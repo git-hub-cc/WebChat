@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P 聊天 - 增强版</title>
+    <style>
+        /* 全局样式 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 侧边栏样式 */
+        .sidebar {
+            width: 30%;
+            min-width: 300px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-right: 1px solid #eee;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            color: #343a40;
+        }
+
+        .status {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            background: #e9ecef;
+            text-align: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .network-info {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f1f3f5;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .connection-quality {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .quality-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin: 0 8px;
+            background: #6c757d;
+        }
+
+        .quality-good {
+            background: #28a745;
+        }
+
+        .quality-medium {
+            background: #ffc107;
+        }
+
+        .quality-poor {
+            background: #dc3545;
+        }
+
+        .steps {
+            margin-bottom: 20px;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .step-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #007bff;
+            color: white;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #0069d9;
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .connection-info {
+            margin-top: 20px;
+        }
+
+        .connection-info h3 {
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            resize: none;
+            font-family: monospace;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .copy-button {
+            width: 100%;
+            background: #17a2b8;
+        }
+
+        .copy-button:hover {
+            background: #138496;
+        }
+
+        .debug-info {
+            margin-top: 20px;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            background: #343a40;
+            color: #fff;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        /* 聊天容器样式 */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #fff;
+        }
+
+        .input-area {
+            padding: 15px;
+            border-top: 1px solid #eee;
+            background: #f8f9fa;
+        }
+
+        .input-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 70%;
+            position: relative;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .sent {
+            background: #dcf8c6;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+        }
+
+        .received {
+            background: #f1f0f0;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+        }
+
+        .timestamp {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        /* 链接预览样式 */
+        .link-preview {
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            background: #fff;
+            transition: box-shadow 0.2s;
+        }
+
+        .link-preview:hover {
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .link-preview-loading {
+            padding: 15px;
+            text-align: center;
+            color: #6c757d;
+        }
+
+        .link-preview-content {
+            padding: 12px;
+        }
+
+        .link-preview-image {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+
+        .link-preview-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #343a40;
+            font-size: 14px;
+        }
+
+        .link-preview-description {
+            color: #6c757d;
+            font-size: 13px;
+            margin-bottom: 5px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .link-preview-domain {
+            display: flex;
+            align-items: center;
+            color: #adb5bd;
+            font-size: 12px;
+            gap: 5px;
+        }
+
+        .preview-error {
+            color: #dc3545;
+            font-size: 12px;
+        }
+
+        /* 图片预览样式 */
+        .image-preview {
+            max-width: 100%;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        #imagePreviewContainer {
+            margin-top: 10px;
+            position: relative;
+        }
+
+        #imagePreviewContainer button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+
+        /* 语音消息样式 */
+        .voice-message {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px;
+        }
+
+        .voice-message button {
+            background: #6c5ce7;
+            color: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            padding: 0;
+        }
+
+        .voice-wave {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 20px;
+        }
+
+        .wave-bar {
+            width: 3px;
+            height: 100%;
+            background: #6c5ce7;
+            border-radius: 3px;
+            animation: waveAnimation 1.5s infinite;
+        }
+
+        .wave-bar:nth-child(2) {
+            animation-delay: 0.2s;
+            height: 15px;
+        }
+
+        .wave-bar:nth-child(3) {
+            animation-delay: 0.4s;
+            height: 20px;
+        }
+
+        .wave-bar:nth-child(4) {
+            animation-delay: 0.6s;
+            height: 10px;
+        }
+
+        .wave-bar:nth-child(5) {
+            animation-delay: 0.8s;
+            height: 15px;
+        }
+
+        @keyframes waveAnimation {
+            0%, 100% {
+                transform: scaleY(1);
+            }
+            50% {
+                transform: scaleY(0.6);
+            }
+        }
+
+        .duration {
+            font-size: 12px;
+            color: #666;
+        }
+
+        #audioPreviewContainer {
+            margin-top: 10px;
+        }
+
+        #audioPreviewContainer button:last-child {
+            font-size: 12px;
+            padding: 4px 8px;
+            background: #dc3545;
+        }
+
+        .voice-record-button {
+            position: relative;
+            background: #6c5ce7 !important;
+        }
+
+        .voice-record-button.recording {
+            background: #dc3545 !important;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+
+        .audio-timer {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: #dc3545;
+            white-space: nowrap;
+        }
+
+        /* 响应式设计 */
+        @media screen and (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                min-width: 0;
+                order: 2;
+                max-height: 40vh;
+            }
+
+            .chat-container {
+                order: 1;
+                height: 60vh;
+            }
+        }
+
+        /* 加载动画 */
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(0, 123, 255, 0.2);
+            border-top-color: #007bff;
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 在head的style标签中添加以下CSS样式 */
+
+        /* 通知样式 */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: 350px;
+            z-index: 9999;
+        }
+
+        .notification {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            padding: 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            animation: notification-in 0.3s ease-out;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+
+        .notification-hide {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+
+        @keyframes notification-in {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .notification-icon {
+            margin-right: 10px;
+            font-size: 18px;
+        }
+
+        .notification-message {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .notification-close {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 20px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .notification-close:hover {
+            color: #333;
+        }
+
+        .notification-info {
+            border-left: 4px solid #2196F3;
+        }
+
+        .notification-warning {
+            border-left: 4px solid #FF9800;
+        }
+
+        .notification-error {
+            border-left: 4px solid #F44336;
+        }
+
+        .notification-success {
+            border-left: 4px solid #4CAF50;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="sidebar">
+        <h2>连接设置</h2>
+        <div class="status" id="connectionStatus">未连接</div>
+        <div class="network-info" id="networkInfo">
+            网络状态: 检测中...
+            <div class="connection-quality">
+                <span>连接质量:</span>
+                <div class="quality-indicator" id="qualityIndicator"></div>
+                <span id="qualityText">未连接</span>
+            </div>
+        </div>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <button onclick="ConnectionManager.createOffer()" id="createOfferBtn">创建连接请求</button>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <button onclick="ConnectionManager.createAnswer()" id="createAnswerBtn">创建连接响应</button>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <button onclick="ConnectionManager.handleAnswer()" id="handleAnswerBtn">处理对方响应</button>
+            </div>
+        </div>
+
+        <div class="connection-info">
+            <h3>连接信息</h3>
+            <textarea id="sdpText" placeholder="粘贴对方的连接信息..."></textarea>
+            <button onclick="UIManager.copyText()" class="copy-button">复制连接信息</button>
+        </div>
+
+        <div class="debug-info" id="debugInfo"></div>
+    </div>
+
+    <div class="chat-container">
+        <div class="chat-box" id="chatBox"></div>
+
+        <div class="input-area">
+            <div class="input-controls">
+                <input type="text" id="messageInput" placeholder="输入消息..." disabled>
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()" id="uploadButton"
+                        disabled>
+                    图片
+                </button>
+                <button class="voice-record-button" id="voiceButton" disabled>
+                    <span id="voiceButtonText">录音</span>
+                    <span id="voiceTimer" class="audio-timer" style="display: none">00:00</span>
+                </button>
+                <button id="sendButton" disabled onclick="MessageManager.sendMessage()">发送</button>
+            </div>
+            <input type="file" id="fileInput" accept="image/*" style="display: none"
+                   onchange="MediaManager.handleImageSelect(event)">
+            <div id="imagePreviewContainer"></div>
+            <div id="audioPreviewContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 配置对象
+    const Config = {
+        // ICE服务器配置，优先使用中国服务器
+        iceServers: [
+            {
+                // 国内STUN服务器
+                urls: [
+                    'stun:stun.miwifi.com:3478',      // 小米
+                    'stun:stun.qq.com:3478',          // 腾讯
+                    'stun:stun.easemob.com:3478',     // 环信
+                    'stun:stun.cloopen.com:3478',     // 容联云
+                    'stun:stun.aliyun.com:3478'       // 阿里云（如可用）
+                ]
+            },
+            {
+                // 国内TURN服务器（注：实际项目应使用自己的TURN服务器）
+                urls: [
+                    'turn:turn.bluehost.cn:3478',
+                    'turn:turn.bluehost.cn:3478?transport=tcp'
+                ],
+                username: 'webrtc',
+                credential: 'webrtc'
+            },
+            {
+                // 备用国际服务器
+                urls: [
+                    'stun:stun.l.google.com:19302',
+                    'turn:global.turn.twilio.com:3478',
+                    'turn:global.turn.twilio.com:3478?transport=tcp'
+                ],
+                username: 'webrtc',
+                credential: 'webrtc'
+            }
+        ],
+
+        // WebRTC配置
+        peerConnectionConfig: {
+            iceTransportPolicy: 'all',
+            bundlePolicy: 'max-bundle',
+            rtcpMuxPolicy: 'require',
+            iceCandidatePoolSize: 10,
+            sdpSemantics: 'unified-plan'
+        },
+
+        // 重连配置
+        reconnect: {
+            maxAttempts: 5,
+            delay: 2000,
+            backoffFactor: 1.5
+        },
+
+        // 超时配置
+        timeouts: {
+            iceGathering: 5000,  // 更低的超时，快速失败
+            connection: 8000,
+            networkCheck: 5000
+        },
+
+        // 媒体配置
+        media: {
+            maxImageSize: 3 * 1024 * 1024,  // 3MB
+            maxAudioDuration: 60,  // 60秒
+            imageCompression: 0.7  // 默认压缩率
+        }
+    };
+
+    // 工具类
+    const Utils = {
+        // 日志级别
+        logLevels: {
+            DEBUG: 0,
+            INFO: 1,
+            WARN: 2,
+            ERROR: 3
+        },
+
+        // 当前日志级别
+        currentLogLevel: 0,
+
+        // 记录日志
+        log: function (message, level = this.logLevels.DEBUG) {
+            if (level >= this.currentLogLevel) {
+                const debugInfo = document.getElementById('debugInfo');
+                const timestamp = new Date().toLocaleTimeString();
+
+                let prefix = '';
+                switch (level) {
+                    case this.logLevels.INFO:
+                        prefix = '[信息] ';
+                        break;
+                    case this.logLevels.WARN:
+                        prefix = '[警告] ';
+                        break;
+                    case this.logLevels.ERROR:
+                        prefix = '[错误] ';
+                        break;
+                    default:
+                        prefix = '[调试] ';
+                }
+
+                debugInfo.innerHTML = `[${timestamp}] ${prefix}${message}<br>` + debugInfo.innerHTML;
+
+                // 限制日志条数
+                const lines = debugInfo.innerHTML.split('<br>');
+                if (lines.length > 10) {
+                    debugInfo.innerHTML = lines.slice(0, 10).join('<br>');
+                }
+
+                // 在控制台也记录日志
+                if (level === this.logLevels.ERROR) {
+                    console.error(message);
+                } else if (level === this.logLevels.WARN) {
+                    console.warn(message);
+                } else {
+                    console.log(message);
+                }
+            }
+        },
+
+        // 压缩图片
+        compressImage: function (dataUrl, quality = Config.media.imageCompression) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // 如果图片很大，按比例缩小
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDimension = 1200;
+
+                    if (width > maxDimension || height > maxDimension) {
+                        if (width > height) {
+                            height = Math.round((height / width) * maxDimension);
+                            width = maxDimension;
+                        } else {
+                            width = Math.round((width / height) * maxDimension);
+                            height = maxDimension;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    // 绘制并压缩
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/jpeg', quality));
+                };
+
+                img.onerror = reject;
+                img.src = dataUrl;
+            });
+        },
+
+        // 格式化时间
+        formatTime: function (seconds) {
+            const minutes = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${minutes}:${secs}`;
+        },
+
+        // 防抖函数
+        debounce: function (func, wait) {
+            let timeout;
+            return function (...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        },
+
+        // 网络类型检测
+        checkNetworkType: async function () {
+            try {
+                const pc = new RTCPeerConnection();
+                const candidates = [];
+
+                pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        candidates.push(e.candidate);
+                    }
+                };
+
+                await pc.createDataChannel("");
+                await pc.createOffer().then(offer => pc.setLocalDescription(offer));
+                await new Promise(r => setTimeout(r, 1000));
+
+                pc.close();
+
+                const hasIPv4 = candidates.some(c => c.address && c.address.indexOf('.') !== -1);
+                const hasIPv6 = candidates.some(c => c.address && c.address.indexOf(':') !== -1);
+                const hasRelay = candidates.some(c => c.type === 'relay');
+                const hasUdp = candidates.some(c => c.protocol === 'udp');
+                const hasTcp = candidates.some(c => c.protocol === 'tcp');
+
+                return {
+                    ipv4: hasIPv4,
+                    ipv6: hasIPv6,
+                    relay: hasRelay,
+                    udp: hasUdp,
+                    tcp: hasTcp,
+                    count: candidates.length
+                };
+            } catch (error) {
+                Utils.log(`网络检测失败: ${error.message}`, Utils.logLevels.ERROR);
+                return null;
+            }
+        },
+
+        // 分块发送大文件
+        sendInChunks: function (data, sendFunc, chunkSize = 16 * 1024) {
+            // 如果数据小于阈值，直接发送
+            if (data.length < chunkSize) {
+                return sendFunc(data);
+            }
+
+            // 否则分块发送
+            const chunks = [];
+            const totalChunks = Math.ceil(data.length / chunkSize);
+            const fileId = new Date().getTime();
+
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * chunkSize;
+                const end = Math.min(data.length, start + chunkSize);
+                chunks.push(data.substring(start, end));
+            }
+
+            Utils.log(`文件过大，分为${totalChunks}块发送`, Utils.logLevels.INFO);
+
+            // 发送元数据
+            sendFunc(JSON.stringify({
+                type: 'file-meta',
+                id: fileId,
+                totalChunks: totalChunks
+            }));
+
+            // 逐块发送
+            chunks.forEach((chunk, index) => {
+                setTimeout(() => {
+                    sendFunc(JSON.stringify({
+                        type: 'file-chunk',
+                        id: fileId,
+                        chunk: chunk,
+                        index: index
+                    }));
+                }, index * 100); // 添加小延迟避免发送过快
+            });
+        }
+    };
+
+    // 事件管理器（观察者模式）
+    const EventEmitter = {
+        events: {},
+
+        // 注册事件
+        on: function (event, callback) {
+            if (!this.events[event]) {
+                this.events[event] = [];
+            }
+            this.events[event].push(callback);
+        },
+
+        // 触发事件
+        emit: function (event, ...args) {
+            if (this.events[event]) {
+                this.events[event].forEach(callback => {
+                    try {
+                        callback(...args);
+                    } catch (e) {
+                        Utils.log(`事件处理发生错误: ${e.message}`, Utils.logLevels.ERROR);
+                    }
+                });
+            }
+        },
+
+        // 移除事件
+        off: function (event, callback) {
+            if (this.events[event]) {
+                if (callback) {
+                    this.events[event] = this.events[event].filter(cb => cb !== callback);
+                } else {
+                    delete this.events[event];
+                }
+            }
+        }
+    };
+
+    // 连接管理器
+    const ConnectionManager = {
+        peerConnection: null,
+        dataChannel: null,
+        iceCandidates: [],
+        connectionTimeout: null,
+        reconnectAttempts: 0,
+        iceTimer: null,
+        iceGatheringStartTime: null,
+        connectionStrength: 0, // 0-100范围内的连接强度
+        pendingChunks: {},
+
+        // 初始化连接
+        init: function () {
+            if (this.peerConnection) {
+                this.close();
+            }
+
+            try {
+                // 创建新的配置，基于当前网络状况
+                let currentConfig = {...Config.peerConnectionConfig};
+                currentConfig.iceServers = Config.iceServers;
+
+                this.peerConnection = new RTCPeerConnection(currentConfig);
+
+                this.peerConnection.onicecandidate = this.handleIceCandidate.bind(this);
+                this.peerConnection.onicegatheringstatechange = this.handleIceGatheringStateChange.bind(this);
+                this.peerConnection.oniceconnectionstatechange = this.handleIceConnectionStateChange.bind(this);
+                this.peerConnection.ondatachannel = this.handleDataChannel.bind(this);
+
+                this.iceCandidates = [];
+                this.reconnectAttempts = 0;
+
+                Utils.log('WebRTC连接已初始化', Utils.logLevels.INFO);
+                return true;
+            } catch (error) {
+                Utils.log(`初始化连接失败: ${error.message}`, Utils.logLevels.ERROR);
+                return false;
+            }
+        },
+
+        // 处理ICE候选者
+        handleIceCandidate: function (event) {
+            if (event.candidate) {
+                this.iceCandidates.push(event.candidate);
+                this.updateSdpText();
+                Utils.log(`收集到ICE候选: ${event.candidate.type} ${event.candidate.protocol}`, Utils.logLevels.DEBUG);
+
+                // 如果连接已建立，尝试发送候选者给对方（启用Trickle ICE）
+                if (this.dataChannel && this.dataChannel.readyState === 'open') {
+                    this.sendIceCandidate(event.candidate);
+                }
+            }
+        },
+
+        // 处理ICE收集状态变化
+        handleIceGatheringStateChange: function (event) {
+            const state = this.peerConnection.iceGatheringState;
+
+            switch (state) {
+                case 'gathering':
+                    UIManager.updateStatus('正在收集网络信息...');
+                    this.startIceTimer();
+                    this.iceGatheringStartTime = Date.now();
+                    break;
+
+                case 'complete':
+                    this.stopIceTimer();
+                    const duration = (Date.now() - this.iceGatheringStartTime) / 1000;
+                    UIManager.updateStatus(`网络信息收集完成 (${duration.toFixed(1)}秒)`);
+                    this.updateSdpText();
+                    break;
+            }
+        },
+
+        // 处理ICE连接状态变化
+        handleIceConnectionStateChange: function () {
+            const state = this.peerConnection.iceConnectionState;
+            UIManager.updateStatus(`ICE状态: ${state}`);
+
+            switch (state) {
+                case 'checking':
+                    this.startConnectionTimeout();
+                    EventEmitter.emit('connectionChecking');
+                    break;
+
+                case 'connected':
+                    this.clearConnectionTimeout();
+                    this.enableTrickleIce();
+                    this.reconnectAttempts = this.calculateConnectionStrength();
+                    UIManager.updateConnectionState(true);
+                    EventEmitter.emit('connectionEstablished');
+                    break;
+
+                case 'disconnected':
+                    this.handleDisconnection();
+                    EventEmitter.emit('connectionDisconnected');
+                    break;
+
+                case 'failed':
+                    this.handleConnectionFailure();
+                    EventEmitter.emit('connectionFailed');
+                    break;
+
+                case 'closed':
+                    UIManager.updateConnectionState(false);
+                    EventEmitter.emit('connectionClosed');
+                    break;
+            }
+        },
+
+        // 处理数据通道
+        handleDataChannel: function (event) {
+            this.setupDataChannel(event.channel);
+        },
+
+        // 启动ICE收集计时器
+        startIceTimer: function () {
+            this.stopIceTimer();
+            this.iceTimer = setTimeout(() => {
+                if (this.peerConnection && this.peerConnection.iceGatheringState !== 'complete') {
+                    Utils.log('ICE收集超时，使用当前可用连接', Utils.logLevels.WARN);
+                    UIManager.updateStatus('网络信息收集超时，使用当前可用连接');
+                    this.updateSdpText();
+                }
+            }, Config.timeouts.iceGathering);
+        },
+
+        // 停止ICE收集计时器
+        stopIceTimer: function () {
+            if (this.iceTimer) {
+                clearTimeout(this.iceTimer);
+                this.iceTimer = null;
+            }
+        },
+
+        // 启动连接超时
+        startConnectionTimeout: function () {
+            this.clearConnectionTimeout();
+            this.connectionTimeout = setTimeout(() => {
+                if (this.peerConnection && this.peerConnection.iceConnectionState === 'checking') {
+                    Utils.log('连接建立超时', Utils.logLevels.WARN);
+                    this.handleConnectionFailure();
+                }
+            }, Config.timeouts.connection);
+        },
+
+        // 清除连接超时
+        clearConnectionTimeout: function () {
+            if (this.connectionTimeout) {
+                clearTimeout(this.connectionTimeout);
+                this.connectionTimeout = null;
+            }
+        },
+
+        // 处理连接失败
+        handleConnectionFailure: function () {
+            UIManager.updateStatus('连接失败');
+            UIManager.updateConnectionState(false);
+
+            if (this.reconnectAttempts < Config.reconnect.maxAttempts) {
+                const delay = Config.reconnect.delay * Math.pow(Config.reconnect.backoffFactor, this.reconnectAttempts);
+                this.reconnectAttempts++;
+
+                UIManager.updateStatus(`正在尝试重新连接 (${this.reconnectAttempts}/${Config.reconnect.maxAttempts})...`, delay);
+
+                setTimeout(() => {
+                    this.restartIceWithRelay();
+                }, delay);
+            } else {
+                UIManager.updateStatus('连接失败，请重新开始连接流程');
+                this.resetConnection();
+            }
+        },
+
+        // 处理连接断开
+        handleDisconnection: function () {
+            UIManager.updateStatus('连接断开，尝试重连...');
+            UIManager.updateConnectionState(false, 'disconnected');
+
+            // 使用指数退避重连
+            const delay = 1000;
+            setTimeout(() => {
+                if (this.peerConnection && this.peerConnection.iceConnectionState === 'disconnected') {
+                    this.restartIce();
+                }
+            }, delay);
+        },
+
+        // 使用中继服务器重启ICE
+        restartIceWithRelay: async function () {
+            try {
+                if (!this.peerConnection) {
+                    throw new Error('没有活动的连接');
+                }
+
+                // 调整配置，强制使用中继
+                const relayConfig = {
+                    ...Config.peerConnectionConfig,
+                    iceTransportPolicy: 'relay'
+                };
+                relayConfig.iceServers = Config.iceServers;
+
+                this.peerConnection.setConfiguration(relayConfig);
+
+                Utils.log('正在使用中继服务器重新协商连接', Utils.logLevels.INFO);
+
+                if (this.peerConnection.signalingState === 'stable') {
+                    const offer = await this.peerConnection.createOffer({iceRestart: true});
+                    await this.peerConnection.setLocalDescription(offer);
+                    UIManager.updateStatus('正在尝试使用中继服务器重连...');
+                    this.updateSdpText();
+                }
+            } catch (error) {
+                Utils.log(`重连尝试失败: ${error.message}`, Utils.logLevels.ERROR);
+                // 继续尝试下一次重连或最终放弃
+                this.handleConnectionFailure();
+            }
+        },
+
+        // 标准ICE重启
+        restartIce: async function () {
+            try {
+                if (!this.peerConnection || this.peerConnection.signalingState !== 'stable') {
+                    return;
+                }
+
+                Utils.log('正在尝试ICE重启', Utils.logLevels.INFO);
+
+                const offer = await this.peerConnection.createOffer({iceRestart: true});
+                await this.peerConnection.setLocalDescription(offer);
+
+                this.updateSdpText();
+                UIManager.updateStatus('正在协商重新连接...');
+            } catch (error) {
+                Utils.log(`ICE重启失败: ${error.message}`, Utils.logLevels.ERROR);
+            }
+        },
+
+        // 启用Trickle ICE（实时发送ICE候选者）
+        enableTrickleIce: function () {
+            Utils.log('启用Trickle ICE', Utils.logLevels.DEBUG);
+            // 已在handleIceCandidate处理
+        },
+
+        // 发送ICE候选者
+        sendIceCandidate: function (candidate) {
+            if (this.dataChannel && this.dataChannel.readyState === 'open') {
+                try {
+                    const message = {
+                        type: 'ice-candidate',
+                        candidate: candidate
+                    };
+                    this.dataChannel.send(JSON.stringify(message));
+                    Utils.log('已发送ICE候选', Utils.logLevels.DEBUG);
+                } catch (error) {
+                    Utils.log(`发送ICE候选失败: ${error.message}`, Utils.logLevels.ERROR);
+                }
+            }
+        },
+
+        // 设置数据通道
+        setupDataChannel: function (channel) {
+            this.dataChannel = channel;
+
+            this.dataChannel.onopen = () => {
+                Utils.log('数据通道已打开', Utils.logLevels.INFO);
+                UIManager.updateStatus("连接已建立，可以开始聊天");
+                UIManager.enableChatInterface(true);
+                EventEmitter.emit('dataChannelOpen');
+
+                // 首次连接成功后自动交换更多ICE候选
+                this.enableTrickleIce();
+
+                // 开始连接质量监控
+                this.startConnectionMonitoring();
+            };
+
+            this.dataChannel.onclose = () => {
+                Utils.log('数据通道已关闭', Utils.logLevels.INFO);
+                UIManager.updateStatus("连接已关闭");
+                UIManager.enableChatInterface(false);
+                EventEmitter.emit('dataChannelClosed');
+            };
+
+            this.dataChannel.onmessage = (event) => {
+                try {
+                    // 尝试解析JSON消息
+                    const message = JSON.parse(event.data);
+
+                    switch (message.type) {
+                        case 'ice-candidate':
+                            this.handleIncomingIceCandidate(message.candidate);
+                            break;
+
+                        case 'file-meta':
+                            // 初始化文件块收集
+                            this.pendingChunks[message.id] = {
+                                chunks: new Array(message.totalChunks),
+                                received: 0,
+                                total: message.totalChunks
+                            };
+                            break;
+
+                        case 'file-chunk':
+                            // 收集文件块
+                            if (this.pendingChunks[message.id]) {
+                                this.pendingChunks[message.id].chunks[message.index] = message.chunk;
+                                this.pendingChunks[message.id].received++;
+
+                                // 检查是否已收到所有块
+                                if (this.pendingChunks[message.id].received === this.pendingChunks[message.id].total) {
+                                    const completeData = this.pendingChunks[message.id].chunks.join('');
+                                    delete this.pendingChunks[message.id];
+
+                                    // 解析并显示完整消息
+                                    const fullMessage = JSON.parse(completeData);
+                                    MessageManager.displayMessage(fullMessage, false);
+                                }
+                            }
+                            break;
+
+                        default:
+                            // 普通消息直接显示
+                            MessageManager.displayMessage(message, false);
+                    }
+                } catch (e) {
+                    // 如果不是JSON，作为普通文本显示
+                    MessageManager.displayMessage(event.data, false);
+                }
+            };
+
+            this.dataChannel.onerror = (error) => {
+                Utils.log(`数据通道错误: ${error.message || '未知错误'}`, Utils.logLevels.ERROR);
+                EventEmitter.emit('dataChannelError', error);
+            };
+        },
+
+        // 处理接收到的ICE候选者
+        handleIncomingIceCandidate: async function (candidate) {
+            try {
+                if (this.peerConnection) {
+                    await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                    Utils.log('已添加远程ICE候选', Utils.logLevels.DEBUG);
+                }
+            } catch (error) {
+                Utils.log(`添加远程ICE候选失败: ${error.message}`, Utils.logLevels.ERROR);
+            }
+        },
+
+        // 开始连接质量监测
+        startConnectionMonitoring: function () {
+            setInterval(async () => {
+                if (this.peerConnection && this.dataChannel && this.dataChannel.readyState === 'open') {
+                    try {
+                        const stats = await this.peerConnection.getStats();
+                        let currentRoundTripTime = null;
+                        let bytesReceived = 0;
+                        let bytesSent = 0;
+                        let localCandidateType = null;
+                        let remoteCandidateType = null;
+
+                        stats.forEach(report => {
+                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                                currentRoundTripTime = report.currentRoundTripTime;
+                                // 保存UDP或TCP连接类型
+                                if (report.localCandidateId && report.remoteCandidateId) {
+                                    stats.forEach(s => {
+                                        if (s.id === report.localCandidateId) {
+                                            localCandidateType = `${s.candidateType}/${s.protocol}`;
+                                        }
+                                        if (s.id === report.remoteCandidateId) {
+                                            remoteCandidateType = `${s.candidateType}/${s.protocol}`;
+                                        }
+                                    });
+                                }
+                            }
+
+                            if (report.type === 'data-channel') {
+                                bytesReceived += report.bytesReceived || 0;
+                                bytesSent += report.bytesSent || 0;
+                            }
+                        });
+
+                        // 只在有效RTT时更新连接质量
+                        if (currentRoundTripTime !== null) {
+                            UIManager.updateConnectionQuality(currentRoundTripTime);
+                            this.connectionStrength = this.calculateConnectionStrength(currentRoundTripTime);
+
+                            Utils.log(`连接监测: RTT=${currentRoundTripTime.toFixed(3)}s, 本地=${localCandidateType}, 远程=${remoteCandidateType}, 传输=${bytesReceived + bytesSent}字节`,
+                                Utils.logLevels.DEBUG);
+
+                            // 如果连接质量很差，尝试重新协商
+                            if (currentRoundTripTime > 1.5 && this.connectionStrength < 30) {
+                                this.considerReconnection();
+                            }
+                        }
+                    } catch (error) {
+                        Utils.log(`获取连接统计失败: ${error.message}`, Utils.logLevels.ERROR);
+                    }
+                }
+            }, Config.timeouts.networkCheck);
+        },
+
+        // 计算连接强度 (0-100)
+        calculateConnectionStrength: function (rtt = null) {
+            if (!this.peerConnection) return 0;
+
+            let strength = 0;
+
+            // 基于ICE连接状态
+            switch (this.peerConnection.iceConnectionState) {
+                case 'connected':
+                    strength += 60;
+                    break;
+                case 'completed':
+                    strength += 70;
+                    break;
+                case 'checking':
+                    strength += 30;
+                    break;
+                case 'disconnected':
+                    strength += 10;
+                    break;
+                default:
+                    strength += 0;
+            }
+
+            // 如果RTT可用，根据延迟调整
+            if (rtt !== null) {
+                if (rtt < 0.1) strength += 30;
+                else if (rtt < 0.3) strength += 20;
+                else if (rtt < 0.7) strength += 10;
+                else if (rtt > 1.0) strength -= 20;
+            }
+
+            // 确保在0-100范围内
+            return Math.max(0, Math.min(100, strength));
+        },
+
+        // 在连接质量差时考虑重连
+        considerReconnection: function () {
+            if (this.reconnectAttempts < Config.reconnect.maxAttempts) {
+                Utils.log('检测到连接质量差，尝试重新协商...', Utils.logLevels.WARN);
+                this.restartIce();
+            }
+        },
+
+        // 更新SDP文本
+        updateSdpText: function () {
+            if (!this.peerConnection || !this.peerConnection.localDescription) {
+                return;
+            }
+
+            const connectionInfo = {
+                sdp: this.peerConnection.localDescription,
+                candidates: this.iceCandidates
+            };
+
+            document.getElementById('sdpText').value = JSON.stringify(connectionInfo);
+        },
+
+        // 重置连接
+        resetConnection: function () {
+            if (this.peerConnection) {
+                this.peerConnection.close();
+            }
+
+            this.peerConnection = null;
+            this.dataChannel = null;
+            this.iceCandidates = [];
+            this.reconnectAttempts = 0;
+
+            UIManager.resetConnectionControls();
+        },
+
+        // 关闭连接
+        close: function () {
+            this.stopIceTimer();
+            this.clearConnectionTimeout();
+
+            if (this.dataChannel) {
+                try {
+                    this.dataChannel.close();
+                } catch (e) {
+                    // 忽略关闭错误
+                }
+                this.dataChannel = null;
+            }
+
+            if (this.peerConnection) {
+                try {
+                    this.peerConnection.close();
+                } catch (e) {
+                    // 忽略关闭错误
+                }
+                this.peerConnection = null;
+            }
+
+            UIManager.updateStatus('连接已关闭');
+            UIManager.enableChatInterface(false);
+        },
+
+        // 创建连接请求
+        createOffer: async function () {
+            if (!UIManager.checkWebRTCSupport()) return;
+
+            try {
+                if (!this.init()) {
+                    throw new Error('无法初始化WebRTC连接');
+                }
+
+                // 创建数据通道
+                this.dataChannel = this.peerConnection.createDataChannel("messageChannel", {
+                    ordered: true,
+                    maxRetransmits: 30
+                });
+
+                this.setupDataChannel(this.dataChannel);
+
+                // 创建offer
+                const offer = await this.peerConnection.createOffer({
+                    offerToReceiveAudio: false,
+                    offerToReceiveVideo: false
+                });
+
+                await this.peerConnection.setLocalDescription(offer);
+                UIManager.updateStatus("正在收集网络信息...");
+
+                // 短暂延迟后更新SDP（让ICE收集开始）
+                setTimeout(() => this.updateSdpText(), 1000);
+
+                UIManager.disableConnectionButtons('offer');
+            } catch (error) {
+                Utils.log(`创建连接请求失败: ${error.message}`, Utils.logLevels.ERROR);
+                UIManager.updateStatus('创建连接请求失败');
+            }
+        },
+
+        // 创建连接响应
+        createAnswer: async function () {
+            try {
+                if (!this.init()) {
+                    throw new Error('无法初始化WebRTC连接');
+                }
+
+                // 解析对方的SDP
+                const sdpText = document.getElementById('sdpText').value.trim();
+                if (!sdpText) {
+                    throw new Error('请先粘贴对方的连接信息');
+                }
+
+                const offerData = JSON.parse(sdpText);
+
+                if (!offerData.sdp) {
+                    throw new Error('无效的连接信息格式');
+                }
+
+                // 设置远程描述
+                await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offerData.sdp));
+
+                // 添加ICE候选者
+                if (offerData.candidates && offerData.candidates.length > 0) {
+                    for (const candidate of offerData.candidates) {
+                        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                    }
+                }
+
+                // 创建应答
+                const answer = await this.peerConnection.createAnswer();
+                await this.peerConnection.setLocalDescription(answer);
+
+                UIManager.updateStatus("正在收集网络信息...");
+
+                // 短暂延迟后更新SDP
+                setTimeout(() => this.updateSdpText(), 1000);
+
+                UIManager.disableConnectionButtons('answer');
+            } catch (error) {
+                Utils.log(`创建连接响应失败: ${error.message}`, Utils.logLevels.ERROR);
+                UIManager.updateStatus(`创建连接响应失败: ${error.message}`);
+            }
+        },
+
+        // 处理连接响应
+        handleAnswer: async function () {
+            try {
+                if (!this.peerConnection) {
+                    throw new Error('未创建连接，请先执行步骤1');
+                }
+
+                // 解析对方的SDP
+                const sdpText = document.getElementById('sdpText').value.trim();
+                if (!sdpText) {
+                    throw new Error('请先粘贴对方的连接信息');
+                }
+
+                const answerData = JSON.parse(sdpText);
+
+                if (!answerData.sdp) {
+                    throw new Error('无效的连接信息格式');
+                }
+
+                // 设置远程描述
+                await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answerData.sdp));
+
+                // 添加ICE候选者
+                if (answerData.candidates && answerData.candidates.length > 0) {
+                    for (const candidate of answerData.candidates) {
+                        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                    }
+                }
+
+                UIManager.updateStatus("正在建立连接...");
+                UIManager.disableConnectionButtons('complete');
+            } catch (error) {
+                Utils.log(`处理连接响应失败: ${error.message}`, Utils.logLevels.ERROR);
+                UIManager.updateStatus(`处理连接响应失败: ${error.message}`);
+            }
+        }
+    };
+
+    // UI 管理器
+    const UIManager = {
+        // 更新连接状态显示
+        updateConnectionState: function (connected, state = '') {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.classList.add('connected');
+                statusElement.classList.remove('disconnected');
+            } else {
+                if (state === 'disconnected') {
+                    statusElement.classList.add('disconnected');
+                } else {
+                    statusElement.classList.remove('connected');
+                }
+            }
+        },
+
+        // 启用/禁用聊天界面
+        enableChatInterface: function (enabled) {
+            document.getElementById('messageInput').disabled = !enabled;
+            document.getElementById('sendButton').disabled = !enabled;
+            document.getElementById('uploadButton').disabled = !enabled;
+            document.getElementById('voiceButton').disabled = !enabled;
+        },
+
+        // 更新连接状态文本
+        updateStatus: function (message, delay = 0) {
+            const statusElement = document.getElementById('connectionStatus');
+
+            if (delay > 0) {
+                // 如果有延迟，显示倒计时
+                statusElement.innerHTML = `${message} <span class="loading-spinner"></span>`;
+
+                let countdown = Math.floor(delay / 1000);
+                const timer = setInterval(() => {
+                    countdown--;
+                    if (countdown <= 0) {
+                        clearInterval(timer);
+                        statusElement.textContent = message;
+                    } else {
+                        statusElement.innerHTML = `${message} (${countdown}秒) <span class="loading-spinner"></span>`;
+                    }
+                }, 1000);
+            } else {
+                statusElement.textContent = message;
+            }
+        },
+
+        // 更新连接质量指示器
+        updateConnectionQuality: function (rtt) {
+            const indicator = document.getElementById('qualityIndicator');
+            const qualityText = document.getElementById('qualityText');
+
+            if (!indicator || !qualityText) return;
+
+            try {
+                if (rtt < 0.3) {
+                    indicator.className = 'quality-indicator quality-good';
+                    qualityText.textContent = '良好';
+                } else if (rtt < 0.8) {
+                    indicator.className = 'quality-indicator quality-medium';
+                    qualityText.textContent = '一般';
+                } else {
+                    indicator.className = 'quality-indicator quality-poor';
+                    qualityText.textContent = '较差';
+                }
+            } catch (error) {
+                Utils.log(`更新连接质量显示失败: ${error}`, Utils.logLevels.ERROR);
+            }
+        },
+
+        // 禁用连接按钮
+        disableConnectionButtons: function (stage) {
+            switch (stage) {
+                case 'offer':
+                    document.getElementById('createOfferBtn').disabled = true;
+                    document.getElementById('createAnswerBtn').disabled = true;
+                    document.getElementById('handleAnswerBtn').disabled = false;
+                    break;
+
+                case 'answer':
+                    document.getElementById('createOfferBtn').disabled = true;
+                    document.getElementById('createAnswerBtn').disabled = true;
+                    document.getElementById('handleAnswerBtn').disabled = true;
+                    break;
+
+                case 'complete':
+                    document.getElementById('createOfferBtn').disabled = true;
+                    document.getElementById('createAnswerBtn').disabled = true;
+                    document.getElementById('handleAnswerBtn').disabled = true;
+                    break;
+            }
+        },
+
+        // 重置连接控件
+        resetConnectionControls: function () {
+            document.getElementById('createOfferBtn').disabled = false;
+            document.getElementById('createAnswerBtn').disabled = false;
+            document.getElementById('handleAnswerBtn').disabled = false;
+            this.enableChatInterface(false);
+        },
+
+        // 复制文本
+        copyText: function () {
+            const textarea = document.getElementById('sdpText');
+            textarea.select();
+            document.execCommand('copy');
+
+            const copyButton = document.querySelector('.copy-button');
+            const originalText = copyButton.textContent;
+
+            copyButton.textContent = '已复制！';
+            setTimeout(() => {
+                copyButton.textContent = originalText;
+            }, 2000);
+        },
+
+        // 检查WebRTC支持
+        checkWebRTCSupport: function () {
+            if (typeof RTCPeerConnection === 'undefined') {
+                this.updateStatus('您的浏览器不支持 WebRTC，请使用 Chrome 等现代浏览器');
+                Utils.log('浏览器不支持WebRTC', Utils.logLevels.ERROR);
+                return false;
+            }
+
+            if (typeof navigator.mediaDevices === 'undefined' ||
+                typeof navigator.mediaDevices.getUserMedia === 'undefined') {
+                Utils.log('浏览器可能不完全支持媒体设备API', Utils.logLevels.WARN);
+            }
+
+            return true;
+        },
+
+        // 显示通知消息
+        showNotification: function (message, type = 'info') {
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+
+            // 设置图标
+            let icon = '';
+            switch (type) {
+                case 'warning':
+                    icon = '⚠️';
+                    break;
+                case 'error':
+                    icon = '❌';
+                    break;
+                case 'success':
+                    icon = '✅';
+                    break;
+                default:
+                    icon = 'ℹ️';
+            }
+
+            notification.innerHTML = `
+                <span class="notification-icon">${icon}</span>
+                <span class="notification-message">${message}</span>
+                <button class="notification-close">×</button>
+            `;
+
+            // 添加到界面
+            if (!document.querySelector('.notification-container')) {
+                const container = document.createElement('div');
+                container.className = 'notification-container';
+                document.body.appendChild(container);
+            }
+
+            const container = document.querySelector('.notification-container');
+            container.appendChild(notification);
+
+            // 点击关闭按钮移除通知
+            notification.querySelector('.notification-close').addEventListener('click', () => {
+                notification.classList.add('notification-hide');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+
+                    // 如果容器为空，移除容器
+                    if (container.children.length === 0) {
+                        container.parentNode.removeChild(container);
+                    }
+                }, 300);
+            });
+
+            // 自动关闭
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.classList.add('notification-hide');
+                    setTimeout(() => {
+                        if (notification.parentNode) {
+                            notification.parentNode.removeChild(notification);
+                        }
+
+                        // 如果容器为空，移除容器
+                        if (container.children.length === 0) {
+                            container.parentNode.removeChild(container);
+                        }
+                    }, 300);
+                }
+            }, 10000); // 10秒后自动关闭
+        }
+
+    };
+
+    // 消息管理器
+    const MessageManager = {
+        selectedImage: null,
+        audioData: null,
+        audioDuration: 0,
+
+        // 发送消息
+        sendMessage: function () {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if ((!message && !this.selectedImage && !this.audioData) ||
+                !ConnectionManager.dataChannel ||
+                ConnectionManager.dataChannel.readyState !== 'open') {
+                return;
+            }
+
+            // 发送语音消息
+            if (this.audioData) {
+                const audioMessage = {
+                    type: 'audio',
+                    data: this.audioData,
+                    duration: this.audioDuration
+                };
+
+                Utils.sendInChunks(JSON.stringify(audioMessage),
+                    (data) => ConnectionManager.dataChannel.send(data));
+
+                this.displayMessage(audioMessage, true);
+                this.cancelAudioData();
+            }
+
+            // 发送图片消息
+            if (this.selectedImage) {
+                const imageMessage = {
+                    type: 'image',
+                    data: this.selectedImage
+                };
+
+                Utils.sendInChunks(JSON.stringify(imageMessage),
+                    (data) => ConnectionManager.dataChannel.send(data));
+
+                this.displayMessage(imageMessage, true);
+                this.cancelImageData();
+            }
+
+            // 发送文本消息
+            if (message) {
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                const messageObj = {
+                    type: 'text',
+                    content: message,
+                    links: message.match(urlRegex) || [],
+                    timestamp: new Date().toISOString()
+                };
+
+                ConnectionManager.dataChannel.send(JSON.stringify(messageObj));
+                this.displayMessage(messageObj, true);
+                input.value = '';
+            }
+        },
+
+        // 显示消息
+        displayMessage: function (message, isSent) {
+            const chatBox = document.getElementById('chatBox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+
+            if (typeof message === 'string') {
+                messageDiv.textContent = message;
+            } else {
+                switch (message.type) {
+                    case 'audio':
+                        const audioDiv = document.createElement('div');
+                        audioDiv.className = 'voice-message';
+
+                        // 格式化音频持续时间
+                        const formattedDuration = typeof message.duration === 'number'
+                            ? Utils.formatTime(message.duration)
+                            : message.duration;
+
+                        audioDiv.innerHTML = `
+                        <button onclick="event.stopPropagation(); MediaManager.playAudio(this)" data-audio="${message.data}">
+                            播放
+                        </button>
+                        <div class="voice-wave">
+                            ${Array(5).fill('<div class="wave-bar"></div>').join('')}
+                        </div>
+                        <span class="duration">${formattedDuration}</span>
+                    `;
+                        messageDiv.appendChild(audioDiv);
+                        break;
+
+                    case 'image':
+                        const img = document.createElement('img');
+                        img.src = message.data;
+                        img.className = 'image-preview';
+                        img.onclick = () => {
+                            // 点击图片时放大显示
+                            const modal = document.createElement('div');
+                            modal.style = `
+                            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                            background: rgba(0,0,0,0.8); display: flex; align-items: center;
+                            justify-content: center; z-index: 1000; cursor: pointer;
+                        `;
+
+                            const fullImg = document.createElement('img');
+                            fullImg.src = message.data;
+                            fullImg.style = 'max-width: 90%; max-height: 90%; object-fit: contain;';
+
+                            modal.appendChild(fullImg);
+                            document.body.appendChild(modal);
+
+                            modal.onclick = () => document.body.removeChild(modal);
+                        };
+                        messageDiv.appendChild(img);
+                        break;
+
+                    case 'text':
+                        const textDiv = document.createElement('div');
+                        textDiv.textContent = message.content;
+                        messageDiv.appendChild(textDiv);
+
+                        if (message.links && message.links.length > 0) {
+                            message.links.forEach(async (link) => {
+                                const linkPreview = await this.createLinkPreview(link);
+                                messageDiv.appendChild(linkPreview);
+                            });
+                        }
+                        break;
+
+                    default:
+                        // 未知类型消息
+                        messageDiv.textContent = JSON.stringify(message);
+                }
+            }
+
+            // 添加时间戳
+            const timestamp = document.createElement('div');
+            timestamp.className = 'timestamp';
+            timestamp.textContent = new Date().toLocaleTimeString();
+            messageDiv.appendChild(timestamp);
+
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        },
+
+        // 链接预览
+        createLinkPreview: async function (url) {
+            const preview = document.createElement('div');
+            preview.className = 'link-preview';
+            preview.innerHTML = `
+            <div class="link-preview-loading">
+                <span class="loading-spinner"></span> 加载预览中...
+            </div>
+        `;
+
+            try {
+                const previewData = await this.fetchLinkPreview(url);
+
+                if (previewData) {
+                    preview.innerHTML = `
+                    <div class="link-preview-content">
+                        ${previewData.image ?
+                        `<img src="${previewData.image}"
+                                class="link-preview-image"
+                                onerror="this.style.display='none'"
+                                alt="${previewData.title || '链接预览'}">`
+                        : ''}
+                        <div class="link-preview-title">${previewData.title || url}</div>
+                        <div class="link-preview-description">${previewData.description || '无描述'}</div>
+                        <div class="link-preview-domain">
+                            <img src="https://www.google.com/s2/favicons?domain=${previewData.domain}"
+                                width="16" height="16" onerror="this.style.display='none'">
+                            ${previewData.domain}
+                        </div>
+                    </div>
+                `;
+                } else {
+                    preview.innerHTML = `
+                    <div class="link-preview-content">
+                        <div class="link-preview-title">${url}</div>
+                        <div class="preview-error">无法加载预览</div>
+                    </div>
+                `;
+                }
+            } catch (error) {
+                preview.innerHTML = `
+                <div class="link-preview-content">
+                    <div class="link-preview-title">${url}</div>
+                    <div class="preview-error">预览加载失败</div>
+                </div>
+            `;
+            }
+
+            preview.onclick = () => window.open(url, '_blank');
+            return preview;
+        },
+
+        // 获取链接预览
+        fetchLinkPreview: async function (url) {
+            try {
+                // 使用第三方API获取链接预览（考虑中国网络情况，可能需要替换为国内可用的服务）
+                // 在生产环境应使用自己的后端服务来代理请求，避免API服务的限制
+                const proxyUrl = 'https://api.allorigins.win/raw?url=';
+                const response = await fetch(`${proxyUrl}${encodeURIComponent(url)}`, {
+                    method: 'GET',
+                    headers: {'Content-Type': 'text/html'},
+                    mode: 'cors',
+                    cache: 'force-cache'
+                });
+
+                if (!response.ok) throw new Error('无法获取链接内容');
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // 提取Open Graph数据
+                const getMetaContent = (name) => {
+                    const element = doc.querySelector(`meta[property="og:${name}"], meta[name="${name}"], meta[name="og:${name}"]`);
+                    return element ? element.getAttribute('content') : null;
+                };
+
+                const title = getMetaContent('title') || doc.title || '';
+                const description = getMetaContent('description') || '';
+                const image = getMetaContent('image') || '';
+                const domain = new URL(url).hostname;
+
+                return {title, description, image, domain};
+            } catch (error) {
+                Utils.log(`链接预览获取失败: ${error.message}`, Utils.logLevels.ERROR);
+
+                // 返回基本信息
+                try {
+                    const domain = new URL(url).hostname;
+                    return {
+                        title: url,
+                        description: '',
+                        image: null,
+                        domain: domain
+                    };
+                } catch (e) {
+                    return null;
+                }
+            }
+        },
+
+        // 取消图片数据
+        cancelImageData: function () {
+            this.selectedImage = null;
+            document.getElementById('imagePreviewContainer').innerHTML = '';
+            document.getElementById('fileInput').value = '';
+        },
+
+        // 取消音频数据
+        cancelAudioData: function () {
+            this.audioData = null;
+            this.audioDuration = 0;
+            document.getElementById('audioPreviewContainer').innerHTML = '';
+        }
+    };
+
+    // 媒体管理器
+    const MediaManager = {
+        mediaRecorder: null,
+        audioChunks: [],
+        recordingTimer: null,
+        recordingStartTime: null,
+        recordingDuration: 0,
+
+        // 初始化语音录制
+        initVoiceRecording: async function () {
+            // 检查是否在安全上下文(HTTPS)
+            if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                Utils.log('语音录制功能需要HTTPS环境', Utils.logLevels.WARN);
+
+                const voiceButton = document.getElementById('voiceButton');
+                voiceButton.disabled = true;
+                voiceButton.title = '录音功能需要HTTPS环境';
+                voiceButton.innerHTML = '<span id="voiceButtonText">需要HTTPS</span>';
+
+                // 显示提示消息
+                UIManager.showNotification('语音录制功能需要HTTPS安全环境才能使用，请使用HTTPS访问本页面。', 'warning');
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+
+                // 尝试使用更好的编码方式
+                const options = {};
+
+                // 尝试使用 opus 编码器
+                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    options.mimeType = 'audio/webm;codecs=opus';
+                } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                    options.mimeType = 'audio/mp4';
+                }
+
+                this.mediaRecorder = new MediaRecorder(stream, options);
+
+                this.mediaRecorder.ondataavailable = (event) => {
+                    this.audioChunks.push(event.data);
+                };
+
+                this.mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(this.audioChunks, {type: options.mimeType || 'audio/webm'});
+                    const reader = new FileReader();
+
+                    reader.onloadend = () => {
+                        MessageManager.audioData = reader.result;
+                        MessageManager.audioDuration = this.recordingDuration;
+                        this.displayAudioPreview(reader.result, this.recordingDuration);
+                    };
+
+                    reader.readAsDataURL(audioBlob);
+                };
+
+                document.getElementById('voiceButton').disabled = false;
+                Utils.log('语音录制功能已初始化', Utils.logLevels.INFO);
+            } catch (error) {
+                Utils.log(`初始化麦克风失败: ${error.message}`, Utils.logLevels.ERROR);
+                document.getElementById('voiceButton').disabled = true;
+                document.getElementById('voiceButtonText').textContent = '录音不可用';
+
+                // 显示友好的错误提示
+                UIManager.showNotification('无法访问麦克风，语音录制功能不可用。', 'error');
+            }
+        },
+
+        // 开始录音
+        startRecording: function () {
+            if (!this.mediaRecorder) return;
+
+            try {
+                this.audioChunks = [];
+                this.mediaRecorder.start();
+                this.recordingStartTime = Date.now();
+
+                const voiceButton = document.getElementById('voiceButton');
+                const voiceButtonText = document.getElementById('voiceButtonText');
+                const voiceTimer = document.getElementById('voiceTimer');
+
+                voiceButton.classList.add('recording');
+                voiceButtonText.textContent = '停止录音';
+                voiceTimer.style.display = 'inline';
+
+                this.recordingTimer = setInterval(() => this.updateRecordingTimer(), 1000);
+                this.updateRecordingTimer();
+
+                Utils.log('开始录音', Utils.logLevels.DEBUG);
+            } catch (error) {
+                Utils.log(`开始录音失败: ${error.message}`, Utils.logLevels.ERROR);
+            }
+        },
+
+        // 停止录音
+        stopRecording: function () {
+            if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') return;
+
+            try {
+                this.mediaRecorder.stop();
+                clearInterval(this.recordingTimer);
+
+                const voiceButton = document.getElementById('voiceButton');
+                const voiceButtonText = document.getElementById('voiceButtonText');
+                const voiceTimer = document.getElementById('voiceTimer');
+
+                voiceButton.classList.remove('recording');
+                voiceButtonText.textContent = '录音';
+                voiceTimer.style.display = 'none';
+
+                Utils.log('录音已停止', Utils.logLevels.DEBUG);
+            } catch (error) {
+                Utils.log(`停止录音失败: ${error.message}`, Utils.logLevels.ERROR);
+            }
+        },
+
+        // 更新录音计时器
+        updateRecordingTimer: function () {
+            const now = Date.now();
+            const duration = Math.floor((now - this.recordingStartTime) / 1000);
+            this.recordingDuration = duration;
+
+            const minutes = Math.floor(duration / 60).toString().padStart(2, '0');
+            const seconds = (duration % 60).toString().padStart(2, '0');
+            document.getElementById('voiceTimer').textContent = `${minutes}:${seconds}`;
+
+            // 如果超过最大录制时间，自动停止
+            if (duration >= Config.media.maxAudioDuration) {
+                this.stopRecording();
+            }
+        },
+
+        // 处理图片选择
+        handleImageSelect: async function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                alert('请选择图片文件');
+                return;
+            }
+
+            if (file.size > Config.media.maxImageSize) {
+                alert(`图片大小不能超过 ${Config.media.maxImageSize / 1024 / 1024} MB`);
+                return;
+            }
+
+            try {
+                const reader = new FileReader();
+
+                reader.onload = async (e) => {
+                    // 压缩图片
+                    const compressedImage = await Utils.compressImage(e.target.result);
+                    MessageManager.selectedImage = compressedImage;
+                    this.displayImagePreview(compressedImage);
+                };
+
+                reader.readAsDataURL(file);
+            } catch (error) {
+                Utils.log(`处理图片失败: ${error.message}`, Utils.logLevels.ERROR);
+                alert('处理图片失败');
+            }
+        },
+
+        // 显示图片预览
+        displayImagePreview: function (dataUrl) {
+            const container = document.getElementById('imagePreviewContainer');
+            container.innerHTML = `
+            <div style="position: relative; display: inline-block;">
+                <img src="${dataUrl}" class="image-preview">
+                <button onclick="MessageManager.cancelImageData()">取消</button>
+            </div>
+        `;
+        },
+
+        // 显示音频预览
+        displayAudioPreview: function (audioData, duration) {
+            const container = document.getElementById('audioPreviewContainer');
+            const formattedDuration = Utils.formatTime(duration);
+
+            container.innerHTML = `
+            <div class="voice-message">
+                <button onclick="event.stopPropagation(); MediaManager.playAudio(this)" data-audio="${audioData}">
+                    播放
+                </button>
+                <div class="voice-wave">
+                    ${Array(5).fill('<div class="wave-bar"></div>').join('')}
+                </div>
+                <span class="duration">${formattedDuration}</span>
+                <button onclick="MessageManager.cancelAudioData()">取消</button>
+            </div>
+        `;
+        },
+
+        // 播放音频
+        playAudio: function (button) {
+            const audio = new Audio(button.dataset.audio);
+            const originalText = button.textContent;
+
+            button.textContent = '播放中...';
+            audio.play();
+
+            // 添加波形动画效果
+            const waveContainer = button.nextElementSibling;
+            if (waveContainer && waveContainer.classList.contains('voice-wave')) {
+                waveContainer.classList.add('playing');
+            }
+
+            audio.onended = () => {
+                button.textContent = originalText;
+                if (waveContainer) {
+                    waveContainer.classList.remove('playing');
+                }
+            };
+
+            audio.onerror = () => {
+                button.textContent = '播放失败';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            };
+        }
+    };
+
+    // 初始化应用
+    const AppInitializer = {
+        init: function () {
+            // 检查浏览器兼容性
+            if (!UIManager.checkWebRTCSupport()) return;
+
+            // 检查网络状态
+            this.checkNetworkType();
+
+            // 添加网络状态监听
+            this.startNetworkMonitoring();
+
+            // 初始化语音录制
+            MediaManager.initVoiceRecording();
+
+            // 添加按钮事件处理程序
+            this.setupEventListeners();
+
+            Utils.log('应用已初始化', Utils.logLevels.INFO);
+        },
+
+        // 检查网络状态
+        checkNetworkType: async function () {
+            const networkInfo = document.getElementById('networkInfo');
+            networkInfo.innerHTML = '<span class="loading-spinner"></span> 正在检测网络...';
+
+            try {
+                const networkType = await Utils.checkNetworkType();
+
+                if (networkType) {
+                    let networkHtml = `
+                    网络支持:<br>
+                    IPv4: ${networkType.ipv4 ? '✓' : '✗'}<br>
+                    IPv6: ${networkType.ipv6 ? '✓' : '✗'}<br>
+                    UDP: ${networkType.udp ? '✓' : '✗'}<br>
+                    TCP: ${networkType.tcp ? '✓' : '✗'}<br>
+                    中继: ${networkType.relay ? '可用' : '未检测到'}<br>
+                    候选数: ${networkType.count}
+                `;
+
+                    // 根据网络状况调整配置
+                    if (!networkType.udp && networkType.tcp) {
+                        Config.peerConnectionConfig.iceTransportPolicy = 'relay';
+                        networkHtml += '<br><b>已切换到中继优先模式</b>';
+                    }
+
+                    networkInfo.innerHTML = networkHtml;
+
+                    const qualityIndicator = document.getElementById('qualityIndicator');
+                    if (qualityIndicator) {
+                        if (networkType.udp) {
+                            qualityIndicator.className = 'quality-indicator quality-good';
+                            document.getElementById('qualityText').textContent = '网络良好';
+                        } else if (networkType.tcp) {
+                            qualityIndicator.className = 'quality-indicator quality-medium';
+                            document.getElementById('qualityText').textContent = '网络受限';
+                        } else {
+                            qualityIndicator.className = 'quality-indicator quality-poor';
+                            document.getElementById('qualityText').textContent = '网络受阻';
+                        }
+                    }
+                } else {
+                    networkInfo.innerHTML = '网络检测失败';
+                }
+            } catch (error) {
+                networkInfo.innerHTML = '网络检测失败: ' + error.message;
+            }
+        },
+
+        // 监听网络状态变化
+        startNetworkMonitoring: function () {
+            window.addEventListener('online', this.handleNetworkChange.bind(this));
+            window.addEventListener('offline', this.handleNetworkChange.bind(this));
+        },
+
+        // 处理网络变化
+        handleNetworkChange: function () {
+            if (navigator.onLine) {
+                UIManager.updateStatus('网络已恢复，尝试重新连接...');
+                if (ConnectionManager.peerConnection &&
+                    ConnectionManager.peerConnection.iceConnectionState !== 'connected') {
+                    ConnectionManager.restartIce();
+                }
+            } else {
+                UIManager.updateStatus('网络已断开');
+            }
+        },
+
+        // 设置事件监听
+        setupEventListeners: function () {
+            // 消息输入框回车发送
+            document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    MessageManager.sendMessage();
+                }
+            });
+
+            // 语音录制按钮事件
+            const voiceButton = document.getElementById('voiceButton');
+
+            // 检测是否为移动设备
+            if ('ontouchstart' in window) {
+                // 移动设备使用触摸事件
+                voiceButton.addEventListener('touchstart', function (e) {
+                    e.preventDefault();
+                    MediaManager.startRecording();
+                });
+
+                voiceButton.addEventListener('touchend', function (e) {
+                    e.preventDefault();
+                    MediaManager.stopRecording();
+                });
+            } else {
+                // 桌面设备使用鼠标事件
+                voiceButton.addEventListener('mousedown', MediaManager.startRecording.bind(MediaManager));
+                voiceButton.addEventListener('mouseup', MediaManager.stopRecording.bind(MediaManager));
+                voiceButton.addEventListener('mouseleave', MediaManager.stopRecording.bind(MediaManager));
+            }
+
+            // 添加全局错误处理
+            window.addEventListener('error', (event) => {
+                Utils.log(`应用错误: ${event.message}`, Utils.logLevels.ERROR);
+            });
+
+            // 添加断开连接前的提示
+            window.addEventListener('beforeunload', (event) => {
+                if (ConnectionManager.peerConnection &&
+                    ConnectionManager.dataChannel &&
+                    ConnectionManager.dataChannel.readyState === 'open') {
+                    event.preventDefault();
+                    event.returnValue = '您正在进行通信，关闭页面将断开连接。确定要离开吗？';
+                    return event.returnValue;
+                }
+            });
+        }
+    };
+
+    // 页面加载完成后初始化
+    window.addEventListener('load', AppInitializer.init.bind(AppInitializer));
+</script>
+</body>
+</html>
