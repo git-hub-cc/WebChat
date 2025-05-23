@@ -3,862 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P 聊天</title>
-    <style>
-        /* 全局样式 */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-
-        body {
-            background-color: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
-        }
-
-        .container {
-            display: flex;
-            height: 100vh;
-            max-width: 1200px;
-            margin: 0 auto;
-            background: #fff;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        /* 侧边栏样式 */
-        .sidebar {
-            width: 30%;
-            min-width: 300px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-right: 1px solid #eee;
-            overflow-y: auto;
-        }
-
-        .sidebar h2 {
-            margin-bottom: 20px;
-            color: #343a40;
-        }
-
-        .status {
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            background: #e9ecef;
-            text-align: center;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        .status.connected {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status.disconnected {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .network-info {
-            margin-bottom: 20px;
-            padding: 10px;
-            background: #f1f3f5;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .connection-quality {
-            display: flex;
-            align-items: center;
-            margin-top: 10px;
-        }
-
-        .quality-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin: 0 8px;
-            background: #6c757d;
-        }
-
-        .quality-good {
-            background: #28a745;
-        }
-
-        .quality-medium {
-            background: #ffc107;
-        }
-
-        .quality-poor {
-            background: #dc3545;
-        }
-
-        .steps {
-            margin-bottom: 20px;
-        }
-
-        .step {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .step-number {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            background: #007bff;
-            color: white;
-            margin-right: 10px;
-            font-size: 14px;
-        }
-
-        button {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 4px;
-            background: #007bff;
-            color: white;
-            cursor: pointer;
-            transition: background 0.2s;
-            font-size: 14px;
-        }
-
-        button:hover {
-            background: #0069d9;
-        }
-
-        button:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-        }
-
-        .connection-info {
-            margin-top: 20px;
-        }
-
-        .connection-info h3 {
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-
-        textarea {
-            width: 100%;
-            height: 80px;
-            padding: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            resize: none;
-            font-family: monospace;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-
-        .copy-button {
-            width: 100%;
-            background: #17a2b8;
-        }
-
-        .copy-button:hover {
-            background: #138496;
-        }
-
-        .debug-info {
-            margin-top: 20px;
-            padding: 10px;
-            height: 150px;
-            overflow-y: auto;
-            background: #343a40;
-            color: #fff;
-            border-radius: 4px;
-            font-family: monospace;
-            font-size: 12px;
-        }
-
-        /* 聊天容器样式 */
-        .chat-container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .chat-box {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background: #fff;
-        }
-
-        .input-area {
-            padding: 15px;
-            border-top: 1px solid #eee;
-            background: #f8f9fa;
-        }
-
-        .input-controls {
-            display: flex;
-            gap: 10px;
-        }
-
-        #messageInput {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 14px;
-            resize: none; /* 防止用户手动调整大小 */
-            min-height: 24px; /* 保持初始高度 */
-            max-height: 120px; /* 限制最大高度 */
-            overflow-y: auto; /* 启用垂直滚动 */
-            font-family: inherit; /* 继承父元素字体 */
-            line-height: 1.4; /* 设置行高 */
-        }
-
-        .message {
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            border-radius: 18px;
-            max-width: 70%;
-            position: relative;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .sent {
-            background: #dcf8c6;
-            margin-left: auto;
-            border-bottom-right-radius: 5px;
-        }
-
-        .received {
-            background: #f1f0f0;
-            margin-right: auto;
-            border-bottom-left-radius: 5px;
-        }
-
-        .timestamp {
-            font-size: 11px;
-            color: #999;
-            margin-top: 5px;
-            text-align: right;
-        }
-
-        /* 链接预览样式 */
-        .link-preview {
-            margin-top: 10px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            overflow: hidden;
-            cursor: pointer;
-            background: #fff;
-            transition: box-shadow 0.2s;
-        }
-
-        .link-preview:hover {
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .link-preview-loading {
-            padding: 15px;
-            text-align: center;
-            color: #6c757d;
-        }
-
-        .link-preview-content {
-            padding: 12px;
-        }
-
-        .link-preview-image {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            margin-bottom: 10px;
-            border-radius: 4px;
-        }
-
-        .link-preview-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #343a40;
-            font-size: 14px;
-        }
-
-        .link-preview-description {
-            color: #6c757d;
-            font-size: 13px;
-            margin-bottom: 5px;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .link-preview-domain {
-            display: flex;
-            align-items: center;
-            color: #adb5bd;
-            font-size: 12px;
-            gap: 5px;
-        }
-
-        .preview-error {
-            color: #dc3545;
-            font-size: 12px;
-        }
-
-        /* 图片预览样式 */
-        .image-preview {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 8px;
-            margin-top: 10px;
-            cursor: pointer;
-        }
-
-        #imagePreviewContainer {
-            margin-top: 10px;
-            position: relative;
-        }
-
-        #imagePreviewContainer button {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            font-size: 12px;
-            padding: 5px 10px;
-        }
-
-        /* 语音消息样式 */
-        .voice-message {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 5px;
-        }
-
-        .voice-message button {
-            background: #6c5ce7;
-            color: white;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            padding: 0;
-        }
-
-        .voice-wave {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            height: 20px;
-        }
-
-        .wave-bar {
-            width: 3px;
-            height: 100%;
-            background: #6c5ce7;
-            border-radius: 3px;
-            animation: waveAnimation 1.5s infinite;
-        }
-
-        .wave-bar:nth-child(2) {
-            animation-delay: 0.2s;
-            height: 15px;
-        }
-
-        .wave-bar:nth-child(3) {
-            animation-delay: 0.4s;
-            height: 20px;
-        }
-
-        .wave-bar:nth-child(4) {
-            animation-delay: 0.6s;
-            height: 10px;
-        }
-
-        .wave-bar:nth-child(5) {
-            animation-delay: 0.8s;
-            height: 15px;
-        }
-
-        @keyframes waveAnimation {
-            0%, 100% {
-                transform: scaleY(1);
-            }
-            50% {
-                transform: scaleY(0.6);
-            }
-        }
-
-        .duration {
-            font-size: 12px;
-            color: #666;
-        }
-
-        #audioPreviewContainer {
-            margin-top: 10px;
-        }
-
-        #audioPreviewContainer button:last-child {
-            font-size: 12px;
-            padding: 4px 8px;
-            background: #dc3545;
-        }
-
-        .voice-record-button {
-            position: relative;
-            background: #6c5ce7 !important;
-        }
-
-        .voice-record-button.recording {
-            background: #dc3545 !important;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-            }
-        }
-
-        .audio-timer {
-            position: absolute;
-            bottom: -18px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 12px;
-            color: #dc3545;
-            white-space: nowrap;
-        }
-
-
-        /* 加载动画 */
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(0, 123, 255, 0.2);
-            border-top-color: #007bff;
-            border-radius: 50%;
-            animation: spin 1s infinite linear;
-            margin-right: 5px;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* 在head的style标签中添加以下CSS样式 */
-
-        /* 通知样式 */
-        .notification-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            max-width: 350px;
-            z-index: 9999;
-        }
-
-        .notification {
-            background: white;
-            border-radius: 4px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            padding: 15px;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            animation: notification-in 0.3s ease-out;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-
-        .notification-hide {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-
-        @keyframes notification-in {
-            from { transform: translateX(400px); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        .notification-icon {
-            margin-right: 10px;
-            font-size: 18px;
-        }
-
-        .notification-message {
-            flex: 1;
-            font-size: 14px;
-            line-height: 1.4;
-        }
-
-        .notification-close {
-            background: none;
-            border: none;
-            color: #999;
-            font-size: 20px;
-            line-height: 1;
-            cursor: pointer;
-            padding: 0 5px;
-        }
-
-        .notification-close:hover {
-            color: #333;
-        }
-
-        .notification-info {
-            border-left: 4px solid #2196F3;
-        }
-
-        .notification-warning {
-            border-left: 4px solid #FF9800;
-        }
-
-        .notification-error {
-            border-left: 4px solid #F44336;
-        }
-
-        .notification-success {
-            border-left: 4px solid #4CAF50;
-        }
-
-        .input-area {
-            padding: 15px;
-            border-top: 1px solid #eee;
-            background: #f8f9fa;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .input-controls {
-            display: flex;
-            gap: 10px;
-            align-items: flex-start; /* 调整为顶部对齐，更适合多行文本 */
-        }
-
-        /* 确保按钮和多行文本框的对齐 */
-        .input-controls button {
-            margin-top: 2px; /* 微调按钮位置 */
-        }
-
-        /* 如果需要响应式设计调整 */
-        @media screen and (max-width: 576px) {
-            #messageInput {
-                max-height: 80px; /* 在小屏设备上减小最大高度 */
-            }
-        }
-
-        .message {
-            margin-bottom: 15px;
-            padding: 10px 15px;
-            border-radius: 18px;
-            max-width: 70%;
-            position: relative;
-            animation: fadeIn 0.3s;
-            white-space: pre-wrap; /* 保留空格和换行 */
-            word-wrap: break-word; /* 允许长单词换行 */
-            overflow-wrap: break-word; /* 同上，更好的兼容性 */
-        }
-
-        .message > div {
-            white-space: pre-wrap; /* 保留空格和换行 */
-            word-wrap: break-word; /* 允许长单词换行 */
-        }
-
-        /* 进入聊天窗口按钮样式 */
-        .back-to-chat-btn {
-            margin-bottom: 15px;
-            padding: 8px 16px;
-            background: #28a745;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-        }
-
-        .back-to-chat-btn:hover {
-            background: #218838;
-        }
-
-
-
-        /* 移动端优化：默认隐藏聊天界面，只显示连接设置 */
-        @media screen and (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-
-            .sidebar {
-                width: 100%;
-                min-width: 0;
-                height: auto;
-                max-height: none;
-            }
-
-            .chat-container {
-                display: none; /* 默认隐藏聊天界面 */
-                height: 100vh;
-            }
-
-            /* 连接成功后的样式 */
-            .connected-mode .sidebar {
-                display: none; /* 连接成功后隐藏侧边栏 */
-            }
-
-            .connected-mode .chat-container {
-                display: flex; /* 连接成功后显示聊天界面 */
-                flex-direction: column;
-                height: 100vh;
-            }
-
-            /* 添加返回按钮样式 */
-            .back-to-settings {
-                position: absolute;
-                top: 10px;
-                left: 10px;
-                padding: 5px 10px;
-                background: rgba(0, 0, 0, 0.1);
-                border-radius: 4px;
-                font-size: 12px;
-                z-index: 100;
-                display: none; /* 默认隐藏 */
-            }
-
-            .connected-mode .back-to-settings {
-                display: block; /* 连接模式下显示 */
-            }
-
-            /* 显示返回按钮样式 */
-            .sidebar.show-back-btn .back-to-chat-btn {
-                display: block; /* 连接成功后显示返回按钮 */
-            }
-        }
-
-        /* 当窗口宽度大于768px时隐藏 */
-        @media screen and (min-width: 768px) {
-            .back-to-chat-btn {
-                display: none;
-            }
-            .back-to-settings{
-                display: none;
-            }
-        }
-
-        /* 视频通话相关样式 */
-        .video-call-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .video-call-controls {
-            position: absolute;
-            bottom: 30px;
-            display: flex;
-            gap: 20px;
-        }
-
-        .video-call-button {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .end-call {
-            background: #FF3B30;
-        }
-
-        .mute-audio {
-            background: #fff;
-        }
-
-        .toggle-camera {
-            background: #fff;
-        }
-
-        .video-streams {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-        }
-
-        #remoteVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        #localVideo {
-            position: absolute;
-            width: 120px;
-            height: 180px;
-            right: 20px;
-            top: 20px;
-            object-fit: cover;
-            border: 2px solid #fff;
-            border-radius: 8px;
-            z-index: 2;
-        }
-
-        /* 视频通话请求弹窗 */
-        .video-call-request {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 300px;
-            background: white;
-            border-radius: 12px;
-            padding: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1001;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            animation: slide-down 0.3s ease-out;
-        }
-
-        @keyframes slide-down {
-            from { transform: translateX(-50%) translateY(-100px); opacity: 0; }
-            to { transform: translateX(-50%) translateY(0); opacity: 1; }
-        }
-
-        .video-call-avatar {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: #f0f0f0;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: #666;
-        }
-
-        .video-call-request-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            width: 100%;
-        }
-
-        .video-call-request-buttons button {
-            flex: 1;
-            padding: 10px;
-            border-radius: 20px;
-            border: none;
-            font-weight: bold;
-        }
-
-        .accept-call {
-            background: #4CD964;
-            color: white;
-        }
-
-        .reject-call {
-            background: #FF3B30;
-            color: white;
-        }
-
-        /* 视频通话按钮 */
-        .video-call-btn {
-            background: #007AFF;
-        }
-        /* 添加到现有的 style 标签中 */
-        .media-controls {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 0 0 0 10px
-        }
-
-        .left-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .right-buttons {
-            display: flex;
-            gap: 10px;
-        }
-
-        .clear-chat-btn {
-            background-color: #f44336;
-        }
-
-        .clear-chat-btn:hover {
-            background-color: #d32f2f;
-        }
-
-        /* 调整输入控件的样式 */
-        .input-controls {
-            display: flex;
-            gap: 10px;
-            align-items: flex-start;
-            width: 100%;
-        }
-
-        .input-controls textarea {
-            flex: 1;
-        }
-    </style>
+    <title>P2P</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="container">
     <div class="sidebar">
         <h2>连接设置</h2>
         <button id="backToChatBtn" class="back-to-chat-btn">进入聊天窗口</button>
+
+        <!-- 连接状态 -->
         <div class="status" id="connectionStatus">未连接</div>
         <div class="network-info" id="networkInfo">
             网络状态: 检测中...
@@ -869,33 +23,81 @@
             </div>
         </div>
 
-        <div class="steps">
-            <div class="step">
-                <div class="step-number">1</div>
-                <button onclick="ConnectionManager.createOffer()" id="createOfferBtn">创建连接请求</button>
-            </div>
-            <div class="step">
-                <div class="step-number">2</div>
-                <button onclick="ConnectionManager.createAnswer()" id="createAnswerBtn">创建连接响应</button>
-            </div>
-            <div class="step">
-                <div class="step-number">3</div>
-                <button onclick="ConnectionManager.handleAnswer()" id="handleAnswerBtn">处理对方响应</button>
-            </div>
+        <!-- 连接选项卡 -->
+        <div class="connection-tabs">
+            <div class="connection-tab active" data-tab="connect">连接</div>
+            <div class="connection-tab" data-tab="chats">聊天列表</div>
         </div>
 
-        <div class="connection-info">
-            <h3>连接信息</h3>
-            <textarea id="sdpText" placeholder="粘贴对方的连接信息..."></textarea>
-            <button onclick="UIManager.copyText()" class="copy-button">复制连接信息</button>
+        <!-- 连接面板 -->
+        <div class="connection-panel active" id="connectPanel">
+            <!-- 用户ID显示 -->
+            <div class="user-id" id="userId">
+                您的ID: <span id="userIdValue">生成中...</span>
+                <button id="copyIdBtn" style="padding: 2px 5px; font-size: 12px; margin-left: 5px;">复制</button>
+            </div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <button onclick="ConnectionManager.createOffer()" id="createOfferBtn">创建连接请求（建议先添加新聊天）</button>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <button onclick="ConnectionManager.createAnswer()" id="createAnswerBtn">创建连接响应</button>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <button onclick="ConnectionManager.handleAnswer()" id="handleAnswerBtn">处理对方响应</button>
+                </div>
+                <!-- 添加重置按钮 -->
+                <div class="reset-container">
+                    <button id="resetAllBtn" class="reset-all-btn">重置</button>
+                </div>
+            </div>
+
+            <div class="connection-info">
+                <h3>连接信息</h3>
+                <textarea id="sdpText" placeholder="粘贴对方的连接信息..."></textarea>
+                <button onclick="UIManager.copyText()" class="copy-button">复制连接信息</button>
+            </div>
+
+            <div class="debug-info" id="debugInfo"></div>
         </div>
 
-        <div class="debug-info" id="debugInfo"></div>
+        <!-- 聊天列表面板 -->
+        <div class="connection-panel" id="chatsPanel">
+
+            <div class="chat-actions">
+                <button id="newChatBtn" class="new-chat-btn">添加新聊天</button>
+                <button id="clearContactsBtn" class="clear-contacts-btn">清空聊天列表</button>
+            </div>
+
+            <!-- 新建聊天表单 -->
+            <div class="new-chat-form" id="newChatForm">
+                <input type="text" id="peerIdInput" placeholder="输入对方ID">
+                <input type="text" id="peerNameInput" placeholder="输入对方昵称">
+                <div class="form-buttons">
+                    <button class="cancel-btn" id="cancelNewChatBtn">取消</button>
+                    <button id="confirmNewChatBtn">确认</button>
+                </div>
+            </div>
+
+            <!-- 聊天列表 -->
+            <div class="chat-list" id="chatList">
+                <!-- 聊天项会动态添加 -->
+            </div>
+        </div>
     </div>
 
     <div class="chat-container">
         <!-- 添加返回设置按钮 -->
         <button class="back-to-settings" id="backToSettings">返回连接设置</button>
+
+        <!-- 聊天头部 -->
+        <div class="chat-header">
+            <div class="chat-title" id="currentChatTitle">未选择聊天</div>
+        </div>
 
         <div class="chat-box" id="chatBox"></div>
 
@@ -970,25 +172,6 @@
     const Config = {
         // ICE服务器配置，优先使用中国服务器
         iceServers: [
-            // {
-            //     // 国内STUN服务器
-            //     urls: [
-            //         'stun:stun.miwifi.com:3478',      // 小米
-            //         'stun:stun.qq.com:3478',          // 腾讯
-            //         'stun:stun.easemob.com:3478',     // 环信
-            //         'stun:stun.cloopen.com:3478',     // 容联云
-            //         'stun:stun.aliyun.com:3478'       // 阿里云（如可用）
-            //     ]
-            // },
-            // {
-            //     // 国内TURN服务器（注：实际项目应使用自己的TURN服务器）
-            //     urls: [
-            //         'turn:turn.bluehost.cn:3478',
-            //         'turn:turn.bluehost.cn:3478?transport=tcp'
-            //     ],
-            //     username: 'webrtc',
-            //     credential: 'webrtc'
-            // },
             {
                 "urls": [
                     "turn:stun.evan-brass.net",
@@ -1212,6 +395,27 @@
                     }));
                 }, index * 100); // 添加小延迟避免发送过快
             });
+        },
+
+        // 生成随机ID
+        generateId: function() {
+            return Math.random().toString(36).substring(2, 10);
+        },
+
+        // 格式化日期
+        formatDate: function(date) {
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            if (date.getTime() > today.getTime()) {
+                return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            } else if (date.getTime() > yesterday.getTime()) {
+                return '昨天';
+            } else {
+                return `${date.getMonth() + 1}月${date.getDate()}日`;
+            }
         }
     };
 
@@ -1252,22 +456,428 @@
         }
     };
 
+    // 用户管理器
+    const UserManager = {
+        userId: null,
+        userName: '我',
+        contacts: {},
+
+        init: function() {
+            // 生成或恢复用户ID
+            this.userId = localStorage.getItem('userId') || Utils.generateId();
+            localStorage.setItem('userId', this.userId);
+
+            // 显示用户ID
+            document.getElementById('userIdValue').textContent = this.userId;
+
+            // 设置复制ID按钮
+            document.getElementById('copyIdBtn').addEventListener('click', () => {
+                navigator.clipboard.writeText(this.userId)
+                    .then(() => UIManager.showNotification('ID已复制到剪贴板', 'success'))
+                    .catch(() => UIManager.showNotification('复制失败，请手动复制', 'error'));
+            });
+
+            // 加载联系人
+            this.loadContacts();
+        },
+
+        loadContacts: function() {
+            const saved = localStorage.getItem('contacts');
+            if (saved) {
+                try {
+                    this.contacts = JSON.parse(saved);
+                    ChatManager.renderChatList();
+                } catch (e) {
+                    Utils.log('加载联系人失败', Utils.logLevels.ERROR);
+                    this.contacts = {};
+                }
+            }
+        },
+
+        saveContacts: function() {
+            localStorage.setItem('contacts', JSON.stringify(this.contacts));
+        },
+
+        addContact: function(id, name) {
+            if (id === this.userId) {
+                UIManager.showNotification('不能添加自己为联系人', 'error');
+                return false;
+            }
+
+            if (this.contacts[id]) {
+                UIManager.showNotification('该联系人已存在', 'warning');
+                return false;
+            }
+
+            this.contacts[id] = {
+                id: id,
+                name: name || `用户${id.substring(0, 4)}`,
+                lastMessage: '',
+                lastTime: new Date().toISOString(),
+                unread: 0
+            };
+
+            this.saveContacts();
+            ChatManager.renderChatList();
+            return true;
+        },
+
+        removeContact: function(id) {
+            if (this.contacts[id]) {
+                delete this.contacts[id];
+                this.saveContacts();
+                ChatManager.renderChatList();
+                return true;
+            }
+            return false;
+        },
+
+        updateContactLastMessage: function(id, message, isUnread = false) {
+            if (this.contacts[id]) {
+                this.contacts[id].lastMessage = message;
+                this.contacts[id].lastTime = new Date().toISOString();
+                if (isUnread) {
+                    this.contacts[id].unread = (this.contacts[id].unread || 0) + 1;
+                }
+                this.saveContacts();
+                ChatManager.renderChatList();
+            }
+        },
+
+        clearUnread: function(id) {
+            if (this.contacts[id]) {
+                this.contacts[id].unread = 0;
+                this.saveContacts();
+                ChatManager.renderChatList();
+            }
+        },
+        // 清空所有聊天列表
+        clearAllContacts: function() {
+            // 确认对话框
+            if (!confirm('确定要清空所有聊天吗？此操作不可撤销。')) {
+                return false;
+            }
+
+            // 备份当前联系人ID，用于后续关闭连接
+            const contactIds = Object.keys(this.contacts);
+
+            // 清空联系人对象
+            this.contacts = {};
+
+            // 保存变更
+            this.saveContacts();
+
+            // 关闭所有连接
+            contactIds.forEach(peerId => {
+                if (ConnectionManager.connections[peerId]) {
+                    ConnectionManager.close(peerId);
+                }
+            });
+
+            // 更新UI
+            ChatManager.renderChatList();
+
+            // 清空当前聊天
+            if (ChatManager.currentChatId) {
+                ChatManager.currentChatId = null;
+                document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                document.getElementById('chatBox').innerHTML = '';
+
+                // 禁用聊天界面
+                UIManager.enableChatInterface(false);
+            }
+
+            // 通知用户
+            UIManager.showNotification('所有联系人已清空', 'info');
+
+            Utils.log('所有联系人已清空', Utils.logLevels.INFO);
+
+            return true;
+        }
+    };
+
+    // 聊天管理器
+    const ChatManager = {
+        currentChatId: null,
+        chats: {},
+
+        init: function() {
+            // 初始化聊天列表
+            this.loadChats();
+
+            // 设置新建聊天按钮事件
+            document.getElementById('newChatBtn').addEventListener('click', () => {
+                document.getElementById('newChatForm').style.display = 'block';
+            });
+
+            // 设置清空聊天列表按钮事件
+            document.getElementById('clearContactsBtn').addEventListener('click', () => {
+                UserManager.clearAllContacts();
+            });
+
+            document.getElementById('cancelNewChatBtn').addEventListener('click', () => {
+                document.getElementById('newChatForm').style.display = 'none';
+                document.getElementById('peerIdInput').value = '';
+                document.getElementById('peerNameInput').value = '';
+            });
+
+            document.getElementById('confirmNewChatBtn').addEventListener('click', () => {
+                const peerId = document.getElementById('peerIdInput').value.trim();
+                const peerName = document.getElementById('peerNameInput').value.trim() || `用户${peerId.substring(0, 4)}`;
+
+                if (!peerId) {
+                    UIManager.showNotification('请输入对方ID', 'warning');
+                    return;
+                }
+
+                if (UserManager.addContact(peerId, peerName)) {
+                    document.getElementById('newChatForm').style.display = 'none';
+                    document.getElementById('peerIdInput').value = '';
+                    document.getElementById('peerNameInput').value = '';
+
+                    // 切换到聊天列表
+                    document.querySelector('.connection-tab[data-tab="chats"]').click();
+                }
+            });
+
+            // 设置选项卡切换
+            document.querySelectorAll('.connection-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.connection-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    const tabName = tab.getAttribute('data-tab');
+                    document.querySelectorAll('.connection-panel').forEach(panel => {
+                        panel.classList.remove('active');
+                    });
+                    document.getElementById(`${tabName}Panel`).classList.add('active');
+                });
+            });
+        },
+
+        loadChats: function() {
+            const saved = localStorage.getItem('chats');
+            if (saved) {
+                try {
+                    this.chats = JSON.parse(saved);
+                } catch (e) {
+                    Utils.log('加载聊天记录失败', Utils.logLevels.ERROR);
+                    this.chats = {};
+                }
+            }
+        },
+
+        saveChats: function() {
+            localStorage.setItem('chats', JSON.stringify(this.chats));
+        },
+
+        renderChatList: function() {
+            const chatList = document.getElementById('chatList');
+            chatList.innerHTML = '';
+
+            const sortedContacts = Object.values(UserManager.contacts).sort((a, b) => {
+                return new Date(b.lastTime) - new Date(a.lastTime);
+            });
+
+            if (sortedContacts.length === 0) {
+                chatList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无聊天，点击"添加新聊天"开始</div>';
+                return;
+            }
+
+            sortedContacts.forEach(contact => {
+                const chatItem = document.createElement('div');
+                chatItem.className = `chat-item ${contact.id === this.currentChatId ? 'active' : ''}`;
+                chatItem.setAttribute('data-id', contact.id);
+
+                const lastTime = new Date(contact.lastTime);
+                const formattedTime = Utils.formatDate(lastTime);
+
+                chatItem.innerHTML = `
+                    <div class="chat-avatar">${contact.name.charAt(0)}</div>
+                    <div class="chat-info">
+                        <div class="chat-name">${contact.name}</div>
+                        <div class="chat-preview">${contact.lastMessage || '暂无消息'}</div>
+                    </div>
+                    <div class="chat-meta">
+                        <div class="chat-time">${formattedTime}</div>
+                        ${contact.unread ? `<div class="chat-badge">${contact.unread > 99 ? '99+' : contact.unread}</div>` : ''}
+                    </div>
+                `;
+
+                chatItem.addEventListener('click', () => {
+                    this.openChat(contact.id);
+                });
+
+                chatList.appendChild(chatItem);
+            });
+        },
+
+        openChat: function(chatId) {
+            // 保存之前的聊天记录
+            if (this.currentChatId) {
+                this.saveCurrentChat();
+            }
+
+            this.currentChatId = chatId;
+            UserManager.clearUnread(chatId);
+
+            // 更新UI
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.toggle('active', item.getAttribute('data-id') === chatId);
+            });
+
+            // 设置聊天标题
+            const contact = UserManager.contacts[chatId];
+            if (contact) {
+                document.getElementById('currentChatTitle').textContent = contact.name;
+            }
+
+            // 加载聊天记录
+            this.loadChatHistory(chatId);
+
+            // 在移动设备上切换到聊天界面
+            if (window.innerWidth <= 768) {
+                document.querySelector('.container').classList.add('connected-mode');
+            }
+
+            // 启用聊天输入
+            UIManager.enableChatInterface(true);
+
+            // 检查连接状态
+            const isConnected = ConnectionManager.isConnectedTo(chatId);
+
+            // 更新视频通话按钮状态
+            document.getElementById('videoCallButton').disabled = !isConnected;
+
+            // 如果连接未建立，添加系统消息提示
+            if (!isConnected) {
+                const chatBox = document.getElementById('chatBox');
+                const systemMessage = document.createElement('div');
+                systemMessage.className = 'system-message';
+                systemMessage.textContent = '连接未建立，发送消息时将提示重新连接';
+                chatBox.appendChild(systemMessage);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            // 聚焦输入框
+            setTimeout(() => document.getElementById('messageInput').focus(), 100);
+        },
+
+        loadChatHistory: function(chatId) {
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = '';
+
+            if (!this.chats[chatId]) {
+                this.chats[chatId] = [];
+                return;
+            }
+
+            this.chats[chatId].forEach(msg => {
+                MessageManager.displayMessage(msg, msg.sender === UserManager.userId);
+            });
+
+            // 滚动到底部
+            chatBox.scrollTop = chatBox.scrollHeight;
+        },
+
+        saveCurrentChat: function() {
+            if (this.currentChatId) {
+                this.saveChats();
+            }
+        },
+
+        addMessage: function(chatId, message) {
+            if (!this.chats[chatId]) {
+                this.chats[chatId] = [];
+            }
+
+            this.chats[chatId].push(message);
+
+            // 如果是当前聊天，显示消息
+            if (chatId === this.currentChatId) {
+                MessageManager.displayMessage(message, message.sender === UserManager.userId);
+                document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+            } else {
+                // 更新未读消息计数
+                UserManager.updateContactLastMessage(
+                    chatId,
+                    message.type === 'text' ? message.content : '[媒体消息]',
+                    true
+                );
+            }
+
+            this.saveChats();
+        },
+
+        clearChat: function(chatId) {
+            if (chatId) {
+                this.chats[chatId] = [];
+                this.saveChats();
+
+                if (chatId === this.currentChatId) {
+                    document.getElementById('chatBox').innerHTML = '';
+                }
+
+                return true;
+            }
+            return false;
+        },
+        // 清空所有聊天记录
+        clearAllChats: function() {
+            // 确认对话框
+            if (!confirm('确定要清空所有聊天记录吗？此操作不可撤销。')) {
+                return;
+            }
+
+            // 清空所有聊天记录
+            this.chats = {};
+            this.saveChats();
+
+            // 如果当前有打开的聊天，清空聊天框
+            if (this.currentChatId) {
+                document.getElementById('chatBox').innerHTML = '';
+
+                // 添加系统消息提示
+                const systemMessage = document.createElement('div');
+                systemMessage.className = 'system-message';
+                systemMessage.textContent = '所有聊天记录已清空';
+                document.getElementById('chatBox').appendChild(systemMessage);
+            }
+
+            // 更新所有联系人的最后消息
+            for (const contactId in UserManager.contacts) {
+                UserManager.contacts[contactId].lastMessage = '';
+                UserManager.contacts[contactId].unread = 0;
+            }
+            UserManager.saveContacts();
+
+            // 更新聊天列表
+            this.renderChatList();
+
+            // 通知用户
+            UIManager.showNotification('所有聊天记录已清空', 'info');
+
+            Utils.log('所有聊天记录已清空', Utils.logLevels.INFO);
+
+            return true;
+        }
+    };
+
     // 连接管理器
     const ConnectionManager = {
-        peerConnection: null,
-        dataChannel: null,
-        iceCandidates: [],
-        connectionTimeout: null,
-        reconnectAttempts: 0,
-        iceTimer: null,
-        iceGatheringStartTime: null,
-        connectionStrength: 0, // 0-100范围内的连接强度
+        connections: {},  // 存储多个连接
+        iceCandidates: {},
+        connectionTimeouts: {},
+        reconnectAttempts: {},
+        iceTimers: {},
+        iceGatheringStartTimes: {},
+        connectionStrengths: {},
         pendingChunks: {},
 
         // 初始化连接
-        init: function () {
-            if (this.peerConnection) {
-                this.close();
+        init: function (peerId) {
+            if (this.connections[peerId]) {
+                this.close(peerId);
             }
 
             try {
@@ -1275,17 +885,22 @@
                 let currentConfig = {...Config.peerConnectionConfig};
                 currentConfig.iceServers = Config.iceServers;
 
-                this.peerConnection = new RTCPeerConnection(currentConfig);
+                this.connections[peerId] = {
+                    peerConnection: new RTCPeerConnection(currentConfig),
+                    dataChannel: null
+                };
 
-                this.peerConnection.onicecandidate = this.handleIceCandidate.bind(this);
-                this.peerConnection.onicegatheringstatechange = this.handleIceGatheringStateChange.bind(this);
-                this.peerConnection.oniceconnectionstatechange = this.handleIceConnectionStateChange.bind(this);
-                this.peerConnection.ondatachannel = this.handleDataChannel.bind(this);
+                const pc = this.connections[peerId].peerConnection;
 
-                this.iceCandidates = [];
-                this.reconnectAttempts = 0;
+                pc.onicecandidate = (e) => this.handleIceCandidate(e, peerId);
+                pc.onicegatheringstatechange = (e) => this.handleIceGatheringStateChange(e, peerId);
+                pc.oniceconnectionstatechange = (e) => this.handleIceConnectionStateChange(e, peerId);
+                pc.ondatachannel = (e) => this.handleDataChannel(e, peerId);
 
-                Utils.log('WebRTC连接已初始化', Utils.logLevels.INFO);
+                this.iceCandidates[peerId] = [];
+                this.reconnectAttempts[peerId] = 0;
+
+                Utils.log(`与${peerId}的WebRTC连接已初始化`, Utils.logLevels.INFO);
                 return true;
             } catch (error) {
                 Utils.log(`初始化连接失败: ${error.message}`, Utils.logLevels.ERROR);
@@ -1294,33 +909,40 @@
         },
 
         // 处理ICE候选者
-        handleIceCandidate: function (event) {
+        handleIceCandidate: function (event, peerId) {
             if (event.candidate) {
-                this.iceCandidates.push(event.candidate);
+                if (!this.iceCandidates[peerId]) {
+                    this.iceCandidates[peerId] = [];
+                }
+                this.iceCandidates[peerId].push(event.candidate);
                 this.updateSdpText();
                 Utils.log(`收集到ICE候选: ${event.candidate.type} ${event.candidate.protocol}`, Utils.logLevels.DEBUG);
 
                 // 如果连接已建立，尝试发送候选者给对方（启用Trickle ICE）
-                if (this.dataChannel && this.dataChannel.readyState === 'open') {
-                    this.sendIceCandidate(event.candidate);
+                const conn = this.connections[peerId];
+                if (conn && conn.dataChannel && conn.dataChannel.readyState === 'open') {
+                    this.sendIceCandidate(event.candidate, peerId);
                 }
             }
         },
 
         // 处理ICE收集状态变化
-        handleIceGatheringStateChange: function (event) {
-            const state = this.peerConnection.iceGatheringState;
+        handleIceGatheringStateChange: function (event, peerId) {
+            const pc = this.connections[peerId]?.peerConnection;
+            if (!pc) return;
+
+            const state = pc.iceGatheringState;
 
             switch (state) {
                 case 'gathering':
                     UIManager.updateStatus('正在收集网络信息...');
-                    this.startIceTimer();
-                    this.iceGatheringStartTime = Date.now();
+                    this.startIceTimer(peerId);
+                    this.iceGatheringStartTimes[peerId] = Date.now();
                     break;
 
                 case 'complete':
-                    this.stopIceTimer();
-                    const duration = (Date.now() - this.iceGatheringStartTime) / 1000;
+                    this.stopIceTimer(peerId);
+                    const duration = (Date.now() - this.iceGatheringStartTimes[peerId]) / 1000;
                     UIManager.updateStatus(`网络信息收集完成 (${duration.toFixed(1)}秒)`);
                     this.updateSdpText();
                     break;
@@ -1328,51 +950,61 @@
         },
 
         // 处理ICE连接状态变化
-        handleIceConnectionStateChange: function () {
-            const state = this.peerConnection.iceConnectionState;
+        handleIceConnectionStateChange: function (event, peerId) {
+            const pc = this.connections[peerId]?.peerConnection;
+            if (!pc) return;
+
+            const state = pc.iceConnectionState;
             UIManager.updateStatus(`ICE状态: ${state}`);
 
             switch (state) {
                 case 'checking':
-                    this.startConnectionTimeout();
-                    EventEmitter.emit('connectionChecking');
+                    this.startConnectionTimeout(peerId);
+                    EventEmitter.emit('connectionChecking', peerId);
                     break;
 
                 case 'connected':
-                    this.clearConnectionTimeout();
-                    this.enableTrickleIce();
-                    this.reconnectAttempts = this.calculateConnectionStrength();
+                    this.clearConnectionTimeout(peerId);
+                    this.enableTrickleIce(peerId);
+                    this.connectionStrengths[peerId] = this.calculateConnectionStrength(peerId);
                     UIManager.updateConnectionState(true);
-                    EventEmitter.emit('connectionEstablished');
+                    EventEmitter.emit('connectionEstablished', peerId);
+
+                    // 更新视频通话按钮状态
+                    if (ChatManager.currentChatId === peerId) {
+                        document.getElementById('videoChatBtn').disabled = false;
+                        document.getElementById('videoChatBtn').onclick = () => VideoCallManager.initiateCall(peerId);
+                    }
                     break;
 
                 case 'disconnected':
-                    this.handleDisconnection();
-                    EventEmitter.emit('connectionDisconnected');
+                    this.handleDisconnection(peerId);
+                    EventEmitter.emit('connectionDisconnected', peerId);
                     break;
 
                 case 'failed':
-                    this.handleConnectionFailure();
-                    EventEmitter.emit('connectionFailed');
+                    this.handleConnectionFailure(peerId);
+                    EventEmitter.emit('connectionFailed', peerId);
                     break;
 
                 case 'closed':
                     UIManager.updateConnectionState(false);
-                    EventEmitter.emit('connectionClosed');
+                    EventEmitter.emit('connectionClosed', peerId);
                     break;
             }
         },
 
         // 处理数据通道
-        handleDataChannel: function (event) {
-            this.setupDataChannel(event.channel);
+        handleDataChannel: function (event, peerId) {
+            this.setupDataChannel(event.channel, peerId);
         },
 
         // 启动ICE收集计时器
-        startIceTimer: function () {
-            this.stopIceTimer();
-            this.iceTimer = setTimeout(() => {
-                if (this.peerConnection && this.peerConnection.iceGatheringState !== 'complete') {
+        startIceTimer: function (peerId) {
+            this.stopIceTimer(peerId);
+            this.iceTimers[peerId] = setTimeout(() => {
+                const pc = this.connections[peerId]?.peerConnection;
+                if (pc && pc.iceGatheringState !== 'complete') {
                     Utils.log('ICE收集超时，使用当前可用连接', Utils.logLevels.WARN);
                     UIManager.updateStatus('网络信息收集超时，使用当前可用连接');
                     this.updateSdpText();
@@ -1381,70 +1013,77 @@
         },
 
         // 停止ICE收集计时器
-        stopIceTimer: function () {
-            if (this.iceTimer) {
-                clearTimeout(this.iceTimer);
-                this.iceTimer = null;
+        stopIceTimer: function (peerId) {
+            if (this.iceTimers[peerId]) {
+                clearTimeout(this.iceTimers[peerId]);
+                this.iceTimers[peerId] = null;
             }
         },
 
         // 启动连接超时
-        startConnectionTimeout: function () {
-            this.clearConnectionTimeout();
-            this.connectionTimeout = setTimeout(() => {
-                if (this.peerConnection && this.peerConnection.iceConnectionState === 'checking') {
+        startConnectionTimeout: function (peerId) {
+            this.clearConnectionTimeout(peerId);
+            this.connectionTimeouts[peerId] = setTimeout(() => {
+                const pc = this.connections[peerId]?.peerConnection;
+                if (pc && pc.iceConnectionState === 'checking') {
                     Utils.log('连接建立超时', Utils.logLevels.WARN);
-                    this.handleConnectionFailure();
+                    this.handleConnectionFailure(peerId);
                 }
             }, Config.timeouts.connection);
         },
 
         // 清除连接超时
-        clearConnectionTimeout: function () {
-            if (this.connectionTimeout) {
-                clearTimeout(this.connectionTimeout);
-                this.connectionTimeout = null;
+        clearConnectionTimeout: function (peerId) {
+            if (this.connectionTimeouts[peerId]) {
+                clearTimeout(this.connectionTimeouts[peerId]);
+                this.connectionTimeouts[peerId] = null;
             }
         },
 
         // 处理连接失败
-        handleConnectionFailure: function () {
+        handleConnectionFailure: function (peerId) {
             UIManager.updateStatus('连接失败');
             UIManager.updateConnectionState(false);
 
-            if (this.reconnectAttempts < Config.reconnect.maxAttempts) {
-                const delay = Config.reconnect.delay * Math.pow(Config.reconnect.backoffFactor, this.reconnectAttempts);
-                this.reconnectAttempts++;
+            if (!this.reconnectAttempts[peerId]) {
+                this.reconnectAttempts[peerId] = 0;
+            }
 
-                UIManager.updateStatus(`正在尝试重新连接 (${this.reconnectAttempts}/${Config.reconnect.maxAttempts})...`, delay);
+            if (this.reconnectAttempts[peerId] < Config.reconnect.maxAttempts) {
+                const delay = Config.reconnect.delay * Math.pow(Config.reconnect.backoffFactor, this.reconnectAttempts[peerId]);
+                this.reconnectAttempts[peerId]++;
+
+                UIManager.updateStatus(`正在尝试重新连接 (${this.reconnectAttempts[peerId]}/${Config.reconnect.maxAttempts})...`, delay);
 
                 setTimeout(() => {
-                    this.restartIceWithRelay();
+                    this.restartIceWithRelay(peerId);
                 }, delay);
             } else {
                 UIManager.updateStatus('连接失败，请重新开始连接流程');
-                this.resetConnection();
+                this.resetConnection(peerId);
             }
         },
 
         // 处理连接断开
-        handleDisconnection: function () {
+        handleDisconnection: function (peerId) {
             UIManager.updateStatus('连接断开，尝试重连...');
             UIManager.updateConnectionState(false, 'disconnected');
 
             // 使用指数退避重连
             const delay = 1000;
             setTimeout(() => {
-                if (this.peerConnection && this.peerConnection.iceConnectionState === 'disconnected') {
-                    this.restartIce();
+                const pc = this.connections[peerId]?.peerConnection;
+                if (pc && pc.iceConnectionState === 'disconnected') {
+                    this.restartIce(peerId);
                 }
             }, delay);
         },
 
         // 使用中继服务器重启ICE
-        restartIceWithRelay: async function () {
+        restartIceWithRelay: async function (peerId) {
             try {
-                if (!this.peerConnection) {
+                const conn = this.connections[peerId];
+                if (!conn || !conn.peerConnection) {
                     throw new Error('没有活动的连接');
                 }
 
@@ -1455,34 +1094,35 @@
                 };
                 relayConfig.iceServers = Config.iceServers;
 
-                this.peerConnection.setConfiguration(relayConfig);
+                conn.peerConnection.setConfiguration(relayConfig);
 
                 Utils.log('正在使用中继服务器重新协商连接', Utils.logLevels.INFO);
 
-                if (this.peerConnection.signalingState === 'stable') {
-                    const offer = await this.peerConnection.createOffer({iceRestart: true});
-                    await this.peerConnection.setLocalDescription(offer);
+                if (conn.peerConnection.signalingState === 'stable') {
+                    const offer = await conn.peerConnection.createOffer({iceRestart: true});
+                    await conn.peerConnection.setLocalDescription(offer);
                     UIManager.updateStatus('正在尝试使用中继服务器重连...');
                     this.updateSdpText();
                 }
             } catch (error) {
                 Utils.log(`重连尝试失败: ${error.message}`, Utils.logLevels.ERROR);
                 // 继续尝试下一次重连或最终放弃
-                this.handleConnectionFailure();
+                this.handleConnectionFailure(peerId);
             }
         },
 
         // 标准ICE重启
-        restartIce: async function () {
+        restartIce: async function (peerId) {
             try {
-                if (!this.peerConnection || this.peerConnection.signalingState !== 'stable') {
+                const conn = this.connections[peerId];
+                if (!conn || !conn.peerConnection || conn.peerConnection.signalingState !== 'stable') {
                     return;
                 }
 
                 Utils.log('正在尝试ICE重启', Utils.logLevels.INFO);
 
-                const offer = await this.peerConnection.createOffer({iceRestart: true});
-                await this.peerConnection.setLocalDescription(offer);
+                const offer = await conn.peerConnection.createOffer({iceRestart: true});
+                await conn.peerConnection.setLocalDescription(offer);
 
                 this.updateSdpText();
                 UIManager.updateStatus('正在协商重新连接...');
@@ -1492,20 +1132,22 @@
         },
 
         // 启用Trickle ICE（实时发送ICE候选者）
-        enableTrickleIce: function () {
+        enableTrickleIce: function (peerId) {
             Utils.log('启用Trickle ICE', Utils.logLevels.DEBUG);
             // 已在handleIceCandidate处理
         },
 
         // 发送ICE候选者
-        sendIceCandidate: function (candidate) {
-            if (this.dataChannel && this.dataChannel.readyState === 'open') {
+        sendIceCandidate: function (candidate, peerId) {
+            const conn = this.connections[peerId];
+            if (conn && conn.dataChannel && conn.dataChannel.readyState === 'open') {
                 try {
                     const message = {
                         type: 'ice-candidate',
-                        candidate: candidate
+                        candidate: candidate,
+                        sender: UserManager.userId
                     };
-                    this.dataChannel.send(JSON.stringify(message));
+                    conn.dataChannel.send(JSON.stringify(message));
                     Utils.log('已发送ICE候选', Utils.logLevels.DEBUG);
                 } catch (error) {
                     Utils.log(`发送ICE候选失败: ${error.message}`, Utils.logLevels.ERROR);
@@ -1514,48 +1156,77 @@
         },
 
         // 设置数据通道
-        setupDataChannel: function (channel) {
-            this.dataChannel = channel;
+        setupDataChannel: function (channel, peerId) {
+            if (!this.connections[peerId]) {
+                this.connections[peerId] = { peerConnection: null, dataChannel: null };
+            }
 
-            this.dataChannel.onopen = () => {
-                Utils.log('数据通道已打开', Utils.logLevels.INFO);
+            this.connections[peerId].dataChannel = channel;
+            const conn = this.connections[peerId];
+
+            conn.dataChannel.onopen = () => {
+                Utils.log(`与${peerId}的数据通道已打开`, Utils.logLevels.INFO);
                 UIManager.updateStatus("连接已建立，可以开始聊天");
                 UIManager.enableChatInterface(true);
-                EventEmitter.emit('dataChannelOpen');
+                EventEmitter.emit('dataChannelOpen', peerId);
 
                 // 首次连接成功后自动交换更多ICE候选
-                this.enableTrickleIce();
+                this.enableTrickleIce(peerId);
 
                 // 开始连接质量监控
-                this.startConnectionMonitoring();
+                this.startConnectionMonitoring(peerId);
+
+                // 如果当前正在查看该联系人的聊天，启用视频通话按钮
+                if (ChatManager.currentChatId === peerId) {
+                    document.getElementById('videoChatBtn').disabled = false;
+                    document.getElementById('videoChatBtn').onclick = () => VideoCallManager.initiateCall(peerId);
+                }
             };
 
-            this.dataChannel.onclose = () => {
-                Utils.log('数据通道已关闭', Utils.logLevels.INFO);
+            conn.dataChannel.onclose = () => {
+                Utils.log(`与${peerId}的数据通道已关闭`, Utils.logLevels.INFO);
                 UIManager.updateStatus("连接已关闭");
-                UIManager.enableChatInterface(false);
-                EventEmitter.emit('dataChannelClosed');
+
+                // 如果当前正在查看该联系人的聊天，禁用视频通话按钮
+                if (ChatManager.currentChatId === peerId) {
+                    document.getElementById('videoChatBtn').disabled = true;
+                }
+
+                EventEmitter.emit('dataChannelClosed', peerId);
             };
 
-            this.dataChannel.onmessage = (event) => {
+            conn.dataChannel.onmessage = (event) => {
                 try {
                     // 尝试解析JSON消息
                     const message = JSON.parse(event.data);
 
+                    // 添加发送者信息
+                    if (!message.sender) {
+                        message.sender = peerId;
+                    }
+
+                    // 添加时间戳
+                    if (!message.timestamp) {
+                        message.timestamp = new Date().toISOString();
+                    }
+
                     // 检查是否是视频通话相关消息
                     if (message.type && message.type.startsWith('video-call-')) {
-                        VideoCallManager.handleMessage(message);
+                        VideoCallManager.handleMessage(message, peerId);
                         return;
                     }
 
                     switch (message.type) {
                         case 'ice-candidate':
-                            this.handleIncomingIceCandidate(message.candidate);
+                            this.handleIncomingIceCandidate(message.candidate, peerId);
                             break;
 
                         case 'file-meta':
                             // 初始化文件块收集
-                            this.pendingChunks[message.id] = {
+                            if (!this.pendingChunks[peerId]) {
+                                this.pendingChunks[peerId] = {};
+                            }
+                            this.pendingChunks[peerId][message.id] = {
                                 chunks: new Array(message.totalChunks),
                                 received: 0,
                                 total: message.totalChunks
@@ -1564,43 +1235,87 @@
 
                         case 'file-chunk':
                             // 收集文件块
-                            if (this.pendingChunks[message.id]) {
-                                this.pendingChunks[message.id].chunks[message.index] = message.chunk;
-                                this.pendingChunks[message.id].received++;
+                            if (this.pendingChunks[peerId] && this.pendingChunks[peerId][message.id]) {
+                                this.pendingChunks[peerId][message.id].chunks[message.index] = message.chunk;
+                                this.pendingChunks[peerId][message.id].received++;
 
                                 // 检查是否已收到所有块
-                                if (this.pendingChunks[message.id].received === this.pendingChunks[message.id].total) {
-                                    const completeData = this.pendingChunks[message.id].chunks.join('');
-                                    delete this.pendingChunks[message.id];
+                                if (this.pendingChunks[peerId][message.id].received === this.pendingChunks[peerId][message.id].total) {
+                                    const completeData = this.pendingChunks[peerId][message.id].chunks.join('');
+                                    delete this.pendingChunks[peerId][message.id];
 
                                     // 解析并显示完整消息
                                     const fullMessage = JSON.parse(completeData);
-                                    MessageManager.displayMessage(fullMessage, false);
+                                    fullMessage.sender = peerId;
+
+                                    // 添加到聊天记录并显示
+                                    ChatManager.addMessage(peerId, fullMessage);
+
+                                    // 更新联系人最后消息
+                                    let previewText = '媒体消息';
+                                    if (fullMessage.type === 'image') previewText = '[图片]';
+                                    if (fullMessage.type === 'audio') previewText = '[语音]';
+
+                                    UserManager.updateContactLastMessage(
+                                        peerId,
+                                        previewText,
+                                        ChatManager.currentChatId !== peerId
+                                    );
                                 }
                             }
                             break;
 
                         default:
-                            // 普通消息直接显示
-                            MessageManager.displayMessage(message, false);
+                            // 普通消息添加到聊天记录
+                            ChatManager.addMessage(peerId, message);
+
+                            // 更新联系人最后消息
+                            let previewText = '';
+                            if (message.type === 'text') {
+                                previewText = message.content;
+                            } else if (message.type === 'image') {
+                                previewText = '[图片]';
+                            } else if (message.type === 'audio') {
+                                previewText = '[语音]';
+                            } else {
+                                previewText = '[消息]';
+                            }
+
+                            UserManager.updateContactLastMessage(
+                                peerId,
+                                previewText,
+                                ChatManager.currentChatId !== peerId
+                            );
                     }
                 } catch (e) {
                     // 如果不是JSON，作为普通文本显示
-                    MessageManager.displayMessage(event.data, false);
+                    const textMessage = {
+                        type: 'text',
+                        content: event.data,
+                        sender: peerId,
+                        timestamp: new Date().toISOString()
+                    };
+                    ChatManager.addMessage(peerId, textMessage);
+                    UserManager.updateContactLastMessage(
+                        peerId,
+                        event.data,
+                        ChatManager.currentChatId !== peerId
+                    );
                 }
             };
 
-            this.dataChannel.onerror = (error) => {
+            conn.dataChannel.onerror = (error) => {
                 Utils.log(`数据通道错误: ${error.message || '未知错误'}`, Utils.logLevels.ERROR);
-                EventEmitter.emit('dataChannelError', error);
+                EventEmitter.emit('dataChannelError', error, peerId);
             };
         },
 
         // 处理接收到的ICE候选者
-        handleIncomingIceCandidate: async function (candidate) {
+        handleIncomingIceCandidate: async function (candidate, peerId) {
             try {
-                if (this.peerConnection) {
-                    await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                const conn = this.connections[peerId];
+                if (conn && conn.peerConnection) {
+                    await conn.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                     Utils.log('已添加远程ICE候选', Utils.logLevels.DEBUG);
                 }
             } catch (error) {
@@ -1609,11 +1324,12 @@
         },
 
         // 开始连接质量监测
-        startConnectionMonitoring: function () {
+        startConnectionMonitoring: function (peerId) {
             setInterval(async () => {
-                if (this.peerConnection && this.dataChannel && this.dataChannel.readyState === 'open') {
+                const conn = this.connections[peerId];
+                if (conn && conn.peerConnection && conn.dataChannel && conn.dataChannel.readyState === 'open') {
                     try {
-                        const stats = await this.peerConnection.getStats();
+                        const stats = await conn.peerConnection.getStats();
                         let currentRoundTripTime = null;
                         let bytesReceived = 0;
                         let bytesSent = 0;
@@ -1645,14 +1361,14 @@
                         // 只在有效RTT时更新连接质量
                         if (currentRoundTripTime !== null) {
                             UIManager.updateConnectionQuality(currentRoundTripTime);
-                            this.connectionStrength = this.calculateConnectionStrength(currentRoundTripTime);
+                            this.connectionStrengths[peerId] = this.calculateConnectionStrength(peerId, currentRoundTripTime);
 
                             Utils.log(`连接监测: RTT=${currentRoundTripTime.toFixed(3)}s, 本地=${localCandidateType}, 远程=${remoteCandidateType}, 传输=${bytesReceived + bytesSent}字节`,
                                 Utils.logLevels.DEBUG);
 
                             // 如果连接质量很差，尝试重新协商
-                            if (currentRoundTripTime > 1.5 && this.connectionStrength < 30) {
-                                this.considerReconnection();
+                            if (currentRoundTripTime > 1.5 && this.connectionStrengths[peerId] < 30) {
+                                this.considerReconnection(peerId);
                             }
                         }
                     } catch (error) {
@@ -1663,13 +1379,14 @@
         },
 
         // 计算连接强度 (0-100)
-        calculateConnectionStrength: function (rtt = null) {
-            if (!this.peerConnection) return 0;
+        calculateConnectionStrength: function (peerId, rtt = null) {
+            const conn = this.connections[peerId];
+            if (!conn || !conn.peerConnection) return 0;
 
             let strength = 0;
 
             // 基于ICE连接状态
-            switch (this.peerConnection.iceConnectionState) {
+            switch (conn.peerConnection.iceConnectionState) {
                 case 'connected':
                     strength += 60;
                     break;
@@ -1699,111 +1416,164 @@
         },
 
         // 在连接质量差时考虑重连
-        considerReconnection: function () {
-            if (this.reconnectAttempts < Config.reconnect.maxAttempts) {
+        considerReconnection: function (peerId) {
+            if (!this.reconnectAttempts[peerId]) {
+                this.reconnectAttempts[peerId] = 0;
+            }
+
+            if (this.reconnectAttempts[peerId] < Config.reconnect.maxAttempts) {
                 Utils.log('检测到连接质量差，尝试重新协商...', Utils.logLevels.WARN);
-                this.restartIce();
+                this.restartIce(peerId);
             }
         },
 
         // 更新SDP文本
-        updateSdpText: function () {
-            if (!this.peerConnection || !this.peerConnection.localDescription) {
+        updateSdpText: function (peerId) {
+            if (!peerId || !this.connections[peerId]) return;
+
+            const conn = this.connections[peerId];
+            if (!conn.peerConnection || !conn.peerConnection.localDescription) {
                 return;
             }
 
             const connectionInfo = {
-                sdp: this.peerConnection.localDescription,
-                candidates: this.iceCandidates
+                sdp: conn.peerConnection.localDescription,
+                candidates: this.iceCandidates[peerId] || [],
+                userId: UserManager.userId
             };
 
             document.getElementById('sdpText').value = JSON.stringify(connectionInfo);
         },
 
         // 重置连接
-        resetConnection: function () {
-            if (this.peerConnection) {
-                this.peerConnection.close();
+        resetConnection: function (peerId) {
+            if (this.connections[peerId]) {
+                this.close(peerId);
             }
 
-            this.peerConnection = null;
-            this.dataChannel = null;
-            this.iceCandidates = [];
-            this.reconnectAttempts = 0;
+            this.connections[peerId] = null;
+            this.iceCandidates[peerId] = [];
+            this.reconnectAttempts[peerId] = 0;
 
-            UIManager.resetConnectionControls();
+            if (this.currentPeerId === peerId) {
+                UIManager.resetConnectionControls();
+            }
         },
 
         // 关闭连接
-        close: function () {
-            this.stopIceTimer();
-            this.clearConnectionTimeout();
+        close: function (peerId) {
+            this.stopIceTimer(peerId);
+            this.clearConnectionTimeout(peerId);
 
-            if (this.dataChannel) {
+            const conn = this.connections[peerId];
+            if (!conn) return;
+
+            if (conn.dataChannel) {
                 try {
-                    this.dataChannel.close();
+                    conn.dataChannel.close();
                 } catch (e) {
                     // 忽略关闭错误
                 }
-                this.dataChannel = null;
+                conn.dataChannel = null;
             }
 
-            if (this.peerConnection) {
+            if (conn.peerConnection) {
                 try {
-                    this.peerConnection.close();
+                    conn.peerConnection.close();
                 } catch (e) {
                     // 忽略关闭错误
                 }
-                this.peerConnection = null;
+                conn.peerConnection = null;
             }
 
-            UIManager.updateStatus('连接已关闭');
-            UIManager.enableChatInterface(false);
+            if (this.currentPeerId === peerId) {
+                UIManager.updateStatus('连接已关闭');
+                UIManager.enableChatInterface(false);
+            }
         },
 
+        // 检查是否已连接到特定用户
+        isConnectedTo: function(peerId) {
+            const conn = this.connections[peerId];
+            return conn &&
+                conn.dataChannel &&
+                conn.dataChannel.readyState === 'open' &&
+                conn.peerConnection &&
+                (conn.peerConnection.iceConnectionState === 'connected' ||
+                    conn.peerConnection.iceConnectionState === 'completed');
+        },
         // 创建连接请求
         createOffer: async function () {
             if (!UIManager.checkWebRTCSupport()) return;
 
+            // 获取对方ID
+            const peerIdInput = document.getElementById('sdpText').value.trim();
+            let targetPeerId = '';
+
+            if (peerIdInput) {
+                try {
+                    // 尝试从SDP文本中提取用户ID
+                    const sdpData = JSON.parse(peerIdInput);
+                    if (sdpData.userId) {
+                        targetPeerId = sdpData.userId;
+                    }
+                } catch (e) {
+                    // 解析失败，可能不是有效的JSON
+                }
+            }
+
+            // 如果没有获取到ID，使用当前选择的聊天ID或请求用户输入
+            if (!targetPeerId) {
+                if (ChatManager.currentChatId) {
+                    targetPeerId = ChatManager.currentChatId;
+                } else {
+                    targetPeerId = prompt('请输入要连接的用户ID:');
+                    if (!targetPeerId) return;
+                }
+            }
+
             try {
-                if (!this.init()) {
+                if (!this.init(targetPeerId)) {
                     throw new Error('无法初始化WebRTC连接');
                 }
 
+                const conn = this.connections[targetPeerId];
+
                 // 创建数据通道
-                this.dataChannel = this.peerConnection.createDataChannel("messageChannel", {
+                conn.dataChannel = conn.peerConnection.createDataChannel("messageChannel", {
                     ordered: true,
                     maxRetransmits: 30
                 });
 
-                this.setupDataChannel(this.dataChannel);
+                this.setupDataChannel(conn.dataChannel, targetPeerId);
 
                 // 创建offer
-                const offer = await this.peerConnection.createOffer({
+                const offer = await conn.peerConnection.createOffer({
                     offerToReceiveAudio: false,
                     offerToReceiveVideo: false
                 });
 
-                await this.peerConnection.setLocalDescription(offer);
+                await conn.peerConnection.setLocalDescription(offer);
                 UIManager.updateStatus("正在收集网络信息...");
 
                 // 短暂延迟后更新SDP（让ICE收集开始）
-                setTimeout(() => this.updateSdpText(), 1000);
+                setTimeout(() => this.updateSdpText(targetPeerId), 1000);
 
+                // 只禁用当前操作的按钮，不影响其他连接
                 UIManager.disableConnectionButtons('offer');
+
+                // 如果用户不在联系人列表中，添加
+                if (!UserManager.contacts[targetPeerId]) {
+                    UserManager.addContact(targetPeerId);
+                }
             } catch (error) {
                 Utils.log(`创建连接请求失败: ${error.message}`, Utils.logLevels.ERROR);
                 UIManager.updateStatus('创建连接请求失败');
             }
         },
-
         // 创建连接响应
         createAnswer: async function () {
             try {
-                if (!this.init()) {
-                    throw new Error('无法初始化WebRTC连接');
-                }
-
                 // 解析对方的SDP
                 const sdpText = document.getElementById('sdpText').value.trim();
                 if (!sdpText) {
@@ -1816,26 +1586,43 @@
                     throw new Error('无效的连接信息格式');
                 }
 
+                // 获取对方ID
+                const targetPeerId = offerData.userId || prompt('请输入对方的用户ID:');
+                if (!targetPeerId) {
+                    throw new Error('需要对方ID才能建立连接');
+                }
+
+                if (!this.init(targetPeerId)) {
+                    throw new Error('无法初始化WebRTC连接');
+                }
+
+                const conn = this.connections[targetPeerId];
+
                 // 设置远程描述
-                await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offerData.sdp));
+                await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(offerData.sdp));
 
                 // 添加ICE候选者
                 if (offerData.candidates && offerData.candidates.length > 0) {
                     for (const candidate of offerData.candidates) {
-                        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        await conn.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                     }
                 }
 
                 // 创建应答
-                const answer = await this.peerConnection.createAnswer();
-                await this.peerConnection.setLocalDescription(answer);
+                const answer = await conn.peerConnection.createAnswer();
+                await conn.peerConnection.setLocalDescription(answer);
 
                 UIManager.updateStatus("正在收集网络信息...");
 
                 // 短暂延迟后更新SDP
-                setTimeout(() => this.updateSdpText(), 1000);
+                setTimeout(() => this.updateSdpText(targetPeerId), 1000);
 
                 UIManager.disableConnectionButtons('answer');
+
+                // 如果用户不在联系人列表中，添加
+                if (!UserManager.contacts[targetPeerId]) {
+                    UserManager.addContact(targetPeerId);
+                }
             } catch (error) {
                 Utils.log(`创建连接响应失败: ${error.message}`, Utils.logLevels.ERROR);
                 UIManager.updateStatus(`创建连接响应失败: ${error.message}`);
@@ -1845,10 +1632,6 @@
         // 处理连接响应
         handleAnswer: async function () {
             try {
-                if (!this.peerConnection) {
-                    throw new Error('未创建连接，请先执行步骤1');
-                }
-
                 // 解析对方的SDP
                 const sdpText = document.getElementById('sdpText').value.trim();
                 if (!sdpText) {
@@ -1861,22 +1644,108 @@
                     throw new Error('无效的连接信息格式');
                 }
 
+                // 获取对方ID
+                const targetPeerId = answerData.userId;
+                if (!targetPeerId) {
+                    throw new Error('连接信息中缺少用户ID');
+                }
+
+                if (!this.connections[targetPeerId]) {
+                    throw new Error('未找到与该用户的连接，请先创建连接请求');
+                }
+
+                const conn = this.connections[targetPeerId];
+
                 // 设置远程描述
-                await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answerData.sdp));
+                await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(answerData.sdp));
 
                 // 添加ICE候选者
                 if (answerData.candidates && answerData.candidates.length > 0) {
                     for (const candidate of answerData.candidates) {
-                        await this.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        await conn.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
                     }
                 }
 
                 UIManager.updateStatus("正在建立连接...");
                 UIManager.disableConnectionButtons('complete');
+                // 清空连接信息
+                document.getElementById('sdpText').value = "";
+
+                // 如果用户不在联系人列表中，添加
+                if (!UserManager.contacts[targetPeerId]) {
+                    UserManager.addContact(targetPeerId);
+                }
             } catch (error) {
                 Utils.log(`处理连接响应失败: ${error.message}`, Utils.logLevels.ERROR);
                 UIManager.updateStatus(`处理连接响应失败: ${error.message}`);
             }
+        },
+
+        // 向特定用户发送消息
+        sendTo: function(peerId, message) {
+            const conn = this.connections[peerId];
+            if (!conn || !conn.dataChannel || conn.dataChannel.readyState !== 'open') {
+                UIManager.showNotification(`无法发送消息，与${peerId}的连接未建立`, 'error');
+                return false;
+            }
+
+            try {
+                // 添加发送者ID
+                if (typeof message === 'object') {
+                    message.sender = UserManager.userId;
+                    message.timestamp = new Date().toISOString();
+                    conn.dataChannel.send(JSON.stringify(message));
+                } else {
+                    const msgObj = {
+                        type: 'text',
+                        content: message,
+                        sender: UserManager.userId,
+                        timestamp: new Date().toISOString()
+                    };
+                    conn.dataChannel.send(JSON.stringify(msgObj));
+                }
+                return true;
+            } catch (error) {
+                Utils.log(`发送消息失败: ${error.message}`, Utils.logLevels.ERROR);
+                return false;
+            }
+        },
+        // 重置所有连接
+        resetAllConnections: function() {
+            // 确认对话框
+            if (!confirm('确定要重置所有连接吗？这将断开所有现有连接。')) {
+                return;
+            }
+
+            // 关闭所有连接
+            for (const peerId in this.connections) {
+                this.close(peerId);
+            }
+
+            // 清空连接列表
+            this.connections = {};
+            this.iceCandidates = {};
+            this.connectionTimeouts = {};
+            this.reconnectAttempts = {};
+            this.iceTimers = {};
+            this.iceGatheringStartTimes = {};
+            this.connectionStrengths = {};
+            this.pendingChunks = {};
+
+            // 重置UI
+            UIManager.resetConnectionControls();
+            UIManager.updateStatus('所有连接已重置');
+            UIManager.enableChatInterface(false);
+
+            // 清空SDP文本
+            document.getElementById('sdpText').value = '';
+
+            // 通知用户
+            UIManager.showNotification('所有连接已重置', 'info');
+
+            Utils.log('所有连接已重置', Utils.logLevels.INFO);
+
+            return true;
         }
     };
 
@@ -1888,6 +1757,10 @@
             if (connected) {
                 statusElement.classList.add('connected');
                 statusElement.classList.remove('disconnected');
+
+                // 显示返回聊天按钮
+                document.getElementById('backToChatBtn').style.display = 'block';
+                document.querySelector('.sidebar').classList.add('show-back-btn');
             } else {
                 if (state === 'disconnected') {
                     statusElement.classList.add('disconnected');
@@ -1990,16 +1863,30 @@
 
         // 重置连接控件
         resetConnectionControls: function () {
+            // 重置连接按钮状态
             document.getElementById('createOfferBtn').disabled = false;
             document.getElementById('createAnswerBtn').disabled = false;
             document.getElementById('handleAnswerBtn').disabled = false;
-            document.getElementById('backToChatBtn').style.display = 'none';
-            document.querySelector('.sidebar').classList.remove('show-back-btn');
-            this.enableChatInterface(false);
 
-            // 移动端：切换回连接设置界面
-            if (window.innerWidth <= 768) {
-                document.querySelector('.container').classList.remove('connected-mode');
+            // 如果没有活跃连接，隐藏返回聊天按钮
+            let hasActiveConnection = false;
+            for (const peerId in ConnectionManager.connections) {
+                const conn = ConnectionManager.connections[peerId];
+                if (conn && conn.dataChannel && conn.dataChannel.readyState === 'open') {
+                    hasActiveConnection = true;
+                    break;
+                }
+            }
+
+            if (!hasActiveConnection) {
+                document.getElementById('backToChatBtn').style.display = 'none';
+                document.querySelector('.sidebar').classList.remove('show-back-btn');
+                this.enableChatInterface(false);
+
+                // 移动端：切换回连接设置界面
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.container').classList.remove('connected-mode');
+                }
             }
         },
 
@@ -2103,8 +1990,188 @@
                     }, 300);
                 }
             }, 10000); // 10秒后自动关闭
-        }
+        },
+        // 显示重连提示
+        showReconnectPrompt: function(peerId, onReconnectSuccess) {
+            // 创建重连提示元素
+            const reconnectPrompt = document.createElement('div');
+            reconnectPrompt.className = 'reconnect-prompt';
+            reconnectPrompt.innerHTML = `
+        <div class="reconnect-message">
+            <p>连接未建立，无法发送消息</p>
+            <div class="reconnect-buttons">
+                <button class="reconnect-btn">重新连接</button>
+                <button class="cancel-btn">取消</button>
+            </div>
+        </div>
+    `;
 
+            // 添加到聊天框
+            const chatBox = document.getElementById('chatBox');
+            chatBox.appendChild(reconnectPrompt);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 添加系统消息提示
+            const systemMessage = document.createElement('div');
+            systemMessage.className = 'system-message';
+            systemMessage.textContent = '连接已断开，请重新建立连接';
+            chatBox.appendChild(systemMessage);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 设置重连按钮事件
+            const reconnectBtn = reconnectPrompt.querySelector('.reconnect-btn');
+            reconnectBtn.addEventListener('click', async () => {
+                // 移除提示
+                if (reconnectPrompt.parentNode) {
+                    reconnectPrompt.parentNode.removeChild(reconnectPrompt);
+                }
+
+                // 显示连接面板
+                document.querySelector('.connection-tab[data-tab="connect"]').click();
+
+                // 如果在移动设备上，切换到连接界面
+                if (window.innerWidth <= 768) {
+                    document.querySelector('.container').classList.remove('connected-mode');
+                }
+
+                // 重置连接按钮状态
+                this.resetConnectionControls();
+
+                // 添加系统消息
+                const reconnectingMsg = document.createElement('div');
+                reconnectingMsg.className = 'system-message';
+                reconnectingMsg.textContent = '正在尝试重新连接...';
+                chatBox.appendChild(reconnectingMsg);
+
+                // 自动开始连接流程
+                try {
+                    // 清空之前的连接信息
+                    document.getElementById('sdpText').value = '';
+
+                    // 初始化新连接
+                    await ConnectionManager.createOffer();
+
+                    // 显示通知
+                    this.showNotification('请将连接信息发送给对方，并等待对方回复', 'info');
+
+                    // 监听连接状态变化
+                    const checkConnection = () => {
+                        if (ConnectionManager.isConnectedTo(peerId)) {
+                            // 连接成功
+                            const successMsg = document.createElement('div');
+                            successMsg.className = 'system-message success';
+                            successMsg.textContent = '连接已重新建立';
+                            chatBox.appendChild(successMsg);
+                            chatBox.scrollTop = chatBox.scrollHeight;
+
+                            // 执行成功回调
+                            if (typeof onReconnectSuccess === 'function') {
+                                onReconnectSuccess();
+                            }
+
+                            // 如果在移动设备上，切换回聊天界面
+                            if (window.innerWidth <= 768) {
+                                document.querySelector('.container').classList.add('connected-mode');
+                            }
+
+                            return true;
+                        }
+                        return false;
+                    };
+
+                    // 定期检查连接状态
+                    const checkInterval = setInterval(() => {
+                        if (checkConnection()) {
+                            clearInterval(checkInterval);
+                        }
+                    }, 2000);
+
+                    // 60秒后停止检查
+                    setTimeout(() => {
+                        clearInterval(checkInterval);
+                        if (!ConnectionManager.isConnectedTo(peerId)) {
+                            const failMsg = document.createElement('div');
+                            failMsg.className = 'system-message error';
+                            failMsg.textContent = '连接建立失败，请手动完成连接步骤';
+                            chatBox.appendChild(failMsg);
+                            chatBox.scrollTop = chatBox.scrollHeight;
+                        }
+                    }, 60000);
+
+                } catch (error) {
+                    Utils.log(`自动重连失败: ${error.message}`, Utils.logLevels.ERROR);
+                    this.showNotification('自动重连失败，请手动建立连接', 'error');
+                }
+            });
+
+            // 设置取消按钮事件
+            const cancelBtn = reconnectPrompt.querySelector('.cancel-btn');
+            cancelBtn.addEventListener('click', () => {
+                if (reconnectPrompt.parentNode) {
+                    reconnectPrompt.parentNode.removeChild(reconnectPrompt);
+                }
+            });
+
+            // 添加样式
+            if (!document.getElementById('reconnect-prompt-style')) {
+                const style = document.createElement('style');
+                style.id = 'reconnect-prompt-style';
+                style.textContent = `
+            .reconnect-prompt {
+                padding: 10px;
+                margin: 10px auto;
+                max-width: 80%;
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                text-align: center;
+            }
+            .reconnect-message {
+                font-size: 14px;
+                color: #333;
+            }
+            .reconnect-buttons {
+                margin-top: 10px;
+                display: flex;
+                justify-content: center;
+                gap: 10px;
+            }
+            .reconnect-btn {
+                background: #4CAF50;
+                color: white;
+                border: none;
+                padding: 5px 15px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            .cancel-btn {
+                background: #f44336;
+                color: white;
+                border: none;
+                padding: 5px 15px;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            .system-message {
+                text-align: center;
+                padding: 5px 10px;
+                margin: 5px auto;
+                font-size: 12px;
+                color: #666;
+                background: rgba(0,0,0,0.05);
+                border-radius: 10px;
+                max-width: 80%;
+            }
+            .system-message.success {
+                color: #4CAF50;
+            }
+            .system-message.error {
+                color: #f44336;
+            }
+        `;
+                document.head.appendChild(style);
+            }
+        }
     };
 
     // 消息管理器
@@ -2114,13 +2181,30 @@
         audioDuration: 0,
 
         // 发送消息
+// 发送消息
         sendMessage: function() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
 
-            if ((!message && !this.selectedImage && !this.audioData) ||
-                !ConnectionManager.dataChannel ||
-                ConnectionManager.dataChannel.readyState !== 'open') {
+            // 检查是否有选择的聊天
+            if (!ChatManager.currentChatId) {
+                UIManager.showNotification('请先选择聊天对象', 'warning');
+                return;
+            }
+
+            // 检查连接状态
+            const isConnected = ConnectionManager.isConnectedTo(ChatManager.currentChatId);
+
+            if (!isConnected && (message || this.selectedImage || this.audioData)) {
+                // 连接未建立，显示重连提示
+                UIManager.showReconnectPrompt(ChatManager.currentChatId, () => {
+                    // 重连成功后的回调，重新尝试发送消息
+                    this.sendMessage();
+                });
+                return;
+            }
+
+            if (!message && !this.selectedImage && !this.audioData) {
                 return;
             }
 
@@ -2129,13 +2213,20 @@
                 const audioMessage = {
                     type: 'audio',
                     data: this.audioData,
-                    duration: this.audioDuration
+                    duration: this.audioDuration,
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
                 };
 
                 Utils.sendInChunks(JSON.stringify(audioMessage),
-                    (data) => ConnectionManager.dataChannel.send(data));
+                    (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
 
-                this.displayMessage(audioMessage, true);
+                // 添加到聊天记录
+                ChatManager.addMessage(ChatManager.currentChatId, audioMessage);
+
+                // 更新联系人最后消息
+                UserManager.updateContactLastMessage(ChatManager.currentChatId, '[语音]');
+
                 this.cancelAudioData(); // 这里会调用 MediaManager.releaseAudioResources()
             }
 
@@ -2143,13 +2234,20 @@
             if (this.selectedImage) {
                 const imageMessage = {
                     type: 'image',
-                    data: this.selectedImage
+                    data: this.selectedImage,
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
                 };
 
                 Utils.sendInChunks(JSON.stringify(imageMessage),
-                    (data) => ConnectionManager.dataChannel.send(data));
+                    (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
 
-                this.displayMessage(imageMessage, true);
+                // 添加到聊天记录
+                ChatManager.addMessage(ChatManager.currentChatId, imageMessage);
+
+                // 更新联系人最后消息
+                UserManager.updateContactLastMessage(ChatManager.currentChatId, '[图片]');
+
                 this.cancelImageData();
             }
 
@@ -2160,37 +2258,48 @@
                     type: 'text',
                     content: message, // 直接使用原始消息，包含换行符
                     links: message.match(urlRegex) || [],
+                    sender: UserManager.userId,
                     timestamp: new Date().toISOString()
                 };
 
-                ConnectionManager.dataChannel.send(JSON.stringify(messageObj));
-                this.displayMessage(messageObj, true);
+                ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(JSON.stringify(messageObj));
+
+                // 添加到聊天记录
+                ChatManager.addMessage(ChatManager.currentChatId, messageObj);
+
+                // 更新联系人最后消息
+                UserManager.updateContactLastMessage(ChatManager.currentChatId, message);
+
                 input.value = '';
             }
         },
 
         // 清空聊天记录
         clearChat: function() {
+            if (!ChatManager.currentChatId) {
+                UIManager.showNotification('请先选择聊天对象', 'warning');
+                return;
+            }
+
             // 显示确认对话框
-            if (confirm('确定要清空所有聊天记录吗？此操作不可撤销。')) {
-                // 清空聊天区域
-                const chatBox = document.getElementById('chatBox');
-                chatBox.innerHTML = '';
+            if (confirm('确定要清空聊天记录吗？此操作不可撤销。')) {
+                // 清空聊天
+                if (ChatManager.clearChat(ChatManager.currentChatId)) {
+                    // 添加系统消息提示
+                    const systemMessage = document.createElement('div');
+                    systemMessage.className = 'system-message';
+                    systemMessage.textContent = '已清空聊天记录';
+                    systemMessage.style.textAlign = 'center';
+                    systemMessage.style.padding = '10px';
+                    systemMessage.style.color = '#666';
+                    systemMessage.style.fontSize = '12px';
+                    document.getElementById('chatBox').appendChild(systemMessage);
 
-                // 添加系统消息提示
-                const systemMessage = document.createElement('div');
-                systemMessage.className = 'system-message';
-                systemMessage.textContent = '已清空聊天记录';
-                systemMessage.style.textAlign = 'center';
-                systemMessage.style.padding = '10px';
-                systemMessage.style.color = '#666';
-                systemMessage.style.fontSize = '12px';
-                chatBox.appendChild(systemMessage);
+                    // 通知用户
+                    UIManager.showNotification('聊天记录已清空', 'info');
 
-                // 通知用户
-                UIManager.showNotification('聊天记录已清空', 'info');
-
-                Utils.log('聊天记录已清空', Utils.logLevels.INFO);
+                    Utils.log('聊天记录已清空', Utils.logLevels.INFO);
+                }
             }
         },
 
@@ -2274,12 +2383,15 @@
             // 添加时间戳
             const timestamp = document.createElement('div');
             timestamp.className = 'timestamp';
-            timestamp.textContent = new Date().toLocaleTimeString();
+            timestamp.textContent = message.timestamp ?
+                new Date(message.timestamp).toLocaleTimeString() :
+                new Date().toLocaleTimeString();
             messageDiv.appendChild(timestamp);
 
             chatBox.appendChild(messageDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
         },
+
         formatMessageText: function(text) {
             if (!text) return '';
 
@@ -2294,6 +2406,7 @@
             // 将换行符转换为<br>标签
             return escaped.replace(/\n/g, '<br>');
         },
+
         // 链接预览
         createLinkPreview: async function (url) {
             const preview = document.createElement('div');
@@ -2454,6 +2567,7 @@
             document.getElementById('voiceButton').disabled = false;
             Utils.log('语音录制按钮已启用，将在用户点击时请求权限', Utils.logLevels.INFO);
         },
+
         // 添加一个新方法来请求麦克风权限
         requestMicrophonePermission: async function() {
             if (this.mediaRecorder) {
@@ -2499,7 +2613,7 @@
 
                 const voiceButton = document.getElementById('voiceButton');
                 voiceButton.disabled = true;
-                voiceButtonText.textContent = '录音不可用';
+                document.getElementById('voiceButtonText').textContent = '录音不可用';
 
                 // 显示友好的错误提示
                 UIManager.showNotification('无法访问麦克风，语音录制功能不可用。', 'error');
@@ -2558,6 +2672,7 @@
                 Utils.log(`停止录音失败: ${error.message}`, Utils.logLevels.ERROR);
             }
         },
+
         releaseAudioResources: function() {
             // 检查是否有活跃的媒体流
             if (this.mediaRecorder && this.mediaRecorder.stream) {
@@ -2689,7 +2804,7 @@
         remoteStream: null,
         localVideo: null,
         remoteVideo: null,
-        peerConnection: null,
+        currentPeerId: null,
         isCallActive: false,
         isCaller: false,
         isCallPending: false,
@@ -2711,28 +2826,49 @@
             }
 
             // 监听视频通话消息
-            EventEmitter.on('dataChannelOpen', () => {
-                document.getElementById('videoCallButton').disabled = false;
+            EventEmitter.on('dataChannelOpen', (peerId) => {
+                if (ChatManager.currentChatId === peerId) {
+                    document.getElementById('videoCallButton').disabled = false;
+                    document.getElementById('videoChatBtn').disabled = false;
+                    document.getElementById('videoChatBtn').onclick = () => this.initiateCall(peerId);
+                }
             });
 
             return true;
         },
 
         // 发起视频通话
-        initiateCall: async function() {
+        initiateCall: async function(peerId) {
             if (this.isCallActive || this.isCallPending) return;
 
+            // 如果没有指定peerId，使用当前聊天对象
+            if (!peerId) {
+                peerId = ChatManager.currentChatId;
+            }
+
+            if (!peerId) {
+                UIManager.showNotification('请先选择聊天对象', 'warning');
+                return;
+            }
+
+            if (!ConnectionManager.isConnectedTo(peerId)) {
+                UIManager.showNotification('连接未建立，无法发起视频通话', 'error');
+                return;
+            }
+
             try {
+                this.currentPeerId = peerId;
                 this.isCaller = true;
                 this.isCallPending = true;
 
                 // 告知对方请求视频通话
                 const callRequest = {
                     type: 'video-call-request',
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    sender: UserManager.userId
                 };
 
-                ConnectionManager.dataChannel.send(JSON.stringify(callRequest));
+                ConnectionManager.sendTo(peerId, callRequest);
 
                 UIManager.showNotification('等待对方接受视频通话...', 'info');
                 Utils.log('已发送视频通话请求', Utils.logLevels.INFO);
@@ -2742,14 +2878,16 @@
                     if (this.isCallPending) {
                         this.isCallPending = false;
                         this.isCaller = false;
+                        this.currentPeerId = null;
                         UIManager.showNotification('对方未应答，通话请求已取消', 'warning');
 
                         // 发送取消消息
                         const cancelRequest = {
                             type: 'video-call-cancel',
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
+                            sender: UserManager.userId
                         };
-                        ConnectionManager.dataChannel.send(JSON.stringify(cancelRequest));
+                        ConnectionManager.sendTo(peerId, cancelRequest);
                     }
                 }, 30000);
             } catch (error) {
@@ -2757,11 +2895,13 @@
                 UIManager.showNotification('发起视频通话失败', 'error');
                 this.isCallPending = false;
                 this.isCaller = false;
+                this.currentPeerId = null;
             }
         },
 
         // 显示通话请求
-        showCallRequest: function() {
+        showCallRequest: function(peerId) {
+            this.currentPeerId = peerId;
             document.getElementById('videoCallRequest').style.display = 'flex';
         },
 
@@ -2773,6 +2913,11 @@
         // 接受通话
         acceptCall: async function() {
             this.hideCallRequest();
+
+            if (!this.currentPeerId) {
+                UIManager.showNotification('通话请求无效', 'error');
+                return;
+            }
 
             try {
                 // 显示获取媒体设备权限的提示
@@ -2787,7 +2932,7 @@
                 // 显示本地视频
                 this.localVideo.srcObject = this.localStream;
 
-                // 创建WebRTC连接
+                // 使用现有的连接
                 this.setupPeerConnection();
 
                 // 显示视频通话界面
@@ -2796,9 +2941,10 @@
                 // 发送接受信号
                 const acceptMessage = {
                     type: 'video-call-accepted',
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    sender: UserManager.userId
                 };
-                ConnectionManager.dataChannel.send(JSON.stringify(acceptMessage));
+                ConnectionManager.sendTo(this.currentPeerId, acceptMessage);
 
                 this.isCallActive = true;
                 this.isCallPending = false;
@@ -2812,9 +2958,12 @@
                 const rejectMessage = {
                     type: 'video-call-rejected',
                     reason: 'device_error',
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    sender: UserManager.userId
                 };
-                ConnectionManager.dataChannel.send(JSON.stringify(rejectMessage));
+                ConnectionManager.sendTo(this.currentPeerId, rejectMessage);
+
+                this.currentPeerId = null;
             }
         },
 
@@ -2822,18 +2971,22 @@
         rejectCall: function() {
             this.hideCallRequest();
 
+            if (!this.currentPeerId) return;
+
             // 发送拒绝消息
             const rejectMessage = {
                 type: 'video-call-rejected',
                 reason: 'user_rejected',
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                sender: UserManager.userId
             };
-            ConnectionManager.dataChannel.send(JSON.stringify(rejectMessage));
+            ConnectionManager.sendTo(this.currentPeerId, rejectMessage);
 
             // 重置状态
             this.isCallPending = false;
             this.isCallActive = false;
             this.isCaller = false;
+            this.currentPeerId = null;
 
             Utils.log('已拒绝视频通话', Utils.logLevels.INFO);
         },
@@ -2841,20 +2994,20 @@
         // 设置对等连接
         setupPeerConnection: function() {
             // 使用已有的连接传递信令
-            if (!ConnectionManager.peerConnection) {
+            if (!this.currentPeerId || !ConnectionManager.connections[this.currentPeerId]) {
                 Utils.log('无法创建视频通话连接: 没有基础连接', Utils.logLevels.ERROR);
                 return;
             }
 
-            this.peerConnection = ConnectionManager.peerConnection;
+            const conn = ConnectionManager.connections[this.currentPeerId];
 
             // 添加本地流
             this.localStream.getTracks().forEach(track => {
-                this.peerConnection.addTrack(track, this.localStream);
+                conn.peerConnection.addTrack(track, this.localStream);
             });
 
             // 处理远程流
-            this.peerConnection.ontrack = (event) => {
+            conn.peerConnection.ontrack = (event) => {
                 if (event.streams && event.streams[0]) {
                     this.remoteVideo.srcObject = event.streams[0];
                     this.remoteStream = event.streams[0];
@@ -2871,19 +3024,25 @@
         // 创建并发送offer
         createAndSendOffer: async function() {
             try {
-                const offer = await this.peerConnection.createOffer({
+                if (!this.currentPeerId) return;
+
+                const conn = ConnectionManager.connections[this.currentPeerId];
+                if (!conn || !conn.peerConnection) return;
+
+                const offer = await conn.peerConnection.createOffer({
                     offerToReceiveAudio: true,
                     offerToReceiveVideo: true
                 });
 
-                await this.peerConnection.setLocalDescription(offer);
+                await conn.peerConnection.setLocalDescription(offer);
 
                 // 发送offer给对方
                 const offerMessage = {
                     type: 'video-call-offer',
-                    sdp: this.peerConnection.localDescription
+                    sdp: conn.peerConnection.localDescription,
+                    sender: UserManager.userId
                 };
-                ConnectionManager.dataChannel.send(JSON.stringify(offerMessage));
+                ConnectionManager.sendTo(this.currentPeerId, offerMessage);
 
                 Utils.log('已发送视频通话offer', Utils.logLevels.DEBUG);
             } catch (error) {
@@ -2893,24 +3052,26 @@
         },
 
         // 处理收到的offer
-        handleOffer: async function(offer) {
+        handleOffer: async function(offer, peerId) {
             try {
-                if (!this.peerConnection) {
-                    this.setupPeerConnection();
-                }
+                this.currentPeerId = peerId;
 
-                await this.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                const conn = ConnectionManager.connections[peerId];
+                if (!conn || !conn.peerConnection) return;
+
+                await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
 
                 // 创建answer
-                const answer = await this.peerConnection.createAnswer();
-                await this.peerConnection.setLocalDescription(answer);
+                const answer = await conn.peerConnection.createAnswer();
+                await conn.peerConnection.setLocalDescription(answer);
 
                 // 发送answer给对方
                 const answerMessage = {
                     type: 'video-call-answer',
-                    sdp: this.peerConnection.localDescription
+                    sdp: conn.peerConnection.localDescription,
+                    sender: UserManager.userId
                 };
-                ConnectionManager.dataChannel.send(JSON.stringify(answerMessage));
+                ConnectionManager.sendTo(peerId, answerMessage);
 
                 Utils.log('已回复视频通话answer', Utils.logLevels.DEBUG);
             } catch (error) {
@@ -2920,9 +3081,14 @@
         },
 
         // 处理收到的answer
-        handleAnswer: async function(answer) {
+        handleAnswer: async function(answer, peerId) {
             try {
-                await this.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+                if (this.currentPeerId !== peerId) return;
+
+                const conn = ConnectionManager.connections[peerId];
+                if (!conn || !conn.peerConnection) return;
+
+                await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
                 Utils.log('已设置远程描述', Utils.logLevels.DEBUG);
             } catch (error) {
                 Utils.log(`处理answer失败: ${error.message}`, Utils.logLevels.ERROR);
@@ -2973,16 +3139,14 @@
             }
 
             // 发送结束通话信号
-            if (this.isCallActive || this.isCallPending) {
+            if ((this.isCallActive || this.isCallPending) && this.currentPeerId) {
                 const endCallMessage = {
                     type: 'video-call-end',
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    sender: UserManager.userId
                 };
                 try {
-                    if (ConnectionManager.dataChannel &&
-                        ConnectionManager.dataChannel.readyState === 'open') {
-                        ConnectionManager.dataChannel.send(JSON.stringify(endCallMessage));
-                    }
+                    ConnectionManager.sendTo(this.currentPeerId, endCallMessage);
                 } catch (error) {
                     Utils.log(`发送结束通话消息失败: ${error.message}`, Utils.logLevels.ERROR);
                 }
@@ -3006,6 +3170,10 @@
             this.isCaller = false;
             this.isAudioMuted = false;
             this.isVideoEnabled = true;
+            this.currentPeerId = null;
+
+            // 重置连接按钮状态
+            UIManager.resetConnectionControls();
 
             Utils.log('视频通话已结束，所有资源已释放', Utils.logLevels.INFO);
         },
@@ -3029,26 +3197,27 @@
         },
 
         // 处理消息
-        handleMessage: function(message) {
+        handleMessage: function(message, peerId) {
             switch (message.type) {
                 case 'video-call-request':
                     if (!this.isCallActive && !this.isCallPending) {
                         this.isCallPending = true;
-                        this.showCallRequest();
+                        this.showCallRequest(peerId);
                         Utils.log('收到视频通话请求', Utils.logLevels.INFO);
                     } else {
                         // 已在通话中，自动拒绝
                         const busyMessage = {
                             type: 'video-call-rejected',
                             reason: 'busy',
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
+                            sender: UserManager.userId
                         };
-                        ConnectionManager.dataChannel.send(JSON.stringify(busyMessage));
+                        ConnectionManager.sendTo(peerId, busyMessage);
                     }
                     break;
 
                 case 'video-call-accepted':
-                    if (this.isCallPending && this.isCaller) {
+                    if (this.isCallPending && this.isCaller && this.currentPeerId === peerId) {
                         clearTimeout(this.callRequestTimeout);
                         this.callRequestTimeout = null;
 
@@ -3058,11 +3227,12 @@
                     break;
 
                 case 'video-call-rejected':
-                    if (this.isCallPending) {
+                    if (this.isCallPending && this.currentPeerId === peerId) {
                         clearTimeout(this.callRequestTimeout);
                         this.callRequestTimeout = null;
                         this.isCallPending = false;
                         this.isCaller = false;
+                        this.currentPeerId = null;
 
                         // 释放已申请的任何媒体资源
                         this.releaseMediaResources();
@@ -3080,9 +3250,10 @@
                     break;
 
                 case 'video-call-cancel':
-                    if (this.isCallPending && !this.isCaller) {
+                    if (this.isCallPending && !this.isCaller && this.currentPeerId === peerId) {
                         this.isCallPending = false;
                         this.hideCallRequest();
+                        this.currentPeerId = null;
 
                         // 释放已申请的任何媒体资源
                         this.releaseMediaResources();
@@ -3092,19 +3263,19 @@
                     break;
 
                 case 'video-call-offer':
-                    if (this.isCallActive && !this.isCaller) {
-                        this.handleOffer(message.sdp);
+                    if (this.isCallActive && !this.isCaller && this.currentPeerId === peerId) {
+                        this.handleOffer(message.sdp, peerId);
                     }
                     break;
 
                 case 'video-call-answer':
-                    if (this.isCallActive && this.isCaller) {
-                        this.handleAnswer(message.sdp);
+                    if (this.isCallActive && this.isCaller && this.currentPeerId === peerId) {
+                        this.handleAnswer(message.sdp, peerId);
                     }
                     break;
 
                 case 'video-call-end':
-                    if (this.isCallActive || this.isCallPending) {
+                    if ((this.isCallActive || this.isCallPending) && this.currentPeerId === peerId) {
                         this.endCall();
                         UIManager.showNotification('对方结束了通话', 'info');
                     }
@@ -3154,6 +3325,12 @@
             // 检查浏览器兼容性
             if (!UIManager.checkWebRTCSupport()) return;
 
+            // 初始化用户管理
+            UserManager.init();
+
+            // 初始化聊天管理
+            ChatManager.init();
+
             // 检查网络状态
             this.checkNetworkType();
 
@@ -3189,12 +3366,11 @@
             const backToChatBtn = document.getElementById('backToChatBtn');
             if (backToChatBtn) {
                 backToChatBtn.addEventListener('click', function() {
-                    // 检查是否已连接
-                    const isConnected = document.getElementById('connectionStatus').classList.contains('connected');
-                    if (isConnected) {
+                    // 检查是否已选择聊天
+                    if (ChatManager.currentChatId) {
                         document.querySelector('.container').classList.add('connected-mode');
                     } else {
-                        UIManager.showNotification('请先建立连接', 'warning');
+                        UIManager.showNotification('请先选择聊天对象', 'warning');
                     }
                 });
             }
@@ -3207,7 +3383,7 @@
                 const backToChatBtn = document.getElementById('backToChatBtn');
 
                 // 如果是移动端且已连接，保持聊天界面显示
-                if (window.innerWidth <= 768 && isConnected) {
+                if (window.innerWidth <= 768 && isConnected && ChatManager.currentChatId) {
                     // 显示进入聊天按钮
                     if (backToChatBtn) backToChatBtn.style.display = 'block';
                     if (sidebar) sidebar.classList.add('show-back-btn');
@@ -3276,9 +3452,14 @@
         handleNetworkChange: function () {
             if (navigator.onLine) {
                 UIManager.updateStatus('网络已恢复，尝试重新连接...');
-                if (ConnectionManager.peerConnection &&
-                    ConnectionManager.peerConnection.iceConnectionState !== 'connected') {
-                    ConnectionManager.restartIce();
+
+                // 尝试重新连接所有活跃的连接
+                for (const peerId in ConnectionManager.connections) {
+                    const conn = ConnectionManager.connections[peerId];
+                    if (conn && conn.peerConnection &&
+                        conn.peerConnection.iceConnectionState !== 'connected') {
+                        ConnectionManager.restartIce(peerId);
+                    }
                 }
             } else {
                 UIManager.updateStatus('网络已断开');
@@ -3297,37 +3478,35 @@
                 // 仅按回车键时，允许换行
                 else if (e.key === 'Enter' && !e.ctrlKey) {
                     // 不阻止默认行为，允许输入换行符
-
-                    // 可选：如果想在移动设备上有更好的体验，可以手动插入换行符
-                    // 因为有些移动浏览器的文本区域行为不一致
-                    /*
-                    e.preventDefault();
-                    const input = document.getElementById('messageInput');
-                    const cursorPosition = input.selectionStart;
-                    const textBeforeCursor = input.value.substring(0, cursorPosition);
-                    const textAfterCursor = input.value.substring(cursorPosition);
-                    input.value = textBeforeCursor + '\n' + textAfterCursor;
-                    input.selectionStart = input.selectionEnd = cursorPosition + 1;
-                    */
                 }
             });
-
 
             // 添加断开连接事件处理
-            EventEmitter.on('connectionDisconnected', function() {
-                // 移动端：断开连接时切换回设置界面
-                if (window.innerWidth <= 768) {
-                    document.querySelector('.container').classList.remove('connected-mode');
+            EventEmitter.on('connectionDisconnected', function(peerId) {
+                // 如果是当前聊天，更新UI
+                if (ChatManager.currentChatId === peerId) {
+                    // 禁用视频通话按钮
+                    document.getElementById('videoChatBtn').disabled = true;
+
+                    // 移动端：断开连接时切换回设置界面
+                    if (window.innerWidth <= 768) {
+                        document.querySelector('.container').classList.remove('connected-mode');
+                    }
                 }
             });
 
-            EventEmitter.on('connectionFailed', function() {
-                // 移动端：连接失败时切换回设置界面
-                if (window.innerWidth <= 768) {
-                    document.querySelector('.container').classList.remove('connected-mode');
+            EventEmitter.on('connectionFailed', function(peerId) {
+                // 如果是当前聊天，更新UI
+                if (ChatManager.currentChatId === peerId) {
+                    // 禁用视频通话按钮
+                    document.getElementById('videoChatBtn').disabled = true;
+
+                    // 移动端：连接失败时切换回设置界面
+                    if (window.innerWidth <= 768) {
+                        document.querySelector('.container').classList.remove('connected-mode');
+                    }
                 }
             });
-
 
             // 语音录制按钮事件
             const voiceButton = document.getElementById('voiceButton');
@@ -3365,9 +3544,15 @@
                 VideoCallManager.releaseMediaResources();
 
                 // 关闭所有连接
-                if (ConnectionManager.peerConnection) {
-                    ConnectionManager.close();
+                for (const peerId in ConnectionManager.connections) {
+                    ConnectionManager.close(peerId);
                 }
+            });
+
+
+            // 添加重置按钮事件
+            document.getElementById('resetAllBtn').addEventListener('click', () => {
+                UIManager.resetConnectionControls();
             });
         }
     };
