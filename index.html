@@ -27,6 +27,7 @@
         <div class="connection-tabs">
             <div class="connection-tab active" data-tab="connect">连接</div>
             <div class="connection-tab" data-tab="chats">聊天列表</div>
+            <div class="connection-tab" data-tab="groups">群聊</div>
         </div>
 
         <!-- 连接面板 -->
@@ -40,7 +41,7 @@
             <div class="steps">
                 <div class="step">
                     <div class="step-number">1</div>
-                    <button onclick="ConnectionManager.createOffer()" id="createOfferBtn">创建连接请求（建议先添加新聊天）</button>
+                    <button onclick="ConnectionManager.createOffer()" id="createOfferBtn">创建连接请求</button>
                 </div>
                 <div class="step">
                     <div class="step-number">2</div>
@@ -58,7 +59,7 @@
 
             <div class="connection-info">
                 <h3>连接信息</h3>
-                <textarea id="sdpText" placeholder="粘贴对方的连接信息..."></textarea>
+                <label for="sdpText"></label><textarea id="sdpText" placeholder="粘贴对方的连接信息..."></textarea>
                 <button onclick="UIManager.copyText()" class="copy-button">复制连接信息</button>
             </div>
 
@@ -75,8 +76,8 @@
 
             <!-- 新建聊天表单 -->
             <div class="new-chat-form" id="newChatForm">
-                <input type="text" id="peerIdInput" placeholder="输入对方ID">
-                <input type="text" id="peerNameInput" placeholder="输入对方昵称">
+                <label for="peerIdInput"></label><input type="text" id="peerIdInput" placeholder="输入对方ID">
+                <label for="peerNameInput"></label><input type="text" id="peerNameInput" placeholder="输入对方昵称">
                 <div class="form-buttons">
                     <button class="cancel-btn" id="cancelNewChatBtn">取消</button>
                     <button id="confirmNewChatBtn">确认</button>
@@ -88,6 +89,26 @@
                 <!-- 聊天项会动态添加 -->
             </div>
         </div>
+        <!-- 群聊面板 -->
+        <div class="connection-panel" id="groupsPanel">
+            <div class="group-actions">
+                <button id="newGroupBtn" class="new-group-btn">创建新群聊</button>
+            </div>
+
+            <!-- 新建群聊表单 -->
+            <div class="new-group-form" id="newGroupForm" style="display: none;">
+                <input type="text" id="groupNameInput" placeholder="输入群聊名称">
+                <div class="form-buttons">
+                    <button class="cancel-btn" id="cancelNewGroupBtn">取消</button>
+                    <button id="confirmNewGroupBtn">确认</button>
+                </div>
+            </div>
+
+            <!-- 群聊列表 -->
+            <div class="group-list" id="groupList">
+                <!-- 群聊项会动态添加 -->
+            </div>
+        </div>
     </div>
 
     <div class="chat-container">
@@ -97,6 +118,29 @@
         <!-- 聊天头部 -->
         <div class="chat-header">
             <div class="chat-title" id="currentChatTitle">未选择聊天</div>
+            <div class="chat-actions" id="chatHeaderActions" style="display: none;">
+                <button id="manageMembersBtn" class="manage-members-btn">管理成员</button>
+            </div>
+        </div>
+
+        <!-- 群聊成员管理弹窗 -->
+        <div id="memberManagementModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3>管理群聊成员</h3>
+                <div class="member-list" id="groupMemberList">
+                    <!-- 成员列表会动态添加 -->
+                </div>
+                <div class="add-member-section">
+                    <h4>添加成员</h4>
+                    <div class="add-member-form">
+                        <label for="contactsDropdown"></label><select id="contactsDropdown">
+                            <option value="">选择联系人...</option>
+                        </select>
+                        <button id="addMemberBtn">添加</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="chat-box" id="chatBox"></div>
@@ -719,6 +763,15 @@
             }
 
             this.currentChatId = chatId;
+
+            // 检查是否是群聊
+            if (chatId.startsWith('group_')) {
+                // 如果是群聊，交给群聊管理器处理
+                GroupManager.openGroup(chatId);
+                return;
+            }
+
+            // 个人聊天处理逻辑
             UserManager.clearUnread(chatId);
 
             // 更新UI
@@ -731,6 +784,9 @@
             if (contact) {
                 document.getElementById('currentChatTitle').textContent = contact.name;
             }
+
+            // 隐藏群聊成员管理按钮
+            document.getElementById('chatHeaderActions').style.display = 'none';
 
             // 加载聊天记录
             this.loadChatHistory(chatId);
@@ -972,8 +1028,8 @@
 
                     // 更新视频通话按钮状态
                     if (ChatManager.currentChatId === peerId) {
-                        document.getElementById('videoChatBtn').disabled = false;
-                        document.getElementById('videoChatBtn').onclick = () => VideoCallManager.initiateCall(peerId);
+                        document.getElementById('videoCallButton').disabled = false;
+                        document.getElementById('videoCallButton').onclick = () => VideoCallManager.initiateCall(peerId);
                     }
                     break;
 
@@ -1178,8 +1234,8 @@
 
                 // 如果当前正在查看该联系人的聊天，启用视频通话按钮
                 if (ChatManager.currentChatId === peerId) {
-                    document.getElementById('videoChatBtn').disabled = false;
-                    document.getElementById('videoChatBtn').onclick = () => VideoCallManager.initiateCall(peerId);
+                    document.getElementById('videoCallButton').disabled = false;
+                    document.getElementById('videoCallButton').onclick = () => VideoCallManager.initiateCall(peerId);
                 }
             };
 
@@ -1189,7 +1245,7 @@
 
                 // 如果当前正在查看该联系人的聊天，禁用视频通话按钮
                 if (ChatManager.currentChatId === peerId) {
-                    document.getElementById('videoChatBtn').disabled = true;
+                    document.getElementById('videoCallButton').disabled = true;
                 }
 
                 EventEmitter.emit('dataChannelClosed', peerId);
@@ -1208,6 +1264,19 @@
                     // 添加时间戳
                     if (!message.timestamp) {
                         message.timestamp = new Date().toISOString();
+                    }
+
+                    // 检查是否是群组相关消息
+                    if (message.groupId ||
+                        message.type === 'group-invite' ||
+                        message.type === 'group-removed' ||
+                        message.type === 'group-member-added' ||
+                        message.type === 'group-member-removed') {
+
+                        // 交给群聊管理器处理
+                        if (GroupManager.handleGroupMessage(message)) {
+                            return; // 已处理群聊消息
+                        }
                     }
 
                     // 检查是否是视频通话相关消息
@@ -1576,6 +1645,7 @@
             try {
                 // 解析对方的SDP
                 const sdpText = document.getElementById('sdpText').value.trim();
+                document.getElementById('sdpText').value = '';
                 if (!sdpText) {
                     throw new Error('请先粘贴对方的连接信息');
                 }
@@ -1690,20 +1760,24 @@
             }
 
             try {
-                // 添加发送者ID
-                if (typeof message === 'object') {
-                    message.sender = UserManager.userId;
-                    message.timestamp = new Date().toISOString();
-                    conn.dataChannel.send(JSON.stringify(message));
-                } else {
-                    const msgObj = {
+                // 确保消息是对象
+                let msgToSend = message;
+                if (typeof message !== 'object') {
+                    msgToSend = {
                         type: 'text',
                         content: message,
                         sender: UserManager.userId,
                         timestamp: new Date().toISOString()
                     };
-                    conn.dataChannel.send(JSON.stringify(msgObj));
+                } else {
+                    // 添加发送者ID
+                    msgToSend.sender = UserManager.userId;
+                    if (!msgToSend.timestamp) {
+                        msgToSend.timestamp = new Date().toISOString();
+                    }
                 }
+
+                conn.dataChannel.send(JSON.stringify(msgToSend));
                 return true;
             } catch (error) {
                 Utils.log(`发送消息失败: ${error.message}`, Utils.logLevels.ERROR);
@@ -2011,13 +2085,6 @@
             chatBox.appendChild(reconnectPrompt);
             chatBox.scrollTop = chatBox.scrollHeight;
 
-            // 添加系统消息提示
-            const systemMessage = document.createElement('div');
-            systemMessage.className = 'system-message';
-            systemMessage.textContent = '连接已断开，请重新建立连接';
-            chatBox.appendChild(systemMessage);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
             // 设置重连按钮事件
             const reconnectBtn = reconnectPrompt.querySelector('.reconnect-btn');
             reconnectBtn.addEventListener('click', async () => {
@@ -2137,7 +2204,7 @@
                 gap: 10px;
             }
             .reconnect-btn {
-                background: #4CAF50;
+                background: #007bff;
                 color: white;
                 border: none;
                 padding: 5px 15px;
@@ -2181,7 +2248,6 @@
         audioDuration: 0,
 
         // 发送消息
-// 发送消息
         sendMessage: function() {
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
@@ -2192,16 +2258,27 @@
                 return;
             }
 
-            // 检查连接状态
-            const isConnected = ConnectionManager.isConnectedTo(ChatManager.currentChatId);
+            // 检查是否是群聊
+            const isGroupChat = ChatManager.currentChatId.startsWith('group_');
 
-            if (!isConnected && (message || this.selectedImage || this.audioData)) {
-                // 连接未建立，显示重连提示
-                UIManager.showReconnectPrompt(ChatManager.currentChatId, () => {
-                    // 重连成功后的回调，重新尝试发送消息
-                    this.sendMessage();
-                });
+            // 如果是群聊，检查群组是否存在
+            if (isGroupChat && !GroupManager.groups[ChatManager.currentChatId]) {
+                UIManager.showNotification('群聊不存在或您已被移出', 'error');
                 return;
+            }
+
+            // 如果是私聊，检查连接状态
+            if (!isGroupChat) {
+                const isConnected = ConnectionManager.isConnectedTo(ChatManager.currentChatId);
+
+                if (!isConnected && (message || this.selectedImage || this.audioData)) {
+                    // 连接未建立，显示重连提示
+                    UIManager.showReconnectPrompt(ChatManager.currentChatId, () => {
+                        // 重连成功后的回调，重新尝试发送消息
+                        this.sendMessage();
+                    });
+                    return;
+                }
             }
 
             if (!message && !this.selectedImage && !this.audioData) {
@@ -2218,16 +2295,26 @@
                     timestamp: new Date().toISOString()
                 };
 
-                Utils.sendInChunks(JSON.stringify(audioMessage),
-                    (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
+                if (isGroupChat) {
+                    // 发送到群组
+                    GroupManager.broadcastToGroup(ChatManager.currentChatId, audioMessage);
+                } else {
+                    // 发送到个人
+                    Utils.sendInChunks(JSON.stringify(audioMessage),
+                        (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
+                }
 
                 // 添加到聊天记录
                 ChatManager.addMessage(ChatManager.currentChatId, audioMessage);
 
-                // 更新联系人最后消息
-                UserManager.updateContactLastMessage(ChatManager.currentChatId, '[语音]');
+                // 更新最后消息
+                if (isGroupChat) {
+                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, '[语音]');
+                } else {
+                    UserManager.updateContactLastMessage(ChatManager.currentChatId, '[语音]');
+                }
 
-                this.cancelAudioData(); // 这里会调用 MediaManager.releaseAudioResources()
+                this.cancelAudioData();
             }
 
             // 发送图片消息
@@ -2239,14 +2326,24 @@
                     timestamp: new Date().toISOString()
                 };
 
-                Utils.sendInChunks(JSON.stringify(imageMessage),
-                    (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
+                if (isGroupChat) {
+                    // 发送到群组
+                    GroupManager.broadcastToGroup(ChatManager.currentChatId, imageMessage);
+                } else {
+                    // 发送到个人
+                    Utils.sendInChunks(JSON.stringify(imageMessage),
+                        (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
+                }
 
                 // 添加到聊天记录
                 ChatManager.addMessage(ChatManager.currentChatId, imageMessage);
 
-                // 更新联系人最后消息
-                UserManager.updateContactLastMessage(ChatManager.currentChatId, '[图片]');
+                // 更新最后消息
+                if (isGroupChat) {
+                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, '[图片]');
+                } else {
+                    UserManager.updateContactLastMessage(ChatManager.currentChatId, '[图片]');
+                }
 
                 this.cancelImageData();
             }
@@ -2256,19 +2353,29 @@
                 const urlRegex = /(https?:\/\/[^\s]+)/g;
                 const messageObj = {
                     type: 'text',
-                    content: message, // 直接使用原始消息，包含换行符
+                    content: message,
                     links: message.match(urlRegex) || [],
                     sender: UserManager.userId,
                     timestamp: new Date().toISOString()
                 };
 
-                ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(JSON.stringify(messageObj));
+                if (isGroupChat) {
+                    // 发送到群组
+                    GroupManager.broadcastToGroup(ChatManager.currentChatId, messageObj);
+                } else {
+                    // 发送到个人
+                    ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(JSON.stringify(messageObj));
+                }
 
                 // 添加到聊天记录
                 ChatManager.addMessage(ChatManager.currentChatId, messageObj);
 
-                // 更新联系人最后消息
-                UserManager.updateContactLastMessage(ChatManager.currentChatId, message);
+                // 更新最后消息
+                if (isGroupChat) {
+                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, message);
+                } else {
+                    UserManager.updateContactLastMessage(ChatManager.currentChatId, message);
+                }
 
                 input.value = '';
             }
@@ -2433,7 +2540,7 @@
                         <div class="link-preview-description">${previewData.description || '无描述'}</div>
                         <div class="link-preview-domain">
                             <img src="https://www.google.com/s2/favicons?domain=${previewData.domain}"
-                                width="16" height="16" onerror="this.style.display='none'">
+                                width="16" height="16" onerror="this.style.display='none'" alt="">
                             ${previewData.domain}
                         </div>
                     </div>
@@ -2740,7 +2847,7 @@
             const container = document.getElementById('imagePreviewContainer');
             container.innerHTML = `
             <div style="position: relative; display: inline-block;">
-                <img src="${dataUrl}" class="image-preview">
+                <img src="${dataUrl}" class="image-preview" alt="">
                 <button onclick="MessageManager.cancelImageData()">取消</button>
             </div>
         `;
@@ -2829,8 +2936,7 @@
             EventEmitter.on('dataChannelOpen', (peerId) => {
                 if (ChatManager.currentChatId === peerId) {
                     document.getElementById('videoCallButton').disabled = false;
-                    document.getElementById('videoChatBtn').disabled = false;
-                    document.getElementById('videoChatBtn').onclick = () => this.initiateCall(peerId);
+                    document.getElementById('videoCallButton').onclick = () => this.initiateCall(peerId);
                 }
             });
 
@@ -3319,6 +3425,581 @@
         }
     };
 
+    // 群聊管理器
+    const GroupManager = {
+        groups: {},
+        currentGroupId: null,
+
+        init: function() {
+            // 从本地存储加载群聊
+            this.loadGroups();
+
+            // 设置新建群聊按钮事件
+            document.getElementById('newGroupBtn').addEventListener('click', () => {
+                document.getElementById('newGroupForm').style.display = 'block';
+            });
+
+            document.getElementById('cancelNewGroupBtn').addEventListener('click', () => {
+                document.getElementById('newGroupForm').style.display = 'none';
+                document.getElementById('groupNameInput').value = '';
+            });
+
+            document.getElementById('confirmNewGroupBtn').addEventListener('click', () => {
+                const groupName = document.getElementById('groupNameInput').value.trim();
+
+                if (!groupName) {
+                    UIManager.showNotification('请输入群聊名称', 'warning');
+                    return;
+                }
+
+                this.createGroup(groupName);
+                document.getElementById('newGroupForm').style.display = 'none';
+                document.getElementById('groupNameInput').value = '';
+            });
+
+            // 设置成员管理
+            document.getElementById('manageMembersBtn').addEventListener('click', () => {
+                this.showMemberManagement();
+            });
+
+            document.getElementById('addMemberBtn').addEventListener('click', () => {
+                const contactId = document.getElementById('contactsDropdown').value;
+                if (contactId) {
+                    this.addMemberToGroup(this.currentGroupId, contactId);
+                }
+            });
+
+            // 关闭模态窗口
+            document.querySelector('.close-modal').addEventListener('click', () => {
+                document.getElementById('memberManagementModal').style.display = 'none';
+            });
+
+            // 点击模态窗口外部关闭
+            window.addEventListener('click', (event) => {
+                const modal = document.getElementById('memberManagementModal');
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        },
+
+        loadGroups: function() {
+            const saved = localStorage.getItem('groups');
+            if (saved) {
+                try {
+                    this.groups = JSON.parse(saved);
+                    this.renderGroupList();
+                } catch (e) {
+                    Utils.log('加载群聊失败', Utils.logLevels.ERROR);
+                    this.groups = {};
+                }
+            }
+        },
+
+        saveGroups: function() {
+            localStorage.setItem('groups', JSON.stringify(this.groups));
+        },
+
+        createGroup: function(name) {
+            const groupId = 'group_' + Utils.generateId();
+            this.groups[groupId] = {
+                id: groupId,
+                name: name,
+                owner: UserManager.userId,
+                members: [UserManager.userId],
+                lastMessage: '',
+                lastTime: new Date().toISOString(),
+                unread: 0
+            };
+
+            this.saveGroups();
+            this.renderGroupList();
+            UIManager.showNotification(`群聊"${name}"已创建`, 'success');
+
+            return groupId;
+        },
+        renderGroupList: function() {
+            const groupList = document.getElementById('groupList');
+            groupList.innerHTML = '';
+
+            const sortedGroups = Object.values(this.groups).sort((a, b) => {
+                return new Date(b.lastTime) - new Date(a.lastTime);
+            });
+
+            if (sortedGroups.length === 0) {
+                groupList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无群聊，点击"创建新群聊"开始</div>';
+                return;
+            }
+
+            sortedGroups.forEach(group => {
+                const groupItem = document.createElement('div');
+                groupItem.className = `group-item ${group.id === this.currentGroupId ? 'active' : ''}`;
+                groupItem.setAttribute('data-id', group.id);
+
+                const lastTime = new Date(group.lastTime);
+                const formattedTime = Utils.formatDate(lastTime);
+
+                groupItem.innerHTML = `
+                <div class="group-avatar">👥</div>
+                <div class="group-info">
+                    <div class="group-name">${group.name}</div>
+                    <div class="group-preview">${group.members.length}人 | ${group.lastMessage || '暂无消息'}</div>
+                </div>
+                <div class="group-meta">
+                    <div class="group-time">${formattedTime}</div>
+                    ${group.unread ? `<div class="chat-badge">${group.unread > 99 ? '99+' : group.unread}</div>` : ''}
+                </div>
+            `;
+
+                groupItem.addEventListener('click', () => {
+                    this.openGroup(group.id);
+                });
+
+                groupList.appendChild(groupItem);
+            });
+        },
+
+        openGroup: function(groupId) {
+            // 保存之前的聊天记录
+            if (ChatManager.currentChatId) {
+                ChatManager.saveCurrentChat();
+            }
+
+            ChatManager.currentChatId = groupId;
+            this.currentGroupId = groupId;
+            this.clearUnread(groupId);
+
+            // 更新UI
+            document.querySelectorAll('.group-item').forEach(item => {
+                item.classList.toggle('active', item.getAttribute('data-id') === groupId);
+            });
+
+            // 设置聊天标题
+            const group = this.groups[groupId];
+            if (group) {
+                document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
+
+                // 显示成员管理按钮（仅群主可见）
+                const chatHeaderActions = document.getElementById('chatHeaderActions');
+                if (group.owner === UserManager.userId) {
+                    chatHeaderActions.style.display = 'flex';
+                } else {
+                    chatHeaderActions.style.display = 'none';
+                }
+            }
+
+            // 加载聊天记录
+            ChatManager.loadChatHistory(groupId);
+
+            // 在移动设备上切换到聊天界面
+            if (window.innerWidth <= 768) {
+                document.querySelector('.container').classList.add('connected-mode');
+            }
+
+            // 启用聊天输入
+            UIManager.enableChatInterface(true);
+
+            // 聚焦输入框
+            setTimeout(() => document.getElementById('messageInput').focus(), 100);
+        },
+
+        showMemberManagement: function() {
+            if (!this.currentGroupId) return;
+
+            const group = this.groups[this.currentGroupId];
+            if (!group) return;
+
+            // 填充成员列表
+            const memberList = document.getElementById('groupMemberList');
+            memberList.innerHTML = '';
+
+            group.members.forEach(memberId => {
+                const memberItem = document.createElement('div');
+                memberItem.className = 'member-item';
+
+                // 确定成员名称
+                let memberName = memberId;
+                if (memberId === UserManager.userId) {
+                    memberName = `${UserManager.userName} (我)`;
+                } else if (UserManager.contacts[memberId]) {
+                    memberName = UserManager.contacts[memberId].name;
+                }
+
+                // 标记群主
+                const isOwner = memberId === group.owner;
+
+                memberItem.innerHTML = `
+                <div class="member-name">${memberName} ${isOwner ? '<span class="owner-badge">群主</span>' : ''}</div>
+                ${!isOwner && group.owner === UserManager.userId ?
+                    `<button class="remove-member-btn" data-id="${memberId}">移除</button>` : ''}
+            `;
+
+                memberList.appendChild(memberItem);
+            });
+
+            // 为移除按钮添加事件
+            memberList.querySelectorAll('.remove-member-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const memberId = e.target.getAttribute('data-id');
+                    this.removeMemberFromGroup(this.currentGroupId, memberId);
+                });
+            });
+
+            // 填充联系人下拉列表
+            const contactsDropdown = document.getElementById('contactsDropdown');
+            contactsDropdown.innerHTML = '<option value="">选择联系人...</option>';
+
+            Object.values(UserManager.contacts).forEach(contact => {
+                // 只显示未加入群的联系人
+                if (!group.members.includes(contact.id)) {
+                    const option = document.createElement('option');
+                    option.value = contact.id;
+                    option.textContent = contact.name;
+                    contactsDropdown.appendChild(option);
+                }
+            });
+
+            // 显示模态窗口
+            document.getElementById('memberManagementModal').style.display = 'block';
+        },
+        addMemberToGroup: function(groupId, memberId) {
+            const group = this.groups[groupId];
+            if (!group) return false;
+
+            // 检查是否已经是成员
+            if (group.members.includes(memberId)) {
+                UIManager.showNotification('该用户已在群聊中', 'warning');
+                return false;
+            }
+
+            // 检查是否已连接
+            if (!ConnectionManager.isConnectedTo(memberId)) {
+                UIManager.showNotification('请先与该用户建立连接', 'warning');
+                return false;
+            }
+
+            // 添加成员
+            group.members.push(memberId);
+            this.saveGroups();
+
+            // 更新成员管理界面
+            this.showMemberManagement();
+
+            // 更新群聊标题
+            if (this.currentGroupId === groupId) {
+                document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
+            }
+
+            // 发送系统消息
+            const systemMessage = {
+                type: 'system',
+                content: `${UserManager.contacts[memberId]?.name || memberId} 已加入群聊`,
+                timestamp: new Date().toISOString()
+            };
+
+            // 添加到聊天记录
+            ChatManager.addMessage(groupId, systemMessage);
+
+            // 通知新成员已加入群聊
+            const groupInfo = {
+                type: 'group-invite',
+                groupId: groupId,
+                groupName: group.name,
+                members: group.members,
+                owner: group.owner,
+                sender: UserManager.userId,
+                timestamp: new Date().toISOString()
+            };
+
+            ConnectionManager.sendTo(memberId, groupInfo);
+
+            // 通知其他成员有新成员加入
+            const memberUpdate = {
+                type: 'group-member-added',
+                groupId: groupId,
+                newMemberId: memberId,
+                sender: UserManager.userId,
+                timestamp: new Date().toISOString()
+            };
+
+            this.broadcastToGroup(groupId, memberUpdate, [memberId]);
+
+            UIManager.showNotification(`已将 ${UserManager.contacts[memberId]?.name || memberId} 添加到群聊`, 'success');
+            return true;
+        },
+
+        removeMemberFromGroup: function(groupId, memberId) {
+            const group = this.groups[groupId];
+            if (!group) return false;
+
+            // 检查是否是群主
+            if (group.owner !== UserManager.userId) {
+                UIManager.showNotification('只有群主可以移除成员', 'error');
+                return false;
+            }
+
+            // 移除成员
+            const index = group.members.indexOf(memberId);
+            if (index !== -1) {
+                group.members.splice(index, 1);
+                this.saveGroups();
+
+                // 更新成员管理界面
+                this.showMemberManagement();
+
+                // 更新群聊标题
+                if (this.currentGroupId === groupId) {
+                    document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
+                }
+
+                // 发送系统消息
+                const systemMessage = {
+                    type: 'system',
+                    content: `${UserManager.contacts[memberId]?.name || memberId} 已被移出群聊`,
+                    timestamp: new Date().toISOString()
+                };
+
+                // 添加到聊天记录
+                ChatManager.addMessage(groupId, systemMessage);
+
+                // 通知被移除的成员
+                const removeNotification = {
+                    type: 'group-removed',
+                    groupId: groupId,
+                    reason: 'removed_by_owner',
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
+                };
+
+                if (ConnectionManager.isConnectedTo(memberId)) {
+                    ConnectionManager.sendTo(memberId, removeNotification);
+                }
+
+                // 通知其他成员
+                const memberUpdate = {
+                    type: 'group-member-removed',
+                    groupId: groupId,
+                    removedMemberId: memberId,
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
+                };
+
+                this.broadcastToGroup(groupId, memberUpdate);
+
+                UIManager.showNotification(`已将 ${UserManager.contacts[memberId]?.name || memberId} 移出群聊`, 'success');
+                return true;
+            }
+
+            return false;
+        },
+
+        clearUnread: function(groupId) {
+            if (this.groups[groupId]) {
+                this.groups[groupId].unread = 0;
+                this.saveGroups();
+                this.renderGroupList();
+            }
+        },
+        updateGroupLastMessage: function(groupId, message, isUnread = false) {
+            if (this.groups[groupId]) {
+                this.groups[groupId].lastMessage = message;
+                this.groups[groupId].lastTime = new Date().toISOString();
+                if (isUnread) {
+                    this.groups[groupId].unread = (this.groups[groupId].unread || 0) + 1;
+                }
+                this.saveGroups();
+                this.renderGroupList();
+            }
+        },
+
+        // 向群组广播消息（星型拓扑）
+        broadcastToGroup: function(groupId, message, excludeMembers = []) {
+            const group = this.groups[groupId];
+            if (!group) return false;
+
+            // 确保消息有发送者信息
+            if (!message.sender) {
+                message.sender = UserManager.userId;
+            }
+
+            // 确保消息有时间戳
+            if (!message.timestamp) {
+                message.timestamp = new Date().toISOString();
+            }
+
+            // 添加群组ID
+            message.groupId = groupId;
+
+            // 如果是群主，直接向所有成员广播
+            if (group.owner === UserManager.userId) {
+                let successCount = 0;
+
+                // 向每个成员发送消息（排除自己和可能的排除列表）
+                group.members.forEach(memberId => {
+                    if (memberId !== UserManager.userId && !excludeMembers.includes(memberId)) {
+                        if (ConnectionManager.isConnectedTo(memberId)) {
+                            ConnectionManager.sendTo(memberId, message);
+                            successCount++;
+                        }
+                    }
+                });
+
+                return successCount > 0;
+            }
+            // 如果不是群主，将消息发送给群主，由群主转发
+            else if (ConnectionManager.isConnectedTo(group.owner)) {
+                // 添加转发标记，表示这是需要群主转发的消息
+                message.needsRelay = true;
+                return ConnectionManager.sendTo(group.owner, message);
+            }
+
+            return false;
+        },
+
+        // 处理收到的群组消息
+        handleGroupMessage: function(message) {
+            const groupId = message.groupId;
+
+            // 检查是否是群组消息
+            if (!groupId || !message.type) return false;
+
+            // 如果是群主收到的消息，且需要转发
+            if (message.needsRelay) {
+                const group = this.groups[groupId];
+                if (group && group.owner === UserManager.userId) {
+                    // 移除转发标记，防止循环转发
+                    delete message.needsRelay;
+
+                    // 转发给群组其他成员
+                    this.broadcastToGroup(groupId, message, [message.sender]);
+                }
+            }
+
+            // 处理不同类型的群组消息
+            switch (message.type) {
+                case 'group-invite':
+                    // 处理群组邀请
+                    this.handleGroupInvite(message);
+                    break;
+
+                case 'group-removed':
+                    // 处理被移出群组
+                    this.handleGroupRemoval(message);
+                    break;
+
+                case 'group-member-added':
+                case 'group-member-removed':
+                    // 更新群组成员信息
+                    this.handleMembershipUpdate(message);
+                    break;
+
+                case 'text':
+                case 'image':
+                case 'audio':
+                    // 处理普通消息
+                    if (this.groups[groupId]) {
+                        // 添加到聊天记录
+                        ChatManager.addMessage(groupId, message);
+
+                        // 更新群组最后消息
+                        let previewText = '';
+                        if (message.type === 'text') {
+                            previewText = message.content;
+                        } else if (message.type === 'image') {
+                            previewText = '[图片]';
+                        } else if (message.type === 'audio') {
+                            previewText = '[语音]';
+                        }
+
+                        this.updateGroupLastMessage(
+                            groupId,
+                            previewText,
+                            this.currentGroupId !== groupId
+                        );
+                    }
+                    break;
+
+                case 'system':
+                    // 处理系统消息
+                    if (this.groups[groupId]) {
+                        ChatManager.addMessage(groupId, message);
+                    }
+                    break;
+            }
+
+            return true;
+        },
+
+        handleGroupInvite: function(message) {
+            // 创建或更新本地群组信息
+            this.groups[message.groupId] = {
+                id: message.groupId,
+                name: message.groupName,
+                owner: message.owner,
+                members: message.members,
+                lastMessage: '您被邀请加入群聊',
+                lastTime: message.timestamp,
+                unread: 1
+            };
+
+            this.saveGroups();
+            this.renderGroupList();
+
+            // 显示通知
+            UIManager.showNotification(`您已被邀请加入群聊"${message.groupName}"`, 'info');
+        },
+
+        handleGroupRemoval: function(message) {
+            const groupId = message.groupId;
+
+            // 如果群组存在，移除它
+            if (this.groups[groupId]) {
+                // 如果当前正在查看该群组，关闭它
+                if (this.currentGroupId === groupId) {
+                    this.currentGroupId = null;
+                    ChatManager.currentChatId = null;
+                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                    document.getElementById('chatBox').innerHTML = '';
+                    document.getElementById('chatHeaderActions').style.display = 'none';
+                }
+
+                // 删除群组
+                delete this.groups[groupId];
+                this.saveGroups();
+                this.renderGroupList();
+
+                // 显示通知
+                UIManager.showNotification('您已被移出群聊', 'warning');
+            }
+        },
+
+        handleMembershipUpdate: function(message) {
+            const groupId = message.groupId;
+            const group = this.groups[groupId];
+
+            if (!group) return;
+
+            // 更新成员列表
+            if (message.type === 'group-member-added' && message.newMemberId) {
+                if (!group.members.includes(message.newMemberId)) {
+                    group.members.push(message.newMemberId);
+                }
+            } else if (message.type === 'group-member-removed' && message.removedMemberId) {
+                const index = group.members.indexOf(message.removedMemberId);
+                if (index !== -1) {
+                    group.members.splice(index, 1);
+                }
+            }
+
+            this.saveGroups();
+
+            // 如果当前正在查看该群组，更新标题
+            if (this.currentGroupId === groupId) {
+                document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
+            }
+        }
+    };
+
     // 初始化应用
     const AppInitializer = {
         init: function () {
@@ -3348,6 +4029,9 @@
 
             // 初始化移动端UI
             this.initMobileUI();
+
+            // 初始化群聊管理
+            GroupManager.init();
 
             Utils.log('应用已初始化', Utils.logLevels.INFO);
         },
@@ -3486,7 +4170,7 @@
                 // 如果是当前聊天，更新UI
                 if (ChatManager.currentChatId === peerId) {
                     // 禁用视频通话按钮
-                    document.getElementById('videoChatBtn').disabled = true;
+                    document.getElementById('videoCallButton').disabled = true;
 
                     // 移动端：断开连接时切换回设置界面
                     if (window.innerWidth <= 768) {
@@ -3499,7 +4183,7 @@
                 // 如果是当前聊天，更新UI
                 if (ChatManager.currentChatId === peerId) {
                     // 禁用视频通话按钮
-                    document.getElementById('videoChatBtn').disabled = true;
+                    document.getElementById('videoCallButton').disabled = true;
 
                     // 移动端：连接失败时切换回设置界面
                     if (window.innerWidth <= 768) {

@@ -82,7 +82,7 @@ body {
 }
 
 .quality-good {
-    background: #28a745;
+    background: #007bff;
 }
 
 .quality-medium {
@@ -598,7 +598,7 @@ textarea {
 .back-to-chat-btn {
     margin-bottom: 15px;
     padding: 8px 16px;
-    background: #28a745;
+    background: #2196F3;
     color: white;
     border: none;
     border-radius: 4px;
@@ -607,7 +607,7 @@ textarea {
 }
 
 .back-to-chat-btn:hover {
-    background: #218838;
+    background: #007bff;
 }
 
 /* 移动端优化：默认隐藏聊天界面，只显示连接设置 */
@@ -944,7 +944,7 @@ textarea {
 }
 
 .new-chat-btn {
-    background: #28a745;
+    background: #007bff;
     flex: 1;
 }
 
@@ -962,6 +962,32 @@ textarea {
     border: 1px solid #ddd;
     border-radius: 4px;
     margin-bottom: 10px;
+}
+
+.new-group-form {
+    padding: 15px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.new-group-form input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 10px;
+}
+
+.group-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.new-group-btn {
+    background: #007bff;
+    flex: 1;
 }
 
 .form-buttons {
@@ -1037,4 +1063,257 @@ textarea {
 
 .clear-contacts-btn:hover {
     background-color: #d32f2f;
+}
+
+/* 群聊样式 */
+/* 群聊样式 */
+.group-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.group-item:hover, .group-item.active {
+    background: #f0f0f0;
+}
+
+.group-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #57be6a;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 18px;
+}
+
+.group-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.group-name {
+    font-weight: bold;
+    margin-bottom: 3px;
+    color: #333;
+}
+
+.group-preview {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.group-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.group-time {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 5px;
+}
+
+/* 成员管理样式 */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.2s;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    animation: slideUp 0.3s;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f8f8f8;
+}
+
+.modal-header h3 {
+    font-size: 18px;
+    font-weight: 500;
+    color: #333;
+    margin: 20px;
+}
+
+.close-modal {
+    color: #888;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s;
+    float: right;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+.member-count {
+    padding: 10px 20px;
+    color: #888;
+    font-size: 14px;
+    background: #f9f9f9;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.member-list {
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.member-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.member-item:last-child {
+    border-bottom: none;
+}
+
+.member-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.member-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #f2f2f2;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    font-size: 18px;
+}
+
+.member-name {
+    font-size: 15px;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+.owner-badge {
+    background-color: #07c160;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.remove-member-btn {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+
+.remove-member-btn:hover {
+    background-color: #d32f2f;
+}
+
+.add-member-section {
+    padding: 15px 20px;
+    border-top: 1px solid #f0f0f0;
+    background: #f9f9f9;
+}
+
+.add-member-header {
+    margin-bottom: 10px;
+}
+
+.add-member-header h4 {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+.add-member-form {
+    display: flex;
+    gap: 10px;
+}
+
+.add-member-form select {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background-color: #fff;
+}
+
+#addMemberBtn {
+    background-color: #07c160;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+}
+
+#addMemberBtn:hover {
+    background-color: #06ae56;
+}
+
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #f0f0f0;
+    text-align: right;
+    background-color: #f8f8f8;
+}
+
+.close-modal-btn {
+    background-color: #07c160;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 15px;
+    transition: background-color 0.2s;
 }
