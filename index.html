@@ -159,6 +159,9 @@
                     <button class="video-call-btn" id="videoCallButton" disabled onclick="VideoCallManager.initiateCall()">
                         视频
                     </button>
+                    <button class="audio-call-btn" id="audioCallButton" disabled onclick="VideoCallManager.initiateAudioCall()">
+                        语音通话
+                    </button>
                 </div>
                 <div class="right-buttons">
                     <button class="clear-chat-btn" id="clearChatButton" onclick="MessageManager.clearChat()">
@@ -206,6 +209,9 @@
         </button>
         <button class="video-call-button end-call" onclick="VideoCallManager.endCall()">
             📞
+        </button>
+        <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">
+            🔊
         </button>
     </div>
 </div>
@@ -590,615 +596,6 @@
                 request.onsuccess = () => resolve();
                 request.onerror = () => reject('清空数据失败');
             });
-        }
-    };
-
-    // 用户管理器
-    const UserManager = {
-        userId: null,
-        userName: '群主',
-        contacts: {},
-
-        init: async function() {
-            try {
-                // 确保数据库初始化
-                await DBManager.init();
-
-                // 获取或生成用户ID
-                const userData = await DBManager.getItem('user', 'current');
-                if (userData) {
-                    this.userId = userData.userId;
-                } else {
-                    // 生成新用户ID
-                    this.userId = Utils.generateId();
-                    await DBManager.setItem('user', {
-                        id: 'current',
-                        userId: this.userId
-                    });
-                }
-
-                // 显示用户ID
-                document.getElementById('userIdValue').textContent = this.userId;
-
-                // 设置复制ID按钮
-                document.getElementById('copyIdBtn').addEventListener('click', () => {
-                    navigator.clipboard.writeText(this.userId)
-                        .then(() => UIManager.showNotification('ID已复制到剪贴板', 'success'))
-                        .catch(() => UIManager.showNotification('复制失败，请手动复制', 'error'));
-                });
-
-                // 加载联系人
-                await this.loadContacts();
-            } catch (error) {
-                Utils.log(`用户初始化失败: ${error}`, Utils.logLevels.ERROR);
-                // 回退方案
-                this.userId = Utils.generateId();
-                document.getElementById('userIdValue').textContent = this.userId;
-                this.loadContactsFromLocalStorage();
-            }
-        },
-
-        loadContacts: async function() {
-            try {
-                const contacts = await DBManager.getAllItems('contacts');
-                this.contacts = {};
-
-                if (contacts && contacts.length > 0) {
-                    contacts.forEach(contact => {
-                        this.contacts[contact.id] = contact;
-                    });
-                    ChatManager.renderChatList();
-                }
-            } catch (error) {
-                Utils.log(`加载联系人失败: ${error}`, Utils.logLevels.ERROR);
-                this.contacts = {};
-                // 尝试从localStorage加载
-                this.loadContactsFromLocalStorage();
-            }
-        },
-
-        saveContacts: async function() {
-            try {
-                for (const id in this.contacts) {
-                    await DBManager.setItem('contacts', this.contacts[id]);
-                }
-            } catch (error) {
-                Utils.log(`保存联系人失败: ${error}`, Utils.logLevels.ERROR);
-            }
-        },
-
-        addContact: async function(id, name) {
-            if (id === this.userId) {
-                UIManager.showNotification('不能添加自己为联系人', 'error');
-                return false;
-            }
-
-            if (this.contacts[id]) {
-                UIManager.showNotification('该联系人已存在', 'warning');
-                return false;
-            }
-
-            const contact = {
-                id: id,
-                name: name || `用户${id.substring(0, 4)}`,
-                lastMessage: '',
-                lastTime: new Date().toISOString(),
-                unread: 0
-            };
-
-            this.contacts[id] = contact;
-
-            try {
-                await DBManager.setItem('contacts', contact);
-                ChatManager.renderChatList();
-                return true;
-            } catch (error) {
-                Utils.log(`添加联系人失败: ${error}`, Utils.logLevels.ERROR);
-                // 备份策略：保存到localStorage
-                this.saveContacts();
-                ChatManager.renderChatList();
-                return true;
-            }
-        },
-
-        removeContact: async function(id) {
-            if (this.contacts[id]) {
-                delete this.contacts[id];
-
-                try {
-                    await DBManager.removeItem('contacts', id);
-                    ChatManager.renderChatList();
-                    return true;
-                } catch (error) {
-                    Utils.log(`删除联系人失败: ${error}`, Utils.logLevels.ERROR);
-                    // 备份策略：保存到localStorage
-                    this.saveContacts();
-                    ChatManager.renderChatList();
-                    return true;
-                }
-            }
-            return false;
-        },
-
-        updateContactLastMessage: async function(id, message, isUnread = false) {
-            if (this.contacts[id]) {
-                this.contacts[id].lastMessage = message;
-                this.contacts[id].lastTime = new Date().toISOString();
-                if (isUnread) {
-                    this.contacts[id].unread = (this.contacts[id].unread || 0) + 1;
-                }
-
-                try {
-                    await DBManager.setItem('contacts', this.contacts[id]);
-                    ChatManager.renderChatList();
-                } catch (error) {
-                    Utils.log(`更新联系人最后消息失败: ${error}`, Utils.logLevels.ERROR);
-                    // 备份策略：保存到localStorage
-                    this.saveContacts();
-                    ChatManager.renderChatList();
-                }
-            }
-        },
-
-        clearUnread: async function(id) {
-            if (this.contacts[id]) {
-                this.contacts[id].unread = 0;
-
-                try {
-                    await DBManager.setItem('contacts', this.contacts[id]);
-                    ChatManager.renderChatList();
-                } catch (error) {
-                    Utils.log(`清除未读数失败: ${error}`, Utils.logLevels.ERROR);
-                    // 备份策略：保存到localStorage
-                    this.saveContacts();
-                    ChatManager.renderChatList();
-                }
-            }
-        },
-
-        // 清空所有联系人列表
-        clearAllContacts: async function() {
-            // 确认对话框
-            if (!confirm('确定要清空所有聊天吗？此操作不可撤销。')) {
-                return false;
-            }
-
-            // 备份当前联系人ID，用于后续关闭连接
-            const contactIds = Object.keys(this.contacts);
-
-            // 清空联系人对象
-            this.contacts = {};
-
-            try {
-                // 清空IndexedDB中的联系人
-                await DBManager.clearStore('contacts');
-
-                // 关闭所有连接
-                contactIds.forEach(peerId => {
-                    if (ConnectionManager.connections[peerId]) {
-                        ConnectionManager.close(peerId);
-                    }
-                });
-
-                // 更新UI
-                ChatManager.renderChatList();
-
-                // 清空当前聊天
-                if (ChatManager.currentChatId) {
-                    ChatManager.currentChatId = null;
-                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
-                    document.getElementById('chatBox').innerHTML = '';
-
-                    // 禁用聊天界面
-                    UIManager.enableChatInterface(false);
-                }
-
-                // 通知用户
-                UIManager.showNotification('所有联系人已清空', 'info');
-                Utils.log('所有联系人已清空', Utils.logLevels.INFO);
-
-                return true;
-            } catch (error) {
-                Utils.log(`清空联系人失败: ${error}`, Utils.logLevels.ERROR);
-                return true;
-            }
-        }
-    };
-
-    // 聊天管理器
-    const ChatManager = {
-        currentChatId: null,
-        chats: {},
-
-        init: async function() {
-            // 初始化联系人列表
-            await this.loadChats();
-
-            // 设置新建聊天按钮事件
-            document.getElementById('newChatBtn').addEventListener('click', () => {
-                document.getElementById('newChatForm').style.display = 'block';
-            });
-
-            // 设置清空联系人列表按钮事件
-            document.getElementById('clearContactsBtn').addEventListener('click', () => {
-                UserManager.clearAllContacts();
-            });
-
-            document.getElementById('cancelNewChatBtn').addEventListener('click', () => {
-                document.getElementById('newChatForm').style.display = 'none';
-                document.getElementById('peerIdInput').value = '';
-                document.getElementById('peerNameInput').value = '';
-            });
-
-            document.getElementById('confirmNewChatBtn').addEventListener('click', () => {
-                const peerId = document.getElementById('peerIdInput').value.trim();
-                const peerName = document.getElementById('peerNameInput').value.trim() || `用户${peerId.substring(0, 4)}`;
-
-                if (!peerId) {
-                    UIManager.showNotification('请输入对方ID', 'warning');
-                    return;
-                }
-
-                if (UserManager.addContact(peerId, peerName)) {
-                    document.getElementById('newChatForm').style.display = 'none';
-                    document.getElementById('peerIdInput').value = '';
-                    document.getElementById('peerNameInput').value = '';
-
-                    // 切换到联系人列表
-                    document.querySelector('.connection-tab[data-tab="chats"]').click();
-                }
-            });
-
-            // 设置选项卡切换
-            document.querySelectorAll('.connection-tab').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    document.querySelectorAll('.connection-tab').forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-
-                    const tabName = tab.getAttribute('data-tab');
-                    document.querySelectorAll('.connection-panel').forEach(panel => {
-                        panel.classList.remove('active');
-                    });
-                    document.getElementById(`${tabName}Panel`).classList.add('active');
-                });
-            });
-        },
-
-        loadChats: async function() {
-            try {
-                await DBManager.init();
-                const chatItems = await DBManager.getAllItems('chats');
-                this.chats = {};
-
-                if (chatItems && chatItems.length > 0) {
-                    chatItems.forEach(item => {
-                        this.chats[item.id] = item.messages || [];
-                    });
-                }
-            } catch (error) {
-                Utils.log(`加载聊天记录失败: ${error}`, Utils.logLevels.ERROR);
-                // 尝试从localStorage加载
-                this.loadChatsFromLocalStorage();
-            }
-        },
-
-        saveChats: async function() {
-            if (this.currentChatId) {
-                try {
-                    await DBManager.setItem('chats', {
-                        id: this.currentChatId,
-                        messages: this.chats[this.currentChatId] || []
-                    });
-
-                } catch (error) {
-                    Utils.log(`保存聊天记录失败: ${error}`, Utils.logLevels.ERROR);
-                }
-            }
-        },
-
-        renderChatList: function() {
-            const chatList = document.getElementById('chatList');
-            chatList.innerHTML = '';
-
-            const sortedContacts = Object.values(UserManager.contacts).sort((a, b) => {
-                return new Date(b.lastTime) - new Date(a.lastTime);
-            });
-
-            if (sortedContacts.length === 0) {
-                chatList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无聊天，点击"添加新聊天"开始</div>';
-                return;
-            }
-
-            sortedContacts.forEach(contact => {
-                const chatItem = document.createElement('div');
-                chatItem.className = `chat-item ${contact.id === this.currentChatId ? 'active' : ''}`;
-                chatItem.setAttribute('data-id', contact.id);
-
-                const lastTime = new Date(contact.lastTime);
-                const formattedTime = Utils.formatDate(lastTime);
-
-                chatItem.innerHTML = `
-            <div class="chat-avatar">${contact.name.charAt(0)}</div>
-            <div class="chat-info">
-                <div class="chat-name">${contact.name}</div>
-                <div class="chat-preview">${contact.lastMessage || '暂无消息'}</div>
-            </div>
-            <div class="chat-meta">
-                <div class="chat-time">${formattedTime}</div>
-                ${contact.unread ? `<div class="chat-badge">${contact.unread > 99 ? '99+' : contact.unread}</div>` : ''}
-            </div>
-            <div class="delete-btn" style="display: none;">删除</div>
-        `;
-
-                chatItem.addEventListener('click', (e) => {
-                    // 如果点击的是删除按钮，不打开聊天
-                    if (e.target.classList.contains('delete-btn')) {
-                        e.stopPropagation();
-                        this.deleteChat(contact.id);
-                        return;
-                    }
-                    this.openChat(contact.id);
-                });
-
-                // 添加鼠标悬浮事件
-                chatItem.addEventListener('mouseenter', () => {
-                    chatItem.querySelector('.delete-btn').style.display = 'block';
-                });
-
-                chatItem.addEventListener('mouseleave', () => {
-                    chatItem.querySelector('.delete-btn').style.display = 'none';
-                });
-
-                chatList.appendChild(chatItem);
-            });
-        },
-
-        // 添加删除聊天记录的方法
-        deleteChat: function(chatId) {
-            // 确认对话框
-            if (confirm('确定要删除此聊天吗？此操作将清空聊天记录且不可撤销。')) {
-                // 清空聊天记录
-                this.clearChat(chatId);
-
-                // 从联系人列表中移除
-                UserManager.removeContact(chatId);
-
-                // 如果删除的是当前聊天，重置聊天界面
-                if (chatId === this.currentChatId) {
-                    this.currentChatId = null;
-                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
-                    document.getElementById('chatBox').innerHTML = '';
-
-                    // 禁用聊天界面
-                    UIManager.enableChatInterface(false);
-                }
-
-                // 更新联系人列表
-                this.renderChatList();
-
-                // 显示通知
-                UIManager.showNotification('聊天已删除', 'info');
-            }
-        },
-
-        openChat: function(chatId) {
-            // 保存之前的聊天记录
-            if (this.currentChatId) {
-                this.saveCurrentChat();
-            }
-
-            this.currentChatId = chatId;
-
-            // 检查是否是群聊
-            if (chatId.startsWith('group_')) {
-                // 如果是群聊，交给群聊管理器处理
-                GroupManager.openGroup(chatId);
-                return;
-            }
-
-            // 个人聊天处理逻辑
-            UserManager.clearUnread(chatId);
-
-            // 更新UI
-            document.querySelectorAll('.chat-item').forEach(item => {
-                item.classList.toggle('active', item.getAttribute('data-id') === chatId);
-            });
-
-            // 设置聊天标题
-            const contact = UserManager.contacts[chatId];
-            if (contact) {
-                document.getElementById('currentChatTitle').textContent = contact.name;
-            }
-
-            // 隐藏群聊成员管理按钮
-            document.getElementById('chatHeaderActions').style.display = 'none';
-
-            // 加载聊天记录
-            this.loadChatHistory(chatId);
-
-            // 在移动设备上切换到聊天界面
-            if (window.innerWidth <= 768) {
-                document.querySelector('.container').classList.add('connected-mode');
-            }
-
-            // 启用聊天输入
-            UIManager.enableChatInterface(true);
-
-            // 检查连接状态
-            const isConnected = ConnectionManager.isConnectedTo(chatId);
-
-            // 更新视频通话按钮状态
-            document.getElementById('videoCallButton').disabled = !isConnected;
-
-            // 如果连接未建立，添加系统消息提示
-            if (!isConnected) {
-                const chatBox = document.getElementById('chatBox');
-                const systemMessage = document.createElement('div');
-                systemMessage.className = 'system-message';
-                systemMessage.textContent = '连接未建立，发送消息时将提示重新连接';
-                chatBox.appendChild(systemMessage);
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-
-            // 聚焦输入框
-            setTimeout(() => document.getElementById('messageInput').focus(), 100);
-        },
-
-        loadChatHistory: function(chatId) {
-            const chatBox = document.getElementById('chatBox');
-            chatBox.innerHTML = '';
-
-            if (!this.chats[chatId]) {
-                this.chats[chatId] = [];
-                return;
-            }
-
-            this.chats[chatId].forEach(msg => {
-                MessageManager.displayMessage(msg, msg.sender === UserManager.userId);
-            });
-
-            // 滚动到底部
-            chatBox.scrollTop = chatBox.scrollHeight;
-        },
-
-        saveCurrentChat: function() {
-            if (this.currentChatId) {
-                this.saveChats();
-            }
-        },
-
-        addMessage: async function(chatId, message) {
-            if (!this.chats[chatId]) {
-                this.chats[chatId] = [];
-            }
-
-            this.chats[chatId].push(message);
-
-            // 如果是当前聊天，显示消息
-            if (chatId === this.currentChatId) {
-                MessageManager.displayMessage(message, message.sender === UserManager.userId);
-                document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
-            } else {
-                // 更新未读消息计数
-                if (chatId.startsWith('group_')) {
-                    GroupManager.updateGroupLastMessage(
-                        chatId,
-                        message.type === 'text' ? message.content : '[媒体消息]',
-                        true
-                    );
-                } else {
-                    UserManager.updateContactLastMessage(
-                        chatId,
-                        message.type === 'text' ? message.content : '[媒体消息]',
-                        true
-                    );
-                }
-            }
-
-            try {
-                // 保存到IndexedDB
-                await DBManager.setItem('chats', {
-                    id: chatId,
-                    messages: this.chats[chatId]
-                });
-            } catch (error) {
-                Utils.log(`保存消息失败: ${error}`, Utils.logLevels.ERROR);
-            }
-        },
-
-        clearChat: async function(chatId) {
-            if (chatId) {
-                this.chats[chatId] = [];
-
-                try {
-                    await DBManager.setItem('chats', {
-                        id: chatId,
-                        messages: []
-                    });
-
-                    if (chatId === this.currentChatId) {
-                        document.getElementById('chatBox').innerHTML = '';
-                    }
-
-                    return true;
-                } catch (error) {
-                    Utils.log(`清空聊天记录失败: ${error}`, Utils.logLevels.ERROR);
-
-                    if (chatId === this.currentChatId) {
-                        document.getElementById('chatBox').innerHTML = '';
-                    }
-
-                    return true;
-                }
-            }
-            return false;
-        },
-
-        // 清空所有聊天记录
-        clearAllChats: async function() {
-            // 确认对话框
-            if (!confirm('确定要清空所有聊天记录吗？此操作不可撤销。')) {
-                return;
-            }
-
-            // 清空所有聊天记录
-            this.chats = {};
-
-            try {
-                await DBManager.clearStore('chats');
-
-                // 如果当前有打开的聊天，清空聊天框
-                if (this.currentChatId) {
-                    document.getElementById('chatBox').innerHTML = '';
-
-                    // 添加系统消息提示
-                    const systemMessage = document.createElement('div');
-                    systemMessage.className = 'system-message';
-                    systemMessage.textContent = '所有聊天记录已清空';
-                    document.getElementById('chatBox').appendChild(systemMessage);
-                }
-
-                // 更新所有联系人的最后消息
-                for (const contactId in UserManager.contacts) {
-                    UserManager.contacts[contactId].lastMessage = '';
-                    UserManager.contacts[contactId].unread = 0;
-                }
-                UserManager.saveContacts();
-
-                // 更新群组的最后消息
-                for (const groupId in GroupManager.groups) {
-                    GroupManager.groups[groupId].lastMessage = '';
-                    GroupManager.groups[groupId].unread = 0;
-                }
-                GroupManager.saveGroups();
-
-                // 更新联系人列表
-                this.renderChatList();
-
-                // 通知用户
-                UIManager.showNotification('所有聊天记录已清空', 'info');
-                Utils.log('所有聊天记录已清空', Utils.logLevels.INFO);
-
-                return true;
-            } catch (error) {
-                Utils.log(`清空所有聊天记录失败: ${error}`, Utils.logLevels.ERROR);
-
-                // 如果当前有打开的聊天，清空聊天框
-                if (this.currentChatId) {
-                    document.getElementById('chatBox').innerHTML = '';
-
-                    // 添加系统消息提示
-                    const systemMessage = document.createElement('div');
-                    systemMessage.className = 'system-message';
-                    systemMessage.textContent = '所有聊天记录已清空';
-                    document.getElementById('chatBox').appendChild(systemMessage);
-                }
-
-                // 更新联系人列表
-                this.renderChatList();
-
-                return true;
-            }
         }
     };
 
@@ -2150,6 +1547,7 @@
             const uploadButton = document.getElementById('uploadButton');
             const voiceButton = document.getElementById('voiceButton');
             const videoCallButton = document.getElementById('videoCallButton');
+            const audioCallButton = document.getElementById('audioCallButton'); // 新增
             const clearChatButton = document.getElementById('clearChatButton');
 
             messageInput.disabled = !enabled;
@@ -2157,6 +1555,7 @@
             uploadButton.disabled = !enabled;
             voiceButton.disabled = !enabled;
             videoCallButton.disabled = !enabled;
+            audioCallButton.disabled = !enabled; // 新增
             clearChatButton.disabled = !enabled;
 
             if (enabled) {
@@ -2541,506 +1940,6 @@
         }
     };
 
-    // 消息管理器
-    const MessageManager = {
-        selectedFile: null,
-        audioData: null,
-        audioDuration: 0,
-
-        // 发送消息
-        sendMessage: function() {
-            const input = document.getElementById('messageInput');
-            const message = input.value.trim();
-
-            // 检查是否有选择的聊天
-            if (!ChatManager.currentChatId) {
-                UIManager.showNotification('请先选择聊天对象', 'warning');
-                return;
-            }
-
-            // 检查是否是群聊
-            const isGroupChat = ChatManager.currentChatId.startsWith('group_');
-
-            // 如果是群聊，检查群组是否存在
-            if (isGroupChat && !GroupManager.groups[ChatManager.currentChatId]) {
-                UIManager.showNotification('群聊不存在或您已被移出', 'error');
-                return;
-            }
-
-            // 如果是私聊，检查连接状态
-            if (!isGroupChat) {
-                const isConnected = ConnectionManager.isConnectedTo(ChatManager.currentChatId);
-
-                if (!isConnected && (message || this.selectedFile || this.audioData)) {
-                    // 连接未建立，显示重连提示
-                    UIManager.showReconnectPrompt(ChatManager.currentChatId, () => {
-                        // 重连成功后的回调，重新尝试发送消息
-                        this.sendMessage();
-                    });
-                    return;
-                }
-            }
-
-            if (!message && !this.selectedFile && !this.audioData) {
-                return;
-            }
-
-            // 发送语音消息
-            if (this.audioData) {
-                const audioMessage = {
-                    type: 'audio',
-                    data: this.audioData,
-                    duration: this.audioDuration,
-                    sender: UserManager.userId,
-                    timestamp: new Date().toISOString()
-                };
-
-                if (isGroupChat) {
-                    // 发送到群组
-                    GroupManager.broadcastToGroup(ChatManager.currentChatId, audioMessage);
-                } else {
-                    // 发送到个人
-                    Utils.sendInChunks(JSON.stringify(audioMessage),
-                        (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
-                }
-
-                // 添加到聊天记录
-                ChatManager.addMessage(ChatManager.currentChatId, audioMessage);
-
-                // 更新最后消息
-                if (isGroupChat) {
-                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, '[语音]');
-                } else {
-                    UserManager.updateContactLastMessage(ChatManager.currentChatId, '[语音]');
-                }
-
-                this.cancelAudioData();
-            }
-
-            // 发送文件消息
-            if (this.selectedFile) {
-                // 生成唯一文件ID
-                const fileId = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-
-                const fileMessage = {
-                    type: 'file',  // 统一使用file类型
-                    fileId: fileId,
-                    fileName: this.selectedFile.name,
-                    fileType: this.selectedFile.type,
-                    fileSize: this.selectedFile.size,
-                    data: this.selectedFile.data,  // 这里包含文件的base64数据
-                    sender: UserManager.userId,
-                    timestamp: new Date().toISOString()
-                };
-
-                if (isGroupChat) {
-                    // 发送到群组
-                    GroupManager.broadcastToGroup(ChatManager.currentChatId, fileMessage);
-                } else {
-                    // 发送到个人
-                    Utils.sendInChunks(JSON.stringify(fileMessage),
-                        (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
-                }
-
-                // 添加到聊天记录
-                ChatManager.addMessage(ChatManager.currentChatId, fileMessage);
-
-                // 更新最后消息
-                let filePreview = '[文件]';
-                if (this.selectedFile.type.startsWith('image/')) filePreview = '[图片]';
-                if (this.selectedFile.type.startsWith('video/')) filePreview = '[视频]';
-                if (this.selectedFile.type.startsWith('audio/')) filePreview = '[音频]';
-
-                if (isGroupChat) {
-                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, filePreview);
-                } else {
-                    UserManager.updateContactLastMessage(ChatManager.currentChatId, filePreview);
-                }
-
-                this.cancelFileData();
-            }
-
-            // 发送文本消息
-            if (message) {
-                const urlRegex = /(https?:\/\/[^\s]+)/g;
-                const messageObj = {
-                    type: 'text',
-                    content: message,
-                    links: message.match(urlRegex) || [],
-                    sender: UserManager.userId,
-                    timestamp: new Date().toISOString()
-                };
-
-                if (isGroupChat) {
-                    // 发送到群组
-                    GroupManager.broadcastToGroup(ChatManager.currentChatId, messageObj);
-                } else {
-                    // 发送到个人
-                    ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(JSON.stringify(messageObj));
-                }
-
-                // 添加到聊天记录
-                ChatManager.addMessage(ChatManager.currentChatId, messageObj);
-
-                // 更新最后消息
-                if (isGroupChat) {
-                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, message);
-                } else {
-                    UserManager.updateContactLastMessage(ChatManager.currentChatId, message);
-                }
-
-                input.value = '';
-            }
-        },
-
-        // 清空聊天记录
-        clearChat: function() {
-            if (!ChatManager.currentChatId) {
-                UIManager.showNotification('请先选择聊天对象', 'warning');
-                return;
-            }
-
-            // 显示确认对话框
-            if (confirm('确定要清空聊天记录吗？此操作不可撤销。')) {
-                // 清空聊天
-                if (ChatManager.clearChat(ChatManager.currentChatId)) {
-                    // 添加系统消息提示
-                    const systemMessage = document.createElement('div');
-                    systemMessage.className = 'system-message';
-                    systemMessage.textContent = '已清空聊天记录';
-                    systemMessage.style.textAlign = 'center';
-                    systemMessage.style.padding = '10px';
-                    systemMessage.style.color = '#666';
-                    systemMessage.style.fontSize = '12px';
-                    document.getElementById('chatBox').appendChild(systemMessage);
-
-                    // 通知用户
-                    UIManager.showNotification('聊天记录已清空', 'info');
-
-                    Utils.log('聊天记录已清空', Utils.logLevels.INFO);
-                }
-            }
-        },
-
-        // 显示消息
-        displayMessage: function (message, isSent) {
-            const chatBox = document.getElementById('chatBox');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
-
-            if (typeof message === 'string') {
-                // 处理纯文本消息，将换行符转换为<br>标签
-                messageDiv.innerHTML = this.formatMessageText(message);
-            } else {
-                switch (message.type) {
-                    case 'audio':
-                        const audioDiv = document.createElement('div');
-                        audioDiv.className = 'voice-message';
-
-                        // 格式化音频持续时间
-                        const formattedDuration = typeof message.duration === 'number'
-                            ? Utils.formatTime(message.duration)
-                            : message.duration;
-
-                        audioDiv.innerHTML = `
-                <button onclick="event.stopPropagation(); MediaManager.playAudio(this)" data-audio="${message.data}">
-                    播放
-                </button>
-                <div class="voice-wave">
-                    ${Array(5).fill('<div class="wave-bar"></div>').join('')}
-                </div>
-                <span class="duration">${formattedDuration}</span>
-            `;
-                        messageDiv.appendChild(audioDiv);
-                        break;
-
-                    case 'file':
-                        // 处理文件消息
-                        const fileDiv = document.createElement('div');
-                        fileDiv.className = 'file-message';
-
-                        // 检查是否有文件数据
-                        const fileData = message.data || '';
-
-                        // 根据文件类型决定展示方式
-                        if (message.fileType && message.fileType.startsWith('image/')) {
-                            // 图片
-                            fileDiv.innerHTML = `
-                        ${fileData ? `<img src="${fileData}" class="file-preview-img" alt="${message.fileName}"
-                             onclick="MessageManager.showFullImage('${fileData}')">` : '<div class="file-error">图片数据丢失</div>'}
-                    `;
-                        } else if (message.fileType && message.fileType.startsWith('video/')) {
-                            // 视频
-                            fileDiv.innerHTML = `
-                        ${fileData ? `<video controls class="file-preview-video">
-                            <source src="${fileData}" type="${message.fileType}">
-                            您的浏览器不支持视频预览
-                        </video>` : '<div class="file-error">视频数据丢失</div>'}
-                    `;
-                        } else {
-                            // 其他文件类型
-                            const fileSize = MediaManager.formatFileSize(message.fileSize || 0);
-                            const fileIcon = MediaManager.getFileIcon(message.fileType);
-
-                            fileDiv.innerHTML = `
-                        <div class="file-info">
-                            <div class="file-icon">${fileIcon}</div>
-                            <div class="file-details">
-                                <div class="file-name">${message.fileName || '未知文件'}</div>
-                                <div class="file-meta">
-                                    <span class="file-size">${fileSize}</span>
-                                    <span class="file-type">${message.fileType || '未知类型'}</span>
-                                </div>
-                            </div>
-                            ${fileData ? `<a href="${fileData}" download="${message.fileName}" class="download-btn">下载</a>` :
-                                '<span class="download-error">下载失败</span>'}
-                        </div>
-                    `;
-                        }
-
-                        messageDiv.appendChild(fileDiv);
-                        break;
-
-                    // 兼容旧版本的image类型，将其视为file类型处理
-                    case 'image':
-                        const imgDiv = document.createElement('div');
-                        imgDiv.className = 'file-message';
-
-                        // 检查是否有文件数据
-                        const imgData = message.data || '';
-
-                        imgDiv.innerHTML = `
-                    ${imgData ? `<img src="${imgData}" class="file-preview-img" alt="${message.fileName || '图片'}"
-                         onclick="MessageManager.showFullImage('${imgData}')">` : '<div class="file-error">图片数据丢失</div>'}
-                `;
-
-                        messageDiv.appendChild(imgDiv);
-                        break;
-
-                    case 'text':
-                        const textDiv = document.createElement('div');
-                        // 使用formatMessageText方法处理文本内容，保留换行符
-                        textDiv.innerHTML = this.formatMessageText(message.content);
-                        messageDiv.appendChild(textDiv);
-
-                        if (message.links && message.links.length > 0) {
-                            message.links.forEach(async (link) => {
-                                const linkPreview = await this.createLinkPreview(link);
-                                messageDiv.appendChild(linkPreview);
-                            });
-                        }
-                        break;
-
-                    case 'system':
-                        // 处理系统消息
-                        const systemDiv = document.createElement('div');
-                        systemDiv.className = 'system-message';
-                        systemDiv.innerHTML = this.formatMessageText(message.content);
-                        messageDiv.className = 'message system'; // 覆盖原来的sent/received类名
-                        messageDiv.appendChild(systemDiv);
-                        break;
-
-                    default:
-                        // 未知类型消息
-                        messageDiv.textContent = JSON.stringify(message);
-
-                }
-            }
-
-            // 添加时间戳和发送者名称
-            const timestamp = document.createElement('div');
-            timestamp.className = 'timestamp';
-
-            // 检查是否是群聊消息
-            const isGroupChat = ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_');
-
-            if (isGroupChat && !isSent) {
-                const group = GroupManager.groups[ChatManager.currentChatId];
-
-                // 获取发送者昵称
-                let senderName = message.senderName || '未知用户';
-
-                // 如果在联系人列表中有该用户，使用联系人名称
-                if (UserManager.contacts[message.sender]) {
-                    senderName = UserManager.contacts[message.sender].name;
-                }
-
-                // 检查发送者是否是群主
-                if (group && message.sender === group.owner) {
-                    timestamp.textContent = `${senderName}(群主) · ${message.timestamp ?
-                        new Date(message.timestamp).toLocaleTimeString() :
-                        new Date().toLocaleTimeString()}`;
-                } else {
-                    timestamp.textContent = `${senderName} · ${message.timestamp ?
-                        new Date(message.timestamp).toLocaleTimeString() :
-                        new Date().toLocaleTimeString()}`;
-                }
-            } else {
-                // 私聊消息或自己发送的消息，只显示时间
-                timestamp.textContent = message.timestamp ?
-                    new Date(message.timestamp).toLocaleTimeString() :
-                    new Date().toLocaleTimeString();
-            }
-
-            messageDiv.appendChild(timestamp);
-
-            chatBox.appendChild(messageDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        },
-
-        // 显示全屏图片
-        showFullImage: function(src) {
-            const modal = document.createElement('div');
-            modal.style = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: flex; align-items: center;
-            justify-content: center; z-index: 1000; cursor: pointer;
-        `;
-
-            const fullImg = document.createElement('img');
-            fullImg.src = src;
-            fullImg.style = 'max-width: 90%; max-height: 90%; object-fit: contain;';
-
-            modal.appendChild(fullImg);
-            document.body.appendChild(modal);
-
-            modal.onclick = () => document.body.removeChild(modal);
-        },
-
-        formatMessageText: function(text) {
-            if (!text) return '';
-
-            // 转义HTML特殊字符，防止XSS攻击
-            const escaped = text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-
-            // 将换行符转换为<br>标签
-            return escaped.replace(/\n/g, '<br>');
-        },
-
-        // 链接预览
-        createLinkPreview: async function (url) {
-            const preview = document.createElement('div');
-            preview.className = 'link-preview';
-            preview.innerHTML = `
-            <div class="link-preview-loading">
-                <span class="loading-spinner"></span> 加载预览中...
-            </div>
-        `;
-
-            try {
-                const previewData = await this.fetchLinkPreview(url);
-
-                if (previewData) {
-                    preview.innerHTML = `
-                    <div class="link-preview-content">
-                        ${previewData.image ?
-                        `<img src="${previewData.image}"
-                                class="link-preview-image"
-                                onerror="this.style.display='none'"
-                                alt="${previewData.title || '链接预览'}">`
-                        : ''}
-                        <div class="link-preview-title">${previewData.title || url}</div>
-                        <div class="link-preview-description">${previewData.description || '无描述'}</div>
-                        <div class="link-preview-domain">
-                            <img src="https://www.google.com/s2/favicons?domain=${previewData.domain}"
-                                width="16" height="16" onerror="this.style.display='none'" alt="">
-                            ${previewData.domain}
-                        </div>
-                    </div>
-                `;
-                } else {
-                    preview.innerHTML = `
-                    <div class="link-preview-content">
-                        <div class="link-preview-title">${url}</div>
-                        <div class="preview-error">无法加载预览</div>
-                    </div>
-                `;
-                }
-            } catch (error) {
-                preview.innerHTML = `
-                <div class="link-preview-content">
-                    <div class="link-preview-title">${url}</div>
-                    <div class="preview-error">预览加载失败</div>
-                </div>
-            `;
-            }
-
-            preview.onclick = () => window.open(url, '_blank');
-            return preview;
-        },
-
-        // 获取链接预览
-        fetchLinkPreview: async function (url) {
-            try {
-                // 使用第三方API获取链接预览（考虑中国网络情况，可能需要替换为国内可用的服务）
-                // 在生产环境应使用自己的后端服务来代理请求，避免API服务的限制
-                const proxyUrl = 'https://api.allorigins.win/raw?url=';
-                const response = await fetch(`${proxyUrl}${encodeURIComponent(url)}`, {
-                    method: 'GET',
-                    headers: {'Content-Type': 'text/html'},
-                    mode: 'cors',
-                    cache: 'force-cache'
-                });
-
-                if (!response.ok) throw new Error('无法获取链接内容');
-
-                const html = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-
-                // 提取Open Graph数据
-                const getMetaContent = (name) => {
-                    const element = doc.querySelector(`meta[property="og:${name}"], meta[name="${name}"], meta[name="og:${name}"]`);
-                    return element ? element.getAttribute('content') : null;
-                };
-
-                const title = getMetaContent('title') || doc.title || '';
-                const description = getMetaContent('description') || '';
-                const image = getMetaContent('image') || '';
-                const domain = new URL(url).hostname;
-
-                return {title, description, image, domain};
-            } catch (error) {
-                Utils.log(`链接预览获取失败: ${error.message}`, Utils.logLevels.ERROR);
-
-                // 返回基本信息
-                try {
-                    const domain = new URL(url).hostname;
-                    return {
-                        title: url,
-                        description: '',
-                        image: null,
-                        domain: domain
-                    };
-                } catch (e) {
-                    return null;
-                }
-            }
-        },
-
-        // 取消文件数据
-        cancelFileData: function () {
-            this.selectedFile = null;
-            document.getElementById('filePreviewContainer').innerHTML = '';
-            document.getElementById('fileInput').value = '';
-        },
-
-        // 取消音频数据
-        cancelAudioData: function () {
-            this.audioData = null;
-            this.audioDuration = 0;
-            document.getElementById('audioPreviewContainer').innerHTML = '';
-
-            // 确保释放媒体资源
-            MediaManager.releaseAudioResources();
-        }
-    };
-
     // 媒体管理器
     const MediaManager = {
         mediaRecorder: null,
@@ -3417,15 +2316,16 @@
         callRequestTimeout: null,
 
         // 初始化
+        // 初始化
         init: function() {
             this.localVideo = document.getElementById('localVideo');
             this.remoteVideo = document.getElementById('remoteVideo');
 
             // 检查浏览器支持
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                Utils.log('浏览器不支持视频通话功能', Utils.logLevels.ERROR);
+                Utils.log('浏览器不支持音视频通话功能', Utils.logLevels.ERROR);
                 document.getElementById('videoCallButton').disabled = true;
-                document.getElementById('videoCallButton').title = '您的浏览器不支持视频通话';
+                document.getElementById('videoCallButton').title = '您的浏览器不支持音视频通话';
                 return false;
             }
 
@@ -3440,8 +2340,9 @@
             return true;
         },
 
-        // 发起视频通话
-        initiateCall: async function(peerId) {
+        // 发起通话
+        // 发起通话
+        initiateCall: async function(peerId, audioOnly = false) {
             if (this.isCallActive || this.isCallPending) return;
 
             // 如果没有指定peerId，使用当前聊天对象
@@ -3455,26 +2356,62 @@
             }
 
             if (!ConnectionManager.isConnectedTo(peerId)) {
-                UIManager.showNotification('连接未建立，无法发起视频通话', 'error');
+                UIManager.showNotification('连接未建立，无法发起通话', 'error');
                 return;
             }
 
             try {
+                // 检查设备支持情况
+                if (!audioOnly) {
+                    // 检查视频设备是否可用
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
+
+                    if (!hasVideoDevice) {
+                        UIManager.showNotification('未检测到摄像头设备，将使用语音通话模式', 'warning');
+                        audioOnly = true;
+                    } else {
+                        // 尝试获取视频权限
+                        try {
+                            const testStream = await navigator.mediaDevices.getUserMedia({video: true});
+                            // 成功获取后立即释放
+                            testStream.getTracks().forEach(track => track.stop());
+                        } catch (error) {
+                            UIManager.showNotification('无法访问摄像头，将使用语音通话模式', 'warning');
+                            Utils.log(`视频权限检查失败: ${error.message}`, Utils.logLevels.WARN);
+                            audioOnly = true;
+                        }
+                    }
+                }
+
+                // 检查音频设备
+                try {
+                    const testAudioStream = await navigator.mediaDevices.getUserMedia({audio: true});
+                    // 成功获取后立即释放
+                    testAudioStream.getTracks().forEach(track => track.stop());
+                } catch (error) {
+                    UIManager.showNotification('无法访问麦克风，通话功能不可用', 'error');
+                    Utils.log(`音频权限检查失败: ${error.message}`, Utils.logLevels.ERROR);
+                    return;
+                }
+
                 this.currentPeerId = peerId;
                 this.isCaller = true;
                 this.isCallPending = true;
+                this.isAudioOnly = audioOnly;
 
-                // 告知对方请求视频通话
+                // 告知对方请求通话
                 const callRequest = {
                     type: 'video-call-request',
+                    audioOnly: audioOnly,
                     timestamp: Date.now(),
                     sender: UserManager.userId
                 };
 
                 ConnectionManager.sendTo(peerId, callRequest);
 
-                UIManager.showNotification('等待对方接受视频通话...', 'info');
-                Utils.log('已发送视频通话请求', Utils.logLevels.INFO);
+                UIManager.showNotification(`等待对方接受${audioOnly ? '语音' : '视频'}通话...`, 'info');
+                Utils.log(`已发送${audioOnly ? '语音' : '视频'}通话请求`, Utils.logLevels.INFO);
 
                 // 30秒超时
                 this.callRequestTimeout = setTimeout(() => {
@@ -3495,7 +2432,7 @@
                 }, 30000);
             } catch (error) {
                 Utils.log(`发起通话失败: ${error.message}`, Utils.logLevels.ERROR);
-                UIManager.showNotification('发起视频通话失败', 'error');
+                UIManager.showNotification('发起通话失败', 'error');
                 this.isCallPending = false;
                 this.isCaller = false;
                 this.currentPeerId = null;
@@ -3503,8 +2440,18 @@
         },
 
         // 显示通话请求
-        showCallRequest: function(peerId) {
+        showCallRequest: function(peerId, audioOnly = false) {
             this.currentPeerId = peerId;
+            this.isAudioOnly = audioOnly;
+
+            // 修改通话请求界面，显示是语音还是视频通话请求
+            const requestTitle = document.querySelector('#videoCallRequest h3');
+            const requestDesc = document.querySelector('#videoCallRequest p');
+            if (requestTitle && requestDesc) {
+                requestTitle.textContent = audioOnly ? '语音通话请求' : '视频通话请求';
+                requestDesc.textContent = `对方请求与您进行${audioOnly ? '语音' : '视频'}通话`;
+            }
+
             document.getElementById('videoCallRequest').style.display = 'flex';
         },
 
@@ -3524,16 +2471,49 @@
 
             try {
                 // 显示获取媒体设备权限的提示
-                UIManager.showNotification('正在请求摄像头和麦克风权限...', 'info');
+                UIManager.showNotification('正在请求媒体设备权限...', 'info');
 
-                // 获取摄像头权限
+                // 检查设备支持情况
+                if (!this.isAudioOnly) {
+                    // 检查视频设备是否可用
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
+
+                    if (!hasVideoDevice) {
+                        UIManager.showNotification('未检测到摄像头设备，将使用语音通话模式', 'warning');
+                        this.isAudioOnly = true;
+                    } else {
+                        // 尝试获取视频权限
+                        try {
+                            const testStream = await navigator.mediaDevices.getUserMedia({video: true});
+                            // 成功获取后立即释放
+                            testStream.getTracks().forEach(track => track.stop());
+                        } catch (error) {
+                            UIManager.showNotification('无法访问摄像头，将使用语音通话模式', 'warning');
+                            Utils.log(`视频权限检查失败: ${error.message}`, Utils.logLevels.WARN);
+                            this.isAudioOnly = true;
+                        }
+                    }
+                }
+
+                // 获取媒体权限
                 this.localStream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
+                    video: !this.isAudioOnly,
                     audio: true
                 });
 
-                // 显示本地视频
+                // 显示本地视频（如果是视频通话）
                 this.localVideo.srcObject = this.localStream;
+
+                // 如果是纯语音通话，隐藏本地视频区域
+                this.localVideo.style.display = this.isAudioOnly ? 'none' : 'block';
+
+                // 设置音频专用按钮状态
+                const audioOnlyBtn = document.getElementById('audioOnlyBtn');
+                if (audioOnlyBtn) {
+                    audioOnlyBtn.style.background = this.isAudioOnly ? '#4CAF50' : '#fff';
+                    audioOnlyBtn.title = this.isAudioOnly ? '切换到视频通话' : '切换到纯语音通话';
+                }
 
                 // 使用现有的连接
                 this.setupPeerConnection();
@@ -3544,6 +2524,7 @@
                 // 发送接受信号
                 const acceptMessage = {
                     type: 'video-call-accepted',
+                    audioOnly: this.isAudioOnly,
                     timestamp: Date.now(),
                     sender: UserManager.userId
                 };
@@ -3552,10 +2533,10 @@
                 this.isCallActive = true;
                 this.isCallPending = false;
 
-                Utils.log('已接受视频通话', Utils.logLevels.INFO);
+                Utils.log(`已接受${this.isAudioOnly ? '语音' : '视频'}通话`, Utils.logLevels.INFO);
             } catch (error) {
                 Utils.log(`接受通话失败: ${error.message}`, Utils.logLevels.ERROR);
-                UIManager.showNotification('无法访问摄像头或麦克风', 'error');
+                UIManager.showNotification('无法访问媒体设备', 'error');
 
                 // 发送拒绝消息，标明原因是设备问题
                 const rejectMessage = {
@@ -3590,15 +2571,16 @@
             this.isCallActive = false;
             this.isCaller = false;
             this.currentPeerId = null;
+            this.isAudioOnly = false;
 
-            Utils.log('已拒绝视频通话', Utils.logLevels.INFO);
+            Utils.log('已拒绝通话请求', Utils.logLevels.INFO);
         },
 
         // 设置对等连接
         setupPeerConnection: function() {
             // 使用已有的连接传递信令
             if (!this.currentPeerId || !ConnectionManager.connections[this.currentPeerId]) {
-                Utils.log('无法创建视频通话连接: 没有基础连接', Utils.logLevels.ERROR);
+                Utils.log('无法创建通话连接: 没有基础连接', Utils.logLevels.ERROR);
                 return;
             }
 
@@ -3614,7 +2596,12 @@
                 if (event.streams && event.streams[0]) {
                     this.remoteVideo.srcObject = event.streams[0];
                     this.remoteStream = event.streams[0];
-                    Utils.log('收到远程视频流', Utils.logLevels.INFO);
+
+                    // 检查是否有视频轨道，如果只有音频则隐藏远程视频
+                    const hasVideoTrack = event.streams[0].getVideoTracks().length > 0;
+                    this.remoteVideo.style.display = hasVideoTrack ? 'block' : 'none';
+
+                    Utils.log(`收到远程${hasVideoTrack ? '视频' : '音频'}流`, Utils.logLevels.INFO);
                 }
             };
 
@@ -3634,7 +2621,7 @@
 
                 const offer = await conn.peerConnection.createOffer({
                     offerToReceiveAudio: true,
-                    offerToReceiveVideo: true
+                    offerToReceiveVideo: !this.isAudioOnly
                 });
 
                 await conn.peerConnection.setLocalDescription(offer);
@@ -3643,11 +2630,12 @@
                 const offerMessage = {
                     type: 'video-call-offer',
                     sdp: conn.peerConnection.localDescription,
+                    audioOnly: this.isAudioOnly,
                     sender: UserManager.userId
                 };
                 ConnectionManager.sendTo(this.currentPeerId, offerMessage);
 
-                Utils.log('已发送视频通话offer', Utils.logLevels.DEBUG);
+                Utils.log(`已发送${this.isAudioOnly ? '语音' : '视频'}通话offer`, Utils.logLevels.DEBUG);
             } catch (error) {
                 Utils.log(`创建offer失败: ${error.message}`, Utils.logLevels.ERROR);
                 this.endCall();
@@ -3655,9 +2643,10 @@
         },
 
         // 处理收到的offer
-        handleOffer: async function(offer, peerId) {
+        handleOffer: async function(offer, peerId, audioOnly) {
             try {
                 this.currentPeerId = peerId;
+                this.isAudioOnly = audioOnly;
 
                 const conn = ConnectionManager.connections[peerId];
                 if (!conn || !conn.peerConnection) return;
@@ -3672,11 +2661,12 @@
                 const answerMessage = {
                     type: 'video-call-answer',
                     sdp: conn.peerConnection.localDescription,
+                    audioOnly: this.isAudioOnly,
                     sender: UserManager.userId
                 };
                 ConnectionManager.sendTo(peerId, answerMessage);
 
-                Utils.log('已回复视频通话answer', Utils.logLevels.DEBUG);
+                Utils.log(`已回复${this.isAudioOnly ? '语音' : '视频'}通话answer`, Utils.logLevels.DEBUG);
             } catch (error) {
                 Utils.log(`处理offer失败: ${error.message}`, Utils.logLevels.ERROR);
                 this.endCall();
@@ -3684,9 +2674,15 @@
         },
 
         // 处理收到的answer
-        handleAnswer: async function(answer, peerId) {
+        handleAnswer: async function(answer, peerId, audioOnly) {
             try {
                 if (this.currentPeerId !== peerId) return;
+
+                // 更新通话类型
+                this.isAudioOnly = audioOnly;
+
+                // 更新UI显示
+                this.updateUIForCallType();
 
                 const conn = ConnectionManager.connections[peerId];
                 if (!conn || !conn.peerConnection) return;
@@ -3703,6 +2699,12 @@
         toggleCamera: function() {
             if (!this.localStream) return;
 
+            // 如果是纯语音模式，切换到视频模式
+            if (this.isAudioOnly) {
+                this.toggleAudioOnly();
+                return;
+            }
+
             const videoTrack = this.localStream.getVideoTracks()[0];
             if (videoTrack) {
                 this.isVideoEnabled = !this.isVideoEnabled;
@@ -3713,6 +2715,9 @@
                 button.style.background = this.isVideoEnabled ? '#fff' : '#666';
 
                 Utils.log(`摄像头已${this.isVideoEnabled ? '开启' : '关闭'}`, Utils.logLevels.DEBUG);
+            } else {
+                // 没有视频轨道，可能是设备不支持或权限问题
+                UIManager.showNotification('无法访问摄像头', 'warning');
             }
         },
 
@@ -3730,6 +2735,138 @@
                 button.style.background = this.isAudioMuted ? '#666' : '#fff';
 
                 Utils.log(`麦克风已${this.isAudioMuted ? '静音' : '开启'}`, Utils.logLevels.DEBUG);
+            }
+        },
+
+        // 切换纯语音模式
+        // 切换纯语音模式
+        toggleAudioOnly: async function() {
+            if (!this.isCallActive) return;
+
+            try {
+                // 如果要切换到视频模式，先检查是否支持视频
+                if (this.isAudioOnly) {
+                    // 检查视频设备是否可用
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const hasVideoDevice = devices.some(device => device.kind === 'videoinput');
+
+                    if (!hasVideoDevice) {
+                        UIManager.showNotification('未检测到摄像头设备，无法切换到视频模式', 'warning');
+                        return;
+                    }
+
+                    // 尝试获取视频权限
+                    try {
+                        const testStream = await navigator.mediaDevices.getUserMedia({video: true});
+                        // 成功获取后立即释放
+                        testStream.getTracks().forEach(track => track.stop());
+                    } catch (error) {
+                        UIManager.showNotification('无法访问摄像头，无法切换到视频模式', 'error');
+                        Utils.log(`视频权限检查失败: ${error.message}`, Utils.logLevels.ERROR);
+                        return;
+                    }
+                }
+
+                this.isAudioOnly = !this.isAudioOnly;
+
+                // 更新UI
+                this.updateUIForCallType();
+
+                // 停止当前媒体流
+                if (this.localStream) {
+                    this.localStream.getTracks().forEach(track => track.stop());
+                }
+
+                // 重新获取媒体权限
+                this.localStream = await navigator.mediaDevices.getUserMedia({
+                    video: !this.isAudioOnly,
+                    audio: true
+                });
+
+                // 更新本地视频
+                this.localVideo.srcObject = this.localStream;
+
+                const conn = ConnectionManager.connections[this.currentPeerId];
+                if (!conn || !conn.peerConnection) return;
+
+                // 替换所有轨道
+                const senders = conn.peerConnection.getSenders();
+                const tracks = this.localStream.getTracks();
+
+                // 查找已有的音频和视频发送器
+                const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+                const videoSender = senders.find(s => s.track && s.track.kind === 'video');
+
+                // 获取新的音频和视频轨道
+                const audioTrack = tracks.find(t => t.kind === 'audio');
+                const videoTrack = tracks.find(t => t.kind === 'video');
+
+                // 替换音频轨道
+                if (audioSender && audioTrack) {
+                    audioSender.replaceTrack(audioTrack);
+                } else if (audioTrack) {
+                    conn.peerConnection.addTrack(audioTrack, this.localStream);
+                }
+
+                // 处理视频轨道
+                if (this.isAudioOnly) {
+                    // 在纯语音模式下，如果有视频发送器，将其移除
+                    if (videoSender) {
+                        try {
+                            conn.peerConnection.removeTrack(videoSender);
+                        } catch (e) {
+                            Utils.log(`移除视频轨道失败: ${e.message}`, Utils.logLevels.ERROR);
+                        }
+                    }
+                } else {
+                    // 在视频模式下，替换或添加视频轨道
+                    if (videoSender && videoTrack) {
+                        videoSender.replaceTrack(videoTrack);
+                    } else if (videoTrack) {
+                        conn.peerConnection.addTrack(videoTrack, this.localStream);
+                    }
+                }
+
+                // 通知对方模式已更改
+                const modeChangeMsg = {
+                    type: 'video-call-mode-change',
+                    audioOnly: this.isAudioOnly,
+                    timestamp: Date.now(),
+                    sender: UserManager.userId
+                };
+                ConnectionManager.sendTo(this.currentPeerId, modeChangeMsg);
+
+                Utils.log(`已切换到${this.isAudioOnly ? '纯语音' : '视频'}通话模式`, Utils.logLevels.INFO);
+            } catch (error) {
+                Utils.log(`切换通话模式失败: ${error.message}`, Utils.logLevels.ERROR);
+                UIManager.showNotification('切换通话模式失败', 'error');
+            }
+        },
+
+        // 更新UI以匹配当前通话类型
+        updateUIForCallType: function() {
+            // 设置本地视频显示
+            if (this.localVideo) {
+                this.localVideo.style.display = this.isAudioOnly ? 'none' : 'block';
+            }
+
+            // 更新音频模式按钮
+            const audioOnlyBtn = document.getElementById('audioOnlyBtn');
+            if (audioOnlyBtn) {
+                audioOnlyBtn.style.background = this.isAudioOnly ? '#4CAF50' : '#fff';
+                audioOnlyBtn.title = this.isAudioOnly ? '切换到视频通话' : '切换到纯语音通话';
+            }
+
+            // 更新摄像头按钮状态
+            const cameraBtn = document.getElementById('toggleCameraBtn');
+            if (cameraBtn) {
+                cameraBtn.style.display = this.isAudioOnly ? 'none' : 'inline-block';
+            }
+
+            // 调整视频容器的布局
+            const videoContainer = document.getElementById('videoCallContainer');
+            if (videoContainer) {
+                videoContainer.classList.toggle('audio-only-mode', this.isAudioOnly);
             }
         },
 
@@ -3773,12 +2910,13 @@
             this.isCaller = false;
             this.isAudioMuted = false;
             this.isVideoEnabled = true;
+            this.isAudioOnly = false;
             this.currentPeerId = null;
 
             // 重置连接按钮状态
             UIManager.resetConnectionControls();
 
-            Utils.log('视频通话已结束，所有资源已释放', Utils.logLevels.INFO);
+            Utils.log('通话已结束，所有资源已释放', Utils.logLevels.INFO);
         },
 
         // 添加一个新方法专门负责释放媒体资源
@@ -3805,8 +2943,9 @@
                 case 'video-call-request':
                     if (!this.isCallActive && !this.isCallPending) {
                         this.isCallPending = true;
-                        this.showCallRequest(peerId);
-                        Utils.log('收到视频通话请求', Utils.logLevels.INFO);
+                        // 注意新增的audioOnly参数
+                        this.showCallRequest(peerId, message.audioOnly || false);
+                        Utils.log(`收到${message.audioOnly ? '语音' : '视频'}通话请求`, Utils.logLevels.INFO);
                     } else {
                         // 已在通话中，自动拒绝
                         const busyMessage = {
@@ -3824,6 +2963,11 @@
                         clearTimeout(this.callRequestTimeout);
                         this.callRequestTimeout = null;
 
+                        // 更新通话类型（接收方可能改变了通话类型）
+                        if (typeof message.audioOnly !== 'undefined') {
+                            this.isAudioOnly = message.audioOnly;
+                        }
+
                         // 对方已接受，开始通话
                         this.startLocalStream();
                     }
@@ -3836,19 +2980,20 @@
                         this.isCallPending = false;
                         this.isCaller = false;
                         this.currentPeerId = null;
+                        this.isAudioOnly = false;
 
                         // 释放已申请的任何媒体资源
                         this.releaseMediaResources();
 
-                        let reason = '对方拒绝了视频通话';
+                        let reason = '对方拒绝了通话';
                         if (message.reason === 'busy') {
                             reason = '对方正忙';
                         } else if (message.reason === 'device_error') {
-                            reason = '对方无法访问摄像头或麦克风';
+                            reason = '对方无法访问麦克风或摄像头';
                         }
 
                         UIManager.showNotification(reason, 'warning');
-                        Utils.log(`视频通话被拒绝: ${message.reason}`, Utils.logLevels.INFO);
+                        Utils.log(`通话被拒绝: ${message.reason}`, Utils.logLevels.INFO);
                     }
                     break;
 
@@ -3857,23 +3002,35 @@
                         this.isCallPending = false;
                         this.hideCallRequest();
                         this.currentPeerId = null;
+                        this.isAudioOnly = false;
 
                         // 释放已申请的任何媒体资源
                         this.releaseMediaResources();
 
-                        Utils.log('对方取消了视频通话请求', Utils.logLevels.INFO);
+                        Utils.log('对方取消了通话请求', Utils.logLevels.INFO);
                     }
                     break;
 
                 case 'video-call-offer':
                     if (this.isCallActive && !this.isCaller && this.currentPeerId === peerId) {
-                        this.handleOffer(message.sdp, peerId);
+                        // 注意新增的audioOnly参数
+                        this.handleOffer(message.sdp, peerId, message.audioOnly || false);
                     }
                     break;
 
                 case 'video-call-answer':
                     if (this.isCallActive && this.isCaller && this.currentPeerId === peerId) {
-                        this.handleAnswer(message.sdp, peerId);
+                        // 注意新增的audioOnly参数
+                        this.handleAnswer(message.sdp, peerId, message.audioOnly || false);
+                    }
+                    break;
+
+                case 'video-call-mode-change':
+                    if (this.isCallActive && this.currentPeerId === peerId) {
+                        // 对方更改了通话模式
+                        this.isAudioOnly = message.audioOnly;
+                        this.updateUIForCallType();
+                        Utils.log(`对方已切换到${this.isAudioOnly ? '纯语音' : '视频'}通话模式`, Utils.logLevels.INFO);
                     }
                     break;
 
@@ -3889,19 +3046,20 @@
         // 开始本地流
         startLocalStream: async function() {
             try {
-                // 只有在还没有本地流时才请求摄像头权限
+                // 只有在还没有本地流时才请求权限
                 if (!this.localStream) {
                     // 显示获取媒体设备权限的提示
-                    UIManager.showNotification('正在请求摄像头和麦克风权限...', 'info');
+                    UIManager.showNotification('正在请求媒体设备权限...', 'info');
 
-                    // 获取摄像头权限
+                    // 获取权限
                     this.localStream = await navigator.mediaDevices.getUserMedia({
-                        video: true,
+                        video: !this.isAudioOnly,
                         audio: true
                     });
 
-                    // 显示本地视频
+                    // 显示本地视频（如果不是纯语音通话）
                     this.localVideo.srcObject = this.localStream;
+                    this.localVideo.style.display = this.isAudioOnly ? 'none' : 'block';
                 }
 
                 // 创建WebRTC连接
@@ -3910,14 +3068,1153 @@
                 // 显示视频通话界面
                 document.getElementById('videoCallContainer').style.display = 'flex';
 
+                // 更新UI以匹配当前通话类型
+                this.updateUIForCallType();
+
                 this.isCallActive = true;
                 this.isCallPending = false;
 
-                Utils.log('视频通话已开始', Utils.logLevels.INFO);
+                Utils.log(`${this.isAudioOnly ? '语音' : '视频'}通话已开始`, Utils.logLevels.INFO);
             } catch (error) {
-                Utils.log(`启动本地视频失败: ${error.message}`, Utils.logLevels.ERROR);
-                UIManager.showNotification('无法访问摄像头或麦克风', 'error');
+                Utils.log(`启动通话失败: ${error.message}`, Utils.logLevels.ERROR);
+                UIManager.showNotification('无法访问媒体设备', 'error');
                 this.endCall();
+            }
+        },
+
+        // 初始化语音通话
+        initiateAudioCall: function(peerId) {
+            // 调用通用的initiateCall方法，设置audioOnly为true
+            this.initiateCall(peerId, true);
+        },
+    };
+
+    // 消息管理器
+    const MessageManager = {
+        selectedFile: null,
+        audioData: null,
+        audioDuration: 0,
+
+        // 发送消息
+        sendMessage: function() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            // 检查是否有选择的聊天
+            if (!ChatManager.currentChatId) {
+                UIManager.showNotification('请先选择聊天对象', 'warning');
+                return;
+            }
+
+            // 检查是否是群聊
+            const isGroupChat = ChatManager.currentChatId.startsWith('group_');
+
+            // 如果是群聊，检查群组是否存在
+            if (isGroupChat && !GroupManager.groups[ChatManager.currentChatId]) {
+                UIManager.showNotification('群聊不存在或您已被移出', 'error');
+                return;
+            }
+
+            // 如果是私聊，检查连接状态
+            if (!isGroupChat) {
+                const isConnected = ConnectionManager.isConnectedTo(ChatManager.currentChatId);
+
+                if (!isConnected && (message || this.selectedFile || this.audioData)) {
+                    // 连接未建立，显示重连提示
+                    UIManager.showReconnectPrompt(ChatManager.currentChatId, () => {
+                        // 重连成功后的回调，重新尝试发送消息
+                        this.sendMessage();
+                    });
+                    return;
+                }
+            }
+
+            if (!message && !this.selectedFile && !this.audioData) {
+                return;
+            }
+
+            // 发送语音消息
+            if (this.audioData) {
+                const audioMessage = {
+                    type: 'audio',
+                    data: this.audioData,
+                    duration: this.audioDuration,
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
+                };
+
+                if (isGroupChat) {
+                    // 发送到群组
+                    GroupManager.broadcastToGroup(ChatManager.currentChatId, audioMessage);
+                } else {
+                    // 发送到个人
+                    Utils.sendInChunks(JSON.stringify(audioMessage),
+                        (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
+                }
+
+                // 添加到聊天记录
+                ChatManager.addMessage(ChatManager.currentChatId, audioMessage);
+
+                // 更新最后消息
+                if (isGroupChat) {
+                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, '[语音]');
+                } else {
+                    UserManager.updateContactLastMessage(ChatManager.currentChatId, '[语音]');
+                }
+
+                this.cancelAudioData();
+            }
+
+            // 发送文件消息
+            if (this.selectedFile) {
+                // 生成唯一文件ID
+                const fileId = `${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
+
+                const fileMessage = {
+                    type: 'file',  // 统一使用file类型
+                    fileId: fileId,
+                    fileName: this.selectedFile.name,
+                    fileType: this.selectedFile.type,
+                    fileSize: this.selectedFile.size,
+                    data: this.selectedFile.data,  // 这里包含文件的base64数据
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
+                };
+
+                if (isGroupChat) {
+                    // 发送到群组
+                    GroupManager.broadcastToGroup(ChatManager.currentChatId, fileMessage);
+                } else {
+                    // 发送到个人
+                    Utils.sendInChunks(JSON.stringify(fileMessage),
+                        (data) => ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(data));
+                }
+
+                // 添加到聊天记录
+                ChatManager.addMessage(ChatManager.currentChatId, fileMessage);
+
+                // 更新最后消息
+                let filePreview = '[文件]';
+                if (this.selectedFile.type.startsWith('image/')) filePreview = '[图片]';
+                if (this.selectedFile.type.startsWith('video/')) filePreview = '[视频]';
+                if (this.selectedFile.type.startsWith('audio/')) filePreview = '[音频]';
+
+                if (isGroupChat) {
+                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, filePreview);
+                } else {
+                    UserManager.updateContactLastMessage(ChatManager.currentChatId, filePreview);
+                }
+
+                this.cancelFileData();
+            }
+
+            // 发送文本消息
+            if (message) {
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                const messageObj = {
+                    type: 'text',
+                    content: message,
+                    links: message.match(urlRegex) || [],
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
+                };
+
+                if (isGroupChat) {
+                    // 发送到群组
+                    GroupManager.broadcastToGroup(ChatManager.currentChatId, messageObj);
+                } else {
+                    // 发送到个人
+                    ConnectionManager.connections[ChatManager.currentChatId].dataChannel.send(JSON.stringify(messageObj));
+                }
+
+                // 添加到聊天记录
+                ChatManager.addMessage(ChatManager.currentChatId, messageObj);
+
+                // 更新最后消息
+                if (isGroupChat) {
+                    GroupManager.updateGroupLastMessage(ChatManager.currentChatId, message);
+                } else {
+                    UserManager.updateContactLastMessage(ChatManager.currentChatId, message);
+                }
+
+                input.value = '';
+            }
+        },
+
+        // 清空聊天记录
+        clearChat: function() {
+            if (!ChatManager.currentChatId) {
+                UIManager.showNotification('请先选择聊天对象', 'warning');
+                return;
+            }
+
+            // 显示确认对话框
+            if (confirm('确定要清空聊天记录吗？此操作不可撤销。')) {
+                // 清空聊天
+                if (ChatManager.clearChat(ChatManager.currentChatId)) {
+                    // 添加系统消息提示
+                    const systemMessage = document.createElement('div');
+                    systemMessage.className = 'system-message';
+                    systemMessage.textContent = '已清空聊天记录';
+                    systemMessage.style.textAlign = 'center';
+                    systemMessage.style.padding = '10px';
+                    systemMessage.style.color = '#666';
+                    systemMessage.style.fontSize = '12px';
+                    document.getElementById('chatBox').appendChild(systemMessage);
+
+                    // 通知用户
+                    UIManager.showNotification('聊天记录已清空', 'info');
+
+                    Utils.log('聊天记录已清空', Utils.logLevels.INFO);
+                }
+            }
+        },
+
+        // 显示消息
+        displayMessage: function (message, isSent) {
+            const chatBox = document.getElementById('chatBox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+
+            if (typeof message === 'string') {
+                // 处理纯文本消息，将换行符转换为<br>标签
+                messageDiv.innerHTML = this.formatMessageText(message);
+            } else {
+                switch (message.type) {
+                    case 'audio':
+                        const audioDiv = document.createElement('div');
+                        audioDiv.className = 'voice-message';
+
+                        // 格式化音频持续时间
+                        const formattedDuration = typeof message.duration === 'number'
+                            ? Utils.formatTime(message.duration)
+                            : message.duration;
+
+                        audioDiv.innerHTML = `
+                <button onclick="event.stopPropagation(); MediaManager.playAudio(this)" data-audio="${message.data}">
+                    播放
+                </button>
+                <div class="voice-wave">
+                    ${Array(5).fill('<div class="wave-bar"></div>').join('')}
+                </div>
+                <span class="duration">${formattedDuration}</span>
+            `;
+                        messageDiv.appendChild(audioDiv);
+                        break;
+
+                    case 'file':
+                        // 处理文件消息
+                        const fileDiv = document.createElement('div');
+                        fileDiv.className = 'file-message';
+
+                        // 检查是否有文件数据
+                        const fileData = message.data || '';
+
+                        // 根据文件类型决定展示方式
+                        if (message.fileType && message.fileType.startsWith('image/')) {
+                            // 图片
+                            fileDiv.innerHTML = `
+                        ${fileData ? `<img src="${fileData}" class="file-preview-img" alt="${message.fileName}"
+                             onclick="MessageManager.showFullImage('${fileData}')">` : '<div class="file-error">图片数据丢失</div>'}
+                    `;
+                        } else if (message.fileType && message.fileType.startsWith('video/')) {
+                            // 视频
+                            fileDiv.innerHTML = `
+                        ${fileData ? `<video controls class="file-preview-video">
+                            <source src="${fileData}" type="${message.fileType}">
+                            您的浏览器不支持视频预览
+                        </video>` : '<div class="file-error">视频数据丢失</div>'}
+                    `;
+                        } else {
+                            // 其他文件类型
+                            const fileSize = MediaManager.formatFileSize(message.fileSize || 0);
+                            const fileIcon = MediaManager.getFileIcon(message.fileType);
+
+                            fileDiv.innerHTML = `
+                        <div class="file-info">
+                            <div class="file-icon">${fileIcon}</div>
+                            <div class="file-details">
+                                <div class="file-name">${message.fileName || '未知文件'}</div>
+                                <div class="file-meta">
+                                    <span class="file-size">${fileSize}</span>
+                                    <span class="file-type">${message.fileType || '未知类型'}</span>
+                                </div>
+                            </div>
+                            ${fileData ? `<a href="${fileData}" download="${message.fileName}" class="download-btn">下载</a>` :
+                                '<span class="download-error">下载失败</span>'}
+                        </div>
+                    `;
+                        }
+
+                        messageDiv.appendChild(fileDiv);
+                        break;
+
+                    // 兼容旧版本的image类型，将其视为file类型处理
+                    case 'image':
+                        const imgDiv = document.createElement('div');
+                        imgDiv.className = 'file-message';
+
+                        // 检查是否有文件数据
+                        const imgData = message.data || '';
+
+                        imgDiv.innerHTML = `
+                    ${imgData ? `<img src="${imgData}" class="file-preview-img" alt="${message.fileName || '图片'}"
+                         onclick="MessageManager.showFullImage('${imgData}')">` : '<div class="file-error">图片数据丢失</div>'}
+                `;
+
+                        messageDiv.appendChild(imgDiv);
+                        break;
+
+                    case 'text':
+                        const textDiv = document.createElement('div');
+                        // 使用formatMessageText方法处理文本内容，保留换行符
+                        textDiv.innerHTML = this.formatMessageText(message.content);
+                        messageDiv.appendChild(textDiv);
+
+                        if (message.links && message.links.length > 0) {
+                            message.links.forEach(async (link) => {
+                                const linkPreview = await this.createLinkPreview(link);
+                                messageDiv.appendChild(linkPreview);
+                            });
+                        }
+                        break;
+
+                    case 'system':
+                        // 处理系统消息
+                        const systemDiv = document.createElement('div');
+                        systemDiv.className = 'system-message';
+                        systemDiv.innerHTML = this.formatMessageText(message.content);
+                        messageDiv.className = 'message system'; // 覆盖原来的sent/received类名
+                        messageDiv.appendChild(systemDiv);
+                        break;
+
+                    default:
+                        // 未知类型消息
+                        messageDiv.textContent = JSON.stringify(message);
+
+                }
+            }
+
+            // 添加时间戳和发送者名称
+            const timestamp = document.createElement('div');
+            timestamp.className = 'timestamp';
+
+            // 检查是否是群聊消息
+            const isGroupChat = ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_');
+
+            if (isGroupChat && !isSent) {
+                const group = GroupManager.groups[ChatManager.currentChatId];
+
+                // 优先使用原始发送者信息
+                const senderId = message.originalSender || message.sender;
+
+                // 获取发送者昵称
+                let senderName = message.originalSenderName || message.senderName || '未知用户';
+
+                // 如果在联系人列表中有该用户，使用联系人名称
+                if (UserManager.contacts[senderId]) {
+                    senderName = UserManager.contacts[senderId].name;
+                }
+
+                // 检查发送者是否是群主
+                if (group && senderId === group.owner) {
+                    timestamp.textContent = `${senderName}(群主) · ${message.timestamp ?
+                        new Date(message.timestamp).toLocaleTimeString() :
+                        new Date().toLocaleTimeString()}`;
+                } else {
+                    timestamp.textContent = `${senderName} · ${message.timestamp ?
+                        new Date(message.timestamp).toLocaleTimeString() :
+                        new Date().toLocaleTimeString()}`;
+                }
+
+                // 添加转发标识（如果有转发者且不是原始发送者）
+                if (message.sender !== message.originalSender && message.sender) {
+                    const relayInfo = document.createElement('div');
+                    relayInfo.className = 'relay-info';
+
+                    // 获取转发者名称
+                    let relayerName = '未知用户';
+                    if (UserManager.contacts[message.sender]) {
+                        relayerName = UserManager.contacts[message.sender].name;
+                    } else if (message.sender === group.owner) {
+                        relayerName = '群主';
+                    }
+
+                    relayInfo.textContent = `由 ${relayerName} 转发`;
+                    timestamp.appendChild(relayInfo);
+                }
+            } else {
+                // 私聊消息或自己发送的消息，只显示时间
+                timestamp.textContent = message.timestamp ?
+                    new Date(message.timestamp).toLocaleTimeString() :
+                    new Date().toLocaleTimeString();
+            }
+
+            messageDiv.appendChild(timestamp);
+
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        },
+
+        // 显示全屏图片
+        showFullImage: function(src) {
+            const modal = document.createElement('div');
+            modal.style = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; align-items: center;
+            justify-content: center; z-index: 1000; cursor: pointer;
+        `;
+
+            const fullImg = document.createElement('img');
+            fullImg.src = src;
+            fullImg.style = 'max-width: 90%; max-height: 90%; object-fit: contain;';
+
+            modal.appendChild(fullImg);
+            document.body.appendChild(modal);
+
+            modal.onclick = () => document.body.removeChild(modal);
+        },
+
+        formatMessageText: function(text) {
+            if (!text) return '';
+
+            // 转义HTML特殊字符，防止XSS攻击
+            const escaped = text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+
+            // 将换行符转换为<br>标签
+            return escaped.replace(/\n/g, '<br>');
+        },
+
+        // 链接预览
+        createLinkPreview: async function (url) {
+            const preview = document.createElement('div');
+            preview.className = 'link-preview';
+            preview.innerHTML = `
+            <div class="link-preview-loading">
+                <span class="loading-spinner"></span> 加载预览中...
+            </div>
+        `;
+
+            try {
+                const previewData = await this.fetchLinkPreview(url);
+
+                if (previewData) {
+                    preview.innerHTML = `
+                    <div class="link-preview-content">
+                        ${previewData.image ?
+                        `<img src="${previewData.image}"
+                                class="link-preview-image"
+                                onerror="this.style.display='none'"
+                                alt="${previewData.title || '链接预览'}">`
+                        : ''}
+                        <div class="link-preview-title">${previewData.title || url}</div>
+                        <div class="link-preview-description">${previewData.description || '无描述'}</div>
+                        <div class="link-preview-domain">
+                            <img src="https://www.google.com/s2/favicons?domain=${previewData.domain}"
+                                width="16" height="16" onerror="this.style.display='none'" alt="">
+                            ${previewData.domain}
+                        </div>
+                    </div>
+                `;
+                } else {
+                    preview.innerHTML = `
+                    <div class="link-preview-content">
+                        <div class="link-preview-title">${url}</div>
+                        <div class="preview-error">无法加载预览</div>
+                    </div>
+                `;
+                }
+            } catch (error) {
+                preview.innerHTML = `
+                <div class="link-preview-content">
+                    <div class="link-preview-title">${url}</div>
+                    <div class="preview-error">预览加载失败</div>
+                </div>
+            `;
+            }
+
+            preview.onclick = () => window.open(url, '_blank');
+            return preview;
+        },
+
+        // 获取链接预览
+        fetchLinkPreview: async function (url) {
+            try {
+                // 使用第三方API获取链接预览（考虑中国网络情况，可能需要替换为国内可用的服务）
+                // 在生产环境应使用自己的后端服务来代理请求，避免API服务的限制
+                const proxyUrl = 'https://api.allorigins.win/raw?url=';
+                const response = await fetch(`${proxyUrl}${encodeURIComponent(url)}`, {
+                    method: 'GET',
+                    headers: {'Content-Type': 'text/html'},
+                    mode: 'cors',
+                    cache: 'force-cache'
+                });
+
+                if (!response.ok) throw new Error('无法获取链接内容');
+
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+
+                // 提取Open Graph数据
+                const getMetaContent = (name) => {
+                    const element = doc.querySelector(`meta[property="og:${name}"], meta[name="${name}"], meta[name="og:${name}"]`);
+                    return element ? element.getAttribute('content') : null;
+                };
+
+                const title = getMetaContent('title') || doc.title || '';
+                const description = getMetaContent('description') || '';
+                const image = getMetaContent('image') || '';
+                const domain = new URL(url).hostname;
+
+                return {title, description, image, domain};
+            } catch (error) {
+                Utils.log(`链接预览获取失败: ${error.message}`, Utils.logLevels.ERROR);
+
+                // 返回基本信息
+                try {
+                    const domain = new URL(url).hostname;
+                    return {
+                        title: url,
+                        description: '',
+                        image: null,
+                        domain: domain
+                    };
+                } catch (e) {
+                    return null;
+                }
+            }
+        },
+
+        // 取消文件数据
+        cancelFileData: function () {
+            this.selectedFile = null;
+            document.getElementById('filePreviewContainer').innerHTML = '';
+            document.getElementById('fileInput').value = '';
+        },
+
+        // 取消音频数据
+        cancelAudioData: function () {
+            this.audioData = null;
+            this.audioDuration = 0;
+            document.getElementById('audioPreviewContainer').innerHTML = '';
+
+            // 确保释放媒体资源
+            MediaManager.releaseAudioResources();
+        }
+    };
+
+    // 聊天管理器
+    const ChatManager = {
+        currentChatId: null,
+        chats: {},
+
+        init: async function() {
+            // 初始化联系人列表
+            await this.loadChats();
+
+            // 设置新建聊天按钮事件
+            document.getElementById('newChatBtn').addEventListener('click', () => {
+                document.getElementById('newChatForm').style.display = 'block';
+            });
+
+            // 设置清空联系人列表按钮事件
+            document.getElementById('clearContactsBtn').addEventListener('click', () => {
+                UserManager.clearAllContacts();
+            });
+
+            document.getElementById('cancelNewChatBtn').addEventListener('click', () => {
+                document.getElementById('newChatForm').style.display = 'none';
+                document.getElementById('peerIdInput').value = '';
+                document.getElementById('peerNameInput').value = '';
+            });
+
+            document.getElementById('confirmNewChatBtn').addEventListener('click', () => {
+                const peerId = document.getElementById('peerIdInput').value.trim();
+                const peerName = document.getElementById('peerNameInput').value.trim() || `用户${peerId.substring(0, 4)}`;
+
+                if (!peerId) {
+                    UIManager.showNotification('请输入对方ID', 'warning');
+                    return;
+                }
+
+                if (UserManager.addContact(peerId, peerName)) {
+                    document.getElementById('newChatForm').style.display = 'none';
+                    document.getElementById('peerIdInput').value = '';
+                    document.getElementById('peerNameInput').value = '';
+
+                    // 切换到联系人列表
+                    document.querySelector('.connection-tab[data-tab="chats"]').click();
+                }
+            });
+
+            // 设置选项卡切换
+            document.querySelectorAll('.connection-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.connection-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    const tabName = tab.getAttribute('data-tab');
+                    document.querySelectorAll('.connection-panel').forEach(panel => {
+                        panel.classList.remove('active');
+                    });
+                    document.getElementById(`${tabName}Panel`).classList.add('active');
+                });
+            });
+        },
+
+        loadChats: async function() {
+            try {
+                await DBManager.init();
+                const chatItems = await DBManager.getAllItems('chats');
+                this.chats = {};
+
+                if (chatItems && chatItems.length > 0) {
+                    chatItems.forEach(item => {
+                        this.chats[item.id] = item.messages || [];
+                    });
+                }
+            } catch (error) {
+                Utils.log(`加载聊天记录失败: ${error}`, Utils.logLevels.ERROR);
+                // 尝试从localStorage加载
+                this.loadChatsFromLocalStorage();
+            }
+        },
+
+        saveChats: async function() {
+            if (this.currentChatId) {
+                try {
+                    await DBManager.setItem('chats', {
+                        id: this.currentChatId,
+                        messages: this.chats[this.currentChatId] || []
+                    });
+
+                } catch (error) {
+                    Utils.log(`保存聊天记录失败: ${error}`, Utils.logLevels.ERROR);
+                }
+            }
+        },
+
+        renderChatList: function() {
+            const chatList = document.getElementById('chatList');
+            chatList.innerHTML = '';
+
+            const sortedContacts = Object.values(UserManager.contacts).sort((a, b) => {
+                return new Date(b.lastTime) - new Date(a.lastTime);
+            });
+
+            if (sortedContacts.length === 0) {
+                chatList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无聊天，点击"添加新聊天"开始</div>';
+                return;
+            }
+
+            sortedContacts.forEach(contact => {
+                const chatItem = document.createElement('div');
+                chatItem.className = `chat-item ${contact.id === this.currentChatId ? 'active' : ''}`;
+                chatItem.setAttribute('data-id', contact.id);
+
+                const lastTime = new Date(contact.lastTime);
+                const formattedTime = Utils.formatDate(lastTime);
+
+                chatItem.innerHTML = `
+            <div class="chat-avatar">${contact.name.charAt(0)}</div>
+            <div class="chat-info">
+                <div class="chat-name">${contact.name}</div>
+                <div class="chat-preview">${contact.lastMessage || '暂无消息'}</div>
+            </div>
+            <div class="chat-meta">
+                <div class="chat-time">${formattedTime}</div>
+                ${contact.unread ? `<div class="chat-badge">${contact.unread > 99 ? '99+' : contact.unread}</div>` : ''}
+            </div>
+            <div class="delete-btn" style="display: none;">删除</div>
+        `;
+
+                chatItem.addEventListener('click', (e) => {
+                    // 如果点击的是删除按钮，不打开聊天
+                    if (e.target.classList.contains('delete-btn')) {
+                        e.stopPropagation();
+                        this.deleteChat(contact.id);
+                        return;
+                    }
+                    this.openChat(contact.id);
+                });
+
+                // 添加鼠标悬浮事件
+                chatItem.addEventListener('mouseenter', () => {
+                    chatItem.querySelector('.delete-btn').style.display = 'block';
+                });
+
+                chatItem.addEventListener('mouseleave', () => {
+                    chatItem.querySelector('.delete-btn').style.display = 'none';
+                });
+
+                chatList.appendChild(chatItem);
+            });
+        },
+
+        // 添加删除聊天记录的方法
+        deleteChat: function(chatId) {
+            // 确认对话框
+            if (confirm('确定要删除此聊天吗？此操作将清空聊天记录且不可撤销。')) {
+                // 清空聊天记录
+                this.clearChat(chatId);
+
+                // 从联系人列表中移除
+                UserManager.removeContact(chatId);
+
+                // 如果删除的是当前聊天，重置聊天界面
+                if (chatId === this.currentChatId) {
+                    this.currentChatId = null;
+                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                    document.getElementById('chatBox').innerHTML = '';
+
+                    // 禁用聊天界面
+                    UIManager.enableChatInterface(false);
+                }
+
+                // 更新联系人列表
+                this.renderChatList();
+
+                // 显示通知
+                UIManager.showNotification('聊天已删除', 'info');
+            }
+        },
+
+        openChat: function(chatId) {
+            // 保存之前的聊天记录
+            if (this.currentChatId) {
+                this.saveCurrentChat();
+            }
+
+            this.currentChatId = chatId;
+
+            // 检查是否是群聊
+            if (chatId.startsWith('group_')) {
+                // 如果是群聊，交给群聊管理器处理
+                GroupManager.openGroup(chatId);
+                return;
+            }
+
+            // 个人聊天处理逻辑
+            UserManager.clearUnread(chatId);
+
+            // 更新UI
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.toggle('active', item.getAttribute('data-id') === chatId);
+            });
+
+            // 设置聊天标题
+            const contact = UserManager.contacts[chatId];
+            if (contact) {
+                document.getElementById('currentChatTitle').textContent = contact.name;
+            }
+
+            // 隐藏群聊成员管理按钮
+            document.getElementById('chatHeaderActions').style.display = 'none';
+
+            // 加载聊天记录
+            this.loadChatHistory(chatId);
+
+            // 在移动设备上切换到聊天界面
+            if (window.innerWidth <= 768) {
+                document.querySelector('.container').classList.add('connected-mode');
+            }
+
+            // 启用聊天输入
+            UIManager.enableChatInterface(true);
+
+            // 检查连接状态
+            const isConnected = ConnectionManager.isConnectedTo(chatId);
+
+            // 更新视频通话按钮状态
+            document.getElementById('videoCallButton').disabled = !isConnected;
+
+            // 如果连接未建立，添加系统消息提示
+            if (!isConnected) {
+                const chatBox = document.getElementById('chatBox');
+                const systemMessage = document.createElement('div');
+                systemMessage.className = 'system-message';
+                systemMessage.textContent = '连接未建立，发送消息时将提示重新连接';
+                chatBox.appendChild(systemMessage);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            // 聚焦输入框
+            setTimeout(() => document.getElementById('messageInput').focus(), 100);
+        },
+
+        loadChatHistory: function(chatId) {
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML = '';
+
+            if (!this.chats[chatId]) {
+                this.chats[chatId] = [];
+                return;
+            }
+
+            this.chats[chatId].forEach(msg => {
+                MessageManager.displayMessage(msg, msg.sender === UserManager.userId);
+            });
+
+            // 滚动到底部
+            chatBox.scrollTop = chatBox.scrollHeight;
+        },
+
+        saveCurrentChat: function() {
+            if (this.currentChatId) {
+                this.saveChats();
+            }
+        },
+
+        addMessage: async function(chatId, message) {
+            if (!this.chats[chatId]) {
+                this.chats[chatId] = [];
+            }
+
+            this.chats[chatId].push(message);
+
+            // 如果是当前聊天，显示消息
+            if (chatId === this.currentChatId) {
+                MessageManager.displayMessage(message, message.sender === UserManager.userId);
+                document.getElementById('chatBox').scrollTop = document.getElementById('chatBox').scrollHeight;
+            } else {
+                // 更新未读消息计数
+                if (chatId.startsWith('group_')) {
+                    GroupManager.updateGroupLastMessage(
+                        chatId,
+                        message.type === 'text' ? message.content : '[媒体消息]',
+                        true
+                    );
+                } else {
+                    UserManager.updateContactLastMessage(
+                        chatId,
+                        message.type === 'text' ? message.content : '[媒体消息]',
+                        true
+                    );
+                }
+            }
+
+            try {
+                // 保存到IndexedDB
+                await DBManager.setItem('chats', {
+                    id: chatId,
+                    messages: this.chats[chatId]
+                });
+            } catch (error) {
+                Utils.log(`保存消息失败: ${error}`, Utils.logLevels.ERROR);
+            }
+        },
+
+        clearChat: async function(chatId) {
+            if (chatId) {
+                this.chats[chatId] = [];
+
+                try {
+                    await DBManager.setItem('chats', {
+                        id: chatId,
+                        messages: []
+                    });
+
+                    if (chatId === this.currentChatId) {
+                        document.getElementById('chatBox').innerHTML = '';
+                    }
+
+                    return true;
+                } catch (error) {
+                    Utils.log(`清空聊天记录失败: ${error}`, Utils.logLevels.ERROR);
+
+                    if (chatId === this.currentChatId) {
+                        document.getElementById('chatBox').innerHTML = '';
+                    }
+
+                    return true;
+                }
+            }
+            return false;
+        },
+
+        // 清空所有聊天记录
+        clearAllChats: async function() {
+            // 确认对话框
+            if (!confirm('确定要清空所有聊天记录吗？此操作不可撤销。')) {
+                return;
+            }
+
+            // 清空所有聊天记录
+            this.chats = {};
+
+            try {
+                await DBManager.clearStore('chats');
+
+                // 如果当前有打开的聊天，清空聊天框
+                if (this.currentChatId) {
+                    document.getElementById('chatBox').innerHTML = '';
+
+                    // 添加系统消息提示
+                    const systemMessage = document.createElement('div');
+                    systemMessage.className = 'system-message';
+                    systemMessage.textContent = '所有聊天记录已清空';
+                    document.getElementById('chatBox').appendChild(systemMessage);
+                }
+
+                // 更新所有联系人的最后消息
+                for (const contactId in UserManager.contacts) {
+                    UserManager.contacts[contactId].lastMessage = '';
+                    UserManager.contacts[contactId].unread = 0;
+                }
+                UserManager.saveContacts();
+
+                // 更新群组的最后消息
+                for (const groupId in GroupManager.groups) {
+                    GroupManager.groups[groupId].lastMessage = '';
+                    GroupManager.groups[groupId].unread = 0;
+                }
+                GroupManager.saveGroups();
+
+                // 更新联系人列表
+                this.renderChatList();
+
+                // 通知用户
+                UIManager.showNotification('所有聊天记录已清空', 'info');
+                Utils.log('所有聊天记录已清空', Utils.logLevels.INFO);
+
+                return true;
+            } catch (error) {
+                Utils.log(`清空所有聊天记录失败: ${error}`, Utils.logLevels.ERROR);
+
+                // 如果当前有打开的聊天，清空聊天框
+                if (this.currentChatId) {
+                    document.getElementById('chatBox').innerHTML = '';
+
+                    // 添加系统消息提示
+                    const systemMessage = document.createElement('div');
+                    systemMessage.className = 'system-message';
+                    systemMessage.textContent = '所有聊天记录已清空';
+                    document.getElementById('chatBox').appendChild(systemMessage);
+                }
+
+                // 更新联系人列表
+                this.renderChatList();
+
+                return true;
+            }
+        }
+    };
+
+    // 用户管理器
+    const UserManager = {
+        userId: null,
+        userName: '我',
+        contacts: {},
+
+        init: async function() {
+            try {
+                // 确保数据库初始化
+                await DBManager.init();
+
+                // 获取或生成用户ID
+                const userData = await DBManager.getItem('user', 'current');
+                if (userData) {
+                    this.userId = userData.userId;
+                } else {
+                    // 生成新用户ID
+                    this.userId = Utils.generateId();
+                    await DBManager.setItem('user', {
+                        id: 'current',
+                        userId: this.userId
+                    });
+                }
+
+                // 显示用户ID
+                document.getElementById('userIdValue').textContent = this.userId;
+                this.userName = this.userId;
+
+                // 设置复制ID按钮
+                document.getElementById('copyIdBtn').addEventListener('click', () => {
+                    navigator.clipboard.writeText(this.userId)
+                        .then(() => UIManager.showNotification('ID已复制到剪贴板', 'success'))
+                        .catch(() => UIManager.showNotification('复制失败，请手动复制', 'error'));
+                });
+
+                // 加载联系人
+                await this.loadContacts();
+            } catch (error) {
+                Utils.log(`用户初始化失败: ${error}`, Utils.logLevels.ERROR);
+                // 回退方案
+                this.userId = Utils.generateId();
+                document.getElementById('userIdValue').textContent = this.userId;
+                this.loadContactsFromLocalStorage();
+            }
+        },
+
+        loadContacts: async function() {
+            try {
+                const contacts = await DBManager.getAllItems('contacts');
+                this.contacts = {};
+
+                if (contacts && contacts.length > 0) {
+                    contacts.forEach(contact => {
+                        this.contacts[contact.id] = contact;
+                    });
+                    ChatManager.renderChatList();
+                }
+            } catch (error) {
+                Utils.log(`加载联系人失败: ${error}`, Utils.logLevels.ERROR);
+                this.contacts = {};
+                // 尝试从localStorage加载
+                this.loadContactsFromLocalStorage();
+            }
+        },
+
+        saveContacts: async function() {
+            try {
+                for (const id in this.contacts) {
+                    await DBManager.setItem('contacts', this.contacts[id]);
+                }
+            } catch (error) {
+                Utils.log(`保存联系人失败: ${error}`, Utils.logLevels.ERROR);
+            }
+        },
+
+        addContact: async function(id, name) {
+            if (id === this.userId) {
+                UIManager.showNotification('不能添加自己为联系人', 'error');
+                return false;
+            }
+
+            if (this.contacts[id]) {
+                UIManager.showNotification('该联系人已存在', 'warning');
+                return false;
+            }
+
+            const contact = {
+                id: id,
+                name: name || `用户${id.substring(0, 4)}`,
+                lastMessage: '',
+                lastTime: new Date().toISOString(),
+                unread: 0
+            };
+
+            this.contacts[id] = contact;
+
+            try {
+                await DBManager.setItem('contacts', contact);
+                ChatManager.renderChatList();
+                return true;
+            } catch (error) {
+                Utils.log(`添加联系人失败: ${error}`, Utils.logLevels.ERROR);
+                // 备份策略：保存到localStorage
+                this.saveContacts();
+                ChatManager.renderChatList();
+                return true;
+            }
+        },
+
+        removeContact: async function(id) {
+            if (this.contacts[id]) {
+                delete this.contacts[id];
+
+                try {
+                    await DBManager.removeItem('contacts', id);
+                    ChatManager.renderChatList();
+                    return true;
+                } catch (error) {
+                    Utils.log(`删除联系人失败: ${error}`, Utils.logLevels.ERROR);
+                    // 备份策略：保存到localStorage
+                    this.saveContacts();
+                    ChatManager.renderChatList();
+                    return true;
+                }
+            }
+            return false;
+        },
+
+        updateContactLastMessage: async function(id, message, isUnread = false) {
+            if (this.contacts[id]) {
+                this.contacts[id].lastMessage = message;
+                this.contacts[id].lastTime = new Date().toISOString();
+                if (isUnread) {
+                    this.contacts[id].unread = (this.contacts[id].unread || 0) + 1;
+                }
+
+                try {
+                    await DBManager.setItem('contacts', this.contacts[id]);
+                    ChatManager.renderChatList();
+                } catch (error) {
+                    Utils.log(`更新联系人最后消息失败: ${error}`, Utils.logLevels.ERROR);
+                    // 备份策略：保存到localStorage
+                    this.saveContacts();
+                    ChatManager.renderChatList();
+                }
+            }
+        },
+
+        clearUnread: async function(id) {
+            if (this.contacts[id]) {
+                this.contacts[id].unread = 0;
+
+                try {
+                    await DBManager.setItem('contacts', this.contacts[id]);
+                    ChatManager.renderChatList();
+                } catch (error) {
+                    Utils.log(`清除未读数失败: ${error}`, Utils.logLevels.ERROR);
+                    // 备份策略：保存到localStorage
+                    this.saveContacts();
+                    ChatManager.renderChatList();
+                }
+            }
+        },
+
+        // 清空所有联系人列表
+        clearAllContacts: async function() {
+            // 确认对话框
+            if (!confirm('确定要清空所有聊天吗？此操作不可撤销。')) {
+                return false;
+            }
+
+            // 备份当前联系人ID，用于后续关闭连接
+            const contactIds = Object.keys(this.contacts);
+
+            // 清空联系人对象
+            this.contacts = {};
+
+            try {
+                // 清空IndexedDB中的联系人
+                await DBManager.clearStore('contacts');
+
+                // 关闭所有连接
+                contactIds.forEach(peerId => {
+                    if (ConnectionManager.connections[peerId]) {
+                        ConnectionManager.close(peerId);
+                    }
+                });
+
+                // 更新UI
+                ChatManager.renderChatList();
+
+                // 清空当前聊天
+                if (ChatManager.currentChatId) {
+                    ChatManager.currentChatId = null;
+                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                    document.getElementById('chatBox').innerHTML = '';
+
+                    // 禁用聊天界面
+                    UIManager.enableChatInterface(false);
+                }
+
+                // 通知用户
+                UIManager.showNotification('所有联系人已清空', 'info');
+                Utils.log('所有联系人已清空', Utils.logLevels.INFO);
+
+                return true;
+            } catch (error) {
+                Utils.log(`清空联系人失败: ${error}`, Utils.logLevels.ERROR);
+                return true;
             }
         }
     };
@@ -4413,7 +4710,7 @@
             }
         },
 
-        // 向群组广播消息（星型拓扑）
+        // 修改消息数据结构
         broadcastToGroup: function(groupId, message, excludeMembers = []) {
             const group = this.groups[groupId];
             if (!group) return false;
@@ -4423,8 +4720,9 @@
                 message.sender = UserManager.userId;
             }
 
-            // 添加用户名称
-            message.senderName = UserManager.userName;
+            // 添加原始发送者信息，用于追踪消息真实来源
+            message.originalSender = message.sender;
+            message.originalSenderName = UserManager.userName;
 
             // 确保消息有时间戳
             if (!message.timestamp) {
@@ -4907,8 +5205,9 @@
                     // 移除转发标记，防止循环转发
                     delete message.needsRelay;
 
-                    // 转发给群组其他成员
-                    this.broadcastToGroup(groupId, message, [message.sender]);
+                    // 转发时保留原始发送者信息
+                    // 群主转发消息时，不修改sender，确保消息显示的是真实发送者
+                    this.broadcastToGroup(groupId, message, [message.originalSender]);
                 }
             }
 
@@ -4936,36 +5235,35 @@
                     this.handleMembershipUpdate(message);
                     break;
 
-                // 其他消息类型处理保持不变
                 case 'text':
                 case 'file':
                 case 'image':
                 case 'audio':
                     // 处理普通消息
                     if (this.groups[groupId]) {
-                        // 添加到聊天记录
+                        // 添加到聊天记录，保留原始发送者信息
                         ChatManager.addMessage(groupId, message);
 
                         // 更新群组最后消息
                         let previewText = '';
+                        const displayName = message.originalSenderName ||
+                            (UserManager.contacts[message.originalSender]?.name) ||
+                            '用户';
+
                         if (message.type === 'text') {
-                            previewText = `${message.senderName || '用户'}: ${message.content}`;
+                            previewText = `${displayName}: ${message.content}`;
                         } else if (message.type === 'file' || message.type === 'image') {
-                            if (message.fileType) {
-                                if (message.fileType.startsWith('image/')) {
-                                    previewText = `${message.senderName || '用户'}: [图片]`;
-                                } else if (message.fileType.startsWith('video/')) {
-                                    previewText = `${message.senderName || '用户'}: [视频]`;
-                                } else if (message.fileType.startsWith('audio/')) {
-                                    previewText = `${message.senderName || '用户'}: [音频]`;
-                                } else {
-                                    previewText = `${message.senderName || '用户'}: [文件]`;
-                                }
+                            if (message.fileType?.startsWith('image/')) {
+                                previewText = `${displayName}: [图片]`;
+                            } else if (message.fileType?.startsWith('video/')) {
+                                previewText = `${displayName}: [视频]`;
+                            } else if (message.fileType?.startsWith('audio/')) {
+                                previewText = `${displayName}: [音频]`;
                             } else {
-                                previewText = `${message.senderName || '用户'}: [文件]`;
+                                previewText = `${displayName}: [文件]`;
                             }
                         } else if (message.type === 'audio') {
-                            previewText = `${message.senderName || '用户'}: [语音]`;
+                            previewText = `${displayName}: [语音]`;
                         }
 
                         this.updateGroupLastMessage(
@@ -5237,11 +5535,26 @@
                 if (ChatManager.currentChatId === peerId) {
                     // 禁用视频通话按钮
                     document.getElementById('videoCallButton').disabled = true;
+                    // 禁用音频通话按钮
+                    document.getElementById('audioCallButton').disabled = true;
 
                     // 移动端：断开连接时切换回设置界面
                     if (window.innerWidth <= 768) {
                         document.querySelector('.container').classList.remove('connected-mode');
                     }
+                }
+            });
+
+            EventEmitter.on('connectionEstablished', function(peerId) {
+                // 如果是当前聊天，更新UI
+                if (ChatManager.currentChatId === peerId) {
+                    // 启用视频通话按钮
+                    document.getElementById('videoCallButton').disabled = false;
+                    document.getElementById('videoCallButton').onclick = () => VideoCallManager.initiateCall(peerId);
+
+                    // 启用音频通话按钮
+                    document.getElementById('audioCallButton').disabled = false;
+                    document.getElementById('audioCallButton').onclick = () => VideoCallManager.initiateAudioCall(peerId);
                 }
             });
 
