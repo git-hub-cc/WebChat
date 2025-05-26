@@ -26,7 +26,7 @@
         <!-- 连接选项卡 -->
         <div class="connection-tabs">
             <div class="connection-tab active" data-tab="connect">连接</div>
-            <div class="connection-tab" data-tab="chats">聊天列表</div>
+            <div class="connection-tab" data-tab="chats">联系人</div>
             <div class="connection-tab" data-tab="groups">群聊</div>
         </div>
 
@@ -66,12 +66,12 @@
             <div class="debug-info" id="debugInfo"></div>
         </div>
 
-        <!-- 聊天列表面板 -->
+        <!-- 联系人列表面板 -->
         <div class="connection-panel" id="chatsPanel">
 
             <div class="chat-actions">
                 <button id="newChatBtn" class="new-chat-btn">添加新聊天</button>
-                <button id="clearContactsBtn" class="clear-contacts-btn">清空聊天列表</button>
+                <button id="clearContactsBtn" class="clear-contacts-btn">清空联系人列表</button>
             </div>
 
             <!-- 新建聊天表单 -->
@@ -84,7 +84,7 @@
                 </div>
             </div>
 
-            <!-- 聊天列表 -->
+            <!-- 联系人列表 -->
             <div class="chat-list" id="chatList">
                 <!-- 聊天项会动态添加 -->
             </div>
@@ -756,7 +756,7 @@
             }
         },
 
-        // 清空所有聊天列表
+        // 清空所有联系人列表
         clearAllContacts: async function() {
             // 确认对话框
             if (!confirm('确定要清空所有聊天吗？此操作不可撤销。')) {
@@ -811,7 +811,7 @@
         chats: {},
 
         init: async function() {
-            // 初始化聊天列表
+            // 初始化联系人列表
             await this.loadChats();
 
             // 设置新建聊天按钮事件
@@ -819,7 +819,7 @@
                 document.getElementById('newChatForm').style.display = 'block';
             });
 
-            // 设置清空聊天列表按钮事件
+            // 设置清空联系人列表按钮事件
             document.getElementById('clearContactsBtn').addEventListener('click', () => {
                 UserManager.clearAllContacts();
             });
@@ -844,7 +844,7 @@
                     document.getElementById('peerIdInput').value = '';
                     document.getElementById('peerNameInput').value = '';
 
-                    // 切换到聊天列表
+                    // 切换到联系人列表
                     document.querySelector('.connection-tab[data-tab="chats"]').click();
                 }
             });
@@ -918,23 +918,67 @@
                 const formattedTime = Utils.formatDate(lastTime);
 
                 chatItem.innerHTML = `
-                    <div class="chat-avatar">${contact.name.charAt(0)}</div>
-                    <div class="chat-info">
-                        <div class="chat-name">${contact.name}</div>
-                        <div class="chat-preview">${contact.lastMessage || '暂无消息'}</div>
-                    </div>
-                    <div class="chat-meta">
-                        <div class="chat-time">${formattedTime}</div>
-                        ${contact.unread ? `<div class="chat-badge">${contact.unread > 99 ? '99+' : contact.unread}</div>` : ''}
-                    </div>
-                `;
+            <div class="chat-avatar">${contact.name.charAt(0)}</div>
+            <div class="chat-info">
+                <div class="chat-name">${contact.name}</div>
+                <div class="chat-preview">${contact.lastMessage || '暂无消息'}</div>
+            </div>
+            <div class="chat-meta">
+                <div class="chat-time">${formattedTime}</div>
+                ${contact.unread ? `<div class="chat-badge">${contact.unread > 99 ? '99+' : contact.unread}</div>` : ''}
+            </div>
+            <div class="delete-btn" style="display: none;">删除</div>
+        `;
 
-                chatItem.addEventListener('click', () => {
+                chatItem.addEventListener('click', (e) => {
+                    // 如果点击的是删除按钮，不打开聊天
+                    if (e.target.classList.contains('delete-btn')) {
+                        e.stopPropagation();
+                        this.deleteChat(contact.id);
+                        return;
+                    }
                     this.openChat(contact.id);
+                });
+
+                // 添加鼠标悬浮事件
+                chatItem.addEventListener('mouseenter', () => {
+                    chatItem.querySelector('.delete-btn').style.display = 'block';
+                });
+
+                chatItem.addEventListener('mouseleave', () => {
+                    chatItem.querySelector('.delete-btn').style.display = 'none';
                 });
 
                 chatList.appendChild(chatItem);
             });
+        },
+
+        // 添加删除聊天记录的方法
+        deleteChat: function(chatId) {
+            // 确认对话框
+            if (confirm('确定要删除此聊天吗？此操作将清空聊天记录且不可撤销。')) {
+                // 清空聊天记录
+                this.clearChat(chatId);
+
+                // 从联系人列表中移除
+                UserManager.removeContact(chatId);
+
+                // 如果删除的是当前聊天，重置聊天界面
+                if (chatId === this.currentChatId) {
+                    this.currentChatId = null;
+                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                    document.getElementById('chatBox').innerHTML = '';
+
+                    // 禁用聊天界面
+                    UIManager.enableChatInterface(false);
+                }
+
+                // 更新联系人列表
+                this.renderChatList();
+
+                // 显示通知
+                UIManager.showNotification('聊天已删除', 'info');
+            }
         },
 
         openChat: function(chatId) {
@@ -1128,7 +1172,7 @@
                 }
                 GroupManager.saveGroups();
 
-                // 更新聊天列表
+                // 更新联系人列表
                 this.renderChatList();
 
                 // 通知用户
@@ -1150,7 +1194,7 @@
                     document.getElementById('chatBox').appendChild(systemMessage);
                 }
 
-                // 更新聊天列表
+                // 更新联系人列表
                 this.renderChatList();
 
                 return true;
@@ -2787,9 +2831,19 @@
                         }
                         break;
 
+                    case 'system':
+                        // 处理系统消息
+                        const systemDiv = document.createElement('div');
+                        systemDiv.className = 'system-message';
+                        systemDiv.innerHTML = this.formatMessageText(message.content);
+                        messageDiv.className = 'message system'; // 覆盖原来的sent/received类名
+                        messageDiv.appendChild(systemDiv);
+                        break;
+
                     default:
                         // 未知类型消息
                         messageDiv.textContent = JSON.stringify(message);
+
                 }
             }
 
@@ -2797,23 +2851,32 @@
             const timestamp = document.createElement('div');
             timestamp.className = 'timestamp';
 
-            // 检查是否是群聊消息（根据消息ID或发送者ID判断）
+            // 检查是否是群聊消息
             const isGroupChat = ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_');
 
-            if (isGroupChat && !isSent && message.sender && message.sender !== UserManager.userId) {
-                // 群聊中的非自己发送的消息，显示发送者名称
+            if (isGroupChat && !isSent) {
+                const group = GroupManager.groups[ChatManager.currentChatId];
+
+                // 获取发送者昵称
                 let senderName = message.senderName || '未知用户';
 
-                // 如果有联系人列表中有该用户，使用联系人名称
+                // 如果在联系人列表中有该用户，使用联系人名称
                 if (UserManager.contacts[message.sender]) {
                     senderName = UserManager.contacts[message.sender].name;
                 }
 
-                timestamp.textContent = `${senderName} · ${message.timestamp ?
-                    new Date(message.timestamp).toLocaleTimeString() :
-                    new Date().toLocaleTimeString()}`;
+                // 检查发送者是否是群主
+                if (group && message.sender === group.owner) {
+                    timestamp.textContent = `${senderName}(群主) · ${message.timestamp ?
+                        new Date(message.timestamp).toLocaleTimeString() :
+                        new Date().toLocaleTimeString()}`;
+                } else {
+                    timestamp.textContent = `${senderName} · ${message.timestamp ?
+                        new Date(message.timestamp).toLocaleTimeString() :
+                        new Date().toLocaleTimeString()}`;
+                }
             } else {
-                // 私聊或自己发送的消息，只显示时间
+                // 私聊消息或自己发送的消息，只显示时间
                 timestamp.textContent = message.timestamp ?
                     new Date(message.timestamp).toLocaleTimeString() :
                     new Date().toLocaleTimeString();
@@ -3975,45 +4038,88 @@
             }
         },
 
-        renderGroupList: function() {
-            const groupList = document.getElementById('groupList');
-            groupList.innerHTML = '';
+        renderChatList: function() {
+            const chatList = document.getElementById('chatList');
+            chatList.innerHTML = '';
 
-            const sortedGroups = Object.values(this.groups).sort((a, b) => {
+            const sortedContacts = Object.values(UserManager.contacts).sort((a, b) => {
                 return new Date(b.lastTime) - new Date(a.lastTime);
             });
 
-            if (sortedGroups.length === 0) {
-                groupList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无群聊，点击"创建新群聊"开始</div>';
+            if (sortedContacts.length === 0) {
+                chatList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无聊天，点击"添加新聊天"开始</div>';
                 return;
             }
 
-            sortedGroups.forEach(group => {
-                const groupItem = document.createElement('div');
-                groupItem.className = `group-item ${group.id === this.currentGroupId ? 'active' : ''}`;
-                groupItem.setAttribute('data-id', group.id);
+            sortedContacts.forEach(contact => {
+                const chatItem = document.createElement('div');
+                chatItem.className = `chat-item ${contact.id === this.currentChatId ? 'active' : ''}`;
+                chatItem.setAttribute('data-id', contact.id);
 
-                const lastTime = new Date(group.lastTime);
+                const lastTime = new Date(contact.lastTime);
                 const formattedTime = Utils.formatDate(lastTime);
 
-                groupItem.innerHTML = `
-                <div class="group-avatar">👥</div>
-                <div class="group-info">
-                    <div class="group-name">${group.name}</div>
-                    <div class="group-preview">${group.members.length}人 | ${group.lastMessage || '暂无消息'}</div>
-                </div>
-                <div class="group-meta">
-                    <div class="group-time">${formattedTime}</div>
-                    ${group.unread ? `<div class="chat-badge">${group.unread > 99 ? '99+' : group.unread}</div>` : ''}
-                </div>
-            `;
+                chatItem.innerHTML = `
+            <div class="chat-avatar">${contact.name.charAt(0)}</div>
+            <div class="chat-info">
+                <div class="chat-name">${contact.name}</div>
+                <div class="chat-preview">${contact.lastMessage || '暂无消息'}</div>
+            </div>
+            <div class="chat-meta">
+                <div class="chat-time">${formattedTime}</div>
+                ${contact.unread ? `<div class="chat-badge">${contact.unread > 99 ? '99+' : contact.unread}</div>` : ''}
+            </div>
+            <div class="delete-btn" style="display: none;">删除</div>
+        `;
 
-                groupItem.addEventListener('click', () => {
-                    this.openGroup(group.id);
+                chatItem.addEventListener('click', (e) => {
+                    // 如果点击的是删除按钮，不打开聊天
+                    if (e.target.classList.contains('delete-btn')) {
+                        e.stopPropagation();
+                        this.deleteChat(contact.id);
+                        return;
+                    }
+                    this.openChat(contact.id);
                 });
 
-                groupList.appendChild(groupItem);
+                // 添加鼠标悬浮事件
+                chatItem.addEventListener('mouseenter', () => {
+                    chatItem.querySelector('.delete-btn').style.display = 'block';
+                });
+
+                chatItem.addEventListener('mouseleave', () => {
+                    chatItem.querySelector('.delete-btn').style.display = 'none';
+                });
+
+                chatList.appendChild(chatItem);
             });
+        },
+
+        deleteChat: function(chatId) {
+            // 确认对话框
+            if (confirm('确定要删除此聊天吗？此操作将清空聊天记录且不可撤销。')) {
+                // 清空聊天记录
+                this.clearChat(chatId);
+
+                // 从联系人列表中移除
+                UserManager.removeContact(chatId);
+
+                // 如果删除的是当前聊天，重置聊天界面
+                if (chatId === this.currentChatId) {
+                    this.currentChatId = null;
+                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                    document.getElementById('chatBox').innerHTML = '';
+
+                    // 禁用聊天界面
+                    UIManager.enableChatInterface(false);
+                }
+
+                // 更新联系人列表
+                this.renderChatList();
+
+                // 显示通知
+                UIManager.showNotification('聊天已删除', 'info');
+            }
         },
 
         openGroup: function(groupId) {
@@ -4058,66 +4164,6 @@
 
             // 聚焦输入框
             setTimeout(() => document.getElementById('messageInput').focus(), 100);
-        },
-
-        showMemberManagement: function() {
-            if (!this.currentGroupId) return;
-
-            const group = this.groups[this.currentGroupId];
-            if (!group) return;
-
-            // 填充成员列表
-            const memberList = document.getElementById('groupMemberList');
-            memberList.innerHTML = '';
-
-            group.members.forEach(memberId => {
-                const memberItem = document.createElement('div');
-                memberItem.className = 'member-item';
-
-                // 确定成员名称
-                let memberName = memberId;
-                if (memberId === UserManager.userId) {
-                    memberName = `${UserManager.userName} (群主)`;
-                } else if (UserManager.contacts[memberId]) {
-                    memberName = UserManager.contacts[memberId].name;
-                }
-
-                // 标记群主
-                const isOwner = memberId === group.owner;
-
-                memberItem.innerHTML = `
-                <div class="member-name">${memberName} ${isOwner ? '<span class="owner-badge">群主</span>' : ''}</div>
-                ${!isOwner && group.owner === UserManager.userId ?
-                    `<button class="remove-member-btn" data-id="${memberId}">移除</button>` : ''}
-            `;
-
-                memberList.appendChild(memberItem);
-            });
-
-            // 为移除按钮添加事件
-            memberList.querySelectorAll('.remove-member-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const memberId = e.target.getAttribute('data-id');
-                    this.removeMemberFromGroup(this.currentGroupId, memberId);
-                });
-            });
-
-            // 填充联系人下拉列表
-            const contactsDropdown = document.getElementById('contactsDropdown');
-            contactsDropdown.innerHTML = '<option value="">选择联系人...</option>';
-
-            Object.values(UserManager.contacts).forEach(contact => {
-                // 只显示未加入群的联系人
-                if (!group.members.includes(contact.id)) {
-                    const option = document.createElement('option');
-                    option.value = contact.id;
-                    option.textContent = contact.name;
-                    contactsDropdown.appendChild(option);
-                }
-            });
-
-            // 显示模态窗口
-            document.getElementById('memberManagementModal').style.display = 'block';
         },
 
         addMemberToGroup: async function(groupId, memberId) {
@@ -4367,43 +4413,6 @@
             }
         },
 
-        handleMembershipUpdate: async function(message) {
-            const groupId = message.groupId;
-            const group = this.groups[groupId];
-
-            if (!group) return;
-
-            // 更新成员列表
-            if (message.type === 'group-member-added' && message.newMemberId) {
-                if (!group.members.includes(message.newMemberId)) {
-                    group.members.push(message.newMemberId);
-                }
-            } else if (message.type === 'group-member-removed' && message.removedMemberId) {
-                const index = group.members.indexOf(message.removedMemberId);
-                if (index !== -1) {
-                    group.members.splice(index, 1);
-                }
-            }
-
-            try {
-                await DBManager.setItem('groups', group);
-
-                // 如果当前正在查看该群组，更新标题
-                if (this.currentGroupId === groupId) {
-                    document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
-                }
-            } catch (error) {
-                Utils.log(`更新群聊成员失败: ${error}`, Utils.logLevels.ERROR);
-                // 备份到localStorage
-                this.saveGroups();
-
-                // 如果当前正在查看该群组，更新标题
-                if (this.currentGroupId === groupId) {
-                    document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
-                }
-            }
-        },
-
         // 向群组广播消息（星型拓扑）
         broadcastToGroup: function(groupId, message, excludeMembers = []) {
             const group = this.groups[groupId];
@@ -4465,7 +4474,426 @@
             return false;
         },
 
-        // 处理收到的群组消息
+        renderGroupList: function() {
+            const groupList = document.getElementById('groupList');
+            groupList.innerHTML = '';
+
+            const sortedGroups = Object.values(this.groups).sort((a, b) => {
+                return new Date(b.lastTime) - new Date(a.lastTime);
+            });
+
+            if (sortedGroups.length === 0) {
+                groupList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无群聊，点击"创建新群聊"开始</div>';
+                return;
+            }
+
+            sortedGroups.forEach(group => {
+                const groupItem = document.createElement('div');
+                groupItem.className = `group-item ${group.id === this.currentGroupId ? 'active' : ''}`;
+                groupItem.setAttribute('data-id', group.id);
+
+                const lastTime = new Date(group.lastTime);
+                const formattedTime = Utils.formatDate(lastTime);
+
+                // 判断是群主还是普通成员
+                const isOwner = group.owner === UserManager.userId;
+                const buttonText = isOwner ? '群解散' : '退群';
+                const buttonClass = isOwner ? 'dissolve-btn' : 'leave-btn';
+
+                groupItem.innerHTML = `
+            <div class="group-avatar">👥</div>
+            <div class="group-info">
+                <div class="group-name">${group.name}</div>
+                <div class="group-preview">${group.members.length}人 | ${group.lastMessage || '暂无消息'}</div>
+            </div>
+            <div class="group-meta">
+                <div class="group-time">${formattedTime}</div>
+                ${group.unread ? `<div class="chat-badge">${group.unread > 99 ? '99+' : group.unread}</div>` : ''}
+            </div>
+            <div class="${buttonClass}" style="display: none;">${buttonText}</div>
+        `;
+
+                groupItem.addEventListener('click', (e) => {
+                    // 如果点击的是按钮，不打开群聊
+                    if (e.target.classList.contains('leave-btn')) {
+                        e.stopPropagation();
+                        this.leaveGroup(group.id);
+                        return;
+                    } else if (e.target.classList.contains('dissolve-btn')) {
+                        e.stopPropagation();
+                        this.dissolveGroup(group.id);
+                        return;
+                    }
+                    this.openGroup(group.id);
+                });
+
+                // 添加鼠标悬浮事件
+                groupItem.addEventListener('mouseenter', () => {
+                    groupItem.querySelector(`.${buttonClass}`).style.display = 'block';
+                });
+
+                groupItem.addEventListener('mouseleave', () => {
+                    groupItem.querySelector(`.${buttonClass}`).style.display = 'none';
+                });
+
+                groupList.appendChild(groupItem);
+            });
+        },
+
+        // 修改leaveGroup方法，添加系统消息通知其他成员
+        leaveGroup: async function(groupId) {
+            if (confirm('确定要退出此群聊吗？此操作不可撤销。')) {
+                const group = this.groups[groupId];
+                if (!group) return;
+
+                // 获取用户名称
+                let userName = UserManager.userName;
+                if (UserManager.contacts[UserManager.userId]) {
+                    userName = UserManager.contacts[UserManager.userId].name;
+                }
+
+                // 从成员列表中移除自己
+                const index = group.members.indexOf(UserManager.userId);
+                if (index !== -1) {
+                    // 创建系统消息，通知其他成员
+                    const systemMessage = {
+                        type: 'system',
+                        content: `${userName} 已退出群聊`,
+                        timestamp: new Date().toISOString(),
+                        sender: UserManager.userId
+                    };
+
+                    // 广播系统消息给群组其他成员
+                    this.broadcastToGroup(groupId, systemMessage);
+
+                    // 通知群主此成员已退出（便于群主识别并可以重新添加）
+                    const leaveMessage = {
+                        type: 'group-member-left',
+                        groupId: groupId,
+                        leftMemberId: UserManager.userId,
+                        leftMemberName: userName,
+                        timestamp: new Date().toISOString(),
+                        sender: UserManager.userId
+                    };
+                    this.broadcastToGroup(groupId, leaveMessage);
+
+                    // 清空群聊记录
+                    await ChatManager.clearChat(groupId);
+
+                    // 从群组中删除
+                    await DBManager.removeItem('groups', groupId);
+                    delete this.groups[groupId];
+
+                    // 如果当前正在查看该群聊，重置聊天界面
+                    if (this.currentGroupId === groupId) {
+                        this.currentGroupId = null;
+                        ChatManager.currentChatId = null;
+                        document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                        document.getElementById('chatBox').innerHTML = '';
+                        document.getElementById('chatHeaderActions').style.display = 'none';
+
+                        // 禁用聊天界面
+                        UIManager.enableChatInterface(false);
+                    }
+
+                    // 更新群聊列表
+                    this.renderGroupList();
+
+                    // 显示通知
+                    UIManager.showNotification('已退出群聊', 'info');
+                }
+            }
+        },
+
+        // 修改handleMembershipUpdate方法，处理成员退出事件
+        handleMembershipUpdate: async function(message) {
+            const groupId = message.groupId;
+            const group = this.groups[groupId];
+
+            if (!group) return;
+
+            // 更新成员列表
+            if (message.type === 'group-member-added' && message.newMemberId) {
+                if (!group.members.includes(message.newMemberId)) {
+                    group.members.push(message.newMemberId);
+                }
+            } else if (message.type === 'group-member-removed' && message.removedMemberId) {
+                const index = group.members.indexOf(message.removedMemberId);
+                if (index !== -1) {
+                    group.members.splice(index, 1);
+                }
+            } else if (message.type === 'group-member-left' && message.leftMemberId) {
+                const index = group.members.indexOf(message.leftMemberId);
+                if (index !== -1) {
+                    group.members.splice(index, 1);
+
+                    // 如果当前用户是群主，记录退出成员的信息，以便重新添加
+                    if (group.owner === UserManager.userId) {
+                        // 保存退出成员信息到群组数据中
+                        if (!group.leftMembers) {
+                            group.leftMembers = [];
+                        }
+
+                        group.leftMembers.push({
+                            id: message.leftMemberId,
+                            name: message.leftMemberName || `用户${message.leftMemberId.substring(0, 4)}`,
+                            leftTime: message.timestamp
+                        });
+                    }
+                }
+            }
+
+            try {
+                await DBManager.setItem('groups', group);
+
+                // 如果当前正在查看该群组，更新标题
+                if (this.currentGroupId === groupId) {
+                    document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
+                }
+            } catch (error) {
+                Utils.log(`更新群聊成员失败: ${error}`, Utils.logLevels.ERROR);
+                // 备份到localStorage
+                this.saveGroups();
+
+                // 如果当前正在查看该群组，更新标题
+                if (this.currentGroupId === groupId) {
+                    document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
+                }
+            }
+        },
+
+        // 修改showMemberManagement方法，添加已退出成员列表
+        showMemberManagement: function() {
+            if (!this.currentGroupId) return;
+
+            const group = this.groups[this.currentGroupId];
+            if (!group) return;
+
+            // 填充成员列表
+            const memberList = document.getElementById('groupMemberList');
+            memberList.innerHTML = '';
+
+            group.members.forEach(memberId => {
+                const memberItem = document.createElement('div');
+                memberItem.className = 'member-item';
+
+                // 确定成员名称
+                let memberName = memberId;
+                if (memberId === UserManager.userId) {
+                    memberName = `${UserManager.userName} (我)`;
+                } else if (UserManager.contacts[memberId]) {
+                    memberName = UserManager.contacts[memberId].name;
+                }
+
+                // 标记群主
+                const isOwner = memberId === group.owner;
+
+                memberItem.innerHTML = `
+            <div class="member-name">${memberName} ${isOwner ? '<span class="owner-badge">群主</span>' : ''}</div>
+            ${!isOwner && group.owner === UserManager.userId ?
+                    `<button class="remove-member-btn" data-id="${memberId}">移除</button>` : ''}
+        `;
+
+                memberList.appendChild(memberItem);
+            });
+
+            // 为移除按钮添加事件
+            memberList.querySelectorAll('.remove-member-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const memberId = e.target.getAttribute('data-id');
+                    this.removeMemberFromGroup(this.currentGroupId, memberId);
+                });
+            });
+
+            // 添加已退出成员列表（仅群主可见）
+            if (group.owner === UserManager.userId && group.leftMembers && group.leftMembers.length > 0) {
+                const leftMembersSection = document.createElement('div');
+                leftMembersSection.className = 'left-members-section';
+                leftMembersSection.innerHTML = '<h4>已退出成员</h4>';
+
+                const leftMembersList = document.createElement('div');
+                leftMembersList.className = 'left-members-list';
+
+                group.leftMembers.forEach(member => {
+                    const leftMemberItem = document.createElement('div');
+                    leftMemberItem.className = 'left-member-item';
+
+                    // 格式化退出时间
+                    const leftTime = new Date(member.leftTime);
+                    const formattedTime = Utils.formatDate(leftTime);
+
+                    leftMemberItem.innerHTML = `
+                <div class="left-member-info">
+                    <div class="left-member-name">${member.name}</div>
+                    <div class="left-member-time">退出时间: ${formattedTime}</div>
+                </div>
+                <button class="readd-member-btn" data-id="${member.id}" data-name="${member.name}">重新添加</button>
+            `;
+
+                    leftMembersList.appendChild(leftMemberItem);
+                });
+
+                leftMembersSection.appendChild(leftMembersList);
+                memberList.appendChild(leftMembersSection);
+
+                // 为重新添加按钮添加事件
+                memberList.querySelectorAll('.readd-member-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const memberId = e.target.getAttribute('data-id');
+                        const memberName = e.target.getAttribute('data-name');
+                        this.readdMemberToGroup(this.currentGroupId, memberId, memberName);
+                    });
+                });
+            }
+
+            // 填充联系人下拉列表
+            const contactsDropdown = document.getElementById('contactsDropdown');
+            contactsDropdown.innerHTML = '<option value="">选择联系人...</option>';
+
+            Object.values(UserManager.contacts).forEach(contact => {
+                // 只显示未加入群的联系人
+                if (!group.members.includes(contact.id)) {
+                    const option = document.createElement('option');
+                    option.value = contact.id;
+                    option.textContent = contact.name;
+                    contactsDropdown.appendChild(option);
+                }
+            });
+
+            // 显示模态窗口
+            document.getElementById('memberManagementModal').style.display = 'block';
+        },
+
+        // 添加重新添加成员方法
+        readdMemberToGroup: async function(groupId, memberId, memberName) {
+            const group = this.groups[groupId];
+            if (!group) return false;
+
+            // 检查是否是群主
+            if (group.owner !== UserManager.userId) {
+                UIManager.showNotification('只有群主可以添加成员', 'error');
+                return false;
+            }
+
+            // 检查是否已经是成员
+            if (group.members.includes(memberId)) {
+                UIManager.showNotification('该用户已在群聊中', 'warning');
+                return false;
+            }
+
+            // 检查是否已连接
+            if (!ConnectionManager.isConnectedTo(memberId)) {
+                UIManager.showNotification('请先与该用户建立连接', 'warning');
+                return false;
+            }
+
+            // 添加成员
+            group.members.push(memberId);
+
+            // 从leftMembers中移除
+            if (group.leftMembers) {
+                group.leftMembers = group.leftMembers.filter(member => member.id !== memberId);
+            }
+
+            try {
+                await DBManager.setItem('groups', group);
+
+                // 更新成员管理界面
+                this.showMemberManagement();
+
+                // 更新群聊标题
+                if (this.currentGroupId === groupId) {
+                    document.getElementById('currentChatTitle').textContent = `${group.name} (${group.members.length}人)`;
+                }
+
+                // 发送系统消息
+                const systemMessage = {
+                    type: 'system',
+                    content: `${memberName || memberId} 已被重新添加到群聊`,
+                    timestamp: new Date().toISOString()
+                };
+
+                // 添加到聊天记录
+                ChatManager.addMessage(groupId, systemMessage);
+
+                // 通知新成员已加入群聊
+                const groupInfo = {
+                    type: 'group-invite',
+                    groupId: groupId,
+                    groupName: group.name,
+                    members: group.members,
+                    owner: group.owner,
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
+                };
+
+                ConnectionManager.sendTo(memberId, groupInfo);
+
+                // 通知其他成员有新成员加入
+                const memberUpdate = {
+                    type: 'group-member-added',
+                    groupId: groupId,
+                    newMemberId: memberId,
+                    newMemberName: memberName,
+                    sender: UserManager.userId,
+                    timestamp: new Date().toISOString()
+                };
+
+                this.broadcastToGroup(groupId, memberUpdate, [memberId]);
+
+                UIManager.showNotification(`已将 ${memberName || memberId} 重新添加到群聊`, 'success');
+                return true;
+            } catch (error) {
+                Utils.log(`重新添加群聊成员失败: ${error}`, Utils.logLevels.ERROR);
+                // 备份到localStorage
+                this.saveGroups();
+                return true;
+            }
+        },
+
+        // 群主解散群聊方法
+        dissolveGroup: async function(groupId) {
+            if (confirm('确定要解散此群聊吗？所有成员将被移出，且此操作不可撤销。')) {
+                const group = this.groups[groupId];
+                if (!group || group.owner !== UserManager.userId) return;
+
+                // 通知所有成员群聊已解散
+                const dissolveMessage = {
+                    type: 'group-dissolved',
+                    groupId: groupId,
+                    timestamp: new Date().toISOString(),
+                    sender: UserManager.userId
+                };
+                this.broadcastToGroup(groupId, dissolveMessage);
+
+                // 清空群聊记录
+                await ChatManager.clearChat(groupId);
+
+                // 从群组中删除
+                await DBManager.removeItem('groups', groupId);
+                delete this.groups[groupId];
+
+                // 如果当前正在查看该群聊，重置聊天界面
+                if (this.currentGroupId === groupId) {
+                    this.currentGroupId = null;
+                    ChatManager.currentChatId = null;
+                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                    document.getElementById('chatBox').innerHTML = '';
+                    document.getElementById('chatHeaderActions').style.display = 'none';
+
+                    // 禁用聊天界面
+                    UIManager.enableChatInterface(false);
+                }
+
+                // 更新群聊列表
+                this.renderGroupList();
+
+                // 显示通知
+                UIManager.showNotification('群聊已解散', 'info');
+            }
+        },
+
+        // 修改handleGroupMessage方法，添加处理群解散和成员退出的逻辑
         handleGroupMessage: function(message) {
             const groupId = message.groupId;
 
@@ -4496,12 +4924,19 @@
                     this.handleGroupRemoval(message);
                     break;
 
+                case 'group-dissolved':
+                    // 处理群组解散
+                    this.handleGroupDissolved(message);
+                    break;
+
                 case 'group-member-added':
                 case 'group-member-removed':
+                case 'group-member-left':
                     // 更新群组成员信息
                     this.handleMembershipUpdate(message);
                     break;
 
+                // 其他消息类型处理保持不变
                 case 'text':
                 case 'file':
                 case 'image':
@@ -4551,6 +4986,48 @@
 
             return true;
         },
+
+        // 处理群聊解散
+        handleGroupDissolved: async function(message) {
+            const groupId = message.groupId;
+
+            // 如果群组存在且不是自己解散的，则处理解散消息
+            if (this.groups[groupId] && message.sender !== UserManager.userId) {
+                // 如果当前正在查看该群组，关闭它
+                if (this.currentGroupId === groupId) {
+                    this.currentGroupId = null;
+                    ChatManager.currentChatId = null;
+                    document.getElementById('currentChatTitle').textContent = '未选择聊天';
+                    document.getElementById('chatBox').innerHTML = '';
+                    document.getElementById('chatHeaderActions').style.display = 'none';
+
+                    // 禁用聊天界面
+                    UIManager.enableChatInterface(false);
+                }
+
+                try {
+                    // 清空群聊记录
+                    await ChatManager.clearChat(groupId);
+
+                    // 删除群组
+                    await DBManager.removeItem('groups', groupId);
+                    delete this.groups[groupId];
+                    this.renderGroupList();
+
+                    // 显示通知
+                    UIManager.showNotification('群主已解散群聊', 'warning');
+                } catch (error) {
+                    Utils.log(`处理群聊解散失败: ${error}`, Utils.logLevels.ERROR);
+                    // 备份到localStorage
+                    delete this.groups[groupId];
+                    this.saveGroups();
+                    this.renderGroupList();
+
+                    // 显示通知
+                    UIManager.showNotification('群主已解散群聊', 'warning');
+                }
+            }
+        }
 
     };
 

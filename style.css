@@ -1379,3 +1379,120 @@ textarea {
     max-height: 90%;
     object-fit: contain;
 }
+
+/* 添加到style.css */
+.chat-item {
+    position: relative;
+}
+
+.delete-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: #f44336;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: none;
+    z-index: 5;
+}
+
+.delete-btn:hover {
+    background-color: #d32f2f;
+}
+
+/* 添加到style.css */
+.group-item {
+    position: relative;
+}
+
+.leave-btn, .dissolve-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: none;
+    z-index: 5;
+    color: white;
+}
+
+.leave-btn {
+    background-color: #ff9800; /* 橙色，表示退出 */
+}
+
+.dissolve-btn {
+    background-color: #f44336; /* 红色，表示解散 */
+}
+
+.leave-btn:hover {
+    background-color: #e65100;
+}
+
+.dissolve-btn:hover {
+    background-color: #d32f2f;
+}
+
+/* 添加到style.css */
+.left-members-section {
+    margin-top: 20px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+
+.left-members-section h4 {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.left-member-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.left-member-name {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.left-member-time {
+    font-size: 12px;
+    color: #999;
+}
+
+.readd-member-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.readd-member-btn:hover {
+    background-color: #388E3C;
+}
+
+.message.system {
+    align-self: center;
+    max-width: 80%;
+    margin: 8px auto;
+}
+
+.system-message {
+    background-color: rgba(0,0,0,0.05);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #666;
+    font-size: 13px;
+    text-align: center;
+}
