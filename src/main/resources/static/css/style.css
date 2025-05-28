@@ -1301,8 +1301,6 @@ textarea {
 #videoCallContainer video {
     max-width: none;
     max-height: none;
-    width: 100%; /* 这些元素通常需要填充容器 */
-    height: 100%;
     object-fit: cover; /* 视频通话通常是填充并裁剪 */
 }
 
@@ -1452,8 +1450,6 @@ textarea {
     color: white;
     border: none;
     border-radius: 4px;
-    padding: 5px 10px;
-    font-size: 12px;
     cursor: pointer;
     margin-right: 5px;
     display: flex;

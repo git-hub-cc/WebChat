@@ -11,6 +11,29 @@ const VideoCallManager = {
     isVideoEnabled: true,
     callRequestTimeout: null,
 
+    // Audio processing constraints
+    audioConstraints: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        channelCount: 1,
+        sampleRate: 48000,
+        sampleSize: 16
+    },
+
+    // Preferred codec settings
+    codecPreferences: {
+        audio: [
+            {mimeType: 'audio/opus', clockRate: 48000, channels: 2,
+                parameters: {minptime: 10, useinbandfec: 1, stereo: 1, maxaveragebitrate: 128000}}
+        ],
+        video: [
+            {mimeType: 'video/VP9'},
+            {mimeType: 'video/VP8'},
+            {mimeType: 'video/H264'}
+        ]
+    },
+
     // 初始化
     init: function () {
         this.localVideo = document.getElementById('localVideo');
@@ -196,10 +219,10 @@ const VideoCallManager = {
                 }
             }
 
-            // 获取媒体权限
+            // 获取媒体权限，添加高质量音频约束
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 video: !this.isAudioOnly,
-                audio: true
+                audio: this.audioConstraints
             });
 
             // 显示本地视频（如果是视频通话）
@@ -286,6 +309,9 @@ const VideoCallManager = {
 
         const conn = ConnectionManager.connections[this.currentPeerId];
 
+        // 设置编解码器首选项
+        this.setCodecPreferences(conn.peerConnection);
+
         // 添加本地流
         this.localStream.getTracks().forEach(track => {
             conn.peerConnection.addTrack(track, this.localStream);
@@ -302,74 +328,160 @@ const VideoCallManager = {
                 this.remoteVideo.style.display = hasVideoTrack ? 'block' : 'none';
 
                 Utils.log(`收到远程${hasVideoTrack ? '视频' : '音频'}流`, Utils.logLevels.INFO);
+
+                // 设置音频输出设备（如果支持）
+                if (typeof this.remoteVideo.setSinkId === 'function') {
+                    // 使用默认音频输出设备
+                    this.remoteVideo.setSinkId('default').catch(error => {
+                        Utils.log(`无法设置音频输出设备: ${error.message}`, Utils.logLevels.WARN);
+                    });
+                }
             }
         };
+
+        // 设置带宽估计和拥塞控制
+        this.setupBandwidthConstraints(conn.peerConnection);
 
         // 如果是呼叫方，创建并发送offer
         if (this.isCaller) {
             this.createAndSendOffer();
         }
+
+        // 设置连接状态监控
+        this.setupConnectionMonitoring(conn.peerConnection);
     },
 
-    // 创建并发送offer
-    createAndSendOffer: async function () {
+    // 设置编解码器首选项
+    setCodecPreferences: function(peerConnection) {
         try {
-            if (!this.currentPeerId) return;
+            const transceivers = peerConnection.getTransceivers();
 
-            const conn = ConnectionManager.connections[this.currentPeerId];
-            if (!conn || !conn.peerConnection) return;
-
-            const offer = await conn.peerConnection.createOffer({
-                offerToReceiveAudio: true,
-                offerToReceiveVideo: !this.isAudioOnly
+            transceivers.forEach(transceiver => {
+                if (transceiver.sender && transceiver.sender.track) {
+                    const kind = transceiver.sender.track.kind;
+                    if (kind === 'audio' && this.codecPreferences.audio) {
+                        // 尝试设置音频编解码器首选项
+                        if (RTCRtpSender.getCapabilities && RTCRtpSender.getCapabilities('audio')) {
+                            const capabilities = RTCRtpSender.getCapabilities('audio');
+                            const preferredCodecs = this.filterSupportedCodecs(capabilities.codecs, this.codecPreferences.audio);
+                            if (preferredCodecs.length > 0) {
+                                transceiver.setCodecPreferences(preferredCodecs);
+                                Utils.log('已设置音频编解码器首选项: Opus', Utils.logLevels.DEBUG);
+                            }
+                        }
+                    } else if (kind === 'video' && this.codecPreferences.video && !this.isAudioOnly) {
+                        // 尝试设置视频编解码器首选项
+                        if (RTCRtpSender.getCapabilities && RTCRtpSender.getCapabilities('video')) {
+                            const capabilities = RTCRtpSender.getCapabilities('video');
+                            const preferredCodecs = this.filterSupportedCodecs(capabilities.codecs, this.codecPreferences.video);
+                            if (preferredCodecs.length > 0) {
+                                transceiver.setCodecPreferences(preferredCodecs);
+                                Utils.log(`已设置视频编解码器首选项: ${preferredCodecs[0].mimeType}`, Utils.logLevels.DEBUG);
+                            }
+                        }
+                    }
+                }
             });
-
-            await conn.peerConnection.setLocalDescription(offer);
-
-            // 发送offer给对方
-            const offerMessage = {
-                type: 'video-call-offer',
-                sdp: conn.peerConnection.localDescription,
-                audioOnly: this.isAudioOnly,
-                sender: UserManager.userId
-            };
-            ConnectionManager.sendTo(this.currentPeerId, offerMessage);
-
-            Utils.log(`已发送${this.isAudioOnly ? '语音' : '视频'}通话offer`, Utils.logLevels.DEBUG);
         } catch (error) {
-            Utils.log(`创建offer失败: ${error.message}`, Utils.logLevels.ERROR);
-            this.endCall();
+            Utils.log(`设置编解码器首选项失败: ${error.message}`, Utils.logLevels.WARN);
         }
     },
 
-    // 处理收到的offer
-    handleOffer: async function (offer, peerId, audioOnly) {
+    // 过滤支持的编解码器
+    filterSupportedCodecs: function(availableCodecs, preferredCodecs) {
+        if (!availableCodecs || !preferredCodecs) return [];
+
+        const result = [];
+
+        // 按照首选项顺序查找支持的编解码器
+        for (const preferred of preferredCodecs) {
+            for (const available of availableCodecs) {
+                if (available.mimeType.toLowerCase() === preferred.mimeType.toLowerCase()) {
+                    // 创建编解码器副本并应用首选参数
+                    const codec = {...available};
+                    if (preferred.parameters) {
+                        codec.parameters = {...(codec.parameters || {}), ...preferred.parameters};
+                    }
+                    result.push(codec);
+                    break;
+                }
+            }
+        }
+
+        // 如果没有找到首选编解码器，返回所有可用的编解码器
+        return result.length > 0 ? result : availableCodecs;
+    },
+
+    // 设置带宽约束
+    setupBandwidthConstraints: function(peerConnection) {
         try {
-            this.currentPeerId = peerId;
-            this.isAudioOnly = audioOnly;
+            // 设置SDP带宽参数
+            peerConnection.addEventListener('negotiationneeded', async () => {
+                try {
+                    const offer = await peerConnection.createOffer();
 
-            const conn = ConnectionManager.connections[peerId];
-            if (!conn || !conn.peerConnection) return;
+                    // 修改SDP以设置音频比特率
+                    let sdp = offer.sdp;
+                    const audioRate = this.isAudioOnly ? 64 : 32; // 纯语音模式下使用更高的音频比特率
 
-            await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+                    // 为音频设置比特率
+                    sdp = sdp.replace(/(m=audio.*\r\n)/g, `$1b=AS:${audioRate}\r\n`);
 
-            // 创建answer
-            const answer = await conn.peerConnection.createAnswer();
-            await conn.peerConnection.setLocalDescription(answer);
+                    // 为视频设置比特率（如果不是纯语音模式）
+                    if (!this.isAudioOnly) {
+                        sdp = sdp.replace(/(m=video.*\r\n)/g, `$1b=AS:800\r\n`);
+                    }
 
-            // 发送answer给对方
-            const answerMessage = {
-                type: 'video-call-answer',
-                sdp: conn.peerConnection.localDescription,
-                audioOnly: this.isAudioOnly,
-                sender: UserManager.userId
-            };
-            ConnectionManager.sendTo(peerId, answerMessage);
+                    const modifiedOffer = new RTCSessionDescription({
+                        type: 'offer',
+                        sdp: sdp
+                    });
 
-            Utils.log(`已回复${this.isAudioOnly ? '语音' : '视频'}通话answer`, Utils.logLevels.DEBUG);
+                    await peerConnection.setLocalDescription(modifiedOffer);
+                } catch (error) {
+                    Utils.log(`设置带宽约束失败: ${error.message}`, Utils.logLevels.WARN);
+                }
+            });
         } catch (error) {
-            Utils.log(`处理offer失败: ${error.message}`, Utils.logLevels.ERROR);
-            this.endCall();
+            Utils.log(`设置带宽约束失败: ${error.message}`, Utils.logLevels.WARN);
+        }
+    },
+
+    // 设置连接状态监控
+    setupConnectionMonitoring: function(peerConnection) {
+        // 监控ICE连接状态
+        peerConnection.oniceconnectionstatechange = () => {
+            Utils.log(`ICE连接状态: ${peerConnection.iceConnectionState}`, Utils.logLevels.DEBUG);
+
+            if (peerConnection.iceConnectionState === 'failed' ||
+                peerConnection.iceConnectionState === 'disconnected') {
+                // 尝试重新协商
+                Utils.log('检测到连接问题，尝试重新协商...', Utils.logLevels.WARN);
+                this.tryReconnect();
+            }
+        };
+
+        // 监控连接状态
+        peerConnection.onconnectionstatechange = () => {
+            Utils.log(`连接状态: ${peerConnection.connectionState}`, Utils.logLevels.DEBUG);
+
+            if (peerConnection.connectionState === 'failed') {
+                UIManager.showNotification('通话连接已断开', 'error');
+                this.endCall();
+            }
+        };
+    },
+
+    // 尝试重新连接
+    tryReconnect: function() {
+        if (!this.isCallActive || !this.currentPeerId) return;
+
+        const conn = ConnectionManager.connections[this.currentPeerId];
+        if (!conn || !conn.peerConnection) return;
+
+        // 如果是呼叫方，尝试重新创建offer
+        if (this.isCaller) {
+            this.createAndSendOffer();
         }
     },
 
@@ -389,9 +501,43 @@ const VideoCallManager = {
 
             await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
             Utils.log('已设置远程描述', Utils.logLevels.DEBUG);
+
+            // 通话建立后，设置抖动缓冲区
+            this.setupJitterBuffer();
         } catch (error) {
             Utils.log(`处理answer失败: ${error.message}`, Utils.logLevels.ERROR);
             this.endCall();
+        }
+    },
+
+    // 设置抖动缓冲区
+    setupJitterBuffer: function() {
+        if (!this.remoteVideo || !this.remoteVideo.srcObject) return;
+
+        try {
+            // 设置音频缓冲策略
+            if (this.remoteVideo.audioTracks && this.remoteVideo.audioTracks[0]) {
+                const audioTrack = this.remoteVideo.audioTracks[0];
+
+                // 尝试设置音频缓冲模式（如果浏览器支持）
+                if (typeof audioTrack.setJitterBufferMode === 'function') {
+                    // 设置为自适应模式
+                    audioTrack.setJitterBufferMode('adaptive');
+                    Utils.log('已设置自适应抖动缓冲模式', Utils.logLevels.DEBUG);
+                }
+            }
+
+            // 设置播放缓冲策略
+            if (typeof this.remoteVideo.playsInline !== 'undefined') {
+                this.remoteVideo.playsInline = true;
+            }
+
+            // 设置低延迟模式（如果浏览器支持）
+            if (typeof this.remoteVideo.setLatencyHint === 'function') {
+                this.remoteVideo.setLatencyHint('interactive');
+            }
+        } catch (error) {
+            Utils.log(`设置抖动缓冲区失败: ${error.message}`, Utils.logLevels.WARN);
         }
     },
 
@@ -476,10 +622,10 @@ const VideoCallManager = {
                 this.localStream.getTracks().forEach(track => track.stop());
             }
 
-            // 重新获取媒体权限
+            // 重新获取媒体权限，使用优化的音频约束
             this.localStream = await navigator.mediaDevices.getUserMedia({
                 video: !this.isAudioOnly,
-                audio: true
+                audio: this.audioConstraints
             });
 
             // 更新本地视频
@@ -503,6 +649,21 @@ const VideoCallManager = {
             // 替换音频轨道
             if (audioSender && audioTrack) {
                 audioSender.replaceTrack(audioTrack);
+
+                // 设置音频编码参数
+                if (audioSender.getParameters) {
+                    try {
+                        const params = audioSender.getParameters();
+                        // 设置更高的音频优先级和比特率
+                        if (params.encodings && params.encodings.length > 0) {
+                            params.encodings[0].priority = 'high';
+                            params.encodings[0].maxBitrate = this.isAudioOnly ? 64000 : 32000;
+                            audioSender.setParameters(params);
+                        }
+                    } catch (e) {
+                        Utils.log(`设置音频参数失败: ${e.message}`, Utils.logLevels.WARN);
+                    }
+                }
             } else if (audioTrack) {
                 conn.peerConnection.addTrack(audioTrack, this.localStream);
             }
@@ -526,6 +687,9 @@ const VideoCallManager = {
                 }
             }
 
+            // 重新设置编解码器首选项
+            this.setCodecPreferences(conn.peerConnection);
+
             // 通知对方模式已更改
             const modeChangeMsg = {
                 type: 'video-call-mode-change',
@@ -534,6 +698,9 @@ const VideoCallManager = {
                 sender: UserManager.userId
             };
             ConnectionManager.sendTo(this.currentPeerId, modeChangeMsg);
+
+            // 重新协商连接
+            this.createAndSendOffer();
 
             Utils.log(`已切换到${this.isAudioOnly ? '纯语音' : '视频'}通话模式`, Utils.logLevels.INFO);
         } catch (error) {
@@ -739,6 +906,136 @@ const VideoCallManager = {
                     UIManager.showNotification('对方结束了通话', 'info');
                 }
                 break;
+
+            case 'video-call-stats':
+                // 处理网络质量统计信息
+                if (this.isCallActive && this.currentPeerId === peerId) {
+                    this.handleCallStats(message.stats);
+                }
+                break;
+        }
+    },
+
+    // 处理通话统计信息
+    handleCallStats: function(stats) {
+        if (!stats) return;
+
+        // 根据网络状况调整UI提示
+        if (stats.packetLoss > 10) {
+            // 高丢包率
+            UIManager.showNotification('网络连接不稳定，可能会影响通话质量', 'warning');
+        }
+
+        // 记录统计信息
+        Utils.log(`通话统计: 丢包率=${stats.packetLoss}%, 延迟=${stats.rtt}ms`, Utils.logLevels.DEBUG);
+    },
+
+    // 收集并发送统计信息
+    collectAndSendStats: async function() {
+        if (!this.isCallActive || !this.currentPeerId) return;
+
+        const conn = ConnectionManager.connections[this.currentPeerId];
+        if (!conn || !conn.peerConnection) return;
+
+        try {
+            const stats = await conn.peerConnection.getStats();
+            let packetLoss = 0;
+            let rtt = 0;
+            let audioLevel = 0;
+
+            stats.forEach(report => {
+                if (report.type === 'outbound-rtp' && report.kind === 'audio') {
+                    if (report.packetsSent && report.packetsLost) {
+                        packetLoss = (report.packetsLost / report.packetsSent) * 100;
+                    }
+                }
+
+                if (report.type === 'remote-inbound-rtp' && report.kind === 'audio') {
+                    if (report.roundTripTime) {
+                        rtt = report.roundTripTime * 1000; // 转换为毫秒
+                    }
+                }
+
+                if (report.type === 'media-source' && report.kind === 'audio') {
+                    if (report.audioLevel) {
+                        audioLevel = report.audioLevel;
+                    }
+                }
+            });
+
+            // 发送统计信息到对方
+            const statsMessage = {
+                type: 'video-call-stats',
+                stats: {
+                    packetLoss,
+                    rtt,
+                    audioLevel,
+                    timestamp: Date.now()
+                },
+                sender: UserManager.userId
+            };
+
+            ConnectionManager.sendTo(this.currentPeerId, statsMessage);
+
+            // 根据统计信息调整本地设置
+            this.adjustCallQuality(packetLoss, rtt);
+
+        } catch (error) {
+            Utils.log(`收集统计信息失败: ${error.message}`, Utils.logLevels.WARN);
+        }
+    },
+
+    // 根据网络状况调整通话质量
+    adjustCallQuality: function(packetLoss, rtt) {
+        if (!this.isCallActive || !this.currentPeerId) return;
+
+        const conn = ConnectionManager.connections[this.currentPeerId];
+        if (!conn || !conn.peerConnection) return;
+
+        try {
+            // 获取所有发送器
+            const senders = conn.peerConnection.getSenders();
+
+            // 根据网络状况调整编码参数
+            senders.forEach(sender => {
+                if (sender.track && sender.track.kind === 'audio' && sender.getParameters) {
+                    const params = sender.getParameters();
+
+                    if (params.encodings && params.encodings.length > 0) {
+                        // 在高丢包或高延迟情况下降低比特率
+                        if (packetLoss > 5 || rtt > 300) {
+                            params.encodings[0].maxBitrate = this.isAudioOnly ? 32000 : 24000;
+                            sender.setParameters(params);
+                            Utils.log('网络状况不佳，已降低音频比特率', Utils.logLevels.DEBUG);
+                        }
+                        // 在网络状况良好时恢复正常比特率
+                        else if (packetLoss < 2 && rtt < 150) {
+                            params.encodings[0].maxBitrate = this.isAudioOnly ? 64000 : 32000;
+                            sender.setParameters(params);
+                        }
+                    }
+                }
+
+                // 对视频也进行类似的调整
+                if (!this.isAudioOnly && sender.track && sender.track.kind === 'video' && sender.getParameters) {
+                    const params = sender.getParameters();
+
+                    if (params.encodings && params.encodings.length > 0) {
+                        if (packetLoss > 5 || rtt > 300) {
+                            params.encodings[0].maxBitrate = 250000; // 降低视频比特率
+                            params.encodings[0].scaleResolutionDownBy = 2.0; // 降低分辨率
+                            sender.setParameters(params);
+                            Utils.log('网络状况不佳，已降低视频质量', Utils.logLevels.DEBUG);
+                        } else if (packetLoss < 2 && rtt < 150) {
+                            params.encodings[0].maxBitrate = 800000;
+                            params.encodings[0].scaleResolutionDownBy = 1.0;
+                            sender.setParameters(params);
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            Utils.log(`调整通话质量失败: ${error.message}`, Utils.logLevels.WARN);
         }
     },
 
@@ -750,10 +1047,10 @@ const VideoCallManager = {
                 // 显示获取媒体设备权限的提示
                 UIManager.showNotification('正在请求媒体设备权限...', 'info');
 
-                // 获取权限
+                // 获取权限，使用优化的音频约束
                 this.localStream = await navigator.mediaDevices.getUserMedia({
                     video: !this.isAudioOnly,
-                    audio: true
+                    audio: this.audioConstraints
                 });
 
                 // 显示本地视频（如果不是纯语音通话）
@@ -773,11 +1070,190 @@ const VideoCallManager = {
             this.isCallActive = true;
             this.isCallPending = false;
 
+            // 启动定期收集统计信息的任务
+            this.statsInterval = setInterval(() => this.collectAndSendStats(), 5000);
+
             Utils.log(`${this.isAudioOnly ? '语音' : '视频'}通话已开始`, Utils.logLevels.INFO);
         } catch (error) {
             Utils.log(`启动通话失败: ${error.message}`, Utils.logLevels.ERROR);
             UIManager.showNotification('无法访问媒体设备', 'error');
             this.endCall();
         }
+    },
+
+    // 创建并发送offer
+    createAndSendOffer: async function () {
+        try {
+            if (!this.currentPeerId) return;
+
+            const conn = ConnectionManager.connections[this.currentPeerId];
+            if (!conn || !conn.peerConnection) return;
+
+            // 设置优化的offer选项
+            const offerOptions = {
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: !this.isAudioOnly,
+                voiceActivityDetection: true,
+                iceRestart: true  // 支持ICE重启以处理网络变化
+            };
+
+            const offer = await conn.peerConnection.createOffer(offerOptions);
+
+            // 修改SDP以优化音频质量 - 使用更安全的方式
+            let sdp = offer.sdp;
+
+            // 找到Opus编解码器的有效载荷类型
+            const opusRegex = /a=rtpmap:(\d+) opus\/48000\/2/;
+            const opusMatch = sdp.match(opusRegex);
+
+            if (opusMatch && opusMatch[1]) {
+                const opusPayloadType = opusMatch[1];
+
+                // 检查是否已经有fmtp行
+                const fmtpRegex = new RegExp(`a=fmtp:${opusPayloadType} (.*)`, 'g');
+                const fmtpMatch = fmtpRegex.exec(sdp);
+
+                if (fmtpMatch) {
+                    // 已经存在fmtp行，确保它包含我们想要的参数
+                    const currentParams = fmtpMatch[1];
+                    const newParams = 'minptime=10;useinbandfec=1;stereo=1;maxaveragebitrate=128000;dtx=1';
+
+                    // 只添加缺少的参数
+                    const updatedParams = this.mergeCodecParams(currentParams, newParams);
+                    sdp = sdp.replace(fmtpMatch[0], `a=fmtp:${opusPayloadType} ${updatedParams}`);
+                } else {
+                    // 不存在fmtp行，添加一个新行
+                    const opusLine = `a=rtpmap:${opusPayloadType} opus/48000/2`;
+                    const newFmtpLine = `a=fmtp:${opusPayloadType} minptime=10;useinbandfec=1;stereo=1;maxaveragebitrate=128000;dtx=1`;
+                    sdp = sdp.replace(opusLine, `${opusLine}\r\n${newFmtpLine}`);
+                }
+            }
+
+            // 创建修改后的offer
+            const modifiedOffer = new RTCSessionDescription({
+                type: 'offer',
+                sdp: sdp
+            });
+
+            await conn.peerConnection.setLocalDescription(modifiedOffer);
+
+            // 发送offer给对方
+            const offerMessage = {
+                type: 'video-call-offer',
+                sdp: conn.peerConnection.localDescription,
+                audioOnly: this.isAudioOnly,
+                sender: UserManager.userId
+            };
+            ConnectionManager.sendTo(this.currentPeerId, offerMessage);
+
+            Utils.log(`已发送${this.isAudioOnly ? '语音' : '视频'}通话offer`, Utils.logLevels.DEBUG);
+        } catch (error) {
+            Utils.log(`创建offer失败: ${error.message}`, Utils.logLevels.ERROR);
+            this.endCall();
+        }
+    },
+
+// 处理收到的offer
+    handleOffer: async function (offer, peerId, audioOnly) {
+        try {
+            this.currentPeerId = peerId;
+            this.isAudioOnly = audioOnly;
+
+            const conn = ConnectionManager.connections[peerId];
+            if (!conn || !conn.peerConnection) return;
+
+            await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+
+            // 创建answer
+            const answerOptions = {
+                voiceActivityDetection: true
+            };
+
+            const answer = await conn.peerConnection.createAnswer(answerOptions);
+
+            // 修改SDP以优化音频质量 - 使用更安全的方式
+            let sdp = answer.sdp;
+
+            // 找到Opus编解码器的有效载荷类型
+            const opusRegex = /a=rtpmap:(\d+) opus\/48000\/2/;
+            const opusMatch = sdp.match(opusRegex);
+
+            if (opusMatch && opusMatch[1]) {
+                const opusPayloadType = opusMatch[1];
+
+                // 检查是否已经有fmtp行
+                const fmtpRegex = new RegExp(`a=fmtp:${opusPayloadType} (.*)`, 'g');
+                const fmtpMatch = fmtpRegex.exec(sdp);
+
+                if (fmtpMatch) {
+                    // 已经存在fmtp行，确保它包含我们想要的参数
+                    const currentParams = fmtpMatch[1];
+                    const newParams = 'minptime=10;useinbandfec=1;stereo=1;maxaveragebitrate=128000;dtx=1';
+
+                    // 只添加缺少的参数
+                    const updatedParams = this.mergeCodecParams(currentParams, newParams);
+                    sdp = sdp.replace(fmtpMatch[0], `a=fmtp:${opusPayloadType} ${updatedParams}`);
+                } else {
+                    // 不存在fmtp行，添加一个新行
+                    const opusLine = `a=rtpmap:${opusPayloadType} opus/48000/2`;
+                    const newFmtpLine = `a=fmtp:${opusPayloadType} minptime=10;useinbandfec=1;stereo=1;maxaveragebitrate=128000;dtx=1`;
+                    sdp = sdp.replace(opusLine, `${opusLine}\r\n${newFmtpLine}`);
+                }
+            }
+
+            // 创建修改后的answer
+            const modifiedAnswer = new RTCSessionDescription({
+                type: 'answer',
+                sdp: sdp
+            });
+
+            await conn.peerConnection.setLocalDescription(modifiedAnswer);
+
+            // 发送answer给对方
+            const answerMessage = {
+                type: 'video-call-answer',
+                sdp: conn.peerConnection.localDescription,
+                audioOnly: this.isAudioOnly,
+                sender: UserManager.userId
+            };
+            ConnectionManager.sendTo(peerId, answerMessage);
+
+            Utils.log(`已回复${this.isAudioOnly ? '语音' : '视频'}通话answer`, Utils.logLevels.DEBUG);
+        } catch (error) {
+            Utils.log(`处理offer失败: ${error.message}`, Utils.logLevels.ERROR);
+            this.endCall();
+        }
+    },
+
+// 合并编解码器参数
+    mergeCodecParams: function(currentParams, newParams) {
+        const currentMap = {};
+        const current = currentParams.split(';');
+        const newParamsArray = newParams.split(';');
+
+        // 解析当前参数
+        current.forEach(param => {
+            if (param) {
+                const parts = param.split('=');
+                if (parts.length === 2) {
+                    currentMap[parts[0]] = parts[1];
+                }
+            }
+        });
+
+        // 添加或更新参数
+        newParamsArray.forEach(param => {
+            if (param) {
+                const parts = param.split('=');
+                if (parts.length === 2) {
+                    currentMap[parts[0]] = parts[1];
+                }
+            }
+        });
+
+        // 重建参数字符串
+        return Object.entries(currentMap)
+            .map(([key, value]) => `${key}=${value}`)
+            .join(';');
     },
 };
