@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>P2P</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+<!-- 加载蒙版 -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">正在连接，请稍候...</div>
+</div>
+
+<div class="container">
+    <div class="sidebar">
+        <h2>连接设置</h2>
+
+        <!-- 连接状态 -->
+        <div class="status" id="connectionStatus">未连接</div>
+        <div class="network-info" id="networkInfo">
+            网络状态: 检测中...
+            <div class="connection-quality">
+                <span>连接质量:</span>
+                <div class="quality-indicator" id="qualityIndicator"></div>
+                <span id="qualityText">未连接</span>
+            </div>
+        </div>
+
+        <!-- 连接选项卡 -->
+        <div class="connection-tabs">
+            <div class="connection-tab active" data-tab="connect">连接</div>
+            <div class="connection-tab" data-tab="chats">联系人</div>
+            <div class="connection-tab" data-tab="groups">群聊</div>
+        </div>
+
+        <!-- 连接面板 -->
+        <div class="connection-panel active" id="connectPanel">
+            <!-- 用户ID显示 -->
+            <div class="user-id" id="userId">
+                您的ID: <span id="userIdValue">生成中...</span>
+                <button id="copyIdBtn" style="padding: 2px 5px; font-size: 12px; margin-left: 5px;">复制</button>
+            </div>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <button onclick="ConnectionManager.createOffer()" id="createOfferBtn">创建连接请求</button>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <button onclick="ConnectionManager.createAnswer()" id="createAnswerBtn">创建连接响应</button>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <button onclick="ConnectionManager.handleAnswer()" id="handleAnswerBtn">处理对方响应</button>
+                </div>
+                <!-- 添加重置按钮 -->
+                <div class="reset-container">
+                    <button id="resetAllBtn" class="reset-all-btn">重置</button>
+                </div>
+            </div>
+
+            <div class="connection-info">
+                <h3>连接信息</h3>
+                <label for="sdpText"></label><textarea id="sdpText" placeholder="粘贴对方的连接信息..."></textarea>
+                <button onclick="UIManager.copyText()" class="copy-button">复制连接信息</button>
+            </div>
+
+            <div class="debug-info" id="debugInfo"></div>
+        </div>
+
+        <!-- 联系人列表面板 -->
+        <div class="connection-panel" id="chatsPanel">
+
+            <div class="chat-actions">
+                <button id="newChatBtn" class="new-chat-btn">添加新聊天</button>
+                <button id="clearContactsBtn" class="clear-contacts-btn">清空联系人列表</button>
+            </div>
+
+            <!-- 新建聊天表单 -->
+            <div class="new-chat-form" id="newChatForm">
+                <label for="peerIdInput"></label><input type="text" id="peerIdInput" placeholder="输入对方ID">
+                <label for="peerNameInput"></label><input type="text" id="peerNameInput" placeholder="输入对方昵称">
+                <div class="form-buttons">
+                    <button class="cancel-btn" id="cancelNewChatBtn">取消</button>
+                    <button id="confirmNewChatBtn">确认</button>
+                </div>
+            </div>
+
+            <!-- 联系人列表 -->
+            <div class="chat-list" id="chatList">
+                <!-- 聊天项会动态添加 -->
+            </div>
+        </div>
+        <!-- 群聊面板 -->
+        <div class="connection-panel" id="groupsPanel">
+            <div class="group-actions">
+                <button id="newGroupBtn" class="new-group-btn">创建新群聊</button>
+            </div>
+
+            <!-- 新建群聊表单 -->
+            <div class="new-group-form" id="newGroupForm" style="display: none;">
+                <input type="text" id="groupNameInput" placeholder="输入群聊名称">
+                <div class="form-buttons">
+                    <button class="cancel-btn" id="cancelNewGroupBtn">取消</button>
+                    <button id="confirmNewGroupBtn">确认</button>
+                </div>
+            </div>
+
+            <!-- 群聊列表 -->
+            <div class="group-list" id="groupList">
+                <!-- 群聊项会动态添加 -->
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <!-- 添加返回设置按钮 -->
+        <button class="back-to-settings" id="backToSettings">返回连接设置</button>
+
+        <!-- 聊天头部 -->
+        <div class="chat-header">
+            <div class="chat-title" id="currentChatTitle">未选择聊天</div>
+            <div class="chat-actions" id="chatHeaderActions" style="display: none;">
+                <button id="manageMembersBtn" class="manage-members-btn">管理成员</button>
+            </div>
+        </div>
+
+        <!-- 群聊成员管理弹窗 -->
+        <div id="memberManagementModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3>管理群聊成员</h3>
+                <div class="member-list" id="groupMemberList">
+                    <!-- 成员列表会动态添加 -->
+                </div>
+                <div class="add-member-section">
+                    <h4>添加成员</h4>
+                    <div class="add-member-form">
+                        <label for="contactsDropdown"></label><select id="contactsDropdown">
+                        <option value="">选择联系人...</option>
+                    </select>
+                        <button id="addMemberBtn">添加</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-box" id="chatBox"></div>
+
+        <div class="input-area">
+            <!-- 添加媒体按钮行 -->
+            <div class="media-controls">
+                <div class="left-buttons">
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()" id="uploadButton"
+                            disabled>
+                        文件
+                    </button>
+                    <button class="voice-record-button" id="voiceButton" disabled>
+                        <span id="voiceButtonText">录音</span>
+                        <span id="voiceTimer" class="audio-timer" style="display: none">00:00</span>
+                    </button>
+                    <button class="video-call-btn" id="videoCallButton" disabled
+                            onclick="VideoCallManager.initiateCall()">
+                        视频
+                    </button>
+                    <button class="audio-call-btn" id="audioCallButton" disabled
+                            onclick="VideoCallManager.initiateAudioCall()">
+                        语音通话
+                    </button>
+                </div>
+                <div class="right-buttons">
+                    <button class="clear-chat-btn" id="clearChatButton" onclick="MessageManager.clearChat()">
+                        清空会话
+                    </button>
+                </div>
+            </div>
+
+            <!-- 文本输入行 -->
+            <div class="input-controls">
+                <label for="messageInput"></label><textarea id="messageInput"
+                                                            placeholder="输入消息... (Ctrl+Enter 发送)"
+                                                            disabled></textarea>
+                <button id="sendButton" disabled onclick="MessageManager.sendMessage()">发送</button>
+            </div>
+
+            <input type="file" id="fileInput" style="display: none"
+                   onchange="MediaManager.handleFileSelect(event)">
+            <div id="filePreviewContainer"></div>
+            <div id="audioPreviewContainer"></div>
+        </div>
+    </div>
+</div>
+<!-- 视频通话请求弹窗 -->
+<div id="videoCallRequest" class="video-call-request" style="display: none;">
+    <div class="video-call-avatar">👤</div>
+    <h3>视频通话请求</h3>
+    <p>对方请求与您进行视频通话</p>
+    <div class="video-call-request-buttons">
+        <button class="reject-call" onclick="VideoCallManager.rejectCall()">拒绝</button>
+        <button class="accept-call" onclick="VideoCallManager.acceptCall()">接受</button>
+    </div>
+</div>
+
+<!-- 视频通话界面 -->
+<div id="videoCallContainer" class="video-call-container" style="display: none;">
+    <div class="video-streams">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay playsinline muted></video>
+    </div>
+    <div class="video-call-controls">
+        <button class="video-call-button toggle-camera" id="toggleCameraBtn" onclick="VideoCallManager.toggleCamera()">
+            📹
+        </button>
+        <button class="video-call-button mute-audio" id="toggleAudioBtn" onclick="VideoCallManager.toggleAudio()">
+            🎤
+        </button>
+        <button class="video-call-button end-call" onclick="VideoCallManager.endCall()">
+            📞
+        </button>
+        <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">
+            🔊
+        </button>
+    </div>
+</div>
+</body>
+<script src="js/Config.js"></script>
+<script src="js/Utils.js"></script>
+<script src="js/EventEmitter.js"></script>
+<script src="js/DBManager.js"></script>
+<script src="js/ConnectionManager.js"></script>
+<script src="js/UIManager.js"></script>
+<script src="js/MediaManager.js"></script>
+<script src="js/VideoCallManager.js"></script>
+<script src="js/MessageManager.js"></script>
+<script src="js/ChatManager.js"></script>
+<script src="js/UserManager.js"></script>
+<script src="js/GroupManager.js"></script>
+<script src="js/AppInitializer.js"></script>
+</html>

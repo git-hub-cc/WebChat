@@ -1,72 +1,41 @@
-## 后续计划
-1. 会话持久化，建立连接通过后端服务器。
-2. 优化底层结构，信息的来源看内容而不是谁发送，在一个三人的群聊中，a是群主，b，c是群员，b发出信息，a负责转发c，c收到信息查看内容知道是b发出的。
+### 1. **优化消息结构**
 
-你已经完成了一个功能完善的 WebRTC P2P 聊天系统，包含 STUN 打洞、单聊、群聊、文件、音视频、界面分区等模块，整体架构和逻辑已经很不错。以下是从用户体验、代码结构、性能和可维护性几个方面提出的一些优化建议：
-
-
-### ✅ 1.  **心跳/保活机制**
-
-* STUN 打洞后连接可能因 NAT 映射过期而失效。
-* 建议每 20s 左右通过 DataChannel 发送一个 ping/pong 消息，保持连接活跃。
-
-```js
-setInterval(() => {
-  if (dataChannel?.readyState === 'open') {
-    dataChannel.send(JSON.stringify({ type: "ping" }));
-  }
-}, 20000);
-```
-
-
-### ✅ 2. **连接信息自动填充与粘贴检测**
-
-* 可以监听剪贴板或粘贴事件，如果内容是 JSON / SDP 格式自动识别处理。
-
-```js
-document.getElementById("sdpText").addEventListener("paste", (e) => {
-  const text = e.clipboardData.getData("text/plain");
-  if (text.startsWith("v=0") || text.includes("candidate")) {
-    ConnectionManager.handlePastedSDP(text);
-  }
-});
-```
-
-### ✅ 3. **分离 JavaScript 模块**
-
-* 建议将 `ConnectionManager`, `VideoCallManager`, `MessageManager`, `UIManager` 分别放入独立模块中（`connection.js`, `video.js`, `message.js`, `ui.js`），提高可维护性。
+* 实现基于内容判断消息来源，而非发送者身份。
+* 在群聊中：如 a 为群主，b 发送消息，a 转发给 c，c 能够通过消息内容判断是 b 发出的。
+* 改进后更适合 P2P 群聊拓展，也有助于消息溯源与一致性管理。
 
 ---
 
-### ✅ 8. **状态管理建议使用有限状态机**
+## 🔐 网络安全性增强
 
-* 使用简单的状态管理系统（如 FSM）来处理 PeerConnection 的各类状态，避免状态混乱，便于维护和扩展。
+### 2. **增加 DTLS 与对称加密**
 
----
-
-### ✅ 9. **群聊优化建议**
-
-* 目前群聊逻辑可能是中心化控制（某客户端负责广播）。
-* 若要真正 P2P 群聊，可使用 mesh 网络结构或通过一个中继客户端转发消息，同时考虑引入 [libp2p-gossipsub](https://docs.libp2p.io/concepts/pubsub/gossipsub/) 类似机制做优化。
+* WebRTC 已支持 DTLS，传输层安全有保障。
+* 建议对 DataChannel 内容加密（如使用 AES），提升端到端数据安全性，防止中间人攻击，特别适用于公网场景。
 
 ---
 
-## 🌐 网络层安全性建议
+## 🎨 UI/UX 微优化
 
-### ✅ 10. **引入 DTLS 或端到端加密**
+### 3. **细节优化建议**
 
-* WebRTC 支持 DTLS，但聊天内容/文件若使用 DataChannel 建议再加一层对称加密（如 AES）保证安全性，尤其用于公网通信。
+* 聊天窗口内容自动滚动到底部。
+* 折叠面板添加过渡动画（使用 `transition` + `max-height`）。
+* 添加“对方正在输入...”提示（通过 `typing` 消息定时广播实现）。
+* 视频聊天增加：
+
+    * 静音状态提示图标；
+    * 摄像头关闭状态图标。
+
+
+## 💬 群聊结构优化
+
+### 4. **去中心化或中继优化群聊**
+
+* 当前群聊模式为半中心化：由群主负责转发。
+* 考虑两种优化路径：
+
+    * 全 mesh 模式（每个客户端与其他人直接通信）。
+    * 引入中继+Gossip 模式：借助 [libp2p-gossipsub](https://docs.libp2p.io/concepts/pubsub/gossipsub/) 的思路，实现更可靠扩展。
 
 ---
-
-## 💄 UI/UX 微优化建议
-
-* 折叠面板可加动画过渡（使用 `transition` + `max-height`）。
-* 聊天窗口内容可自动滚动到底部。
-* 加入“对方正在输入...”的提示（基于短时间的“typing”广播消息）。
-* 视频聊天界面建议添加静音提示 / 摄像头关闭状态图标。
-
----
-
-
-

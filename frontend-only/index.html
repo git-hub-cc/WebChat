@@ -10,7 +10,6 @@
 <div class="container">
     <div class="sidebar">
         <h2>连接设置</h2>
-        <button id="backToChatBtn" class="back-to-chat-btn">进入聊天窗口</button>
 
         <!-- 连接状态 -->
         <div class="status" id="connectionStatus">未连接</div>
@@ -1529,7 +1528,6 @@
                 statusElement.classList.remove('disconnected');
 
                 // 显示返回聊天按钮
-                document.getElementById('backToChatBtn').style.display = 'block';
                 document.querySelector('.sidebar').classList.add('show-back-btn');
             } else {
                 if (state === 'disconnected') {
@@ -1651,7 +1649,6 @@
             }
 
             if (!hasActiveConnection) {
-                document.getElementById('backToChatBtn').style.display = 'none';
                 document.querySelector('.sidebar').classList.remove('show-back-btn');
                 this.enableChatInterface(false);
 
@@ -5410,30 +5407,16 @@
                 });
             }
 
-            // 添加进入聊天按钮事件
-            const backToChatBtn = document.getElementById('backToChatBtn');
-            if (backToChatBtn) {
-                backToChatBtn.addEventListener('click', function() {
-                    // 检查是否已选择聊天
-                    if (ChatManager.currentChatId) {
-                        document.querySelector('.container').classList.add('connected-mode');
-                    } else {
-                        UIManager.showNotification('请先选择聊天对象', 'warning');
-                    }
-                });
-            }
 
             // 响应屏幕尺寸变化
             window.addEventListener('resize', function() {
                 const container = document.querySelector('.container');
                 const isConnected = document.getElementById('connectionStatus').classList.contains('connected');
                 const sidebar = document.querySelector('.sidebar');
-                const backToChatBtn = document.getElementById('backToChatBtn');
 
                 // 如果是移动端且已连接，保持聊天界面显示
                 if (window.innerWidth <= 768 && isConnected && ChatManager.currentChatId) {
                     // 显示进入聊天按钮
-                    if (backToChatBtn) backToChatBtn.style.display = 'block';
                     if (sidebar) sidebar.classList.add('show-back-btn');
                 } else if (window.innerWidth > 768) {
                     // 在大屏幕上，移除连接模式类，显示两个面板
