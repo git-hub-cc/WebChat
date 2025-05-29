@@ -28,6 +28,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
         try {
+            System.out.println(message.getPayload());
             String payload = message.getPayload().toString();
             SignalingMessage signalingMessage = objectMapper.readValue(payload, SignalingMessage.class);
 
@@ -87,50 +88,6 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         }
     }
 
-    private void handleOffer(WebSocketSession session, SignalingMessage message) {
-        String userId = message.getUserId();
-        String targetUserId = message.getTargetUserId();
-
-        logger.info("用户 {} 向用户 {} 发送offer", userId, targetUserId);
-
-        WebSocketSession targetSession = userSessionService.getUserSession(targetUserId);
-        if (targetSession == null || !targetSession.isOpen()) {
-            sendErrorMessage(session, "目标用户 " + targetUserId + " 不在线");
-            return;
-        }
-
-        // 转发offer给目标用户
-        SignalingMessage forwardMessage = new SignalingMessage(MessageType.OFFER);
-        forwardMessage.setFromUserId(userId);
-        forwardMessage.setSdp(message.getSdp());
-        forwardMessage.setCandidates(message.getCandidates());
-
-        sendMessage(targetSession, forwardMessage);
-        logger.info("Offer已转发给用户 {}", targetUserId);
-    }
-
-    private void handleAnswer(WebSocketSession session, SignalingMessage message) {
-        String userId = message.getUserId();
-        String targetUserId = message.getTargetUserId();
-
-        logger.info("用户 {} 向用户 {} 发送answer", userId, targetUserId);
-
-        WebSocketSession targetSession = userSessionService.getUserSession(targetUserId);
-        if (targetSession == null || !targetSession.isOpen()) {
-            sendErrorMessage(session, "目标用户 " + targetUserId + " 不在线");
-            return;
-        }
-
-        // 转发answer给目标用户
-        SignalingMessage forwardMessage = new SignalingMessage(MessageType.ANSWER);
-        forwardMessage.setFromUserId(userId);
-        forwardMessage.setSdp(message.getSdp());
-        forwardMessage.setCandidates(message.getCandidates());
-
-        sendMessage(targetSession, forwardMessage);
-        logger.info("Answer已转发给用户 {}", targetUserId);
-    }
-
     private void handleIceCandidate(WebSocketSession session, SignalingMessage message) {
         String userId = message.getUserId();
         String targetUserId = message.getTargetUserId();
@@ -165,5 +122,62 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
     private void sendErrorMessage(WebSocketSession session, String errorMessage) {
         SignalingMessage message = new SignalingMessage(MessageType.ERROR, errorMessage);
         sendMessage(session, message);
+    }
+
+    private void handleOffer(WebSocketSession session, SignalingMessage message) {
+        String userId = message.getUserId(); // This is the initiator
+        String targetUserId = message.getTargetUserId();
+
+        logger.info("用户 {} 向用户 {} 发送offer. isVideoCall={}, isAudioOnly={}, sdpType={}",
+                userId, targetUserId, message.getIsVideoCall(), message.getIsAudioOnly(), message.getSdpType());
+
+        WebSocketSession targetSession = userSessionService.getUserSession(targetUserId);
+        if (targetSession == null || !targetSession.isOpen()) {
+            sendErrorMessage(session, "目标用户 " + targetUserId + " 不在线");
+            // Also notify client that user was not found.
+            SignalingMessage userNotFoundMsg = new SignalingMessage(MessageType.USER_NOT_FOUND);
+            userNotFoundMsg.setTargetUserId(targetUserId); // So client knows which attempt failed
+            sendMessage(session, userNotFoundMsg);
+            return;
+        }
+
+        SignalingMessage forwardMessage = new SignalingMessage(MessageType.OFFER);
+        forwardMessage.setFromUserId(userId); // Set who the original message is from
+        forwardMessage.setSdp(message.getSdp());
+        forwardMessage.setSdpType(message.getSdpType()); // Forward sdpType
+        forwardMessage.setCandidates(message.getCandidates());
+        forwardMessage.setIsVideoCall(message.getIsVideoCall()); // Forward isVideoCall
+        forwardMessage.setIsAudioOnly(message.getIsAudioOnly()); // Forward isAudioOnly
+
+        sendMessage(targetSession, forwardMessage);
+        logger.info("Offer已转发给用户 {}", targetUserId);
+    }
+
+    private void handleAnswer(WebSocketSession session, SignalingMessage message) {
+        String userId = message.getUserId(); // This is the one sending the answer
+        String targetUserId = message.getTargetUserId(); // This is the original offer initiator
+
+        logger.info("用户 {} 向用户 {} 发送answer. isVideoCall={}, isAudioOnly={}, sdpType={}",
+                userId, targetUserId, message.getIsVideoCall(), message.getIsAudioOnly(), message.getSdpType());
+
+        WebSocketSession targetSession = userSessionService.getUserSession(targetUserId);
+        if (targetSession == null || !targetSession.isOpen()) {
+            sendErrorMessage(session, "目标用户 " + targetUserId + " 不在线");
+            SignalingMessage userNotFoundMsg = new SignalingMessage(MessageType.USER_NOT_FOUND);
+            userNotFoundMsg.setTargetUserId(targetUserId);
+            sendMessage(session, userNotFoundMsg);
+            return;
+        }
+
+        SignalingMessage forwardMessage = new SignalingMessage(MessageType.ANSWER);
+        forwardMessage.setFromUserId(userId);
+        forwardMessage.setSdp(message.getSdp());
+        forwardMessage.setSdpType(message.getSdpType()); // Forward sdpType
+        forwardMessage.setCandidates(message.getCandidates());
+        forwardMessage.setIsVideoCall(message.getIsVideoCall()); // Forward isVideoCall
+        forwardMessage.setIsAudioOnly(message.getIsAudioOnly()); // Forward isAudioOnly
+
+        sendMessage(targetSession, forwardMessage);
+        logger.info("Answer已转发给用户 {}", targetUserId);
     }
 }

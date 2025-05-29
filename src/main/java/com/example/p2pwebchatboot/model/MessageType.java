@@ -6,5 +6,6 @@ public enum MessageType {
     ANSWER,
     ICE_CANDIDATE,
     ERROR,
+    USER_NOT_FOUND,
     SUCCESS
 }

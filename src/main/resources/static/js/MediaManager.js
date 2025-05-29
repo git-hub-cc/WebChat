@@ -1,361 +1,331 @@
-
 const MediaManager = {
     mediaRecorder: null,
     audioChunks: [],
     recordingTimer: null,
     recordingStartTime: null,
     recordingDuration: 0,
+    audioStream: null, // Store the stream to release it
 
-    // 初始化语音录制
     initVoiceRecording: function() {
-        // 不再主动请求麦克风权限，而是在按下录音按钮时请求
-
-        // 检查是否在安全上下文(HTTPS)
-        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            Utils.log('语音录制功能需要HTTPS环境', Utils.logLevels.WARN);
-
-            const voiceButton = document.getElementById('voiceButton');
-            voiceButton.disabled = true;
-            voiceButton.title = '录音功能需要HTTPS环境';
-            voiceButton.innerHTML = '<span id="voiceButtonText">需要HTTPS</span>';
-
-            // 显示提示消息
-            UIManager.showNotification('语音录制功能需要HTTPS安全环境才能使用，请使用HTTPS访问本页面。', 'warning');
-            return;
-        }
-
-        // 检查浏览器是否支持getUserMedia
+        const voiceButton = document.getElementById('voiceButtonMain');
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            Utils.log('浏览器不支持录音功能', Utils.logLevels.WARN);
-
-            const voiceButton = document.getElementById('voiceButton');
-            voiceButton.disabled = true;
-            voiceButton.title = '您的浏览器不支持录音功能';
-            voiceButton.innerHTML = '<span id="voiceButtonText">录音不可用</span>';
+            Utils.log('Browser does not support media devices.', Utils.logLevels.WARN);
+            if(voiceButton) voiceButton.disabled = true;
             return;
         }
-
-        // 启用录音按钮，但延迟请求权限
-        document.getElementById('voiceButton').disabled = false;
-        Utils.log('语音录制按钮已启用，将在用户点击时请求权限', Utils.logLevels.INFO);
+        if(voiceButton) voiceButton.disabled = false; // Enable button, permission requested on click
     },
 
-    // 添加一个新方法来请求麦克风权限
     requestMicrophonePermission: async function() {
-        if (this.mediaRecorder) {
-            return true; // 已经有权限了
+        if (this.mediaRecorder && this.audioStream && this.audioStream.active) {
+            // Check if an old stream is still active from a previous interaction
+            if (this.mediaRecorder.state === "inactive") {
+                // Stream exists but recorder is inactive, likely safe to reuse or re-init
+            } else {
+                return true; // Already has an active recorder and stream
+            }
         }
 
+        // Release any existing stream before getting a new one
+        this.releaseAudioResources();
+
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-
-            // 尝试使用更好的编码方式
-            const options = {};
-
-            // 尝试使用 opus 编码器
-            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                options.mimeType = 'audio/webm;codecs=opus';
-            } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
-                options.mimeType = 'audio/mp4';
+            this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: Config.media.audioConstraints || true });
+            const options = { mimeType: 'audio/webm;codecs=opus' }; // Prefer Opus
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                options.mimeType = 'audio/ogg;codecs=opus'; // Firefox Opus
+                if(!MediaRecorder.isTypeSupported(options.mimeType)){
+                    options.mimeType = 'audio/webm'; // Fallback
+                }
             }
 
-            this.mediaRecorder = new MediaRecorder(stream, options);
+            this.mediaRecorder = new MediaRecorder(this.audioStream, options);
 
             this.mediaRecorder.ondataavailable = (event) => {
-                this.audioChunks.push(event.data);
+                if (event.data.size > 0) this.audioChunks.push(event.data);
             };
 
             this.mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(this.audioChunks, {type: options.mimeType || 'audio/webm'});
+                if (this.audioChunks.length === 0) {
+                    Utils.log("No audio data recorded.", Utils.logLevels.WARN);
+                    this.releaseAudioResources(); // Ensure resources are released
+                    return;
+                }
+                const audioBlob = new Blob(this.audioChunks, { type: this.mediaRecorder.mimeType });
                 const reader = new FileReader();
-
                 reader.onloadend = () => {
-                    MessageManager.audioData = reader.result;
+                    MessageManager.audioData = reader.result; // base64 data
                     MessageManager.audioDuration = this.recordingDuration;
                     this.displayAudioPreview(reader.result, this.recordingDuration);
+                    // Don't release here, preview might want to play. Release after sending or cancelling.
                 };
-
                 reader.readAsDataURL(audioBlob);
+                this.audioChunks = []; // Clear for next recording
             };
-
-            Utils.log('麦克风权限已获取', Utils.logLevels.INFO);
+            Utils.log('Microphone permission granted.', Utils.logLevels.INFO);
             return true;
         } catch (error) {
-            Utils.log(`获取麦克风权限失败: ${error.message}`, Utils.logLevels.ERROR);
-
-            const voiceButton = document.getElementById('voiceButton');
-            voiceButton.disabled = true;
-            document.getElementById('voiceButtonText').textContent = '录音不可用';
-
-            // 显示友好的错误提示
-            UIManager.showNotification('无法访问麦克风，语音录制功能不可用。', 'error');
+            Utils.log(`Error getting microphone permission: ${error}`, Utils.logLevels.ERROR);
+            UIManager.showNotification('Microphone access denied or unavailable.', 'error');
+            const voiceButton = document.getElementById('voiceButtonMain');
+            if(voiceButton) voiceButton.disabled = true;
+            this.releaseAudioResources(); // Clean up
             return false;
         }
     },
 
-    // 开始录音
     startRecording: async function() {
-        // 先请求权限
-        if (!this.mediaRecorder) {
-            const permissionGranted = await this.requestMicrophonePermission();
-            if (!permissionGranted) return;
-        }
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') return; // Already recording
+
+        const permissionGranted = await this.requestMicrophonePermission();
+        if (!permissionGranted) return;
 
         try {
             this.audioChunks = [];
             this.mediaRecorder.start();
             this.recordingStartTime = Date.now();
+            this.recordingDuration = 0;
 
-            const voiceButton = document.getElementById('voiceButton');
-            const voiceButtonText = document.getElementById('voiceButtonText');
-            const voiceTimer = document.getElementById('voiceTimer');
-
+            const voiceButton = document.getElementById('voiceButtonMain');
+            const voiceTimerEl = document.createElement('span'); // Create timer dynamically
+            voiceTimerEl.id = 'recordingVoiceTimer';
+            voiceTimerEl.className = 'audio-timer-indicator';
             voiceButton.classList.add('recording');
-            voiceButtonText.textContent = '停止录音';
-            voiceTimer.style.display = 'inline';
+            voiceButton.innerHTML = '🛑'; // Stop icon
+            voiceButton.appendChild(voiceTimerEl);
 
+
+            this.updateRecordingTimer(); // Initial display
             this.recordingTimer = setInterval(() => this.updateRecordingTimer(), 1000);
-            this.updateRecordingTimer();
-
-            Utils.log('开始录音', Utils.logLevels.DEBUG);
+            Utils.log('Audio recording started.', Utils.logLevels.INFO);
         } catch (error) {
-            Utils.log(`开始录音失败: ${error.message}`, Utils.logLevels.ERROR);
+            Utils.log(`Failed to start recording: ${error}`, Utils.logLevels.ERROR);
+            this.releaseAudioResources();
         }
     },
 
-    // 停止录音
-    stopRecording: function () {
-        if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') return;
+    stopRecording: function() {
+        if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
+            // If stop is called when not recording (e.g. mouseleave after permission denied)
+            this.resetRecordingButton();
+            this.releaseAudioResources(); // Ensure resources are freed
+            return;
+        }
 
         try {
-            this.mediaRecorder.stop();
+            this.mediaRecorder.stop(); // This will trigger ondataavailable and onstop
             clearInterval(this.recordingTimer);
-
-            const voiceButton = document.getElementById('voiceButton');
-            const voiceButtonText = document.getElementById('voiceButtonText');
-            const voiceTimer = document.getElementById('voiceTimer');
-
-            voiceButton.classList.remove('recording');
-            voiceButtonText.textContent = '录音';
-            voiceTimer.style.display = 'none';
-
-            Utils.log('录音已停止', Utils.logLevels.DEBUG);
+            this.recordingTimer = null;
+            this.resetRecordingButton();
+            Utils.log('Audio recording stopped.', Utils.logLevels.INFO);
         } catch (error) {
-            Utils.log(`停止录音失败: ${error.message}`, Utils.logLevels.ERROR);
+            Utils.log(`Failed to stop recording: ${error}`, Utils.logLevels.ERROR);
+            this.releaseAudioResources();
         }
     },
 
-    // 释放音频资源
-    releaseAudioResources: function() {
-        // 检查是否有活跃的媒体流
-        if (this.mediaRecorder && this.mediaRecorder.stream) {
-            // 停止所有音频轨道
-            this.mediaRecorder.stream.getTracks().forEach(track => {
-                track.stop();
-                Utils.log('麦克风资源已释放', Utils.logLevels.DEBUG);
-            });
+    resetRecordingButton: function() {
+        const voiceButton = document.getElementById('voiceButtonMain');
+        if (voiceButton) {
+            voiceButton.classList.remove('recording');
+            voiceButton.innerHTML = '🎙️'; // Record icon
+            const timerEl = document.getElementById('recordingVoiceTimer');
+            if(timerEl) timerEl.remove();
         }
-
-        // 重置录音器
-        this.mediaRecorder = null;
     },
 
-    // 更新录音计时器
-    updateRecordingTimer: function () {
+    updateRecordingTimer: function() {
+        if (!this.recordingStartTime) return; // Guard against timer firing after stop
         const now = Date.now();
-        const duration = Math.floor((now - this.recordingStartTime) / 1000);
-        this.recordingDuration = duration;
+        const elapsedSeconds = Math.floor((now - this.recordingStartTime) / 1000);
+        this.recordingDuration = elapsedSeconds;
 
-        const minutes = Math.floor(duration / 60).toString().padStart(2, '0');
-        const seconds = (duration % 60).toString().padStart(2, '0');
-        document.getElementById('voiceTimer').textContent = `${minutes}:${seconds}`;
+        const voiceTimerEl = document.getElementById('recordingVoiceTimer');
+        if (voiceTimerEl) {
+            voiceTimerEl.textContent = Utils.formatTime(elapsedSeconds);
+        }
 
-        // 如果超过最大录制时间，自动停止
-        if (duration >= Config.media.maxAudioDuration) {
+        if (elapsedSeconds >= Config.media.maxAudioDuration) {
             this.stopRecording();
+            UIManager.showNotification(`Max recording time of ${Config.media.maxAudioDuration}s reached.`, 'info');
         }
     },
 
-    // 显示音频预览
-    displayAudioPreview: function (audioData, duration) {
+    displayAudioPreview: function (audioDataUrl, duration) {
         const container = document.getElementById('audioPreviewContainer');
+        if (!container) {
+            Utils.log("Error: audioPreviewContainer not found in DOM.", Utils.logLevels.ERROR);
+            return;
+        }
         const formattedDuration = Utils.formatTime(duration);
 
+        // Corrected the typo here: class="btn-cancel-preview"
         container.innerHTML = `
-            <div class="voice-message">
-                <button onclick="event.stopPropagation(); MediaManager.playAudio(this)" data-audio="${audioData}">
-                    播放
-                </button>
-                <div class="voice-wave">
-                    ${Array(5).fill('<div class="wave-bar"></div>').join('')}
-                </div>
-                <span class="duration">${formattedDuration}</span>
-                <button onclick="MessageManager.cancelAudioData()">取消</button>
+            <div class="voice-message-preview">
+                <span>🎙️ Voice Message (${formattedDuration})</span>
+                <audio controls src="${audioDataUrl}" style="display:none;"></audio> 
+                <button class="btn-play-preview">Play</button>
+                <button class="btn-cancel-preview">Cancel</button> 
             </div>
-            `;
+        `;
+        const playBtn = container.querySelector('.btn-play-preview');
+        const cancelBtn = container.querySelector('.btn-cancel-preview');
+        const audioEl = container.querySelector('audio');
 
-        // 音频数据已保存，可以释放麦克风资源
-        this.releaseAudioResources();
-    },
-
-    // 播放音频
-    playAudio: function (button) {
-        const audio = new Audio(button.dataset.audio);
-        const originalText = button.textContent;
-
-        button.textContent = '播放中...';
-        audio.play();
-
-        // 添加波形动画效果
-        const waveContainer = button.nextElementSibling;
-        if (waveContainer && waveContainer.classList.contains('voice-wave')) {
-            waveContainer.classList.add('playing');
+        if (playBtn && audioEl) {
+            playBtn.onclick = () => {
+                if (audioEl.paused) {
+                    audioEl.play().catch(e => Utils.log("Error playing preview audio: " + e, Utils.logLevels.ERROR));
+                    playBtn.textContent = "Pause";
+                } else {
+                    audioEl.pause();
+                    playBtn.textContent = "Play";
+                }
+            };
+            audioEl.onended = () => {
+                playBtn.textContent = "Play";
+            }
+        } else {
+            Utils.log("Audio preview: Play button or audio element not found.", Utils.logLevels.ERROR);
         }
 
-        audio.onended = () => {
-            button.textContent = originalText;
-            if (waveContainer) {
-                waveContainer.classList.remove('playing');
-            }
-        };
-
-        audio.onerror = () => {
-            button.textContent = '播放失败';
-            setTimeout(() => {
-                button.textContent = originalText;
-            }, 2000);
-        };
+        if (cancelBtn) {
+            cancelBtn.onclick = () => { MessageManager.cancelAudioData(); };
+        } else {
+            Utils.log("Audio preview: Cancel button not found. This might be due to the corrected typo now, or other issues if it persists.", Utils.logLevels.ERROR);
+        }
     },
 
-    // 格式化文件大小
+    playAudio: function(buttonElement) {
+        const audioDataUrl = buttonElement.dataset.audio;
+        if (!audioDataUrl) return;
+
+        // Simple audio player for message bubbles - create a new audio element each time
+        // This avoids issues with managing a single player instance for multiple messages
+        const existingAudio = buttonElement.querySelector('audio.playing-audio-instance');
+        if (existingAudio) {
+            existingAudio.pause();
+            existingAudio.remove();
+            buttonElement.innerHTML = '▶'; // Play icon
+            return;
+        }
+
+        // Remove other playing instances if any
+        document.querySelectorAll('audio.playing-audio-instance').forEach(aud => {
+            aud.pause();
+            const btn = aud.closest('.voice-message').querySelector('.play-voice-btn');
+            if(btn) btn.innerHTML = '▶';
+            aud.remove();
+
+        });
+
+
+        const audio = new Audio(audioDataUrl);
+        audio.className = "playing-audio-instance"; // Add a class to identify it
+        buttonElement.innerHTML = '❚❚';
+
+        audio.play().catch(e => {
+            Utils.log("Error playing audio: "+e, Utils.logLevels.ERROR);
+            buttonElement.innerHTML = '▶';
+        });
+
+        audio.onended = () => {
+            buttonElement.innerHTML = '▶';
+            audio.remove(); // Clean up the audio element
+        };
+        audio.onerror = () => {
+            buttonElement.innerHTML = '⚠️';
+            setTimeout(() => {buttonElement.innerHTML = '▶'; audio.remove();}, 2000);
+        };
+        // Append to button or a hidden div if needed for controls, but usually not necessary for simple play
+        // buttonElement.appendChild(audio); // Optional: if you want the audio element to be part of the button's DOM
+    },
+
+    releaseAudioResources: function() {
+        if (this.audioStream) {
+            this.audioStream.getTracks().forEach(track => track.stop());
+            this.audioStream = null;
+            Utils.log('Microphone stream released.', Utils.logLevels.INFO);
+        }
+        if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+            // If it's recording or paused, try to stop it cleanly
+            // This case should ideally be handled by explicit stopRecording calls
+            try {
+                this.mediaRecorder.stop();
+            } catch(e) { /* ignore errors if already stopped or in invalid state */ }
+        }
+        this.mediaRecorder = null; // Ensure it's nullified
+        this.audioChunks = []; // Clear any pending chunks
+    },
+
     formatFileSize: function(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     },
 
-    // 显示文件预览方法
-    displayFilePreview: function (fileObj) {
+    displayFilePreview: function(fileObj) {
         const container = document.getElementById('filePreviewContainer');
-        const fileType = fileObj.type;
-        const fileName = fileObj.name;
-        let previewHtml = '';
+        if (!container) {
+            Utils.log("Error: filePreviewContainer not found.", Utils.logLevels.ERROR);
+            return;
+        }
+        container.innerHTML = '';
 
-        // 根据文件类型显示不同预览
-        if (fileType.startsWith('image/')) {
-            // 图片预览
-            previewHtml = `
-                <div class="file-preview">
-                    <div class="file-preview-header">
-                        <span>${fileName}</span>
-                        <button onclick="MessageManager.cancelFileData()">取消</button>
-                    </div>
-                    <div class="file-preview-content">
-                        <img src="${fileObj.data}" class="image-preview" alt="${fileName}">
-                    </div>
-                </div>
-            `;
-        } else if (fileType.startsWith('video/')) {
-            // 视频预览
-            previewHtml = `
-                <div class="file-preview">
-                    <div class="file-preview-header">
-                        <span>${fileName}</span>
-                        <button onclick="MessageManager.cancelFileData()">取消</button>
-                    </div>
-                    <div class="file-preview-content">
-                        <video controls class="video-preview">
-                            <source src="${fileObj.data}" type="${fileType}">
-                            您的浏览器不支持视频预览
-                        </video>
-                    </div>
-                </div>
-            `;
+        const previewDiv = document.createElement('div');
+        previewDiv.className = 'file-preview-item';
+
+        let contentHtml = '';
+        if (fileObj.type.startsWith('image/')) {
+            contentHtml = `<img src="${fileObj.data}" alt="Preview" style="max-height: 50px; border-radius: 4px; margin-right: 8px;"> ${Utils.escapeHtml(fileObj.name)}`;
+        } else if (fileObj.type.startsWith('video/')) {
+            contentHtml = `🎬 ${Utils.escapeHtml(fileObj.name)} (Video)`;
         } else {
-            // 其他文件类型，显示文件信息
-            const fileSize = this.formatFileSize(fileObj.size);
-            const fileIcon = this.getFileIcon(fileType);
-
-            previewHtml = `
-                <div class="file-preview">
-                    <div class="file-preview-header">
-                        <span>${fileName}</span>
-                        <button onclick="MessageManager.cancelFileData()">取消</button>
-                    </div>
-                    <div class="file-preview-content file-info">
-                        <div class="file-icon">${fileIcon}</div>
-                        <div class="file-details">
-                            <div class="file-name">${fileName}</div>
-                            <div class="file-size">${fileSize}</div>
-                            <div class="file-type">${fileType || '未知类型'}</div>
-                        </div>
-                    </div>
-                </div>
-            `;
+            contentHtml = `📄 ${Utils.escapeHtml(fileObj.name)} (${this.formatFileSize(fileObj.size)})`;
         }
 
-        container.innerHTML = previewHtml;
+        previewDiv.innerHTML = `
+            <span>${contentHtml}</span>
+            <button class="cancel-file-preview" title="Remove attachment">✕</button>
+        `;
+        container.appendChild(previewDiv);
+
+        const cancelBtn = container.querySelector('.cancel-file-preview');
+        if (cancelBtn) {
+            cancelBtn.onclick = () => MessageManager.cancelFileData();
+        } else {
+            Utils.log("File preview: Cancel button not found.", Utils.logLevels.ERROR);
+        }
     },
 
-    // 获取文件图标
-    getFileIcon: function(mimeType) {
-        if (!mimeType) return '📄';
-
-        if (mimeType.startsWith('image/')) return '🖼️';
-        if (mimeType.startsWith('video/')) return '🎬';
-        if (mimeType.startsWith('audio/')) return '🎵';
-
-        if (mimeType === 'application/pdf') return '📕';
-        if (mimeType.includes('word')) return '📘';
-        if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📗';
-        if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return '📙';
-
-        if (mimeType.includes('zip') || mimeType.includes('compressed')) return '🗜️';
-        if (mimeType.includes('text')) return '📝';
-
-        return '📄';
-    },
-
-    // 处理文件选择方法
-    handleFileSelect: async function (event) {
+    handleFileSelect: async function(event) {
         const file = event.target.files[0];
         if (!file) return;
 
-        // 检查文件大小
-        const maxFileSize = 10 * 1024 * 1024; // 10MB
-        if (file.size > maxFileSize) {
-            alert(`文件大小不能超过 ${maxFileSize / 1024 / 1024} MB`);
+        if (file.size > Config.media.maxFileSize) {
+            UIManager.showNotification(`File too large. Max size: ${this.formatFileSize(Config.media.maxFileSize)}.`, 'error');
+            event.target.value = ''; // Reset file input
             return;
         }
 
         try {
             const reader = new FileReader();
-
-            reader.onload = async (e) => {
-                const fileData = e.target.result;
-                const fileType = file.type;
-                const fileName = file.name;
-                const fileSize = file.size;
-
-                // 设置消息对象
+            reader.onload = (e) => {
                 MessageManager.selectedFile = {
-                    data: fileData,
-                    type: fileType,
-                    name: fileName,
-                    size: fileSize
+                    data: e.target.result, // base64 data
+                    type: file.type,
+                    name: file.name,
+                    size: file.size
                 };
-
-                // 显示文件预览
                 this.displayFilePreview(MessageManager.selectedFile);
             };
-
-            // 使用readAsDataURL读取为base64格式
             reader.readAsDataURL(file);
         } catch (error) {
-            Utils.log(`处理文件失败: ${error.message}`, Utils.logLevels.ERROR);
-            alert('处理文件失败');
+            Utils.log(`Error handling file select: ${error}`, Utils.logLevels.ERROR);
+            UIManager.showNotification('Error processing file.', 'error');
         }
-    }
+        event.target.value = ''; // Reset file input to allow selecting the same file again
+    },
 };

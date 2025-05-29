@@ -3,230 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P</title>
+    <title>P2P Chat Modern</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
-<!-- 加载蒙版 -->
-<div class="loading-overlay" id="loadingOverlay">
-    <div class="loading-spinner"></div>
-    <div class="loading-text">正在连接，请稍候...</div>
-</div>
-
-<div class="container">
-    <div class="sidebar">
-        <h2>连接设置</h2>
-
-        <!-- 连接状态 -->
-        <div class="status" id="connectionStatus">未连接</div>
-        <div class="network-info" id="networkInfo">
-            网络状态: 检测中...
-            <div class="connection-quality">
-                <span>连接质量:</span>
-                <div class="quality-indicator" id="qualityIndicator"></div>
-                <span id="qualityText">未连接</span>
-            </div>
+<div class="app-container">
+    <!-- Left Sidebar (Navigation) -->
+    <aside class="sidebar-nav" id="sidebarNav">
+        <div class="sidebar-header">
+            <button class="menu-btn" id="mainMenuBtn" title="Menu">☰</button>
+            <input type="search" class="search-bar" id="chatSearchInput" placeholder="Search...">
         </div>
-
-        <!-- 连接选项卡 -->
-        <div class="connection-tabs">
-            <div class="connection-tab active" data-tab="connect">连接</div>
-            <div class="connection-tab" data-tab="chats">联系人</div>
-            <div class="connection-tab" data-tab="groups">群聊</div>
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab-target="all-chats" id="tabAllChats">All</button>
+            <button class="nav-tab" data-tab-target="contacts-list" id="tabContacts">Contacts</button>
+            <button class="nav-tab" data-tab-target="groups-list" id="tabGroups">Groups</button>
         </div>
-
-        <!-- 连接面板 -->
-        <div class="connection-panel active" id="connectPanel">
-            <!-- 用户ID显示 -->
-            <div class="user-id" id="userId">
-                您的ID: <span id="userIdValue">生成中...</span>
-                <button id="copyIdBtn" style="padding: 2px 5px; font-size: 12px; margin-left: 5px;">复制</button>
-            </div>
-
-            <div class="steps">
-                <div class="step">
-                    <div class="step-number">1</div>
-                    <button onclick="ConnectionManager.createOffer()" id="createOfferBtn">创建连接请求</button>
-                </div>
-                <div class="step">
-                    <div class="step-number">2</div>
-                    <button onclick="ConnectionManager.createAnswer()" id="createAnswerBtn">创建连接响应</button>
-                </div>
-                <div class="step">
-                    <div class="step-number">3</div>
-                    <button onclick="ConnectionManager.handleAnswer()" id="handleAnswerBtn">处理对方响应</button>
-                </div>
-                <!-- 添加重置按钮 -->
-                <div class="reset-container">
-                    <button id="resetAllBtn" class="reset-all-btn">重置</button>
-                </div>
-            </div>
-
-            <div class="connection-info">
-                <h3>连接信息</h3>
-                <label for="sdpText"></label><textarea id="sdpText" placeholder="粘贴对方的连接信息..."></textarea>
-                <button onclick="UIManager.copyText()" class="copy-button">复制连接信息</button>
-            </div>
-
-            <div class="debug-info" id="debugInfo"></div>
+        <div class="chat-list-container">
+            <ul id="chatListNav">
+                <!-- Chat items will be populated here by JS -->
+                <li class="chat-list-item-empty">No chats yet.</li>
+            </ul>
         </div>
+        <button class="new-chat-fab" id="newChatFab" title="New Chat/Group">+</button>
+    </aside>
 
-        <!-- 联系人列表面板 -->
-        <div class="connection-panel" id="chatsPanel">
-
-            <div class="chat-actions">
-                <button id="newChatBtn" class="new-chat-btn">添加新聊天</button>
-                <button id="clearContactsBtn" class="clear-contacts-btn">清空联系人列表</button>
-            </div>
-
-            <!-- 新建聊天表单 -->
-            <div class="new-chat-form" id="newChatForm">
-                <label for="peerIdInput"></label><input type="text" id="peerIdInput" placeholder="输入对方ID">
-                <label for="peerNameInput"></label><input type="text" id="peerNameInput" placeholder="输入对方昵称">
-                <div class="form-buttons">
-                    <button class="cancel-btn" id="cancelNewChatBtn">取消</button>
-                    <button id="confirmNewChatBtn">确认</button>
-                </div>
-            </div>
-
-            <!-- 联系人列表 -->
-            <div class="chat-list" id="chatList">
-                <!-- 聊天项会动态添加 -->
-            </div>
-        </div>
-        <!-- 群聊面板 -->
-        <div class="connection-panel" id="groupsPanel">
-            <div class="group-actions">
-                <button id="newGroupBtn" class="new-group-btn">创建新群聊</button>
-            </div>
-
-            <!-- 新建群聊表单 -->
-            <div class="new-group-form" id="newGroupForm" style="display: none;">
-                <input type="text" id="groupNameInput" placeholder="输入群聊名称">
-                <div class="form-buttons">
-                    <button class="cancel-btn" id="cancelNewGroupBtn">取消</button>
-                    <button id="confirmNewGroupBtn">确认</button>
-                </div>
-            </div>
-
-            <!-- 群聊列表 -->
-            <div class="group-list" id="groupList">
-                <!-- 群聊项会动态添加 -->
-            </div>
-        </div>
-    </div>
-
-    <div class="chat-container">
-        <!-- 添加返回设置按钮 -->
-        <button class="back-to-settings" id="backToSettings">返回连接设置</button>
-
-        <!-- 聊天头部 -->
-        <div class="chat-header">
-            <div class="chat-title" id="currentChatTitle">未选择聊天</div>
-            <div class="chat-actions" id="chatHeaderActions" style="display: none;">
-                <button id="manageMembersBtn" class="manage-members-btn">管理成员</button>
-            </div>
-        </div>
-
-        <!-- 群聊成员管理弹窗 -->
-        <div id="memberManagementModal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h3>管理群聊成员</h3>
-                <div class="member-list" id="groupMemberList">
-                    <!-- 成员列表会动态添加 -->
-                </div>
-                <div class="add-member-section">
-                    <h4>添加成员</h4>
-                    <div class="add-member-form">
-                        <label for="contactsDropdown"></label><select id="contactsDropdown">
-                        <option value="">选择联系人...</option>
-                    </select>
-                        <button id="addMemberBtn">添加</button>
+    <!-- Main Chat Area -->
+    <main class="chat-area" id="chatArea">
+        <div class="chat-area-content">
+            <header class="chat-header-main">
+                <button class="back-to-list-btn" id="backToListBtn" title="Back to list">←</button>
+                <div class="chat-info-main">
+                    <div class="chat-avatar-main" id="currentChatAvatarMain"></div>
+                    <div class="chat-details-main-header">
+                        <div class="chat-title-main" id="currentChatTitleMain">Select a chat</div>
+                        <div class="chat-status-main" id="currentChatStatusMain"></div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="chat-box" id="chatBox"></div>
-
-        <div class="input-area">
-            <!-- 添加媒体按钮行 -->
-            <div class="media-controls">
-                <div class="left-buttons">
-                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()" id="uploadButton"
-                            disabled>
-                        文件
-                    </button>
-                    <button class="voice-record-button" id="voiceButton" disabled>
-                        <span id="voiceButtonText">录音</span>
-                        <span id="voiceTimer" class="audio-timer" style="display: none">00:00</span>
-                    </button>
-                    <button class="video-call-btn" id="videoCallButton" disabled
-                            onclick="VideoCallManager.initiateCall()">
-                        视频通话
-                    </button>
-                    <button class="audio-call-btn" id="audioCallButton" disabled
-                            onclick="VideoCallManager.initiateAudioCall()">
-                        语音通话
-                    </button>
+                <div class="chat-actions-main">
+                    <button class="header-action-btn" id="videoCallButtonMain" title="Video Call" disabled>📹</button>
+                    <button class="header-action-btn" id="audioCallButtonMain" title="Audio Call" disabled>🎤</button>
+                    <button class="header-action-btn" id="chatDetailsBtnMain" title="Chat Info">ℹ️</button>
                 </div>
-                <div class="right-buttons">
-                    <button class="clear-chat-btn" id="clearChatButton" onclick="MessageManager.clearChat()">
-                        清空会话
-                    </button>
+            </header>
+
+            <div class="chat-messages-container" id="chatBox">
+                <div class="no-chat-selected" id="noChatSelectedScreen">
+                    <div class="logo-placeholder">💬</div>
+                    <h2>P2P Modern Chat</h2>
+                    <p>Select a chat from the list to start messaging, or create a new one.</p>
+                    <p id="connectionStatusGlobal" class="status-indicator">Status: <span id="connectionStatusText">Initializing...</span></p>
                 </div>
             </div>
 
-            <!-- 文本输入行 -->
-            <div class="input-controls">
-                <label for="messageInput"></label><textarea id="messageInput"
-                                                            placeholder="输入消息... (Ctrl+Enter 发送)"
-                                                            disabled></textarea>
-                <button id="sendButton" disabled onclick="MessageManager.sendMessage()">发送</button>
-            </div>
+            <footer class="chat-input-container">
+                <div id="filePreviewContainer" class="file-preview-input"></div>
+                <div id="audioPreviewContainer" class="audio-preview-input"></div>
+                <div class="input-row">
+                    <button class="icon-btn attach-btn" id="attachBtnMain" title="Attach file" disabled>📎</button>
+                    <input type="file" id="fileInput" style="display: none" onchange="MediaManager.handleFileSelect(event)">
+                    <textarea id="messageInput" placeholder="Write a message..." disabled></textarea>
+                    <!-- <button class="icon-btn emoji-btn" id="emojiBtnMain" title="Emoji" disabled>😊</button> -->
+                    <button class="icon-btn send-btn" id="sendButtonMain" title="Send" disabled>➤</button>
+                    <button class="icon-btn record-btn" id="voiceButtonMain" title="Record voice" disabled>🎙️</button>
+                </div>
+            </footer>
+        </div>
+    </main>
 
-            <input type="file" id="fileInput" style="display: none"
-                   onchange="MediaManager.handleFileSelect(event)">
-            <div id="filePreviewContainer"></div>
-            <div id="audioPreviewContainer"></div>
+    <!-- Right Details Panel -->
+    <aside class="details-panel" id="detailsPanel">
+        <header class="details-header">
+            <h3 id="detailsPanelTitle">Chat Info</h3>
+            <button class="icon-btn close-details-btn" id="closeDetailsBtnMain" title="Close details">✕</button>
+        </header>
+        <div class="details-content" id="detailsPanelContent">
+            <div class="details-section" id="detailsContactInfo">
+                <div class="details-avatar" id="detailsAvatar"></div>
+                <h4 id="detailsName">Name</h4>
+                <p id="detailsId">ID: </p>
+                <p id="detailsStatus">Status: </p>
+            </div>
+            <!-- New section for contact actions -->
+            <div class="details-section" id="contactActionsDetails" style="display:none;">
+                <h4>Contact Actions</h4>
+                <button id="deleteContactBtnDetails" class="btn btn-danger">Delete Contact</button>
+            </div>
+            <!-- End of new section -->
+            <div class="details-section" id="detailsGroupManagement">
+                <h4>Members (<span id="groupMemberCount">0</span>)</h4>
+                <div id="groupMemberListDetails" class="member-list-details"></div>
+                <div id="addGroupMemberArea" class="add-member-details" style="display:none;">
+                    <h5>Add Member</h5>
+                    <select id="contactsDropdownDetails"></select>
+                    <button id="addMemberBtnDetails" class="btn btn-primary">Add</button>
+                </div>
+                <div id="leftMembersArea" class="left-members-details" style="display:none;">
+                    <h5>Previously Left Members</h5>
+                    <div id="leftMemberListDetails"></div>
+                </div>
+            </div>
+            <div class="details-section">
+                <h4>Shared Media</h4>
+                <p><em>(Shared media feature coming soon)</em></p>
+            </div>
+            <div class="details-section" id="groupActionsDetails" style="display:none;">
+                <h4>Group Actions</h4>
+                <button id="leaveGroupBtnDetails" class="btn btn-danger">Leave Group</button>
+                <button id="dissolveGroupBtnDetails" class="btn btn-danger" style="display:none;">Dissolve Group</button>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<!-- Modals -->
+<div class="loading-overlay" id="loadingOverlay" style="display: flex;">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Connecting, please wait...</div>
+</div>
+
+<div id="videoCallRequest" class="modal-like video-call-request" style="display: none;">
+    <div class="modal-content">
+        <div class="video-call-avatar">👤</div>
+        <h3>Video Call Request</h3>
+        <p>Incoming call...</p>
+        <div class="video-call-request-buttons">
+            <button class="btn btn-danger reject-call" onclick="VideoCallManager.rejectCall()">Reject</button>
+            <button class="btn btn-success accept-call" onclick="VideoCallManager.acceptCall()">Accept</button>
         </div>
     </div>
 </div>
-<!-- 视频通话请求弹窗 -->
-<div id="videoCallRequest" class="video-call-request" style="display: none;">
-    <div class="video-call-avatar">👤</div>
-    <h3>视频通话请求</h3>
-    <p>对方请求与您进行视频通话</p>
-    <div class="video-call-request-buttons">
-        <button class="reject-call" onclick="VideoCallManager.rejectCall()">拒绝</button>
-        <button class="accept-call" onclick="VideoCallManager.acceptCall()">接受</button>
-    </div>
-</div>
 
-<!-- 视频通话界面 -->
-<div id="videoCallContainer" class="video-call-container" style="display: none;">
+<div id="videoCallContainer" class="video-call-container-main" style="display: none;">
     <div class="video-streams">
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" autoplay playsinline muted></video>
     </div>
     <div class="video-call-controls">
-        <button class="video-call-button toggle-camera" id="toggleCameraBtn" onclick="VideoCallManager.toggleCamera()">
-            📹
-        </button>
-        <button class="video-call-button mute-audio" id="toggleAudioBtn" onclick="VideoCallManager.toggleAudio()">
-            🎤
-        </button>
-        <button class="video-call-button end-call" onclick="VideoCallManager.endCall()">
-            📞
-        </button>
-        <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">
-            🔊
-        </button>
+        <button class="video-call-button toggle-camera" id="toggleCameraBtn" onclick="VideoCallManager.toggleCamera()">📹</button>
+        <button class="video-call-button mute-audio" id="toggleAudioBtn" onclick="VideoCallManager.toggleAudio()">🎤</button>
+        <button class="video-call-button end-call" onclick="VideoCallManager.endCall()">📞</button>
+        <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">🔊</button>
     </div>
 </div>
-</body>
+
+<!-- Main Menu / Settings Modal -->
+<div id="mainMenuModal" class="modal-like" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Menu & Settings</h2>
+            <button class="icon-btn close-modal-btn" data-modal-id="mainMenuModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="settings-section">
+                <h3>Your User ID</h3>
+                <div class="user-id-display">
+                    <span id="modalUserIdValue">Generating...</span>
+                    <button id="modalCopyIdBtn" class="btn btn-secondary">Copy ID</button>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>Network Status</h3>
+                <div id="modalNetworkInfo">Detecting...</div>
+                <div class="connection-quality">
+                    Quality: <div class="quality-indicator" id="modalQualityIndicator"></div> <span id="modalQualityText">N/A</span>
+                </div>
+                <button id="checkNetworkBtnModal" class="btn btn-secondary">Re-check Network</button>
+            </div>
+            <div class="settings-section">
+                <h3>Manual Connection (Advanced)</h3>
+                <p>For connecting if signaling server fails or for direct peer connection.</p>
+                <div class="manual-connect-step">
+                    <button onclick="ConnectionManager.createOffer()" id="modalCreateOfferBtn" class="btn">1. Create Offer</button>
+                </div>
+                <div class="manual-connect-step">
+                    <textarea id="modalSdpText" placeholder="Paste peer's connection info here..."></textarea>
+                    <button onclick="UIManager.copySdpTextFromModal()" class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
+                </div>
+                <div class="manual-connect-step">
+                    <button onclick="ConnectionManager.createAnswer()" id="modalCreateAnswerBtn" class="btn">2. Create Answer (after pasting offer)</button>
+                </div>
+                <div class="manual-connect-step">
+                    <button onclick="ConnectionManager.handleAnswer()" id="modalHandleAnswerBtn" class="btn">3. Accept Answer (after pasting answer)</button>
+                </div>
+            </div>
+            <div class="settings-section">
+                <h3>Danger Zone</h3>
+                <button id="modalResetAllConnectionsBtn" class="btn btn-danger">Reset All Connections</button>
+                <button id="modalClearContactsBtn" class="btn btn-danger">Clear All Contacts</button>
+                <button id="modalClearAllChatsBtn" class="btn btn-danger">Clear All Chat History</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Chat/Group Modal -->
+<div id="newContactGroupModal" class="modal-like" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>New Chat / Group</h2>
+            <button class="icon-btn close-modal-btn" data-modal-id="newContactGroupModal">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="settings-section">
+                <h3>Add New Contact</h3>
+                <input type="text" id="newPeerIdInput" placeholder="Enter Peer ID">
+                <input type="text" id="newPeerNameInput" placeholder="Enter Peer Nickname (Optional)">
+                <button id="confirmNewContactBtn" class="btn btn-primary">Add Contact</button>
+            </div>
+            <hr>
+            <div class="settings-section">
+                <h3>Create New Group</h3>
+                <input type="text" id="newGroupNameInput" placeholder="Enter Group Name">
+                <button id="confirmNewGroupBtnModal" class="btn btn-primary">Create Group</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script src="js/Config.js"></script>
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>
@@ -240,4 +236,5 @@
 <script src="js/UserManager.js"></script>
 <script src="js/GroupManager.js"></script>
 <script src="js/AppInitializer.js"></script>
+</body>
 </html>

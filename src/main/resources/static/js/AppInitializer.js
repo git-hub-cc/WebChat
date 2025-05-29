@@ -1,303 +1,230 @@
 const AppInitializer = {
 
     init: async function () {
-        // 检查浏览器兼容性
+        Utils.setLogLevelFromConfig(); // Set log level from Config first
         if (!UIManager.checkWebRTCSupport()) return;
 
         try {
-            // 初始化IndexedDB
             await DBManager.init();
             Utils.log('数据库初始化成功', Utils.logLevels.INFO);
 
-            // 初始化用户管理
             await UserManager.init();
-
-            // 初始化聊天管理
             await ChatManager.init();
+            await GroupManager.init(); // Init GroupManager after UserManager and ChatManager
 
-            // 检查网络状态
-            this.checkNetworkType();
-
-            // 添加网络状态监听
+            await this.refreshNetworkStatusUI(); // Initial comprehensive network status check
             this.startNetworkMonitoring();
 
-            // 初始化语音录制按钮（但不申请权限）
             MediaManager.initVoiceRecording();
-
-            // 初始化视频通话按钮（但不申请权限）
             VideoCallManager.init();
 
-            // 添加按钮事件处理程序
             this.setupEventListeners();
+            this.initUIMode(); // Initialize UI mode for mobile/desktop
 
-            // 初始化移动端UI
-            this.initMobileUI();
-
-            // 初始化群聊管理
-            await GroupManager.init();
-
-            ConnectionManager.initialize();
+            ConnectionManager.initialize(); // This will attempt WebSocket connection
 
             Utils.log('应用已初始化', Utils.logLevels.INFO);
         } catch (error) {
             Utils.log(`应用初始化失败: ${error}`, Utils.logLevels.ERROR);
+            UIManager.showNotification('应用初始化失败，部分功能可能无法使用.', 'error');
 
-            // 回退到localStorage模式
-            Utils.log('回退到localStorage存储模式', Utils.logLevels.WARN);
-
-            // 初始化用户管理
-            UserManager.userId = Utils.generateId();
-            document.getElementById('userIdValue').textContent = UserManager.userId;
-
-            // 加载联系人
-            UserManager.loadContactsFromLocalStorage();
-
-            // 初始化聊天管理
-            ChatManager.loadChatsFromLocalStorage();
-
-            // 其他初始化步骤
-            this.checkNetworkType();
+            // Fallback for core functionalities if DB fails
+            if (!UserManager.userId) { // Ensure UserManager fallback if its init failed before DB
+                UserManager.userId = Utils.generateId(8);
+                document.getElementById('modalUserIdValue').textContent = UserManager.userId;
+            }
+            await this.refreshNetworkStatusUI();
             this.startNetworkMonitoring();
             MediaManager.initVoiceRecording();
             VideoCallManager.init();
             this.setupEventListeners();
-            this.initMobileUI();
-
-            // 加载群组
-            GroupManager.loadGroupsFromLocalStorage();
-
-            Utils.log('应用已使用localStorage模式初始化', Utils.logLevels.INFO);
+            this.initUIMode();
         }
+        // Remove loading overlay after a slight delay to ensure WebSocket status is updated
+        // The observer logic for connectionStatusText is better.
     },
 
-    // 初始化移动端UI
-    initMobileUI: function() {
-        // 添加返回设置按钮事件
-        const backButton = document.getElementById('backToSettings');
-        if (backButton) {
-            backButton.addEventListener('click', function() {
-                document.querySelector('.container').classList.remove('connected-mode');
-            });
-        }
-
-        // 响应屏幕尺寸变化
-        window.addEventListener('resize', function() {
-            const container = document.querySelector('.container');
-            const isConnected = document.getElementById('connectionStatus').classList.contains('connected');
-            const sidebar = document.querySelector('.sidebar');
-
-            // 如果是移动端且已连接，保持聊天界面显示
-            if (window.innerWidth <= 768 && isConnected && ChatManager.currentChatId) {
-                // 显示进入聊天按钮
-                if (sidebar) sidebar.classList.add('show-back-btn');
-            } else if (window.innerWidth > 768) {
-                // 在大屏幕上，移除连接模式类，显示两个面板
-                container.classList.remove('connected-mode');
-            }
-        });
+    initUIMode: function() {
+        UIManager.updateResponsiveUI(); // Initial check
+        // **FIXED: Bind the UIManager context to the updateResponsiveUI function**
+        window.addEventListener('resize', UIManager.updateResponsiveUI.bind(UIManager));
     },
 
-    // 检查网络状态
-    checkNetworkType: async function () {
-        const networkInfo = document.getElementById('networkInfo');
-        networkInfo.innerHTML = '<span class="loading-spinner"></span> 正在检测网络...';
-
+    // New function to consolidate network status updates for the UI
+    refreshNetworkStatusUI: async function() {
         try {
             const networkType = await Utils.checkNetworkType();
-
-            if (networkType) {
-                let networkHtml = `
-                    网络支持:<br>
-                    IPv4: ${networkType.ipv4 ? '✓' : '✗'}<br>
-                    IPv6: ${networkType.ipv6 ? '✓' : '✗'}<br>
-                    UDP: ${networkType.udp ? '✓' : '✗'}<br>
-                    TCP: ${networkType.tcp ? '✓' : '✗'}<br>
-                    中继: ${networkType.relay ? '可用' : '未检测到'}<br>
-                    候选数: ${networkType.count}
-                `;
-
-                // 根据网络状况调整配置
-                if (!networkType.udp && networkType.tcp) {
-                    Config.peerConnectionConfig.iceTransportPolicy = 'relay';
-                    networkHtml += '<br><b>已切换到中继优先模式</b>';
-                }
-
-                networkInfo.innerHTML = networkHtml;
-
-                const qualityIndicator = document.getElementById('qualityIndicator');
-                if (qualityIndicator) {
-                    if (networkType.udp) {
-                        qualityIndicator.className = 'quality-indicator quality-good';
-                        document.getElementById('qualityText').textContent = '网络良好';
-                    } else if (networkType.tcp) {
-                        qualityIndicator.className = 'quality-indicator quality-medium';
-                        document.getElementById('qualityText').textContent = '网络受限';
-                    } else {
-                        qualityIndicator.className = 'quality-indicator quality-poor';
-                        document.getElementById('qualityText').textContent = '网络受阻';
-                    }
-                }
-            } else {
-                networkInfo.innerHTML = '网络检测失败';
-            }
+            const wsStatus = ConnectionManager.isWebSocketConnected; // Get current WS status
+            UIManager.updateNetworkInfoDisplay(networkType, wsStatus);
         } catch (error) {
-            networkInfo.innerHTML = '网络检测失败: ' + error.message;
+            // Error from Utils.checkNetworkType
+            Utils.log(`Error in refreshNetworkStatusUI during Utils.checkNetworkType: ${error}`, Utils.logLevels.ERROR);
+            UIManager.updateNetworkInfoDisplay({ error: "WebRTC check failed" }, ConnectionManager.isWebSocketConnected);
         }
     },
 
-    // 监听网络状态变化
+    // Deprecated direct call to UIManager from here, now uses refreshNetworkStatusUI
+    checkNetworkType: async function () {
+        // This function is kept if other parts of the app rely on it for just WebRTC check,
+        // but for UI updates, refreshNetworkStatusUI is preferred.
+        // For now, it effectively does what refreshNetworkStatusUI does for the modal.
+        await this.refreshNetworkStatusUI();
+    },
+
     startNetworkMonitoring: function () {
         window.addEventListener('online', this.handleNetworkChange.bind(this));
         window.addEventListener('offline', this.handleNetworkChange.bind(this));
     },
 
-    // 处理网络变化
-    handleNetworkChange: function () {
+    handleNetworkChange: async function () { // Made async
         if (navigator.onLine) {
-            UIManager.updateStatus('网络已恢复，尝试重新连接...');
-
-            // 尝试重新连接所有活跃的连接
-            for (const peerId in ConnectionManager.connections) {
-                const conn = ConnectionManager.connections[peerId];
-                if (conn && conn.peerConnection &&
-                    conn.peerConnection.iceConnectionState !== 'connected') {
-                    ConnectionManager.restartIce(peerId);
-                }
-            }
+            UIManager.updateConnectionStatusIndicator('Network reconnected. Attempting to restore connections...');
+            ConnectionManager.initialize(); // Re-initialize WebSocket and connections
         } else {
-            UIManager.updateStatus('网络已断开');
+            UIManager.updateConnectionStatusIndicator('Network disconnected.');
         }
+        await this.refreshNetworkStatusUI(); // Refresh full status display
     },
 
-    // 设置事件监听
     setupEventListeners: function () {
-        // 消息输入框回车发送
         document.getElementById('messageInput').addEventListener('keydown', (e) => {
-            // 如果是 Ctrl+Enter 组合键，则发送消息
-            if (e.key === 'Enter' && e.ctrlKey) {
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) { // Send on Enter, Shift+Enter or Ctrl+Enter for newline
                 e.preventDefault();
                 MessageManager.sendMessage();
             }
-            // 仅按回车键时，允许换行
-            else if (e.key === 'Enter' && !e.ctrlKey) {
-                // 不阻止默认行为，允许输入换行符
-            }
         });
 
-        // 添加断开连接事件处理
-        EventEmitter.on('connectionDisconnected', function(peerId) {
-            // 如果是当前聊天，更新UI
+        EventEmitter.on('connectionDisconnected', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
-                // 禁用视频通话按钮
-                document.getElementById('videoCallButton').disabled = true;
-                // 禁用音频通话按钮
-                document.getElementById('audioCallButton').disabled = true;
-
-                // 移动端：断开连接时切换回设置界面
-                if (window.innerWidth <= 768) {
-                    document.querySelector('.container').classList.remove('connected-mode');
-                }
+                UIManager.setCallButtonsState(false);
+                // Optionally, if not a silent disconnect, update header.
+                // UIManager.updateChatHeaderStatus('Disconnected'); // This might be too aggressive for brief disconnections.
             }
+            UIManager.updateChatListItemStatus(peerId, false);
         });
 
-        EventEmitter.on('connectionEstablished', function(peerId) {
-            // 如果是当前聊天，更新UI
+        EventEmitter.on('connectionEstablished', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
-                // 启用视频通话按钮
-                document.getElementById('videoCallButton').disabled = false;
-                document.getElementById('videoCallButton').onclick = () => VideoCallManager.initiateCall(peerId);
-
-                // 启用音频通话按钮
-                document.getElementById('audioCallButton').disabled = false;
-                document.getElementById('audioCallButton').onclick = () => VideoCallManager.initiateAudioCall(peerId);
+                UIManager.setCallButtonsState(true, peerId);
+                // UIManager.updateChatHeaderStatus('Connected'); // Already handled by DC onopen
             }
+            UIManager.updateChatListItemStatus(peerId, true);
         });
 
-        EventEmitter.on('connectionFailed', function(peerId) {
-            // 如果是当前聊天，更新UI
+        EventEmitter.on('connectionFailed', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
-                // 禁用视频通话按钮
-                document.getElementById('videoCallButton').disabled = true;
-
-                // 移动端：连接失败时切换回设置界面
-                if (window.innerWidth <= 768) {
-                    document.querySelector('.container').classList.remove('connected-mode');
-                }
+                UIManager.setCallButtonsState(false);
+                // UIManager.updateChatHeaderStatus('Connection Failed');
             }
+            UIManager.updateChatListItemStatus(peerId, false);
         });
 
-        // 语音录制按钮事件
-        const voiceButton = document.getElementById('voiceButton');
+        // Event listener for WebSocket status changes
+        EventEmitter.on('websocketStatusUpdate', async () => {
+            Utils.log('WebSocket status updated event received, refreshing network UI.', Utils.logLevels.DEBUG);
+            await this.refreshNetworkStatusUI();
+        });
 
-        // 检测是否为移动设备
+        const voiceButton = document.getElementById('voiceButtonMain');
         if ('ontouchstart' in window) {
-            // 移动设备使用触摸事件
-            voiceButton.addEventListener('touchstart', function (e) {
-                e.preventDefault();
-                MediaManager.startRecording();
-            });
-
-            voiceButton.addEventListener('touchend', function (e) {
-                e.preventDefault();
-                MediaManager.stopRecording();
-            });
+            voiceButton.addEventListener('touchstart', (e) => { e.preventDefault(); MediaManager.startRecording(); });
+            voiceButton.addEventListener('touchend', (e) => { e.preventDefault(); MediaManager.stopRecording(); });
         } else {
-            // 桌面设备使用鼠标事件
             voiceButton.addEventListener('mousedown', MediaManager.startRecording.bind(MediaManager));
             voiceButton.addEventListener('mouseup', MediaManager.stopRecording.bind(MediaManager));
-            voiceButton.addEventListener('mouseleave', MediaManager.stopRecording.bind(MediaManager));
+            voiceButton.addEventListener('mouseleave', () => { // Stop if mouse leaves button while pressed
+                if (MediaManager.mediaRecorder && MediaManager.mediaRecorder.state === 'recording') {
+                    MediaManager.stopRecording();
+                }
+            });
         }
 
-        // 添加全局错误处理
+        // Main Menu Modal
+        document.getElementById('mainMenuBtn').addEventListener('click', () => UIManager.toggleModal('mainMenuModal', true));
+        document.querySelector('.close-modal-btn[data-modal-id="mainMenuModal"]').addEventListener('click', () => UIManager.toggleModal('mainMenuModal', false));
+        document.getElementById('modalCopyIdBtn').addEventListener('click', () => UIManager.copyUserIdFromModal());
+        document.getElementById('checkNetworkBtnModal').addEventListener('click', async () => await this.refreshNetworkStatusUI());
+
+
+        // Manual Connection Buttons in Modal
+        document.getElementById('modalCreateOfferBtn').addEventListener('click', () => ConnectionManager.createOffer(null, { isSilent: false, isVideoCall: false, isAudioOnly: false }));
+        document.getElementById('modalResetAllConnectionsBtn').addEventListener('click', () => ConnectionManager.resetAllConnections());
+        document.getElementById('modalClearContactsBtn').addEventListener('click', () => UserManager.clearAllContacts());
+        document.getElementById('modalClearAllChatsBtn').addEventListener('click', () => ChatManager.clearAllChats());
+
+
+        // New Chat/Group FAB and Modal
+        document.getElementById('newChatFab').addEventListener('click', () => UIManager.toggleModal('newContactGroupModal', true));
+        document.querySelector('.close-modal-btn[data-modal-id="newContactGroupModal"]').addEventListener('click', () => UIManager.toggleModal('newContactGroupModal', false));
+        document.getElementById('confirmNewContactBtn').addEventListener('click', UIManager.handleAddNewContact);
+        document.getElementById('confirmNewGroupBtnModal').addEventListener('click', UIManager.handleCreateNewGroup);
+
+        // Chat Area Header Action Buttons
+        document.getElementById('videoCallButtonMain').onclick = () => VideoCallManager.initiateCall(ChatManager.currentChatId);
+        document.getElementById('audioCallButtonMain').onclick = () => VideoCallManager.initiateAudioCall(ChatManager.currentChatId);
+        document.getElementById('chatDetailsBtnMain').addEventListener('click', () => UIManager.toggleDetailsPanel(true));
+
+        // Details Panel
+        document.getElementById('closeDetailsBtnMain').addEventListener('click', () => UIManager.toggleDetailsPanel(false));
+        document.getElementById('addMemberBtnDetails').addEventListener('click', UIManager.handleAddMemberToGroupDetails);
+
+        // Sidebar Tabs
+        document.getElementById('tabAllChats').addEventListener('click', () => ChatManager.renderChatList('all'));
+        document.getElementById('tabContacts').addEventListener('click', () => UserManager.renderContactListForSidebar());
+        document.getElementById('tabGroups').addEventListener('click', () => GroupManager.renderGroupListForSidebar());
+
+        // Search
+        document.getElementById('chatSearchInput').addEventListener('input', (e) => UIManager.filterChatList(e.target.value));
+
+        // Send and Attach buttons
+        document.getElementById('sendButtonMain').addEventListener('click', MessageManager.sendMessage);
+        document.getElementById('attachBtnMain').addEventListener('click', () => document.getElementById('fileInput').click());
+
+        // Back to list button (mobile)
+        document.getElementById('backToListBtn').addEventListener('click', () => UIManager.showChatListArea());
+
         window.addEventListener('error', (event) => {
-            Utils.log(`应用错误: ${event.message}`, Utils.logLevels.ERROR);
+            Utils.log(`应用错误: ${event.message} at ${event.filename}:${event.lineno}`, Utils.logLevels.ERROR);
+            UIManager.showNotification('An application error occurred. Check console for details.', 'error');
         });
 
-        // 添加断开连接前的提示
+        window.addEventListener('unhandledrejection', function(event) {
+            Utils.log(`未处理的Promise拒绝: ${event.reason}`, Utils.logLevels.ERROR);
+            UIManager.showNotification('An unhandled promise rejection occurred.', 'error');
+        });
+
         window.addEventListener('beforeunload', () => {
-            // 释放语音录制资源
             MediaManager.releaseAudioResources();
-
-            // 释放视频通话资源
             VideoCallManager.releaseMediaResources();
-
-            // 关闭所有连接
             for (const peerId in ConnectionManager.connections) {
-                ConnectionManager.close(peerId);
+                ConnectionManager.close(peerId); // Close with notification if possible
             }
         });
 
-
-        // 添加重置按钮事件
-        document.getElementById('resetAllBtn').addEventListener('click', () => {
-            UIManager.resetConnectionControls();
-        });
-    }
-
-};
-const connectionStatus = document.getElementById('connectionStatus');
-const loadingOverlay = document.getElementById('loadingOverlay');
-
-// 创建一个观察器来监视connectionStatus元素的内容变化
-const observer = new MutationObserver(function(mutations) {
-    mutations.forEach(function(mutation) {
-        if (mutation.type === 'childList') {
-            // 检查连接状态是否变为"用户注册成功"
-            if (connectionStatus.textContent !== '未连接' && connectionStatus.textContent !== '信令服务器连接断开') {
-                // 隐藏加载蒙版
-                loadingOverlay.style.display = 'none';
-                console.log('用户注册成功，移除加载蒙版');
-            }
+        // Observer for loading overlay
+        const connectionStatusTextEl = document.getElementById('connectionStatusText');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (connectionStatusTextEl && loadingOverlay) {
+            const observer = new MutationObserver(() => {
+                const statusText = connectionStatusTextEl.textContent.toLowerCase();
+                if (statusText.includes('user registration successful') || statusText.includes('signaling server connected')) {
+                    // Wait a bit longer for auto-connections to start potentially
+                    setTimeout(() => {
+                        if (loadingOverlay.style.display !== 'none') { // Check if not already hidden by another condition
+                            loadingOverlay.style.display = 'none';
+                        }
+                    }, 500); // Delay hiding slightly
+                    // Do not disconnect observer immediately, registration success might be followed by disconnection quickly.
+                    // Observer will be naturally inactive if element is hidden.
+                    // Reconsider if this causes issues. For now, let it observe.
+                } else if (statusText.includes('failed') || statusText.includes('error') || statusText.includes('disconnected')) {
+                    // Keep loading overlay or show an error message within it if critical failure prevents app use.
+                    // For now, general errors don't re-show overlay unless they are about initial connection.
+                }
+            });
+            observer.observe(connectionStatusTextEl, { childList: true, characterData: true, subtree: true });
         }
-    });
-});
+    }
+};
 
-// 配置观察器
-const config = { childList: true, subtree: true };
-
-// 开始观察connectionStatus元素
-observer.observe(connectionStatus, config);
-
-
-// 页面加载完成后初始化
 window.addEventListener('load', AppInitializer.init.bind(AppInitializer));

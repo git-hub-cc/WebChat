@@ -1,35 +1,46 @@
 const EventEmitter = {
     events: {},
 
-    // 注册事件
     on: function (event, callback) {
         if (!this.events[event]) {
-            this.events[event] = [];
+            this.events[event] = new Set();
         }
-        this.events[event].push(callback);
+        this.events[event].add(callback);
+        Utils.log(`Event listener added for: ${event}`, Utils.logLevels.DEBUG);
     },
 
-    // 触发事件
     emit: function (event, ...args) {
         if (this.events[event]) {
+            Utils.log(`Emitting event: ${event} with args: ${JSON.stringify(args)}`, Utils.logLevels.DEBUG);
             this.events[event].forEach(callback => {
                 try {
                     callback(...args);
                 } catch (e) {
-                    Utils.log(`事件处理发生错误: ${e.message}`, Utils.logLevels.ERROR);
+                    Utils.log(`Error in event listener for ${event}: ${e.message}\n${e.stack}`, Utils.logLevels.ERROR);
                 }
             });
+        } else {
+            // Utils.log(`No listeners for event: ${event}`, Utils.logLevels.DEBUG);
         }
     },
 
-    // 移除事件
     off: function (event, callback) {
         if (this.events[event]) {
             if (callback) {
-                this.events[event] = this.events[event].filter(cb => cb !== callback);
+                this.events[event].delete(callback);
+                Utils.log(`Specific event listener removed for: ${event}`, Utils.logLevels.DEBUG);
             } else {
                 delete this.events[event];
+                Utils.log(`All event listeners removed for: ${event}`, Utils.logLevels.DEBUG);
             }
         }
+    },
+
+    once: function(event, callback) {
+        const onceCallback = (...args) => {
+            this.off(event, onceCallback);
+            callback(...args);
+        };
+        this.on(event, onceCallback);
     }
 };
