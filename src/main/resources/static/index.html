@@ -143,6 +143,7 @@
     <div class="video-call-controls">
         <button class="video-call-button toggle-camera" id="toggleCameraBtn" onclick="VideoCallManager.toggleCamera()">📹</button>
         <button class="video-call-button mute-audio" id="toggleAudioBtn" onclick="VideoCallManager.toggleAudio()">🎤</button>
+        <button class="video-call-button toggle-pip" id="togglePipBtn" title="Minimize Video">🖼️</button> <!-- ADD THIS LINE -->
         <button class="video-call-button end-call" onclick="VideoCallManager.endCall()">📞</button>
         <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">🔊</button>
     </div>
@@ -188,7 +189,7 @@
                     <button onclick="ConnectionManager.createOffer()" id="modalCreateOfferBtn" class="btn">1. Create Offer</button>
                 </div>
                 <div class="manual-connect-step">
-                    <textarea id="modalSdpText" placeholder="Paste peer's connection info here..."></textarea>
+                    <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="Paste peer's connection info here..."></textarea>
                     <button onclick="UIManager.copySdpTextFromModal()" class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
                 </div>
                 <div class="manual-connect-step">

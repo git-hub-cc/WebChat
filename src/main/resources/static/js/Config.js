@@ -2,7 +2,6 @@ const Config = {
     // WebRTC PeerConnection Configuration
     peerConnectionConfig: {
         iceServers: [
-            // ---- Your Essential TURN Server ----
             {
                 urls: [
                     "turn:175.178.216.24:3478?transport=udp",
@@ -11,11 +10,14 @@ const Config = {
                 username: "test",
                 credential: "123456"
             },
-            // ---- Priority STUN for China Region ----
-            { urls: 'stun:stun.qq.com:3478' },
-            { urls: 'stun:stun.miwifi.com:3478' }, // Already included from your long list, moved up
-            // ---- Extensive list of other public STUN servers as further fallbacks ----
-            { urls: 'stun:23.21.150.121:3478' },
+            { urls: 'stun:stun.hoiio.com:3478' },
+            { urls: 'stun:stun.siplogin.de:3478' },
+            { urls: 'stun:stun.zadarma.com:3478' },
+            { urls: 'stun:stun.solcon.nl:3478' },
+            { urls: 'stun:stun.sonetel.net:3478' },
+            { urls: 'stun:stun.solnet.ch:3478' },
+            { urls: 'stun:stun.freeswitch.org:3478' },
+            { urls: 'stun:stun.sonetel.com:3478' }
         ],
         iceTransportPolicy: 'all',
         bundlePolicy: 'max-bundle',
@@ -46,7 +48,7 @@ const Config = {
         messageRenderBatchSize: 30,
         typingIndicatorTimeout: 3000
     },
-    logLevel: 'DEBUG',
+    logLevel: 'ERROR',
 };
 
 // Apply log level from config

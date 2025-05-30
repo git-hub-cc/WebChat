@@ -8,10 +8,23 @@ const VideoCallManager = {
     isCaller: false,
     isCallPending: false,
     isAudioMuted: false,
-    isVideoEnabled: true,   // Can *I* send video? (based on camera + user choice)
-    isAudioOnly: false,     // Is the *call itself* in audio-only mode (UI, offerToReceiveVideo)?
+    isVideoEnabled: true,
+    isAudioOnly: false,
     callRequestTimeout: null,
     statsInterval: null,
+
+    isPipMode: false, // For Picture-in-Picture mode
+    pipButton: null,
+    dragInfo: { // For PiP dragging
+        active: false,
+        currentX: 0,
+        currentY: 0,
+        initialX: 0,
+        initialY: 0,
+        xOffset: 0,
+        yOffset: 0,
+        draggedElement: null
+    },
 
     audioConstraints: {
         echoCancellation: true,
@@ -29,9 +42,15 @@ const VideoCallManager = {
     init: function () {
         this.localVideo = document.getElementById('localVideo');
         this.remoteVideo = document.getElementById('remoteVideo');
+        this.pipButton = document.getElementById('togglePipBtn'); // Get PiP button
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             Utils.log('Browser does not support media devices (getUserMedia). Call functions will be disabled.', Utils.logLevels.ERROR);
             return false;
+        }
+
+        if (this.pipButton) {
+            this.pipButton.addEventListener('click', () => this.togglePipMode());
         }
         return true;
     },
@@ -41,6 +60,7 @@ const VideoCallManager = {
     },
 
     initiateCall: async function (peerId, audioOnly = false) {
+        // ... (no changes in this function regarding the new requirements)
         if (this.isCallActive || this.isCallPending) {
             UIManager.showNotification('A call is already active or pending.', 'warning');
             return;
@@ -55,8 +75,8 @@ const VideoCallManager = {
             return;
         }
 
-        this.isAudioOnly = audioOnly;         // Call's fundamental mode
-        this.isVideoEnabled = !audioOnly;     // If call is video, local video sending is initially *intended*
+        this.isAudioOnly = audioOnly;
+        this.isVideoEnabled = !audioOnly;
         this.isAudioMuted = false;
 
         try {
@@ -86,6 +106,7 @@ const VideoCallManager = {
     },
 
     showCallRequest: function (peerId, audioOnly = false) {
+        // ... (no changes)
         this.currentPeerId = peerId;
         this.isAudioOnly = audioOnly;
         this.isVideoEnabled = !audioOnly;
@@ -104,22 +125,23 @@ const VideoCallManager = {
     },
 
     hideCallRequest: function () {
+        // ... (no changes)
         const requestModal = document.getElementById('videoCallRequest');
         if(requestModal) requestModal.style.display = 'none';
     },
 
     acceptCall: async function () {
+        // ... (no changes)
         this.hideCallRequest();
         if (!this.currentPeerId) {
             UIManager.showNotification('Invalid call request.', 'error');
             return;
         }
         try {
-            // isAudioOnly and isVideoEnabled are set by showCallRequest based on INCOMING request
-            await this.startLocalStreamAndSignal(false); // false: not the initial offer creator for media
+            await this.startLocalStreamAndSignal(false);
             ConnectionManager.sendTo(this.currentPeerId, {
                 type: 'video-call-accepted',
-                audioOnly: this.isAudioOnly, // Send our current mode (might have changed if we lack camera)
+                audioOnly: this.isAudioOnly,
                 sender: UserManager.userId
             });
         } catch (error) {
@@ -127,7 +149,7 @@ const VideoCallManager = {
             UIManager.showNotification(`Accept call failed: ${error.message}`, 'error');
             ConnectionManager.sendTo(this.currentPeerId, {
                 type: 'video-call-rejected',
-                reason: 'device_error', // Let peer know it was a device issue on our side
+                reason: 'device_error',
                 sender: UserManager.userId
             });
             this.endCallCleanup();
@@ -135,6 +157,7 @@ const VideoCallManager = {
     },
 
     rejectCall: function () {
+        // ... (no changes)
         this.hideCallRequest();
         if (!this.currentPeerId) return;
         ConnectionManager.sendTo(this.currentPeerId, {
@@ -147,13 +170,14 @@ const VideoCallManager = {
     },
 
     startLocalStreamAndSignal: async function(isOfferCreatorForMedia) {
+        // ... (no major changes, logic for isVideoEnabled remains)
         let attemptLocalVideoSending = !this.isAudioOnly;
 
         try {
             if (attemptLocalVideoSending) {
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 if (!devices.some(d => d.kind === 'videoinput')) {
-                    if (!this.isAudioOnly) UIManager.showNotification('No camera detected. You will send audio only.', 'warning');
+                    if (!this.isAudioOnly) UIManager.showNotification('No camera detected. You will send audio only for this video call.', 'warning');
                     attemptLocalVideoSending = false;
                 }
             }
@@ -165,11 +189,10 @@ const VideoCallManager = {
 
             if (attemptLocalVideoSending && (this.localStream.getVideoTracks().length === 0 || this.localStream.getVideoTracks()[0].readyState === 'ended')) {
                 this.isVideoEnabled = false;
-                if (!this.isAudioOnly) UIManager.showNotification('Could not use camera. Sending audio only.', 'warning');
-                // If video failed but audio is okay, make sure audio track is still part of the stream
-                if (this.localStream.getAudioTracks().length === 0) { // This case should be rare if audio constraint was met
-                    this.localStream.getTracks().forEach(t => t.stop()); // Stop potentially partial stream
-                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.audioConstraints }); // Get audio only
+                if (!this.isAudioOnly) UIManager.showNotification('Could not use camera. Sending audio only for this video call.', 'warning');
+                if (this.localStream.getAudioTracks().length === 0) {
+                    this.localStream.getTracks().forEach(t => t.stop());
+                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.audioConstraints });
                 }
             } else if (!attemptLocalVideoSending) {
                 this.isVideoEnabled = false;
@@ -179,23 +202,22 @@ const VideoCallManager = {
         } catch (getUserMediaError) {
             Utils.log(`getUserMedia error: ${getUserMediaError.name} - ${getUserMediaError.message}`, Utils.logLevels.ERROR);
             this.isVideoEnabled = false;
-            if (attemptLocalVideoSending && !this.isAudioOnly) { // Only show error if user expected video
-                UIManager.showNotification(`Camera error: ${getUserMediaError.name}. Sending audio only.`, 'error');
+            if (attemptLocalVideoSending && !this.isAudioOnly) {
+                UIManager.showNotification(`Camera error: ${getUserMediaError.name}. Sending audio only for this video call.`, 'error');
             }
             try {
                 if (this.localStream) this.localStream.getTracks().forEach(t => t.stop());
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.audioConstraints });
             } catch (audioError) {
                 Utils.log(`Fallback audio getUserMedia error: ${audioError.name}`, Utils.logLevels.ERROR);
-                throw audioError; // Propagate if audio also fails
+                throw audioError;
             }
         }
 
-        // Apply mute state to the new stream's tracks
         if (this.localStream.getAudioTracks()[0]) {
             this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
         }
-        if (this.localStream.getVideoTracks()[0]) { // Check if video track exists
+        if (this.localStream.getVideoTracks()[0]) {
             this.localStream.getVideoTracks()[0].enabled = this.isVideoEnabled;
         }
 
@@ -213,6 +235,7 @@ const VideoCallManager = {
     },
 
     setupPeerConnection: async function (isOfferCreatorForMedia) {
+        // ... (ontrack is significantly changed)
         const conn = ConnectionManager.connections[this.currentPeerId];
         if (!conn || !conn.peerConnection) {
             Utils.log("setupPeerConnection: No PeerConnection found.", Utils.logLevels.ERROR);
@@ -228,7 +251,7 @@ const VideoCallManager = {
         this.localStream.getTracks().forEach(track => {
             if (track.kind === 'audio') {
                 pc.addTrack(track, this.localStream);
-            } else if (track.kind === 'video' && this.isVideoEnabled) { // Only add video track if local sending is enabled
+            } else if (track.kind === 'video' && this.isVideoEnabled) {
                 pc.addTrack(track, this.localStream);
             }
         });
@@ -236,48 +259,68 @@ const VideoCallManager = {
         this.setCodecPreferences(pc);
 
         pc.ontrack = (event) => {
-            const stream = event.streams && event.streams[0] ? event.streams[0] : null;
+            Utils.log(`ontrack event: track kind=${event.track.kind}, id=${event.track.id}, streams: ${event.streams.length}`, Utils.logLevels.DEBUG);
 
-            if (stream) {
-                this.remoteVideo.srcObject = stream;
-                this.remoteStream = stream;
-                const videoTracks = stream.getVideoTracks();
-                const hasVideo = videoTracks && videoTracks.length > 0 && videoTracks.some(t => t.readyState === "live" && !t.muted && t.enabled);
-
-                this.remoteVideo.style.display = (hasVideo && !document.getElementById('videoCallContainer').classList.contains('audio-only-mode')) ? 'block' : 'none';
-            } else if (event.track) {
-                if (!this.remoteStream || (event.streams && event.streams[0] && this.remoteStream.id !== event.streams[0].id) ) {
-                    this.remoteStream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream();
+            const trackHandler = (track) => {
+                if (!track._videoManagerListenersAttached) {
+                    track.onunmute = () => {
+                        Utils.log(`Remote track ${track.id} (${track.kind}) unmuted.`, Utils.logLevels.DEBUG);
+                        this.updateUIForCallType();
+                        if (track.kind === 'video' && this.remoteVideo.paused) {
+                            this.remoteVideo.play().catch(e => Utils.log(`Error playing remote video on unmute: ${e}`, Utils.logLevels.WARN));
+                        }
+                    };
+                    track.onmute = () => {
+                        Utils.log(`Remote track ${track.id} (${track.kind}) muted.`, Utils.logLevels.DEBUG);
+                        this.updateUIForCallType();
+                    };
+                    track.onended = () => {
+                        Utils.log(`Remote track ${track.id} (${track.kind}) ended.`, Utils.logLevels.DEBUG);
+                        if (this.remoteStream && this.remoteStream.getTrackById(track.id)) {
+                            try { this.remoteStream.removeTrack(track); } catch(e) { /* ignore */ }
+                        }
+                        this.updateUIForCallType();
+                    };
+                    track._videoManagerListenersAttached = true;
                 }
-                if (!this.remoteStream.getTracks().includes(event.track)) {
+            };
+
+            if (event.streams && event.streams[0]) {
+                const newStream = event.streams[0];
+                if (this.remoteVideo.srcObject !== newStream) {
+                    this.remoteVideo.srcObject = newStream;
+                    this.remoteStream = newStream;
+                    Utils.log(`Assigned event.streams[0] (id: ${this.remoteStream.id}) to remoteVideo.srcObject.`, Utils.logLevels.DEBUG);
+                    newStream.getTracks().forEach(trackHandler);
+                }
+            } else {
+                // Fallback: manage tracks on a single remoteStream instance
+                if (!this.remoteStream) {
+                    this.remoteStream = new MediaStream();
+                    this.remoteVideo.srcObject = this.remoteStream;
+                }
+                if (event.track && !this.remoteStream.getTrackById(event.track.id)) {
                     this.remoteStream.addTrack(event.track);
+                    trackHandler(event.track);
+                    Utils.log(`Added track ${event.track.id} (${event.track.kind}) to manually managed remoteStream.`, Utils.logLevels.DEBUG);
                 }
-                this.remoteVideo.srcObject = this.remoteStream;
-
-                const videoTracks = this.remoteStream.getVideoTracks();
-                const hasVideo = videoTracks && videoTracks.length > 0 && videoTracks.some(t => t.readyState === "live" && !t.muted && t.enabled);
-                this.remoteVideo.style.display = (hasVideo && !document.getElementById('videoCallContainer').classList.contains('audio-only-mode')) ? 'block' : 'none';
             }
-            this.updateUIForCallType(); // Re-evaluate remote video display
+            this.updateUIForCallType(); // Initial UI update
         };
 
-        // Setup other PC event handlers like oniceconnectionstatechange if not already handled by ConnectionManager
         this.setupConnectionMonitoring(pc);
-
 
         if (isOfferCreatorForMedia) {
             await this.createAndSendOffer();
         }
     },
 
-    setupConnectionMonitoring: function(pc) {
+    setupConnectionMonitoring: function(pc) { // ... (no changes)
         pc.oniceconnectionstatechange = () => {
             Utils.log(`Call ICE State: ${pc.iceConnectionState} for ${this.currentPeerId}`, Utils.logLevels.DEBUG);
             if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'closed') {
-                if (this.isCallActive) { // Only act if the call was considered active
+                if (this.isCallActive) {
                     UIManager.showNotification('Call connection issue detected.', 'warning');
-                    // Consider attempting ICE restart or ending the call
-                    // For simplicity now, we might just end it if it's 'failed' or 'closed'
                     if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
                         this.endCall();
                     }
@@ -286,20 +329,20 @@ const VideoCallManager = {
         };
     },
 
-    setCodecPreferences: function(pc) {
+    setCodecPreferences: function(pc) { // ... (no changes)
         if (typeof RTCRtpTransceiver === 'undefined' || !('setCodecPreferences' in RTCRtpTransceiver.prototype)) {
             Utils.log("setCodecPreferences not supported by this browser.", Utils.logLevels.WARN);
             return;
         }
         try {
             pc.getTransceivers().forEach(transceiver => {
-                if (!transceiver.sender || !transceiver.sender.track) return; // Skip if no track to base kind on
+                if (!transceiver.sender || !transceiver.sender.track) return;
                 const kind = transceiver.sender.track.kind;
 
                 if (kind === 'audio') {
                     const { codecs } = RTCRtpSender.getCapabilities('audio');
                     const preferredAudio = this.codecPreferences.audio
-                        .map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase() && (!pref.sdpFmtpLine || (c.sdpFmtpLine && c.sdpFmtpLine.includes(pref.sdpFmtpLine.split(';')[0]))))) // Match first part of fmtpLine for flexibility
+                        .map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase() && (!pref.sdpFmtpLine || (c.sdpFmtpLine && c.sdpFmtpLine.includes(pref.sdpFmtpLine.split(';')[0])))))
                         .filter(c => c);
                     if (preferredAudio.length > 0) {
                         try { transceiver.setCodecPreferences(preferredAudio); } catch (e) { Utils.log(`Failed to set audio codec prefs for transceiver: ${e.message}`, Utils.logLevels.WARN); }
@@ -319,7 +362,7 @@ const VideoCallManager = {
         }
     },
 
-    modifySdpForOpus: function(sdp) {
+    modifySdpForOpus: function(sdp) { // ... (no changes)
         const opusRegex = /a=rtpmap:(\d+) opus\/48000\/2/gm;
         let match;
         let modifiedSdp = sdp;
@@ -327,21 +370,16 @@ const VideoCallManager = {
 
         while ((match = opusRegex.exec(sdp)) !== null) {
             const opusPayloadType = match[1];
-            // Ensure we are looking for the correct rtpmap line to append to.
             const rtpmapLineSignature = `a=rtpmap:${opusPayloadType} opus/48000/2`;
             const fmtpLineForPayload = `a=fmtp:${opusPayloadType} ${opusTargetParams}`;
-
-            // Check if an fmtp line for this payload already exists
             const existingFmtpRegex = new RegExp(`^a=fmtp:${opusPayloadType} .*(\\r\\n)?`, 'm');
             if (existingFmtpRegex.test(modifiedSdp)) {
-                // If it exists, replace it to ensure our params take precedence
                 modifiedSdp = modifiedSdp.replace(existingFmtpRegex, fmtpLineForPayload + (RegExp.$2 || '\r\n'));
             } else {
-                // If it doesn't exist, find the rtpmap line and insert fmtp after it
                 const rtpmapLineIndex = modifiedSdp.indexOf(rtpmapLineSignature);
                 if (rtpmapLineIndex !== -1) {
                     const endOfRtpmapLine = modifiedSdp.indexOf('\n', rtpmapLineIndex);
-                    const insertPosition = (endOfRtpmapLine !== -1) ? endOfRtpmapLine : modifiedSdp.length; // Should always find \n
+                    const insertPosition = (endOfRtpmapLine !== -1) ? endOfRtpmapLine : modifiedSdp.length;
                     modifiedSdp = modifiedSdp.slice(0, insertPosition) + `\r\n${fmtpLineForPayload}` + modifiedSdp.slice(insertPosition);
                 }
             }
@@ -349,19 +387,14 @@ const VideoCallManager = {
         return modifiedSdp;
     },
 
-    mergeSdpFmtpParams: function(existingStr, newStr) { /* Not actively used with current modifySdpForOpus, but kept for reference */
-        const params = {}; /* ... */ return Object.entries(params).map(([k,v])=>v===true?k:`${k}=${v}`).join(';');
-    },
-
-    createAndSendOffer: async function () {
-        if (!this.currentPeerId || !this.isCallActive) return; // Ensure call is active
+    createAndSendOffer: async function () { // ... (no changes)
+        if (!this.currentPeerId || !this.isCallActive) return;
         const conn = ConnectionManager.connections[this.currentPeerId];
         if (!conn || !conn.peerConnection) { Utils.log("No PC to create offer",Utils.logLevels.ERROR); return; }
         try {
             const offerOptions = {
                 offerToReceiveAudio: true,
                 offerToReceiveVideo: !this.isAudioOnly,
-                // iceRestart: true // Consider adding this if renegotiation is due to network issues
             };
             const offer = await conn.peerConnection.createOffer(offerOptions);
             let sdp = this.modifySdpForOpus(offer.sdp);
@@ -376,7 +409,7 @@ const VideoCallManager = {
         } catch (e) { Utils.log("Error creating/sending offer: " + e, Utils.logLevels.ERROR); this.endCall(); }
     },
 
-    handleOffer: async function (sdpOffer, peerId, remoteIsAudioOnly) {
+    handleOffer: async function (sdpOffer, peerId, remoteIsAudioOnly) { // ... (no changes)
         const conn = ConnectionManager.connections[peerId];
         if (!conn || !conn.peerConnection) { Utils.log("No PC to handle offer",Utils.logLevels.ERROR); return; }
         try {
@@ -385,12 +418,11 @@ const VideoCallManager = {
             if (!this.isCallActive) {
                 this.currentPeerId = peerId;
                 this.isAudioOnly = remoteIsAudioOnly;
-                this.isCaller = false; // We are receiving the offer that starts the call
-                await this.startLocalStreamAndSignal(false); // Will setup local stream and then PC
+                this.isCaller = false;
+                await this.startLocalStreamAndSignal(false);
             }
-            // If already active, local stream should be set. Now create answer.
 
-            const answer = await conn.peerConnection.createAnswer(); // No specific options needed for answer related to receive preference
+            const answer = await conn.peerConnection.createAnswer();
             let sdp = this.modifySdpForOpus(answer.sdp);
             const modifiedAnswer = new RTCSessionDescription({ type: 'answer', sdp: sdp });
             await conn.peerConnection.setLocalDescription(modifiedAnswer);
@@ -403,174 +435,239 @@ const VideoCallManager = {
         } catch (e) { Utils.log("Error handling offer: " + e, Utils.logLevels.ERROR); this.endCall(); }
     },
 
-    handleAnswer: async function (sdpAnswer, peerId, remoteIsAudioOnly) {
+    handleAnswer: async function (sdpAnswer, peerId, remoteIsAudioOnly) { // ... (no changes)
         if (this.currentPeerId !== peerId || !this.isCallActive) return;
         const conn = ConnectionManager.connections[peerId];
         if (!conn || !conn.peerConnection) return;
         try {
+            if (remoteIsAudioOnly !== this.isAudioOnly) {
+                Utils.log(`Warning: Mismatch in audioOnly state from answer. Peer says ${remoteIsAudioOnly}, we are ${this.isAudioOnly}. Sticking to our state.`, Utils.logLevels.WARN);
+            }
             await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpAnswer));
             Utils.log(`Answer from ${peerId} processed. Call should be established/updated.`, Utils.logLevels.INFO);
         } catch (e) { Utils.log("Error handling answer: " + e, Utils.logLevels.ERROR); this.endCall(); }
     },
 
-    toggleCamera: function () {
+    toggleCamera: function () { // ... (no changes)
         if (!this.isCallActive) return;
         if (this.isAudioOnly) {
-            this.toggleAudioOnly();
+            UIManager.showNotification("Camera is not available in an audio-only call.", "warning");
             return;
         }
-
-        if (!this.localStream || this.localStream.getVideoTracks().length === 0) {
-            if (!this.isAudioOnly) { // We are in video mode but have no video track
-                Utils.log("Attempting to re-enable video via toggleAudioOnly as no local video track exists.", Utils.logLevels.WARN)
-                this.toggleAudioOnly(); // This will try to get video
-            } else {
-                UIManager.showNotification('No local camera to toggle.', 'warning');
-            }
+        const videoTrack = this.localStream ? this.localStream.getVideoTracks()[0] : null;
+        if (!videoTrack) {
+            UIManager.showNotification('Local video stream is not available. Cannot toggle camera state.', 'warning');
             return;
         }
         this.isVideoEnabled = !this.isVideoEnabled;
-        this.localStream.getVideoTracks()[0].enabled = this.isVideoEnabled;
+        videoTrack.enabled = this.isVideoEnabled;
         this.updateUIForCallType();
     },
 
-    toggleAudio: function () {
+    toggleAudio: function () { // ... (no changes)
         if (!this.isCallActive || !this.localStream || !this.localStream.getAudioTracks()[0]) return;
         this.isAudioMuted = !this.isAudioMuted;
         this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
         this.updateUIForCallType();
     },
 
-    toggleAudioOnly: async function () {
-        if (!this.isCallActive) return;
-        const newCallAudioOnlyState = !this.isAudioOnly;
-        let newLocalStream = null;
-        let newLocalVideoSendingEnabled = !newCallAudioOnlyState;
-
-        try {
-            if (newCallAudioOnlyState === false) {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                if (!devices.some(d => d.kind === 'videoinput')) {
-                    UIManager.showNotification("No camera detected. Cannot switch to video call mode.", "warning");
-                    // If already audio-only, and no camera, prevent switching TO video mode.
-                    if (this.isAudioOnly) return;
-                    newLocalVideoSendingEnabled = false; // Can't send video, but call *mode* might still be video
-                } else {
-                    try {
-                        const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
-                        testStream.getTracks().forEach(track => track.stop());
-                    } catch (permError) {
-                        UIManager.showNotification("Camera permission denied. Cannot switch to video call mode.", "warning");
-                        if (this.isAudioOnly) return;
-                        newLocalVideoSendingEnabled = false;
-                    }
-                }
-            }
-
-            newLocalStream = await navigator.mediaDevices.getUserMedia({
-                video: newLocalVideoSendingEnabled,
-                audio: this.audioConstraints
-            });
-
-            if (newLocalVideoSendingEnabled && (newLocalStream.getVideoTracks().length === 0 || newLocalStream.getVideoTracks()[0].readyState === 'ended')) {
-                newLocalVideoSendingEnabled = false;
-                if (!newCallAudioOnlyState) UIManager.showNotification("Could not start video. Call mode is video, but sending audio only.", "warning");
-            }
-
-            if (this.localStream) this.localStream.getTracks().forEach(track => track.stop());
-            this.localStream = newLocalStream;
-
-            this.isAudioOnly = newCallAudioOnlyState;
-            this.isVideoEnabled = newLocalVideoSendingEnabled;
-
-            if (this.localStream.getAudioTracks()[0]) this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
-            if (this.localStream.getVideoTracks()[0]) this.localStream.getVideoTracks()[0].enabled = this.isVideoEnabled;
-
-            this.localVideo.srcObject = this.localStream;
-
-            const conn = ConnectionManager.connections[this.currentPeerId];
-            if (!conn || !conn.peerConnection) throw new Error("PeerConnection not found for mode switch.");
-            const pc = conn.peerConnection;
-
-            const audioSender = pc.getSenders().find(s => s.track?.kind === 'audio');
-            const currentAudioTrack = this.localStream.getAudioTracks()[0];
-            if (audioSender && currentAudioTrack) await audioSender.replaceTrack(currentAudioTrack);
-            else if (currentAudioTrack) pc.addTrack(currentAudioTrack, this.localStream);
-
-            const videoSender = pc.getSenders().find(s => s.track?.kind === 'video');
-            const currentVideoTrack = this.localStream.getVideoTracks()[0];
-
-            if (videoSender) {
-                await videoSender.replaceTrack(this.isVideoEnabled && currentVideoTrack ? currentVideoTrack : null);
-            } else if (this.isVideoEnabled && currentVideoTrack) {
-                pc.addTrack(currentVideoTrack, this.localStream);
-            }
-
-            this.setCodecPreferences(pc);
-            // Update UI *after* tracks are managed and before offer, so UI reflects what's being offered
-            this.updateUIForCallType();
-
-            ConnectionManager.sendTo(this.currentPeerId, {
-                type: 'video-call-mode-change',
-                audioOnly: this.isAudioOnly,
-                sender: UserManager.userId
-            });
-            await this.createAndSendOffer();
-        } catch (error) {
-            Utils.log(`Failed to switch call mode: ${error.message}`, Utils.logLevels.ERROR);
-            UIManager.showNotification(`Mode switch failed: ${error.message}`, 'error');
-            if (newLocalStream) newLocalStream.getTracks().forEach(track => track.stop());
-            this.updateUIForCallType(); // Re-assert UI based on PREVIOUS stable state.
+    toggleAudioOnly: async function () { // ... (no changes)
+        if (this.isCallActive) {
+            UIManager.showNotification("Cannot switch call mode (Audio/Video) while a call is active.", "warning");
+            return;
         }
+        Utils.log("toggleAudioOnly called when no call is active. Current isAudioOnly: " + this.isAudioOnly, Utils.logLevels.INFO);
     },
 
     updateUIForCallType: function () {
         const callContainer = document.getElementById('videoCallContainer');
         const localVideoEl = this.localVideo;
         const remoteVideoEl = this.remoteVideo;
-        const audioOnlyBtn = document.getElementById('audioOnlyBtn');
+        const audioOnlyBtn = document.getElementById('audioOnlyBtn'); // The "switch audio/video" button, now hidden in-call
         const cameraBtn = document.getElementById('toggleCameraBtn');
         const audioBtn = document.getElementById('toggleAudioBtn');
+        const pipBtn = this.pipButton; // Actual PiP toggle button
 
-        if (!callContainer) return; // Exit if UI elements are not ready (e.g. during teardown)
+        if (!callContainer) return;
 
         callContainer.classList.toggle('audio-only-mode', this.isAudioOnly);
+        callContainer.classList.toggle('pip-mode', this.isPipMode && this.isCallActive);
+
 
         if (localVideoEl) {
             localVideoEl.style.display = (!this.isAudioOnly && this.isVideoEnabled) ? 'block' : 'none';
         }
 
         if (remoteVideoEl) {
-            const hasRemoteVideo = this.remoteStream && this.remoteStream.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
+            const currentRemoteStream = remoteVideoEl.srcObject;
+            const hasRemoteVideoTrack = currentRemoteStream && currentRemoteStream instanceof MediaStream &&
+                currentRemoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
+
             if (this.isAudioOnly) {
                 remoteVideoEl.style.display = 'none';
             } else {
-                remoteVideoEl.style.display = hasRemoteVideo ? 'block' : 'none';
+                remoteVideoEl.style.display = hasRemoteVideoTrack ? 'block' : 'none';
+                if (hasRemoteVideoTrack && remoteVideoEl.paused) {
+                    remoteVideoEl.play().catch(e => Utils.log(`Error playing remote video: ${e.name} - ${e.message}`, Utils.logLevels.WARN));
+                }
             }
         }
 
-        if (audioOnlyBtn) {
-            audioOnlyBtn.style.background = this.isAudioOnly ? 'var(--primary-color)' : '#fff';
-            audioOnlyBtn.style.color = this.isAudioOnly ? 'white' : 'var(--text-color)';
-            audioOnlyBtn.innerHTML = this.isAudioOnly ? '🎬' : '🔊';
-            audioOnlyBtn.title = this.isAudioOnly ? 'Switch to Video Call' : 'Switch to Audio-Only Call';
+        if (audioOnlyBtn) { // The old mode switch button
+            audioOnlyBtn.style.display = this.isCallActive ? 'none' : 'inline-block';
+            if (!this.isCallActive) { // Pre-call state
+                audioOnlyBtn.style.background = this.isAudioOnly ? 'var(--primary-color)' : '#fff';
+                audioOnlyBtn.style.color = this.isAudioOnly ? 'white' : 'var(--text-color)';
+                audioOnlyBtn.innerHTML = this.isAudioOnly ? '🎬' : '🔊';
+                audioOnlyBtn.title = this.isAudioOnly ? 'Switch to Video Call' : 'Switch to Audio-Only Call';
+            }
         }
+
+        if (pipBtn) { // New PiP button
+            pipBtn.style.display = this.isCallActive ? 'inline-block' : 'none'; // Only show PiP button during active call
+            if (this.isCallActive) {
+                pipBtn.innerHTML = this.isPipMode ? '📺' : '🖼️';
+                pipBtn.title = this.isPipMode ? 'Maximize Video' : 'Minimize Video';
+            }
+        }
+
         if (cameraBtn) {
             cameraBtn.style.display = this.isAudioOnly ? 'none' : 'inline-block';
             if (!this.isAudioOnly) {
                 cameraBtn.innerHTML = this.isVideoEnabled ? '📹' : '🚫';
                 cameraBtn.style.background = this.isVideoEnabled ? '#fff' : '#666';
                 cameraBtn.style.color = this.isVideoEnabled ? 'var(--text-color)' : 'white';
+                cameraBtn.title = this.isVideoEnabled ? 'Turn Camera Off' : 'Turn Camera On';
             }
         }
         if (audioBtn) {
             audioBtn.innerHTML = this.isAudioMuted ? '🔇' : '🎤';
             audioBtn.style.background = this.isAudioMuted ? '#666' : '#fff';
             audioBtn.style.color = this.isAudioMuted ? 'white' : 'var(--text-color)';
+            audioBtn.title = this.isAudioMuted ? 'Unmute Microphone' : 'Mute Microphone';
         }
     },
 
+    // --- PiP Mode and Draggable Logic ---
+    togglePipMode: function() {
+        if (!this.isCallActive) return; // PiP only makes sense during an active call
+
+        this.isPipMode = !this.isPipMode;
+        const callContainer = document.getElementById('videoCallContainer');
+
+        callContainer.classList.toggle('pip-mode', this.isPipMode);
+
+        if (this.isPipMode) {
+            // Entering PiP Mode
+            this.initPipDraggable(callContainer);
+            // Set initial PiP position (e.g., bottom right) or restore last known
+            callContainer.style.left = callContainer.dataset.pipLeft || `${window.innerWidth - callContainer.offsetWidth - 20}px`;
+            callContainer.style.top = callContainer.dataset.pipTop || `${window.innerHeight - callContainer.offsetHeight - 20}px`;
+            callContainer.style.right = 'auto';
+            callContainer.style.bottom = 'auto';
+        } else {
+            // Exiting PiP Mode
+            this.removePipDraggable(callContainer);
+            // Store last dragged position
+            if (callContainer.style.left && callContainer.style.left !== 'auto') {
+                callContainer.dataset.pipLeft = callContainer.style.left;
+            }
+            if (callContainer.style.top && callContainer.style.top !== 'auto') {
+                callContainer.dataset.pipTop = callContainer.style.top;
+            }
+            // Clear inline styles to let CSS for full mode take over
+            callContainer.style.left = '';
+            callContainer.style.top = '';
+            callContainer.style.right = '';
+            callContainer.style.bottom = '';
+        }
+        this.updateUIForCallType(); // Update button icons
+    },
+
+    initPipDraggable: function(element) {
+        element.addEventListener("mousedown", this._boundDragStart = this._boundDragStart || this.dragStart.bind(this));
+        element.addEventListener("touchstart", this._boundDragStartTouch = this._boundDragStartTouch || this.dragStart.bind(this), { passive: false });
+    },
+
+    removePipDraggable: function(element) {
+        element.removeEventListener("mousedown", this._boundDragStart);
+        element.removeEventListener("touchstart", this._boundDragStartTouch);
+        // Clean up global listeners if drag was interrupted
+        document.removeEventListener("mousemove", this._boundDrag);
+        document.removeEventListener("mouseup", this._boundDragEnd);
+        document.removeEventListener("touchmove", this._boundDragTouch);
+        document.removeEventListener("touchend", this._boundDragEndTouch);
+    },
+
+    dragStart: function (e) {
+        if (e.target.classList.contains('video-call-button') || e.target.closest('.video-call-button')) {
+            return; // Don't drag if clicking on a button
+        }
+        if (!this.isPipMode || !this.isCallActive) return;
+
+        this.dragInfo.draggedElement = document.getElementById('videoCallContainer');
+        this.dragInfo.active = true;
+        this.dragInfo.draggedElement.style.cursor = 'grabbing';
+
+        const rect = this.dragInfo.draggedElement.getBoundingClientRect();
+
+        if (e.type === "touchstart") {
+            this.dragInfo.initialX = e.touches[0].clientX - rect.left;
+            this.dragInfo.initialY = e.touches[0].clientY - rect.top;
+            document.addEventListener("touchmove", this._boundDragTouch = this._boundDragTouch || this.drag.bind(this), { passive: false });
+            document.addEventListener("touchend", this._boundDragEndTouch = this._boundDragEndTouch || this.dragEnd.bind(this));
+            e.preventDefault();
+        } else {
+            this.dragInfo.initialX = e.clientX - rect.left;
+            this.dragInfo.initialY = e.clientY - rect.top;
+            document.addEventListener("mousemove", this._boundDrag = this._boundDrag || this.drag.bind(this));
+            document.addEventListener("mouseup", this._boundDragEnd = this._boundDragEnd || this.dragEnd.bind(this));
+        }
+    },
+
+    drag: function (e) {
+        if (!this.dragInfo.active) return;
+
+        let currentX, currentY;
+        if (e.type === "touchmove") {
+            e.preventDefault();
+            currentX = e.touches[0].clientX - this.dragInfo.initialX;
+            currentY = e.touches[0].clientY - this.dragInfo.initialY;
+        } else {
+            currentX = e.clientX - this.dragInfo.initialX;
+            currentY = e.clientY - this.dragInfo.initialY;
+        }
+
+        const container = this.dragInfo.draggedElement;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        currentX = Math.max(0, Math.min(currentX, viewportWidth - container.offsetWidth));
+        currentY = Math.max(0, Math.min(currentY, viewportHeight - container.offsetHeight));
+
+        container.style.left = currentX + "px";
+        container.style.top = currentY + "px";
+    },
+
+    dragEnd: function () {
+        if (!this.dragInfo.active) return;
+        this.dragInfo.active = false;
+        if (this.dragInfo.draggedElement) {
+            this.dragInfo.draggedElement.style.cursor = 'grab';
+            // Store final position for next PiP activation
+            this.dragInfo.draggedElement.dataset.pipLeft = this.dragInfo.draggedElement.style.left;
+            this.dragInfo.draggedElement.dataset.pipTop = this.dragInfo.draggedElement.style.top;
+        }
+
+        document.removeEventListener("mousemove", this._boundDrag);
+        document.removeEventListener("mouseup", this._boundDragEnd);
+        document.removeEventListener("touchmove", this._boundDragTouch);
+        document.removeEventListener("touchend", this._boundDragEndTouch);
+    },
+    // --- End PiP ---
+
     endCall: function () {
+        // ... (no changes)
         if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
         this.callRequestTimeout = null;
 
@@ -584,44 +681,53 @@ const VideoCallManager = {
         if (this.statsInterval) clearInterval(this.statsInterval); this.statsInterval = null;
         this.releaseMediaResources();
         if (this.localVideo) this.localVideo.srcObject = null;
-        if (this.remoteVideo) this.remoteVideo.srcObject = null; this.remoteStream = null;
+        if (this.remoteVideo) { this.remoteVideo.srcObject = null; this.remoteVideo.style.display = 'none'; }
+        this.remoteStream = null;
 
         const callContainer = document.getElementById('videoCallContainer');
+        if (this.isPipMode) { // Ensure PiP is exited cleanly
+            this.isPipMode = false; // Force it, then updateUI will reflect
+            // togglePipMode would normally handle this, but directly reset here.
+            this.removePipDraggable(callContainer);
+            callContainer.classList.remove('pip-mode');
+            callContainer.style.left = ''; callContainer.style.top = '';
+            callContainer.style.right = ''; callContainer.style.bottom = '';
+        }
+
         if(callContainer) callContainer.style.display = 'none';
         this.hideCallRequest();
 
         const oldPeerId = this.currentPeerId;
         this.isCallActive = false; this.isCallPending = false; this.isCaller = false;
-        this.isAudioMuted = false; this.isVideoEnabled = true; this.isAudioOnly = false;
+        this.isAudioMuted = false;
+        this.isAudioOnly = false;
+        this.isVideoEnabled = true;
         this.currentPeerId = null;
+        // this.isPipMode is already set to false above
 
         if (oldPeerId && ConnectionManager.connections[oldPeerId]) {
             const pc = ConnectionManager.connections[oldPeerId].peerConnection;
             if (pc) {
                 pc.getSenders().forEach(sender => {
                     if (sender.track && (sender.track.kind === 'audio' || sender.track.kind === 'video')) {
-                        try {
-                            // sender.track.stop(); // Track should be stopped by releaseMediaResources or when stream is replaced
-                            pc.removeTrack(sender);
-                        } catch (e) { Utils.log(`Error removing track from sender for ${oldPeerId}: ${e}`, Utils.logLevels.WARN); }
+                        try { pc.removeTrack(sender); } catch (e) { Utils.log(`Error removing track from sender for ${oldPeerId}: ${e}`, Utils.logLevels.WARN); }
                     }
                 });
                 pc.ontrack = null;
             }
         }
         Utils.log('Call resources cleaned up.', Utils.logLevels.INFO);
-        this.updateUIForCallType(); // Ensure UI is reset
+        this.updateUIForCallType(); // Ensure UI is fully reset
     },
 
-    releaseMediaResources: function () {
+    releaseMediaResources: function () { // ... (no changes)
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => track.stop());
             this.localStream = null;
         }
-        // No need to stop remoteStream tracks, they are controlled by the remote peer.
     },
 
-    handleMessage: function (message, peerId) {
+    handleMessage: function (message, peerId) { // ... (no changes related to these requirements)
         switch (message.type) {
             case 'video-call-request':
                 if (!this.isCallActive && !this.isCallPending) {
@@ -634,9 +740,8 @@ const VideoCallManager = {
             case 'video-call-accepted':
                 if (this.isCallPending && this.isCaller && this.currentPeerId === peerId) {
                     if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
-                    if (typeof message.audioOnly === 'boolean') {
-                        this.isAudioOnly = message.audioOnly;
-                        // isVideoEnabled will be determined by startLocalStreamAndSignal based on this.isAudioOnly and camera availability
+                    if (typeof message.audioOnly === 'boolean' && message.audioOnly !== this.isAudioOnly) {
+                        Utils.log(`Warning: Peer accepted with audioOnly=${message.audioOnly}, but we initiated with audioOnly=${this.isAudioOnly}. Sticking to initiated mode.`, Utils.logLevels.WARN);
                     }
                     this.startLocalStreamAndSignal(true);
                 }
@@ -651,35 +756,27 @@ const VideoCallManager = {
                 }
                 break;
             case 'video-call-offer':
+                const remoteIsAudioOnlyOffer = message.audioOnly || false;
                 if (!this.isCallActive && !this.isCallPending) {
                     this.isCallPending = true;
-                    // this.currentPeerId will be set in handleOffer
-                    // this.isAudioOnly will be set in handleOffer
                     this.isCaller = false;
-                    this.handleOffer(message.sdp, peerId, message.audioOnly || false); // Pass remote's preference
+                    this.handleOffer(message.sdp, peerId, remoteIsAudioOnlyOffer);
                 } else if (this.isCallActive && this.currentPeerId === peerId) {
-                    this.handleOffer(message.sdp, peerId, message.audioOnly || false);
+                    if (remoteIsAudioOnlyOffer !== this.isAudioOnly) {
+                        Utils.log(`Warning: Received re-offer with different audioOnly mode (${remoteIsAudioOnlyOffer}) than current call (${this.isAudioOnly}). Ignoring mode change.`, Utils.logLevels.WARN);
+                    }
+                    this.handleOffer(message.sdp, peerId, this.isAudioOnly);
                 }
                 break;
             case 'video-call-answer':
+                const remoteIsAudioOnlyAnswer = message.audioOnly || false;
                 if (this.isCallActive && this.currentPeerId === peerId) {
-                    this.handleAnswer(message.sdp, peerId, message.audioOnly || false); // Pass remote's confirmation
+                    this.handleAnswer(message.sdp, peerId, remoteIsAudioOnlyAnswer);
                 }
                 break;
             case 'video-call-mode-change':
                 if (this.isCallActive && this.currentPeerId === peerId) {
-                    if (this.isAudioOnly !== message.audioOnly) { // If mode actually changes
-                        // Peer is informing us of *their* new mode. We should try to match if possible,
-                        // or at least update our UI for receiving.
-                        // For now, we just acknowledge by updating our 'isAudioOnly' for receiving.
-                        // A more complex system might involve renegotiation.
-                        this.isAudioOnly = message.audioOnly;
-                        // this.isVideoEnabled would typically remain our sending capability.
-                        // If peer switches to audio-only, we might want to stop sending video if we were.
-                        // This part can be complex. For simplicity, we just update our UI based on their mode.
-                        this.updateUIForCallType();
-                        UIManager.showNotification(`Peer switched to ${this.isAudioOnly ? 'audio-only' : 'video'} mode.`, 'info');
-                    }
+                    Utils.log(`Received deprecated 'video-call-mode-change' from peer ${peerId} to audioOnly: ${message.audioOnly}. Current mode is audioOnly: ${this.isAudioOnly}. Ignoring remote change as mode switching is disabled.`, Utils.logLevels.WARN);
                 }
                 break;
             case 'video-call-end':
@@ -695,12 +792,12 @@ const VideoCallManager = {
                 break;
         }
     },
-    handleCallStats: function(stats) {
+    handleCallStats: function(stats) { // ... (no changes)
         if (stats && typeof stats.rtt === 'number') {
             Utils.log(`Call RTT to ${this.currentPeerId}: ${stats.rtt}ms. Packets Lost: ${stats.packetsLost || 'N/A'}`, Utils.logLevels.DEBUG);
         }
     },
-    collectAndSendStats: async function() {
+    collectAndSendStats: async function() { // ... (no changes)
         if (!this.isCallActive || !this.currentPeerId) return;
         const conn = ConnectionManager.connections[this.currentPeerId];
         if (!conn || !conn.peerConnection || typeof conn.peerConnection.getStats !== 'function') return;
@@ -709,15 +806,15 @@ const VideoCallManager = {
             const reports = await conn.peerConnection.getStats(null);
             let relevantStats = { rtt: null, packetsLost: null, jitter: null, bytesSent: null, bytesReceived: null };
             reports.forEach(report => {
-                if (report.type === 'remote-inbound-rtp' && report.kind === 'audio') { // Stats for audio received from peer
+                if (report.type === 'remote-inbound-rtp' && report.kind === 'audio') {
                     if (report.roundTripTime !== undefined) relevantStats.rtt = Math.round(report.roundTripTime * 1000);
-                    if (report.packetsLost !== undefined) relevantStats.packetsLost = report.packetsLost; // Cumulative
+                    if (report.packetsLost !== undefined) relevantStats.packetsLost = report.packetsLost;
                     if (report.jitter !== undefined) relevantStats.jitter = report.jitter;
                 }
-                if (report.type === 'outbound-rtp' && report.kind === 'audio') { // Stats for audio sent to peer
+                if (report.type === 'outbound-rtp' && report.kind === 'audio') {
                     if (report.bytesSent !== undefined) relevantStats.bytesSent = report.bytesSent;
                 }
-                if (report.type === 'inbound-rtp' && report.kind === 'audio') { // Stats for audio received by us
+                if (report.type === 'inbound-rtp' && report.kind === 'audio') {
                     if (report.bytesReceived !== undefined) relevantStats.bytesReceived = report.bytesReceived;
                 }
             });

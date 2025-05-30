@@ -1,18 +1,16 @@
-// MessageManager.js
 
 const MessageManager = {
-    selectedFile: null, // { data, type, name, size }
-    audioData: null,    // base64 audio data
+    selectedFile: null,
+    audioData: null,
     audioDuration: 0,
 
     sendMessage: function() {
         const input = document.getElementById('messageInput');
         const messageText = input.value.trim();
-        this.audioData = MessageManager.audioData;
-        this.selectedFile = MessageManager.selectedFile;
-        this.audioDuration = MessageManager.audioDuration;
-
-        // selectedFile and audioData are properties of MessageManager, so use this.selectedFile and this.audioData
+        // Correctly access properties of MessageManager
+        // this.audioData = MessageManager.audioData; // This was redundant
+        // this.selectedFile = MessageManager.selectedFile;
+        // this.audioDuration = MessageManager.audioDuration;
 
         if (!ChatManager.currentChatId) {
             UIManager.showNotification('Select a chat to send a message.', 'warning');
@@ -24,13 +22,8 @@ const MessageManager = {
 
         if (!isGroup && !ConnectionManager.isConnectedTo(targetId)) {
             if (messageText || this.selectedFile || this.audioData) {
-                // 使用箭头函数作为 onReconnectSuccess 回调
                 UIManager.showReconnectPrompt(targetId, () => {
-                    // 'this' 在这里正确地指向 MessageManager
                     Utils.log("Reconnection successful, attempting to resend message.", Utils.logLevels.INFO);
-                    // setTimeout(() => {
-                    //     MessageManager.sendMessage();
-                    // }, 500);
                 });
                 return;
             }
@@ -38,7 +31,7 @@ const MessageManager = {
 
 
         if (!messageText && !this.selectedFile && !this.audioData) {
-            return; // Nothing to send
+            return;
         }
 
         let messageSent = false;
@@ -55,7 +48,7 @@ const MessageManager = {
 
             ChatManager.addMessage(targetId, {...audioMessage, sender: UserManager.userId});
             messageSent = true;
-            MessageManager.cancelAudioData(); // Use this.cancelAudioData
+            this.cancelAudioData();
         }
 
         if (this.selectedFile) {
@@ -73,7 +66,7 @@ const MessageManager = {
 
             ChatManager.addMessage(targetId, {...fileMessage, sender: UserManager.userId});
             messageSent = true;
-            MessageManager.cancelFileData(); // Use this.cancelFileData
+            this.cancelFileData();
         }
 
         if (messageText) {
@@ -206,11 +199,14 @@ const MessageManager = {
             UIManager.showNotification('No chat selected to clear.', 'warning');
             return;
         }
-        if (confirm('Are you sure you want to clear messages in this chat? This cannot be undone.')) {
-            ChatManager.clearChat(ChatManager.currentChatId).then(success => {
-                if (success) UIManager.showNotification('Chat history cleared.', 'success');
-                else UIManager.showNotification('Failed to clear chat history.', 'error');
-            });
-        }
+        UIManager.showConfirmationModal(
+            'Are you sure you want to clear messages in this chat? This cannot be undone.',
+            () => { // onConfirm
+                ChatManager.clearChat(ChatManager.currentChatId).then(success => {
+                    if (success) UIManager.showNotification('Chat history cleared.', 'success');
+                    else UIManager.showNotification('Failed to clear chat history.', 'error');
+                });
+            }
+        );
     },
 };

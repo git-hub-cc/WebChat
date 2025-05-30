@@ -68,8 +68,6 @@ const UIManager = {
             // Log parent state for debugging
             if (chatAreaEl) {
                 Utils.log("UIManager.showChatArea: Parent 'chatArea' exists. 'chatBox' is missing within it.", Utils.logLevels.DEBUG);
-                // For deeper debugging in browser console:
-                // console.log("Current chatArea innerHTML:", chatAreaEl.innerHTML);
             }
         }
     },
@@ -113,7 +111,6 @@ const UIManager = {
         avatarEl.className = 'chat-avatar-main'; // Reset classes
         if (isGroup) avatarEl.classList.add('group');
 
-        // Show/hide group management buttons based on context
         const detailsBtn = document.getElementById('chatDetailsBtnMain');
         detailsBtn.style.display = ChatManager.currentChatId ? 'block' : 'none';
     },
@@ -126,14 +123,13 @@ const UIManager = {
     enableChatInterface: function(enabled) {
         const elementsToToggle = [
             'messageInput', 'sendButtonMain', 'attachBtnMain',
-            'voiceButtonMain', /*'emojiBtnMain'*/
+            'voiceButtonMain',
         ];
         elementsToToggle.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.disabled = !enabled;
         });
 
-        // Call buttons are handled separately by setCallButtonsState
         if (enabled && ChatManager.currentChatId) {
             this.setCallButtonsState(ConnectionManager.isConnectedTo(ChatManager.currentChatId), ChatManager.currentChatId);
         } else {
@@ -149,8 +145,8 @@ const UIManager = {
         const videoCallBtn = document.getElementById('videoCallButtonMain');
         const audioCallBtn = document.getElementById('audioCallButtonMain');
 
-        if (videoCallBtn) videoCallBtn.disabled = !enabled || ChatManager.currentChatId?.startsWith('group_'); // No group video calls
-        if (audioCallBtn) audioCallBtn.disabled = !enabled || ChatManager.currentChatId?.startsWith('group_'); // No group audio calls
+        if (videoCallBtn) videoCallBtn.disabled = !enabled || ChatManager.currentChatId?.startsWith('group_');
+        if (audioCallBtn) audioCallBtn.disabled = !enabled || ChatManager.currentChatId?.startsWith('group_');
 
         if (enabled && peerId && !ChatManager.currentChatId?.startsWith('group_')) {
             videoCallBtn.onclick = () => VideoCallManager.initiateCall(peerId);
@@ -158,13 +154,13 @@ const UIManager = {
         }
     },
 
-    updateConnectionStatusIndicator: function(message, type = 'info') { // type: 'info', 'success', 'error', 'warning'
+    updateConnectionStatusIndicator: function(message, type = 'info') {
         const statusTextEl = document.getElementById('connectionStatusText');
         const statusContainerEl = document.getElementById('connectionStatusGlobal');
 
         if (statusTextEl) statusTextEl.textContent = message;
         if (statusContainerEl) {
-            statusContainerEl.className = 'status-indicator'; // Reset class
+            statusContainerEl.className = 'status-indicator';
             if (type !== 'info') {
                 statusContainerEl.classList.add(`status-${type}`);
             }
@@ -189,30 +185,27 @@ const UIManager = {
             html += 'WebRTC Network detection: ' + (networkType?.error || 'Failed or not supported') + '.<br>';
         }
 
-        // Add WebSocket status
-        // Ensuring CSS variables --success-color and --danger-color are defined in style.css
         html += `Signaling Server: ${webSocketStatus ? '<span style="color: green;">Connected</span>' : '<span style="color: var(--danger-color, red);">Disconnected</span>'}`;
         networkInfoEl.innerHTML = html;
 
-        // Determine overall quality
         if (!webSocketStatus) {
             overallQuality = 'Signaling Offline';
             qualityClass = 'quality-poor';
-        } else if (networkType && networkType.error === null) { // WebSocket is connected, now check WebRTC capabilities
+        } else if (networkType && networkType.error === null) {
             if (networkType.udp) {
                 overallQuality = 'Good';
                 qualityClass = 'quality-good';
             } else if (networkType.tcp) {
                 overallQuality = 'Limited (TCP Fallback)';
                 qualityClass = 'quality-medium';
-            } else if (networkType.relay) { // Only relay means no direct P2P path via UDP/TCP host candidates
+            } else if (networkType.relay) {
                 overallQuality = 'Relay Only';
                 qualityClass = 'quality-medium';
-            } else { // No UDP, no TCP, no Relay, but WS is connected.
+            } else {
                 overallQuality = 'Poor (WebRTC P2P Failed)';
                 qualityClass = 'quality-poor';
             }
-        } else { // WebSocket connected, but networkType detection itself failed
+        } else {
             overallQuality = 'WebRTC Check Failed';
             qualityClass = 'quality-poor';
         }
@@ -224,14 +217,13 @@ const UIManager = {
     checkWebRTCSupport: function() {
         if (typeof RTCPeerConnection === 'undefined') {
             this.updateConnectionStatusIndicator('Browser does not support WebRTC.', 'error');
-            // Consider also updating modal network info if modal is open or can be opened
             this.updateNetworkInfoDisplay(null, ConnectionManager.isWebSocketConnected);
             return false;
         }
         return true;
     },
 
-    showNotification: function(message, type = 'info') { // type: 'info', 'success', 'warning', 'error'
+    showNotification: function(message, type = 'info') {
         const container = document.querySelector('.notification-container') || this._createNotificationContainer();
 
         const notification = document.createElement('div');
@@ -254,7 +246,7 @@ const UIManager = {
         };
 
         notification.querySelector('.notification-close').onclick = removeNotification;
-        setTimeout(removeNotification, type === 'error' ? 8000 : 5000); // Longer for errors
+        setTimeout(removeNotification, type === 'error' ? 8000 : 5000);
     },
     _createNotificationContainer: function() {
         const container = document.createElement('div');
@@ -268,8 +260,7 @@ const UIManager = {
         if (modal) {
             modal.style.display = show ? 'flex' : 'none';
             if (show && modalId === 'mainMenuModal') {
-                // When main menu modal is shown, refresh its network status display
-                AppInitializer.refreshNetworkStatusUI(); // Assuming AppInitializer is globally accessible or pass by reference
+                AppInitializer.refreshNetworkStatusUI();
             }
         }
     },
@@ -316,7 +307,7 @@ const UIManager = {
         UIManager.toggleModal('newContactGroupModal', false);
     },
 
-    setActiveTab: function(tabName) { // 'all', 'contacts', 'groups'
+    setActiveTab: function(tabName) {
         document.querySelectorAll('.nav-tabs .nav-tab').forEach(tab => tab.classList.remove('active'));
         let targetTabId = '';
         if (tabName === 'all') targetTabId = 'tabAllChats';
@@ -333,17 +324,15 @@ const UIManager = {
         this.isDetailsPanelVisible = show;
 
         if (show) {
-            if (!ChatManager.currentChatId) { // Don't show if no chat is active
+            if (!ChatManager.currentChatId) {
                 this.isDetailsPanelVisible = false;
                 return;
             }
-            detailsPanel.style.display = 'flex'; // Make it visible before animation/class
+            detailsPanel.style.display = 'flex';
             appContainer.classList.add('show-details');
             this.updateDetailsPanel(ChatManager.currentChatId, ChatManager.currentChatId.startsWith('group_') ? 'group' : 'contact');
         } else {
             appContainer.classList.remove('show-details');
-            // Timeout to allow animation before hiding, if CSS uses it.
-            // For direct display:none, timeout isn't strictly needed but good for consistency.
             setTimeout(() => {
                 if (!this.isDetailsPanelVisible) detailsPanel.style.display = 'none';
             }, 300);
@@ -355,22 +344,16 @@ const UIManager = {
         const idEl = document.getElementById('detailsId');
         const avatarEl = document.getElementById('detailsAvatar');
         const statusEl = document.getElementById('detailsStatus');
-
-        // Action sections
         const contactActionsEl = document.getElementById('contactActionsDetails');
         const groupMgmtEl = document.getElementById('detailsGroupManagement');
         const groupActionsEl = document.getElementById('groupActionsDetails');
-
-        // Buttons
         const deleteContactBtn = document.getElementById('deleteContactBtnDetails');
         const leaveGroupBtn = document.getElementById('leaveGroupBtnDetails');
         const dissolveGroupBtn = document.getElementById('dissolveGroupBtnDetails');
 
-        // Hide all action sections by default
         if (contactActionsEl) contactActionsEl.style.display = 'none';
         if (groupMgmtEl) groupMgmtEl.style.display = 'none';
         if (groupActionsEl) groupActionsEl.style.display = 'none';
-
 
         if (type === 'contact') {
             const contact = UserManager.contacts[chatId];
@@ -378,14 +361,13 @@ const UIManager = {
             nameEl.textContent = contact.name;
             idEl.textContent = `ID: ${contact.id}`;
             avatarEl.textContent = contact.name.charAt(0).toUpperCase();
-            avatarEl.className = 'details-avatar'; // Reset
+            avatarEl.className = 'details-avatar';
             statusEl.textContent = ConnectionManager.isConnectedTo(chatId) ? 'Connected' : 'Offline';
 
             if (contactActionsEl) contactActionsEl.style.display = 'block';
             if (deleteContactBtn) {
                 deleteContactBtn.onclick = () => ChatManager.deleteChat(chatId, 'contact');
             }
-
         } else if (type === 'group') {
             const group = GroupManager.groups[chatId];
             if (!group) return;
@@ -399,27 +381,24 @@ const UIManager = {
             if (groupActionsEl) groupActionsEl.style.display = 'block';
 
             const isOwner = group.owner === UserManager.userId;
-
             document.getElementById('addGroupMemberArea').style.display = isOwner ? 'block' : 'none';
             const leftMembersAreaEl = document.getElementById('leftMembersArea');
             if (leftMembersAreaEl) {
                 leftMembersAreaEl.style.display = isOwner && group.leftMembers && group.leftMembers.length > 0 ? 'block' : 'none';
             }
 
-
             if (leaveGroupBtn) {
                 if (isOwner) {
-                    leaveGroupBtn.style.display = 'none'; // Owner cannot "leave", they "dissolve" or manage members via other UI
+                    leaveGroupBtn.style.display = 'none';
                 } else {
-                    leaveGroupBtn.style.display = 'block'; // or 'inline-block' based on styling
+                    leaveGroupBtn.style.display = 'block';
                     leaveGroupBtn.textContent = 'Leave Group';
                     leaveGroupBtn.onclick = () => GroupManager.leaveGroup(chatId);
                     leaveGroupBtn.disabled = false;
                 }
             }
-
             if (dissolveGroupBtn) {
-                dissolveGroupBtn.style.display = isOwner ? 'block' : 'none'; // or 'inline-block'
+                dissolveGroupBtn.style.display = isOwner ? 'block' : 'none';
                 dissolveGroupBtn.onclick = () => GroupManager.dissolveGroup(chatId);
             }
             this.updateDetailsPanelMembers(chatId);
@@ -440,7 +419,7 @@ const UIManager = {
             item.className = 'member-item-detail';
             let html = `<span>${Utils.escapeHtml(member.name)} ${memberId === UserManager.userId ? '(You)' : ''}</span>`;
             if (memberId === group.owner) html += '<span class="owner-badge">Owner</span>';
-            else if (group.owner === UserManager.userId) { // Only owner can remove
+            else if (group.owner === UserManager.userId) {
                 html += `<button class="remove-member-btn-detail" data-member-id="${memberId}" title="Remove member">✕</button>`;
             }
             item.innerHTML = html;
@@ -451,7 +430,6 @@ const UIManager = {
             btn.onclick = () => GroupManager.removeMemberFromGroup(groupId, btn.dataset.memberId);
         });
 
-        // Populate contacts dropdown for adding new members
         const contactsDropdown = document.getElementById('contactsDropdownDetails');
         contactsDropdown.innerHTML = '<option value="">Select contact to add...</option>';
         Object.values(UserManager.contacts).forEach(contact => {
@@ -463,7 +441,6 @@ const UIManager = {
             }
         });
 
-        // Populate left members list
         const leftMemberListEl = document.getElementById('leftMemberListDetails');
         const leftMembersAreaEl = document.getElementById('leftMembersArea');
         leftMemberListEl.innerHTML = '';
@@ -471,7 +448,7 @@ const UIManager = {
         if (group.owner === UserManager.userId && group.leftMembers && group.leftMembers.length > 0) {
             group.leftMembers.forEach(leftMember => {
                 const item = document.createElement('div');
-                item.className = 'left-member-item-detail'; // Similar styling
+                item.className = 'left-member-item-detail';
                 item.innerHTML = `
                     <span>${Utils.escapeHtml(leftMember.name)} (Left: ${Utils.formatDate(new Date(leftMember.leftTime))})</span>
                     <button class="re-add-member-btn-detail" data-member-id="${leftMember.id}" data-member-name="${Utils.escapeHtml(leftMember.name)}" title="Re-add member">+</button>
@@ -499,16 +476,13 @@ const UIManager = {
     },
 
     filterChatList: function(query) {
-        query = query.toLowerCase();
-        // The actual filtering is done within ChatManager.renderChatList
-        // This just triggers a re-render with the current query.
         ChatManager.renderChatList(ChatManager.currentFilter);
     },
 
     showFullImage: function(src, altText = "Image") {
         const modal = document.createElement('div');
         modal.className = 'modal-like image-viewer';
-        modal.style.backgroundColor = 'rgba(0,0,0,0.85)'; // Darker for images
+        modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
 
         const img = document.createElement('img');
         img.src = src;
@@ -520,7 +494,7 @@ const UIManager = {
         img.style.boxShadow = '0 0 30px rgba(0,0,0,0.5)';
 
         modal.appendChild(img);
-        modal.onclick = () => modal.remove(); // Click anywhere to close
+        modal.onclick = () => modal.remove();
         document.body.appendChild(modal);
     },
 
@@ -535,7 +509,7 @@ const UIManager = {
                         onlineDot = document.createElement('span');
                         onlineDot.className = 'online-dot';
                         onlineDot.title = "Connected";
-                        nameEl.appendChild(onlineDot); // Append to name
+                        nameEl.appendChild(onlineDot);
                     }
                     onlineDot.style.display = 'inline-block';
                 } else {
@@ -550,13 +524,11 @@ const UIManager = {
     showReconnectPrompt: function(peerId, onReconnectSuccess) {
         const chatBox = document.getElementById('chatBox');
         let promptDiv = chatBox.querySelector(`.system-message.reconnect-prompt[data-peer-id="${peerId}"]`);
-
         const peerName = UserManager.contacts[peerId]?.name || `Peer ${peerId.substring(0,4)}`;
 
         if (promptDiv) {
             Utils.log(`Reconnect prompt for ${peerId} already visible. Updating text.`, Utils.logLevels.DEBUG);
             promptDiv.querySelector('.reconnect-prompt-text').textContent = `Connection to ${peerName} lost.`;
-            // Ensure buttons are re-enabled if a previous attempt failed and user wants to try again from same prompt.
             const recBtn = promptDiv.querySelector('.btn-reconnect-inline');
             if(recBtn) recBtn.disabled = false;
             return;
@@ -565,7 +537,6 @@ const UIManager = {
         promptDiv = document.createElement('div');
         promptDiv.className = 'system-message reconnect-prompt';
         promptDiv.setAttribute('data-peer-id', peerId);
-
         promptDiv.innerHTML = `
             <span class="reconnect-prompt-text">Connection to ${peerName} lost.</span>
             <button class="btn-reconnect-inline">Reconnect</button> 
@@ -577,8 +548,7 @@ const UIManager = {
         const reconnectButton = promptDiv.querySelector('.btn-reconnect-inline');
         const cancelButton = promptDiv.querySelector('.btn-cancel-reconnect-inline');
         const textElement = promptDiv.querySelector('.reconnect-prompt-text');
-
-        let successHandler, failHandler; // Declare to be accessible in cleanup
+        let successHandler, failHandler;
 
         const cleanupPrompt = (removeImmediately = false) => {
             EventEmitter.off('connectionEstablished', successHandler);
@@ -587,7 +557,6 @@ const UIManager = {
                 if (removeImmediately) {
                     promptDiv.remove();
                 } else {
-                    // Keep message for a bit then remove
                     setTimeout(() => {
                         if (promptDiv && promptDiv.parentNode) promptDiv.remove();
                     }, textElement.textContent.includes("Failed") ? 5000 : 3000);
@@ -604,7 +573,7 @@ const UIManager = {
                     cancelButton.onclick = () => cleanupPrompt(true);
                 }
                 if (typeof onReconnectSuccess === 'function') onReconnectSuccess();
-                cleanupPrompt(); // Will remove after timeout
+                cleanupPrompt();
             }
         };
 
@@ -612,13 +581,10 @@ const UIManager = {
             if (failedPeerId === peerId) {
                 textElement.textContent = `Failed to reconnect to ${peerName}. Try manual connection or refresh.`;
                 if (reconnectButton) {
-                    reconnectButton.style.display = 'initial'; // Show reconnect button again
-                    reconnectButton.disabled = false; // Re-enable it
+                    reconnectButton.style.display = 'initial';
+                    reconnectButton.disabled = false;
                 }
-                if (cancelButton) cancelButton.textContent = 'Dismiss'; // Keep dismiss button
-                // Don't auto-cleanup on fail, let user try again or dismiss.
-                // Listeners remain active for next attempt via this prompt.
-                // If dismissed, cancelButton.onclick will cleanup.
+                if (cancelButton) cancelButton.textContent = 'Dismiss';
             }
         };
 
@@ -628,11 +594,67 @@ const UIManager = {
         reconnectButton.onclick = () => {
             textElement.textContent = `Attempting to reconnect to ${peerName}...`;
             reconnectButton.disabled = true;
-            ConnectionManager.createOffer(peerId, { isSilent: false }); // Not silent for manual reconnect attempt
+            ConnectionManager.createOffer(peerId, { isSilent: false });
+        };
+        cancelButton.onclick = () => {
+            cleanupPrompt(true);
+        };
+    },
+
+    showConfirmationModal: function(message, onConfirm, onCancel = null, options = {}) {
+        const existingModal = document.getElementById('genericConfirmationModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modalId = 'genericConfirmationModal';
+        const modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'modal-like confirmation-modal';
+        modal.style.display = 'flex';
+
+        const modalContent = document.createElement('div');
+        modalContent.className = 'modal-content';
+
+        const modalHeader = document.createElement('div');
+        modalHeader.className = 'modal-header';
+        const titleElement = document.createElement('h2');
+        titleElement.textContent = options.title || 'Confirm Action';
+        modalHeader.appendChild(titleElement);
+
+        const modalBody = document.createElement('div');
+        modalBody.className = 'modal-body';
+        const messageParagraph = document.createElement('p');
+        messageParagraph.textContent = message;
+        modalBody.appendChild(messageParagraph);
+
+        const modalFooter = document.createElement('div');
+        modalFooter.className = 'modal-footer';
+
+        const confirmButton = document.createElement('button');
+        confirmButton.textContent = options.confirmText || 'Confirm';
+        confirmButton.className = `btn ${options.confirmClass || 'btn-danger'}`;
+        confirmButton.onclick = () => {
+            if (onConfirm) onConfirm();
+            modal.remove();
         };
 
+        const cancelButton = document.createElement('button');
+        cancelButton.textContent = options.cancelText || 'Cancel';
+        cancelButton.className = `btn ${options.cancelClass || 'btn-secondary'}`;
         cancelButton.onclick = () => {
-            cleanupPrompt(true); // Remove immediately and cleanup listeners
+            if (onCancel) onCancel();
+            modal.remove();
         };
+
+        modalFooter.appendChild(cancelButton);
+        modalFooter.appendChild(confirmButton);
+
+        modalContent.appendChild(modalHeader);
+        modalContent.appendChild(modalBody);
+        modalContent.appendChild(modalFooter);
+        modal.appendChild(modalContent);
+
+        document.body.appendChild(modal);
     }
 };

@@ -21,9 +21,9 @@ const Utils = {
 
             // console output
             if (level === this.logLevels.ERROR) console.error(logMessage);
+            else if (level === this.logLevels.DEBUG) console.debug(logMessage);
             else if (level === this.logLevels.WARN) console.warn(logMessage);
             else if (level === this.logLevels.INFO) console.info(logMessage);
-            else console.log(logMessage);
 
             // UI debug output (optional, can be removed if not needed)
             // const debugInfo = document.getElementById('debugInfo'); // Assuming a debug panel

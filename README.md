@@ -1,112 +1,151 @@
-# P2P 聊天
+# P2P Web Chat
 
-![P2P Chat](https://img.shields.io/badge/P2P-Chat-blue)
-![WebRTC](https://img.shields.io/badge/WebRTC-RTCPeerConnection-green)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+[![GitHub stars](https://img.shields.io/github/stars/git-hub-cc/P2P-Web-Chat.svg?style=social)](https://github.com/git-hub-cc/P2P-Web-Chat/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/git-hub-cc/P2P-Web-Chat.svg?style=social)](https://github.com/git-hub-cc/P2P-Web-Chat/network/members)
 
-基于 WebRTC 技术构建的点对点加密聊天应用，无需服务器即可实现安全通信。支持文本、图片、语音消息和视频通话等多种通信方式。
+A modern, peer-to-peer web chat application built with HTML, CSS, and Vanilla JavaScript, utilizing WebRTC for direct communication and a WebSocket-based signaling server.
 
-## ✨ 特性
-- **多媒体消息**：
-    - 💬 文本消息（支持多行文本和换行）
-    - 🖼️ 图片分享（自动压缩优化）
-    - 🎤 语音消息
-    - 📹 视频通话
-- **链接预览**：自动识别聊天中的链接并生成预览
-- **响应式设计**：完美支持移动端和桌面端
-- **极低延迟**：直接点对点连接确保通信延迟最小化
+**Live Demo:**
+https://175.178.216.24/
 
-## 📋 使用指南
+## ✨ Features
 
-### 建立连接
-1. 点击联系人/添加新聊天
-2. 输入对方ID、对方昵称，点击确定
-3. 选择改用户
-4. 直接开始聊天（要求对方在线）
+*   **1-to-1 & Group Chat:** Engage in private conversations or create groups.
+    *   Text Messaging
+    *   File Sharing (Images, Videos, Documents)
+    *   Voice Messages
+*   **Real-time Communication:**
+    *   1-to-1 Video & Audio Calls
+    *   Picture-in-Picture (PiP) mode for video calls, allowing you to multitask.
+*   **Data Persistence:**
+    *   Chat history, contacts, and user settings are stored locally in your browser using IndexedDB.
+*   **User Experience:**
+    *   Contact Management (Add, Remove, List)
+    *   Responsive Design for desktop and mobile devices.
+    *   User-configurable Settings (User ID, Auto-Connect to contacts).
+    *   Network Status Display & Quality Indicators.
+    *   Notifications for new messages, calls, and system events.
+*   **P2P Architecture:**
+    *   Direct peer-to-peer connections established using WebRTC.
+    *   Signaling handled via a WebSocket server for connection negotiation.
+    *   Includes STUN/TURN server configurations for NAT traversal.
 
-### 多媒体功能
+## 🛠️ Tech Stack
 
-- **发送图片**：点击「图片」按钮选择本地图片
-- **录制语音**：按住「录音」按钮录制语音消息，松开发送
-- **视频通话**：点击「视频」按钮发起视频通话请求
-- **文本消息**：在输入框中输入文本，按 Ctrl+Enter 发送（回车键用于换行）
+*   **Frontend:** HTML5, CSS3, Vanilla JavaScript (ES6+ Modules)
+*   **Core P2P Technology:** WebRTC (RTCPeerConnection, RTCDataChannel, MediaStreams)
+*   **Signaling:** WebSocket
+*   **Local Storage:** IndexedDB
+*   **Backend (Signaling Server):** The repository includes a Java Spring Boot application (`P2P-Web-Chat-Boot`) that can serve as the signaling server.
 
-## 🔒 隐私与安全
+## ⚙️ How it Works
 
-- **无数据存储**：所有通信数据均不会存储在任何服务器上
-- **按需权限**：仅在用户主动使用相关功能时才请求摄像头/麦克风权限
-- **资源释放**：使用完毕后立即释放摄像头和麦克风资源
-- **安全传输**：基于 DTLS 和 SRTP 的加密传输
+1.  **Initialization:** When a user opens the application, a unique User ID is generated or loaded from local storage.
+2.  **Signaling:** The client connects to a WebSocket-based signaling server. This server helps peers discover each other and exchange messages necessary to establish a direct connection (like SDP offers/answers and ICE candidates).
+3.  **P2P Connection:** Once signaling is complete, a direct WebRTC `RTCPeerConnection` is established between users.
+    *   `RTCDataChannel` is used for sending text messages, file information, voice message data, and group chat messages (relayed by the group owner).
+    *   `MediaStreams` are used for audio and video call data.
+4.  **Local Persistence:** All contacts, chat messages, and user settings are stored in the browser's IndexedDB, making them available across sessions.
+5.  **Group Chat:** Group chats are currently owner-relayed. The group owner receives messages from members and forwards them to other members in the group.
 
-## 💻 技术栈
+## 🚀 Getting Started
 
-- WebRTC API (RTCPeerConnection)
-- JavaScript (ES6+)
-- HTML5 / CSS3
-- MediaStream API
-- Web Audio API
-- ICE 框架 (STUN/TURN)
+### Prerequisites
 
-## 🌐 浏览器兼容性
+*   A modern web browser with WebRTC support (e.g., Chrome, Firefox, Edge, Safari).
+*   Node.js and npm (optional, for using `live-server` or similar tools for local development).
+*   Java 17 and Maven (if you want to run the provided Spring Boot signaling server).
 
-- Chrome 60+
-- Firefox 55+
-- Safari 11+
-- Edge 79+
-- Opera 47+
-- iOS Safari 11+
-- Android Chrome 60+
+### Running the Application
 
-## 🔧 高级配置
+#### 1. Signaling Server (Choose one option)
 
-可通过修改 `Config` 对象自定义以下配置：
+*   **Option A: Use the provided public signaling server (if available and trusted)**
+    *   The application is pre-configured in `js/ConnectionManager.js` to use `wss://175.178.216.24/signaling`.
+    *   If this server is operational, you might not need to run your own signaling server for initial testing.
 
-- ICE 服务器设置（STUN/TURN）
-- 媒体配置（压缩率、最大大小）
-- 连接超时设置
-- 重连策略
+*   **Option B: Run the included Spring Boot Signaling Server**
+    1.  Clone the repository:
+        ```bash
+        git clone https://github.com/git-hub-cc/P2P-Web-Chat.git
+        cd P2P-Web-Chat
+        ```
+    2.  The Spring Boot project is likely named `P2P-Web-Chat-Boot` or is at the root. Navigate to its directory if it's a sub-directory.
+    3.  Build and run the server using Maven:
+        ```bash
+        mvn spring-boot:run
+        ```
+        This will typically start the server on `http://localhost:8080`. The WebSocket endpoint would be `ws://localhost:8080/signaling` (or as configured in the Spring Boot app).
+    4.  **Important:** If you run your own signaling server, you **must** update the `signalingServerUrl` in `js/ConnectionManager.js` to point to your local server address (e.g., `ws://localhost:8080/signaling`).
 
-## ⚙️ 离线使用
+#### 2. Frontend
 
-该应用可完全离线使用，无需互联网连接即可在局域网内工作。
+1.  The frontend consists of static HTML, CSS, and JavaScript files.
+2.  **It's highly recommended to serve the frontend files via a local HTTP server** due to browser security restrictions (CORS, `file://` protocol limitations for `type="module"` scripts and media access).
+    *   If you have Node.js, you can use `live-server`:
+        ```bash
+        npm install -g live-server
+        cd P2P-Web-Chat # (navigate to the root of the frontend files)
+        live-server
+        ```
+    *   Alternatively, use Python's built-in HTTP server (Python 3):
+        ```bash
+        cd P2P-Web-Chat # (navigate to the root of the frontend files)
+        python -m http.server
+        ```
+        Then open `http://localhost:8000` (or the port shown) in your browser.
+3.  Open the `index.html` file in two different browser windows or on two different devices (on the same network if using a local signaling server without NAT traversal for it) to test P2P functionality.
 
-## 🛠️ 开发
+## 🔧 Configuration
 
-1. 克隆仓库
-   ```bash
-    git clone https://github.com/git-hub-cc/P2P-Web-Chat.git
-    
-    # 进入项目目录
-    cd P2P-Web-Chat-Boot
-    
-    # 编译项目
-    mvn clean package
-   ```
+*   **STUN/TURN Servers:** Configured in `js/Config.js`. These are crucial for NAT traversal to enable P2P connections across different networks. The project includes a default set.
+*   **Signaling Server URL:** Configured in `js/ConnectionManager.js`.
 
-## 🤝 贡献指南
+## 🧩 Key Frontend Components
 
-欢迎提交 Pull Request 或创建 Issue 来帮助改进这个项目！
+The JavaScript codebase is modular:
 
-## 📜 许可证
+*   `AppInitializer.js`: Initializes the application, sets up event listeners.
+*   `UIManager.js`: Manages all UI interactions, DOM updates, and responsiveness.
+*   `DBManager.js`: Handles IndexedDB operations for local data storage.
+*   `UserManager.js`: Manages user identity, settings, and contacts.
+*   `ConnectionManager.js`: Manages WebSocket signaling and WebRTC peer connections.
+*   `ChatManager.js`: Manages chat sessions, loading/saving messages.
+*   `MessageManager.js`: Handles sending and displaying different types of messages.
+*   `GroupManager.js`: Manages group creation, membership, and message broadcasting for groups.
+*   `MediaManager.js`: Handles file attachments, voice recording, and previews.
+*   `VideoCallManager.js`: Manages 1-to-1 video and audio calls, including stream handling and UI.
+*   `Config.js`: Stores application-wide configurations (STUN/TURN, timeouts, etc.).
+*   `Utils.js`: Provides utility functions (logging, formatting, ID generation).
+*   `EventEmitter.js`: A simple event emitter for decoupled communication between modules.
 
-该项目采用 [MIT 许可证](LICENSE)。
+## 💡 Future Enhancements
 
-## 💡 实现原理
+Based on `doc.md` and common P2P chat improvements:
 
-该应用利用 WebRTC 技术建立浏览器之间的点对点连接：
+*   **End-to-End Encryption:** Implement symmetric encryption (e.g., AES) for DataChannel messages on top of the inherent DTLS security for true E2EE of chat content.
+*   **Decentralized Group Chat:**
+    *   Explore full mesh P2P connections for smaller groups.
+    *   Investigate GossipSub-like protocols (e.g., inspired by libp2p-gossipsub) for more scalable and resilient group messaging.
+*   **Group Video/Audio Calls:** Integrate an SFU (Selective Forwarding Unit) or MCU (Multipoint Conferencing Unit) for multi-party video/audio calls, as WebRTC mesh becomes inefficient for many participants.
+*   **Improved UI/UX:** Further refinements to user interface and experience.
+*   **Offline Messaging:** If the signaling server can queue messages for offline users.
+*   **User Presence:** More detailed online/offline/typing indicators.
+*   **Message Status:** Sent/Delivered/Read receipts.
 
-1. **信令阶段**：通过复制粘贴 SDP 信息完成连接协商
-2. **ICE 候选收集**：获取可能的连接路径（本地、反射和中继候选）
-3. **点对点数据通道**：一旦连接建立，所有通信通过加密数据通道进行
-4. **媒体流处理**：语音和视频功能使用 MediaStream API 捕获和处理
+## 🤝 Contributing
 
-## ⚠️ 限制与注意事项
+Contributions are welcome! If you'd like to contribute, please feel free to fork the repository, make your changes, and submit a pull request. For major changes, please open an issue first to discuss what you would like to change.
 
-- 建议先添加新聊天
-- 对于 NAT 后的设备，可能需要配置 TURN 服务器以确保连接成功
-- 大型文件传输会自动分块处理，但仍受限于 WebRTC 数据通道性能
-- 为获得最佳体验，建议使用最新版本的主流浏览器
+1.  Fork the Project
+2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4.  Push to the Branch (`git push origin feature/AmazingFeature`)
+5.  Open a Pull Request
 
----
 
-**注意**：此应用仅用于技术演示和学习目的。在处理敏感信息时，请确保使用经过充分安全审计的通信工具。
+## 🙏 Acknowledgements
+
+*   WebRTC and browser vendors for providing the P2P capabilities.
+*   Inspiration from various P2P chat applications.
+*   The list of public STUN servers often shared by the community (see `stun_servers.txt`).
