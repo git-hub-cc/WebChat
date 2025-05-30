@@ -1,61 +1,52 @@
 const Config = {
-    // ICE服务器配置
-    iceServers: [
-        {
-            "urls": [
-                "turn:stun.evan-brass.net",
-                "turn:stun.evan-brass.net?transport=tcp",
-                "stun:stun.evan-brass.net"
-            ],
-            "username": "guest",
-            "credential": "password"
-        }
-    ],
-
     // WebRTC PeerConnection Configuration
     peerConnectionConfig: {
-        iceTransportPolicy: 'all', // 'all' or 'relay'
-        bundlePolicy: 'max-bundle', // Recommended for performance
-        rtcpMuxPolicy: 'require',   // Recommended
-        iceCandidatePoolSize: 0,   // 0 for immediate candidate gathering, or a small number like 5-10
-        sdpSemantics: 'unified-plan', // Standard
+        iceServers: [
+            // ---- Your Essential TURN Server ----
+            {
+                urls: [
+                    "turn:175.178.216.24:3478?transport=udp",
+                    "turn:175.178.216.24:3478?transport=tcp"
+                ],
+                username: "test",
+                credential: "123456"
+            },
+            // ---- Priority STUN for China Region ----
+            { urls: 'stun:stun.qq.com:3478' },
+            { urls: 'stun:stun.miwifi.com:3478' }, // Already included from your long list, moved up
+            // ---- Extensive list of other public STUN servers as further fallbacks ----
+            { urls: 'stun:23.21.150.121:3478' },
+        ],
+        iceTransportPolicy: 'all',
+        bundlePolicy: 'max-bundle',
+        rtcpMuxPolicy: 'require',
+        iceCandidatePoolSize: 0,
+        sdpSemantics: 'unified-plan',
     },
 
-    // Reconnection Strategy
+    // ... rest of your Config.js remains the same
     reconnect: {
-        maxAttempts: 3,       // Max number of reconnection attempts
-        delay: 3000,          // Initial delay in ms
-        backoffFactor: 1.5    // Multiplier for subsequent delays
+        maxAttempts: 3,
+        delay: 3000,
+        backoffFactor: 1.5
     },
-
-    // Timeouts
     timeouts: {
-        iceGathering: 8000,   // Max time for ICE gathering (ms)
-        connection: 15000,    // Max time for connection to establish (ms)
-        networkCheck: 10000,  // Interval for checking network stats during calls (ms)
-        signalingResponse: 10000 // Timeout for waiting for signaling server responses
+        iceGathering: 8000,
+        connection: 15000,
+        networkCheck: 10000,
+        signalingResponse: 10000
     },
-
-    // Media Settings
     media: {
-        maxAudioDuration: 60,  // Max voice note duration in seconds
-        imageCompression: 0.8, // JPEG compression quality (0.0 to 1.0)
-        maxFileSize: 25 * 1024 * 1024, // 25MB max file size
+        maxAudioDuration: 60,
+        imageCompression: 0.8,
+        maxFileSize: 25 * 1024 * 1024,
     },
-
-    // DataChannel & Messaging
-    chunkSize: 64 * 1024, // 64KB for message chunking (some browsers have ~64KB limit for DC messages)
-                          // Test this value, browsers like Firefox might support larger chunks (up to 256KB or 1MB)
-                          // But 64KB is safer for cross-browser. SCTP has a path MTU.
-
-    // UI Settings
+    chunkSize: 64 * 1024,
     ui: {
-        messageRenderBatchSize: 30, // Number of messages to render at once when scrolling
-        typingIndicatorTimeout: 3000 // ms
+        messageRenderBatchSize: 30,
+        typingIndicatorTimeout: 3000
     },
-
-    // Logging Level ('DEBUG', 'INFO', 'WARN', 'ERROR')
-    logLevel: 'DEBUG', // Set to 'INFO' or 'WARN' for production
+    logLevel: 'DEBUG',
 };
 
 // Apply log level from config

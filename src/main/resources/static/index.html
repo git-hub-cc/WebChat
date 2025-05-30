@@ -164,6 +164,16 @@
                 </div>
             </div>
             <div class="settings-section">
+                <h3>Preferences</h3>
+                <div class="settings-item">
+                    <label for="autoConnectToggle">Auto-connect to Contacts</label>
+                    <label class="switch">
+                        <input type="checkbox" id="autoConnectToggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            <div class="settings-section">
                 <h3>Network Status</h3>
                 <div id="modalNetworkInfo">Detecting...</div>
                 <div class="connection-quality">
@@ -171,7 +181,7 @@
                 </div>
                 <button id="checkNetworkBtnModal" class="btn btn-secondary">Re-check Network</button>
             </div>
-            <div class="settings-section">
+            <div class="settings-section" style="display: none;">
                 <h3>Manual Connection (Advanced)</h3>
                 <p>For connecting if signaling server fails or for direct peer connection.</p>
                 <div class="manual-connect-step">
@@ -190,7 +200,7 @@
             </div>
             <div class="settings-section">
                 <h3>Danger Zone</h3>
-                <button id="modalResetAllConnectionsBtn" class="btn btn-danger">Reset All Connections</button>
+                <button id="modalResetAllConnectionsBtn" class="btn btn-danger" style="display: none;">Reset All Connections</button>
                 <button id="modalClearContactsBtn" class="btn btn-danger">Clear All Contacts</button>
                 <button id="modalClearAllChatsBtn" class="btn btn-danger">Clear All Chat History</button>
             </div>

@@ -191,7 +191,7 @@ const UIManager = {
 
         // Add WebSocket status
         // Ensuring CSS variables --success-color and --danger-color are defined in style.css
-        html += `Signaling Server: ${webSocketStatus ? '<span style="color: var(--success-color, green);">Connected</span>' : '<span style="color: var(--danger-color, red);">Disconnected</span>'}`;
+        html += `Signaling Server: ${webSocketStatus ? '<span style="color: green;">Connected</span>' : '<span style="color: var(--danger-color, red);">Disconnected</span>'}`;
         networkInfoEl.innerHTML = html;
 
         // Determine overall quality

@@ -2,29 +2,67 @@ const UserManager = {
     userId: null,
     userName: 'Me', // Default, can be changed by user settings later
     contacts: {}, // { id: {id, name, lastMessage, lastTime, unread} }
+    userSettings: { // New property for settings
+        autoConnectEnabled: true, // Default
+    },
 
     init: async function() {
         try {
             await DBManager.init();
-            const userData = await DBManager.getItem('user', 'currentUser');
+            let userData = await DBManager.getItem('user', 'currentUser');
             if (userData && userData.userId) {
                 this.userId = userData.userId;
                 this.userName = userData.userName || `User ${this.userId.substring(0,4)}`;
+                // Load settings
+                this.userSettings.autoConnectEnabled = typeof userData.autoConnectEnabled === 'boolean' ? userData.autoConnectEnabled : false;
             } else {
                 this.userId = Utils.generateId(8); // Generate a slightly longer default ID
                 this.userName = `User ${this.userId.substring(0,4)}`;
-                await DBManager.setItem('user', { id: 'currentUser', userId: this.userId, userName: this.userName });
+                // Save initial user data including default settings
+                userData = {
+                    id: 'currentUser',
+                    userId: this.userId,
+                    userName: this.userName,
+                    autoConnectEnabled: this.userSettings.autoConnectEnabled // Save default
+                };
+                await DBManager.setItem('user', userData);
             }
             document.getElementById('modalUserIdValue').textContent = this.userId;
             Utils.log(`User initialized: ${this.userId} (${this.userName})`, Utils.logLevels.INFO);
+            Utils.log(`User settings loaded: autoConnectEnabled = ${this.userSettings.autoConnectEnabled}`, Utils.logLevels.DEBUG);
             await this.loadContacts();
         } catch (error) {
             Utils.log(`User initialization failed: ${error}`, Utils.logLevels.ERROR);
             // Fallback: generate temporary ID if DB fails hard
             this.userId = Utils.generateId(8);
             this.userName = `User ${this.userId.substring(0,4)}`;
+            this.userSettings.autoConnectEnabled = false; // Fallback setting
             document.getElementById('modalUserIdValue').textContent = this.userId;
             // Potentially load from localStorage if DB completely fails
+        }
+    },
+
+    // New function to update a specific setting
+    updateUserSetting: async function(settingKey, value) {
+        if (this.userSettings.hasOwnProperty(settingKey)) {
+            this.userSettings[settingKey] = value;
+            Utils.log(`User setting updated: ${settingKey} = ${value}`, Utils.logLevels.INFO);
+
+            // Persist the change
+            try {
+                const userData = await DBManager.getItem('user', 'currentUser') ||
+                    { id: 'currentUser', userId: this.userId, userName: this.userName };
+                // Ensure all settings are preserved if userData was minimal
+                const updatedUserData = { ...userData, ...this.userSettings };
+                updatedUserData[settingKey] = value; // Explicitly set the changed value
+
+                await DBManager.setItem('user', updatedUserData);
+            } catch (error) {
+                Utils.log(`Failed to save setting ${settingKey}: ${error}`, Utils.logLevels.ERROR);
+                UIManager.showNotification('Failed to save setting.', 'error');
+            }
+        } else {
+            Utils.log(`Attempted to update unknown setting: ${settingKey}`, Utils.logLevels.WARN);
         }
     },
 

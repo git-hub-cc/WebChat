@@ -8,7 +8,7 @@ const AppInitializer = {
             await DBManager.init();
             Utils.log('数据库初始化成功', Utils.logLevels.INFO);
 
-            await UserManager.init();
+            await UserManager.init(); // UserManager.init now loads the autoConnectEnabled setting
             await ChatManager.init();
             await GroupManager.init(); // Init GroupManager after UserManager and ChatManager
 
@@ -31,13 +31,14 @@ const AppInitializer = {
             // Fallback for core functionalities if DB fails
             if (!UserManager.userId) { // Ensure UserManager fallback if its init failed before DB
                 UserManager.userId = Utils.generateId(8);
+                UserManager.userSettings.autoConnectEnabled = false; // Ensure default on fallback
                 document.getElementById('modalUserIdValue').textContent = UserManager.userId;
             }
             await this.refreshNetworkStatusUI();
             this.startNetworkMonitoring();
             MediaManager.initVoiceRecording();
             VideoCallManager.init();
-            this.setupEventListeners();
+            this.setupEventListeners(); // Call setupEventListeners even in fallback
             this.initUIMode();
         }
         // Remove loading overlay after a slight delay to ensure WebSocket status is updated
@@ -140,14 +141,39 @@ const AppInitializer = {
         }
 
         // Main Menu Modal
-        document.getElementById('mainMenuBtn').addEventListener('click', () => UIManager.toggleModal('mainMenuModal', true));
+        document.getElementById('mainMenuBtn').addEventListener('click', () => {
+            UIManager.toggleModal('mainMenuModal', true);
+            // Set initial state of the auto-connect toggle when modal is shown
+            const autoConnectToggle = document.getElementById('autoConnectToggle');
+            if (autoConnectToggle && UserManager.userSettings) { // Ensure userSettings is available
+                autoConnectToggle.checked = UserManager.userSettings.autoConnectEnabled;
+            }
+        });
         document.querySelector('.close-modal-btn[data-modal-id="mainMenuModal"]').addEventListener('click', () => UIManager.toggleModal('mainMenuModal', false));
         document.getElementById('modalCopyIdBtn').addEventListener('click', () => UIManager.copyUserIdFromModal());
         document.getElementById('checkNetworkBtnModal').addEventListener('click', async () => await this.refreshNetworkStatusUI());
 
+        // Event listener for the new Auto-Connect Toggle
+        const autoConnectToggle = document.getElementById('autoConnectToggle');
+        if (autoConnectToggle) {
+            autoConnectToggle.addEventListener('change', (event) => {
+                if (UserManager.userSettings) { // Check if userSettings available
+                    UserManager.updateUserSetting('autoConnectEnabled', event.target.checked);
+                    if (event.target.checked) {
+                        UIManager.showNotification('Auto-connect enabled. Will attempt on next app start or successful signaling connection.', 'info');
+                        // If WebSocket is connected and registration was successful, try to connect immediately
+                        if (ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN) {
+                            ConnectionManager.autoConnectToAllContacts();
+                        }
+                    } else {
+                        UIManager.showNotification('Auto-connect disabled.', 'info');
+                    }
+                }
+            });
+        }
+
 
         // Manual Connection Buttons in Modal
-        document.getElementById('modalCreateOfferBtn').addEventListener('click', () => ConnectionManager.createOffer(null, { isSilent: false, isVideoCall: false, isAudioOnly: false }));
         document.getElementById('modalResetAllConnectionsBtn').addEventListener('click', () => ConnectionManager.resetAllConnections());
         document.getElementById('modalClearContactsBtn').addEventListener('click', () => UserManager.clearAllContacts());
         document.getElementById('modalClearAllChatsBtn').addEventListener('click', () => ChatManager.clearAllChats());
