@@ -1,4 +1,4 @@
-const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 }; // Private-like variable
+const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, ALL: 4 }; // Private-like variable
 
 const Utils = {
     logLevels: _Utils_logLevels,
@@ -20,7 +20,8 @@ const Utils = {
             const logMessage = `[${timestamp}] ${prefix} ${message}`;
 
             // console output
-            if (level === this.logLevels.ERROR) console.error(logMessage);
+            if (level === this.logLevels.ALL) console.log(logMessage);
+            else if (level === this.logLevels.ERROR) console.error(logMessage);
             else if (level === this.logLevels.DEBUG) console.debug(logMessage);
             else if (level === this.logLevels.WARN) console.warn(logMessage);
             else if (level === this.logLevels.INFO) console.info(logMessage);

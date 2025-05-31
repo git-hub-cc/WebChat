@@ -9,8 +9,9 @@ const MessageManager = {
         const messageText = input.value.trim();
         // Correctly access properties of MessageManager
         // this.audioData = MessageManager.audioData; // This was redundant
-        // this.selectedFile = MessageManager.selectedFile;
-        // this.audioDuration = MessageManager.audioDuration;
+        this.selectedFile = MessageManager.selectedFile;
+        this.audioData = MessageManager.audioData;
+        this.audioDuration = MessageManager.audioDuration;
 
         if (!ChatManager.currentChatId) {
             UIManager.showNotification('Select a chat to send a message.', 'warning');
@@ -48,7 +49,7 @@ const MessageManager = {
 
             ChatManager.addMessage(targetId, {...audioMessage, sender: UserManager.userId});
             messageSent = true;
-            this.cancelAudioData();
+            MessageManager.cancelAudioData();
         }
 
         if (this.selectedFile) {
@@ -66,7 +67,7 @@ const MessageManager = {
 
             ChatManager.addMessage(targetId, {...fileMessage, sender: UserManager.userId});
             messageSent = true;
-            this.cancelFileData();
+            MessageManager.cancelFileData();
         }
 
         if (messageText) {

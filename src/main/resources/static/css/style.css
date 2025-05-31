@@ -506,7 +506,7 @@ body {
     color: var(--text-color-light);
     cursor: pointer;
     padding: 8px; /* Consistent padding around icons */
-    margin: 0 5px;
+    margin: 0 10px;
     border-radius: 50%;
     width: 40px;
     height: 40px;
