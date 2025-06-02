@@ -19,6 +19,7 @@ public class SignalingMessage {
 
     private Boolean isVideoCall;
     private Boolean isAudioOnly;
+    private Boolean isScreenShare; // Added for screen sharing
 
     private String message; // For SUCCESS/ERROR types
 
@@ -56,6 +57,8 @@ public class SignalingMessage {
     public void setIsVideoCall(Boolean videoCall) { isVideoCall = videoCall; }
     public Boolean getIsAudioOnly() { return isAudioOnly; } // Use getIsAudioOnly for boolean
     public void setIsAudioOnly(Boolean audioOnly) { isAudioOnly = audioOnly; }
+    public Boolean getIsScreenShare() { return isScreenShare; }
+    public void setIsScreenShare(Boolean screenShare) { isScreenShare = screenShare; }
     public String getMessage() { return message; }
     public void setMessage(String message) { this.message = message; }
 }

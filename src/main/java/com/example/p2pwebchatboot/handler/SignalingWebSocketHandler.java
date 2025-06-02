@@ -32,7 +32,14 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             String payload = message.getPayload().toString();
             SignalingMessage signalingMessage = objectMapper.readValue(payload, SignalingMessage.class);
 
-            logger.info("收到消息: {} 来自会话: {}", signalingMessage.getType(), session.getId());
+            // Avoid logging SDP content directly in production if it's too verbose or sensitive
+            if (signalingMessage.getType() == MessageType.OFFER || signalingMessage.getType() == MessageType.ANSWER) {
+                logger.info("收到消息类型: {} 来自会话: {}, 目标用户: {}, isVideoCall: {}, isAudioOnly: {}, isScreenShare: {}",
+                        signalingMessage.getType(), session.getId(), signalingMessage.getTargetUserId(),
+                        signalingMessage.getIsVideoCall(), signalingMessage.getIsAudioOnly(), signalingMessage.getIsScreenShare());
+            } else {
+                logger.info("收到消息: {} 来自会话: {}", signalingMessage.getType(), session.getId());
+            }
 
             handleSignalingMessage(session, signalingMessage);
         } catch (Exception e) {
@@ -96,7 +103,13 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
 
         WebSocketSession targetSession = userSessionService.getUserSession(targetUserId);
         if (targetSession == null || !targetSession.isOpen()) {
-            sendErrorMessage(session, "目标用户 " + targetUserId + " 不在线");
+            // Do not send "目标用户不在线" for ICE candidates as they might arrive late or for a connection being torn down.
+            // The WebRTC connection state handles this.
+            logger.warn("ICE Candidate: 目标用户 {} 不在线或会话已关闭. ICE for {}->{} not forwarded.", targetUserId, userId, targetUserId);
+            // Optionally, if you want to inform the sender, send USER_NOT_FOUND
+            // SignalingMessage userNotFoundMsg = new SignalingMessage(MessageType.USER_NOT_FOUND);
+            // userNotFoundMsg.setTargetUserId(targetUserId);
+            // sendMessage(session, userNotFoundMsg);
             return;
         }
 
@@ -128,8 +141,8 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         String userId = message.getUserId(); // This is the initiator
         String targetUserId = message.getTargetUserId();
 
-        logger.info("用户 {} 向用户 {} 发送offer. isVideoCall={}, isAudioOnly={}, sdpType={}",
-                userId, targetUserId, message.getIsVideoCall(), message.getIsAudioOnly(), message.getSdpType());
+        logger.info("用户 {} 向用户 {} 发送offer. isVideoCall={}, isAudioOnly={}, isScreenShare={}, sdpType={}",
+                userId, targetUserId, message.getIsVideoCall(), message.getIsAudioOnly(), message.getIsScreenShare(), message.getSdpType());
 
         WebSocketSession targetSession = userSessionService.getUserSession(targetUserId);
         if (targetSession == null || !targetSession.isOpen()) {
@@ -148,6 +161,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         forwardMessage.setCandidates(message.getCandidates());
         forwardMessage.setIsVideoCall(message.getIsVideoCall()); // Forward isVideoCall
         forwardMessage.setIsAudioOnly(message.getIsAudioOnly()); // Forward isAudioOnly
+        forwardMessage.setIsScreenShare(message.getIsScreenShare()); // Forward isScreenShare
 
         sendMessage(targetSession, forwardMessage);
         logger.info("Offer已转发给用户 {}", targetUserId);
@@ -157,8 +171,8 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         String userId = message.getUserId(); // This is the one sending the answer
         String targetUserId = message.getTargetUserId(); // This is the original offer initiator
 
-        logger.info("用户 {} 向用户 {} 发送answer. isVideoCall={}, isAudioOnly={}, sdpType={}",
-                userId, targetUserId, message.getIsVideoCall(), message.getIsAudioOnly(), message.getSdpType());
+        logger.info("用户 {} 向用户 {} 发送answer. isVideoCall={}, isAudioOnly={}, isScreenShare={}, sdpType={}",
+                userId, targetUserId, message.getIsVideoCall(), message.getIsAudioOnly(), message.getIsScreenShare(), message.getSdpType());
 
         WebSocketSession targetSession = userSessionService.getUserSession(targetUserId);
         if (targetSession == null || !targetSession.isOpen()) {
@@ -176,6 +190,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         forwardMessage.setCandidates(message.getCandidates());
         forwardMessage.setIsVideoCall(message.getIsVideoCall()); // Forward isVideoCall
         forwardMessage.setIsAudioOnly(message.getIsAudioOnly()); // Forward isAudioOnly
+        forwardMessage.setIsScreenShare(message.getIsScreenShare()); // Forward isScreenShare
 
         sendMessage(targetSession, forwardMessage);
         logger.info("Answer已转发给用户 {}", targetUserId);

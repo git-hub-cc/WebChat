@@ -144,13 +144,20 @@ const UIManager = {
     setCallButtonsState(enabled, peerId = null) {
         const videoCallBtn = document.getElementById('videoCallButtonMain');
         const audioCallBtn = document.getElementById('audioCallButtonMain');
+        const screenShareBtn = document.getElementById('screenShareButtonMain');
 
-        if (videoCallBtn) videoCallBtn.disabled = !enabled || ChatManager.currentChatId?.startsWith('group_');
-        if (audioCallBtn) audioCallBtn.disabled = !enabled || ChatManager.currentChatId?.startsWith('group_');
+        const isGroupChat = ChatManager.currentChatId?.startsWith('group_');
+        // Check if getDisplayMedia API is available
+        const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 
-        if (enabled && peerId && !ChatManager.currentChatId?.startsWith('group_')) {
+        if (videoCallBtn) videoCallBtn.disabled = !enabled || isGroupChat;
+        if (audioCallBtn) audioCallBtn.disabled = !enabled || isGroupChat;
+        if (screenShareBtn) screenShareBtn.disabled = !enabled || isGroupChat || !canShareScreen;
+
+        if (enabled && peerId && !isGroupChat) {
             videoCallBtn.onclick = () => VideoCallManager.initiateCall(peerId);
             audioCallBtn.onclick = () => VideoCallManager.initiateAudioCall(peerId);
+            if (canShareScreen) screenShareBtn.onclick = () => VideoCallManager.initiateScreenShare(peerId);
         }
     },
 
