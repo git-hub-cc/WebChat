@@ -1054,3 +1054,175 @@ input:checked + .slider:before {
 #localVideo, #remoteVideo {
     background-color: #2c2c2c;
 }
+
+.online-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #4CAF50; /* Green */
+    border-radius: 50%;
+    margin-left: 6px; /* Space from the name */
+    vertical-align: middle; /* Aligns better with text if name wraps */
+    box-shadow: 0 0 3px #4caf50c9; /* Optional: subtle glow */
+    flex-shrink: 0; /* Prevent shrinking if name is very long */
+}
+
+.chat-list-item .chat-list-name {
+    display: flex; /* Use flex to align name and dot */
+    align-items: center; /* Vertically center items in the name container */
+    word-break: break-word; /* Prevent long names from breaking layout */
+}
+
+/* For the reconnect prompt */
+.reconnect-prompt {
+    background-color: var(--warning-bg-color, #fff3cd);
+    color: var(--warning-text-color, #856404);
+    border-left: 4px solid var(--warning-color, #ffc107);
+    padding: 10px 15px;
+    margin: 10px 0;
+    font-size: 0.9em;
+    border-radius: var(--border-radius);
+}
+.reconnect-prompt-text {
+    margin-right: 10px;
+}
+.btn-reconnect-inline, .btn-cancel-reconnect-inline {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+.btn-reconnect-inline:hover, .btn-cancel-reconnect-inline:hover {
+    background-color: var(--primary-dark-color);
+}
+.btn-reconnect-inline:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+.btn-cancel-reconnect-inline {
+    background-color: var(--secondary-action-color, #6c757d);
+}
+.btn-cancel-reconnect-inline:hover {
+    background-color: #5a6268;
+}
+
+/* Confirmation Modal Styles */
+.confirmation-modal {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001; /* Ensure it's above other modals */
+}
+
+.confirmation-modal .modal-content {
+    background-color: var(--background-color-light, #fff);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 400px;
+    text-align: left;
+}
+
+.confirmation-modal .modal-header {
+    border-bottom: 1px solid var(--border-color, #eee);
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+.confirmation-modal .modal-header h2 {
+    margin: 0;
+    font-size: 1.25em;
+    color: var(--text-color-strong);
+}
+
+.confirmation-modal .modal-body p {
+    margin: 0 0 20px 0;
+    line-height: 1.6;
+    color: var(--text-color);
+}
+
+.confirmation-modal .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.confirmation-modal .btn {
+    padding: 8px 15px;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    font-weight: 500;
+    border: none;
+}
+.confirmation-modal .btn-danger {
+    background-color: var(--danger-color, #dc3545);
+    color: white;
+}
+.confirmation-modal .btn-danger:hover {
+    background-color: #c82333;
+}
+.confirmation-modal .btn-secondary {
+    background-color: var(--secondary-action-color, #6c757d);
+    color: white;
+}
+.confirmation-modal .btn-secondary:hover {
+    background-color: #5a6268;
+}
+
+
+/* General Modal Styling (if not already present) */
+.modal-like { /* Common base for modals */
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--background-color-light, #fff);
+    margin: auto;
+    padding: 20px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 500px; /* Adjust as needed */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    position: relative;
+}
+
+.close-modal-btn {
+    color: var(--text-color-light, #aaa);
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.close-modal-btn:hover,
+.close-modal-btn:focus {
+    color: var(--text-color, black);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Style for the file input, as it's now part of AppInitializer event setup */
+#fileInput {
+    display: none; /* Hide the default file input */
+}

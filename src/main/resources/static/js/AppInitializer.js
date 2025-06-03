@@ -1,3 +1,4 @@
+
 const AppInitializer = {
 
     init: async function () {
@@ -98,8 +99,6 @@ const AppInitializer = {
         EventEmitter.on('connectionDisconnected', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
                 UIManager.setCallButtonsState(false);
-                // Optionally, if not a silent disconnect, update header.
-                // UIManager.updateChatHeaderStatus('Disconnected'); // This might be too aggressive for brief disconnections.
             }
             UIManager.updateChatListItemStatus(peerId, false);
         });
@@ -107,7 +106,6 @@ const AppInitializer = {
         EventEmitter.on('connectionEstablished', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
                 UIManager.setCallButtonsState(true, peerId);
-                // UIManager.updateChatHeaderStatus('Connected'); // Already handled by DC onopen
             }
             UIManager.updateChatListItemStatus(peerId, true);
         });
@@ -115,10 +113,17 @@ const AppInitializer = {
         EventEmitter.on('connectionFailed', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
                 UIManager.setCallButtonsState(false);
-                // UIManager.updateChatHeaderStatus('Connection Failed');
             }
             UIManager.updateChatListItemStatus(peerId, false);
         });
+
+        EventEmitter.on('connectionClosed', (peerId) => { // Handle definitive close
+            if (ChatManager.currentChatId === peerId) {
+                UIManager.setCallButtonsState(false);
+            }
+            UIManager.updateChatListItemStatus(peerId, false);
+        });
+
 
         // Event listener for WebSocket status changes
         EventEmitter.on('websocketStatusUpdate', async () => {
@@ -206,6 +211,8 @@ const AppInitializer = {
         // Send and Attach buttons
         document.getElementById('sendButtonMain').addEventListener('click', MessageManager.sendMessage);
         document.getElementById('attachBtnMain').addEventListener('click', () => document.getElementById('fileInput').click());
+        document.getElementById('fileInput').addEventListener('change', MediaManager.handleFileSelect.bind(MediaManager));
+
 
         // Back to list button (mobile)
         document.getElementById('backToListBtn').addEventListener('click', () => UIManager.showChatListArea());
