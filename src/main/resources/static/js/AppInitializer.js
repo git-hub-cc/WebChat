@@ -42,35 +42,22 @@ const AppInitializer = {
             this.setupEventListeners(); // Call setupEventListeners even in fallback
             this.initUIMode();
         }
-        // Remove loading overlay after a slight delay to ensure WebSocket status is updated
-        // The observer logic for connectionStatusText is better.
     },
 
     initUIMode: function() {
-        UIManager.updateResponsiveUI(); // Initial check
-        // **FIXED: Bind the UIManager context to the updateResponsiveUI function**
+        UIManager.updateResponsiveUI();
         window.addEventListener('resize', UIManager.updateResponsiveUI.bind(UIManager));
     },
 
-    // New function to consolidate network status updates for the UI
     refreshNetworkStatusUI: async function() {
         try {
             const networkType = await Utils.checkNetworkType();
-            const wsStatus = ConnectionManager.isWebSocketConnected; // Get current WS status
+            const wsStatus = ConnectionManager.isWebSocketConnected;
             UIManager.updateNetworkInfoDisplay(networkType, wsStatus);
         } catch (error) {
-            // Error from Utils.checkNetworkType
             Utils.log(`Error in refreshNetworkStatusUI during Utils.checkNetworkType: ${error}`, Utils.logLevels.ERROR);
             UIManager.updateNetworkInfoDisplay({ error: "WebRTC check failed" }, ConnectionManager.isWebSocketConnected);
         }
-    },
-
-    // Deprecated direct call to UIManager from here, now uses refreshNetworkStatusUI
-    checkNetworkType: async function () {
-        // This function is kept if other parts of the app rely on it for just WebRTC check,
-        // but for UI updates, refreshNetworkStatusUI is preferred.
-        // For now, it effectively does what refreshNetworkStatusUI does for the modal.
-        await this.refreshNetworkStatusUI();
     },
 
     startNetworkMonitoring: function () {
@@ -78,19 +65,19 @@ const AppInitializer = {
         window.addEventListener('offline', this.handleNetworkChange.bind(this));
     },
 
-    handleNetworkChange: async function () { // Made async
+    handleNetworkChange: async function () {
         if (navigator.onLine) {
             UIManager.updateConnectionStatusIndicator('Network reconnected. Attempting to restore connections...');
-            ConnectionManager.initialize(); // Re-initialize WebSocket and connections
+            ConnectionManager.initialize();
         } else {
             UIManager.updateConnectionStatusIndicator('Network disconnected.');
         }
-        await this.refreshNetworkStatusUI(); // Refresh full status display
+        await this.refreshNetworkStatusUI();
     },
 
     setupEventListeners: function () {
         document.getElementById('messageInput').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) { // Send on Enter, Shift+Enter or Ctrl+Enter for newline
+            if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
                 e.preventDefault();
                 MessageManager.sendMessage();
             }
@@ -105,10 +92,17 @@ const AppInitializer = {
 
         EventEmitter.on('connectionEstablished', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
-                UIManager.setCallButtonsState(true, peerId);
+                // For special contacts, call buttons should remain disabled for P2P calls
+                const contact = UserManager.contacts[peerId];
+                if (contact && contact.isSpecial) {
+                    UIManager.setCallButtonsState(false);
+                } else {
+                    UIManager.setCallButtonsState(true, peerId);
+                }
             }
             UIManager.updateChatListItemStatus(peerId, true);
         });
+
 
         EventEmitter.on('connectionFailed', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
@@ -117,7 +111,7 @@ const AppInitializer = {
             UIManager.updateChatListItemStatus(peerId, false);
         });
 
-        EventEmitter.on('connectionClosed', (peerId) => { // Handle definitive close
+        EventEmitter.on('connectionClosed', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
                 UIManager.setCallButtonsState(false);
             }
@@ -125,7 +119,6 @@ const AppInitializer = {
         });
 
 
-        // Event listener for WebSocket status changes
         EventEmitter.on('websocketStatusUpdate', async () => {
             Utils.log('WebSocket status updated event received, refreshing network UI.', Utils.logLevels.DEBUG);
             await this.refreshNetworkStatusUI();
@@ -138,19 +131,17 @@ const AppInitializer = {
         } else {
             voiceButton.addEventListener('mousedown', MediaManager.startRecording.bind(MediaManager));
             voiceButton.addEventListener('mouseup', MediaManager.stopRecording.bind(MediaManager));
-            voiceButton.addEventListener('mouseleave', () => { // Stop if mouse leaves button while pressed
+            voiceButton.addEventListener('mouseleave', () => {
                 if (MediaManager.mediaRecorder && MediaManager.mediaRecorder.state === 'recording') {
                     MediaManager.stopRecording();
                 }
             });
         }
 
-        // Main Menu Modal
         document.getElementById('mainMenuBtn').addEventListener('click', () => {
             UIManager.toggleModal('mainMenuModal', true);
-            // Set initial state of the auto-connect toggle when modal is shown
             const autoConnectToggle = document.getElementById('autoConnectToggle');
-            if (autoConnectToggle && UserManager.userSettings) { // Ensure userSettings is available
+            if (autoConnectToggle && UserManager.userSettings) {
                 autoConnectToggle.checked = UserManager.userSettings.autoConnectEnabled;
             }
         });
@@ -158,15 +149,13 @@ const AppInitializer = {
         document.getElementById('modalCopyIdBtn').addEventListener('click', () => UIManager.copyUserIdFromModal());
         document.getElementById('checkNetworkBtnModal').addEventListener('click', async () => await this.refreshNetworkStatusUI());
 
-        // Event listener for the new Auto-Connect Toggle
         const autoConnectToggle = document.getElementById('autoConnectToggle');
         if (autoConnectToggle) {
             autoConnectToggle.addEventListener('change', (event) => {
-                if (UserManager.userSettings) { // Check if userSettings available
+                if (UserManager.userSettings) {
                     UserManager.updateUserSetting('autoConnectEnabled', event.target.checked);
                     if (event.target.checked) {
                         UIManager.showNotification('Auto-connect enabled. Will attempt on next app start or successful signaling connection.', 'info');
-                        // If WebSocket is connected and registration was successful, try to connect immediately
                         if (ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN) {
                             ConnectionManager.autoConnectToAllContacts();
                         }
@@ -178,43 +167,35 @@ const AppInitializer = {
         }
 
 
-        // Manual Connection Buttons in Modal
         document.getElementById('modalResetAllConnectionsBtn').addEventListener('click', () => ConnectionManager.resetAllConnections());
         document.getElementById('modalClearContactsBtn').addEventListener('click', () => UserManager.clearAllContacts());
         document.getElementById('modalClearAllChatsBtn').addEventListener('click', () => ChatManager.clearAllChats());
 
 
-        // New Chat/Group FAB and Modal
         document.getElementById('newChatFab').addEventListener('click', () => UIManager.toggleModal('newContactGroupModal', true));
         document.querySelector('.close-modal-btn[data-modal-id="newContactGroupModal"]').addEventListener('click', () => UIManager.toggleModal('newContactGroupModal', false));
         document.getElementById('confirmNewContactBtn').addEventListener('click', UIManager.handleAddNewContact);
         document.getElementById('confirmNewGroupBtnModal').addEventListener('click', UIManager.handleCreateNewGroup);
 
-        // Chat Area Header Action Buttons
         document.getElementById('videoCallButtonMain').onclick = () => VideoCallManager.initiateCall(ChatManager.currentChatId);
         document.getElementById('audioCallButtonMain').onclick = () => VideoCallManager.initiateAudioCall(ChatManager.currentChatId);
         document.getElementById('screenShareButtonMain').onclick = () => VideoCallManager.initiateScreenShare(ChatManager.currentChatId);
         document.getElementById('chatDetailsBtnMain').addEventListener('click', () => UIManager.toggleDetailsPanel(true));
 
-        // Details Panel
         document.getElementById('closeDetailsBtnMain').addEventListener('click', () => UIManager.toggleDetailsPanel(false));
         document.getElementById('addMemberBtnDetails').addEventListener('click', UIManager.handleAddMemberToGroupDetails);
 
-        // Sidebar Tabs
         document.getElementById('tabAllChats').addEventListener('click', () => ChatManager.renderChatList('all'));
         document.getElementById('tabContacts').addEventListener('click', () => UserManager.renderContactListForSidebar());
         document.getElementById('tabGroups').addEventListener('click', () => GroupManager.renderGroupListForSidebar());
 
-        // Search
         document.getElementById('chatSearchInput').addEventListener('input', (e) => UIManager.filterChatList(e.target.value));
 
-        // Send and Attach buttons
         document.getElementById('sendButtonMain').addEventListener('click', MessageManager.sendMessage);
         document.getElementById('attachBtnMain').addEventListener('click', () => document.getElementById('fileInput').click());
         document.getElementById('fileInput').addEventListener('change', MediaManager.handleFileSelect.bind(MediaManager));
 
 
-        // Back to list button (mobile)
         document.getElementById('backToListBtn').addEventListener('click', () => UIManager.showChatListArea());
 
         window.addEventListener('error', (event) => {
@@ -224,7 +205,6 @@ const AppInitializer = {
 
         window.addEventListener('unhandledrejection', function(event) {
             Utils.log(`未处理的Promise拒绝: ${event.reason}`, Utils.logLevels.ERROR);
-            // UIManager.showNotification('An unhandled promise rejection occurred.', 'error');
             UIManager.showNotification('Lost connection to the server.', 'error');
         });
 
@@ -232,29 +212,21 @@ const AppInitializer = {
             MediaManager.releaseAudioResources();
             VideoCallManager.releaseMediaResources();
             for (const peerId in ConnectionManager.connections) {
-                ConnectionManager.close(peerId); // Close with notification if possible
+                ConnectionManager.close(peerId);
             }
         });
 
-        // Observer for loading overlay
         const connectionStatusTextEl = document.getElementById('connectionStatusText');
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (connectionStatusTextEl && loadingOverlay) {
             const observer = new MutationObserver(() => {
                 const statusText = connectionStatusTextEl.textContent.toLowerCase();
                 if (statusText.includes('user registration successful') || statusText.includes('signaling server connected')) {
-                    // Wait a bit longer for auto-connections to start potentially
                     setTimeout(() => {
-                        if (loadingOverlay.style.display !== 'none') { // Check if not already hidden by another condition
+                        if (loadingOverlay.style.display !== 'none') {
                             loadingOverlay.style.display = 'none';
                         }
-                    }, 500); // Delay hiding slightly
-                    // Do not disconnect observer immediately, registration success might be followed by disconnection quickly.
-                    // Observer will be naturally inactive if element is hidden.
-                    // Reconsider if this causes issues. For now, let it observe.
-                } else if (statusText.includes('failed') || statusText.includes('error') || statusText.includes('disconnected')) {
-                    // Keep loading overlay or show an error message within it if critical failure prevents app use.
-                    // For now, general errors don't re-show overlay unless they are about initial connection.
+                    }, 500);
                 }
             });
             observer.observe(connectionStatusTextEl, { childList: true, characterData: true, subtree: true });

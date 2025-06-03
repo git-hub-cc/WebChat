@@ -1,3 +1,4 @@
+
 const MediaManager = {
     mediaRecorder: null,
     audioChunks: [],
@@ -159,7 +160,6 @@ const MediaManager = {
         }
         const formattedDuration = Utils.formatTime(duration);
 
-        // Corrected the typo here: class="btn-cancel-preview"
         container.innerHTML = `
             <div class="voice-message-preview">
                 <span>🎙️ Voice Message (${formattedDuration})</span>
@@ -192,7 +192,7 @@ const MediaManager = {
         if (cancelBtn) {
             cancelBtn.onclick = () => { MessageManager.cancelAudioData(); };
         } else {
-            Utils.log("Audio preview: Cancel button not found. This might be due to the corrected typo now, or other issues if it persists.", Utils.logLevels.ERROR);
+            Utils.log("Audio preview: Cancel button not found.", Utils.logLevels.ERROR);
         }
     },
 
@@ -200,17 +200,14 @@ const MediaManager = {
         const audioDataUrl = buttonElement.dataset.audio;
         if (!audioDataUrl) return;
 
-        // Simple audio player for message bubbles - create a new audio element each time
-        // This avoids issues with managing a single player instance for multiple messages
         const existingAudio = buttonElement.querySelector('audio.playing-audio-instance');
         if (existingAudio) {
             existingAudio.pause();
             existingAudio.remove();
-            buttonElement.innerHTML = '▶'; // Play icon
+            buttonElement.innerHTML = '▶';
             return;
         }
 
-        // Remove other playing instances if any
         document.querySelectorAll('audio.playing-audio-instance').forEach(aud => {
             aud.pause();
             const btn = aud.closest('.voice-message').querySelector('.play-voice-btn');
@@ -221,7 +218,7 @@ const MediaManager = {
 
 
         const audio = new Audio(audioDataUrl);
-        audio.className = "playing-audio-instance"; // Add a class to identify it
+        audio.className = "playing-audio-instance";
         buttonElement.innerHTML = '❚❚';
 
         audio.play().catch(e => {
@@ -231,14 +228,12 @@ const MediaManager = {
 
         audio.onended = () => {
             buttonElement.innerHTML = '▶';
-            audio.remove(); // Clean up the audio element
+            audio.remove();
         };
         audio.onerror = () => {
             buttonElement.innerHTML = '⚠️';
             setTimeout(() => {buttonElement.innerHTML = '▶'; audio.remove();}, 2000);
         };
-        // Append to button or a hidden div if needed for controls, but usually not necessary for simple play
-        // buttonElement.appendChild(audio); // Optional: if you want the audio element to be part of the button's DOM
     },
 
     releaseAudioResources: function() {
@@ -248,14 +243,12 @@ const MediaManager = {
             Utils.log('Microphone stream released.', Utils.logLevels.INFO);
         }
         if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
-            // If it's recording or paused, try to stop it cleanly
-            // This case should ideally be handled by explicit stopRecording calls
             try {
                 this.mediaRecorder.stop();
-            } catch(e) { /* ignore errors if already stopped or in invalid state */ }
+            } catch(e) { /* ignore */ }
         }
-        this.mediaRecorder = null; // Ensure it's nullified
-        this.audioChunks = []; // Clear any pending chunks
+        this.mediaRecorder = null;
+        this.audioChunks = [];
     },
 
     formatFileSize: function(bytes) {
@@ -306,7 +299,7 @@ const MediaManager = {
 
         if (file.size > Config.media.maxFileSize) {
             UIManager.showNotification(`File too large. Max size: ${this.formatFileSize(Config.media.maxFileSize)}.`, 'error');
-            event.target.value = ''; // Reset file input
+            event.target.value = '';
             return;
         }
 
@@ -314,7 +307,7 @@ const MediaManager = {
             const reader = new FileReader();
             reader.onload = (e) => {
                 MessageManager.selectedFile = {
-                    data: e.target.result, // base64 data
+                    data: e.target.result,
                     type: file.type,
                     name: file.name,
                     size: file.size
@@ -326,6 +319,6 @@ const MediaManager = {
             Utils.log(`Error handling file select: ${error}`, Utils.logLevels.ERROR);
             UIManager.showNotification('Error processing file.', 'error');
         }
-        event.target.value = ''; // Reset file input to allow selecting the same file again
+        event.target.value = '';
     },
 };

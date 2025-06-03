@@ -2,20 +2,17 @@
 const UIManager = {
     isDetailsPanelVisible: false,
 
-    // Call this on init and resize
     updateResponsiveUI: function() {
         const appContainer = document.querySelector('.app-container');
         if (window.innerWidth <= 768) {
             appContainer.classList.add('mobile-view');
             if (!appContainer.classList.contains('chat-view-active')) {
-                this.showChatListArea(); // Default to list view on mobile
+                this.showChatListArea();
             }
         } else {
             appContainer.classList.remove('mobile-view', 'chat-view-active');
-            const sidebarNav = document.getElementById('sidebarNav');
-            if (sidebarNav) sidebarNav.style.display = 'flex';
-            const chatArea = document.getElementById('chatArea');
-            if (chatArea) chatArea.style.display = 'flex';
+            document.getElementById('sidebarNav').style.display = 'flex';
+            document.getElementById('chatArea').style.display = 'flex';
         }
     },
 
@@ -23,12 +20,10 @@ const UIManager = {
         const appContainer = document.querySelector('.app-container');
         if (appContainer.classList.contains('mobile-view')) {
             appContainer.classList.remove('chat-view-active');
-            const sidebarNav = document.getElementById('sidebarNav');
-            if (sidebarNav) sidebarNav.style.display = 'flex';
-            const chatArea = document.getElementById('chatArea');
-            if (chatArea) chatArea.style.display = 'none';
+            document.getElementById('sidebarNav').style.display = 'flex';
+            document.getElementById('chatArea').style.display = 'none';
         }
-        this.toggleDetailsPanel(false); // Hide details when going to list on mobile
+        this.toggleDetailsPanel(false);
     },
 
     showChatArea: function() {
@@ -67,28 +62,20 @@ const UIManager = {
     },
 
     showNoChatSelected: function() {
-        const currentChatTitleMain = document.getElementById('currentChatTitleMain');
-        if (currentChatTitleMain) currentChatTitleMain.textContent = 'Select a chat';
-        const currentChatStatusMain = document.getElementById('currentChatStatusMain');
-        if (currentChatStatusMain) currentChatStatusMain.textContent = '';
-        const currentChatAvatarMain = document.getElementById('currentChatAvatarMain');
-        if (currentChatAvatarMain) currentChatAvatarMain.textContent = '';
+        document.getElementById('currentChatTitleMain').textContent = 'Select a chat';
+        document.getElementById('currentChatStatusMain').textContent = '';
+        const avatarEl = document.getElementById('currentChatAvatarMain');
+        avatarEl.innerHTML = ''; // Clear previous content (text or image)
+        avatarEl.className = 'chat-avatar-main'; // Reset class
 
         const chatBox = document.getElementById('chatBox');
         if (chatBox) {
             chatBox.innerHTML = '';
-            chatBox.style.display = 'hidden'; // Hide message area when no chat is selected
-        } else {
-            Utils.log("UIManager.showNoChatSelected: chatBox element NOT FOUND!", Utils.logLevels.ERROR);
-        }
+            chatBox.style.display = 'none'; // Corrected: 'none' not 'hidden'
+        } else Utils.log("UIManager.showNoChatSelected: chatBox element NOT FOUND!", Utils.logLevels.ERROR);
 
-        const noChatSelectedScreen = document.getElementById('noChatSelectedScreen');
-        if (noChatSelectedScreen) {
-            noChatSelectedScreen.style.display = 'flex';
-        } else {
-            Utils.log("UIManager.showNoChatSelected: noChatSelectedScreen element NOT FOUND!", Utils.logLevels.ERROR);
-        }
 
+        document.getElementById('noChatSelectedScreen').style.display = 'flex';
 
         this.enableChatInterface(false);
         this.toggleDetailsPanel(false);
@@ -102,12 +89,27 @@ const UIManager = {
         document.getElementById('currentChatTitleMain').textContent = Utils.escapeHtml(title);
         document.getElementById('currentChatStatusMain').textContent = Utils.escapeHtml(status);
         const avatarEl = document.getElementById('currentChatAvatarMain');
-        avatarEl.textContent = Utils.escapeHtml(avatarText) || Utils.escapeHtml(title).charAt(0).toUpperCase();
+
         avatarEl.className = 'chat-avatar-main'; // Reset classes
         if (isGroup) avatarEl.classList.add('group');
 
-        const detailsBtn = document.getElementById('chatDetailsBtnMain');
-        detailsBtn.style.display = ChatManager.currentChatId ? 'block' : 'none';
+        const currentContact = UserManager.contacts[ChatManager.currentChatId];
+        let avatarContentHtml = Utils.escapeHtml(avatarText) || Utils.escapeHtml(title).charAt(0).toUpperCase();
+
+        if (currentContact) {
+            if (currentContact.isSpecial) {
+                avatarEl.classList.add('special-avatar');
+            }
+            if (currentContact.avatarUrl) { // Check for custom avatar URL
+                avatarContentHtml = `<img src="${currentContact.avatarUrl}" alt="${Utils.escapeHtml(title.charAt(0))}" class="avatar-image">`;
+            }
+        } else if (isGroup) {
+            avatarContentHtml = Utils.escapeHtml(avatarText); // Ensure group avatar text is used
+        }
+
+        avatarEl.innerHTML = avatarContentHtml;
+
+        document.getElementById('chatDetailsBtnMain').style.display = ChatManager.currentChatId ? 'block' : 'none';
     },
 
     updateChatHeaderStatus: function(statusText) {
@@ -126,13 +128,17 @@ const UIManager = {
         });
 
         if (enabled && ChatManager.currentChatId) {
-            this.setCallButtonsState(ConnectionManager.isConnectedTo(ChatManager.currentChatId), ChatManager.currentChatId);
+            const currentContact = UserManager.contacts[ChatManager.currentChatId];
+            if (currentContact && currentContact.isSpecial) {
+                this.setCallButtonsState(false); // Special contacts (like AI) generally don't support P2P calls
+            } else {
+                this.setCallButtonsState(ConnectionManager.isConnectedTo(ChatManager.currentChatId), ChatManager.currentChatId);
+            }
         } else {
-            this.setCallButtonsState(false); // Disable if no chat or interface disabled
+            this.setCallButtonsState(false);
         }
 
         if (enabled) {
-            // Small delay for focus to work reliably after UI changes
             setTimeout(() => {
                 const messageInput = document.getElementById('messageInput');
                 if (messageInput) messageInput.focus();
@@ -147,20 +153,25 @@ const UIManager = {
 
         const currentChat = ChatManager.currentChatId;
         const isGroupChat = currentChat?.startsWith('group_');
+        const currentContact = UserManager.contacts[currentChat];
+        const isSpecialChat = currentContact && currentContact.isSpecial; // Check if current chat is with any special contact
+
         const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 
-        if (videoCallBtn) videoCallBtn.disabled = !enabled || isGroupChat;
-        if (audioCallBtn) audioCallBtn.disabled = !enabled || isGroupChat;
-        if (screenShareBtn) screenShareBtn.disabled = !enabled || isGroupChat || !canShareScreen;
+        const finalEnabledState = enabled && !isGroupChat && !isSpecialChat;
 
-        if (enabled && peerId && !isGroupChat) {
+        if (videoCallBtn) videoCallBtn.disabled = !finalEnabledState;
+        if (audioCallBtn) audioCallBtn.disabled = !finalEnabledState;
+        if (screenShareBtn) screenShareBtn.disabled = !finalEnabledState || !canShareScreen;
+
+        if (finalEnabledState && peerId) {
             videoCallBtn.onclick = () => VideoCallManager.initiateCall(peerId);
             audioCallBtn.onclick = () => VideoCallManager.initiateAudioCall(peerId);
             if (canShareScreen) screenShareBtn.onclick = () => VideoCallManager.initiateScreenShare(peerId);
-        } else { // Clear onclick handlers if disabled or group chat
-            videoCallBtn.onclick = null;
-            audioCallBtn.onclick = null;
-            screenShareBtn.onclick = null;
+        } else {
+            if (videoCallBtn) videoCallBtn.onclick = null;
+            if (audioCallBtn) audioCallBtn.onclick = null;
+            if (screenShareBtn) screenShareBtn.onclick = null;
         }
     },
 
@@ -170,9 +181,9 @@ const UIManager = {
 
         if (statusTextEl) statusTextEl.textContent = message;
         if (statusContainerEl) {
-            statusContainerEl.className = 'status-indicator global'; // Ensure 'global' class is always present
+            statusContainerEl.className = 'status-indicator global'; // Reset classes
             if (type !== 'info') {
-                statusContainerEl.classList.add(`status-${type}`);
+                statusContainerEl.classList.add(`status-${type}`); // Add specific type class
             }
         }
     },
@@ -198,6 +209,7 @@ const UIManager = {
         html += `Signaling Server: ${webSocketStatus ? '<span style="color: green;">Connected</span>' : '<span style="color: var(--danger-color, red);">Disconnected</span>'}`;
         networkInfoEl.innerHTML = html;
 
+        // Determine overall quality based on network and WebSocket status
         if (!webSocketStatus) {
             overallQuality = 'Signaling Offline';
             qualityClass = 'quality-poor';
@@ -220,7 +232,7 @@ const UIManager = {
             qualityClass = 'quality-poor';
         }
 
-        qualityIndicator.className = `quality-indicator ${qualityClass}`;
+        qualityIndicator.className = `quality-indicator ${qualityClass}`; // Reset and set class
         qualityText.textContent = overallQuality;
     },
 
@@ -233,7 +245,7 @@ const UIManager = {
         return true;
     },
 
-    showNotification: function(message, type = 'info') {
+    showNotification: function(message, type = 'info') { // type: 'info', 'success', 'warning', 'error'
         const container = document.querySelector('.notification-container') || this._createNotificationContainer();
 
         const notification = document.createElement('div');
@@ -252,11 +264,11 @@ const UIManager = {
             setTimeout(() => {
                 if (notification.parentNode) notification.remove();
                 if (container.children.length === 0 && container.parentNode) container.remove(); // Remove container if empty
-            }, 300);
+            }, 300); // Match CSS transition
         };
 
         notification.querySelector('.notification-close').onclick = removeNotification;
-        setTimeout(removeNotification, type === 'error' ? 8000 : 5000);
+        setTimeout(removeNotification, type === 'error' ? 8000 : 5000); // Longer display for errors
     },
     _createNotificationContainer: function() {
         const container = document.createElement('div');
@@ -270,7 +282,6 @@ const UIManager = {
         if (modal) {
             modal.style.display = show ? 'flex' : 'none';
             if (show && modalId === 'mainMenuModal') {
-                // Refresh network status when main menu modal is shown
                 AppInitializer.refreshNetworkStatusUI();
             }
         }
@@ -284,7 +295,7 @@ const UIManager = {
                 .catch(() => this.showNotification('Failed to copy ID.', 'error'));
         }
     },
-    copySdpTextFromModal: function() { // Make sure this button exists or is added to HTML
+    copySdpTextFromModal: function() {
         const sdpText = document.getElementById('modalSdpText').value;
         if (sdpText) {
             navigator.clipboard.writeText(sdpText)
@@ -320,7 +331,7 @@ const UIManager = {
         UIManager.toggleModal('newContactGroupModal', false);
     },
 
-    setActiveTab: function(tabName) {
+    setActiveTab: function(tabName) { // tabName: 'all', 'contacts', 'groups'
         document.querySelectorAll('.nav-tabs .nav-tab').forEach(tab => tab.classList.remove('active'));
         let targetTabId = '';
         if (tabName === 'all') targetTabId = 'tabAllChats';
@@ -337,19 +348,19 @@ const UIManager = {
         this.isDetailsPanelVisible = show;
 
         if (show) {
-            if (!ChatManager.currentChatId) { // Don't show if no chat selected
-                this.isDetailsPanelVisible = false;
-                return;
+            if (!ChatManager.currentChatId) {
+                this.isDetailsPanelVisible = false; // Ensure flag is correct
+                return; // Don't show if no chat selected
             }
             detailsPanel.style.display = 'flex';
             appContainer.classList.add('show-details');
             this.updateDetailsPanel(ChatManager.currentChatId, ChatManager.currentChatId.startsWith('group_') ? 'group' : 'contact');
         } else {
             appContainer.classList.remove('show-details');
-            // Delay hiding to allow for transition animation
+            // Delay hiding to allow for CSS transition if any (not strictly necessary for 'display:none')
             setTimeout(() => {
                 if (!this.isDetailsPanelVisible) detailsPanel.style.display = 'none';
-            }, 300);
+            }, 300); // Adjust time if CSS transitions are added to panel visibility
         }
     },
 
@@ -365,58 +376,98 @@ const UIManager = {
         const leaveGroupBtn = document.getElementById('leaveGroupBtnDetails');
         const dissolveGroupBtn = document.getElementById('dissolveGroupBtnDetails');
 
-        if (contactActionsEl) contactActionsEl.style.display = 'none';
-        if (groupMgmtEl) groupMgmtEl.style.display = 'none';
-        if (groupActionsEl) groupActionsEl.style.display = 'none';
+        // AI "About" section elements
+        const aiContactAboutSectionEl = document.getElementById('aiContactAboutSection');
+        const aiContactAboutNameEl = document.getElementById('aiContactAboutName');
+        const aiContactBasicInfoListEl = document.getElementById('aiContactBasicInfoList');
+        const aiContactAboutNameSubEl = document.getElementById('aiContactAboutNameSub');
+        const aiContactAboutTextEl = document.getElementById('aiContactAboutText');
+
+
+        if(contactActionsEl) contactActionsEl.style.display = 'none';
+        if(groupMgmtEl) groupMgmtEl.style.display = 'none';
+        if(groupActionsEl) groupActionsEl.style.display = 'none';
+        if(aiContactAboutSectionEl) aiContactAboutSectionEl.style.display = 'none'; // Hide AI section by default
+
 
         if (type === 'contact') {
             const contact = UserManager.contacts[chatId];
             if (!contact) return;
             nameEl.textContent = contact.name;
             idEl.textContent = `ID: ${contact.id}`;
-            avatarEl.textContent = contact.name.charAt(0).toUpperCase();
-            avatarEl.className = 'details-avatar';
-            statusEl.textContent = ConnectionManager.isConnectedTo(chatId) ? 'Connected' : 'Offline';
 
-            if (contactActionsEl) contactActionsEl.style.display = 'block';
-            if (deleteContactBtn) {
-                deleteContactBtn.onclick = () => ChatManager.deleteChat(chatId, 'contact');
+            avatarEl.className = 'details-avatar'; // Reset
+            let avatarContentHtml = Utils.escapeHtml(contact.avatarText || contact.name.charAt(0).toUpperCase());
+            if (contact.isSpecial) avatarEl.classList.add('special-avatar');
+            if (contact.avatarUrl) {
+                avatarContentHtml = `<img src="${contact.avatarUrl}" alt="${Utils.escapeHtml(contact.name.charAt(0))}" class="avatar-image">`;
             }
+            avatarEl.innerHTML = avatarContentHtml;
+
+
+            if (contact.isSpecial) {
+                statusEl.textContent = (contact.isAI ? 'AI Assistant' : 'Special Contact') + ' - Always available';
+                if(contactActionsEl) contactActionsEl.style.display = 'none'; // No actions for special contacts
+
+                // Show and populate AI "About" section if details exist
+                if (contact.isAI && contact.aboutDetails && aiContactAboutSectionEl) {
+                    aiContactAboutSectionEl.style.display = 'block';
+                    if (aiContactAboutNameEl) aiContactAboutNameEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
+                    if (aiContactAboutNameSubEl) aiContactAboutNameSubEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
+
+                    if (aiContactBasicInfoListEl) {
+                        aiContactBasicInfoListEl.innerHTML = ''; // Clear previous
+                        contact.aboutDetails.basicInfo.forEach(info => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `<strong>${Utils.escapeHtml(info.label)}:</strong> ${Utils.escapeHtml(info.value)}`;
+                            aiContactBasicInfoListEl.appendChild(li);
+                        });
+                    }
+                    if (aiContactAboutTextEl) {
+                        aiContactAboutTextEl.textContent = contact.aboutDetails.aboutText;
+                    }
+                }
+
+            } else {
+                statusEl.textContent = ConnectionManager.isConnectedTo(chatId) ? 'Connected' : 'Offline';
+                if(contactActionsEl) contactActionsEl.style.display = 'block';
+                if(deleteContactBtn) deleteContactBtn.onclick = () => ChatManager.deleteChat(chatId, 'contact');
+            }
+
         } else if (type === 'group') {
             const group = GroupManager.groups[chatId];
             if (!group) return;
             nameEl.textContent = group.name;
             idEl.textContent = `Group ID: ${group.id.substring(6)}`; // Show partial ID
-            avatarEl.textContent = '👥';
-            avatarEl.className = 'details-avatar group';
+            avatarEl.innerHTML = '👥'; // Groups use text avatar
+            avatarEl.className = 'details-avatar group'; // Reset and add group class
             statusEl.textContent = `${group.members.length} member${group.members.length === 1 ? '' : 's'}`;
 
-            if (groupMgmtEl) groupMgmtEl.style.display = 'block';
-            if (groupActionsEl) groupActionsEl.style.display = 'block';
+            if(groupMgmtEl) groupMgmtEl.style.display = 'block';
+            if(groupActionsEl) groupActionsEl.style.display = 'block';
+
 
             const isOwner = group.owner === UserManager.userId;
             document.getElementById('addGroupMemberArea').style.display = isOwner ? 'block' : 'none';
             const leftMembersAreaEl = document.getElementById('leftMembersArea');
-            if (leftMembersAreaEl) {
-                leftMembersAreaEl.style.display = isOwner && group.leftMembers && group.leftMembers.length > 0 ? 'block' : 'none';
-            }
-
+            if(leftMembersAreaEl) leftMembersAreaEl.style.display = isOwner && group.leftMembers && group.leftMembers.length > 0 ? 'block' : 'none';
 
             if (leaveGroupBtn) {
                 if (isOwner) {
-                    leaveGroupBtn.style.display = 'none'; // Owner cannot "leave", must dissolve
+                    leaveGroupBtn.style.display = 'none'; // Owner uses dissolve, not leave
                 } else {
                     leaveGroupBtn.style.display = 'block';
                     leaveGroupBtn.textContent = 'Leave Group';
-                    leaveGroupBtn.onclick = () => ChatManager.deleteChat(chatId, 'group'); // Use deleteChat for consistency
+                    leaveGroupBtn.onclick = () => ChatManager.deleteChat(chatId, 'group'); // deleteChat handles leave for non-owners
                     leaveGroupBtn.disabled = false;
                 }
             }
             if (dissolveGroupBtn) {
                 dissolveGroupBtn.style.display = isOwner ? 'block' : 'none';
-                dissolveGroupBtn.onclick = () => ChatManager.deleteChat(chatId, 'group'); // Use deleteChat
+                dissolveGroupBtn.onclick = () => ChatManager.deleteChat(chatId, 'group'); // deleteChat handles dissolve for owners
             }
             this.updateDetailsPanelMembers(chatId);
+            if (aiContactAboutSectionEl) aiContactAboutSectionEl.style.display = 'none'; // Hide AI section for groups
         }
     },
 
@@ -425,7 +476,7 @@ const UIManager = {
         if (!group) return;
 
         const memberListEl = document.getElementById('groupMemberListDetails');
-        memberListEl.innerHTML = ''; // Clear previous list
+        memberListEl.innerHTML = '';
         document.getElementById('groupMemberCount').textContent = group.members.length;
 
         group.members.forEach(memberId => {
@@ -441,16 +492,18 @@ const UIManager = {
             memberListEl.appendChild(item);
         });
 
-        // Add event listeners to new remove buttons
         memberListEl.querySelectorAll('.remove-member-btn-detail').forEach(btn => {
             btn.onclick = () => GroupManager.removeMemberFromGroup(groupId, btn.dataset.memberId);
         });
 
         // Populate contacts dropdown for adding new members
         const contactsDropdown = document.getElementById('contactsDropdownDetails');
-        contactsDropdown.innerHTML = '<option value="">Select contact to add...</option>'; // Reset
+        contactsDropdown.innerHTML = '<option value="">Select contact to add...</option>';
         Object.values(UserManager.contacts).forEach(contact => {
-            if (!group.members.includes(contact.id) && !(group.leftMembers?.find(lm => lm.id === contact.id))) { // Don't show if already member or recently left (handled by re-add)
+            // Exclude already members, left members, and special AI contacts
+            if (!group.members.includes(contact.id) &&
+                !(group.leftMembers?.find(lm => lm.id === contact.id)) &&
+                !(contact.isSpecial && contact.isAI)) { // Don't add AI contacts to groups
                 const option = document.createElement('option');
                 option.value = contact.id;
                 option.textContent = contact.name;
@@ -458,7 +511,7 @@ const UIManager = {
             }
         });
 
-        // Populate left members list for re-adding
+        // Populate left members list
         const leftMemberListEl = document.getElementById('leftMemberListDetails');
         const leftMembersAreaEl = document.getElementById('leftMembersArea');
         leftMemberListEl.innerHTML = '';
@@ -476,9 +529,9 @@ const UIManager = {
             leftMemberListEl.querySelectorAll('.re-add-member-btn-detail').forEach(btn => {
                 btn.onclick = () => GroupManager.addMemberToGroup(groupId, btn.dataset.memberId, btn.dataset.memberName);
             });
-            if (leftMembersAreaEl) leftMembersAreaEl.style.display = 'block';
+            if(leftMembersAreaEl) leftMembersAreaEl.style.display = 'block';
         } else {
-            if (leftMembersAreaEl) leftMembersAreaEl.style.display = 'none';
+            if(leftMembersAreaEl) leftMembersAreaEl.style.display = 'none';
         }
     },
 
@@ -489,8 +542,8 @@ const UIManager = {
         const memberName = memberSelect.selectedOptions[0]?.text;
 
         if (groupId && memberId) {
-            GroupManager.addMemberToGroup(groupId, memberId, memberName).then(() => {
-                memberSelect.value = ""; // Reset dropdown after adding
+            GroupManager.addMemberToGroup(groupId, memberId, memberName).then(success => {
+                if (success) memberSelect.value = ""; // Reset dropdown on success
             });
         } else {
             UIManager.showNotification("Please select a contact to add.", "warning");
@@ -498,13 +551,15 @@ const UIManager = {
     },
 
     filterChatList: function(query) {
-        ChatManager.renderChatList(ChatManager.currentFilter); // Re-render with current filter and new query
+        // The actual filtering logic is inside ChatManager.renderChatList
+        // This function just triggers a re-render
+        ChatManager.renderChatList(ChatManager.currentFilter);
     },
 
     showFullImage: function(src, altText = "Image") {
         const modal = document.createElement('div');
-        modal.className = 'modal-like image-viewer'; // 'modal' for basic styling, 'image-viewer' for specifics
-        modal.style.backgroundColor = 'rgba(0,0,0,0.85)'; // Dark semi-transparent background
+        modal.className = 'modal-like image-viewer'; // Use a class for styling if needed
+        modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
         modal.style.position = 'fixed';
         modal.style.top = '0';
         modal.style.left = '0';
@@ -513,14 +568,14 @@ const UIManager = {
         modal.style.display = 'flex';
         modal.style.alignItems = 'center';
         modal.style.justifyContent = 'center';
-        modal.style.zIndex = '1001'; // Above other modals
+        modal.style.zIndex = '1001'; // Ensure it's above other modals potentially
 
         const img = document.createElement('img');
         img.src = src;
         img.alt = altText;
         img.style.maxWidth = '90%';
         img.style.maxHeight = '90%';
-        img.style.objectFit = 'contain';
+        img.style.objectFit = 'contain'; // Important for image aspect ratio
         img.style.borderRadius = 'var(--border-radius)';
         img.style.boxShadow = '0 0 30px rgba(0,0,0,0.5)';
 
@@ -531,23 +586,26 @@ const UIManager = {
 
     updateChatListItemStatus: function(peerId, isConnected) {
         const itemEl = document.querySelector(`.chat-list-item[data-id="${peerId}"]`);
-        if (itemEl && itemEl.dataset.type === 'contact') { // Ensure it's a contact item
+        if (itemEl && itemEl.dataset.type === 'contact') {
+            // Do not update for special contacts, as their "online" status is fixed or conceptual
+            if (UserManager.isSpecialContact(peerId)) return;
+
             const nameEl = itemEl.querySelector('.chat-list-name');
             if (nameEl) {
                 let onlineDot = nameEl.querySelector('.online-dot');
                 if (isConnected) {
-                    if (!onlineDot) { // If dot doesn't exist, create it
+                    if (!onlineDot) {
                         onlineDot = document.createElement('span');
                         onlineDot.className = 'online-dot';
                         onlineDot.title = "Connected";
-                        nameEl.appendChild(onlineDot); // Append dot to the name element
+                        nameEl.appendChild(onlineDot); // Append to name element
                     }
-                    onlineDot.style.display = 'inline-block'; // Ensure it's visible
+                    onlineDot.style.display = 'inline-block'; // Ensure visible
                 } else {
-                    if (onlineDot) onlineDot.style.display = 'none'; // Hide if disconnected
+                    if (onlineDot) onlineDot.style.display = 'none'; // Hide if not connected
                 }
             }
-            // Also update the status in the main chat header if this is the current chat
+            // Update header if this peer is the current chat
             if (ChatManager.currentChatId === peerId) {
                 this.updateChatHeaderStatus(isConnected ? 'Connected' : 'Offline');
             }
@@ -558,17 +616,17 @@ const UIManager = {
         let promptDiv = chatBox.querySelector(`.system-message.reconnect-prompt[data-peer-id="${peerId}"]`);
         const peerName = UserManager.contacts[peerId]?.name || `Peer ${peerId.substring(0,4)}`;
 
-        if (promptDiv) { // If prompt already exists, update its state
+        if (promptDiv) { // Prompt already exists, update it
             Utils.log(`Reconnect prompt for ${peerId} already visible. Updating text.`, Utils.logLevels.DEBUG);
             const textElement = promptDiv.querySelector('.reconnect-prompt-text');
             if (textElement) textElement.textContent = `Connection to ${peerName} lost.`;
             const recBtn = promptDiv.querySelector('.btn-reconnect-inline');
-            if(recBtn) recBtn.disabled = false; // Re-enable button
+            if(recBtn) recBtn.disabled = false; // Re-enable button if it was disabled
             return;
         }
 
         promptDiv = document.createElement('div');
-        promptDiv.className = 'system-message reconnect-prompt';
+        promptDiv.className = 'system-message reconnect-prompt'; // Use system-message for consistent styling
         promptDiv.setAttribute('data-peer-id', peerId);
         promptDiv.innerHTML = `
             <span class="reconnect-prompt-text">Connection to ${peerName} lost.</span>
@@ -576,7 +634,7 @@ const UIManager = {
             <button class="btn-cancel-reconnect-inline">Dismiss</button>
         `;
         chatBox.appendChild(promptDiv);
-        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to make it visible
+        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to show prompt
 
         const reconnectButton = promptDiv.querySelector('.btn-reconnect-inline');
         const cancelButton = promptDiv.querySelector('.btn-cancel-reconnect-inline');
@@ -587,13 +645,12 @@ const UIManager = {
             EventEmitter.off('connectionEstablished', successHandler);
             EventEmitter.off('connectionFailed', failHandler);
             if (promptDiv && promptDiv.parentNode) {
-                if (removeImmediately) {
+                if(removeImmediately){
                     promptDiv.remove();
                 } else {
-                    // Delay removal slightly to allow user to read status
-                    setTimeout(() => {
+                    setTimeout(() => { // Delay removal to let user see status message
                         if (promptDiv && promptDiv.parentNode) promptDiv.remove();
-                    }, textElement.textContent.includes("Failed") ? 5000 : 3000);
+                    }, textElement.textContent.includes("Failed") ? 5000 : 3000); // Longer for failure message
                 }
             }
         };
@@ -603,11 +660,11 @@ const UIManager = {
                 textElement.textContent = `Reconnected to ${peerName}.`;
                 if (reconnectButton) reconnectButton.style.display = 'none'; // Hide reconnect button
                 if (cancelButton) {
-                    cancelButton.textContent = 'OK';
-                    cancelButton.onclick = () => cleanupPrompt(true); // OK button just closes
+                    cancelButton.textContent = 'OK'; // Change dismiss to OK
+                    cancelButton.onclick = () => cleanupPrompt(true); // OK now dismisses immediately
                 }
                 if (typeof onReconnectSuccess === 'function') onReconnectSuccess();
-                cleanupPrompt(); // Start timed removal
+                cleanupPrompt(); // Schedule removal
             }
         };
 
@@ -615,10 +672,10 @@ const UIManager = {
             if (failedPeerId === peerId) {
                 textElement.textContent = `Failed to reconnect to ${peerName}. Try manual connection or refresh.`;
                 if (reconnectButton) {
-                    reconnectButton.style.display = 'initial'; // Show button again
+                    reconnectButton.style.display = 'initial'; // Ensure visible
                     reconnectButton.disabled = false; // Re-enable
                 }
-                if (cancelButton) cancelButton.textContent = 'Dismiss';
+                if(cancelButton) cancelButton.textContent = 'Dismiss'; // Keep as dismiss
             }
         };
 
@@ -627,11 +684,11 @@ const UIManager = {
 
         reconnectButton.onclick = () => {
             textElement.textContent = `Attempting to reconnect to ${peerName}...`;
-            reconnectButton.disabled = true; // Disable while attempting
-            ConnectionManager.createOffer(peerId, { isSilent: false }); // Attempt non-silent offer
+            reconnectButton.disabled = true;
+            ConnectionManager.createOffer(peerId, { isSilent: false }); // Not silent, as user initiated
         };
         cancelButton.onclick = () => {
-            cleanupPrompt(true); // Dismiss immediately
+            cleanupPrompt(true); // Immediate removal on dismiss
         };
     },
 
@@ -644,7 +701,7 @@ const UIManager = {
         const modalId = 'genericConfirmationModal';
         const modal = document.createElement('div');
         modal.id = modalId;
-        modal.className = 'modal-like confirmation-modal'; // Base class + specific class
+        modal.className = 'modal-like confirmation-modal'; // General modal class + specific
         modal.style.display = 'flex'; // Show it
 
         const modalContent = document.createElement('div');
@@ -655,11 +712,14 @@ const UIManager = {
         const titleElement = document.createElement('h2');
         titleElement.textContent = options.title || 'Confirm Action';
         modalHeader.appendChild(titleElement);
+        // Optionally add close button to header if needed:
+        // const closeBtn = document.createElement('button'); closeBtn.className = 'icon-btn close-modal-btn'; closeBtn.innerHTML = '✕';
+        // closeBtn.onclick = () => { if (onCancel) onCancel(); modal.remove(); }; modalHeader.appendChild(closeBtn);
 
         const modalBody = document.createElement('div');
         modalBody.className = 'modal-body';
         const messageParagraph = document.createElement('p');
-        messageParagraph.innerHTML = Utils.escapeHtml(message).replace(/\n/g, '<br>'); // Support newlines
+        messageParagraph.innerHTML = Utils.escapeHtml(message).replace(/\n/g, '<br>'); // Support newlines in message
         modalBody.appendChild(messageParagraph);
 
         const modalFooter = document.createElement('div');
@@ -667,22 +727,22 @@ const UIManager = {
 
         const confirmButton = document.createElement('button');
         confirmButton.textContent = options.confirmText || 'Confirm';
-        confirmButton.className = `btn ${options.confirmClass || 'btn-danger'}`; // Default to danger for destructive actions
+        confirmButton.className = `btn ${options.confirmClass || 'btn-danger'}`; // Default to danger for confirm
         confirmButton.onclick = () => {
             if (onConfirm) onConfirm();
-            modal.remove(); // Close modal
+            modal.remove();
         };
 
         const cancelButton = document.createElement('button');
         cancelButton.textContent = options.cancelText || 'Cancel';
-        cancelButton.className = `btn ${options.cancelClass || 'btn-secondary'}`; // Default to secondary
+        cancelButton.className = `btn ${options.cancelClass || 'btn-secondary'}`; // Default to secondary for cancel
         cancelButton.onclick = () => {
             if (onCancel) onCancel();
-            modal.remove(); // Close modal
+            modal.remove();
         };
 
-        modalFooter.appendChild(cancelButton); // Cancel first, then confirm (common UI pattern)
-        modalFooter.appendChild(confirmButton);
+        modalFooter.appendChild(cancelButton); // Typically cancel on left
+        modalFooter.appendChild(confirmButton); // Confirm on right
 
         modalContent.appendChild(modalHeader);
         modalContent.appendChild(modalBody);
@@ -706,11 +766,19 @@ const UIManager = {
 
         titleEl.textContent = `${callType}...`;
         textEl.textContent = `Contacting ${Utils.escapeHtml(peerName)}...`;
-        avatarEl.textContent = (Utils.escapeHtml(peerName).charAt(0) || 'P').toUpperCase();
 
-        cancelBtn.onclick = onCancelCall;
+        // Avatar logic for calling modal
+        let avatarContentHtml = (Utils.escapeHtml(peerName).charAt(0) || 'P').toUpperCase();
+        const peerContact = UserManager.contacts[VideoCallManager.currentPeerId]; // Assuming VideoCallManager.currentPeerId is set
+        if (peerContact && peerContact.avatarUrl) {
+            avatarContentHtml = `<img src="${peerContact.avatarUrl}" alt="${Utils.escapeHtml(peerName.charAt(0))}" class="avatar-image">`;
+        }
+        avatarEl.innerHTML = avatarContentHtml;
 
-        modal.style.display = 'flex';
+
+        cancelBtn.onclick = onCancelCall; // Set the cancel action
+
+        modal.style.display = 'flex'; // Show the modal
     },
 
     hideCallingModal: function() {
@@ -718,7 +786,7 @@ const UIManager = {
         if (modal && modal.style.display !== 'none') {
             modal.style.display = 'none';
             const cancelBtn = document.getElementById('callingModalCancelBtn');
-            if (cancelBtn) cancelBtn.onclick = null;
+            if (cancelBtn) cancelBtn.onclick = null; // Clear the onclick handler
         }
     }
 };

@@ -1,4 +1,3 @@
-// Applying the fix to VideoCallManager.js
 
 const VideoCallManager = {
     localStream: null,
@@ -149,7 +148,7 @@ const VideoCallManager = {
         this.isAudioMuted = false;      // User can mute audio if they wish
 
         try {
-            this.currentPeerId = peerId;
+            this.currentPeerId = peerId; // Set currentPeerId here for UIManager.showCallingModal
             this.isCaller = true;
             this.isCallPending = true;
 
@@ -186,7 +185,6 @@ const VideoCallManager = {
     },
 
     initiateCall: async function (peerId, audioOnly = false) {
-        // ... (no changes in this function regarding the new requirements)
         if (this.isCallActive || this.isCallPending) {
             UIManager.showNotification('A call is already active or pending.', 'warning');
             return;
@@ -207,7 +205,7 @@ const VideoCallManager = {
         this.isAudioMuted = false;
 
         try {
-            this.currentPeerId = peerId;
+            this.currentPeerId = peerId; // Set currentPeerId here for UIManager.showCallingModal
             this.isCaller = true;
             this.isCallPending = true;
 
@@ -244,20 +242,28 @@ const VideoCallManager = {
 
     showCallRequest: function (peerId, audioOnly = false, isScreenShare = false) {
         this.currentPeerId = peerId;
-        this.isAudioOnly = audioOnly;           // Will be false if isScreenShare is true from initiator
-        this.isScreenSharing = isScreenShare;   // True if remote initiated screen share
-        this.isVideoEnabled = !audioOnly;       // True if screen sharing or video call. Reflects the *call type* having video.
-                                                // Local video sending status is handled separately.
+        this.isAudioOnly = audioOnly;
+        this.isScreenSharing = isScreenShare;
+        this.isVideoEnabled = !audioOnly;
         this.isAudioMuted = false;
-        this.isCaller = false; // We are receiving the request
+        this.isCaller = false;
 
         const requestModal = document.getElementById('videoCallRequest');
         const requestTitle = requestModal.querySelector('h3');
         const requestDesc = requestModal.querySelector('p');
-        const avatar = requestModal.querySelector('.video-call-avatar');
+        const avatarEl = requestModal.querySelector('.video-call-avatar');
 
         const peerName = UserManager.contacts[peerId]?.name || `Peer ${peerId.substring(0, 4)}`;
-        if (avatar) avatar.textContent = UserManager.contacts[peerId]?.name?.charAt(0).toUpperCase() || 'P';
+        let avatarContentHtml = (UserManager.contacts[peerId]?.name?.charAt(0).toUpperCase() || 'P');
+
+        const peerContact = UserManager.contacts[peerId];
+        if (peerContact && peerContact.avatarUrl) {
+            avatarContentHtml = `<img src="${peerContact.avatarUrl}" alt="${Utils.escapeHtml(peerName.charAt(0))}" class="avatar-image">`;
+        } else {
+            avatarContentHtml = Utils.escapeHtml(avatarContentHtml); // Escape if it's text
+        }
+        if (avatarEl) avatarEl.innerHTML = avatarContentHtml;
+
 
         let callTypeString = "Video Call";
         if (this.isScreenSharing) {
@@ -272,13 +278,11 @@ const VideoCallManager = {
     },
 
     hideCallRequest: function () {
-        // ... (no changes)
         const requestModal = document.getElementById('videoCallRequest');
         if (requestModal) requestModal.style.display = 'none';
     },
 
     acceptCall: async function () {
-        // ... (no changes)
         this.hideCallRequest();
         this.stopMusic(); // Callee stops music on accept
         if (!this.currentPeerId) {
@@ -286,14 +290,11 @@ const VideoCallManager = {
             return;
         }
         try {
-            // If we are accepting a screen share, our local isVideoEnabled should be false
-            // as we are not sending our camera/screen.
-            if (this.isScreenSharing) { // (this.isScreenSharing is true if remote initiated it)
+            if (this.isScreenSharing) {
                 this.isVideoEnabled = false;
             }
-            // For regular calls, this.isVideoEnabled was set in showCallRequest based on audioOnly.
 
-            await this.startLocalStreamAndSignal(false); // false as we are not initial offerer for media exchange.
+            await this.startLocalStreamAndSignal(false);
 
             ConnectionManager.sendTo(this.currentPeerId, {
                 type: 'video-call-accepted',
@@ -314,7 +315,6 @@ const VideoCallManager = {
     },
 
     rejectCall: function () {
-        // ... (no changes)
         this.hideCallRequest();
         this.stopMusic(); // Callee stops music on reject
         if (!this.currentPeerId) return;
@@ -332,9 +332,9 @@ const VideoCallManager = {
 
         try {
             if (this.isScreenSharing) {
-                if (this.isCaller) { // I initiated the screen share
+                if (this.isCaller) {
                     this.localStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
-                    this.isVideoEnabled = true; // My screen is the video being sent
+                    this.isVideoEnabled = true;
 
                     const screenTrack = this.localStream.getVideoTracks()[0];
                     if (screenTrack) {
@@ -355,14 +355,14 @@ const VideoCallManager = {
                             Utils.log(`Could not get microphone audio for screen share: ${micError.message}`, Utils.logLevels.WARN);
                         }
                     }
-                } else { // I accepted a screen share request (I am the VIEWER)
+                } else {
                     this.localStream = await navigator.mediaDevices.getUserMedia({
                         video: false,
                         audio: this.audioConstraints
                     });
-                    this.isVideoEnabled = false; // I am not sending video, only potentially audio
+                    this.isVideoEnabled = false;
                 }
-            } else { // Regular video or audio call
+            } else {
                 if (attemptLocalCameraVideoSending) {
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     if (!devices.some(d => d.kind === 'videoinput')) {
@@ -396,9 +396,9 @@ const VideoCallManager = {
                     video: false,
                     audio: this.audioConstraints
                 });
-                this.isAudioOnly = true; // Fallback to audio only
+                this.isAudioOnly = true;
                 this.isVideoEnabled = false;
-                if (this.isScreenSharing) this.isScreenSharing = false; // Cannot screen share if source failed
+                if (this.isScreenSharing) this.isScreenSharing = false;
             } catch (audioError) {
                 Utils.log(`Fallback audio getUserMedia error: ${audioError.name}`, Utils.logLevels.ERROR);
                 this.endCallCleanup();
@@ -409,24 +409,21 @@ const VideoCallManager = {
         if (this.localStream.getAudioTracks()[0]) {
             this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
         }
-        // Ensure video track (if exists and should be enabled) is set correctly
         if (this.localStream.getVideoTracks()[0]) {
             this.localStream.getVideoTracks()[0].enabled = this.isVideoEnabled;
         }
 
-
-        // Local video preview logic
-        if (this.isScreenSharing && this.isCaller) { // I am initiating screen share
-            this.localVideo.srcObject = null; // Browser gives preview
-            this.localVideo.style.display = 'none';
-        } else if (this.isScreenSharing && !this.isCaller) { // I am accepting screen share
+        if (this.isScreenSharing && this.isCaller) {
             this.localVideo.srcObject = null;
             this.localVideo.style.display = 'none';
-        } else { // Regular call
-            if (!this.isAudioOnly && this.isVideoEnabled) { // Video call, camera on
+        } else if (this.isScreenSharing && !this.isCaller) {
+            this.localVideo.srcObject = null;
+            this.localVideo.style.display = 'none';
+        } else {
+            if (!this.isAudioOnly && this.isVideoEnabled) {
                 this.localVideo.srcObject = this.localStream;
                 this.localVideo.style.display = 'block';
-            } else { // Audio call or video call with camera off
+            } else {
                 this.localVideo.srcObject = null;
                 this.localVideo.style.display = 'none';
             }
@@ -467,10 +464,6 @@ const VideoCallManager = {
             if (track.kind === 'audio') {
                 pc.addTrack(track, this.localStream);
             } else if (track.kind === 'video' && this.isVideoEnabled) {
-                // Only add local video track if:
-                // 1. It's a regular video call (not screen sharing) AND local video is enabled OR
-                // 2. I am the one initiating the screen share (isVideoEnabled will be true for the screen track).
-                // Do NOT add local video track if I am ACCEPTING a screen share (isVideoEnabled will be false for local).
                 if ((!this.isScreenSharing && this.isVideoEnabled) || (this.isScreenSharing && this.isCaller && this.isVideoEnabled)) {
                     pc.addTrack(track, this.localStream);
                 }
@@ -483,23 +476,20 @@ const VideoCallManager = {
             Utils.log(`ontrack event: track kind=${event.track.kind}, id=${event.track.id}, streams associated: ${event.streams.length}`, Utils.logLevels.DEBUG);
 
             const trackHandler = (track) => {
-                // Ensure listeners are attached only once
                 if (!track._videoManagerListenersAttached) {
                     track.onunmute = () => {
                         Utils.log(`Remote track ${track.id} (${track.kind}) unmuted.`, Utils.logLevels.DEBUG);
-                        this.updateUIForCallType(); // Refresh UI, e.g., show video element if it's a video track
-                        // Attempt to play remote video if it's a video track and paused
+                        this.updateUIForCallType();
                         if (track.kind === 'video' && this.remoteVideo && this.remoteVideo.paused) {
                             this.remoteVideo.play().catch(e => Utils.log(`Error playing remote video on unmute: ${e}`, Utils.logLevels.WARN));
                         }
                     };
                     track.onmute = () => {
                         Utils.log(`Remote track ${track.id} (${track.kind}) muted.`, Utils.logLevels.DEBUG);
-                        this.updateUIForCallType(); // Refresh UI
+                        this.updateUIForCallType();
                     };
                     track.onended = () => {
                         Utils.log(`Remote track ${track.id} (${track.kind}) ended.`, Utils.logLevels.DEBUG);
-                        // Remove the track from our managed remoteStream if it exists there
                         if (this.remoteStream && this.remoteStream.getTrackById(track.id)) {
                             try {
                                 this.remoteStream.removeTrack(track);
@@ -508,61 +498,47 @@ const VideoCallManager = {
                                 Utils.log(`Error removing track ${track.id} from remoteStream: ${e}`, Utils.logLevels.WARN);
                             }
                         }
-                        // Special handling if a remote screen share video track ends
                         if (track.kind === 'video' && this.isScreenSharing && !this.isCaller) {
                             Utils.log("Remote screen share track ended. Ending call.", Utils.logLevels.INFO);
                             this.endCall();
                         } else {
-                            this.updateUIForCallType(); // Refresh UI
+                            this.updateUIForCallType();
                         }
                     };
                     track._videoManagerListenersAttached = true;
                 }
             };
 
-            // Prefer using event.streams[0] if available, as it's the stream the track belongs to.
             if (event.streams && event.streams[0]) {
                 const incomingStream = event.streams[0];
                 if (this.remoteVideo.srcObject !== incomingStream) {
                     this.remoteVideo.srcObject = incomingStream;
-                    this.remoteStream = incomingStream; // Update our reference to this authoritative stream
+                    this.remoteStream = incomingStream;
                     Utils.log(`Assigned event.streams[0] (id: ${this.remoteStream.id}) to remoteVideo.srcObject.`, Utils.logLevels.INFO);
                 }
-                // Ensure trackHandler is called for all tracks currently in this stream,
-                // especially the current event.track which triggered this event.
-                if (this.remoteStream) { // Should always be true if incomingStream was assigned
+                if (this.remoteStream) {
                     this.remoteStream.getTracks().forEach(t => trackHandler(t));
                 }
-                // Fallback specifically for event.track if it somehow wasn't processed by the loop above.
-                if (event.track) { // This ensures the current track's handler is attached
+                if (event.track) {
                     trackHandler(event.track);
                 }
 
             } else if (event.track) {
-                // Fallback: Track arrived without an associated stream in event.streams array.
-                // Manage tracks in our own `this.remoteStream`.
                 if (!this.remoteStream) {
                     this.remoteStream = new MediaStream();
-                    // Assign to srcObject only if it's not already pointing to a (potentially different) live stream
                     if (!this.remoteVideo.srcObject || !(this.remoteVideo.srcObject instanceof MediaStream) || this.remoteVideo.srcObject.getTracks().length === 0) {
                         this.remoteVideo.srcObject = this.remoteStream;
                     }
                     Utils.log(`Initialized new remoteStream (event.track w/o event.streams[0]). Current srcObject: ${this.remoteVideo.srcObject === this.remoteStream ? 'this.remoteStream' : 'other stream'}.`, Utils.logLevels.INFO);
                 }
-                // Add track to our existing remoteStream if it's not already there.
                 if (!this.remoteStream.getTrackById(event.track.id)) {
                     this.remoteStream.addTrack(event.track);
                     Utils.log(`Added event.track (id: ${event.track.id}, kind: ${event.track.kind}) to manually managed remoteStream.`, Utils.logLevels.INFO);
                 }
-                // If remoteVideo.srcObject is NOT our remoteStream (e.g. it's using event.streams[0] from a previous track),
-                // we might need to reconsider. However, this 'else if (event.track)' path implies event.streams[0] was absent.
                 if(this.remoteVideo.srcObject !== this.remoteStream && this.remoteStream.getTracks().length > 0) {
-                    // This case might happen if a previous track set event.streams[0] and now a track comes without it.
-                    // We should decide if we want to merge into remoteVideo.srcObject or stick to this.remoteStream.
-                    // For simplicity and to ensure all tracks are heard/seen, if remoteStream is now populated, ensure it's used.
                     this.remoteVideo.srcObject = this.remoteStream;
                 }
-                trackHandler(event.track); // Ensure listeners are attached to this specific track.
+                trackHandler(event.track);
             }
 
             this.updateUIForCallType();
@@ -611,7 +587,7 @@ const VideoCallManager = {
                             Utils.log(`Failed to set audio codec prefs for transceiver: ${e.message}`, Utils.logLevels.WARN);
                         }
                     }
-                } else if (kind === 'video' && !this.isAudioOnly) { // Only set video codecs if not an audio-only call type
+                } else if (kind === 'video' && !this.isAudioOnly) {
                     const {codecs} = RTCRtpSender.getCapabilities('video');
                     const preferredVideo = this.codecPreferences.video
                         .map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase()))
@@ -665,7 +641,7 @@ const VideoCallManager = {
         try {
             const offerOptions = {
                 offerToReceiveAudio: true,
-                offerToReceiveVideo: !this.isAudioOnly || this.isScreenSharing, // Receive video if it's a video call OR a screen share
+                offerToReceiveVideo: !this.isAudioOnly || this.isScreenSharing,
             };
             const offer = await conn.peerConnection.createOffer(offerOptions);
             let sdp = this.modifySdpForOpus(offer.sdp);
@@ -693,21 +669,15 @@ const VideoCallManager = {
         try {
             await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpOffer));
 
-            if (!this.isCallActive) { // This is the first offer for this call session
+            if (!this.isCallActive) {
                 this.isScreenSharing = remoteIsScreenShare;
-                this.isAudioOnly = remoteIsAudioOnly && !remoteIsScreenShare; // If it's a screen share, it's not audioOnly in the traditional sense
+                this.isAudioOnly = remoteIsAudioOnly && !remoteIsScreenShare;
                 this.currentPeerId = peerId;
                 this.isCaller = false;
-
-                // If remote is screen sharing, we don't send our video.
-                // If it's a regular video call, we send video.
-                // If it's an audio call, we don't send video.
                 this.isVideoEnabled = !this.isAudioOnly && !this.isScreenSharing;
 
-                await this.startLocalStreamAndSignal(false); // Setup our local stream (audio only if viewing screen share)
+                await this.startLocalStreamAndSignal(false);
             }
-            // If call is already active, this might be a re-negotiation, which is more complex.
-            // For now, assume first offer or an update that doesn't drastically change roles.
 
             const answer = await conn.peerConnection.createAnswer();
             let sdp = this.modifySdpForOpus(answer.sdp);
@@ -716,8 +686,8 @@ const VideoCallManager = {
             ConnectionManager.sendTo(peerId, {
                 type: 'video-call-answer',
                 sdp: conn.peerConnection.localDescription,
-                audioOnly: this.isAudioOnly, // Reflect our current state
-                isScreenShare: this.isScreenSharing, // Reflect our current state (which matches remote's initiation)
+                audioOnly: this.isAudioOnly,
+                isScreenShare: this.isScreenSharing,
                 sender: UserManager.userId
             });
         } catch (e) {
@@ -731,8 +701,6 @@ const VideoCallManager = {
         const conn = ConnectionManager.connections[peerId];
         if (!conn || !conn.peerConnection) return;
         try {
-            // The initiator's (our) state (isAudioOnly, isScreenSharing) is authoritative here.
-            // The answer should confirm these, not change them.
             if (remoteIsAudioOnly !== this.isAudioOnly) {
                 Utils.log(`Warning: Mismatch in audioOnly state from answer. Peer: ${remoteIsAudioOnly}, Self: ${this.isAudioOnly}. Using self's state.`, Utils.logLevels.WARN);
             }
@@ -753,7 +721,7 @@ const VideoCallManager = {
             UIManager.showNotification("Camera is not available in an audio-only call.", "warning");
             return;
         }
-        if (this.isScreenSharing) { // This covers both initiator and acceptor
+        if (this.isScreenSharing) {
             UIManager.showNotification("Camera cannot be toggled while screen sharing.", "warning");
             return;
         }
@@ -774,7 +742,7 @@ const VideoCallManager = {
         this.updateUIForCallType();
     },
 
-    toggleAudioOnly: async function () { // This button is now hidden during active calls
+    toggleAudioOnly: async function () {
         if (this.isCallActive) {
             UIManager.showNotification("Cannot switch call mode (Audio/Video) while a call is active.", "warning");
             return;
@@ -804,13 +772,13 @@ const VideoCallManager = {
 
 
         if (localVideoEl) {
-            if (this.isScreenSharing && !this.isCaller) { // I am VIEWING a screen share
+            if (this.isScreenSharing && !this.isCaller) {
                 localVideoEl.style.display = 'none';
-            } else if (this.isScreenSharing && this.isCaller) { // I AM screen sharing
-                localVideoEl.style.display = 'none'; // Browser provides preview
-            } else if (!this.isAudioOnly && this.isVideoEnabled) { // Regular video call, camera on
+            } else if (this.isScreenSharing && this.isCaller) {
+                localVideoEl.style.display = 'none';
+            } else if (!this.isAudioOnly && this.isVideoEnabled) {
                 localVideoEl.style.display = 'block';
-            } else { // Audio only call, or video call with camera off
+            } else {
                 localVideoEl.style.display = 'none';
             }
         }
@@ -821,7 +789,6 @@ const VideoCallManager = {
             const hasRemoteVideoTrack = currentRemoteStream && currentRemoteStream instanceof MediaStream &&
                 currentRemoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
 
-            // Show remote video if it's a screen share OR a video call with an active remote video track
             if ((this.isScreenSharing && hasRemoteVideoTrack) || (!this.isAudioOnly && hasRemoteVideoTrack)) {
                 remoteVideoEl.style.display = 'block';
                 if (remoteVideoEl.paused) {
@@ -851,7 +818,7 @@ const VideoCallManager = {
         }
 
         if (cameraBtn) {
-            const disableCameraToggle = this.isAudioOnly || this.isScreenSharing; // Disable if audio-only OR any screen sharing
+            const disableCameraToggle = this.isAudioOnly || this.isScreenSharing;
             cameraBtn.style.display = disableCameraToggle ? 'none' : 'inline-block';
             if (!disableCameraToggle) {
                 cameraBtn.innerHTML = this.isVideoEnabled ? '📹' : '🚫';
@@ -988,8 +955,8 @@ const VideoCallManager = {
     },
 
     endCallCleanup: function () {
-        this.stopMusic(); // Stop music when call ends for any reason
-        UIManager.hideCallingModal(); // Hide initiator's calling modal
+        this.stopMusic();
+        UIManager.hideCallingModal();
 
         if (this.statsInterval) clearInterval(this.statsInterval);
         this.statsInterval = null;
@@ -1067,7 +1034,7 @@ const VideoCallManager = {
                 break;
             case 'video-call-accepted':
                 if (this.isCallPending && this.isCaller && this.currentPeerId === peerId) {
-                    this.stopMusic(); // Caller stops music when callee accepts
+                    this.stopMusic();
                     UIManager.hideCallingModal();
                     if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
                     this.callRequestTimeout = null;
@@ -1078,28 +1045,25 @@ const VideoCallManager = {
                 break;
             case 'video-call-rejected':
                 if (this.isCallPending && this.currentPeerId === peerId) {
-                    if (this.isCaller) { // Caller received rejection
+                    if (this.isCaller) {
                         this.stopMusic();
                         UIManager.hideCallingModal();
                     }
-                    // Callee doesn't typically receive 'video-call-rejected' if they initiated the rejection
                     if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
                     this.callRequestTimeout = null;
                     UIManager.showNotification(`Call rejected by ${UserManager.contacts[peerId]?.name || 'peer'}. Reason: ${message.reason || 'N/A'}`, 'warning');
                     this.endCallCleanup();
                 }
                 break;
-            case 'video-call-cancel': // Callee receiving cancel from caller, or caller initiated cancel timeout
+            case 'video-call-cancel':
                 if (this.isCallPending && this.currentPeerId === peerId) {
-                    if (!this.isCaller) { // Callee receiving cancel
+                    if (!this.isCaller) {
                         this.stopMusic();
                         this.hideCallRequest();
                     }
-                    // Caller's cancel (e.g. from modal or timeout) calls endCall which calls endCallCleanup
-                    // So music stop and modal hide for caller is handled there.
                     if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
                     this.callRequestTimeout = null;
-                    if (!this.isCaller) { // Only show notification to callee
+                    if (!this.isCaller) {
                         UIManager.showNotification(`Call cancelled by ${UserManager.contacts[peerId]?.name || 'peer'}.`, 'warning');
                     }
                     this.endCallCleanup();
@@ -1108,11 +1072,10 @@ const VideoCallManager = {
             case 'video-call-offer':
                 const remoteIsAudioOnlyOffer = message.audioOnly || false;
                 const remoteIsScreenShareOffer = message.isScreenShare || false;
-                if (!this.isCallActive && !this.isCallPending) { // Initial offer from remote
-                    this.isCallPending = true; // Set pending since we're now processing an incoming offer
-                    // this.isCaller is set in showCallRequest/handleOffer based on who is sending offer
+                if (!this.isCallActive && !this.isCallPending) {
+                    this.isCallPending = true;
                     this.handleOffer(message.sdp, peerId, remoteIsAudioOnlyOffer, remoteIsScreenShareOffer);
-                } else if (this.isCallActive && this.currentPeerId === peerId) { // Re-negotiation
+                } else if (this.isCallActive && this.currentPeerId === peerId) {
                     this.handleOffer(message.sdp, peerId, remoteIsAudioOnlyOffer, remoteIsScreenShareOffer);
                 }
                 break;
@@ -1123,7 +1086,7 @@ const VideoCallManager = {
                     this.handleAnswer(message.sdp, peerId, remoteIsAudioOnlyAnswer, remoteIsScreenShareAnswer);
                 }
                 break;
-            case 'video-call-mode-change': // Deprecated, but handle gracefully if received
+            case 'video-call-mode-change':
                 if (this.isCallActive && this.currentPeerId === peerId) {
                     Utils.log(`Received deprecated 'video-call-mode-change'. Ignoring.`, Utils.logLevels.WARN);
                 }

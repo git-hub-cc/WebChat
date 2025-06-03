@@ -1,3 +1,4 @@
+
 const DBManager = {
     db: null,
     dbName: 'p2pModernChatDB', // New DB name for the refactored version

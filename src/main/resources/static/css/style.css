@@ -14,12 +14,13 @@
     --hover-bg-color: #f0f0f0;
     --active-bg-color: #e0e0e0;
     --sidebar-width: 320px;
-    --details-panel-width: 300px;
+    --details-panel-width: 200px;
     --header-height: 60px;
     --input-area-height: auto; /* Adjusted by content */
     --border-radius: 8px;
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    --special-contact-color: #7E57C2; /* Color for AI contact */
 }
 
 * {
@@ -167,9 +168,25 @@ body {
     font-weight: bold;
     margin-right: 12px;
     font-size: 18px;
+    flex-shrink: 0; /* Prevent avatar shrinking */
+    overflow: hidden; /* Clip image if it's not perfectly round/square */
 }
 .chat-list-item.group .chat-list-avatar {
     background-color: var(--accent-color); /* Different color for groups */
+}
+.chat-list-item.special-contact .chat-list-avatar,
+.chat-avatar-main.special-avatar, /* For main chat header */
+.details-avatar.special-avatar { /* For details panel */
+    background-color: var(--special-contact-color);
+}
+.chat-list-avatar .avatar-image,
+.chat-avatar-main .avatar-image,
+.details-avatar .avatar-image,
+#callingModalAvatar .avatar-image { /* Added for calling modal */
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%; /* Ensures the image itself is round */
 }
 
 
@@ -185,6 +202,8 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
 }
 
 .chat-list-preview {
@@ -248,10 +267,10 @@ body {
 /* Main Chat Area */
 .chat-area {
     flex-grow: 1;
-    display: flex; /* This will be controlled by JS for mobile */
+    display: flex;
     flex-direction: column;
-    background-color: #e5ddd5; /* WhatsApp/Telegram like chat background */
-    position: relative; /* For no-chat-selected overlay */
+    background-color: #e5ddd5;
+    position: relative;
 }
 .chat-area-content {
     display: flex;
@@ -265,11 +284,11 @@ body {
     padding: 0 15px;
     display: flex;
     align-items: center;
-    background-color: #f0f2f5; /* Lighter header */
+    background-color: #f0f2f5;
     border-bottom: 1px solid var(--border-color);
 }
 .back-to-list-btn {
-    display: none; /* Hidden by default, shown on mobile */
+    display: none;
     background: none;
     border: none;
     font-size: 24px;
@@ -295,6 +314,8 @@ body {
     font-weight: bold;
     margin-right: 12px;
     font-size: 18px;
+    flex-shrink: 0;
+    overflow: hidden; /* For image avatars */
 }
 .chat-details-main-header {
     display: flex;
@@ -311,7 +332,7 @@ body {
 }
 
 .chat-actions-main button {
-    float: left;
+    float: left; /* This might not be needed with flex */
 }
 .header-action-btn {
     background: none;
@@ -333,7 +354,6 @@ body {
     flex-grow: 1;
     padding: 15px;
     overflow-y: auto;
-    /* background-image: url('chat-bg.png'); /* Optional chat background */
     display: flex;
     flex-direction: column;
 }
@@ -341,6 +361,11 @@ body {
     margin: auto;
     text-align: center;
     color: var(--text-color-light);
+    display: flex; /* Make it a flex container */
+    flex-direction: column; /* Stack items vertically */
+    justify-content: center; /* Center vertically */
+    align-items: center; /* Center horizontally */
+    height: 100%; /* Take full height of parent */
 }
 .no-chat-selected .logo-placeholder {
     font-size: 60px;
@@ -349,6 +374,11 @@ body {
 .status-indicator {
     margin-top: 20px;
     font-size: 14px;
+}
+.status-indicator.global { /* For the one in noChatSelectedScreen */
+    background-color: rgba(0,0,0,0.05);
+    padding: 5px 10px;
+    border-radius: 4px;
 }
 
 
@@ -366,40 +396,47 @@ body {
 .message.sent {
     background-color: var(--sent-bg-color);
     align-self: flex-end;
-    border-bottom-right-radius: 2px; /* Telegram style tail */
+    border-bottom-right-radius: 2px;
 }
 .message.received {
     background-color: var(--received-bg-color);
     align-self: flex-start;
-    border-bottom-left-radius: 2px; /* Telegram style tail */
+    border-bottom-left-radius: 2px;
 }
 .message.system {
     align-self: center;
-    background-color: #f0f2f5;
+    background-color: #f0f2f5c9; /* Slightly transparent */
     color: var(--text-color-light);
     font-size: 12px;
     padding: 5px 10px;
     border-radius: 15px;
     box-shadow: none;
+    text-align: center;
+}
+.message.system.thinking .message-content {
+    font-style: italic;
+    color: var(--text-color-light);
 }
 
-.message-sender { /* For group chats */
+
+.message-sender {
     font-size: 13px;
     font-weight: 600;
     color: var(--primary-color);
     margin-bottom: 4px;
 }
+.message.received[data-sender-id="fixed_contact_ai_yuuka_hayase"] .message-sender {
+    color: var(--special-contact-color);
+}
+
 .message .message-content {
-    white-space: pre-wrap; /* Preserve line breaks */
+    white-space: pre-wrap;
 }
 .message .timestamp {
     font-size: 11px;
     color: var(--text-color-light);
     margin-top: 5px;
     text-align: right;
-}
-.message.sent .timestamp {
-    /* color: #60a040; */ /* Darker green for sent timestamp */
 }
 
 
@@ -411,9 +448,6 @@ body {
     margin-top: 5px;
     cursor: pointer;
     display: block;
-}
-.message .file-message {
-    padding: 0; /* Remove default padding for file messages */
 }
 .message .file-info {
     display: flex;
@@ -436,7 +470,7 @@ body {
     align-items: center;
     gap: 8px;
 }
-.message .voice-message button { /* Play button */
+.message .voice-message button.play-voice-btn {
     background: var(--primary-color);
     color: white;
     border-radius: 50%;
@@ -445,50 +479,55 @@ body {
     border: none;
     font-size: 14px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
-.message .voice-wave { display: none; /* Simplified for now */ }
-.message .duration { font-size: 12px; }
+.message .voice-duration { font-size: 12px; color: var(--text-color-light); }
 
 
 .chat-input-container {
     padding: 10px 15px;
-    background-color: #f0f2f5; /* Consistent with header */
+    background-color: #f0f2f5;
     border-top: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
 }
-.file-preview-input, .audio-preview-input {
+#filePreviewContainer, #audioPreviewContainer {
     margin-bottom: 5px;
     background: var(--secondary-color);
     border-radius: var(--border-radius);
     font-size: 13px;
 }
-.file-preview-input .file-preview, .audio-preview-input .voice-message {
+.file-preview-item, .voice-message-preview {
     display: flex;
-    justify-content: space-between;
     align-items: center;
 }
-.file-preview-input .file-preview-header button,
-.audio-preview-input .voice-message button:last-child { /* Cancel button */
-    background: var(--danger-color); color: white; font-size: 12px; padding: 3px 6px; border-radius: 4px;
+.file-preview-item button, .voice-message-preview button {
+    background: var(--danger-color); color: white; font-size: 12px; padding: 3px 8px; border-radius: 4px; border:none; cursor: pointer; margin-left: 10px;
 }
+.voice-message-preview .btn-play-preview {
+    background: var(--accent-color);
+}
+
 
 .input-row {
     display: flex;
-    align-items: flex-end; /* Align items to bottom for multi-line textarea */
+    align-items: flex-end;
 }
 #messageInput {
     flex-grow: 1;
     padding: 10px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 20px; /* Rounded input */
+    border-radius: 20px;
     font-size: 15px;
     resize: none;
-    min-height: 24px; /* Initial height for single line */
-    max-height: 120px; /* Max height before scrolling */
+    min-height: 24px;
+    max-height: 120px;
     overflow-y: auto;
     line-height: 1.4;
     background-color: white;
+    margin: 0 5px; /* Added small margin */
 }
 #messageInput:focus {
     outline: none;
@@ -505,8 +544,8 @@ body {
     font-size: 22px;
     color: var(--text-color-light);
     cursor: pointer;
-    padding: 8px; /* Consistent padding around icons */
-    margin: 0 10px;
+    padding: 8px;
+    margin: 0 2px; /* Reduced margin */
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -523,13 +562,26 @@ body {
     cursor: not-allowed;
     background-color: transparent;
 }
-.send-btn {
+#sendButtonMain { /* Specifically target send button for style consistency */
     color: var(--primary-color);
 }
-.record-btn.recording {
+#voiceButtonMain.recording {
     color: var(--danger-color);
     animation: pulse 1.5s infinite;
 }
+#voiceButtonMain .audio-timer-indicator {
+    position: absolute;
+    bottom: 35px; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
 @keyframes pulse {
     0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
     70% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
@@ -538,15 +590,15 @@ body {
 
 /* Details Panel */
 .details-panel {
-    width: var(--details-panel-width);
+    min-width: var(--details-panel-width);
     background-color: #f8f9fa;
     border-left: 1px solid var(--border-color);
-    display: flex; /* Controlled by JS */
+    display: none; /* Hidden by default, shown by JS */
     flex-direction: column;
     transition: margin-right 0.3s ease-in-out;
 }
 .details-header {
-    height: var(--header-height);
+    min-height: var(--header-height);
     padding: 0 15px;
     display: flex;
     align-items: center;
@@ -559,7 +611,7 @@ body {
 }
 .details-content {
     flex-grow: 1;
-    padding: 15px;
+    padding: 20px; /* Increased padding for better overall look */
     overflow-y: auto;
 }
 .details-section {
@@ -569,9 +621,12 @@ body {
     font-size: 14px;
     font-weight: 600;
     color: var(--text-color-light);
-    margin-bottom: 8px;
+    margin-bottom: 10px; /* Increased for better separation */
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 5px;
+    padding-bottom: 8px; /* Increased for better separation */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 .details-avatar {
     width: 80px;
@@ -584,15 +639,54 @@ body {
     justify-content: center;
     font-size: 36px;
     margin: 0 auto 15px auto;
+    overflow: hidden; /* For image avatars */
 }
 #detailsName { text-align: center; font-size: 18px; font-weight: 600; margin-bottom: 5px;}
-#detailsId, #detailsStatus { text-align: center; font-size: 13px; color: var(--text-color-light); margin-bottom: 5px;}
+#detailsId, #detailsStatus { text-align: center; font-size: 13px; color: var(--text-color-light); margin-bottom: 10px; /* Increased spacing */}
+
+/* General paragraph styling within details sections for consistency */
+.details-section p {
+    font-size: 14px;
+    color: var(--text-color);
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+.details-section p strong { /* For sub-headings within paragraphs if used */
+    font-weight: 500;
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* AI Contact Specifics */
+#aiContactAboutSection h4 span { /* Style the AI name in the heading */
+    color: var(--special-contact-color);
+}
+#aiContactDetailsContent p strong { /* e.g., "Basic Information", "About AI Name" */
+    color: var(--text-color); /* Make it stand out a bit more */
+    font-weight: 600;
+    margin-top: 10px; /* Space above these pseudo-headings */
+}
+#aiContactBasicInfoList {
+    list-style-type: none;
+    padding-left: 0;
+    margin-bottom: 10px;
+}
+#aiContactBasicInfoList li {
+    margin-bottom: 5px;
+    font-size: 0.95em;
+}
+#aiContactAboutText {
+    white-space: pre-wrap;
+    font-size: 0.9em;
+    line-height: 1.5;
+    color: var(--text-color-light);
+}
 
 .member-list-details .member-item-detail {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: 10px 0; /* Increased padding */
     font-size: 14px;
 }
 .member-item-detail .owner-badge {
@@ -602,8 +696,41 @@ body {
     background: none; border: none; color: var(--danger-color); cursor: pointer; font-size: 12px;
 }
 
-.add-member-details input, .add-member-details select {
-    width: calc(100% - 20px); padding: 8px; margin-bottom: 8px; border: 1px solid var(--border-color); border-radius: 4px;
+.add-member-details select {
+    width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 4px;
+}
+.add-member-details button { /* Specific button styling */
+    width: 100%;
+}
+.left-members-details .left-member-item-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0; /* Adjusted padding */
+    font-size: 13px;
+    color: var(--text-color-light);
+}
+.left-member-item-detail .re-add-member-btn-detail {
+    background: var(--accent-color); color: white; border:none; border-radius: 4px; padding: 3px 6px; cursor: pointer;
+}
+
+/* Full-width buttons within details sections */
+.details-section .btn {
+    width: 100%;
+    margin-bottom: 8px;
+}
+.details-section .btn:last-child {
+    margin-bottom: 0;
+}
+
+/* Initially hidden sections in details panel */
+#detailsPanelContent #aiContactAboutSection,
+#detailsPanelContent #contactActionsDetails,
+#detailsPanelContent #addGroupMemberArea,
+#detailsPanelContent #leftMembersArea,
+#detailsPanelContent #groupActionsDetails,
+#detailsPanelContent #dissolveGroupBtnDetails {
+    display: none;
 }
 
 .btn {
@@ -614,6 +741,10 @@ body {
     font-size: 14px;
     font-weight: 500;
     transition: background-color 0.2s, box-shadow 0.2s;
+    display: inline-flex; /* Better alignment for icons if any */
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 .btn-primary { background-color: var(--primary-color); color: white; }
 .btn-primary:hover { background-color: var(--primary-color-dark); }
@@ -626,7 +757,7 @@ body {
 
 
 /* Modals (Loading, Video Call, Settings) */
-.loading-overlay {
+.loading-overlay { /* Default state is display:flex, managed by JS for hiding */
     position: fixed;
     top: 0;
     left: 0;
@@ -652,6 +783,15 @@ body {
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .loading-text { font-size: 18px; font-weight: 500; }
 
+/* Default hidden state for modals, JS will toggle display */
+#videoCallRequest,
+#callingModal,
+#videoCallContainer,
+#mainMenuModal,
+#newContactGroupModal {
+    display: none;
+}
+
 .modal-like {
     position: fixed;
     top: 0;
@@ -659,7 +799,7 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(0,0,0,0.5);
-    display: flex;
+    /* display: none; Default moved to specific IDs for initial state */
     justify-content: center;
     align-items: center;
     z-index: 1000;
@@ -674,6 +814,7 @@ body {
     max-width: 500px;
     max-height: 90vh;
     overflow-y: auto;
+    position: relative;
 }
 .modal-header {
     display: flex;
@@ -684,6 +825,16 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 .modal-header h2 { font-size: 20px; }
+.close-modal-btn { /* General close button for modals */
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-color-light);
+    padding: 0; /* Reset padding */
+}
+.close-modal-btn:hover { color: var(--primary-color); }
+
 .modal-body .settings-section { margin-bottom: 20px; }
 .modal-body .settings-section h3 { font-size: 16px; margin-bottom: 10px; }
 .modal-body input[type="text"], .modal-body textarea {
@@ -696,17 +847,66 @@ body {
 .modal-body textarea { min-height: 80px; }
 .modal-body button { margin-top: 5px; margin-right: 5px; }
 
-.user-id-display { display: flex; align-items: center; gap: 10px; }
-#modalUserIdValue { font-weight: bold; background: #f0f0f0; padding: 5px 10px; border-radius: 4px; }
+.user-id-display { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+#modalUserIdValue { font-weight: bold; background: #f0f0f0; padding: 5px 10px; border-radius: 4px; user-select: all; }
 
 .manual-connect-step { margin-bottom: 10px; }
 .manual-connect-step button { display: block; width: 100%; margin-bottom: 5px; }
 
+/* Main Menu Modal specific hidden sections (can be toggled by JS) */
+#mainMenuModal .settings-section.manual-connection-advanced,
+#mainMenuModal #modalResetAllConnectionsBtn {
+    display: none;
+}
+
+
 .video-call-request .modal-content { text-align: center; }
-.video-call-avatar { font-size: 40px; margin-bottom: 10px; }
+.video-call-avatar {
+    font-size: 40px;
+    margin-bottom: 10px;
+    width: 60px; /* Size for request modal avatar */
+    height: 60px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden; /* For image */
+}
 .video-call-request-buttons { display: flex; justify-content: space-around; margin-top: 20px; }
 
-.video-call-container-main { /* Renamed to avoid conflict with old style */
+/* Calling Modal Specifics */
+#callingModal .modal-content {
+    max-width: 350px;
+    text-align: center;
+}
+#callingModal .modal-header {
+    justify-content: center;
+    border-bottom: none;
+}
+#callingModal #callingModalAvatar {
+    font-size: 50px;
+    margin: 10px auto 20px auto; /* Ensure margin is applied correctly */
+    /* width, height, bg-color, color, border-radius, display, align, justify, overflow are in .chat-list-avatar or specific rule */
+}
+#callingModal #callingModalText {
+    margin-bottom: 20px;
+}
+#callingModal .modal-footer {
+    justify-content: center; /* Center the single button */
+    border-top: none; /* Already in main .modal-footer, but ensure it's not overridden if this becomes more specific */
+}
+#callingModal #callingModalCancelBtn {
+    width: 80%; /* From existing CSS for this button */
+    max-width: 200px; /* From existing CSS */
+    /* flex-grow and margin-left removed as it's a single centered button now */
+}
+
+
+.video-call-container-main {
     position: fixed;
     top: 0;
     left: 0;
@@ -714,7 +914,7 @@ body {
     height: 100%;
     background: rgba(0, 0, 0, 0.9);
     z-index: 1001;
-    display: flex;
+    /* display: none; Set by specific ID */
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -729,20 +929,23 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    background-color: #2c2c2c;
 }
 .video-call-container-main #localVideo {
     position: absolute;
-    width: 120px; /* Smaller local video */
+    width: 120px;
     height: 180px;
     right: 20px;
-    bottom: 80px; /* Above controls */
+    bottom: 80px;
     object-fit: cover;
     border: 2px solid #fff;
     border-radius: var(--border-radius);
     z-index: 2;
+    background-color: #2c2c2c;
 }
-.video-call-container-main.audio-only-mode #localVideo {
-    display: none !important; /* Keep hiding local video if not used */
+.video-call-container-main.audio-only-mode #localVideo,
+.video-call-container-main.screen-sharing-mode #localVideo { /* Hide local if audio-only OR screen sharing (as viewer) */
+    display: none !important;
 }
 .video-call-container-main.audio-only-mode .video-streams {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%23cccccc"><path d="M12 3c-4.97 0-9 4.03-9 9v7c0 1.1.9 2 2 2h4v-8H5v-1c0-3.87 3.13-7 7-7s7 3.13 7 7v1h-4v8h4c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9z"/></svg>');
@@ -772,17 +975,17 @@ body {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
 }
 .video-call-button.end-call { background: var(--danger-color); color: white; }
-.video-call-button.mute-audio, .video-call-button.toggle-camera, .video-call-button.audio-only {
+.video-call-button.mute-audio, .video-call-button.toggle-camera, .video-call-button.audio-only, .video-call-button.toggle-pip {
     background: #fff; color: var(--text-color);
 }
 .video-call-button.active { background: var(--primary-color); color: white; }
 
 
 /* Quality Indicator */
-.connection-quality { display: flex; align-items: center; font-size: 14px; }
+.connection-quality { display: flex; align-items: center; font-size: 14px; margin-top: 5px; }
 .quality-indicator {
     width: 10px; height: 10px; border-radius: 50%; margin: 0 5px;
-    background: #6c757d; /* Default: N/A */
+    background: #6c757d;
 }
 .quality-indicator.quality-good { background: var(--accent-color); }
 .quality-indicator.quality-medium { background: var(--warning-color); }
@@ -827,7 +1030,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    font-size: 14px; /* Consistent font size for settings items */
+    font-size: 14px;
 }
 
 .switch {
@@ -890,9 +1093,6 @@ input:checked + .slider:before {
 }
 
 /* Confirmation Modal Styles */
-.modal-like.confirmation-modal {
-    z-index: 1050; /* Higher than other general modals */
-}
 .modal-like.confirmation-modal .modal-content {
     max-width: 450px;
 }
@@ -902,7 +1102,7 @@ input:checked + .slider:before {
 .modal-like.confirmation-modal .modal-body p {
     font-size: 15px;
     line-height: 1.5;
-    margin-bottom: 0; /* No extra margin needed as footer provides it */
+    margin-bottom: 0;
 }
 .modal-footer {
     display: flex;
@@ -919,7 +1119,7 @@ input:checked + .slider:before {
 /* Responsive Design */
 @media screen and (max-width: 900px) {
     .details-panel {
-        display: none; /* Hide details panel by default on smaller screens */
+        display: none;
     }
     .app-container.show-details .details-panel {
         display: flex;
@@ -928,29 +1128,29 @@ input:checked + .slider:before {
         z-index: 20;
     }
     .app-container.show-details .chat-area {
-        margin-right: var(--details-panel-width); /* Push chat area when details shown */
+        margin-right: var(--details-panel-width);
     }
 }
 
 @media screen and (max-width: 768px) {
     :root {
-        --sidebar-width: 100%; /* Full width for mobile view */
+        --sidebar-width: 100%;
     }
     .app-container {
-        flex-direction: column; /* Stack views on mobile */
+        flex-direction: column;
         max-height: 100vh;
         border-radius: 0;
     }
     .sidebar-nav {
         width: 100%;
-        height: 100vh; /* Full height */
+        height: 100vh;
         border-right: none;
-        display: flex; /* Default: show list */
+        display: flex;
     }
     .chat-area {
         width: 100%;
-        height: 100vh; /* Full height */
-        display: none; /* Default: hide chat */
+        height: 100vh;
+        display: none;
     }
     .app-container.chat-view-active .sidebar-nav {
         display: none;
@@ -967,28 +1167,28 @@ input:checked + .slider:before {
     }
     .details-panel {
         width: 100%;
-        max-width: 300px; /* Limit width on mobile if shown as overlay */
-        position: fixed; /* Overlay */
-        right: -300px; /* Off-screen */
+        max-width: 300px;
+        position: fixed;
+        right: -300px; /* Start off-screen */
         top: 0;
         height: 100%;
         z-index: 20;
         transition: right 0.3s ease-in-out;
     }
     .app-container.show-details .details-panel {
-        right: 0;
+        right: 0; /* Slide in */
         display: flex;
     }
     .app-container.show-details .chat-area {
-        margin-right: 0; /* No push on mobile overlay */
+        margin-right: 0; /* No margin change needed as details panel is fixed */
     }
-    #localVideo {
+    .video-call-container-main #localVideo {
         width: 90px !important;
         height: 135px !important;
         bottom: 70px !important;
         right: 10px !important;
     }
-    .video-call-controls {
+    .video-call-container-main .video-call-controls {
         gap: 10px !important;
     }
     .video-call-button {
@@ -1011,7 +1211,7 @@ input:checked + .slider:before {
     cursor: grab;
     display: flex;
     flex-direction: column;
-    background-color: var(--background-color-dark);
+    background-color: #2c2c2c; /* Dark background for PiP */
 }
 
 .video-call-container-main.pip-mode .video-streams {
@@ -1037,207 +1237,110 @@ input:checked + .slider:before {
     border-radius: 4px;
     z-index: 1;
     object-fit: cover;
+    display: block !important; /* Ensure local video shows in PiP if available */
 }
+.video-call-container-main.pip-mode.audio-only-mode #localVideo,
+.video-call-container-main.pip-mode.screen-sharing-mode #localVideo {
+    display: none !important; /* Still hide if contextually inappropriate */
+}
+
 
 .video-call-container-main.pip-mode .video-call-controls {
     padding: 6px;
     flex-shrink: 0;
     justify-content: space-around;
+    background-color: rgba(0,0,0,0.5); /* Semi-transparent controls BG */
 }
 
 .video-call-container-main.pip-mode .video-call-controls .video-call-button {
-    padding: 8px;
-    font-size: 1.1em;
+    width: 36px; /* Smaller buttons for PiP */
+    height: 36px;
+    font-size: 16px;
     margin: 0 2px;
 }
 
-#localVideo, #remoteVideo {
-    background-color: #2c2c2c;
-}
 
 .online-dot {
     display: inline-block;
     width: 8px;
     height: 8px;
-    background-color: #4CAF50; /* Green */
+    background-color: var(--accent-color);
     border-radius: 50%;
-    margin-left: 6px; /* Space from the name */
-    vertical-align: middle; /* Aligns better with text if name wraps */
-    box-shadow: 0 0 3px #4caf50c9; /* Optional: subtle glow */
-    flex-shrink: 0; /* Prevent shrinking if name is very long */
-}
-
-.chat-list-item .chat-list-name {
-    display: flex; /* Use flex to align name and dot */
-    align-items: center; /* Vertically center items in the name container */
-    word-break: break-word; /* Prevent long names from breaking layout */
+    margin-left: 6px;
+    vertical-align: middle;
+    box-shadow: 0 0 3px #4caf50c9;
+    flex-shrink: 0;
 }
 
 /* For the reconnect prompt */
 .reconnect-prompt {
-    background-color: var(--warning-bg-color, #fff3cd);
-    color: var(--warning-text-color, #856404);
-    border-left: 4px solid var(--warning-color, #ffc107);
+    background-color: #fff3cd;
+    color: #856404;
+    border-left: 4px solid #ffc107;
     padding: 10px 15px;
-    margin: 10px 0;
+    margin: 10px auto; /* Center it */
     font-size: 0.9em;
     border-radius: var(--border-radius);
+    max-width: 90%;
+    text-align: center;
 }
 .reconnect-prompt-text {
     margin-right: 10px;
+    display: block;
+    margin-bottom: 5px;
 }
 .btn-reconnect-inline, .btn-cancel-reconnect-inline {
     background-color: var(--primary-color);
     color: white;
     border: none;
     padding: 5px 10px;
-    border-radius: var(--border-radius-small);
+    border-radius: var(--border-radius); /* Consistent radius */
     cursor: pointer;
     font-size: 0.9em;
     margin-left: 5px;
 }
 .btn-reconnect-inline:hover, .btn-cancel-reconnect-inline:hover {
-    background-color: var(--primary-dark-color);
+    background-color: var(--primary-color-dark);
 }
 .btn-reconnect-inline:disabled {
     background-color: #ccc;
     cursor: not-allowed;
 }
 .btn-cancel-reconnect-inline {
-    background-color: var(--secondary-action-color, #6c757d);
+    background-color: #6c757d;
 }
 .btn-cancel-reconnect-inline:hover {
     background-color: #5a6268;
 }
 
-/* Confirmation Modal Styles */
-.confirmation-modal {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1001; /* Ensure it's above other modals */
-}
-
-.confirmation-modal .modal-content {
-    background-color: var(--background-color-light, #fff);
-    padding: 20px;
-    border-radius: var(--border-radius);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    width: 90%;
-    max-width: 400px;
-    text-align: left;
-}
-
-.confirmation-modal .modal-header {
-    border-bottom: 1px solid var(--border-color, #eee);
-    padding-bottom: 10px;
-    margin-bottom: 15px;
-}
-.confirmation-modal .modal-header h2 {
-    margin: 0;
-    font-size: 1.25em;
-    color: var(--text-color-strong);
-}
-
-.confirmation-modal .modal-body p {
-    margin: 0 0 20px 0;
-    line-height: 1.6;
-    color: var(--text-color);
-}
-
-.confirmation-modal .modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-.confirmation-modal .btn {
-    padding: 8px 15px;
-    border-radius: var(--border-radius-small);
-    cursor: pointer;
-    font-weight: 500;
-    border: none;
-}
-.confirmation-modal .btn-danger {
-    background-color: var(--danger-color, #dc3545);
-    color: white;
-}
-.confirmation-modal .btn-danger:hover {
-    background-color: #c82333;
-}
-.confirmation-modal .btn-secondary {
-    background-color: var(--secondary-action-color, #6c757d);
-    color: white;
-}
-.confirmation-modal .btn-secondary:hover {
-    background-color: #5a6268;
-}
-
-
-/* General Modal Styling (if not already present) */
-.modal-like { /* Common base for modals */
-    display: none; /* Hidden by default */
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.5);
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    background-color: var(--background-color-light, #fff);
-    margin: auto;
-    padding: 20px;
-    border: 1px solid var(--border-color, #ddd);
-    border-radius: var(--border-radius);
-    width: 90%;
-    max-width: 500px; /* Adjust as needed */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    position: relative;
-}
-
-.close-modal-btn {
-    color: var(--text-color-light, #aaa);
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    line-height: 1;
-}
-
-.close-modal-btn:hover,
-.close-modal-btn:focus {
-    color: var(--text-color, black);
-    text-decoration: none;
-    cursor: pointer;
-}
-
-/* Style for the file input, as it's now part of AppInitializer event setup */
+/* File input is hidden by default, attach button triggers it */
 #fileInput {
-    display: none; /* Hide the default file input */
+    display: none;
 }
 
-/* Styles for Outgoing Call Modal */
-.outgoing-call-modal .modal-content {
+/* Outgoing Call Modal Styling */
+#callingModal .modal-content { /* Re-confirming specificity */
     text-align: center;
-    max-width: 400px; /* Consistent with incoming call */
+    max-width: 350px;
 }
-.outgoing-call-avatar { /* Reusing video-call-avatar style */
-    font-size: 40px;
-    margin-bottom: 10px;
-}
-.outgoing-call-buttons { /* Reusing video-call-request-buttons style */
+#callingModal #callingModalAvatar { /* Target the avatar div in callingModal */
+    font-size: 50px;
+    margin: 10px auto 20px auto; /* Merged from inline */
+    width: 80px;
+    height: 80px;
+    background-color: var(--primary-color); /* Fallback BG */
+    color: white; /* Fallback text color */
+    border-radius: 50%;
     display: flex;
-    justify-content: center; /* Center the single cancel button */
-    margin-top: 20px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Important for image */
+}
+#callingModal .modal-footer { /* Re-confirming for callingModal */
+    border-top: none;
+    justify-content: center;
+}
+#callingModal #callingModalCancelBtn { /* Re-confirming for callingModal */
+    width: 80%;
+    max-width: 200px;
 }

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -6,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P2P Chat Modern</title>
     <link rel="stylesheet" href="css/style.css">
+<!--    <link rel="stylesheet" href="css/蔚蓝档案.css">-->
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -64,7 +64,7 @@
                 <div id="audioPreviewContainer" class="audio-preview-input"></div>
                 <div class="input-row">
                     <button class="icon-btn attach-btn" id="attachBtnMain" title="Attach file" disabled>📎</button>
-                    <input type="file" id="fileInput" style="display: none" onchange="MediaManager.handleFileSelect(event)">
+                    <input type="file" id="fileInput" onchange="MediaManager.handleFileSelect(event)">
                     <textarea id="messageInput" placeholder="Write a message..." disabled></textarea>
                     <!-- <button class="icon-btn emoji-btn" id="emojiBtnMain" title="Emoji" disabled>😊</button> -->
                     <button class="icon-btn send-btn" id="sendButtonMain" title="Send" disabled>➤</button>
@@ -87,8 +87,20 @@
                 <p id="detailsId">ID: </p>
                 <p id="detailsStatus">Status: </p>
             </div>
-            <!-- New section for contact actions -->
-            <div class="details-section" id="contactActionsDetails" style="display:none;">
+            <!-- AI Contact About Section -->
+            <div class="details-section" id="aiContactAboutSection">
+                <h4>About <span id="aiContactAboutName">AI Name</span></h4>
+                <div id="aiContactDetailsContent">
+                    <p><strong>基本信息</strong></p>
+                    <ul id="aiContactBasicInfoList">
+                        <!-- Populated by JS: <li><strong>年龄:</strong> 16岁</li> -->
+                    </ul>
+                    <p><strong>关于 <span id="aiContactAboutNameSub">AI Name</span></strong></p>
+                    <p id="aiContactAboutText"></p>
+                </div>
+            </div>
+            <!-- End AI Contact About Section -->
+            <div class="details-section" id="contactActionsDetails">
                 <h4>Contact Actions</h4>
                 <button id="deleteContactBtnDetails" class="btn btn-danger">Delete Contact</button>
             </div>
@@ -96,12 +108,12 @@
             <div class="details-section" id="detailsGroupManagement">
                 <h4>Members (<span id="groupMemberCount">0</span>)</h4>
                 <div id="groupMemberListDetails" class="member-list-details"></div>
-                <div id="addGroupMemberArea" class="add-member-details" style="display:none;">
+                <div id="addGroupMemberArea" class="add-member-details">
                     <h5>Add Member</h5>
                     <select id="contactsDropdownDetails"></select>
                     <button id="addMemberBtnDetails" class="btn btn-primary">Add</button>
                 </div>
-                <div id="leftMembersArea" class="left-members-details" style="display:none;">
+                <div id="leftMembersArea" class="left-members-details">
                     <h5>Previously Left Members</h5>
                     <div id="leftMemberListDetails"></div>
                 </div>
@@ -110,22 +122,22 @@
                 <h4>Shared Media</h4>
                 <p><em>(Shared media feature coming soon)</em></p>
             </div>
-            <div class="details-section" id="groupActionsDetails" style="display:none;">
+            <div class="details-section" id="groupActionsDetails">
                 <h4>Group Actions</h4>
                 <button id="leaveGroupBtnDetails" class="btn btn-danger">Leave Group</button>
-                <button id="dissolveGroupBtnDetails" class="btn btn-danger" style="display:none;">Dissolve Group</button>
+                <button id="dissolveGroupBtnDetails" class="btn btn-danger">Dissolve Group</button>
             </div>
         </div>
     </aside>
 </div>
 
 <!-- Modals -->
-<div class="loading-overlay" id="loadingOverlay" style="display: flex;">
+<div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
     <div class="loading-text">Connecting, please wait...</div>
 </div>
 
-<div id="videoCallRequest" class="modal-like video-call-request" style="display: none;">
+<div id="videoCallRequest" class="modal-like video-call-request">
     <div class="modal-content">
         <div class="video-call-avatar">👤</div>
         <h3>Video Call Request</h3>
@@ -137,23 +149,23 @@
     </div>
 </div>
 
-<div id="callingModal" class="modal-like" style="display: none;">
-    <div class="modal-content" style="max-width: 350px; text-align: center;">
-        <div class="modal-header" style="justify-content: center; border-bottom: none;">
+<div id="callingModal" class="modal-like">
+    <div class="modal-content">
+        <div class="modal-header">
             <h2 id="callingModalTitle">Calling...</h2>
         </div>
         <div class="modal-body">
-            <div class="video-call-avatar" id="callingModalAvatar" style="font-size: 50px; margin: 10px auto;">👤</div>
-            <p id="callingModalText" style="margin-bottom: 20px;">Contacting [Peer Name]...</p>
+            <div class="video-call-avatar" id="callingModalAvatar">👤</div>
+            <p id="callingModalText">Contacting [Peer Name]...</p>
         </div>
-        <div class="modal-footer" style="justify-content: space-around;">
-            <button id="callingModalCancelBtn" class="btn btn-danger" style="flex-grow: 1; margin-left: 5px;">Cancel Call</button>
+        <div class="modal-footer">
+            <button id="callingModalCancelBtn" class="btn btn-danger">Cancel Call</button>
         </div>
     </div>
 </div>
 
 
-<div id="videoCallContainer" class="video-call-container-main" style="display: none;">
+<div id="videoCallContainer" class="video-call-container-main">
     <div class="video-streams">
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" autoplay playsinline muted></video>
@@ -161,14 +173,14 @@
     <div class="video-call-controls">
         <button class="video-call-button toggle-camera" id="toggleCameraBtn" onclick="VideoCallManager.toggleCamera()">📹</button>
         <button class="video-call-button mute-audio" id="toggleAudioBtn" onclick="VideoCallManager.toggleAudio()">🎤</button>
-        <button class="video-call-button toggle-pip" id="togglePipBtn" title="Minimize Video">🖼️</button> <!-- ADD THIS LINE -->
+        <button class="video-call-button toggle-pip" id="togglePipBtn" title="Minimize Video">🖼️</button>
         <button class="video-call-button end-call" onclick="VideoCallManager.endCall()">📞</button>
         <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">🔊</button>
     </div>
 </div>
 
 <!-- Main Menu / Settings Modal -->
-<div id="mainMenuModal" class="modal-like" style="display: none;">
+<div id="mainMenuModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
             <h2>Menu & Settings</h2>
@@ -200,7 +212,7 @@
                 </div>
                 <button id="checkNetworkBtnModal" class="btn btn-secondary">Re-check Network</button>
             </div>
-            <div class="settings-section" style="display: none;">
+            <div class="settings-section manual-connection-advanced">
                 <h3>Manual Connection (Advanced)</h3>
                 <p>For connecting if signaling server fails or for direct peer connection.</p>
                 <div class="manual-connect-step">
@@ -219,7 +231,7 @@
             </div>
             <div class="settings-section">
                 <h3>Danger Zone</h3>
-                <button id="modalResetAllConnectionsBtn" class="btn btn-danger" style="display: none;">Reset All Connections</button>
+                <button id="modalResetAllConnectionsBtn" class="btn btn-danger">Reset All Connections</button>
                 <button id="modalClearContactsBtn" class="btn btn-danger">Clear All Contacts</button>
                 <button id="modalClearAllChatsBtn" class="btn btn-danger">Clear All Chat History</button>
             </div>
@@ -228,7 +240,7 @@
 </div>
 
 <!-- New Chat/Group Modal -->
-<div id="newContactGroupModal" class="modal-like" style="display: none;">
+<div id="newContactGroupModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
             <h2>New Chat / Group</h2>
@@ -252,6 +264,7 @@
 </div>
 
 
+<!--<script src="data/蔚蓝档案.js"></script>-->
 <script src="js/Config.js"></script>
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>

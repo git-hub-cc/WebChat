@@ -54,8 +54,3 @@ const Config = {
     },
     logLevel: 'DEBUG', // Set to DEBUG for easier troubleshooting, change to INFO/ERROR for prod
 };
-
-// Apply log level from config - Utils.setLogLevelFromConfig will handle this
-// if (Utils && Utils.logLevels && Config.logLevel) {
-//     Utils.currentLogLevel = Utils.logLevels[Config.logLevel.toUpperCase()] || Utils.logLevels.DEBUG;
-// }

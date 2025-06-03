@@ -1,3 +1,4 @@
+
 const ChatManager = {
     currentChatId: null,
     chats: {}, // { chatId: [messages] }
@@ -50,12 +51,14 @@ const ChatManager = {
                 itemsToRender.push({
                     id: contact.id,
                     name: contact.name,
-                    avatarText: contact.name.charAt(0).toUpperCase(),
-                    lastMessage: contact.lastMessage || 'No messages yet',
+                    avatarText: contact.avatarText || (contact.isSpecial ? 'S' : contact.name.charAt(0).toUpperCase()),
+                    avatarUrl: contact.avatarUrl || null, // Pass avatarUrl
+                    lastMessage: contact.lastMessage || (contact.isSpecial ? 'Ready to chat!' : 'No messages yet'),
                     lastTime: contact.lastTime,
                     unread: contact.unread || 0,
                     type: 'contact',
-                    online: ConnectionManager.isConnectedTo(contact.id) // Key for green dot
+                    online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id), // Special contacts always "online" for UI
+                    isSpecial: contact.isSpecial || false
                 });
             });
         }
@@ -65,18 +68,17 @@ const ChatManager = {
                 itemsToRender.push({
                     id: group.id,
                     name: group.name,
-                    avatarText: '👥',
+                    avatarText: '👥', // Groups use text avatar
+                    avatarUrl: null,  // Groups don't have image avatars in this setup
                     lastMessage: group.lastMessage || `Members: ${group.members.length}`,
                     lastTime: group.lastTime,
                     unread: group.unread || 0,
                     type: 'group'
-                    // 'online' status is not typically directly applicable to groups in the same way
                 });
             });
         }
 
         itemsToRender.sort((a, b) => (b.lastTime && a.lastTime) ? new Date(b.lastTime) - new Date(a.lastTime) : (b.lastTime ? 1 : -1));
-
 
         const searchQuery = document.getElementById('chatSearchInput').value.toLowerCase();
         if (searchQuery) {
@@ -90,18 +92,25 @@ const ChatManager = {
 
         itemsToRender.forEach(item => {
             const li = document.createElement('li');
-            li.className = `chat-list-item ${item.id === this.currentChatId ? 'active' : ''} ${item.type === 'group' ? 'group' : ''}`;
+            li.className = `chat-list-item ${item.id === this.currentChatId ? 'active' : ''} ${item.type === 'group' ? 'group' : ''} ${item.isSpecial ? 'special-contact' : ''}`;
             li.setAttribute('data-id', item.id);
             li.setAttribute('data-type', item.type);
 
             const formattedTime = item.lastTime ? Utils.formatDate(new Date(item.lastTime)) : '';
             let statusIndicator = '';
-            if (item.type === 'contact' && item.online) { // Check 'online' property
+            if (item.type === 'contact' && (item.online || UserManager.isSpecialContact(item.id))) {
                 statusIndicator = '<span class="online-dot" title="Connected"></span>';
             }
 
+            let avatarContentHtml = '';
+            if (item.avatarUrl) {
+                avatarContentHtml = `<img src="${item.avatarUrl}" alt="${Utils.escapeHtml(item.name.charAt(0))}" class="avatar-image">`;
+            } else {
+                avatarContentHtml = Utils.escapeHtml(item.avatarText);
+            }
+
             li.innerHTML = `
-                <div class="chat-list-avatar">${item.avatarText}</div>
+                <div class="chat-list-avatar ${item.isSpecial ? 'special-avatar' : ''}">${avatarContentHtml}</div>
                 <div class="chat-list-info">
                     <div class="chat-list-name">${Utils.escapeHtml(item.name)} ${statusIndicator}</div>
                     <div class="chat-list-preview">${Utils.escapeHtml(item.lastMessage)}</div>
@@ -118,45 +127,48 @@ const ChatManager = {
 
     openChat: function(chatId, type) {
         if (this.currentChatId) {
-            this.saveCurrentChat(); // Save previous chat before switching
+            this.saveCurrentChat();
             const prevActive = document.querySelector(`#chatListNav .chat-list-item.active`);
             if (prevActive) prevActive.classList.remove('active');
         }
 
         this.currentChatId = chatId;
-        UIManager.showChatArea(); // Make chat area visible (handles mobile view)
+        UIManager.showChatArea();
 
         const currentActive = document.querySelector(`#chatListNav .chat-list-item[data-id="${chatId}"]`);
         if (currentActive) currentActive.classList.add('active');
 
         if (type === 'group') {
             GroupManager.openGroup(chatId);
-        } else { // Contact
+        } else {
             const contact = UserManager.contacts[chatId];
             if (contact) {
-                UIManager.updateChatHeader(contact.name, ConnectionManager.isConnectedTo(chatId) ? 'Connected' : `ID: ${contact.id.substring(0,8)}... (Offline)`, contact.name.charAt(0).toUpperCase());
-                UserManager.clearUnread(chatId); // Clear unread for this contact
-                UIManager.setCallButtonsState(ConnectionManager.isConnectedTo(chatId), chatId);
+                // The UIManager.updateChatHeader will handle avatarUrl internally
+                if (contact.isSpecial) {
+                    UIManager.updateChatHeader(contact.name, (contact.isAI ? 'AI Assistant' : 'Special Contact'), contact.avatarText || 'S');
+                    UIManager.setCallButtonsState(false); // Disable P2P call buttons for special contacts
+                } else {
+                    UIManager.updateChatHeader(contact.name, ConnectionManager.isConnectedTo(chatId) ? 'Connected' : `ID: ${contact.id.substring(0,8)}... (Offline)`, contact.name.charAt(0).toUpperCase());
+                    UIManager.setCallButtonsState(ConnectionManager.isConnectedTo(chatId), chatId);
+                }
+                UserManager.clearUnread(chatId);
             }
-            // Hide group-specific elements in details panel
-            const detailsGroupManagement = document.getElementById('detailsGroupManagement');
-            if (detailsGroupManagement) detailsGroupManagement.style.display = 'none';
-            const groupActionsDetails = document.getElementById('groupActionsDetails');
-            if (groupActionsDetails) groupActionsDetails.style.display = 'none';
+            document.getElementById('detailsGroupManagement').style.display = 'none';
+            document.getElementById('groupActionsDetails').style.display = 'none';
         }
 
-        UIManager.enableChatInterface(true); // Enable input, send button etc.
+        UIManager.enableChatInterface(true);
         this.loadChatHistory(chatId);
 
         const messageInput = document.getElementById('messageInput');
         if (messageInput) {
-            messageInput.value = ''; // Clear message input
-            messageInput.style.height = 'auto'; // Reset height
-            setTimeout(() => messageInput.focus(), 0); // Focus after UI updates
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            setTimeout(() => messageInput.focus(), 0);
         }
 
-        UIManager.toggleDetailsPanel(false); // Close details panel if open
-        UIManager.updateDetailsPanel(chatId, type); // Update details panel for the new chat
+        UIManager.toggleDetailsPanel(false); // Close details panel when switching chats
+        UIManager.updateDetailsPanel(chatId, type); // Update details panel content for the new chat
     },
 
     loadChatHistory: function(chatId) {
@@ -165,15 +177,20 @@ const ChatManager = {
             Utils.log("ChatManager.loadChatHistory: chatBox element NOT FOUND!", Utils.logLevels.ERROR);
             return;
         }
-        chatBox.innerHTML = ''; // Clear previous messages
+        chatBox.innerHTML = '';
 
         const messages = this.chats[chatId] || [];
-        if (messages.length === 0 && chatId) { // Check if chatId is valid
+        const contact = UserManager.contacts[chatId];
+
+        if (messages.length === 0 && chatId) {
             const placeholder = document.createElement('div');
             placeholder.className = "system-message";
-            placeholder.textContent = "No messages yet. Start the conversation!";
-            if(chatId.startsWith('group_') && GroupManager.groups[chatId]?.owner === UserManager.userId && GroupManager.groups[chatId]?.members.length === 1) {
+            if (contact && contact.isSpecial) {
+                placeholder.textContent = `Start a conversation with ${contact.name}!`;
+            } else if(chatId.startsWith('group_') && GroupManager.groups[chatId]?.owner === UserManager.userId && GroupManager.groups[chatId]?.members.length === 1) {
                 placeholder.textContent = "You created this group. Invite members to start chatting!";
+            } else {
+                placeholder.textContent = "No messages yet. Start the conversation!";
             }
             chatBox.appendChild(placeholder);
         } else {
@@ -181,36 +198,38 @@ const ChatManager = {
                 MessageManager.displayMessage(msg, msg.sender === UserManager.userId || msg.originalSender === UserManager.userId);
             });
         }
-        chatBox.scrollTop = chatBox.scrollHeight; // Scroll to bottom
+        chatBox.scrollTop = chatBox.scrollHeight;
     },
 
     addMessage: async function(chatId, message) {
         if (!this.chats[chatId]) {
             this.chats[chatId] = [];
         }
-        // Simple duplicate check for last message (can be more sophisticated)
+        // Simple duplicate check (can be improved)
         const lastMsg = this.chats[chatId][this.chats[chatId].length - 1];
         if (lastMsg && lastMsg.timestamp === message.timestamp && lastMsg.content === message.content && lastMsg.sender === message.sender) {
-            // Utils.log(`Duplicate message detected for chat ${chatId}. Skipping add.`, Utils.logLevels.DEBUG);
-            // return; // Optional: Prevent adding exact duplicates received too close
+            // Utils.log(`Duplicate message detected for chat ${chatId}. Skipping.`, Utils.logLevels.DEBUG);
+            // return; // Commented out as it might be too aggressive
         }
+
 
         this.chats[chatId].push(message);
 
         if (chatId === this.currentChatId) {
-            const chatBoxEl = document.getElementById('chatBox'); // Re-fetch for safety
+            const chatBoxEl = document.getElementById('chatBox');
             if (chatBoxEl) {
                 const noMsgPlaceholder = chatBoxEl.querySelector('.system-message');
-                if(noMsgPlaceholder && (noMsgPlaceholder.textContent.includes("No messages yet") || noMsgPlaceholder.textContent.includes("You created this group"))) {
+                if(noMsgPlaceholder && (noMsgPlaceholder.textContent.includes("No messages yet") || noMsgPlaceholder.textContent.includes("You created this group") || noMsgPlaceholder.textContent.includes("Start a conversation with"))) {
                     noMsgPlaceholder.remove();
                 }
             }
-            MessageManager.displayMessage(message, message.sender === UserManager.userId || message.originalSender === UserManager.userId);
+            if (!message.isThinking) {
+                MessageManager.displayMessage(message, message.sender === UserManager.userId || message.originalSender === UserManager.userId);
+            }
             if (chatBoxEl) chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
         }
 
         const isGroup = chatId.startsWith('group_');
-        // Increment unread if chat is not current or document doesn't have focus
         const isUnread = chatId !== this.currentChatId || !document.hasFocus();
 
         if (isGroup) {
@@ -219,7 +238,7 @@ const ChatManager = {
                 let previewText = GroupManager.formatMessagePreview(message);
                 await GroupManager.updateGroupLastMessage(chatId, previewText, isUnread);
             }
-        } else { // Contact
+        } else {
             const contact = UserManager.contacts[chatId];
             if (contact) {
                 let previewText = UserManager.formatMessagePreview(message);
@@ -227,7 +246,6 @@ const ChatManager = {
             }
         }
 
-        // Save to DB
         try {
             await DBManager.setItem('chats', { id: chatId, messages: this.chats[chatId] });
         } catch (error) {
@@ -239,11 +257,10 @@ const ChatManager = {
         if (chatId && this.chats[chatId]) {
             this.chats[chatId] = [];
             try {
-                await DBManager.setItem('chats', { id: chatId, messages: [] }); // Save empty messages
+                await DBManager.setItem('chats', { id: chatId, messages: [] });
                 if (chatId === this.currentChatId) {
-                    this.loadChatHistory(chatId); // Reload history (will show placeholder)
+                    this.loadChatHistory(chatId);
                 }
-                // Update last message in contact/group list
                 if (chatId.startsWith('group_')) {
                     GroupManager.updateGroupLastMessage(chatId, 'Chat cleared', false, true);
                 } else {
@@ -252,35 +269,48 @@ const ChatManager = {
                 return true;
             } catch (error) {
                 Utils.log(`清空聊天记录失败 (${chatId}): ${error}`, Utils.logLevels.ERROR);
-                // Attempt to reload UI even if DB fails
-                if (chatId === this.currentChatId) {
+                if (chatId === this.currentChatId) { // Attempt to reload even on error to reflect memory state
                     this.loadChatHistory(chatId);
                 }
-                return false; // Indicate failure
+                return false;
             }
         }
-        return false; // Chat not found or no messages
+        return false;
     },
 
     clearAllChats: async function() {
         UIManager.showConfirmationModal(
             'Are you sure you want to clear ALL chat history? This cannot be undone.',
-            async () => { // onConfirm
-                this.chats = {}; // Clear in-memory chats
+            async () => {
+                const chatIdsToClear = Object.keys(this.chats);
+                this.chats = {};
                 try {
-                    await DBManager.clearStore('chats'); // Clear DB store
-                    if (this.currentChatId) { // If a chat is open, reload its history
-                        this.loadChatHistory(this.currentChatId);
+                    for (const id of chatIdsToClear) {
+                        await DBManager.setItem('chats', { id: id, messages: [] });
                     }
-                    // Reset last message for all contacts and groups
-                    Object.values(UserManager.contacts).forEach(c => UserManager.updateContactLastMessage(c.id, 'Chat cleared', false, true));
+
+                    Object.values(UserManager.contacts).forEach(c => {
+                        if (c.isSpecial) {
+                            const specialDef = UserManager.SPECIAL_CONTACTS_DEFINITIONS.find(sd => sd.id === c.id);
+                            UserManager.updateContactLastMessage(c.id, specialDef ? specialDef.initialMessage : 'Chat cleared', false, true);
+                        } else {
+                            UserManager.updateContactLastMessage(c.id, 'Chat cleared', false, true);
+                        }
+                    });
                     Object.values(GroupManager.groups).forEach(g => GroupManager.updateGroupLastMessage(g.id, 'Chat cleared', false, true));
 
-                    this.renderChatList(this.currentFilter); // Re-render chat list
+
+                    if (this.currentChatId) {
+                        this.loadChatHistory(this.currentChatId);
+                    }
+
+                    this.renderChatList(this.currentFilter);
                     UIManager.showNotification('All chat history cleared.', 'success');
                 } catch (error) {
                     Utils.log('清空所有聊天记录失败: ' + error, Utils.logLevels.ERROR);
                     UIManager.showNotification('Failed to clear all chat history from database.', 'error');
+                    await this.loadChats(); // Potentially reload chats from DB to revert memory state
+                    this.renderChatList(this.currentFilter);
                 }
             }
         );
@@ -292,34 +322,39 @@ const ChatManager = {
             UIManager.showNotification(`${type === 'group' ? 'Group' : 'Contact'} not found.`, 'error');
             return;
         }
+
+        if (type === 'contact' && entity.isSpecial) {
+            UIManager.showNotification(`${entity.name} is a built-in contact and cannot be deleted. You can clear the chat history if needed.`, 'warning');
+            return;
+        }
+
         const entityName = entity.name;
         let confirmMessage = `Are you sure you want to delete contact "${entityName}"? All associated messages will be lost.`;
         if (type === 'group') {
             confirmMessage = `Are you sure you want to ${entity.owner === UserManager.userId ? 'dissolve this group' : 'leave this group'} ("${entityName}")? All associated messages will be lost.`;
         }
 
-
         UIManager.showConfirmationModal(
             confirmMessage,
-            async () => { // onConfirm
-                await this.clearChat(chatId); // Clear messages first for this chat
+            async () => {
+                await this.clearChat(chatId); // Clear chat history first
 
                 if (type === 'group') {
-                    if (entity.owner === UserManager.userId) { // Dissolve if owner
+                    if (entity.owner === UserManager.userId) {
                         await GroupManager.dissolveGroup(chatId);
-                    } else { // Leave if member
+                    } else {
                         await GroupManager.leaveGroup(chatId);
                     }
-                } else { // Contact
-                    await UserManager.removeContact(chatId); // Removes from contacts DB and closes connection
+                } else {
+                    await UserManager.removeContact(chatId);
                 }
 
-                if (chatId === this.currentChatId) { // If the deleted chat was open
+                if (chatId === this.currentChatId) {
                     this.currentChatId = null;
                     UIManager.showNoChatSelected();
                     UIManager.enableChatInterface(false);
                 }
-                this.renderChatList(this.currentFilter); // Re-render chat list
+                this.renderChatList(this.currentFilter);
             }
         );
     },

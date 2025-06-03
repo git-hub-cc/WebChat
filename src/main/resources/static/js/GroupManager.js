@@ -1,3 +1,4 @@
+
 const GroupManager = {
     groups: {}, // { groupId: {id, name, owner, members:[], lastMessage, lastTime, unread, leftMembers: []} }
     currentGroupId: null, // This might be redundant if ChatManager.currentChatId is primary
@@ -103,12 +104,14 @@ const GroupManager = {
         if (!group) { UIManager.showNotification("Group not found.", "error"); return false; }
         if (group.owner !== UserManager.userId) { UIManager.showNotification("Only group owner can add members.", "error"); return false; }
         if (group.members.includes(memberId)) { UIManager.showNotification("User is already in the group.", "warning"); return false; }
-        if (!ConnectionManager.isConnectedTo(memberId) && memberId !== UserManager.userId) {
-            // Allow adding self (owner) without connection, but for others, connection is good.
-            // For P2P, group messages are relayed. Owner needs connection to new member to invite.
-            // UIManager.showNotification(`Not connected to ${memberName || memberId}. Cannot invite.`, "warning");
-            // return false; // This restriction can be harsh. Let's try to send invite anyway.
+
+        // Prevent adding special AI contacts to groups
+        const contactToAdd = UserManager.contacts[memberId];
+        if (contactToAdd && contactToAdd.isSpecial && contactToAdd.isAI) {
+            UIManager.showNotification(`${contactToAdd.name} is an AI assistant and cannot be added to groups.`, "warning");
+            return false;
         }
+
 
         group.members.push(memberId);
         // If member was in leftMembers, remove them
@@ -199,29 +202,19 @@ const GroupManager = {
         const memberIndex = group.members.indexOf(myId);
         if (memberIndex === -1) { /* Already not a member, or error */ return; }
 
-        // Don't modify group.members locally yet, let owner handle it.
-        // Send 'group-member-left' message to owner (and potentially all members for direct P2P groups)
         const myName = UserManager.contacts[myId]?.name || `User ${myId.substring(0,4)}`;
         const leaveMessage = {
             type: 'group-member-left',
             groupId: groupId,
             leftMemberId: myId,
-            leftMemberName: myName, // Send name too
+            leftMemberName: myName,
             sender: myId,
         };
+        this.broadcastToGroup(groupId, leaveMessage, [myId], true);
 
-        // In a P2P model without a central server for group state, the leaver might need to inform all
-        // or the owner acts as the source of truth. Let's assume owner relays or all connected peers get it.
-        // For simplicity, if connected to owner, send to owner. Owner will then broadcast update.
-        // If not connected to owner, might be an issue.
-        // A robust P2P group needs more complex state sync.
-        // Let's try broadcasting to all current members (they will ignore if not owner, or process if owner/peer state)
-        this.broadcastToGroup(groupId, leaveMessage, [myId], true); // true to force direct send if not owner
-
-        // Local cleanup:
-        delete this.groups[groupId]; // Remove group from local list
-        await DBManager.removeItem('groups', groupId); // Remove from DB
-        await ChatManager.clearChat(groupId); // Clear local messages for this group
+        delete this.groups[groupId];
+        await DBManager.removeItem('groups', groupId);
+        await ChatManager.clearChat(groupId);
 
         if (ChatManager.currentChatId === groupId) {
             ChatManager.currentChatId = null;
@@ -236,16 +229,14 @@ const GroupManager = {
         if (!group) return;
         if (group.owner !== UserManager.userId) { UIManager.showNotification("Only group owner can dissolve the group.", "error"); return; }
 
-        // Notification to all members
         const dissolveNotification = {
             type: 'group-dissolved',
             groupId: groupId,
             groupName: group.name,
             sender: UserManager.userId,
         };
-        this.broadcastToGroup(groupId, dissolveNotification, [UserManager.userId]); // Exclude self from direct message
+        this.broadcastToGroup(groupId, dissolveNotification, [UserManager.userId]);
 
-        // Local cleanup
         delete this.groups[groupId];
         await DBManager.removeItem('groups', groupId);
         await ChatManager.clearChat(groupId);
@@ -262,20 +253,22 @@ const GroupManager = {
         const group = this.groups[groupId];
         if (!group) return false;
 
-        message.groupId = groupId; // Ensure groupId is in the message
-        message.sender = message.sender || UserManager.userId; // Ensure sender
-        // Add originalSender if not present, for relay tracking
+        message.groupId = groupId;
+        message.sender = message.sender || UserManager.userId;
         message.originalSender = message.originalSender || message.sender;
-        message.originalSenderName = message.originalSenderName || UserManager.contacts[message.originalSender]?.name || `User ${message.originalSender.substring(0,4)}`;
+
+        const originalSenderContact = UserManager.contacts[message.originalSender];
+        message.originalSenderName = message.originalSenderName ||
+            (originalSenderContact ? originalSenderContact.name : `User ${message.originalSender.substring(0,4)}`);
 
 
-        if (group.owner === UserManager.userId || forceDirect) { // If I am owner OR forced direct send
+        if (group.owner === UserManager.userId || forceDirect) {
             group.members.forEach(memberId => {
                 if (memberId !== UserManager.userId && !excludeIds.includes(memberId)) {
-                    ConnectionManager.sendTo(memberId, { ...message }); // Send a copy
+                    ConnectionManager.sendTo(memberId, { ...message });
                 }
             });
-        } else { // I am not the owner, send to owner for relay
+        } else {
             if (group.owner !== UserManager.userId && !excludeIds.includes(group.owner)) {
                 ConnectionManager.sendTo(group.owner, { ...message, needsRelay: true });
             }
@@ -291,13 +284,14 @@ const GroupManager = {
         Utils.log(`Handling group message for ${groupId}, type: ${type}, from: ${sender}, original: ${originalSender}`, Utils.logLevels.DEBUG);
 
         if (type === 'group-invite') {
-            if (!this.groups[groupId]) { // If I'm invited and don't have the group
+            if (!this.groups[groupId]) {
+                const inviterName = UserManager.contacts[message.invitedBy]?.name || message.invitedBy.substring(0,4);
                 this.groups[groupId] = {
                     id: groupId,
                     name: message.groupName,
                     owner: message.owner,
                     members: message.members || [],
-                    lastMessage: `You were invited by ${UserManager.contacts[message.invitedBy]?.name || message.invitedBy.substring(0,4)}`,
+                    lastMessage: `You were invited by ${inviterName}`,
                     lastTime: new Date().toISOString(),
                     unread: 1,
                     leftMembers: []
@@ -305,10 +299,10 @@ const GroupManager = {
                 await this.saveGroup(groupId);
                 ChatManager.renderChatList(ChatManager.currentFilter);
                 UIManager.showNotification(`Invited to group: ${message.groupName}`, 'success');
-            } else { // Already in group, might be an update to member list
-                group.members = message.members || group.members; // Update member list
+            } else {
+                group.members = message.members || group.members;
                 await this.saveGroup(groupId);
-                if (ChatManager.currentChatId === groupId) this.openGroup(groupId); // Refresh member count if open
+                if (ChatManager.currentChatId === groupId) this.openGroup(groupId);
             }
             return;
         }
@@ -318,13 +312,9 @@ const GroupManager = {
             return;
         }
 
-        // If I am owner and message needs relay
         if (message.needsRelay && group.owner === UserManager.userId) {
-            delete message.needsRelay; // Remove relay flag
-            // The sender of relayed message is the original sender.
-            // Exclude the original sender from broadcast if they are also a member.
+            delete message.needsRelay;
             this.broadcastToGroup(groupId, message, [originalSender || sender]);
-            // Also add to owner's chat
             if(originalSender !== UserManager.userId) ChatManager.addMessage(groupId, message);
             return;
         }
@@ -335,43 +325,40 @@ const GroupManager = {
             case 'file':
             case 'image':
             case 'audio':
-            case 'system': // System messages can also be broadcasted
-                // Only add if not original sender (already added locally)
-                // And if I am a member of the group
+            case 'system':
                 if ((originalSender || sender) !== UserManager.userId && group.members.includes(UserManager.userId)) {
                     ChatManager.addMessage(groupId, message);
                 }
                 break;
 
-            case 'group-member-left': // Someone left
+            case 'group-member-left':
                 if (group.members.includes(message.leftMemberId)) {
                     group.members = group.members.filter(id => id !== message.leftMemberId);
                     const leftMemberName = message.leftMemberName || `User ${message.leftMemberId.substring(0,4)}`;
-                    if (group.owner === UserManager.userId) { // If I'm owner, add to leftMembers list
+                    if (group.owner === UserManager.userId) {
                         if(!group.leftMembers) group.leftMembers = [];
-                        // Avoid duplicates in leftMembers
                         if(!group.leftMembers.find(lm => lm.id === message.leftMemberId)) {
                             group.leftMembers.push({ id: message.leftMemberId, name: leftMemberName, leftTime: new Date().toISOString() });
                         }
                     }
                     await this.saveGroup(groupId);
 
-                    // Add system message to chat only if I am still in the group
                     if(group.members.includes(UserManager.userId)) {
                         const sysMsg = { type: 'system', content: `${leftMemberName} left the group.`, groupId: groupId, timestamp: new Date().toISOString()};
                         ChatManager.addMessage(groupId, sysMsg);
                     }
 
                     if (ChatManager.currentChatId === groupId) {
-                        this.openGroup(groupId); // Refresh UI
+                        this.openGroup(groupId);
                         UIManager.updateDetailsPanelMembers(groupId);
                     }
                     ChatManager.renderChatList(ChatManager.currentFilter);
                 }
                 break;
 
-            case 'group-removed': // I was removed or member was removed
-                if (message.removedMemberId === UserManager.userId || (message.reason === 'removed_by_owner' && sender !== UserManager.userId && message.targetUserId === UserManager.userId)) {
+            case 'group-removed':
+                const targetUserIdForRemoval = message.targetUserId || message.removedMemberId; // Handle old and new property
+                if (targetUserIdForRemoval === UserManager.userId || (message.reason === 'removed_by_owner' && sender !== UserManager.userId && targetUserIdForRemoval === UserManager.userId)) {
                     UIManager.showNotification(`You were removed from group: ${group.name}`, 'warning');
                     delete this.groups[groupId];
                     await DBManager.removeItem('groups', groupId);
@@ -380,11 +367,11 @@ const GroupManager = {
                         ChatManager.currentChatId = null; UIManager.showNoChatSelected();
                     }
                     ChatManager.renderChatList(ChatManager.currentFilter);
-                } else if (group.members.includes(message.removedMemberId)) { // Another member was removed
-                    group.members = group.members.filter(id => id !== message.removedMemberId);
+                } else if (group.members.includes(targetUserIdForRemoval)) {
+                    group.members = group.members.filter(id => id !== targetUserIdForRemoval);
                     await this.saveGroup(groupId);
                     if (ChatManager.currentChatId === groupId) {
-                        this.openGroup(groupId); // Refresh UI
+                        this.openGroup(groupId);
                         UIManager.updateDetailsPanelMembers(groupId);
                     }
                     ChatManager.renderChatList(ChatManager.currentFilter);
@@ -392,7 +379,7 @@ const GroupManager = {
                 break;
 
             case 'group-dissolved':
-                if (sender !== UserManager.userId) { // If I didn't dissolve it
+                if (sender !== UserManager.userId) {
                     UIManager.showNotification(`Group "${group.name}" was dissolved by the owner.`, 'warning');
                     delete this.groups[groupId];
                     await DBManager.removeItem('groups', groupId);
@@ -417,7 +404,7 @@ const GroupManager = {
                 group.unread = (group.unread || 0) + 1;
             }
             await this.saveGroup(groupId);
-            ChatManager.renderChatList(ChatManager.currentFilter); // Update the list
+            ChatManager.renderChatList(ChatManager.currentFilter);
         }
     },
 
@@ -432,7 +419,11 @@ const GroupManager = {
 
     formatMessagePreview: function(message) {
         let preview = '';
-        const senderName = message.originalSenderName || (UserManager.contacts[message.originalSender || message.sender]?.name || 'User');
+        // Use originalSenderName if available (set by broadcastToGroup)
+        // otherwise, fetch from UserManager or default.
+        const senderName = message.originalSenderName ||
+            (UserManager.contacts[message.originalSender || message.sender]?.name || 'User');
+
 
         switch (message.type) {
             case 'text':
@@ -451,7 +442,7 @@ const GroupManager = {
                 preview = `${senderName}: [Voice Message]`;
                 break;
             case 'system':
-                preview = message.content; // System messages don't need sender prefix usually
+                preview = message.content;
                 break;
             default:
                 preview = `${senderName}: [New Message]`;
