@@ -21,14 +21,41 @@
     --xn-active-press: rgba(var(--xn-dao-purple-rgb), 0.5); /* 激活按压 */
 
     /* 角色特定颜色 (Character Specific Colors) */
-    --xn-wanglin-aura: var(--xn-blood-crimson); /* 王林 - 血煞之气 */
-    --xn-limuwan-essence: #B2DFDB; /* 李慕婉 - 温婉如玉 (淡青玉色) */
-    --xn-sutunan-flame: #FF7043;   /* 司徒南 - 狂傲魔焰 (烈焰橙) */
-    --xn-qingshui-sword: #90A4AE; /* 清水 - 孤高剑意 (冷冽银灰) */
-    --xn-liqianmei-sevenhue: #CE93D8; /* 李倩梅 - 七彩道魂 (柔和紫) */
-    --xn-zhouru-purity: #FFF59D; /* 周茹 - 纯真初雪 (暖姜黄) */
-    --xn-xuliguo-shadow: #757575; /* 许立国 - 猥琐暗影 (中性灰) */
-    --xn-wenshou-ferocity: #4E342E; /* 蚊兽 - 洪荒凶煞 (深褐) */
+    --xn-wanglin-primary: var(--xn-blood-crimson);
+    --xn-wanglin-secondary: rgba(176, 22, 22, 0.2);
+    --xn-wanglin-text: var(--xn-spirit-jade);
+
+    --xn-limuwan-primary: #B2DFDB;
+    --xn-limuwan-secondary: #E0F2F1;
+    --xn-limuwan-text: #004D40; /* Darker teal for contrast */
+
+    --xn-sutunan-primary: #FF7043;
+    --xn-sutunan-secondary: #FFE0B2;
+    --xn-sutunan-text: #BF360C; /* Darker orange */
+
+    --xn-zhouru-primary: #FFF59D;
+    --xn-zhouru-secondary: #FFFDE7;
+    --xn-zhouru-text: #F57F17; /* Darker yellow/orange */
+
+    --xn-xuliguo-primary: #757575;
+    --xn-xuliguo-secondary: #BDBDBD;
+    --xn-xuliguo-text: var(--xn-spirit-jade);
+
+    --xn-wenshou-primary: #4E342E;
+    --xn-wenshou-secondary: #6D4C41;
+    --xn-wenshou-text: var(--xn-spirit-jade);
+
+    --xn-yunquezi-primary: #6A7A8C;
+    --xn-yunquezi-secondary: #90A4AE;
+    --xn-yunquezi-text: var(--xn-spirit-jade);
+
+    --xn-liumei-primary: #AB87C0;
+    --xn-liumei-secondary: #D1C4E9;
+    --xn-liumei-text: #4A148C; /* Darker purple */
+
+    --xn-hongdie-primary: #E54B6B;
+    --xn-hongdie-secondary: #F8BBD0;
+    --xn-hongdie-text: #880E4F; /* Darker pink/magenta */
 
 
     /* 覆盖 P2P Chat 原有变量 */
@@ -52,7 +79,7 @@
     --border-radius: 6px; /* 棱角分明一些 */
     --font-family: "Noto Serif SC", "Source Han Serif SC", serif; /* 古朴衬线字体 */
     --box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 0 10px rgba(var(--xn-dao-purple-rgb),0.2) inset; /* 深邃阴影带内发光 */
-    --special-contact-color: var(--xn-wanglin-aura); /* 默认特殊联系人颜色，会被具体角色覆盖 */
+    --special-contact-color: var(--xn-wanglin-primary); /* 默认特殊联系人颜色，会被具体角色覆盖 */
 }
 
 * {
@@ -167,15 +194,16 @@ body {
 .chat-list-item:hover {
     background-color: var(--hover-bg-color);
 }
+/* Default Active Chat List Item */
 .chat-list-item.active {
     background-color: var(--primary-color);
-    color: var(--text-color-inverted); /* 确保文字可读 */
+    color: var(--text-color-inverted);
     box-shadow: 0 0 10px rgba(var(--xn-dao-purple-rgb), 0.5) inset;
 }
 .chat-list-item.active .chat-list-name,
 .chat-list-item.active .chat-list-preview,
 .chat-list-item.active .chat-list-time {
-    color: var(--text-color-inverted); /* 确保文字可读 */
+    color: var(--text-color-inverted);
 }
 
 .chat-list-avatar {
@@ -183,15 +211,126 @@ body {
     font-family: "KaiTi", "STKaiti", serif; /* 头像文字用楷体 */
     border: 1px solid rgba(var(--xn-spirit-jade-rgb), 0.2);
 }
-/* 角色头像颜色应用 */
-.chat-list-item.special-contact.wanglin .chat-list-avatar, .chat-avatar-main.wanglin, .details-avatar.wanglin { background-color: var(--xn-wanglin-aura); }
-.chat-list-item.special-contact.limuwan .chat-list-avatar, .chat-avatar-main.limuwan, .details-avatar.limuwan { background-color: var(--xn-limuwan-essence); color: var(--xn-void-black); } /* 浅色背景，深色字 */
-.chat-list-item.special-contact.sutunan .chat-list-avatar, .chat-avatar-main.sutunan, .details-avatar.sutunan { background-color: var(--xn-sutunan-flame); }
-.chat-list-item.special-contact.qingshui .chat-list-avatar, .chat-avatar-main.qingshui, .details-avatar.qingshui { background-color: var(--xn-qingshui-sword); }
-.chat-list-item.special-contact.liqianmei .chat-list-avatar, .chat-avatar-main.liqianmei, .details-avatar.liqianmei { background-color: var(--xn-liqianmei-sevenhue); }
-.chat-list-item.special-contact.zhouru .chat-list-avatar, .chat-avatar-main.zhouru, .details-avatar.zhouru { background-color: var(--xn-zhouru-purity); color: var(--xn-void-black); }
-.chat-list-item.special-contact.xuliguo .chat-list-avatar, .chat-avatar-main.xuliguo, .details-avatar.xuliguo { background-color: var(--xn-xuliguo-shadow); }
-.chat-list-item.special-contact.wenshou .chat-list-avatar, .chat-avatar-main.wenshou, .details-avatar.wenshou { background-color: var(--xn-wenshou-ferocity); }
+
+/* 角色头像颜色应用 & Active List Item */
+.chat-list-item.special-contact.AI_王林 .chat-list-avatar,
+.chat-avatar-main.AI_王林,
+.details-avatar.AI_王林,
+#callingModalAvatar.AI_王林 {
+    background-color: var(--xn-wanglin-primary);
+    color: var(--xn-wanglin-text);
+    border-color: rgba(var(--xn-spirit-jade-rgb), 0.3);
+}
+.chat-list-item.active.AI_王林 { background-color: var(--xn-wanglin-secondary); box-shadow: 0 0 8px var(--xn-wanglin-primary) inset; }
+.chat-list-item.active.AI_王林 .chat-list-name,
+.chat-list-item.active.AI_王林 .chat-list-preview,
+.chat-list-item.active.AI_王林 .chat-list-time { color: var(--xn-wanglin-text); }
+
+
+.chat-list-item.special-contact.AI_李慕婉 .chat-list-avatar,
+.chat-avatar-main.AI_李慕婉,
+.details-avatar.AI_李慕婉,
+#callingModalAvatar.AI_李慕婉 {
+    background-color: var(--xn-limuwan-primary);
+    color: var(--xn-limuwan-text);
+    border-color: rgba(var(--xn-void-black-rgb), 0.3);
+}
+.chat-list-item.active.AI_李慕婉 { background-color: var(--xn-limuwan-secondary); box-shadow: 0 0 8px var(--xn-limuwan-primary) inset; }
+.chat-list-item.active.AI_李慕婉 .chat-list-name,
+.chat-list-item.active.AI_李慕婉 .chat-list-preview,
+.chat-list-item.active.AI_李慕婉 .chat-list-time { color: var(--xn-limuwan-text); }
+
+
+.chat-list-item.special-contact.AI_司徒南 .chat-list-avatar,
+.chat-avatar-main.AI_司徒南,
+.details-avatar.AI_司徒南,
+#callingModalAvatar.AI_司徒南 {
+    background-color: var(--xn-sutunan-primary);
+    color: var(--xn-sutunan-text);
+    border-color: rgba(var(--xn-void-black-rgb), 0.3);
+}
+.chat-list-item.active.AI_司徒南 { background-color: var(--xn-sutunan-secondary); box-shadow: 0 0 8px var(--xn-sutunan-primary) inset; }
+.chat-list-item.active.AI_司徒南 .chat-list-name,
+.chat-list-item.active.AI_司徒南 .chat-list-preview,
+.chat-list-item.active.AI_司徒南 .chat-list-time { color: var(--xn-sutunan-text); }
+
+.chat-list-item.special-contact.AI_周茹 .chat-list-avatar,
+.chat-avatar-main.AI_周茹,
+.details-avatar.AI_周茹,
+#callingModalAvatar.AI_周茹 {
+    background-color: var(--xn-zhouru-primary);
+    color: var(--xn-zhouru-text);
+    border-color: rgba(var(--xn-void-black-rgb), 0.3);
+}
+.chat-list-item.active.AI_周茹 { background-color: var(--xn-zhouru-secondary); box-shadow: 0 0 8px var(--xn-zhouru-primary) inset; }
+.chat-list-item.active.AI_周茹 .chat-list-name,
+.chat-list-item.active.AI_周茹 .chat-list-preview,
+.chat-list-item.active.AI_周茹 .chat-list-time { color: var(--xn-zhouru-text); }
+
+.chat-list-item.special-contact.AI_许立国 .chat-list-avatar,
+.chat-avatar-main.AI_许立国,
+.details-avatar.AI_许立国,
+#callingModalAvatar.AI_许立国 {
+    background-color: var(--xn-xuliguo-primary);
+    color: var(--xn-xuliguo-text);
+    border-color: rgba(var(--xn-spirit-jade-rgb), 0.2);
+}
+.chat-list-item.active.AI_许立国 { background-color: var(--xn-xuliguo-secondary); box-shadow: 0 0 8px var(--xn-xuliguo-primary) inset; }
+.chat-list-item.active.AI_许立国 .chat-list-name,
+.chat-list-item.active.AI_许立国 .chat-list-preview,
+.chat-list-item.active.AI_许立国 .chat-list-time { color: var(--xn-xuliguo-text); }
+
+.chat-list-item.special-contact.AI_蚊兽 .chat-list-avatar,
+.chat-avatar-main.AI_蚊兽,
+.details-avatar.AI_蚊兽,
+#callingModalAvatar.AI_蚊兽 {
+    background-color: var(--xn-wenshou-primary);
+    color: var(--xn-wenshou-text);
+    border-color: rgba(var(--xn-spirit-jade-rgb), 0.2);
+}
+.chat-list-item.active.AI_蚊兽 { background-color: var(--xn-wenshou-secondary); box-shadow: 0 0 8px var(--xn-wenshou-primary) inset; }
+.chat-list-item.active.AI_蚊兽 .chat-list-name,
+.chat-list-item.active.AI_蚊兽 .chat-list-preview,
+.chat-list-item.active.AI_蚊兽 .chat-list-time { color: var(--xn-wenshou-text); }
+
+.chat-list-item.special-contact.AI_云雀子 .chat-list-avatar,
+.chat-avatar-main.AI_云雀子,
+.details-avatar.AI_云雀子,
+#callingModalAvatar.AI_云雀子 {
+    background-color: var(--xn-yunquezi-primary);
+    color: var(--xn-yunquezi-text);
+    border-color: rgba(var(--xn-spirit-jade-rgb), 0.2);
+}
+.chat-list-item.active.AI_云雀子 { background-color: var(--xn-yunquezi-secondary); box-shadow: 0 0 8px var(--xn-yunquezi-primary) inset; }
+.chat-list-item.active.AI_云雀子 .chat-list-name,
+.chat-list-item.active.AI_云雀子 .chat-list-preview,
+.chat-list-item.active.AI_云雀子 .chat-list-time { color: var(--xn-yunquezi-text); }
+
+.chat-list-item.special-contact.AI_柳眉 .chat-list-avatar,
+.chat-avatar-main.AI_柳眉,
+.details-avatar.AI_柳眉,
+#callingModalAvatar.AI_柳眉 {
+    background-color: var(--xn-liumei-primary);
+    color: var(--xn-liumei-text);
+    border-color: rgba(var(--xn-void-black-rgb), 0.2);
+}
+.chat-list-item.active.AI_柳眉 { background-color: var(--xn-liumei-secondary); box-shadow: 0 0 8px var(--xn-liumei-primary) inset; }
+.chat-list-item.active.AI_柳眉 .chat-list-name,
+.chat-list-item.active.AI_柳眉 .chat-list-preview,
+.chat-list-item.active.AI_柳眉 .chat-list-time { color: var(--xn-liumei-text); }
+
+.chat-list-item.special-contact.AI_红蝶 .chat-list-avatar,
+.chat-avatar-main.AI_红蝶,
+.details-avatar.AI_红蝶,
+#callingModalAvatar.AI_红蝶 {
+    background-color: var(--xn-hongdie-primary);
+    color: var(--xn-hongdie-text);
+    border-color: rgba(var(--xn-spirit-jade-rgb), 0.2);
+}
+.chat-list-item.active.AI_红蝶 { background-color: var(--xn-hongdie-secondary); box-shadow: 0 0 8px var(--xn-hongdie-primary) inset; }
+.chat-list-item.active.AI_红蝶 .chat-list-name,
+.chat-list-item.active.AI_红蝶 .chat-list-preview,
+.chat-list-item.active.AI_红蝶 .chat-list-time { color: var(--xn-hongdie-text); }
 
 
 .chat-list-badge { /* 未读消息徽章 */
@@ -211,13 +350,23 @@ body {
 /* --- Main Chat Area (主聊天区) --- */
 .chat-area {
     background-color: var(--secondary-color); /* 使用了古岩玄灰 */
-    /* 尝试添加一个非常微妙的纹理或图案作为背景，模拟古卷或石壁 */
-    /* background-image: url('data:image/svg+xml;...'); (需要设计SVG) */
 }
 
 .chat-header-main {
     background-color: rgba(var(--xn-void-black-rgb), 0.2); /* 头部背景更深邃 */
 }
+/* Character-specific Chat Header Title Color */
+.chat-header-main.current-chat-AI_王林 .chat-title-main { color: var(--xn-wanglin-primary); }
+.chat-header-main.current-chat-AI_李慕婉 .chat-title-main { color: var(--xn-limuwan-text); text-shadow: 0 0 3px var(--xn-limuwan-primary); }
+.chat-header-main.current-chat-AI_司徒南 .chat-title-main { color: var(--xn-sutunan-primary); }
+.chat-header-main.current-chat-AI_周茹 .chat-title-main { color: var(--xn-zhouru-text); text-shadow: 0 0 3px var(--xn-zhouru-primary); }
+.chat-header-main.current-chat-AI_许立国 .chat-title-main { color: var(--xn-xuliguo-primary); }
+.chat-header-main.current-chat-AI_蚊兽 .chat-title-main { color: var(--xn-wenshou-primary); }
+.chat-header-main.current-chat-AI_云雀子 .chat-title-main { color: var(--xn-yunquezi-primary); }
+.chat-header-main.current-chat-AI_柳眉 .chat-title-main { color: var(--xn-liumei-primary); }
+.chat-header-main.current-chat-AI_红蝶 .chat-title-main { color: var(--xn-hongdie-primary); }
+
+
 .chat-avatar-main { /* 头部当前聊天对象头像 */
     border: 2px solid var(--xn-border-subtle);
 }
@@ -262,6 +411,18 @@ body {
     background-color: var(--received-bg-color); /* 已在root中定义 */
     border-right: 3px solid var(--xn-ethereal-blue); /* 接收者消息右侧辉光 */
 }
+/* Character-specific received message border */
+.message.received[data-sender-id="AI_王林"] { border-left: 3px solid var(--xn-wanglin-primary); border-right: none; }
+.message.received[data-sender-id="AI_李慕婉"] { border-left: 3px solid var(--xn-limuwan-primary); border-right: none; }
+.message.received[data-sender-id="AI_司徒南"] { border-left: 3px solid var(--xn-sutunan-primary); border-right: none; }
+.message.received[data-sender-id="AI_周茹"] { border-left: 3px solid var(--xn-zhouru-primary); border-right: none; }
+.message.received[data-sender-id="AI_许立国"] { border-left: 3px solid var(--xn-xuliguo-primary); border-right: none; }
+.message.received[data-sender-id="AI_蚊兽"] { border-left: 3px solid var(--xn-wenshou-primary); border-right: none; }
+.message.received[data-sender-id="AI_云雀子"] { border-left: 3px solid var(--xn-yunquezi-primary); border-right: none; }
+.message.received[data-sender-id="AI_柳眉"] { border-left: 3px solid var(--xn-liumei-primary); border-right: none; }
+.message.received[data-sender-id="AI_红蝶"] { border-left: 3px solid var(--xn-hongdie-primary); border-right: none; }
+
+
 .message.system { /* 系统消息，如“王林上线了” */
     background-color: rgba(var(--xn-ancient-stone-rgb), 0.9);
     color: var(--xn-golden-inscription);
@@ -274,10 +435,16 @@ body {
     font-weight: bold;
 }
 /* 特定角色发送消息时的名称颜色 */
-.message.received[data-sender-id="AI_WangLin"] .message-sender { color: var(--xn-wanglin-aura); }
-.message.received[data-sender-id="AI_LiMuwan"] .message-sender { color: var(--xn-limuwan-essence); text-shadow: 0 0 2px #000; }
-.message.received[data-sender-id="AI_SituNan"] .message-sender { color: var(--xn-sutunan-flame); }
-/* ... 其他角色 ... */
+.message.received[data-sender-id="AI_王林"] .message-sender { color: var(--xn-wanglin-primary); }
+.message.received[data-sender-id="AI_李慕婉"] .message-sender { color: var(--xn-limuwan-text); background-color: rgba(178,223,219,0.3); padding: 0 3px; border-radius: 2px;}
+.message.received[data-sender-id="AI_司徒南"] .message-sender { color: var(--xn-sutunan-text); background-color: rgba(255,112,67,0.7); padding: 0 3px; border-radius: 2px; }
+.message.received[data-sender-id="AI_周茹"] .message-sender { color: var(--xn-zhouru-text); background-color: rgba(255,245,157,0.5); padding: 0 3px; border-radius: 2px;}
+.message.received[data-sender-id="AI_许立国"] .message-sender { color: var(--xn-xuliguo-text); background-color: rgba(117,117,117,0.3); padding: 0 3px; border-radius: 2px; }
+.message.received[data-sender-id="AI_蚊兽"] .message-sender { color: var(--xn-wenshou-text); background-color: rgba(78,52,46,0.5); padding: 0 3px; border-radius: 2px; }
+.message.received[data-sender-id="AI_云雀子"] .message-sender { color: var(--xn-yunquezi-text); background-color: rgba(106,122,140,0.4); padding: 0 3px; border-radius: 2px; }
+.message.received[data-sender-id="AI_柳眉"] .message-sender { color: var(--xn-liumei-text); background-color: rgba(171,135,192,0.4); padding: 0 3px; border-radius: 2px; }
+.message.received[data-sender-id="AI_红蝶"] .message-sender { color: var(--xn-hongdie-text); background-color: rgba(229,75,107,0.4); padding: 0 3px; border-radius: 2px; }
+
 
 .message .timestamp {
     color: var(--xn-text-light-dim);
@@ -364,6 +531,16 @@ body {
     color: var(--xn-golden-inscription); /* "AI Name" 突出显示 */
     text-shadow: 0 0 3px var(--xn-golden-inscription);
 }
+.details-panel.AI_王林 #aiContactAboutSection h4 span { color: var(--xn-wanglin-primary); }
+.details-panel.AI_李慕婉 #aiContactAboutSection h4 span { color: var(--xn-limuwan-text); }
+.details-panel.AI_司徒南 #aiContactAboutSection h4 span { color: var(--xn-sutunan-primary); }
+.details-panel.AI_周茹 #aiContactAboutSection h4 span { color: var(--xn-zhouru-text); }
+.details-panel.AI_许立国 #aiContactAboutSection h4 span { color: var(--xn-xuliguo-primary); }
+.details-panel.AI_蚊兽 #aiContactAboutSection h4 span { color: var(--xn-wenshou-primary); }
+.details-panel.AI_云雀子 #aiContactAboutSection h4 span { color: var(--xn-yunquezi-primary); }
+.details-panel.AI_柳眉 #aiContactAboutSection h4 span { color: var(--xn-liumei-primary); }
+.details-panel.AI_红蝶 #aiContactAboutSection h4 span { color: var(--xn-hongdie-primary); }
+
 #aiContactDetailsContent {
     background-color: rgba(var(--xn-void-black-rgb), 0.2);
     padding: 15px;
@@ -451,6 +628,18 @@ body {
     background-color: var(--primary-color);
     border: 2px solid var(--xn-border-subtle);
 }
+/* Specific styling for video call avatar based on character ID */
+#callingModalAvatar.AI_王林 { background-color: var(--xn-wanglin-primary); color: var(--xn-wanglin-text); }
+#callingModalAvatar.AI_李慕婉 { background-color: var(--xn-limuwan-primary); color: var(--xn-limuwan-text); }
+#callingModalAvatar.AI_司徒南 { background-color: var(--xn-sutunan-primary); color: var(--xn-sutunan-text); }
+#callingModalAvatar.AI_周茹 { background-color: var(--xn-zhouru-primary); color: var(--xn-zhouru-text); }
+#callingModalAvatar.AI_许立国 { background-color: var(--xn-xuliguo-primary); color: var(--xn-xuliguo-text); }
+#callingModalAvatar.AI_蚊兽 { background-color: var(--xn-wenshou-primary); color: var(--xn-wenshou-text); }
+#callingModalAvatar.AI_云雀子 { background-color: var(--xn-yunquezi-primary); color: var(--xn-yunquezi-text); }
+#callingModalAvatar.AI_柳眉 { background-color: var(--xn-liumei-primary); color: var(--xn-liumei-text); }
+#callingModalAvatar.AI_红蝶 { background-color: var(--xn-hongdie-primary); color: var(--xn-hongdie-text); }
+
+
 .video-call-container-main {
     background: rgba(var(--xn-void-black-rgb), 0.95);
 }
@@ -496,10 +685,19 @@ input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
     display: none;
 }
 
-/* 特定于AI角色显示"关于"区域的样式 */
-.details-panel.ai-contact-active #aiContactAboutSection {
+/* 特定于AI角色显示"关于"区域的样式 (handled by JS adding class to detailsPanel) */
+.details-panel.AI_王林 #aiContactAboutSection,
+.details-panel.AI_李慕婉 #aiContactAboutSection,
+.details-panel.AI_司徒南 #aiContactAboutSection,
+.details-panel.AI_周茹 #aiContactAboutSection,
+.details-panel.AI_许立国 #aiContactAboutSection,
+.details-panel.AI_蚊兽 #aiContactAboutSection,
+.details-panel.AI_云雀子 #aiContactAboutSection,
+.details-panel.AI_柳眉 #aiContactAboutSection,
+.details-panel.AI_红蝶 #aiContactAboutSection {
     display: block;
 }
+
 .details-panel.human-contact-active #contactActionsDetails {
     display: block;
 }
@@ -521,14 +719,9 @@ input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
     box-shadow: 0 0 10px rgba(var(--xn-warning-color-rgb, 255,179,0), 0.3);
 }
 
-#callingModal #callingModalAvatar {
-    /* 使用角色对应的颜色 */
-}
 
 /* 修复一些可能的继承问题 */
 .chat-list-item.active .chat-list-avatar,
 .chat-list-item.active .chat-list-badge {
     /* 确保在激活项中，这些元素颜色不会被覆盖导致看不清 */
 }
-
-/* --- END OF FILE xianni-theme.css --- */

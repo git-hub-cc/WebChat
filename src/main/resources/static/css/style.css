@@ -14,7 +14,7 @@
     --hover-bg-color: #f0f0f0;
     --active-bg-color: #e0e0e0;
     --sidebar-width: 320px;
-    --details-panel-width: 200px;
+    --details-panel-width: 280px;
     --header-height: 60px;
     --input-area-height: auto; /* Adjusted by content */
     --border-radius: 8px;
@@ -535,7 +535,6 @@ body {
     box-shadow: 0 0 0 2px rgba(0,136,204,0.2);
 }
 #messageInput:disabled {
-    background-color: #f5f5f5;
 }
 
 .icon-btn {
@@ -598,7 +597,7 @@ body {
     transition: margin-right 0.3s ease-in-out;
 }
 .details-header {
-    min-height: var(--header-height);
+    height: var(--header-height);
     padding: 0 15px;
     display: flex;
     align-items: center;

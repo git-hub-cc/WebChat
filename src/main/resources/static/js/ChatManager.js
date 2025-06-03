@@ -92,7 +92,10 @@ const ChatManager = {
 
         itemsToRender.forEach(item => {
             const li = document.createElement('li');
-            li.className = `chat-list-item ${item.id === this.currentChatId ? 'active' : ''} ${item.type === 'group' ? 'group' : ''} ${item.isSpecial ? 'special-contact' : ''}`;
+            li.className = `chat-list-item ${item.id === this.currentChatId ? 'active' : ''} ${item.type === 'group' ? 'group' : ''}`;
+            if (item.isSpecial) {
+                li.classList.add('special-contact', item.id); // Add item.id as class for special contacts
+            }
             li.setAttribute('data-id', item.id);
             li.setAttribute('data-type', item.type);
 
@@ -103,6 +106,7 @@ const ChatManager = {
             }
 
             let avatarContentHtml = '';
+            const avatarClass = `chat-list-avatar ${item.isSpecial ? item.id : ''}`; // Add item.id for special contact avatar styling
             if (item.avatarUrl) {
                 avatarContentHtml = `<img src="${item.avatarUrl}" alt="${Utils.escapeHtml(item.name.charAt(0))}" class="avatar-image">`;
             } else {
@@ -110,7 +114,7 @@ const ChatManager = {
             }
 
             li.innerHTML = `
-                <div class="chat-list-avatar ${item.isSpecial ? 'special-avatar' : ''}">${avatarContentHtml}</div>
+                <div class="${avatarClass}">${avatarContentHtml}</div>
                 <div class="chat-list-info">
                     <div class="chat-list-name">${Utils.escapeHtml(item.name)} ${statusIndicator}</div>
                     <div class="chat-list-preview">${Utils.escapeHtml(item.lastMessage)}</div>
@@ -143,10 +147,9 @@ const ChatManager = {
         } else {
             const contact = UserManager.contacts[chatId];
             if (contact) {
-                // The UIManager.updateChatHeader will handle avatarUrl internally
                 if (contact.isSpecial) {
                     UIManager.updateChatHeader(contact.name, (contact.isAI ? 'AI Assistant' : 'Special Contact'), contact.avatarText || 'S');
-                    UIManager.setCallButtonsState(false); // Disable P2P call buttons for special contacts
+                    UIManager.setCallButtonsState(false);
                 } else {
                     UIManager.updateChatHeader(contact.name, ConnectionManager.isConnectedTo(chatId) ? 'Connected' : `ID: ${contact.id.substring(0,8)}... (Offline)`, contact.name.charAt(0).toUpperCase());
                     UIManager.setCallButtonsState(ConnectionManager.isConnectedTo(chatId), chatId);
@@ -167,8 +170,8 @@ const ChatManager = {
             setTimeout(() => messageInput.focus(), 0);
         }
 
-        UIManager.toggleDetailsPanel(false); // Close details panel when switching chats
-        UIManager.updateDetailsPanel(chatId, type); // Update details panel content for the new chat
+        UIManager.toggleDetailsPanel(false);
+        UIManager.updateDetailsPanel(chatId, type);
     },
 
     loadChatHistory: function(chatId) {

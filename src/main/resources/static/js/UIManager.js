@@ -68,6 +68,12 @@ const UIManager = {
         avatarEl.innerHTML = ''; // Clear previous content (text or image)
         avatarEl.className = 'chat-avatar-main'; // Reset class
 
+        const chatHeaderMainEl = document.querySelector('.chat-header-main');
+        if (chatHeaderMainEl) { // Remove character-specific classes from header
+            chatHeaderMainEl.className = 'chat-header-main';
+        }
+
+
         const chatBox = document.getElementById('chatBox');
         if (chatBox) {
             chatBox.innerHTML = '';
@@ -89,6 +95,12 @@ const UIManager = {
         document.getElementById('currentChatTitleMain').textContent = Utils.escapeHtml(title);
         document.getElementById('currentChatStatusMain').textContent = Utils.escapeHtml(status);
         const avatarEl = document.getElementById('currentChatAvatarMain');
+        const chatHeaderMainEl = document.querySelector('.chat-header-main');
+
+        // Reset character-specific classes from header first
+        if (chatHeaderMainEl) {
+            chatHeaderMainEl.className = 'chat-header-main';
+        }
 
         avatarEl.className = 'chat-avatar-main'; // Reset classes
         if (isGroup) avatarEl.classList.add('group');
@@ -98,7 +110,10 @@ const UIManager = {
 
         if (currentContact) {
             if (currentContact.isSpecial) {
-                avatarEl.classList.add('special-avatar');
+                avatarEl.classList.add('special-avatar', currentContact.id); // Add character ID class to avatar
+                if (chatHeaderMainEl) {
+                    chatHeaderMainEl.classList.add(`current-chat-${currentContact.id}`); // Add character ID class to header
+                }
             }
             if (currentContact.avatarUrl) { // Check for custom avatar URL
                 avatarContentHtml = `<img src="${currentContact.avatarUrl}" alt="${Utils.escapeHtml(title.charAt(0))}" class="avatar-image">`;
@@ -365,6 +380,7 @@ const UIManager = {
     },
 
     updateDetailsPanel: function(chatId, type) {
+        const detailsPanelEl = document.getElementById('detailsPanel'); // Get the panel itself
         const nameEl = document.getElementById('detailsName');
         const idEl = document.getElementById('detailsId');
         const avatarEl = document.getElementById('detailsAvatar');
@@ -383,6 +399,9 @@ const UIManager = {
         const aiContactAboutNameSubEl = document.getElementById('aiContactAboutNameSub');
         const aiContactAboutTextEl = document.getElementById('aiContactAboutText');
 
+        // Reset panel class list
+        detailsPanelEl.className = 'details-panel';
+
 
         if(contactActionsEl) contactActionsEl.style.display = 'none';
         if(groupMgmtEl) groupMgmtEl.style.display = 'none';
@@ -393,12 +412,23 @@ const UIManager = {
         if (type === 'contact') {
             const contact = UserManager.contacts[chatId];
             if (!contact) return;
+
+            // Add classes for CSS targeting
+            detailsPanelEl.classList.add('contact-details-active');
+            if (contact.isSpecial) {
+                detailsPanelEl.classList.add(contact.id); // e.g., AI_早濑优香
+                // The CSS will use .details-panel.AI_早濑优香 #aiContactAboutSection { display: block; }
+            } else {
+                detailsPanelEl.classList.add('human-contact-active');
+            }
+
+
             nameEl.textContent = contact.name;
             idEl.textContent = `ID: ${contact.id}`;
 
             avatarEl.className = 'details-avatar'; // Reset
             let avatarContentHtml = Utils.escapeHtml(contact.avatarText || contact.name.charAt(0).toUpperCase());
-            if (contact.isSpecial) avatarEl.classList.add('special-avatar');
+            if (contact.isSpecial) avatarEl.classList.add('special-avatar', contact.id); // Add char ID
             if (contact.avatarUrl) {
                 avatarContentHtml = `<img src="${contact.avatarUrl}" alt="${Utils.escapeHtml(contact.name.charAt(0))}" class="avatar-image">`;
             }
@@ -409,9 +439,8 @@ const UIManager = {
                 statusEl.textContent = (contact.isAI ? 'AI Assistant' : 'Special Contact') + ' - Always available';
                 if(contactActionsEl) contactActionsEl.style.display = 'none'; // No actions for special contacts
 
-                // Show and populate AI "About" section if details exist
                 if (contact.isAI && contact.aboutDetails && aiContactAboutSectionEl) {
-                    aiContactAboutSectionEl.style.display = 'block';
+                    // aiContactAboutSectionEl.style.display = 'block'; // This will be handled by CSS: .details-panel.AI_CharacterID #aiContactAboutSection
                     if (aiContactAboutNameEl) aiContactAboutNameEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
                     if (aiContactAboutNameSubEl) aiContactAboutNameSubEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
 
@@ -430,21 +459,24 @@ const UIManager = {
 
             } else {
                 statusEl.textContent = ConnectionManager.isConnectedTo(chatId) ? 'Connected' : 'Offline';
-                if(contactActionsEl) contactActionsEl.style.display = 'block';
+                // if(contactActionsEl) contactActionsEl.style.display = 'block'; // This will be handled by CSS: .details-panel.human-contact-active #contactActionsDetails
                 if(deleteContactBtn) deleteContactBtn.onclick = () => ChatManager.deleteChat(chatId, 'contact');
             }
 
         } else if (type === 'group') {
             const group = GroupManager.groups[chatId];
             if (!group) return;
+
+            detailsPanelEl.classList.add('group-chat-active');
+
             nameEl.textContent = group.name;
             idEl.textContent = `Group ID: ${group.id.substring(6)}`; // Show partial ID
             avatarEl.innerHTML = '👥'; // Groups use text avatar
             avatarEl.className = 'details-avatar group'; // Reset and add group class
             statusEl.textContent = `${group.members.length} member${group.members.length === 1 ? '' : 's'}`;
 
-            if(groupMgmtEl) groupMgmtEl.style.display = 'block';
-            if(groupActionsEl) groupActionsEl.style.display = 'block';
+            // if(groupMgmtEl) groupMgmtEl.style.display = 'block'; // CSS handles this
+            // if(groupActionsEl) groupActionsEl.style.display = 'block'; // CSS handles this
 
 
             const isOwner = group.owner === UserManager.userId;
@@ -770,6 +802,12 @@ const UIManager = {
         // Avatar logic for calling modal
         let avatarContentHtml = (Utils.escapeHtml(peerName).charAt(0) || 'P').toUpperCase();
         const peerContact = UserManager.contacts[VideoCallManager.currentPeerId]; // Assuming VideoCallManager.currentPeerId is set
+
+        avatarEl.className = 'video-call-avatar'; // Reset class, specific styles will be applied by CSS based on peerContact.id
+        if (peerContact && peerContact.isSpecial) {
+            avatarEl.classList.add(peerContact.id); // Add character-specific class e.g. "AI_王林"
+        }
+
         if (peerContact && peerContact.avatarUrl) {
             avatarContentHtml = `<img src="${peerContact.avatarUrl}" alt="${Utils.escapeHtml(peerName.charAt(0))}" class="avatar-image">`;
         }

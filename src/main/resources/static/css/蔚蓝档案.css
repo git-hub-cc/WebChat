@@ -1,4 +1,3 @@
-/* --- START OF FILE momotalk-theme.css (蔚蓝档案 Momotalk 风格) --- */
 :root {
     /* Momotalk Inspired Palette */
     --momo-primary-rgb: 255, 105, 180; /* 粉色 (For rgba usage) */
@@ -13,6 +12,7 @@
     --momo-text-dark: rgb(var(--momo-text-dark-rgb));
     --momo-text-light: #888; /* 浅灰文字 (比原777稍亮) */
     --momo-text-inverted: #ffffff;
+    --momo-text-inverted-rgb: 255,255,255; /* For message timestamp */
     --momo-border: rgba(var(--momo-accent-rgb), 0.4); /* 边框 - 强调浅粉/40 */
     --momo-border-light: rgba(var(--momo-accent-rgb), 0.25); /* 更浅的边框 */
     --momo-white: #ffffff;
@@ -20,13 +20,51 @@
     --momo-blue-sky-rgb: 135, 206, 250; /* 天蓝色 (优香代表色之一) */
     --momo-blue-sky: rgb(var(--momo-blue-sky-rgb));
     --momo-blue-dark: rgb(100, 170, 220); /* 深蓝色 */
+    --danger-color-rgb: 244,67,54; /* For momo-pulse animation */
 
 
-    /* 角色特定颜色 (Character Specific Colors - 示例) */
-    /* 以早濑优香为例 */
-    --yuuka-primary: var(--momo-blue-sky); /* 早濑优香主色调 - 天蓝 */
-    --yuuka-secondary: #e0f2fe;        /* 早濑优香辅助色 - 淡蓝 */
-    --yuuka-text: #0d47a1;             /* 早濑优香相关文字深蓝 */
+    /* 角色特定颜色 (Character Specific Colors) */
+    /* 早濑优香 */
+    --yuuka-primary: var(--momo-blue-sky);
+    --yuuka-secondary: #e0f2fe; /* For avatar bg */
+    --yuuka-active-bg: #ccebff; /* For active list item */
+    --yuuka-text: #0d47a1;
+    /* 砂狼白子 */
+    --shiroko-primary: #A8D8F8;
+    --shiroko-secondary: #E6F4FB;
+    --shiroko-active-bg: #d4ecfa;
+    --shiroko-text: #507C9D;
+    /* 生盐诺亚 */
+    --noah-primary: #C9A0DC;
+    --noah-secondary: #F3E8F7;
+    --noah-active-bg: #eadcf0;
+    --noah-text: #7C528C;
+    /* 星野 */
+    --hoshino-primary: #FF8FAB;
+    --hoshino-secondary: #FFD6E1;
+    --hoshino-active-bg: #ffc2d1;
+    --hoshino-text: #C93756;
+    /* 日奈 */
+    --hina-primary: #6C757D; /* Darker gray for primary accent */
+    --hina-secondary: #E9ECEF; /* Light gray for avatar bg */
+    --hina-active-bg: #d1d5d9; /* Medium gray for active list item */
+    --hina-text: #343A40; /* Very dark gray/black for text */
+    /* 未花 */
+    --mika-primary: #FF69B4; /* Main Pink */
+    --mika-secondary: #FFC0CB; /* Lighter Pink for avatar bg */
+    --mika-active-bg: #ffb3c1; /* Slightly darker light pink for active */
+    --mika-text: #C71585; /* Deep Pink/Magenta for text */
+    /* 爱丽丝 */
+    --aris-primary: #87CEFA; /* Sky Blue */
+    --aris-secondary: #E0FFFF; /* Light Cyan for avatar bg */
+    --aris-active-bg: #c0f7fa; /* Lighter cyan for active */
+    --aris-text: #2A52BE; /* Royal Blue for text */
+    /* 亚子 */
+    --ako-primary: #4A55A2; /* Indigo/Dark Blue */
+    --ako-secondary: #D6DAF0; /* Light Lavender Blue for avatar bg */
+    --ako-active-bg: #c1c7e0; /* Slightly darker lavender for active */
+    --ako-text: #2C325E; /* Very Dark Blue for text */
+
 
     /* 覆盖 P2P Chat 原有变量 */
     --primary-color: var(--momo-primary);
@@ -162,10 +200,11 @@ body {
 .chat-list-item:hover {
     background-color: var(--hover-bg-color);
 }
+/* Default active list item */
 .chat-list-item.active {
     background-color: var(--active-bg-color);
 }
-.chat-list-item.active .chat-list-name { /* 活动项名字用主题色 */
+.chat-list-item.active .chat-list-name {
     color: var(--primary-color);
 }
 
@@ -178,18 +217,132 @@ body {
     font-weight: 600;
     border: 2px solid transparent; /* 准备给活动项加边框 */
 }
-.chat-list-item.active .chat-list-avatar {
+.chat-list-item.active .chat-list-avatar { /* Default active avatar border */
     border-color: var(--primary-color);
 }
-/* 角色头像颜色应用 - 早濑优香 */
+
+/* 角色头像颜色应用 & Active List Item */
+/* 早濑优香 */
 .chat-list-item.special-contact.AI_早濑优香 .chat-list-avatar,
 .chat-avatar-main.AI_早濑优香,
 .details-avatar.AI_早濑优香,
 #callingModalAvatar.AI_早濑优香 {
-    background-color: var(--yuuka-secondary); /* 优香头像背景淡蓝 */
-    color: var(--yuuka-text); /* 优香头像文字深蓝 */
-    border-color: var(--yuuka-primary); /* 优香头像边框天蓝 */
+    background-color: var(--yuuka-secondary);
+    color: var(--yuuka-text);
+    border-color: var(--yuuka-primary);
 }
+.chat-list-item.active.AI_早濑优香 { background-color: var(--yuuka-active-bg); }
+.chat-list-item.active.AI_早濑优香 .chat-list-name,
+.chat-list-item.active.AI_早濑优香 .chat-list-preview,
+.chat-list-item.active.AI_早濑优香 .chat-list-time { color: var(--yuuka-text); }
+.chat-list-item.active.AI_早濑优香 .chat-list-avatar { border-color: var(--yuuka-primary); }
+
+/* 砂狼白子 */
+.chat-list-item.special-contact.AI_砂狼白子 .chat-list-avatar,
+.chat-avatar-main.AI_砂狼白子,
+.details-avatar.AI_砂狼白子,
+#callingModalAvatar.AI_砂狼白子 {
+    background-color: var(--shiroko-secondary);
+    color: var(--shiroko-text);
+    border-color: var(--shiroko-primary);
+}
+.chat-list-item.active.AI_砂狼白子 { background-color: var(--shiroko-active-bg); }
+.chat-list-item.active.AI_砂狼白子 .chat-list-name,
+.chat-list-item.active.AI_砂狼白子 .chat-list-preview,
+.chat-list-item.active.AI_砂狼白子 .chat-list-time { color: var(--shiroko-text); }
+.chat-list-item.active.AI_砂狼白子 .chat-list-avatar { border-color: var(--shiroko-primary); }
+
+/* 生盐诺亚 */
+.chat-list-item.special-contact.AI_生盐诺亚 .chat-list-avatar,
+.chat-avatar-main.AI_生盐诺亚,
+.details-avatar.AI_生盐诺亚,
+#callingModalAvatar.AI_生盐诺亚 {
+    background-color: var(--noah-secondary);
+    color: var(--noah-text);
+    border-color: var(--noah-primary);
+}
+.chat-list-item.active.AI_生盐诺亚 { background-color: var(--noah-active-bg); }
+.chat-list-item.active.AI_生盐诺亚 .chat-list-name,
+.chat-list-item.active.AI_生盐诺亚 .chat-list-preview,
+.chat-list-item.active.AI_生盐诺亚 .chat-list-time { color: var(--noah-text); }
+.chat-list-item.active.AI_生盐诺亚 .chat-list-avatar { border-color: var(--noah-primary); }
+
+/* 星野 */
+.chat-list-item.special-contact.AI_星野 .chat-list-avatar,
+.chat-avatar-main.AI_星野,
+.details-avatar.AI_星野,
+#callingModalAvatar.AI_星野 {
+    background-color: var(--hoshino-secondary);
+    color: var(--hoshino-text);
+    border-color: var(--hoshino-primary);
+}
+.chat-list-item.active.AI_星野 { background-color: var(--hoshino-active-bg); }
+.chat-list-item.active.AI_星野 .chat-list-name,
+.chat-list-item.active.AI_星野 .chat-list-preview,
+.chat-list-item.active.AI_星野 .chat-list-time { color: var(--hoshino-text); }
+.chat-list-item.active.AI_星野 .chat-list-avatar { border-color: var(--hoshino-primary); }
+
+/* 日奈 */
+.chat-list-item.special-contact.AI_日奈 .chat-list-avatar,
+.chat-avatar-main.AI_日奈,
+.details-avatar.AI_日奈,
+#callingModalAvatar.AI_日奈 {
+    background-color: var(--hina-secondary);
+    color: var(--hina-text);
+    border-color: var(--hina-primary);
+}
+.chat-list-item.active.AI_日奈 { background-color: var(--hina-active-bg); }
+.chat-list-item.active.AI_日奈 .chat-list-name,
+.chat-list-item.active.AI_日奈 .chat-list-preview,
+.chat-list-item.active.AI_日奈 .chat-list-time { color: var(--hina-text); }
+.chat-list-item.active.AI_日奈 .chat-list-avatar { border-color: var(--hina-primary); }
+
+/* 未花 */
+.chat-list-item.special-contact.AI_未花 .chat-list-avatar,
+.chat-avatar-main.AI_未花,
+.details-avatar.AI_未花,
+#callingModalAvatar.AI_未花 {
+    background-color: var(--mika-secondary);
+    color: var(--mika-text);
+    border-color: var(--mika-primary);
+}
+.chat-list-item.active.AI_未花 { background-color: var(--mika-active-bg); }
+.chat-list-item.active.AI_未花 .chat-list-name,
+.chat-list-item.active.AI_未花 .chat-list-preview,
+.chat-list-item.active.AI_未花 .chat-list-time { color: var(--mika-text); }
+.chat-list-item.active.AI_未花 .chat-list-avatar { border-color: var(--mika-primary); }
+
+/* 爱丽丝 */
+.chat-list-item.special-contact.AI_爱丽丝 .chat-list-avatar,
+.chat-avatar-main.AI_爱丽丝,
+.details-avatar.AI_爱丽丝,
+#callingModalAvatar.AI_爱丽丝 {
+    background-color: var(--aris-secondary);
+    color: var(--aris-text);
+    border-color: var(--aris-primary);
+}
+.chat-list-item.active.AI_爱丽丝 { background-color: var(--aris-active-bg); }
+.chat-list-item.active.AI_爱丽丝 .chat-list-name,
+.chat-list-item.active.AI_爱丽丝 .chat-list-preview,
+.chat-list-item.active.AI_爱丽丝 .chat-list-time { color: var(--aris-text); }
+.chat-list-item.active.AI_爱丽丝 .chat-list-avatar { border-color: var(--aris-primary); }
+
+/* 亚子 */
+.chat-list-item.special-contact.AI_亚子 .chat-list-avatar,
+.chat-avatar-main.AI_亚子,
+.details-avatar.AI_亚子,
+#callingModalAvatar.AI_亚子 {
+    background-color: var(--ako-secondary);
+    color: var(--ako-text);
+    border-color: var(--ako-primary);
+}
+.chat-list-item.active.AI_亚子 { background-color: var(--ako-active-bg); }
+.chat-list-item.active.AI_亚子 .chat-list-name,
+.chat-list-item.active.AI_亚子 .chat-list-preview,
+.chat-list-item.active.AI_亚子 .chat-list-time { color: var(--ako-text); }
+.chat-list-item.active.AI_亚子 .chat-list-avatar { border-color: var(--ako-primary); }
+
+
 .chat-list-avatar .avatar-image { /* 确保图片填满并保持圆角 */
     width: 100%;
     height: 100%;
@@ -226,6 +379,17 @@ body {
     background-color: var(--momo-white); /* 头部白色实底 */
     padding: 0 20px;
 }
+/* Character-specific Chat Header Title Color */
+.chat-header-main.current-chat-AI_早濑优香 .chat-title-main { color: var(--yuuka-primary); }
+.chat-header-main.current-chat-AI_砂狼白子 .chat-title-main { color: var(--shiroko-primary); }
+.chat-header-main.current-chat-AI_生盐诺亚 .chat-title-main { color: var(--noah-primary); }
+.chat-header-main.current-chat-AI_星野 .chat-title-main { color: var(--hoshino-primary); }
+.chat-header-main.current-chat-AI_日奈 .chat-title-main { color: var(--hina-primary); }
+.chat-header-main.current-chat-AI_未花 .chat-title-main { color: var(--mika-primary); }
+.chat-header-main.current-chat-AI_爱丽丝 .chat-title-main { color: var(--aris-primary); }
+.chat-header-main.current-chat-AI_亚子 .chat-title-main { color: var(--ako-primary); }
+
+
 .chat-avatar-main { /* 头部当前聊天对象头像 */
     width: 44px;
     height: 44px;
@@ -278,6 +442,17 @@ body {
     border: 1px solid var(--momo-border-light);
     border-bottom-left-radius: 4px; /* Momotalk 特色尖角 */
 }
+/* Character-specific received message border */
+.message.received[data-sender-id="AI_早濑优香"] { border-left: 3px solid var(--yuuka-primary); }
+.message.received[data-sender-id="AI_砂狼白子"] { border-left: 3px solid var(--shiroko-primary); }
+.message.received[data-sender-id="AI_生盐诺亚"] { border-left: 3px solid var(--noah-primary); }
+.message.received[data-sender-id="AI_星野"] { border-left: 3px solid var(--hoshino-primary); }
+.message.received[data-sender-id="AI_日奈"] { border-left: 3px solid var(--hina-primary); }
+.message.received[data-sender-id="AI_未花"] { border-left: 3px solid var(--mika-primary); }
+.message.received[data-sender-id="AI_爱丽丝"] { border-left: 3px solid var(--aris-primary); }
+.message.received[data-sender-id="AI_亚子"] { border-left: 3px solid var(--ako-primary); }
+
+
 .message.system { /* 系统消息 */
     background-color: var(--momo-neutral);
     color: var(--primary-color);
@@ -291,10 +466,16 @@ body {
     font-size: 14px;
     margin-bottom: 3px;
 }
-/* 特定角色发送消息时的名称颜色 - 早濑优香 */
-.message.received[data-sender-id="AI_早濑优香"] .message-sender {
-    color: var(--yuuka-primary); /* 优香消息发送者用天蓝色 */
-}
+/* 特定角色发送消息时的名称颜色 */
+.message.received[data-sender-id="AI_早濑优香"] .message-sender { color: var(--yuuka-text); }
+.message.received[data-sender-id="AI_砂狼白子"] .message-sender { color: var(--shiroko-text); }
+.message.received[data-sender-id="AI_生盐诺亚"] .message-sender { color: var(--noah-text); }
+.message.received[data-sender-id="AI_星野"] .message-sender { color: var(--hoshino-text); }
+.message.received[data-sender-id="AI_日奈"] .message-sender { color: var(--hina-text); }
+.message.received[data-sender-id="AI_未花"] .message-sender { color: var(--mika-text); }
+.message.received[data-sender-id="AI_爱丽丝"] .message-sender { color: var(--aris-text); }
+.message.received[data-sender-id="AI_亚子"] .message-sender { color: var(--ako-text); }
+
 
 .message .timestamp {
     color: var(--text-color-light);
@@ -372,7 +553,7 @@ body {
     animation: momo-pulse 1.5s infinite;
 }
 @keyframes momo-pulse { /* 呼吸灯效果 */
-    0% { box-shadow: 0 0 0 0 rgba(var(--danger-color-rgb, 244,67,54), 0.4); } /* 假设danger-color-rgb */
+    0% { box-shadow: 0 0 0 0 rgba(var(--danger-color-rgb, 244,67,54), 0.4); }
     70% { box-shadow: 0 0 0 10px rgba(var(--danger-color-rgb, 244,67,54), 0); }
     100% { box-shadow: 0 0 0 0 rgba(var(--danger-color-rgb, 244,67,54), 0); }
 }
@@ -419,9 +600,19 @@ body {
     align-items: center;
 }
 #aiContactAboutSection h4 span { /* "AI Name" 突出显示 */
-    color: var(--special-contact-color); /* 优香用蓝色 */
+    color: var(--special-contact-color); /* 默认是优香的蓝色，会被特定角色CSS覆盖 */
     margin-left: 5px;
 }
+/* 特定角色 "关于" 部分的标题颜色 */
+.details-panel.AI_早濑优香 #aiContactAboutSection h4 span { color: var(--yuuka-primary); }
+.details-panel.AI_砂狼白子 #aiContactAboutSection h4 span { color: var(--shiroko-primary); }
+.details-panel.AI_生盐诺亚 #aiContactAboutSection h4 span { color: var(--noah-primary); }
+.details-panel.AI_星野 #aiContactAboutSection h4 span { color: var(--hoshino-primary); }
+.details-panel.AI_日奈 #aiContactAboutSection h4 span { color: var(--hina-primary); }
+.details-panel.AI_未花 #aiContactAboutSection h4 span { color: var(--mika-primary); }
+.details-panel.AI_爱丽丝 #aiContactAboutSection h4 span { color: var(--aris-primary); }
+.details-panel.AI_亚子 #aiContactAboutSection h4 span { color: var(--ako-primary); }
+
 #aiContactDetailsContent {
     background-color: var(--momo-neutral);
     padding: 15px;
@@ -521,6 +712,16 @@ body {
     border: 3px solid var(--momo-white);
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
+/* Calling Modal Avatar - Character Specific */
+#callingModalAvatar.AI_早濑优香 { background-color: var(--yuuka-secondary); color: var(--yuuka-text); }
+#callingModalAvatar.AI_砂狼白子 { background-color: var(--shiroko-secondary); color: var(--shiroko-text); }
+#callingModalAvatar.AI_生盐诺亚 { background-color: var(--noah-secondary); color: var(--noah-text); }
+#callingModalAvatar.AI_星野 { background-color: var(--hoshino-secondary); color: var(--hoshino-text); }
+#callingModalAvatar.AI_日奈 { background-color: var(--hina-secondary); color: var(--hina-text); }
+#callingModalAvatar.AI_未花 { background-color: var(--mika-secondary); color: var(--mika-text); }
+#callingModalAvatar.AI_爱丽丝 { background-color: var(--aris-secondary); color: var(--aris-text); }
+#callingModalAvatar.AI_亚子 { background-color: var(--ako-secondary); color: var(--ako-text); }
+
 .video-call-container-main {
     background: rgba(var(--momo-text-dark-rgb), 0.9);
 }
@@ -575,10 +776,18 @@ input:checked + .slider:before { transform: translateX(24px); }
     display: none;
 }
 
-/* 特定于AI角色显示"关于"区域的样式 */
-.details-panel.ai-contact-active #aiContactAboutSection {
+/* 特定于AI角色显示"关于"区域的样式 (handled by JS adding class to detailsPanel) */
+.details-panel.AI_早濑优香 #aiContactAboutSection,
+.details-panel.AI_砂狼白子 #aiContactAboutSection,
+.details-panel.AI_生盐诺亚 #aiContactAboutSection,
+.details-panel.AI_星野 #aiContactAboutSection,
+.details-panel.AI_日奈 #aiContactAboutSection,
+.details-panel.AI_未花 #aiContactAboutSection,
+.details-panel.AI_爱丽丝 #aiContactAboutSection,
+.details-panel.AI_亚子 #aiContactAboutSection {
     display: block;
 }
+
 .details-panel.human-contact-active #contactActionsDetails {
     display: block;
 }
@@ -599,7 +808,6 @@ input:checked + .slider:before { transform: translateX(24px); }
     border-radius: var(--border-radius);
 }
 
-#callingModal #callingModalAvatar {
-    /* 这里可以根据被呼叫人的ID（如果能传递）动态改变背景色，
-       或保持一个统一的呼叫中头像样式 */
-}
+/* This is handled by specific classes like #callingModalAvatar.AI_早濑优香 */
+/* #callingModal #callingModalAvatar {
+} */
