@@ -112,7 +112,9 @@ const ConnectionManager = {
                 this.autoConnectToAllContacts(); // Attempt auto-connection after successful registration
                 break;
             case 'ERROR': // Generic error from signaling server
-                // UIManager.showNotification(`Signaling error: ${message.message}`, 'error');
+                if (!message.message.includes('不在线')) {
+                    UIManager.showNotification(`Signaling error: ${message.message}`, 'error');
+                }
                 Utils.log(`Signaling server error: ${message.message}`, Utils.logLevels.ERROR);
                 break;
             case 'OFFER':

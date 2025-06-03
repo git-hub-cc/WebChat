@@ -224,7 +224,8 @@ const AppInitializer = {
 
         window.addEventListener('unhandledrejection', function(event) {
             Utils.log(`未处理的Promise拒绝: ${event.reason}`, Utils.logLevels.ERROR);
-            UIManager.showNotification('An unhandled promise rejection occurred.', 'error');
+            // UIManager.showNotification('An unhandled promise rejection occurred.', 'error');
+            UIManager.showNotification('Lost connection to the server.', 'error');
         });
 
         window.addEventListener('beforeunload', () => {

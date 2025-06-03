@@ -690,5 +690,35 @@ const UIManager = {
         modal.appendChild(modalContent);
 
         document.body.appendChild(modal);
+    },
+
+    showCallingModal: function(peerName, onCancelCall, onStopMusicOnly, callType) {
+        const modal = document.getElementById('callingModal');
+        const titleEl = document.getElementById('callingModalTitle');
+        const textEl = document.getElementById('callingModalText');
+        const avatarEl = document.getElementById('callingModalAvatar');
+        const cancelBtn = document.getElementById('callingModalCancelBtn');
+
+        if (!modal || !titleEl || !textEl || !avatarEl || !cancelBtn) {
+            Utils.log("Calling modal elements not found!", Utils.logLevels.ERROR);
+            return;
+        }
+
+        titleEl.textContent = `${callType}...`;
+        textEl.textContent = `Contacting ${Utils.escapeHtml(peerName)}...`;
+        avatarEl.textContent = (Utils.escapeHtml(peerName).charAt(0) || 'P').toUpperCase();
+
+        cancelBtn.onclick = onCancelCall;
+
+        modal.style.display = 'flex';
+    },
+
+    hideCallingModal: function() {
+        const modal = document.getElementById('callingModal');
+        if (modal && modal.style.display !== 'none') {
+            modal.style.display = 'none';
+            const cancelBtn = document.getElementById('callingModalCancelBtn');
+            if (cancelBtn) cancelBtn.onclick = null;
+        }
     }
 };

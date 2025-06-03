@@ -1,3 +1,5 @@
+// Applying the fix to VideoCallManager.js
+
 const VideoCallManager = {
     localStream: null,
     remoteStream: null,
@@ -25,6 +27,9 @@ const VideoCallManager = {
         yOffset: 0,
         draggedElement: null
     },
+    musicPlayer: null,
+    isMusicPlaying: false,
+    _boundEnableMusicPlay: null, // For removing event listener
 
     audioConstraints: {
         echoCancellation: true,
@@ -49,6 +54,21 @@ const VideoCallManager = {
         this.remoteVideo = document.getElementById('remoteVideo');
         this.pipButton = document.getElementById('togglePipBtn'); // Get PiP button
 
+        try {
+            this.musicPlayer = new Audio('/music/call.mp3'); // Assuming music.mp3 is in the root
+            this.musicPlayer.loop = true;
+            this.musicPlayer.addEventListener('ended', () => {
+                if (this.isMusicPlaying) {
+                    this.musicPlayer.currentTime = 0;
+                    this.musicPlayer.play().catch(e => Utils.log(`Music loop error: ${e}`, Utils.logLevels.WARN));
+                }
+            }, false);
+        } catch (e) {
+            Utils.log(`Error initializing Audio object for music: ${e}`, Utils.logLevels.ERROR);
+            this.musicPlayer = null;
+        }
+
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             Utils.log('Browser does not support media devices (getUserMedia). Call functions will be disabled.', Utils.logLevels.ERROR);
             return false;
@@ -58,6 +78,50 @@ const VideoCallManager = {
             this.pipButton.addEventListener('click', () => this.togglePipMode());
         }
         return true;
+    },
+
+    playMusic: function (isRetry = false) {
+        if (this.musicPlayer && this.musicPlayer.paused && !this.isMusicPlaying) {
+            Utils.log("Attempting to play music...", Utils.logLevels.DEBUG);
+            this.musicPlayer.play().then(() => {
+                this.isMusicPlaying = true;
+                Utils.log("Music started playing.", Utils.logLevels.INFO);
+                if (isRetry && this._boundEnableMusicPlay) {
+                    document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
+                    document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
+                    delete this._boundEnableMusicPlay;
+                }
+            }).catch(error => {
+                Utils.log(`Error playing music: ${error.name} - ${error.message}`, Utils.logLevels.ERROR);
+                if (error.name === 'NotAllowedError' && !isRetry) {
+                    UIManager.showNotification("Music playback blocked. Click/tap anywhere to enable.", "warning");
+                    this._boundEnableMusicPlay = () => this.playMusic(true);
+                    document.body.addEventListener('click', this._boundEnableMusicPlay, {once: true, capture: true});
+                    document.body.addEventListener('touchstart', this._boundEnableMusicPlay, {
+                        once: true,
+                        capture: true
+                    });
+                }
+            });
+        } else if (this.isMusicPlaying) {
+            Utils.log("Music is already playing or play attempt in progress.", Utils.logLevels.DEBUG);
+        } else if (!this.musicPlayer) {
+            Utils.log("Music player not available.", Utils.logLevels.WARN);
+        }
+    },
+
+    stopMusic: function () {
+        if (this.musicPlayer && (!this.musicPlayer.paused || this.isMusicPlaying)) {
+            this.musicPlayer.pause();
+            this.musicPlayer.currentTime = 0;
+            this.isMusicPlaying = false;
+            Utils.log("Music stopped.", Utils.logLevels.INFO);
+            if (this._boundEnableMusicPlay) {
+                document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
+                document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
+                delete this._boundEnableMusicPlay;
+            }
+        }
     },
 
     initiateAudioCall: function (peerId) {
@@ -95,7 +159,15 @@ const VideoCallManager = {
                 isScreenShare: this.isScreenSharing, // true
                 sender: UserManager.userId
             });
-            UIManager.showNotification(`Requesting screen share with ${UserManager.contacts[peerId]?.name || 'peer'}...`, 'info');
+
+            UIManager.showCallingModal(
+                UserManager.contacts[peerId]?.name || 'peer',
+                () => this.endCall(), // onCancelCall
+                () => this.stopMusic(), // onStopMusicOnly
+                'Screen Share'
+            );
+            this.playMusic();
+
 
             this.callRequestTimeout = setTimeout(() => {
                 if (this.isCallPending) {
@@ -103,8 +175,7 @@ const VideoCallManager = {
                         type: 'video-call-cancel',
                         sender: UserManager.userId
                     });
-                    this.endCallCleanup();
-                    UIManager.showNotification('Screen share request timed out.', 'warning');
+                    this.endCall(); // endCall will call endCallCleanup which stops music and hides modal
                 }
             }, 30000);
         } catch (error) {
@@ -146,7 +217,14 @@ const VideoCallManager = {
                 isScreenShare: this.isScreenSharing, // will be false
                 sender: UserManager.userId
             });
-            UIManager.showNotification(`Calling ${UserManager.contacts[peerId]?.name || 'peer'} (${this.isAudioOnly ? 'Audio' : 'Video'})...`, 'info');
+
+            UIManager.showCallingModal(
+                UserManager.contacts[peerId]?.name || 'peer',
+                () => this.endCall(), // onCancelCall
+                () => this.stopMusic(), // onStopMusicOnly
+                this.isAudioOnly ? 'Audio Call' : 'Video Call'
+            );
+            this.playMusic();
 
             this.callRequestTimeout = setTimeout(() => {
                 if (this.isCallPending) {
@@ -154,8 +232,7 @@ const VideoCallManager = {
                         type: 'video-call-cancel',
                         sender: UserManager.userId
                     });
-                    this.endCallCleanup();
-                    UIManager.showNotification('Call request timed out.', 'warning');
+                    this.endCall(); // endCall will call endCallCleanup
                 }
             }, 30000);
         } catch (error) {
@@ -191,6 +268,7 @@ const VideoCallManager = {
         if (requestTitle) requestTitle.textContent = `${callTypeString} Request`;
         if (requestDesc) requestDesc.textContent = `${peerName} ${this.isScreenSharing ? 'wants to share screen' : 'is calling'}...`;
         requestModal.style.display = 'flex';
+        this.playMusic();
     },
 
     hideCallRequest: function () {
@@ -202,6 +280,7 @@ const VideoCallManager = {
     acceptCall: async function () {
         // ... (no changes)
         this.hideCallRequest();
+        this.stopMusic(); // Callee stops music on accept
         if (!this.currentPeerId) {
             UIManager.showNotification('Invalid call request.', 'error');
             return;
@@ -237,6 +316,7 @@ const VideoCallManager = {
     rejectCall: function () {
         // ... (no changes)
         this.hideCallRequest();
+        this.stopMusic(); // Callee stops music on reject
         if (!this.currentPeerId) return;
         ConnectionManager.sendTo(this.currentPeerId, {
             type: 'video-call-rejected',
@@ -400,60 +480,91 @@ const VideoCallManager = {
         this.setCodecPreferences(pc);
 
         pc.ontrack = (event) => {
-            Utils.log(`ontrack event: track kind=${event.track.kind}, id=${event.track.id}, streams: ${event.streams.length}`, Utils.logLevels.DEBUG);
+            Utils.log(`ontrack event: track kind=${event.track.kind}, id=${event.track.id}, streams associated: ${event.streams.length}`, Utils.logLevels.DEBUG);
 
             const trackHandler = (track) => {
+                // Ensure listeners are attached only once
                 if (!track._videoManagerListenersAttached) {
                     track.onunmute = () => {
                         Utils.log(`Remote track ${track.id} (${track.kind}) unmuted.`, Utils.logLevels.DEBUG);
-                        this.updateUIForCallType();
-                        if (track.kind === 'video' && this.remoteVideo.paused) {
+                        this.updateUIForCallType(); // Refresh UI, e.g., show video element if it's a video track
+                        // Attempt to play remote video if it's a video track and paused
+                        if (track.kind === 'video' && this.remoteVideo && this.remoteVideo.paused) {
                             this.remoteVideo.play().catch(e => Utils.log(`Error playing remote video on unmute: ${e}`, Utils.logLevels.WARN));
                         }
                     };
                     track.onmute = () => {
                         Utils.log(`Remote track ${track.id} (${track.kind}) muted.`, Utils.logLevels.DEBUG);
-                        this.updateUIForCallType();
+                        this.updateUIForCallType(); // Refresh UI
                     };
                     track.onended = () => {
                         Utils.log(`Remote track ${track.id} (${track.kind}) ended.`, Utils.logLevels.DEBUG);
+                        // Remove the track from our managed remoteStream if it exists there
                         if (this.remoteStream && this.remoteStream.getTrackById(track.id)) {
                             try {
                                 this.remoteStream.removeTrack(track);
-                            } catch (e) { /* ignore */
+                                Utils.log(`Removed track ${track.id} from remoteStream.`, Utils.logLevels.DEBUG);
+                            } catch (e) {
+                                Utils.log(`Error removing track ${track.id} from remoteStream: ${e}`, Utils.logLevels.WARN);
                             }
                         }
-                        // If the remote screen share track ends (and we are in a screen share session initiated by remote)
+                        // Special handling if a remote screen share video track ends
                         if (track.kind === 'video' && this.isScreenSharing && !this.isCaller) {
                             Utils.log("Remote screen share track ended. Ending call.", Utils.logLevels.INFO);
                             this.endCall();
                         } else {
-                            this.updateUIForCallType();
+                            this.updateUIForCallType(); // Refresh UI
                         }
                     };
                     track._videoManagerListenersAttached = true;
                 }
             };
 
+            // Prefer using event.streams[0] if available, as it's the stream the track belongs to.
             if (event.streams && event.streams[0]) {
-                const newStream = event.streams[0];
-                if (this.remoteVideo.srcObject !== newStream) {
-                    this.remoteVideo.srcObject = newStream;
-                    this.remoteStream = newStream;
-                    Utils.log(`Assigned event.streams[0] (id: ${this.remoteStream.id}) to remoteVideo.srcObject.`, Utils.logLevels.DEBUG);
-                    newStream.getTracks().forEach(trackHandler);
+                const incomingStream = event.streams[0];
+                if (this.remoteVideo.srcObject !== incomingStream) {
+                    this.remoteVideo.srcObject = incomingStream;
+                    this.remoteStream = incomingStream; // Update our reference to this authoritative stream
+                    Utils.log(`Assigned event.streams[0] (id: ${this.remoteStream.id}) to remoteVideo.srcObject.`, Utils.logLevels.INFO);
                 }
-            } else {
+                // Ensure trackHandler is called for all tracks currently in this stream,
+                // especially the current event.track which triggered this event.
+                if (this.remoteStream) { // Should always be true if incomingStream was assigned
+                    this.remoteStream.getTracks().forEach(t => trackHandler(t));
+                }
+                // Fallback specifically for event.track if it somehow wasn't processed by the loop above.
+                if (event.track) { // This ensures the current track's handler is attached
+                    trackHandler(event.track);
+                }
+
+            } else if (event.track) {
+                // Fallback: Track arrived without an associated stream in event.streams array.
+                // Manage tracks in our own `this.remoteStream`.
                 if (!this.remoteStream) {
                     this.remoteStream = new MediaStream();
+                    // Assign to srcObject only if it's not already pointing to a (potentially different) live stream
+                    if (!this.remoteVideo.srcObject || !(this.remoteVideo.srcObject instanceof MediaStream) || this.remoteVideo.srcObject.getTracks().length === 0) {
+                        this.remoteVideo.srcObject = this.remoteStream;
+                    }
+                    Utils.log(`Initialized new remoteStream (event.track w/o event.streams[0]). Current srcObject: ${this.remoteVideo.srcObject === this.remoteStream ? 'this.remoteStream' : 'other stream'}.`, Utils.logLevels.INFO);
+                }
+                // Add track to our existing remoteStream if it's not already there.
+                if (!this.remoteStream.getTrackById(event.track.id)) {
+                    this.remoteStream.addTrack(event.track);
+                    Utils.log(`Added event.track (id: ${event.track.id}, kind: ${event.track.kind}) to manually managed remoteStream.`, Utils.logLevels.INFO);
+                }
+                // If remoteVideo.srcObject is NOT our remoteStream (e.g. it's using event.streams[0] from a previous track),
+                // we might need to reconsider. However, this 'else if (event.track)' path implies event.streams[0] was absent.
+                if(this.remoteVideo.srcObject !== this.remoteStream && this.remoteStream.getTracks().length > 0) {
+                    // This case might happen if a previous track set event.streams[0] and now a track comes without it.
+                    // We should decide if we want to merge into remoteVideo.srcObject or stick to this.remoteStream.
+                    // For simplicity and to ensure all tracks are heard/seen, if remoteStream is now populated, ensure it's used.
                     this.remoteVideo.srcObject = this.remoteStream;
                 }
-                if (event.track && !this.remoteStream.getTrackById(event.track.id)) {
-                    this.remoteStream.addTrack(event.track);
-                    trackHandler(event.track);
-                    Utils.log(`Added track ${event.track.id} (${event.track.kind}) to manually managed remoteStream.`, Utils.logLevels.DEBUG);
-                }
+                trackHandler(event.track); // Ensure listeners are attached to this specific track.
             }
+
             this.updateUIForCallType();
         };
 
@@ -877,6 +988,9 @@ const VideoCallManager = {
     },
 
     endCallCleanup: function () {
+        this.stopMusic(); // Stop music when call ends for any reason
+        UIManager.hideCallingModal(); // Hide initiator's calling modal
+
         if (this.statsInterval) clearInterval(this.statsInterval);
         this.statsInterval = null;
         this.releaseMediaResources();
@@ -953,21 +1067,41 @@ const VideoCallManager = {
                 break;
             case 'video-call-accepted':
                 if (this.isCallPending && this.isCaller && this.currentPeerId === peerId) {
+                    this.stopMusic(); // Caller stops music when callee accepts
+                    UIManager.hideCallingModal();
                     if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
                     this.callRequestTimeout = null;
-                    // Initiator's state is leading here. Answer just confirms.
-                    this.isAudioOnly = message.audioOnly || false; // Should match what we sent
-                    this.isScreenSharing = message.isScreenShare || false; // Should match what we sent
+                    this.isAudioOnly = message.audioOnly || false;
+                    this.isScreenSharing = message.isScreenShare || false;
                     this.startLocalStreamAndSignal(true);
                 }
                 break;
             case 'video-call-rejected':
-            case 'video-call-cancel':
                 if (this.isCallPending && this.currentPeerId === peerId) {
+                    if (this.isCaller) { // Caller received rejection
+                        this.stopMusic();
+                        UIManager.hideCallingModal();
+                    }
+                    // Callee doesn't typically receive 'video-call-rejected' if they initiated the rejection
                     if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
                     this.callRequestTimeout = null;
-                    const reason = message.type === 'video-call-rejected' ? (message.reason || 'rejected') : 'cancelled';
-                    UIManager.showNotification(`Call ${reason} by ${UserManager.contacts[peerId]?.name || 'peer'}.`, 'warning');
+                    UIManager.showNotification(`Call rejected by ${UserManager.contacts[peerId]?.name || 'peer'}. Reason: ${message.reason || 'N/A'}`, 'warning');
+                    this.endCallCleanup();
+                }
+                break;
+            case 'video-call-cancel': // Callee receiving cancel from caller, or caller initiated cancel timeout
+                if (this.isCallPending && this.currentPeerId === peerId) {
+                    if (!this.isCaller) { // Callee receiving cancel
+                        this.stopMusic();
+                        this.hideCallRequest();
+                    }
+                    // Caller's cancel (e.g. from modal or timeout) calls endCall which calls endCallCleanup
+                    // So music stop and modal hide for caller is handled there.
+                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
+                    this.callRequestTimeout = null;
+                    if (!this.isCaller) { // Only show notification to callee
+                        UIManager.showNotification(`Call cancelled by ${UserManager.contacts[peerId]?.name || 'peer'}.`, 'warning');
+                    }
                     this.endCallCleanup();
                 }
                 break;

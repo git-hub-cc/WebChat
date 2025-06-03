@@ -91,7 +91,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             response.setUserId(userId);
             sendMessage(session, response);
         } else {
-            sendErrorMessage(session, "用户ID已存在或无效");
+            sendErrorMessage(session, "用户ID已存在或无效，也可能同时打开多个窗口");
         }
     }
 

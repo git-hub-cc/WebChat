@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -135,6 +136,22 @@
         </div>
     </div>
 </div>
+
+<div id="callingModal" class="modal-like" style="display: none;">
+    <div class="modal-content" style="max-width: 350px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: none;">
+            <h2 id="callingModalTitle">Calling...</h2>
+        </div>
+        <div class="modal-body">
+            <div class="video-call-avatar" id="callingModalAvatar" style="font-size: 50px; margin: 10px auto;">👤</div>
+            <p id="callingModalText" style="margin-bottom: 20px;">Contacting [Peer Name]...</p>
+        </div>
+        <div class="modal-footer" style="justify-content: space-around;">
+            <button id="callingModalCancelBtn" class="btn btn-danger" style="flex-grow: 1; margin-left: 5px;">Cancel Call</button>
+        </div>
+    </div>
+</div>
+
 
 <div id="videoCallContainer" class="video-call-container-main" style="display: none;">
     <div class="video-streams">

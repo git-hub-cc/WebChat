@@ -1226,3 +1226,18 @@ input:checked + .slider:before {
 #fileInput {
     display: none; /* Hide the default file input */
 }
+
+/* Styles for Outgoing Call Modal */
+.outgoing-call-modal .modal-content {
+    text-align: center;
+    max-width: 400px; /* Consistent with incoming call */
+}
+.outgoing-call-avatar { /* Reusing video-call-avatar style */
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+.outgoing-call-buttons { /* Reusing video-call-request-buttons style */
+    display: flex;
+    justify-content: center; /* Center the single cancel button */
+    margin-top: 20px;
+}
