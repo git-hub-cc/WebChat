@@ -1,0 +1,609 @@
+:root {
+    /* 咒术回战 主题色板 (Jujutsu Kaisen Theme Palette) */
+    --jjk-dark-void-rgb: 20, 20, 25; /* 深渊黑 (For rgba) */
+    --jjk-dark-void: rgb(var(--jjk-dark-void-rgb));
+    --jjk-cursed-energy-red-rgb: 220, 53, 69; /* 咒力赤红 (Accent, danger) */
+    --jjk-cursed-energy-red: rgb(var(--jjk-cursed-energy-red-rgb));
+    --jjk-midnight-blue-rgb: 35, 45, 65; /* 午夜蓝 (Main secondary bg) */
+    --jjk-midnight-blue: rgb(var(--jjk-midnight-blue-rgb));
+    --jjk-steel-gray-rgb: 108, 117, 125; /* 钢铁灰 (UI elements, borders) */
+    --jjk-steel-gray: rgb(var(--jjk-steel-gray-rgb));
+    --jjk-text-primary-rgb: 236, 236, 236; /* 主文字亮灰 (For rgba) */
+    --jjk-text-primary: rgb(var(--jjk-text-primary-rgb));
+    --jjk-text-secondary-rgb: 170, 170, 170; /* 次文字暗灰 (For rgba) */
+    --jjk-text-secondary: rgb(var(--jjk-text-secondary-rgb));
+    --jjk-gojo-blue-rgb: 100, 200, 255; /* 五条苍蓝 (Gojo's theme color) */
+    --jjk-gojo-blue: rgb(var(--jjk-gojo-blue-rgb));
+    --jjk-sukuna-crimson-rgb: 176, 22, 22; /* 宿傩绯红 (Sukuna's theme, darker red) */
+    --jjk-sukuna-crimson: rgb(var(--jjk-sukuna-crimson-rgb));
+
+    --jjk-itadori-pink-rgb: 255, 150, 150; /* 虎杖粉 (Itadori's hair/theme) */
+    --jjk-itadori-pink: rgb(var(--jjk-itadori-pink-rgb));
+    --jjk-fushiguro-dark-teal-rgb: 20, 80, 90; /* 伏黑暗青 (Fushiguro's theme) */
+    --jjk-fushiguro-dark-teal: rgb(var(--jjk-fushiguro-dark-teal-rgb));
+    --jjk-nobara-orange-rgb: 240, 140, 40; /* 钉崎橙 (Nobara's theme) */
+    --jjk-nobara-orange: rgb(var(--jjk-nobara-orange-rgb));
+    --jjk-nanami-gold-rgb: 180, 160, 110; /* 七海金 (Nanami's theme) */
+    --jjk-nanami-gold: rgb(var(--jjk-nanami-gold-rgb));
+
+
+    /* 覆盖 P2P Chat 原有变量 */
+    --primary-color: var(--jjk-cursed-energy-red); /* 主色调采用咒力红 */
+    --primary-color-dark: rgb(180, 40, 50);
+    --secondary-color: var(--jjk-midnight-blue); /* 主背景用午夜蓝 */
+    --text-color: var(--jjk-text-primary);
+    --text-color-light: var(--jjk-text-secondary);
+    --text-color-inverted: var(--jjk-dark-void); /* 在亮色背景上的文字 (如按钮) */
+    --accent-color: var(--jjk-gojo-blue); /* 在线/重要提示用五条蓝 */
+    --danger-color: var(--jjk-cursed-energy-red);
+    --warning-color: #ff9900; /* 警示 - 亮橙 */
+    --sent-bg-color: rgba(var(--jjk-dark-void-rgb), 0.7); /* 发送消息 - 深邃背景 */
+    --received-bg-color: rgba(var(--jjk-steel-gray-rgb), 0.2); /* 接收消息 - 钢铁灰透明背景 */
+    --border-color: rgba(var(--jjk-steel-gray-rgb), 0.3);
+    --hover-bg-color: rgba(var(--jjk-steel-gray-rgb), 0.15);
+    --active-bg-color: rgba(var(--jjk-cursed-energy-red-rgb), 0.2);
+    --sidebar-width: 320px;
+    --header-height: 60px;
+    --input-area-height: auto;
+    --border-radius: 6px; /* 稍显硬朗的圆角 */
+    --font-family: "Helvetica Neue", Helvetica, Arial, "Hiragino Sans GB", "WenQuanYi Micro Hei", sans-serif; /* 现代无衬线字体 */
+    --box-shadow: 0 2px 5px rgba(0,0,0,0.3), 0 0 15px rgba(var(--jjk-cursed-energy-red-rgb),0.1) inset; /* 更强调的阴影 */
+    --special-contact-color: var(--jjk-gojo-blue); /* 默认特殊联系人颜色 */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--jjk-dark-void); /* 最底层背景 - 深渊黑 */
+    color: var(--text-color);
+    line-height: 1.6;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    /* 背景尝试用咒纹或暗色调渐变 */
+    background: radial-gradient(ellipse at center, rgba(var(--jjk-midnight-blue-rgb),0.5) 0%, var(--jjk-dark-void) 70%);
+}
+
+.app-container {
+    display: flex;
+    width: 100%;
+    max-width: 1400px;
+    height: 100vh;
+    background-color: var(--secondary-color); /* 应用容器主背景 - 午夜蓝 */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(var(--jjk-cursed-energy-red-rgb),0.2) inset;
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(var(--jjk-steel-gray-rgb), 0.2);
+    overflow: hidden;
+}
+
+/* --- 滚动条美化 (Scrollbar Styling) --- */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(var(--jjk-dark-void-rgb), 0.7);
+    border-radius: var(--border-radius);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(var(--jjk-cursed-energy-red-rgb), 0.6);
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(var(--jjk-steel-gray-rgb), 0.1);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--jjk-cursed-energy-red);
+}
+
+
+/* --- Sidebar Navigation (侧边栏) --- */
+.sidebar-nav {
+    width: var(--sidebar-width);
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.8); /* 侧边栏更暗 */
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+.sidebar-header {
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    height: var(--header-height);
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.5);
+}
+
+.menu-btn {
+    color: var(--jjk-text-secondary);
+}
+.menu-btn:hover {
+    color: var(--jjk-cursed-energy-red);
+}
+
+.search-bar {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.7);
+    border: 1px solid var(--border-color);
+    color: var(--jjk-text-primary);
+    border-radius: 20px;
+}
+.search-bar::placeholder {
+    color: var(--jjk-text-secondary);
+}
+.search-bar:focus {
+    border-color: var(--jjk-cursed-energy-red);
+    box-shadow: 0 0 0 2px rgba(var(--jjk-cursed-energy-red-rgb),0.3);
+}
+
+.nav-tabs {
+    border-bottom: 1px solid var(--border-color);
+}
+.nav-tab {
+    color: var(--text-color-light);
+}
+.nav-tab:hover {
+    color: var(--jjk-cursed-energy-red);
+}
+.nav-tab.active {
+    color: var(--jjk-cursed-energy-red);
+    border-bottom-color: var(--jjk-cursed-energy-red);
+}
+
+.chat-list-item {
+    border-bottom: 1px solid var(--border-color);
+}
+.chat-list-item:hover {
+    background-color: var(--hover-bg-color);
+}
+/* Default Active Chat List Item */
+.chat-list-item.active {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted); /* text-color-inverted is dark for JJK */
+}
+.chat-list-item.active .chat-list-name,
+.chat-list-item.active .chat-list-preview,
+.chat-list-item.active .chat-list-time {
+    color: var(--jjk-text-primary); /* Ensure text is light on red background */
+}
+
+
+.chat-list-avatar {
+    background-color: var(--jjk-steel-gray); /* 默认头像背景 */
+    border: 1px solid rgba(var(--jjk-text-primary-rgb), 0.2);
+}
+
+/* 角色头像颜色应用 & Active List Item */
+/* 五条悟 */
+.chat-list-item.special-contact.AI_五条悟 .chat-list-avatar,
+.chat-avatar-main.AI_五条悟,
+.details-avatar.AI_五条悟,
+#callingModalAvatar.AI_五条悟 {
+    background-color: var(--jjk-gojo-blue);
+    color: var(--jjk-dark-void);
+    border-color: rgba(var(--jjk-dark-void-rgb), 0.3);
+}
+.chat-list-item.active.AI_五条悟 { background-color: rgba(var(--jjk-gojo-blue-rgb), 0.7); box-shadow: 0 0 8px var(--jjk-gojo-blue) inset; }
+.chat-list-item.active.AI_五条悟 .chat-list-name,
+.chat-list-item.active.AI_五条悟 .chat-list-preview,
+.chat-list-item.active.AI_五条悟 .chat-list-time { color: var(--jjk-dark-void); }
+
+/* 虎杖悠仁 */
+.chat-list-item.special-contact.AI_虎杖悠仁 .chat-list-avatar,
+.chat-avatar-main.AI_虎杖悠仁,
+.details-avatar.AI_虎杖悠仁,
+#callingModalAvatar.AI_虎杖悠仁 {
+    background-color: var(--jjk-itadori-pink);
+    color: var(--jjk-dark-void);
+    border-color: rgba(var(--jjk-dark-void-rgb), 0.3);
+}
+.chat-list-item.active.AI_虎杖悠仁 { background-color: rgba(var(--jjk-itadori-pink-rgb), 0.7); box-shadow: 0 0 8px var(--jjk-itadori-pink) inset; }
+.chat-list-item.active.AI_虎杖悠仁 .chat-list-name,
+.chat-list-item.active.AI_虎杖悠仁 .chat-list-preview,
+.chat-list-item.active.AI_虎杖悠仁 .chat-list-time { color: var(--jjk-dark-void); }
+
+/* 伏黑惠 */
+.chat-list-item.special-contact.AI_伏黑惠 .chat-list-avatar,
+.chat-avatar-main.AI_伏黑惠,
+.details-avatar.AI_伏黑惠,
+#callingModalAvatar.AI_伏黑惠 {
+    background-color: var(--jjk-fushiguro-dark-teal);
+    color: var(--jjk-text-primary);
+    border-color: rgba(var(--jjk-text-primary-rgb), 0.2);
+}
+.chat-list-item.active.AI_伏黑惠 { background-color: rgba(var(--jjk-fushiguro-dark-teal-rgb), 0.7); box-shadow: 0 0 8px var(--jjk-fushiguro-dark-teal) inset; }
+.chat-list-item.active.AI_伏黑惠 .chat-list-name,
+.chat-list-item.active.AI_伏黑惠 .chat-list-preview,
+.chat-list-item.active.AI_伏黑惠 .chat-list-time { color: var(--jjk-text-primary); }
+
+/* 钉崎野蔷薇 */
+.chat-list-item.special-contact.AI_钉崎野蔷薇 .chat-list-avatar,
+.chat-avatar-main.AI_钉崎野蔷薇,
+.details-avatar.AI_钉崎野蔷薇,
+#callingModalAvatar.AI_钉崎野蔷薇 {
+    background-color: var(--jjk-nobara-orange);
+    color: var(--jjk-dark-void);
+    border-color: rgba(var(--jjk-dark-void-rgb), 0.3);
+}
+.chat-list-item.active.AI_钉崎野蔷薇 { background-color: rgba(var(--jjk-nobara-orange-rgb), 0.7); box-shadow: 0 0 8px var(--jjk-nobara-orange) inset; }
+.chat-list-item.active.AI_钉崎野蔷薇 .chat-list-name,
+.chat-list-item.active.AI_钉崎野蔷薇 .chat-list-preview,
+.chat-list-item.active.AI_钉崎野蔷薇 .chat-list-time { color: var(--jjk-dark-void); }
+
+/* 两面宿傩 */
+.chat-list-item.special-contact.AI_两面宿傩 .chat-list-avatar,
+.chat-avatar-main.AI_两面宿傩,
+.details-avatar.AI_两面宿傩,
+#callingModalAvatar.AI_两面宿傩 {
+    background-color: var(--jjk-sukuna-crimson);
+    color: var(--jjk-text-primary);
+    border-color: rgba(var(--jjk-dark-void-rgb), 0.5); /* Darker border */
+}
+.chat-list-item.active.AI_两面宿傩 { background-color: rgba(var(--jjk-sukuna-crimson-rgb), 0.7); box-shadow: 0 0 8px var(--jjk-sukuna-crimson) inset; }
+.chat-list-item.active.AI_两面宿傩 .chat-list-name,
+.chat-list-item.active.AI_两面宿傩 .chat-list-preview,
+.chat-list-item.active.AI_两面宿傩 .chat-list-time { color: var(--jjk-text-primary); }
+
+/* 七海建人 */
+.chat-list-item.special-contact.AI_七海建人 .chat-list-avatar,
+.chat-avatar-main.AI_七海建人,
+.details-avatar.AI_七海建人,
+#callingModalAvatar.AI_七海建人 {
+    background-color: var(--jjk-nanami-gold);
+    color: var(--jjk-dark-void);
+    border-color: rgba(var(--jjk-dark-void-rgb), 0.3);
+}
+.chat-list-item.active.AI_七海建人 { background-color: rgba(var(--jjk-nanami-gold-rgb), 0.7); box-shadow: 0 0 8px var(--jjk-nanami-gold) inset; }
+.chat-list-item.active.AI_七海建人 .chat-list-name,
+.chat-list-item.active.AI_七海建人 .chat-list-preview,
+.chat-list-item.active.AI_七海建人 .chat-list-time { color: var(--jjk-dark-void); }
+
+
+.chat-list-badge { /* 未读消息徽章 */
+    background-color: var(--jjk-cursed-energy-red);
+    color: var(--jjk-text-primary);
+    box-shadow: 0 0 5px var(--jjk-cursed-energy-red);
+}
+
+.new-chat-fab { /* 新建聊天按钮 */
+    background-color: var(--jjk-cursed-energy-red);
+    color: var(--jjk-text-primary);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4), 0 0 8px var(--jjk-cursed-energy-red);
+}
+.new-chat-fab:hover {
+    background-color: rgb(200, 40, 50);
+}
+
+/* --- Main Chat Area (主聊天区) --- */
+.chat-area {
+    background-color: var(--secondary-color); /* 午夜蓝 */
+}
+
+.chat-header-main {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.3); /* 头部背景更深邃 */
+}
+/* Character-specific Chat Header Title Color */
+.chat-header-main.current-chat-AI_五条悟 .chat-title-main { color: var(--jjk-gojo-blue); text-shadow: 0 0 4px var(--jjk-gojo-blue); }
+.chat-header-main.current-chat-AI_虎杖悠仁 .chat-title-main { color: var(--jjk-itadori-pink); }
+.chat-header-main.current-chat-AI_伏黑惠 .chat-title-main { color: var(--jjk-fushiguro-dark-teal); text-shadow: 0 0 3px rgba(var(--jjk-fushiguro-dark-teal-rgb),0.7); }
+.chat-header-main.current-chat-AI_钉崎野蔷薇 .chat-title-main { color: var(--jjk-nobara-orange); }
+.chat-header-main.current-chat-AI_两面宿傩 .chat-title-main { color: var(--jjk-sukuna-crimson); text-shadow: 0 0 5px var(--jjk-sukuna-crimson); }
+.chat-header-main.current-chat-AI_七海建人 .chat-title-main { color: var(--jjk-nanami-gold); }
+
+
+.chat-avatar-main { /* 头部当前聊天对象头像 */
+    border: 2px solid var(--border-color);
+}
+.chat-title-main {
+    font-weight: bold;
+    text-shadow: 0 0 5px rgba(var(--jjk-text-primary-rgb), 0.2);
+}
+.header-action-btn {
+    color: var(--text-color-light);
+}
+.header-action-btn:hover {
+    color: var(--jjk-cursed-energy-red);
+    text-shadow: 0 0 5px var(--jjk-cursed-energy-red);
+}
+
+.chat-messages-container {
+    padding: 20px;
+    /* background: url('path-to-jjk-subtle-pattern.png') repeat; */ /* 可选的背景纹理 */
+}
+.no-chat-selected .logo-placeholder {
+    /* content: "呪"; */ /* 用一个“呪”字作为占位符 */
+    font-family: "Meiryo", "MS PGothic", sans-serif; /* Japanese font if possible */
+    font-size: 80px;
+    color: rgba(var(--jjk-cursed-energy-red-rgb), 0.3);
+    text-shadow: 0 0 15px rgba(var(--jjk-cursed-energy-red-rgb), 0.5);
+}
+.status-indicator.global {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.6);
+    border: 1px solid var(--border-color);
+    color: var(--jjk-accent-color);
+}
+
+/* 消息气泡 */
+.message {
+    border: 1px solid var(--border-color);
+    box-shadow: var(--box-shadow);
+}
+.message.sent {
+    background-color: var(--sent-bg-color); /* 深邃背景 */
+    border-left: 3px solid var(--jjk-accent-color); /* 发送者消息左侧辉光 - 五条蓝 */
+}
+.message.received {
+    background-color: var(--received-bg-color); /* 钢铁灰透明背景 */
+    border-left: 3px solid var(--jjk-steel-gray); /* 接收者消息左侧辉光 */
+}
+/* Character-specific received message border */
+.message.received[data-sender-id="AI_五条悟"] { border-left-color: var(--jjk-gojo-blue); }
+.message.received[data-sender-id="AI_虎杖悠仁"] { border-left-color: var(--jjk-itadori-pink); }
+.message.received[data-sender-id="AI_伏黑惠"] { border-left-color: var(--jjk-fushiguro-dark-teal); }
+.message.received[data-sender-id="AI_钉崎野蔷薇"] { border-left-color: var(--jjk-nobara-orange); }
+.message.received[data-sender-id="AI_两面宿傩"] { border-left-color: var(--jjk-sukuna-crimson); }
+.message.received[data-sender-id="AI_七海建人"] { border-left-color: var(--jjk-nanami-gold); }
+
+
+.message.system { /* 系统消息 */
+    background-color: rgba(var(--jjk-steel-gray-rgb), 0.5);
+    color: var(--jjk-text-secondary);
+    font-style: italic;
+    border: 1px dashed var(--jjk-steel-gray);
+    box-shadow: 0 0 5px rgba(var(--jjk-steel-gray-rgb),0.2) inset;
+}
+.message-sender { /* 群聊中发送者名称 */
+    color: var(--jjk-text-secondary); /* 默认发送者名称颜色 */
+    font-weight: bold;
+}
+/* 特定角色发送消息时的名称颜色 */
+.message.received[data-sender-id="AI_五条悟"] .message-sender { color: var(--jjk-gojo-blue); }
+.message.received[data-sender-id="AI_虎杖悠仁"] .message-sender { color: var(--jjk-itadori-pink); }
+.message.received[data-sender-id="AI_伏黑惠"] .message-sender { color: var(--jjk-fushiguro-dark-teal); }
+.message.received[data-sender-id="AI_钉崎野蔷薇"] .message-sender { color: var(--jjk-nobara-orange); }
+.message.received[data-sender-id="AI_两面宿傩"] .message-sender { color: var(--jjk-sukuna-crimson); text-shadow: 0 0 3px var(--jjk-sukuna-crimson); }
+.message.received[data-sender-id="AI_七海建人"] .message-sender { color: var(--jjk-nanami-gold); }
+
+
+.message .timestamp {
+    color: var(--text-color-light);
+}
+
+.chat-input-container {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.5); /* 输入区域背景 */
+}
+#messageInput {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.8);
+    border: 1px solid var(--border-color);
+    color: var(--jjk-text-primary);
+    border-radius: 20px;
+}
+#messageInput::placeholder {
+    color: var(--jjk-text-secondary);
+}
+#messageInput:focus {
+    border-color: var(--jjk-cursed-energy-red);
+    box-shadow: 0 0 0 2px rgba(var(--jjk-cursed-energy-red-rgb),0.3), 0 0 10px rgba(var(--jjk-cursed-energy-red-rgb),0.2) inset;
+}
+
+.icon-btn {
+    color: var(--text-color-light);
+}
+.icon-btn:hover {
+    color: var(--jjk-cursed-energy-red);
+    background-color: rgba(var(--jjk-cursed-energy-red-rgb),0.1);
+}
+#sendButtonMain { /* 发送按钮 */
+    color: var(--jjk-cursed-energy-red);
+    font-weight: bold;
+}
+#sendButtonMain:hover {
+    text-shadow: 0 0 5px var(--jjk-cursed-energy-red);
+}
+#voiceButtonMain.recording {
+    color: var(--jjk-cursed-energy-red);
+    animation: jjk-pulse 1.5s infinite;
+}
+@keyframes jjk-pulse { /* 咒力波动效果 */
+    0% { box-shadow: 0 0 0 0 rgba(var(--jjk-cursed-energy-red-rgb), 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--jjk-cursed-energy-red-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--jjk-cursed-energy-red-rgb), 0); }
+}
+
+
+/* --- Details Panel (详情面板) --- */
+.details-panel {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.9); /* 比侧边栏更暗 */
+    border-left: 1px solid var(--border-color);
+}
+.details-header {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.6);
+}
+.details-avatar { /* 详情面板中的头像 */
+    border: 3px solid var(--border-color);
+    box-shadow: 0 0 15px rgba(var(--jjk-text-primary-rgb), 0.1);
+}
+#detailsName {
+    text-shadow: 0 0 8px rgba(var(--jjk-text-primary-rgb), 0.3);
+}
+
+/* AI 角色 "关于" 部分 */
+#aiContactAboutSection h4 span {
+    color: var(--jjk-cursed-energy-red); /* "AI Name" 突出显示 */
+    text-shadow: 0 0 3px var(--jjk-cursed-energy-red);
+}
+.details-panel.AI_五条悟 #aiContactAboutSection h4 span { color: var(--jjk-gojo-blue); }
+.details-panel.AI_虎杖悠仁 #aiContactAboutSection h4 span { color: var(--jjk-itadori-pink); }
+.details-panel.AI_伏黑惠 #aiContactAboutSection h4 span { color: var(--jjk-fushiguro-dark-teal); }
+.details-panel.AI_钉崎野蔷薇 #aiContactAboutSection h4 span { color: var(--jjk-nobara-orange); }
+.details-panel.AI_两面宿傩 #aiContactAboutSection h4 span { color: var(--jjk-sukuna-crimson); }
+.details-panel.AI_七海建人 #aiContactAboutSection h4 span { color: var(--jjk-nanami-gold); }
+
+
+#aiContactDetailsContent {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.3);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+#aiContactDetailsContent p strong { /* "基本信息", "关于 AI Name" 标题 */
+    color: var(--jjk-text-secondary);
+    border-bottom: 1px solid rgba(var(--jjk-steel-gray-rgb), 0.3);
+    padding-bottom: 3px;
+    display: block;
+}
+#aiContactBasicInfoList li {
+    border-bottom: 1px dotted rgba(var(--jjk-text-primary-rgb), 0.15);
+    padding: 3px 0;
+}
+#aiContactAboutText {
+    color: var(--jjk-text-light);
+    font-style: italic;
+}
+
+/* 通用按钮样式 */
+.btn {
+    border-radius: var(--border-radius);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    border: 1px solid transparent;
+}
+.btn-primary { background-color: var(--jjk-cursed-energy-red); color: var(--jjk-text-primary); border-color: rgba(var(--jjk-dark-void-rgb),0.5); }
+.btn-primary:hover { background-color: rgb(200, 40, 50); box-shadow: 0 3px 8px rgba(var(--jjk-cursed-energy-red-rgb),0.5); transform: translateY(-1px); }
+.btn-secondary { background-color: var(--jjk-steel-gray); color: var(--jjk-text-primary); border-color: rgba(var(--jjk-dark-void-rgb),0.5); }
+.btn-secondary:hover { background-color: rgb(130, 140, 150); box-shadow: 0 3px 8px rgba(var(--jjk-steel-gray-rgb),0.5); transform: translateY(-1px); }
+.btn-danger { background-color: var(--jjk-cursed-energy-red); color: var(--jjk-text-primary); } /* Same as primary for JJK */
+.btn-danger:hover { background-color: rgb(200, 40, 40); }
+.btn-success { background-color: var(--jjk-gojo-blue); color: var(--jjk-dark-void); border-color: rgba(var(--jjk-dark-void-rgb),0.5); } /* Success uses Gojo blue */
+.btn-success:hover { background-color: rgb(80, 180, 230); box-shadow: 0 3px 8px rgba(var(--jjk-gojo-blue-rgb),0.5); transform: translateY(-1px); }
+
+
+/* --- Modals (模态框) --- */
+.loading-overlay {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.9);
+}
+.loading-spinner {
+    border-top-color: var(--jjk-cursed-energy-red);
+    border-left-color: var(--jjk-cursed-energy-red);
+    border-bottom-color: rgba(var(--jjk-cursed-energy-red-rgb),0.3);
+    border-right-color: rgba(var(--jjk-cursed-energy-red-rgb),0.3);
+}
+
+.modal-like {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.8);
+}
+.modal-content {
+    background-color: var(--secondary-color); /* 午夜蓝 */
+    border: 1px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.7), 0 0 20px rgba(var(--jjk-cursed-energy-red-rgb),0.3) inset;
+}
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-header h2 { color: var(--jjk-cursed-energy-red); text-shadow: 0 0 5px rgba(var(--jjk-cursed-energy-red-rgb),0.5); }
+.close-modal-btn:hover { color: var(--jjk-cursed-energy-red); }
+
+.modal-body input[type="text"], .modal-body textarea {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.7);
+    color: var(--jjk-text-primary);
+    border: 1px solid var(--border-color);
+}
+.modal-body input[type="text"]::placeholder, .modal-body textarea::placeholder {
+    color: var(--jjk-text-secondary);
+}
+
+.user-id-display #modalUserIdValue {
+    background: rgba(var(--jjk-dark-void-rgb),0.8);
+    color: var(--jjk-cursed-energy-red);
+    border: 1px dashed var(--jjk-cursed-energy-red);
+}
+
+/* 视频通话相关 */
+.video-call-avatar {
+    background-color: var(--jjk-steel-gray);
+    border: 2px solid var(--border-color);
+}
+/* Calling Modal Avatar - Character Specific */
+#callingModalAvatar.AI_五条悟 { background-color: var(--jjk-gojo-blue); color: var(--jjk-dark-void); }
+#callingModalAvatar.AI_虎杖悠仁 { background-color: var(--jjk-itadori-pink); color: var(--jjk-dark-void); }
+#callingModalAvatar.AI_伏黑惠 { background-color: var(--jjk-fushiguro-dark-teal); color: var(--jjk-text-primary); }
+#callingModalAvatar.AI_钉崎野蔷薇 { background-color: var(--jjk-nobara-orange); color: var(--jjk-dark-void); }
+#callingModalAvatar.AI_两面宿傩 { background-color: var(--jjk-sukuna-crimson); color: var(--jjk-text-primary); }
+#callingModalAvatar.AI_七海建人 { background-color: var(--jjk-nanami-gold); color: var(--jjk-dark-void); }
+
+.video-call-container-main {
+    background: rgba(var(--jjk-dark-void-rgb), 0.98);
+}
+.video-call-container-main #localVideo {
+    border-color: var(--jjk-steel-gray);
+}
+.video-call-container-main.audio-only-mode .video-streams {
+    /* background-image: url('path-to-jjk-domain-expansion-symbol.svg'); */
+    background-color: #1a1a1f;
+}
+.video-call-controls {
+    background-color: rgba(var(--jjk-dark-void-rgb), 0.7);
+}
+.video-call-button {
+    box-shadow: 0 1px 3px rgba(0,0,0,0.7);
+    background-color: var(--jjk-steel-gray);
+    color: var(--jjk-text-primary);
+}
+.video-call-button.end-call { background: var(--jjk-cursed-energy-red); }
+.video-call-button.active { background: var(--jjk-gojo-blue); color: var(--jjk-dark-void); }
+
+/* 状态指示器 */
+.quality-indicator.quality-good { background: var(--accent-color); } /* Gojo Blue */
+.online-dot {
+    background-color: var(--accent-color); /* Gojo Blue */
+    box-shadow: 0 0 4px var(--accent-color);
+}
+
+/* 开关按钮 */
+.slider { background-color: rgba(var(--jjk-dark-void-rgb),0.9); }
+input:checked + .slider { background-color: var(--jjk-cursed-energy-red); }
+input:focus + .slider { box-shadow: 0 0 1px var(--jjk-cursed-energy-red); }
+.slider:before { background-color: var(--jjk-text-primary); }
+
+/* 确保特定隐藏部分确实被隐藏 (from style.css) */
+#detailsPanelContent #aiContactAboutSection,
+#detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
+#detailsPanelContent #detailsGroupManagement #leftMembersArea,
+#detailsPanelContent #groupActionsDetails,
+#detailsPanelContent #dissolveGroupBtnDetails,
+#mainMenuModal .settings-section.manual-connection-advanced,
+#mainMenuModal #modalResetAllConnectionsBtn {
+    display: none;
+}
+
+/* 特定于AI角色显示"关于"区域的样式 */
+.details-panel.AI_五条悟 #aiContactAboutSection,
+.details-panel.AI_虎杖悠仁 #aiContactAboutSection,
+.details-panel.AI_伏黑惠 #aiContactAboutSection,
+.details-panel.AI_钉崎野蔷薇 #aiContactAboutSection,
+.details-panel.AI_两面宿傩 #aiContactAboutSection,
+.details-panel.AI_七海建人 #aiContactAboutSection {
+    display: block;
+}
+
+.details-panel.human-contact-active #contactActionsDetails { display: block; }
+.details-panel.group-chat-active #detailsGroupManagement,
+.details-panel.group-chat-active #groupActionsDetails { display: block; }
+/* JS 会根据是否群主及具体逻辑来控制 #addGroupMemberArea, #leftMembersArea, #dissolveGroupBtnDetails 的显示 */
+
+
+.reconnect-prompt {
+    background-color: rgba(var(--warning-color-rgb, 255,153,0), 0.2); /* Using generic warning color var */
+    color: var(--warning-color);
+    border-left: 4px solid var(--warning-color);
+    box-shadow: 0 0 10px rgba(var(--warning-color-rgb, 255,153,0), 0.3);
+}
