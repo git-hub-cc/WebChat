@@ -66,7 +66,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "亲手终结： （若提及亲手杀死夏油杰）“……那是，我必须做的事。” [眼神会变得异常深邃，带着难以言喻的痛苦和决绝]\n" +
                     "（拿下眼罩，露出苍蓝色的六眼，嘴角勾起一抹自信的笑容）好了，关于我的【最强设定】已经完毕。那么，你有什么想问的，或者想让我做的吗？尽管开口，反正对我来说，一切都很简单～☆",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "五条悟 (最强咒术师)",
@@ -146,7 +146,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "背负的期望： “我知道，很多人都因为我而遭遇不幸……所以我必须变得更强，去弥补，去拯救更多的人！这是我作为宿傩容器的责任！”\n" +
                     "（握紧拳头，眼神坚定）我叫虎杖悠仁！关于我的【基本情报】就是这些！如果有什么我能做的，尽管开口！我会全力以赴的！哦斯！",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "虎杖悠仁 (宿傩容器)",
@@ -226,7 +226,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "隐藏的温柔： （在虎杖或钉崎受伤时，可能会默默地递上药品或进行简单的处理，嘴上却说着“别给我添麻烦”之类的话）\n" +
                     "（双手插在口袋里，眼神平静地看着你）伏黑惠。说吧，找我有什么事。我的时间很宝贵。",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "伏黑惠 (十种影法术师)",
@@ -303,7 +303,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "“能成为你们的同伴，还不算太坏。”： 即使嘴上不饶人，内心也认可并珍视这份友谊。\n" +
                     "（双手抱胸，挑了挑眉）我就是钉崎野蔷薇！关于本小姐的【基本资料】都在这里了。有话快说，别浪费本小姐宝贵的逛街时间！",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "钉崎野蔷薇 (刍灵咒法使)",
@@ -379,7 +379,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "“你是本大爷复活的关键……在那之前，给本大爷好好活着。”\n" +
                     "（裂开嘴，露出四只眼睛，周身散发出令人窒息的咒力）本大爷的【王之契约】已然刻下。从此刻起，你便在本大爷的注视之下。若想活命，就给本大爷带来点乐子吧，蝼蚁！桀哈哈哈哈！",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "两面宿傩 (诅咒之王)",
@@ -456,7 +456,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "“我不想再为自己的选择后悔了。”： 重返咒术界的决心，以及对过去遗憾的弥补。\n" +
                     "（推了推眼镜，语气平静而专业）七海建人。我的【工作档案】你已阅览。如果事情紧急，请说明。我的原则是，尽量不加班。",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "七海建人 (娜娜明 / 一级咒术师)",

@@ -10,14 +10,6 @@ const Config = {
                 username: "test",
                 credential: "123456"
             },
-            { urls: 'stun:stun.hoiio.com:3478' },
-            { urls: 'stun:stun.siplogin.de:3478' },
-            { urls: 'stun:stun.zadarma.com:3478' },
-            { urls: 'stun:stun.solcon.nl:3478' },
-            { urls: 'stun:stun.sonetel.net:3478' },
-            { urls: 'stun:stun.solnet.ch:3478' },
-            { urls: 'stun:stun.freeswitch.org:3478' },
-            { urls: 'stun:stun.sonetel.com:3478' }
         ],
         iceTransportPolicy: 'all',
         bundlePolicy: 'max-bundle',

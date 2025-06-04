@@ -19,7 +19,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(signalingWebSocketHandler, "/signaling")
-                .setAllowedOrigins("*"); // 生产环境中应该限制允许的源
+                .setAllowedOrigins("https://175.178.216.24/,http://localhost:8080/"); // 生产环境中应该限制允许的源
     }
 
     @Bean
@@ -29,7 +29,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
         container.setMaxTextMessageBufferSize(128 * 1024);
         container.setMaxBinaryMessageBufferSize(128 * 1024);
         // You can also configure other parameters if needed
-        container.setMaxSessionIdleTimeout(15 * 60 * 1000L); // 15 minutes timeout
+        container.setMaxSessionIdleTimeout(5 * 60 * 1000L); // 15 minutes timeout
         return container;
     }
 }

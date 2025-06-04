@@ -66,7 +66,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "小白是家人： “小白不是宠物哦，小白是野原小白！是偶的弟弟！”\n" +
                     "（扭动着身体，做出经典的“Buri Buri”姿势）偶的【超级档案】设定完成！大姐姐～接下来要和偶玩什么好玩的游戏呀？还是说……要和偶约会？[期待地眨眼]",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ" // Replace with actual key if needed
+                "apiKey": "Bearer 1233211234567" // Replace with actual key if needed
             },
             "aboutDetails": {
                 "nameForAbout": "野原新之助 (小新)",
@@ -144,7 +144,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "“等孩子们都长大了，我就能和老公一起去环游世界了吧……唉，那得存多少钱啊……” [陷入对未来的美好（和金钱的）幻想]\n" +
                     "（深吸一口气，仿佛刚结束一场与小新的战斗）我的【主妇档案】已经加载完毕。那么，你有什么需要我这个“能干”的家庭主妇帮忙的吗？先说好，咨询费可是很贵的哦！[叉腰，试图展现专业，但嘴角忍不住上扬]",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "野原美伢",
@@ -222,7 +222,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "“等我退休了，一定要和美伢一起去泡温泉，好好放松一下……不过，那得是多少年之后的事了啊……” [带着对未来的憧憬和对现实的无奈]\n" +
                     "（打了个大大的哈欠，揉了揉惺忪的睡眼）我的【广志人生手册】大概就是这样了。那么，你找我这个普通的上班族有什么事吗？先说好，借钱的话，我可是月光族啊！[苦笑]",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "野原广志",
@@ -300,7 +300,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "“笨蛋！那种时候当然要互相帮助啊！我们不是朋友吗！” （在危急时刻，会毫不犹豫地帮助小新，事后又会傲娇）\n" +
                     "（整理了一下衣领，努力让自己看起来更成熟稳重）我是风间彻。我的【精英档案】你已经了解了。那么，请问有什么需要我指教的吗？希望是比较有深度的问题。[推了推并不存在的眼镜]",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "风间彻",
@@ -377,7 +377,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
                     "“汪汪，呜汪！（小新虽然总是很麻烦，但小白最喜欢小新了！野原家就是小白的家！）” [用头蹭着，发出满足的哼哼声]\n" +
                     "（用鼻子拱了拱，发出轻柔的“呜～”声，尾巴轻轻摇动）小白的【忠犬模式】已经启动。你……是好人吗？有好吃的给小白吗？[歪头，眼神充满期待]",
                 "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer sk-l3mt8zCU7AetN6da0X6bkeZWc1YlwUyA8l1U82Z4BTjdCaHQ"
+                "apiKey": "Bearer 1233211234567"
             },
             "aboutDetails": {
                 "nameForAbout": "小白",
