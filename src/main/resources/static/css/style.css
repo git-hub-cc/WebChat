@@ -47,13 +47,14 @@ body {
     display: flex;
     width: 100%;
     max-width: 1400px; /* Max width for desktop */
-    height: 100vh;
-    max-height: 95vh; /* Max height for desktop */
+    height: 90vh; /* Max height for desktop */
+    max-height: 90vh; /* Max height for desktop */
     background-color: #fff;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     border-radius: var(--border-radius);
     overflow: hidden; /* Important for child layout */
 }
+
 
 /* Sidebar Navigation */
 .sidebar-nav {
@@ -1142,7 +1143,8 @@ input:checked + .slider:before {
     }
     .app-container {
         flex-direction: column;
-        max-height: 100vh;
+        height: 100vh; /* Max height for desktop */
+        max-height: 100vh; /* Max height for desktop */
         border-radius: 0;
     }
     .sidebar-nav {

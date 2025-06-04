@@ -106,7 +106,6 @@ body {
     display: flex;
     width: 100%;
     max-width: 1400px;
-    height: 100vh;
     background-color: var(--secondary-color); /* 应用容器主背景 - 古岩 */
     box-shadow: 0 8px 25px rgba(0,0,0,0.5), 0 0 30px rgba(var(--xn-dao-purple-rgb),0.3) inset;
     border-radius: var(--border-radius);
