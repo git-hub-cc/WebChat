@@ -1,4 +1,3 @@
-
 const UIManager = {
     isDetailsPanelVisible: false,
 
@@ -406,7 +405,7 @@ const UIManager = {
         if(contactActionsEl) contactActionsEl.style.display = 'none';
         if(groupMgmtEl) groupMgmtEl.style.display = 'none';
         if(groupActionsEl) groupActionsEl.style.display = 'none';
-        if(aiContactAboutSectionEl) aiContactAboutSectionEl.style.display = 'none'; // Hide AI section by default
+        if(aiContactAboutSectionEl) aiContactAboutSectionEl.style.display = 'none';
 
 
         if (type === 'contact') {
@@ -417,7 +416,6 @@ const UIManager = {
             detailsPanelEl.classList.add('contact-details-active');
             if (contact.isSpecial) {
                 detailsPanelEl.classList.add(contact.id); // e.g., AI_早濑优香
-                // The CSS will use .details-panel.AI_早濑优香 #aiContactAboutSection { display: block; }
             } else {
                 detailsPanelEl.classList.add('human-contact-active');
             }
@@ -440,7 +438,7 @@ const UIManager = {
                 if(contactActionsEl) contactActionsEl.style.display = 'none'; // No actions for special contacts
 
                 if (contact.isAI && contact.aboutDetails && aiContactAboutSectionEl) {
-                    // aiContactAboutSectionEl.style.display = 'block'; // This will be handled by CSS: .details-panel.AI_CharacterID #aiContactAboutSection
+                    aiContactAboutSectionEl.style.display = 'block';
                     if (aiContactAboutNameEl) aiContactAboutNameEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
                     if (aiContactAboutNameSubEl) aiContactAboutNameSubEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
 
@@ -457,9 +455,9 @@ const UIManager = {
                     }
                 }
 
-            } else {
+            } else { // Non-special (human) contact
                 statusEl.textContent = ConnectionManager.isConnectedTo(chatId) ? 'Connected' : 'Offline';
-                // if(contactActionsEl) contactActionsEl.style.display = 'block'; // This will be handled by CSS: .details-panel.human-contact-active #contactActionsDetails
+                if(contactActionsEl) contactActionsEl.style.display = 'block'; // Show contact actions
                 if(deleteContactBtn) deleteContactBtn.onclick = () => ChatManager.deleteChat(chatId, 'contact');
             }
 
@@ -475,8 +473,8 @@ const UIManager = {
             avatarEl.className = 'details-avatar group'; // Reset and add group class
             statusEl.textContent = `${group.members.length} member${group.members.length === 1 ? '' : 's'}`;
 
-            // if(groupMgmtEl) groupMgmtEl.style.display = 'block'; // CSS handles this
-            // if(groupActionsEl) groupActionsEl.style.display = 'block'; // CSS handles this
+            if(groupMgmtEl) groupMgmtEl.style.display = 'block';
+            if(groupActionsEl) groupActionsEl.style.display = 'block';
 
 
             const isOwner = group.owner === UserManager.userId;

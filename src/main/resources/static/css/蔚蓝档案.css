@@ -114,7 +114,6 @@ body {
     width: 100%;
     max-width: 1400px;
     height: 100vh;
-    max-height: 95vh;
     background-color: var(--momo-white); /* 应用主容器背景 */
     box-shadow: 0 5px 20px rgba(var(--momo-primary-rgb), 0.1); /* 粉色调阴影 */
     border-radius: 16px; /* 更大的圆角 */
@@ -766,7 +765,6 @@ input:checked + .slider:before { transform: translateX(24px); }
 
 /* 确保特定隐藏部分确实被隐藏 */
 #detailsPanelContent #aiContactAboutSection, /* AI "关于" */
-#detailsPanelContent #contactActionsDetails, /* 普通联系人操作 */
 #detailsPanelContent #detailsGroupManagement #addGroupMemberArea, /* 群管理 - 加人 */
 #detailsPanelContent #detailsGroupManagement #leftMembersArea, /* 群管理 - 离开成员 */
 #detailsPanelContent #groupActionsDetails, /* 群操作 */

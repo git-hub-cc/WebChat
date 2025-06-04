@@ -127,7 +127,7 @@ const UserManager = {
             const contactItems = await DBManager.getAllItems('contacts');
             if (contactItems && contactItems.length > 0) {
                 contactItems.forEach(contact => {
-                    if (!this.isSpecialContact(contact.id) || (!this.contacts[contact.id])) {
+                    if (!contact.id.startsWith("AI_") && (!this.isSpecialContact(contact.id) || (!this.contacts[contact.id])) ) {
                         this.contacts[contact.id] = contact;
                     }
                 });

@@ -50,13 +50,14 @@
                 </div>
             </header>
 
+            <div class="no-chat-selected" id="noChatSelectedScreen">
+                <div class="logo-placeholder">💬</div>
+                <h2>P2P Modern Chat</h2>
+                <p>Select a chat from the list to start messaging, or create a new one.</p>
+                <p id="connectionStatusGlobal" class="status-indicator">Status: <span id="connectionStatusText">Initializing...</span></p>
+            </div>
             <div class="chat-messages-container" id="chatBox">
-                <div class="no-chat-selected" id="noChatSelectedScreen">
-                    <div class="logo-placeholder">💬</div>
-                    <h2>P2P Modern Chat</h2>
-                    <p>Select a chat from the list to start messaging, or create a new one.</p>
-                    <p id="connectionStatusGlobal" class="status-indicator">Status: <span id="connectionStatusText">Initializing...</span></p>
-                </div>
+                <!-- Messages will be populated here. noChatSelectedScreen is no longer a child. -->
             </div>
 
             <footer class="chat-input-container">
