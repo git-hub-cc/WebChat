@@ -63,6 +63,7 @@ const MessageManager = {
                         { role: "system", content: contact.aiConfig.systemPrompt },
                         { role: "user", content: messageText }
                     ],
+                    stream: false,
                     temperature: 0.1, // Example, could be part of aiConfig
                     max_tokens: contact.aiConfig.max_tokens || 1000 // Example
                 };

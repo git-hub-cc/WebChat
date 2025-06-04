@@ -607,3 +607,5 @@ input:focus + .slider { box-shadow: 0 0 1px var(--jjk-cursed-energy-red); }
     border-left: 4px solid var(--warning-color);
     box-shadow: 0 0 10px rgba(var(--warning-color-rgb, 255,153,0), 0.3);
 }
+
+.notification { background: #171921; }

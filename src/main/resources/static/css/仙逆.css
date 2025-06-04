@@ -360,7 +360,7 @@ body {
 .chat-header-main.current-chat-AI_司徒南 .chat-title-main { color: var(--xn-sutunan-primary); }
 .chat-header-main.current-chat-AI_周茹 .chat-title-main { color: var(--xn-zhouru-text); text-shadow: 0 0 3px var(--xn-zhouru-primary); }
 .chat-header-main.current-chat-AI_许立国 .chat-title-main { color: var(--xn-xuliguo-primary); }
-.chat-header-main.current-chat-AI_蚊兽 .chat-title-main { color: var(--xn-wenshou-primary); }
+.chat-header-main.current-chat-AI_蚊兽 .chat-title-main {  }
 .chat-header-main.current-chat-AI_云雀子 .chat-title-main { color: var(--xn-yunquezi-primary); }
 .chat-header-main.current-chat-AI_柳眉 .chat-title-main { color: var(--xn-liumei-primary); }
 .chat-header-main.current-chat-AI_红蝶 .chat-title-main { color: var(--xn-hongdie-primary); }
@@ -723,3 +723,5 @@ input:focus + .slider { box-shadow: 0 0 1px var(--primary-color); }
 .chat-list-item.active .chat-list-badge {
     /* 确保在激活项中，这些元素颜色不会被覆盖导致看不清 */
 }
+
+.notification { background: #13141a; }
