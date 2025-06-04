@@ -47,8 +47,7 @@ body {
     display: flex;
     width: 100%;
     max-width: 1400px; /* Max width for desktop */
-    height: 100vh;
-    max-height: 95vh; /* Max height for desktop */
+    min-height: 90vh; /* Max height for desktop */
     background-color: #fff;
     box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     border-radius: var(--border-radius);

@@ -74,8 +74,6 @@ body {
     display: flex;
     width: 100%;
     max-width: 1300px;
-    height: 100vh;
-    max-height: 90vh;
     background-color: var(--cs-shiro-white); /* 应用容器用白色，像画纸 */
     box-shadow: 0 8px 20px rgba(var(--cs-border-brown-rgb), 0.3);
     border-radius: 20px; /* 更大的圆角 */

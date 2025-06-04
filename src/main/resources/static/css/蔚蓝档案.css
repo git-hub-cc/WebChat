@@ -113,7 +113,6 @@ body {
     display: flex;
     width: 100%;
     max-width: 1400px;
-    height: 100vh;
     background-color: var(--momo-white); /* 应用主容器背景 */
     box-shadow: 0 5px 20px rgba(var(--momo-primary-rgb), 0.1); /* 粉色调阴影 */
     border-radius: 16px; /* 更大的圆角 */

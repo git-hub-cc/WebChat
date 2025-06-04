@@ -75,7 +75,6 @@ body {
     display: flex;
     width: 100%;
     max-width: 1400px;
-    height: 100vh;
     background-color: var(--secondary-color); /* 应用容器主背景 - 午夜蓝 */
     box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(var(--jjk-cursed-energy-red-rgb),0.2) inset;
     border-radius: var(--border-radius);
