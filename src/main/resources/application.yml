@@ -11,3 +11,8 @@ logging:
     org.springframework.web.socket: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+api:
+  v1:
+    request:
+      limit: 400

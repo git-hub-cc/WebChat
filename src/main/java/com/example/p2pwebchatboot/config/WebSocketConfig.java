@@ -18,8 +18,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(signalingWebSocketHandler, "/signaling")
-                .setAllowedOrigins("https://175.178.216.24/,http://localhost:8080/"); // 生产环境中应该限制允许的源
+        registry.addHandler(signalingWebSocketHandler, "/signaling").
+                setAllowedOrigins("https://175.178.216.24", "http://localhost:8080");
     }
 
     @Bean

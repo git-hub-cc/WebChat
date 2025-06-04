@@ -16,7 +16,8 @@ const ChatManager = {
             this.chats = {};
             if (chatItems && chatItems.length > 0) {
                 chatItems.forEach(item => {
-                    this.chats[item.id] = item.messages || [];
+                    // Ensure messages are always an array, even if DB stores null/undefined for empty old chats
+                    this.chats[item.id] = Array.isArray(item.messages) ? item.messages : [];
                 });
             }
         } catch (error) {
@@ -52,12 +53,12 @@ const ChatManager = {
                     id: contact.id,
                     name: contact.name,
                     avatarText: contact.avatarText || (contact.isSpecial ? 'S' : contact.name.charAt(0).toUpperCase()),
-                    avatarUrl: contact.avatarUrl || null, // Pass avatarUrl
+                    avatarUrl: contact.avatarUrl || null,
                     lastMessage: contact.lastMessage || (contact.isSpecial ? 'Ready to chat!' : 'No messages yet'),
                     lastTime: contact.lastTime,
                     unread: contact.unread || 0,
                     type: 'contact',
-                    online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id), // Special contacts always "online" for UI
+                    online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id),
                     isSpecial: contact.isSpecial || false
                 });
             });
@@ -68,8 +69,8 @@ const ChatManager = {
                 itemsToRender.push({
                     id: group.id,
                     name: group.name,
-                    avatarText: '👥', // Groups use text avatar
-                    avatarUrl: null,  // Groups don't have image avatars in this setup
+                    avatarText: '👥',
+                    avatarUrl: null,
                     lastMessage: group.lastMessage || `Members: ${group.members.length}`,
                     lastTime: group.lastTime,
                     unread: group.unread || 0,
@@ -94,7 +95,7 @@ const ChatManager = {
             const li = document.createElement('li');
             li.className = `chat-list-item ${item.id === this.currentChatId ? 'active' : ''} ${item.type === 'group' ? 'group' : ''}`;
             if (item.isSpecial) {
-                li.classList.add('special-contact', item.id); // Add item.id as class for special contacts
+                li.classList.add('special-contact', item.id);
             }
             li.setAttribute('data-id', item.id);
             li.setAttribute('data-type', item.type);
@@ -106,7 +107,7 @@ const ChatManager = {
             }
 
             let avatarContentHtml = '';
-            const avatarClass = `chat-list-avatar ${item.isSpecial ? item.id : ''}`; // Add item.id for special contact avatar styling
+            const avatarClass = `chat-list-avatar ${item.isSpecial ? item.id : ''}`;
             if (item.avatarUrl) {
                 avatarContentHtml = `<img src="${item.avatarUrl}" alt="${Utils.escapeHtml(item.name.charAt(0))}" class="avatar-image">`;
             } else {
@@ -208,25 +209,39 @@ const ChatManager = {
         if (!this.chats[chatId]) {
             this.chats[chatId] = [];
         }
-        // Simple duplicate check (can be improved)
-        const lastMsg = this.chats[chatId][this.chats[chatId].length - 1];
-        if (lastMsg && lastMsg.timestamp === message.timestamp && lastMsg.content === message.content && lastMsg.sender === message.sender) {
-            // Utils.log(`Duplicate message detected for chat ${chatId}. Skipping.`, Utils.logLevels.DEBUG);
-            // return; // Commented out as it might be too aggressive
+
+        let messageExists = false;
+        if (message.id) { // If message has an ID (e.g., for streaming AI responses)
+            const existingMsgIndex = this.chats[chatId].findIndex(m => m.id === message.id);
+            if (existingMsgIndex !== -1) {
+                // Update existing message. Ensure important fields like timestamp are preserved if not in new `message`
+                this.chats[chatId][existingMsgIndex] = { ...this.chats[chatId][existingMsgIndex], ...message };
+                messageExists = true;
+            }
         }
 
+        if (!messageExists) {
+            // Simple duplicate check for non-ID'd messages (can be improved)
+            const lastMsg = this.chats[chatId][this.chats[chatId].length - 1];
+            if (lastMsg && !message.id && lastMsg.timestamp === message.timestamp && lastMsg.content === message.content && lastMsg.sender === message.sender) {
+                // Utils.log(`Duplicate message detected for chat ${chatId}. Skipping.`, Utils.logLevels.DEBUG);
+                // return;
+            }
+            this.chats[chatId].push(message);
+        }
 
-        this.chats[chatId].push(message);
 
         if (chatId === this.currentChatId) {
             const chatBoxEl = document.getElementById('chatBox');
             if (chatBoxEl) {
-                const noMsgPlaceholder = chatBoxEl.querySelector('.system-message');
+                const noMsgPlaceholder = chatBoxEl.querySelector('.system-message:not(.thinking):not(.reconnect-prompt)');
                 if(noMsgPlaceholder && (noMsgPlaceholder.textContent.includes("No messages yet") || noMsgPlaceholder.textContent.includes("You created this group") || noMsgPlaceholder.textContent.includes("Start a conversation with"))) {
                     noMsgPlaceholder.remove();
                 }
             }
-            if (!message.isThinking) {
+            // displayMessage will handle finding existing message by ID if it's a stream update
+            // or create a new one.
+            if (!message.isThinking) { // For regular messages or final stream update
                 MessageManager.displayMessage(message, message.sender === UserManager.userId || message.originalSender === UserManager.userId);
             }
             if (chatBoxEl) chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
@@ -235,21 +250,27 @@ const ChatManager = {
         const isGroup = chatId.startsWith('group_');
         const isUnread = chatId !== this.currentChatId || !document.hasFocus();
 
-        if (isGroup) {
-            const group = GroupManager.groups[chatId];
-            if (group) {
-                let previewText = GroupManager.formatMessagePreview(message);
-                await GroupManager.updateGroupLastMessage(chatId, previewText, isUnread);
-            }
-        } else {
-            const contact = UserManager.contacts[chatId];
-            if (contact) {
-                let previewText = UserManager.formatMessagePreview(message);
-                await UserManager.updateContactLastMessage(chatId, previewText, isUnread);
+        // Only update last message preview and unread count if it's not a partial stream update
+        // Or, if it's the *final* part of a stream (message.isStreaming is false or absent)
+        if (!message.isStreaming) {
+            if (isGroup) {
+                const group = GroupManager.groups[chatId];
+                if (group) {
+                    let previewText = GroupManager.formatMessagePreview(message);
+                    await GroupManager.updateGroupLastMessage(chatId, previewText, isUnread);
+                }
+            } else {
+                const contact = UserManager.contacts[chatId];
+                if (contact) {
+                    let previewText = UserManager.formatMessagePreview(message);
+                    await UserManager.updateContactLastMessage(chatId, previewText, isUnread);
+                }
             }
         }
 
+        // Save to DB
         try {
+            // Always save the full state of this chat's messages
             await DBManager.setItem('chats', { id: chatId, messages: this.chats[chatId] });
         } catch (error) {
             Utils.log(`保存消息到DB失败 (${chatId}): ${error}`, Utils.logLevels.ERROR);
@@ -272,7 +293,7 @@ const ChatManager = {
                 return true;
             } catch (error) {
                 Utils.log(`清空聊天记录失败 (${chatId}): ${error}`, Utils.logLevels.ERROR);
-                if (chatId === this.currentChatId) { // Attempt to reload even on error to reflect memory state
+                if (chatId === this.currentChatId) {
                     this.loadChatHistory(chatId);
                 }
                 return false;
@@ -312,7 +333,7 @@ const ChatManager = {
                 } catch (error) {
                     Utils.log('清空所有聊天记录失败: ' + error, Utils.logLevels.ERROR);
                     UIManager.showNotification('Failed to clear all chat history from database.', 'error');
-                    await this.loadChats(); // Potentially reload chats from DB to revert memory state
+                    await this.loadChats();
                     this.renderChatList(this.currentFilter);
                 }
             }

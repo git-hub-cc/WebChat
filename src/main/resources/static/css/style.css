@@ -1350,3 +1350,16 @@ input:checked + .slider:before {
     width: 80%;
     max-width: 200px;
 }
+.message .message-content .streaming-cursor {
+    display: inline-block;
+    animation: blink-animation 1s step-end infinite;
+    opacity: 1;
+    font-weight: bold; /* Make it more visible */
+    color: var(--primary-color); /* Or a distinct cursor color */
+}
+
+@keyframes blink-animation {
+    50% {
+        opacity: 0;
+    }
+}

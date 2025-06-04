@@ -45,4 +45,7 @@ const Config = {
         typingIndicatorTimeout: 3000
     },
     logLevel: 'DEBUG', // Set to DEBUG for easier troubleshooting, change to INFO/ERROR for prod
+    ai: {
+        sessionTime: 5 * 60 * 1000,
+    }
 };
