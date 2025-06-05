@@ -42,9 +42,10 @@
     --border-color: rgba(var(--cs-border-brown-rgb), 0.5);
     --hover-bg-color: rgba(var(--cs-shinchan-yellow-rgb), 0.3);
     --active-bg-color: rgba(var(--cs-shinchan-yellow-rgb), 0.5);
-    --sidebar-width: 300px;
-    --header-height: 55px; /* 稍小一点的头部 */
-    --border-radius: 15px; /* 更圆润的边角 */
+    --sidebar-width: 320px;
+    --header-height: 60px;
+    --input-area-height: auto;
+    --border-radius: 6px; /* 稍显硬朗的圆角 */
     --font-family: "Comic Sans MS", "Chalkduster", "Arial Rounded MT Bold", sans-serif; /* 俏皮字体 */
     --box-shadow: 0 3px 6px rgba(0,0,0,0.1), 0 1px 2px rgba(var(--cs-border-brown-rgb), 0.2); /* 柔和阴影带蜡笔色 */
     --special-contact-color: var(--cs-shinchan-yellow); /* 默认特殊联系人颜色 */
@@ -73,7 +74,7 @@ body {
 .app-container {
     display: flex;
     width: 100%;
-    max-width: 1300px;
+    max-width: 1400px;
     background-color: var(--cs-shiro-white); /* 应用容器用白色，像画纸 */
     box-shadow: 0 8px 20px rgba(var(--cs-border-brown-rgb), 0.3);
     border-radius: 20px; /* 更大的圆角 */

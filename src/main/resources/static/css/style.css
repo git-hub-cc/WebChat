@@ -1038,6 +1038,45 @@ body {
     font-size: 14px;
 }
 
+.modal-body .settings-item select,
+#themeSelector {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23333333' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.7em center; /* Position arrow */
+    background-size: 0.8em auto; /* Size of the arrow */
+
+    width: auto; /* Allow it to size based on content or parent flex/grid */
+    flex-grow: 1; /* If its parent .settings-item is flex and needs it to grow */
+    padding: 8px 12px;
+    padding-right: 2.5em; /* Make space for the custom arrow */
+
+    margin-left: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px; /* Consistent with other inputs */
+    background-color: #fff; /* Explicit default background */
+    font-size: 14px; /* Match other inputs */
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s; /* Smooth transition */
+}
+
+.modal-body .settings-item label[for="themeSelector"] {
+    margin-right: 10px;
+}
+
+#themeSelector:hover {
+    border-color: var(--primary-color);
+}
+
+#themeSelector:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 30%, transparent);
+    outline: none; /* Remove default browser outline to rely on box-shadow */
+}
+
 .switch {
     position: relative;
     display: inline-block;
@@ -1363,3 +1402,4 @@ input:checked + .slider:before {
         opacity: 0;
     }
 }
+

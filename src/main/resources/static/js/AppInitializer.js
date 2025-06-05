@@ -2,58 +2,54 @@
 const AppInitializer = {
 
     init: async function () {
-        Utils.setLogLevelFromConfig(); // Set log level from Config first
+        Utils.setLogLevelFromConfig();
         if (!UIManager.checkWebRTCSupport()) return;
+
+        // ThemeLoader.init() is already called via inline script in index.html
+        // This ensures CSS and data JS are loaded before other initializations.
 
         try {
             await DBManager.init();
             Utils.log('数据库初始化成功', Utils.logLevels.INFO);
 
-            await UserManager.init(); // UserManager.init now loads the autoConnectEnabled setting
-            await ChatManager.init();
-            await GroupManager.init(); // Init GroupManager after UserManager and ChatManager
+            // UserManager.init now loads SPECIAL_CONTACTS_DEFINITIONS which should be globally set
+            // by the theme's data JS file (loaded by ThemeLoader.init in index.html).
 
-            await this.refreshNetworkStatusUI(); // Initial comprehensive network status check
+            await UserManager.init();
+            await ChatManager.init();
+            await GroupManager.init();
+
+            await this.refreshNetworkStatusUI();
             this.startNetworkMonitoring();
 
             MediaManager.initVoiceRecording();
             VideoCallManager.init();
 
             this.setupEventListeners();
-            this.initUIMode(); // Initialize UI mode for mobile/desktop
+            this.initUIMode();
+            this.smartBackToChatList();
 
-            ConnectionManager.initialize(); // This will attempt WebSocket connection
+            ThemeLoader.populateSelector(); // Populate the theme selector now that DOM is ready
 
-            history.pushState(null, null, location.href);
-            window.addEventListener('popstate', function(event) {
-                const btn = document.querySelector('.back-to-list-btn');
-                if (btn) {
-                    const computedStyle = window.getComputedStyle(btn);
-                    const displayProperty = computedStyle.getPropertyValue('display');
-                    if (displayProperty === "block"){
-                        history.pushState(null, null, location.href);
-                        UIManager.showChatListArea()
-                        console.log("用户尝试返回，猜测可能需要返回聊天列表。");
-                    }
-                }
-            });
+            ConnectionManager.initialize();
+
             Utils.log('应用已初始化', Utils.logLevels.INFO);
         } catch (error) {
             Utils.log(`应用初始化失败: ${error}`, Utils.logLevels.ERROR);
             UIManager.showNotification('应用初始化失败，部分功能可能无法使用.', 'error');
 
-            // Fallback for core functionalities if DB fails
-            if (!UserManager.userId) { // Ensure UserManager fallback if its init failed before DB
+            if (!UserManager.userId) {
                 UserManager.userId = Utils.generateId(8);
-                UserManager.userSettings.autoConnectEnabled = false; // Ensure default on fallback
+                UserManager.userSettings.autoConnectEnabled = false;
                 document.getElementById('modalUserIdValue').textContent = UserManager.userId;
             }
             await this.refreshNetworkStatusUI();
             this.startNetworkMonitoring();
             MediaManager.initVoiceRecording();
             VideoCallManager.init();
-            this.setupEventListeners(); // Call setupEventListeners even in fallback
+            this.setupEventListeners();
             this.initUIMode();
+            ThemeLoader.populateSelector(); // Populate selector even in fallback
         }
     },
 
@@ -87,6 +83,21 @@ const AppInitializer = {
         }
         await this.refreshNetworkStatusUI();
     },
+    smartBackToChatList: function (){
+        history.pushState(null, null, location.href);
+        window.addEventListener('popstate', function(event) {
+            const btn = document.querySelector('.back-to-list-btn');
+            if (btn) {
+                const computedStyle = window.getComputedStyle(btn);
+                const displayProperty = computedStyle.getPropertyValue('display');
+                if (displayProperty === "block"){
+                    history.pushState(null, null, location.href);
+                    UIManager.showChatListArea()
+                    console.log("用户尝试返回，猜测可能需要返回聊天列表。");
+                }
+            }
+        });
+    },
 
     setupEventListeners: function () {
         document.getElementById('messageInput').addEventListener('keydown', (e) => {
@@ -105,7 +116,6 @@ const AppInitializer = {
 
         EventEmitter.on('connectionEstablished', (peerId) => {
             if (ChatManager.currentChatId === peerId) {
-                // For special contacts, call buttons should remain disabled for P2P calls
                 const contact = UserManager.contacts[peerId];
                 if (contact && contact.isSpecial) {
                     UIManager.setCallButtonsState(false);
@@ -247,4 +257,5 @@ const AppInitializer = {
     }
 };
 
+ThemeLoader.init(); // Call init immediately to load CSS and data JS
 window.addEventListener('load', AppInitializer.init.bind(AppInitializer));
