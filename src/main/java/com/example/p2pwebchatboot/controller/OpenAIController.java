@@ -1,101 +1,98 @@
 package com.example.p2pwebchatboot.controller;
 
-import org.springframework.http.*;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-
+/**
+ * Controller to proxy requests to the OpenAI API.
+ * Uses WebClient for non-blocking, reactive HTTP calls.
+ */
 @RestController
-@RequestMapping("v1")
+@RequestMapping("/v1") // Matches OpenAI's API path prefix
 public class OpenAIController {
 
-    private final WebClient webClient;
-    private final RestTemplate restTemplate;
-    private static final String base64EncodedKey = "CCQmVhcCCmVyIHNrLWE2M2IzMDdjNWIxNTCCRiZGY5MjkzYjRhZTczYjdmMjc2CC";
-    private static final String OPENAI_API_KEY = new String(Base64.getDecoder().decode(base64EncodedKey.replace("CC","")), StandardCharsets.UTF_8);
-    private static final String OPENAI_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1";
+    private static final Logger logger = LoggerFactory.getLogger(OpenAIController.class);
 
-    public OpenAIController(WebClient.Builder webClientBuilder, RestTemplate restTemplate) {
-        this.webClient = webClientBuilder.baseUrl(OPENAI_API_URL).build();
-        this.restTemplate = restTemplate;
+    private final WebClient webClient;
+
+    public OpenAIController(WebClient.Builder webClientBuilder,
+                            @Value("${openai.api.base_url}") String openaiApiBaseUrl,
+                            @Value("${openai.api.api_key}") String apiKey) { // Corrected property name
+        // Configure WebClient for OpenAI API interaction
+        this.webClient = webClientBuilder.baseUrl(openaiApiBaseUrl)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey) // Standard way to send API key
+                .filter((request, next) -> { // Log WebClient requests and responses
+                    logger.debug("WebClient 请求: {} {} Headers: {}", request.method(), request.url(), request.headers());
+                    return next.exchange(request)
+                            .doOnNext(response -> logger.debug("WebClient 响应: {} {} Status: {}", request.method(), request.url(), response.statusCode()))
+                            .doOnError(error -> logger.error("WebClient 请求 {} 失败", request.url(), error));
+                })
+                .build();
+
+        logger.info("OpenAIController 初始化。基础 URL: {}", openaiApiBaseUrl);
+        if (apiKey != null && !apiKey.isEmpty()) {
+            logger.info("OpenAI API 密钥已配置 (长度: {})", apiKey.length());
+        } else {
+            logger.warn("OpenAI API 密钥未配置!");
+        }
     }
 
-    @PostMapping(value = "/chat/completions", produces = MediaType.APPLICATION_JSON_VALUE)
+    /**
+     * Streams chat completions from the OpenAI API.
+     * @param body The request body, expected to conform to OpenAI's chat completions API.
+     * @return A Flux of String representing the streamed response.
+     */
+    @PostMapping(value = "/chat/completions", produces = MediaType.TEXT_EVENT_STREAM_VALUE) // OpenAI stream uses text/event-stream
     public Flux<String> generateStream(@RequestBody String body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.remove("Authorization");
-        headers.set("Authorization", OPENAI_API_KEY);
-        headers.set("content-type", MediaType.APPLICATION_JSON_VALUE);
+        logger.info("收到 POST /v1/chat/completions (流式) 请求");
+        // Be cautious with logging full request bodies in production if they contain sensitive data.
+        logger.debug("请求体 /chat/completions: {}", body);
 
         return webClient.post()
                 .uri("/chat/completions")
-                .headers(httpHeaders -> httpHeaders.addAll(headers))
+                .contentType(MediaType.APPLICATION_JSON)
                 .body(BodyInserters.fromValue(body))
                 .retrieve()
-                .bodyToFlux(String.class);
+                .onStatus(HttpStatusCode::isError, clientResponse -> { // Custom error handling for OpenAI API errors
+                    logger.error("OpenAI /chat/completions (流式) 错误: HTTP 状态 {}", clientResponse.statusCode());
+                    return clientResponse.bodyToMono(String.class)
+                            .flatMap(errorBody -> {
+                                logger.error("OpenAI /chat/completions (流式) 错误体: {}", errorBody);
+                                return Mono.error(new OpenAIClientException("OpenAI API 错误: " + clientResponse.statusCode() + " - " + errorBody, clientResponse.statusCode()));
+                            });
+                })
+                .bodyToFlux(String.class) // Stream the response body as a Flux of Strings
+                .doOnSubscribe(subscription -> logger.info("已订阅 OpenAI /chat/completions 流"))
+                .doOnNext(data -> logger.trace("OpenAI /chat/completions 流数据接收 (前50字符): {}", data.substring(0, Math.min(data.length(), 50))))
+                .doOnError(error -> logger.error("处理 OpenAI /chat/completions 流时出错", error))
+                .doOnComplete(() -> logger.info("OpenAI /chat/completions 流已完成"));
     }
 
+    /**
+     * Custom exception for errors originating from the OpenAI client interaction.
+     */
+    static class OpenAIClientException extends RuntimeException {
+        private final HttpStatusCode statusCode;
 
-    @PostMapping(value = "/images/generations")
-    public ResponseEntity<String> generateImage(@RequestBody String body) {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", OPENAI_API_KEY);
-        headers.set("content-type", MediaType.APPLICATION_JSON_VALUE);
-        HttpEntity<String> request = new HttpEntity<>(body, headers);
+        public OpenAIClientException(String message, HttpStatusCode statusCode) {
+            super(message);
+            this.statusCode = statusCode;
+        }
 
-        return this.restTemplate.exchange(
-                OPENAI_API_URL + "/images/generations",
-                HttpMethod.POST,
-                request,
-                String.class
-        );
-    }
-
-    @PostMapping(value = "/audio/transcriptions")
-    public ResponseEntity<String> transcribeAudio(@RequestPart("file") MultipartFile file, @RequestParam("model") String model, @RequestParam("temperature") String temperature
-            , @RequestParam("response_format") String response_format, @RequestParam("language") String language) throws IOException {
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", OPENAI_API_KEY);
-        headers.set("content-type", MediaType.MULTIPART_FORM_DATA_VALUE);
-        MultiValueMap<String, Object> requestBody = new LinkedMultiValueMap<>();
-        requestBody.add("file", file.getResource());
-        requestBody.add("model", model);
-        requestBody.add("temperature", temperature);
-        requestBody.add("response_format", response_format);
-        requestBody.add("language", language);
-        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<>(requestBody, headers);
-
-        return this.restTemplate.exchange(
-                OPENAI_API_URL + "/audio/transcriptions",
-                HttpMethod.POST,
-                request,
-                String.class
-        );
-    }
-
-    @PostMapping(value = "/audio/speech")
-    public ResponseEntity<byte[]> tts(@RequestBody String body) {
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Authorization", OPENAI_API_KEY);
-        headers.set("content-type", MediaType.APPLICATION_JSON_VALUE);
-        HttpEntity<String> request = new HttpEntity<>(body, headers);
-
-        return this.restTemplate.exchange(
-                OPENAI_API_URL + "/audio/speech",
-                HttpMethod.POST,
-                request,
-                byte[].class
-        );
+        public HttpStatusCode getStatusCode() {
+            return statusCode;
+        }
     }
 }

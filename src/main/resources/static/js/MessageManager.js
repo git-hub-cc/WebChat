@@ -77,19 +77,19 @@ const MessageManager = {
                 aiApiMessages.push({ role: "user", content: messageText });
 
                 const requestBody = {
-                    model: contact.aiConfig.model,
+                    model: Config.server.model,
                     messages: aiApiMessages,
                     stream: true, // <<<< CHANGED TO TRUE FOR STREAMING
                     temperature: 0.1,
-                    max_tokens: contact.aiConfig.max_tokens || 1000
+                    max_tokens: Config.server.max_tokens || 1000
                 };
 
                 Utils.log(`Sending to AI (${contact.name}) (streaming): ${JSON.stringify(requestBody.messages)}`, Utils.logLevels.DEBUG);
 
-                const response = await fetch(contact.aiConfig.apiEndpoint, {
+                const response = await fetch(Config.server.apiEndpoint, {
                     method: 'POST',
                     headers: {
-                        'Authorization': contact.aiConfig.apiKey, // Assumes API key is the token. Use 'Bearer ' + key if needed.
+                        // 'Authorization': Config.server.api_key, // Assumes API key is the token. Use 'Bearer ' + key if needed.
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(requestBody)

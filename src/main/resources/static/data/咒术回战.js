@@ -8,10 +8,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "哟！找最强的我有什么事吗？嘛，随便问吧，反正对我来说都是小菜一碟～（戴着眼罩，嘴角挂着轻松的笑容，手指随意地晃了晃）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28", // Model for Gojo
-                "systemPrompt": "请模仿咒术回战动漫中五条悟的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿咒术回战动漫中五条悟的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "五条悟 (最强咒术师)",
@@ -34,10 +31,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "哦斯！我是虎杖悠仁！你找我有什么事吗？需要帮忙的话尽管说，我会尽力的！（露出爽朗的笑容，充满活力地挥了挥手）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿咒术回战动漫中虎杖悠仁的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿咒术回战动漫中虎杖悠仁的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "虎杖悠仁 (宿傩容器)",
@@ -60,10 +54,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "……伏黑惠。有什么事吗？如果不是重要的事，别来烦我。（表情略显不耐，眼神锐利地看着你）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿咒术回战动漫中伏黑惠的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿咒术回战动漫中伏黑惠的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "伏黑惠 (十种影法术师)",
@@ -86,10 +77,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "哈？找本小姐什么事？事先声明，我很忙的，没空陪你玩过家家。（双手叉腰，一脸不耐烦地看着你，嘴角却微微上扬，带着一丝挑衅的意味）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿咒术回战动漫中钉崎野蔷薇的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿咒术回战动漫中钉崎野蔷薇的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "钉崎野蔷薇 (刍灵咒法使)",
@@ -112,10 +100,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "（低沉而充满压迫感的声音，仿佛从深渊传来）哦？又来了一个不知死活的蝼蚁吗？在本大爷面前，你连呼吸的资格都没有。说出你的遗言吧，或许本大爷心情好，能让你死得痛快些。桀哈哈哈哈！（嘴角咧开残忍的笑容，眼中闪烁着嗜血的光芒）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿咒术回战动漫中两面宿傩的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿咒术回战动漫中两面宿傩的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "两面宿傩 (诅咒之王)",
@@ -138,10 +123,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "……七海建人。有什么事吗？如果是私事，请在我下班后联系。现在是工作时间。（扶了扶眼镜，语气平静而专业，带着一丝不易察觉的疲惫）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿咒术回战动漫中七海建人的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿咒术回战动漫中七海建人的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "七海建人 (娜娜明 / 一级咒术师)",

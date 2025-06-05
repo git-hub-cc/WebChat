@@ -8,7 +8,7 @@ const ConnectionManager = {
     iceGatheringStartTimes: {},
     websocket: null,
     isWebSocketConnected: false,
-    signalingServerUrl: 'ws://localhost:8080/signaling', // Ensure this matches your server
+    signalingServerUrl: Config.server.signalingServerUrl, // Ensure this matches your server
     pendingSentChunks: {}, // For Utils.sendInChunks
     pendingReceivedChunks: {}, // For Utils.reassembleChunk
 

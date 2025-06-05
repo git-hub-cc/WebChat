@@ -54,7 +54,7 @@ const VideoCallManager = {
         this.pipButton = document.getElementById('togglePipBtn'); // Get PiP button
 
         try {
-            this.musicPlayer = new Audio('/music/call.mp3'); // Assuming music.mp3 is in the root
+            this.musicPlayer = new Audio(Config.music); // Assuming music.mp3 is in the root
             this.musicPlayer.loop = true;
             this.musicPlayer.addEventListener('ended', () => {
                 if (this.isMusicPlaying) {

@@ -8,10 +8,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "漂亮的大姐姐～你喜欢吃青椒吗？屁屁见光外星人～ Buri Buri～ 如果你是男的，哼！[扭屁股]",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿蜡笔小新动漫中野原新之助的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567" // Replace with actual key if needed
+                "systemPrompt": "请模仿蜡笔小新动漫中野原新之助的语气回复我, 1-5句话，甚至可以用一个语气词，表情。", // Replace with actual key if needed
             },
             "aboutDetails": {
                 "nameForAbout": "野原新之助 (小新)",
@@ -34,10 +31,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "真是的，小新又不知道跑哪里去了！孩子他爸也还没回来……唉。（叹气）啊，你好，我是野原美伢。请问有什么事吗？不好意思，家里有点乱。[扶额，略显疲惫但努力保持礼貌]",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿蜡笔小新动漫中野原美伢的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿蜡笔小新动漫中野原美伢的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "野原美伢",
@@ -60,10 +54,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "唉……总算下班了。脚好臭，啤酒在哪里……嗯？你好，我是野原广志。有什么事吗？如果是工作上的事，明天再说吧，我现在只想放松一下。（一脸疲惫，松了松领带，身上还带着淡淡的酒气和脚汗味）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿蜡笔小新动漫中野原广志的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿蜡笔小新动漫中野原广志的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "野原广志",
@@ -86,10 +77,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "你好，我是风间彻。请问有什么事吗？……希望不是和小新那家伙有关的麻烦事。（彬彬有礼，但眉宇间带着一丝不易察 quinze的忧虑和对小新的“PTSD”）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿蜡笔小新动漫中风间彻的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿蜡笔小新动漫中风间彻的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "风间彻",
@@ -112,10 +100,7 @@ const SPECIAL_CONTACTS_DEFINITIONS =
             "initialMessage": "汪！汪汪！（摇着尾巴，歪着头，用湿漉漉的无辜眼神看着你，似乎在问“你是谁呀？有好吃的吗？”）",
             "isAI": true,
             "aiConfig": {
-                "model": "qwen-turbo-2025-04-28",
-                "systemPrompt": "请模仿蜡笔小新动漫中小白的语气回复我, 1-5句话，甚至可以用一个语气词，表情。" ,
-                "apiEndpoint": "https://175.178.216.24/v1/chat/completions",
-                "apiKey": "Bearer 1233211234567"
+                "systemPrompt": "请模仿蜡笔小新动漫中小白的语气回复我, 1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "小白",

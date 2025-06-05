@@ -1,6 +1,7 @@
 const Config = {
     // WebRTC PeerConnection Configuration
     peerConnectionConfig: {
+        // todo
         iceServers: [
             {
                 urls: [
@@ -47,5 +48,14 @@ const Config = {
     logLevel: 'DEBUG', // Set to DEBUG for easier troubleshooting, change to INFO/ERROR for prod
     ai: {
         sessionTime: 5 * 60 * 1000,
+    },
+    music: '/music/call.mp3',
+    // todo
+    server: {
+        signalingServerUrl: 'ws://localhost:8080/signaling',
+        apiEndpoint: 'http://localhost:8080'+"/v1/chat/completions",
+        // api_key: "Bearer sk-xxxx"
+        model: "qwen-turbo-2025-04-28",
+        max_tokens: 1000,
     }
 };

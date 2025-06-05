@@ -24,6 +24,19 @@ const AppInitializer = {
 
             ConnectionManager.initialize(); // This will attempt WebSocket connection
 
+            history.pushState(null, null, location.href);
+            window.addEventListener('popstate', function(event) {
+                const btn = document.querySelector('.back-to-list-btn');
+                if (btn) {
+                    const computedStyle = window.getComputedStyle(btn);
+                    const displayProperty = computedStyle.getPropertyValue('display');
+                    if (displayProperty === "block"){
+                        history.pushState(null, null, location.href);
+                        UIManager.showChatListArea()
+                        console.log("用户尝试返回，猜测可能需要返回聊天列表。");
+                    }
+                }
+            });
             Utils.log('应用已初始化', Utils.logLevels.INFO);
         } catch (error) {
             Utils.log(`应用初始化失败: ${error}`, Utils.logLevels.ERROR);

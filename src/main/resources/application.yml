@@ -1,18 +1,39 @@
+# Server configuration
 server:
-  port: 8080
+  port: 8080 # HTTP port the application will listen on.
 
+# Spring application specific configuration
 spring:
   application:
-    name: webrtc-signaling-server
+    name: webrtc-signaling-server # Name of the application, used in logging and management endpoints.
 
+# Logging configuration
 logging:
   level:
-    com.example.signaling: INFO
-    org.springframework.web.socket: DEBUG
+    com.example.p2pwebchatboot: INFO # Default log level for the application's main package. Change to DEBUG for more verbose logging.
+    org.springframework.web.socket: DEBUG # Detailed logging for Spring WebSocket interactions, helpful for debugging WebSocket issues.
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
+# Custom WebSocket server settings
+# These values are used by WebSocketConfig.java
+websocket:
+  max:
+    textBufferSize: 128   # Maximum size of a text message (in KB) that the WebSocket server can handle.
+    binaryBufferSize: 128 # Maximum size of a binary message (in KB) that the WebSocket server can handle.
+    sessionTimeout: 5     # Maximum idle time (in minutes) before a WebSocket session is closed.
+
+# Custom API configuration
 api:
-  v1:
+  v1: # Configuration specific to v1 of the API
     request:
-      limit: 400
+      limit: 400 # Daily request limit for v1 API endpoints (per client IP), used by RateLimitInterceptor.java
+
+# TODO: Review if 'local.url' is the best name. Consider 'app.base-url' or 'cors.allowed-origin' if more specific.
+allowed:
+  url: "https://175.178.216.24/"
+
+openai:
+  api:
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1" # Base URL for the OpenAI compatible API endpoint.
+    api_key: "Bearer sk-xxxx" # Example API Key (replace with your actual key).

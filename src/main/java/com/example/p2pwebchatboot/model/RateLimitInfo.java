@@ -1,13 +1,16 @@
 package com.example.p2pwebchatboot.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-
 import java.time.LocalDate;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
+/**
+ * Stores rate limiting information for a client.
+ * Includes the request count and the date for which the count is valid.
+ */
+@JsonInclude(JsonInclude.Include.NON_NULL) // Not strictly necessary here, but good practice for DTOs
 public class RateLimitInfo {
     private int count;
-    private final LocalDate date; // 记录当前计数是哪一天的
+    private final LocalDate date; // The date this count applies to
 
     public RateLimitInfo(int count, LocalDate date) {
         this.count = count;
