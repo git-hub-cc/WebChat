@@ -1,0 +1,324 @@
+:root {
+    /* Telegram Dark Theme Palette */
+    --tg-blue-dark-accent-rgb: 82, 149, 197; /* 柔和强调蓝 (Soft Accent Blue) */
+    --tg-blue-dark-accent: rgb(var(--tg-blue-dark-accent-rgb));
+    --tg-blue-dark-accent-darker-rgb: 66, 129, 173; /* 柔和强调蓝 (暗) */
+    --tg-blue-dark-accent-darker: rgb(var(--tg-blue-dark-accent-darker-rgb));
+
+    --tg-bg-dark-rgb: 23, 33, 43;          /* 深蓝灰色背景 (Dark Bluish-Gray Background) */
+    --tg-bg-dark: rgb(var(--tg-bg-dark-rgb));
+    --tg-panel-dark-rgb: 34, 46, 58;       /* 稍浅的深色面板 (Slightly Lighter Dark Panel) */
+    --tg-panel-dark: rgb(var(--tg-panel-dark-rgb));
+
+    --tg-text-light-rgb: 225, 227, 229;     /* 浅灰色文字 (Light Gray Text) */
+    --tg-text-light: rgb(var(--tg-text-light-rgb));
+    --tg-text-dark-medium-gray-rgb: 138, 153, 168; /* 中暗灰色文字 (Medium Dark Gray Text - for previews, timestamps) */
+    --tg-text-dark-medium-gray: rgb(var(--tg-text-dark-medium-gray-rgb));
+    --tg-text-inverted-dark-rgb: 255, 255, 255; /* 白色反相文字 (White Inverted Text - on blue buttons) */
+    /* --tg-text-inverted-dark-rgb: 23, 33, 43; /* 深色反相文字 (Dark Inverted Text - on blue buttons if needed) */
+    --tg-text-inverted-dark: rgb(var(--tg-text-inverted-dark-rgb));
+
+
+    --tg-border-dark-rgb: 48, 61, 76;       /* 深色边框 (Dark Border) */
+    --tg-border-dark: rgb(var(--tg-border-dark-rgb));
+
+    /* Telegram often uses a slightly darker shade of the accent for sent, and panel for received */
+    --tg-sent-bubble-dark-rgb: 43, 82, 120; /* 深蓝发送气泡 (Dark Blue Sent Bubble) */
+    --tg-sent-bubble-dark: rgb(var(--tg-sent-bubble-dark-rgb));
+    --tg-received-bubble-dark-rgb: 38, 50, 62; /* 深色面板接收气泡 (Dark Panel Received Bubble) */
+    --tg-received-bubble-dark: rgb(var(--tg-received-bubble-dark-rgb));
+
+    --tg-accent-cyan-rgb: 80, 170, 220;    /* 青色强调 (Cyan Accent - for online, success, alternative to green) */
+    --tg-accent-cyan: rgb(var(--tg-accent-cyan-rgb));
+    --tg-danger-red-dark-rgb: 200, 50, 60;   /* 红色危险 (Red Danger - slightly desaturated for dark) */
+    --tg-danger-red-dark: rgb(var(--tg-danger-red-dark-rgb));
+    --tg-warning-orange-dark-rgb: 230, 130, 40; /* 橙色警告 (Orange Warning - slightly desaturated for dark) */
+    --tg-warning-orange-dark: rgb(var(--tg-warning-orange-dark-rgb));
+
+    /* Override P2P Chat variables */
+    --primary-color: var(--tg-blue-dark-accent);
+    --primary-color-dark: var(--tg-blue-dark-accent-darker);
+    --secondary-color: var(--tg-bg-dark); /* Main app panels like sidebar, header */
+    --text-color: var(--tg-text-light);
+    --text-color-light: var(--tg-text-dark-medium-gray);
+    --text-color-inverted: var(--tg-text-inverted-dark);
+    --accent-color: var(--tg-accent-cyan); /* Using cyan for online status in dark mode */
+    --danger-color: var(--tg-danger-red-dark);
+    --warning-color: var(--tg-warning-orange-dark);
+
+    --sent-bg-color: var(--tg-sent-bubble-dark);
+    --received-bg-color: var(--tg-received-bubble-dark);
+
+    --border-color: var(--tg-border-dark);
+    --hover-bg-color: rgba(255, 255, 255, 0.05); /* Subtle light hover */
+    --active-bg-color: rgba(var(--tg-blue-dark-accent-rgb), 0.2); /* Soft blue active state */
+
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --box-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 1px 1px rgba(0,0,0,0.2); /* Darker shadow for dark theme */
+    --special-contact-color: var(--tg-blue-dark-accent);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--tg-bg-dark);
+    color: var(--text-color);
+    line-height: 1.6;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    /* For dark mode, often a solid color or very subtle gradient is used */
+    background: var(--tg-bg-dark);
+}
+
+.app-container {
+    display: flex;
+    width: 100%;
+    max-width: 1400px;
+    height: 90vh;
+    max-height: 90vh;
+    background-color: var(--secondary-color); /* App container uses the main dark bg */
+    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color); /* Add a subtle border */
+    overflow: hidden;
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: rgba(var(--tg-bg-dark-rgb), 0.8); border-radius: var(--border-radius); }
+::-webkit-scrollbar-thumb { background: rgba(var(--tg-border-dark-rgb), 0.7); border-radius: var(--border-radius); }
+::-webkit-scrollbar-thumb:hover { background: var(--tg-blue-dark-accent); }
+
+/* --- Sidebar Navigation --- */
+.sidebar-nav {
+    background-color: var(--tg-panel-dark); /* Slightly lighter panel for sidebar */
+    border-right: 1px solid var(--border-color);
+}
+.sidebar-header {
+    background-color: var(--tg-panel-dark);
+}
+.menu-btn { color: var(--text-color-light); }
+.menu-btn:hover { color: var(--primary-color); }
+.search-bar {
+    background-color: var(--tg-bg-dark); /* Darker search bar */
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+.search-bar::placeholder { color: var(--text-color-light); }
+.search-bar:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px rgba(var(--tg-blue-dark-accent-rgb),0.4);
+}
+.nav-tabs { border-bottom: 1px solid var(--border-color); }
+.nav-tab { color: var(--text-color-light); }
+.nav-tab:hover { color: var(--primary-color); }
+.nav-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+.chat-list-item { border-bottom: 1px solid var(--border-color); }
+.chat-list-item:hover { background-color: var(--hover-bg-color); }
+.chat-list-item.active {
+    background-color: var(--primary-color); /* Accent blue for active chat item */
+}
+.chat-list-item.active .chat-list-name,
+.chat-list-item.active .chat-list-preview,
+.chat-list-item.active .chat-list-time {
+    color: var(--text-color-inverted); /* Bright text on active blue */
+}
+.chat-list-avatar {
+    background-color: var(--tg-blue-dark-accent);
+    color: var(--tg-text-inverted-dark);
+    font-family: var(--font-family);
+    border: none;
+}
+.chat-list-item.group .chat-list-avatar {
+    background-color: var(--tg-accent-cyan); /* Using cyan for groups */
+}
+
+/* --- Main Chat Area --- */
+.chat-area {
+    background-color: var(--secondary-color); /* Main dark background for messages area */
+}
+.chat-header-main {
+    background-color: var(--tg-panel-dark); /* Slightly lighter panel for header */
+}
+.chat-avatar-main {
+    background-color: var(--tg-blue-dark-accent);
+    color: var(--tg-text-inverted-dark);
+    border: 1px solid var(--border-color);
+}
+.chat-title-main { font-weight: 600; text-shadow: 0 0 5px rgba(var(--tg-text-light-rgb), 0.05); }
+.header-action-btn { color: var(--text-color-light); }
+.header-action-btn:hover { color: var(--primary-color); text-shadow: 0 0 3px var(--primary-color); }
+
+.chat-messages-container { padding: 15px; }
+.no-chat-selected .logo-placeholder {
+    font-size: 60px;
+    color: rgba(var(--tg-text-light-rgb), 0.2);
+}
+.status-indicator.global {
+    background-color: rgba(var(--tg-panel-dark-rgb), 0.5);
+    border: 1px solid var(--border-color);
+    color: var(--primary-color);
+}
+
+/* Message Bubbles */
+.message {
+    border: none;
+    box-shadow: var(--box-shadow);
+}
+.message.sent {
+    background-color: var(--sent-bg-color);
+}
+.message.received {
+    background-color: var(--received-bg-color);
+}
+.message.system {
+    background-color: rgba(var(--tg-panel-dark-rgb), 0.9);
+    color: var(--text-color-light);
+    font-style: italic;
+    border: none;
+    box-shadow: none;
+}
+.message-sender {
+    color: var(--primary-color);
+}
+.message.received[data-sender-id="fixed_contact_ai_yuuka_hayase"] .message-sender,
+.message.received[data-sender-id^="AI_"] .message-sender {
+    color: var(--special-contact-color);
+}
+.message .timestamp { color: var(--text-color-light); opacity: 0.8; }
+
+.chat-input-container {
+    background-color: var(--tg-panel-dark); /* Slightly lighter panel for input */
+}
+#messageInput {
+    background-color: var(--tg-bg-dark); /* Darker input field */
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+#messageInput::placeholder { color: var(--text-color-light); }
+#messageInput:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px rgba(var(--tg-blue-dark-accent-rgb),0.4);
+}
+.icon-btn { color: var(--text-color-light); }
+.icon-btn:hover { color: var(--primary-color); background-color: rgba(var(--tg-blue-dark-accent-rgb),0.1); }
+#sendButtonMain { color: var(--primary-color); }
+#voiceButtonMain.recording { color: var(--danger-color); animation: pulse-dark 1.5s infinite; }
+@keyframes pulse-dark {
+    0% { box-shadow: 0 0 0 0 rgba(var(--tg-danger-red-dark-rgb), 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--tg-danger-red-dark-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--tg-danger-red-dark-rgb), 0); }
+}
+
+/* --- Details Panel --- */
+.details-panel {
+    background-color: var(--tg-panel-dark); /* Slightly lighter panel */
+    border-left: 1px solid var(--border-color);
+}
+.details-header {
+    background-color: var(--tg-panel-dark);
+}
+.details-avatar {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+    border: 2px solid var(--tg-panel-dark);
+    box-shadow: 0 0 8px rgba(0,0,0,0.2);
+}
+#detailsName { text-shadow: 0 0 3px rgba(var(--tg-text-light-rgb), 0.1); }
+#aiContactDetailsContent {
+    background-color: var(--tg-bg-dark); /* Darker content area */
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    border-radius: var(--border-radius);
+}
+#aiContactDetailsContent p strong { color: var(--primary-color); border-bottom: 1px solid rgba(var(--tg-blue-dark-accent-rgb), 0.3); }
+#aiContactBasicInfoList li { border-bottom: 1px dotted rgba(var(--tg-border-dark-rgb), 0.7); }
+#aiContactAboutText { color: var(--text-color-light); }
+
+/* Buttons */
+.btn {
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.2);
+}
+.btn-primary { background-color: var(--primary-color); color: var(--text-color-inverted); border: none; }
+.btn-primary:hover { background-color: var(--primary-color-dark); }
+.btn-secondary { background-color: var(--tg-border-dark); color: var(--text-color); border: none; }
+.btn-secondary:hover { background-color: rgb(70, 85, 100); }
+.btn-danger { background-color: var(--danger-color); color: var(--text-color-inverted); border: none; }
+.btn-danger:hover { background-color: rgb(170, 40, 50); }
+.btn-success { background-color: var(--accent-color); color: var(--text-color-inverted); border: none; }
+.btn-success:hover { background-color: rgb(70, 150, 200); }
+
+/* --- Modals --- */
+.loading-overlay { background-color: rgba(var(--tg-bg-dark-rgb), 0.85); color: var(--text-color); }
+.loading-spinner {
+    border-top-color: var(--primary-color);
+    border-left-color: var(--primary-color);
+    border-bottom-color: rgba(var(--tg-blue-dark-accent-rgb),0.2);
+    border-right-color: rgba(var(--tg-blue-dark-accent-rgb),0.2);
+}
+.modal-content {
+    background-color: var(--tg-panel-dark); /* Dark modal background */
+    border: 1px solid var(--border-color);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+}
+.modal-header h2 { color: var(--primary-color); text-shadow: 0 0 3px rgba(var(--tg-primary-color-rgb),0.2); }
+.close-modal-btn:hover { color: var(--primary-color); }
+.modal-body input[type="text"], .modal-body textarea {
+    background-color: var(--tg-bg-dark);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+.user-id-display #modalUserIdValue {
+    background: var(--tg-bg-dark);
+    color: var(--primary-color);
+    border: 1px dashed var(--primary-color);
+}
+
+/* Video Call */
+.video-call-avatar { background-color: var(--primary-color); border: 1px solid var(--border-color); }
+.video-call-button.end-call { background: var(--danger-color); }
+.video-call-button.active { background: var(--primary-color); color: var(--text-color-inverted); }
+.video-call-button.mute-audio, .video-call-button.toggle-camera, .video-call-button.audio-only, .video-call-button.toggle-pip {
+    background: rgba(var(--tg-panel-dark-rgb),0.9); color: var(--text-color);
+}
+
+
+/* Toggle Switch */
+input:checked + .slider { background-color: var(--primary-color); }
+.slider { background-color: var(--tg-border-dark); }
+.slider:before { background-color: var(--tg-panel-dark); }
+
+
+/* Custom Select for Theme Picker */
+.custom-select {
+    color: var(--text-color);
+    background-color: var(--tg-bg-dark);
+    border: 1px solid var(--border-color);
+}
+.custom-select .options {
+    border: 1px solid var(--border-color);
+    border-top: none;
+    background-color: var(--tg-bg-dark);
+}
+.custom-select .option:hover {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+}
+
+/* Notification */
+.notification {
+    background: var(--tg-panel-dark);
+    border-left-color: var(--primary-color);
+    color: var(--text-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.notification.notification-success { border-left-color: var(--accent-color); }
+.notification.notification-warning { border-left-color: var(--warning-color); }
+.notification.notification-error { border-left-color: var(--danger-color); }

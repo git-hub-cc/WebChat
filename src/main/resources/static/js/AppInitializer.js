@@ -1,4 +1,3 @@
-
 const AppInitializer = {
 
     init: async function () {
@@ -25,7 +24,7 @@ const AppInitializer = {
             MediaManager.initVoiceRecording();
             VideoCallManager.init();
 
-            this.setupEventListeners();
+            this.setupEventListeners(); // This will also init the Open Source Modal UI elements
             this.initUIMode();
             this.smartBackToChatList();
 
@@ -34,22 +33,34 @@ const AppInitializer = {
             ConnectionManager.initialize();
 
             Utils.log('应用已初始化', Utils.logLevels.INFO);
+            // Note: The loading overlay is now hidden by the MutationObserver in setupEventListeners
+            // which will then trigger the UIManager.showOpenSourceInfoModal()
         } catch (error) {
             Utils.log(`应用初始化失败: ${error}`, Utils.logLevels.ERROR);
             UIManager.showNotification('应用初始化失败，部分功能可能无法使用.', 'error');
 
+            // Fallback initialization for essential UI if main init fails
             if (!UserManager.userId) {
                 UserManager.userId = Utils.generateId(8);
-                UserManager.userSettings.autoConnectEnabled = false;
-                document.getElementById('modalUserIdValue').textContent = UserManager.userId;
+                UserManager.userSettings.autoConnectEnabled = false; // Sensible default on error
+                const userIdEl = document.getElementById('modalUserIdValue');
+                if(userIdEl) userIdEl.textContent = UserManager.userId;
             }
-            await this.refreshNetworkStatusUI();
+            await this.refreshNetworkStatusUI(); // Attempt to show some network status
             this.startNetworkMonitoring();
-            MediaManager.initVoiceRecording();
-            VideoCallManager.init();
-            this.setupEventListeners();
+            MediaManager.initVoiceRecording(); // Try to init basic media
+            VideoCallManager.init();          // Try to init basic video call logic
+            this.setupEventListeners();       // Setup basic listeners and Open Source Modal
             this.initUIMode();
-            ThemeLoader.populateSelector(); // Populate selector even in fallback
+            ThemeLoader.populateSelector();   // Populate selector even in fallback
+
+            // Explicitly try to hide loading overlay and show open source modal on error too,
+            // assuming basic UI elements for them are present.
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            if (loadingOverlay && loadingOverlay.style.display !== 'none') {
+                loadingOverlay.style.display = 'none';
+                UIManager.showOpenSourceInfoModal(); // Attempt to show it even on some init errors
+            }
         }
     },
 
@@ -100,6 +111,8 @@ const AppInitializer = {
     },
 
     setupEventListeners: function () {
+        UIManager.initOpenSourceModal(); // Initialize Open Source Modal elements and bind its events
+
         document.getElementById('messageInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
                 e.preventDefault();
@@ -244,12 +257,13 @@ const AppInitializer = {
         if (connectionStatusTextEl && loadingOverlay) {
             const observer = new MutationObserver(() => {
                 const statusText = connectionStatusTextEl.textContent.toLowerCase();
-                if (statusText.includes('user registration successful') || statusText.includes('signaling server connected')) {
+                if (statusText.includes('user registration successful') || statusText.includes('signaling server connected') || statusText.includes('loaded from local') || statusText.includes('using existing id')) {
                     setTimeout(() => {
                         if (loadingOverlay.style.display !== 'none') {
                             loadingOverlay.style.display = 'none';
+                            UIManager.showOpenSourceInfoModal(); // Show the modal after loading overlay is hidden
                         }
-                    }, 500);
+                    }, 500); // Delay to ensure UI settles
                 }
             });
             observer.observe(connectionStatusTextEl, { childList: true, characterData: true, subtree: true });

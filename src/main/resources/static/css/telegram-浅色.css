@@ -1,0 +1,324 @@
+:root {
+    /* Telegram Light Theme Palette */
+    --tg-blue-light-rgb: 0, 136, 204;       /* 经典 Telegram 蓝 (Classic Telegram Blue) */
+    --tg-blue-light: rgb(var(--tg-blue-light-rgb));
+    --tg-blue-light-darker-rgb: 0, 119, 179; /* 经典 Telegram 蓝 (暗) */
+    --tg-blue-light-darker: rgb(var(--tg-blue-light-darker-rgb));
+
+    --tg-bg-light-rgb: 255, 255, 255;       /* 白色背景 (White Background) */
+    --tg-bg-light: rgb(var(--tg-bg-light-rgb));
+    --tg-panel-light-rgb: 240, 242, 245;    /* 浅灰色面板 (Light Gray Panel - for sidebars, headers) */
+    --tg-panel-light: rgb(var(--tg-panel-light-rgb));
+    --tg-chat-bg-light-rgb: 229, 221, 213;   /* 聊天背景 (Chat Background - like WhatsApp/Telegram default wallpaper) */
+    --tg-chat-bg-light: rgb(var(--tg-chat-bg-light-rgb));
+
+
+    --tg-text-dark-rgb: 33, 33, 33;         /* 深灰色文字 (Dark Gray Text) */
+    --tg-text-dark: rgb(var(--tg-text-dark-rgb));
+    --tg-text-medium-gray-rgb: 117, 117, 117;/* 中灰色文字 (Medium Gray Text - for previews, timestamps) */
+    --tg-text-medium-gray: rgb(var(--tg-text-medium-gray-rgb));
+    --tg-text-inverted-light-rgb: 255, 255, 255; /* 白色反相文字 (White Inverted Text - on blue buttons) */
+    --tg-text-inverted-light: rgb(var(--tg-text-inverted-light-rgb));
+
+    --tg-border-light-rgb: 224, 224, 224;   /* 浅灰色边框 (Light Gray Border) */
+    --tg-border-light: rgb(var(--tg-border-light-rgb));
+
+    --tg-sent-bubble-light-rgb: 225, 255, 199; /* 淡绿色已发送气泡 (Light Green Sent Bubble) */
+    --tg-sent-bubble-light: rgb(var(--tg-sent-bubble-light-rgb));
+    --tg-received-bubble-light-rgb: 255, 255, 255; /* 白色已接收气泡 (White Received Bubble) */
+    --tg-received-bubble-light: rgb(var(--tg-received-bubble-light-rgb));
+
+    --tg-accent-green-rgb: 76, 175, 80;     /* 绿色强调 (Green Accent - for online, success) */
+    --tg-accent-green: rgb(var(--tg-accent-green-rgb));
+    --tg-danger-red-rgb: 244, 67, 54;       /* 红色危险 (Red Danger) */
+    --tg-danger-red: rgb(var(--tg-danger-red-rgb));
+    --tg-warning-orange-rgb: 255, 152, 0;   /* 橙色警告 (Orange Warning) */
+    --tg-warning-orange: rgb(var(--tg-warning-orange-rgb));
+
+
+    /* Override P2P Chat variables */
+    --primary-color: var(--tg-blue-light);
+    --primary-color-dark: var(--tg-blue-light-darker);
+    --secondary-color: var(--tg-panel-light); /* Main app panels like sidebar, header */
+    --text-color: var(--tg-text-dark);
+    --text-color-light: var(--tg-text-medium-gray);
+    --text-color-inverted: var(--tg-text-inverted-light);
+    --accent-color: var(--tg-accent-green);
+    --danger-color: var(--tg-danger-red);
+    --warning-color: var(--tg-warning-orange);
+
+    --sent-bg-color: var(--tg-sent-bubble-light);
+    --received-bg-color: var(--tg-received-bubble-light);
+
+    --border-color: var(--tg-border-light);
+    --hover-bg-color: rgba(0, 0, 0, 0.04); /* Subtle dark hover */
+    --active-bg-color: rgba(var(--tg-blue-light-rgb), 0.1); /* Light blue active state */
+
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* Standard system fonts like Telegram */
+    --box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 1px 1px rgba(0,0,0,0.06); /* Softer shadow for light theme */
+    --special-contact-color: var(--tg-blue-light); /* AI contacts will use primary blue */
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--tg-chat-bg-light); /* Default chat background, often a pattern in Telegram */
+    color: var(--text-color);
+    line-height: 1.6;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    /* Use a very subtle gradient for the overall page, or keep it simple */
+    background: linear-gradient(to bottom right, #e0eafc, #cfdef3); /* Light blueish gradient */
+}
+
+.app-container {
+    display: flex;
+    width: 100%;
+    max-width: 1400px;
+    height: 90vh;
+    max-height: 90vh;
+    background-color: var(--tg-bg-light); /* Main app container is white */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(var(--tg-panel-light-rgb), 0.5); }
+::-webkit-scrollbar-thumb { background: rgba(var(--tg-text-medium-gray-rgb), 0.4); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(var(--tg-text-medium-gray-rgb), 0.6); }
+
+/* --- Sidebar Navigation --- */
+.sidebar-nav {
+    background-color: var(--secondary-color); /* Light gray panel */
+    border-right: 1px solid var(--border-color);
+}
+.sidebar-header {
+    background-color: var(--secondary-color);
+}
+.menu-btn { color: var(--text-color-light); }
+.menu-btn:hover { color: var(--primary-color); }
+.search-bar {
+    background-color: var(--tg-bg-light); /* White search bar */
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+.search-bar::placeholder { color: var(--text-color-light); }
+.search-bar:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px rgba(var(--tg-blue-light-rgb),0.3);
+}
+.nav-tabs { border-bottom: 1px solid var(--border-color); }
+.nav-tab { color: var(--text-color-light); }
+.nav-tab:hover { color: var(--primary-color); }
+.nav-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+
+.chat-list-item { border-bottom: 1px solid var(--border-color); }
+.chat-list-item:hover { background-color: var(--hover-bg-color); }
+.chat-list-item.active {
+    background-color: var(--primary-color);
+}
+.chat-list-item.active .chat-list-name,
+.chat-list-item.active .chat-list-preview,
+.chat-list-item.active .chat-list-time {
+    color: var(--text-color-inverted);
+}
+.chat-list-avatar { /* Default avatar style */
+    background-color: var(--tg-blue-light);
+    color: var(--tg-text-inverted-light);
+    font-family: var(--font-family);
+    border: none;
+}
+.chat-list-item.group .chat-list-avatar {
+    background-color: var(--tg-accent-green);
+}
+
+/* --- Main Chat Area --- */
+.chat-area {
+    background-color: var(--tg-chat-bg-light); /* The patterned/colored background for messages */
+}
+.chat-header-main {
+    background-color: var(--secondary-color); /* Light gray panel */
+}
+.chat-avatar-main {
+    background-color: var(--tg-blue-light);
+    color: var(--tg-text-inverted-light);
+    border: 1px solid var(--border-color);
+}
+.chat-title-main { font-weight: 600; }
+.header-action-btn { color: var(--text-color-light); }
+.header-action-btn:hover { color: var(--primary-color); }
+
+.chat-messages-container { padding: 15px; } /* Already has flex from base */
+.no-chat-selected .logo-placeholder {
+    font-size: 60px;
+    color: rgba(var(--tg-text-dark-rgb), 0.3);
+}
+.status-indicator.global {
+    background-color: rgba(var(--tg-text-dark-rgb), 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--primary-color);
+}
+
+/* Message Bubbles */
+.message {
+    border: none; /* Telegram messages usually don't have borders */
+    box-shadow: var(--box-shadow);
+}
+.message.sent {
+    background-color: var(--sent-bg-color);
+    /* border-left: none; */
+}
+.message.received {
+    background-color: var(--received-bg-color);
+    /* border-right: none; */
+}
+.message.system {
+    background-color: rgba(var(--tg-panel-light-rgb), 0.8);
+    color: var(--text-color-light);
+    border: none;
+    box-shadow: none;
+}
+.message-sender {
+    color: var(--primary-color); /* Sender name in primary color for received messages */
+}
+.message.received[data-sender-id="fixed_contact_ai_yuuka_hayase"] .message-sender, /* Example special contact */
+.message.received[data-sender-id^="AI_"] .message-sender { /* Generic AI prefix */
+    color: var(--special-contact-color); /* Use special color or primary for AI */
+}
+.message .timestamp { color: var(--text-color-light); opacity: 0.9; }
+
+.chat-input-container {
+    background-color: var(--secondary-color); /* Light gray panel */
+}
+#messageInput {
+    background-color: var(--tg-bg-light); /* White input field */
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+#messageInput::placeholder { color: var(--text-color-light); }
+#messageInput:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px rgba(var(--tg-blue-light-rgb),0.3);
+}
+.icon-btn { color: var(--text-color-light); }
+.icon-btn:hover { color: var(--primary-color); background-color: rgba(var(--tg-blue-light-rgb),0.05); }
+#sendButtonMain { color: var(--primary-color); } /* Explicitly Telegram blue */
+#voiceButtonMain.recording { color: var(--danger-color); animation: pulse-light 1.5s infinite; }
+@keyframes pulse-light {
+    0% { box-shadow: 0 0 0 0 rgba(var(--tg-danger-red-rgb), 0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--tg-danger-red-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--tg-danger-red-rgb), 0); }
+}
+
+/* --- Details Panel --- */
+.details-panel {
+    background-color: var(--secondary-color); /* Light gray panel */
+    border-left: 1px solid var(--border-color);
+}
+.details-header {
+    background-color: var(--secondary-color);
+}
+.details-avatar {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+    border: 2px solid var(--tg-bg-light); /* White border around avatar */
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+#detailsName { text-shadow: none; }
+#aiContactDetailsContent {
+    background-color: var(--tg-bg-light); /* White content area within details */
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    border-radius: var(--border-radius);
+}
+#aiContactDetailsContent p strong { color: var(--primary-color); border-bottom: 1px solid rgba(var(--tg-blue-light-rgb), 0.2); }
+#aiContactBasicInfoList li { border-bottom: 1px dotted rgba(var(--tg-border-light-rgb), 0.7); }
+#aiContactAboutText { color: var(--text-color-light); }
+
+/* Buttons */
+.btn {
+    text-transform: none; /* Telegram buttons are usually not all-caps */
+    letter-spacing: normal;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+.btn-primary { background-color: var(--primary-color); color: var(--text-color-inverted); border: none; }
+.btn-primary:hover { background-color: var(--primary-color-dark); }
+.btn-secondary { background-color: var(--tg-border-light); color: var(--text-color); border: none; } /* e.g. Copy ID button */
+.btn-secondary:hover { background-color: #d0d0d0; }
+.btn-danger { background-color: var(--danger-color); color: var(--text-color-inverted); border: none; }
+.btn-danger:hover { background-color: rgb(211, 47, 47); }
+.btn-success { background-color: var(--accent-color); color: var(--text-color-inverted); border: none; }
+.btn-success:hover { background-color: rgb(67, 160, 71); }
+
+/* --- Modals --- */
+.loading-overlay { background-color: rgba(var(--tg-panel-light-rgb), 0.8); color: var(--text-color); }
+.loading-spinner {
+    border-top-color: var(--primary-color);
+    border-left-color: var(--primary-color);
+    border-bottom-color: rgba(var(--tg-blue-light-rgb),0.2);
+    border-right-color: rgba(var(--tg-blue-light-rgb),0.2);
+}
+.modal-content {
+    background-color: var(--tg-bg-light); /* White modal background */
+    border: 1px solid var(--border-color);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+.modal-header h2 { color: var(--primary-color); }
+.close-modal-btn:hover { color: var(--primary-color); }
+.modal-body input[type="text"], .modal-body textarea {
+    background-color: var(--tg-bg-light);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+.user-id-display #modalUserIdValue {
+    background: var(--tg-panel-light);
+    color: var(--primary-color);
+    border: 1px dashed var(--primary-color);
+}
+
+/* Video Call */
+.video-call-avatar { background-color: var(--primary-color); border: 1px solid var(--border-color); }
+.video-call-button.end-call { background: var(--danger-color); }
+.video-call-button.active { background: var(--primary-color); color: var(--text-color-inverted); }
+.video-call-button.mute-audio, .video-call-button.toggle-camera, .video-call-button.audio-only, .video-call-button.toggle-pip {
+    background: rgba(var(--tg-bg-light-rgb),0.9); color: var(--text-color);
+}
+
+
+/* Toggle Switch */
+input:checked + .slider { background-color: var(--primary-color); }
+.slider { background-color: var(--tg-border-light); }
+.slider:before { background-color: var(--tg-bg-light); }
+
+
+/* Custom Select for Theme Picker */
+.custom-select {
+    color: var(--text-color);
+    background-color: var(--tg-bg-light);
+    border: 1px solid var(--border-color);
+}
+.custom-select .options {
+    border: 1px solid var(--border-color);
+    border-top: none;
+    background-color: var(--tg-bg-light);
+}
+.custom-select .option:hover {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+}
+
+/* Notification */
+.notification {
+    background: var(--tg-bg-light);
+    border-left-color: var(--primary-color);
+    color: var(--text-color);
+}
+.notification.notification-success { border-left-color: var(--accent-color); }
+.notification.notification-warning { border-left-color: var(--warning-color); }
+.notification.notification-error { border-left-color: var(--danger-color); }

@@ -1,6 +1,75 @@
 const UIManager = {
     isDetailsPanelVisible: false,
 
+    // Properties for Open Source Info Modal
+    openSourceInfoModal: null,
+    closeOpenSourceInfoModalBtn: null,
+    permanentlyCloseOpenSourceInfoModalBtn: null,
+    openSourceModalTimerSpan: null,
+    openSourceModalAutoCloseTimer: null,
+    openSourceModalCountdownInterval: null,
+
+    initOpenSourceModal: function() {
+        this.openSourceInfoModal = document.getElementById('openSourceInfoModal');
+        this.closeOpenSourceInfoModalBtn = document.getElementById('closeOpenSourceInfoModalBtn');
+        this.permanentlyCloseOpenSourceInfoModalBtn = document.getElementById('permanentlyCloseOpenSourceInfoModalBtn');
+        this.openSourceModalTimerSpan = document.getElementById('openSourceModalTimer');
+        this._bindOpenSourceInfoModalEvents();
+    },
+
+    _bindOpenSourceInfoModalEvents: function() {
+        if (this.closeOpenSourceInfoModalBtn) {
+            this.closeOpenSourceInfoModalBtn.addEventListener('click', () => this.hideOpenSourceInfoModal());
+        }
+        if (this.permanentlyCloseOpenSourceInfoModalBtn) {
+            this.permanentlyCloseOpenSourceInfoModalBtn.addEventListener('click', () => {
+                localStorage.setItem('hideOpenSourceModalPermanently', 'true');
+                this.hideOpenSourceInfoModal();
+            });
+        }
+    },
+
+    showOpenSourceInfoModal: function() {
+        if (localStorage.getItem('hideOpenSourceModalPermanently') === 'true') {
+            return; // Don't show if permanently hidden
+        }
+
+        if (this.openSourceInfoModal && this.openSourceModalTimerSpan) {
+            this.openSourceInfoModal.style.display = 'flex';
+            let countdown = 15;
+            this.openSourceModalTimerSpan.textContent = countdown;
+
+            // Clear any existing timers
+            if (this.openSourceModalAutoCloseTimer) clearTimeout(this.openSourceModalAutoCloseTimer);
+            if (this.openSourceModalCountdownInterval) clearInterval(this.openSourceModalCountdownInterval);
+
+            this.openSourceModalCountdownInterval = setInterval(() => {
+                countdown--;
+                this.openSourceModalTimerSpan.textContent = countdown;
+                if (countdown <= 0) {
+                    clearInterval(this.openSourceModalCountdownInterval);
+                }
+            }, 1000);
+
+            this.openSourceModalAutoCloseTimer = setTimeout(() => {
+                this.hideOpenSourceInfoModal();
+            }, 15000);
+        } else {
+            Utils.log("Open Source Info Modal elements not found or not initialized.", Utils.logLevels.WARN);
+        }
+    },
+
+    hideOpenSourceInfoModal: function() {
+        if (this.openSourceInfoModal) {
+            this.openSourceInfoModal.style.display = 'none';
+        }
+        // Clear timers when modal is hidden, regardless of how
+        if (this.openSourceModalAutoCloseTimer) clearTimeout(this.openSourceModalAutoCloseTimer);
+        if (this.openSourceModalCountdownInterval) clearInterval(this.openSourceModalCountdownInterval);
+        this.openSourceModalAutoCloseTimer = null;
+        this.openSourceModalCountdownInterval = null;
+    },
+
     updateResponsiveUI: function() {
         const appContainer = document.querySelector('.app-container');
         if (window.innerWidth <= 768) {
