@@ -4,6 +4,8 @@ const MessageManager = {
     selectedFile: null,
     audioData: null,
     audioDuration: 0,
+    _currentlyPlayingTtsAudio: null, // For managing single TTS playback instance
+    _currentlyPlayingTtsButton: null, // Tracks which button is playing TTS
 
     sendMessage: async function() {
         const input = document.getElementById('messageInput');
@@ -79,7 +81,7 @@ const MessageManager = {
                 const requestBody = {
                     model: Config.server.model,
                     messages: aiApiMessages,
-                    stream: true, // <<<< CHANGED TO TRUE FOR STREAMING
+                    stream: true,
                     temperature: 0.1,
                     max_tokens: Config.server.max_tokens || 1000
                 };
@@ -89,16 +91,15 @@ const MessageManager = {
                 const response = await fetch(Config.server.apiEndpoint, {
                     method: 'POST',
                     headers: {
-                        // 'Authorization': Config.server.api_key, // Assumes API key is the token. Use 'Bearer ' + key if needed.
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'authorization': Config.server.api_key,
                     },
                     body: JSON.stringify(requestBody)
                 });
 
-                // Remove "thinking..." message as stream is about to start or has started
                 if (thinkingElement && thinkingElement.parentNode) {
                     thinkingElement.remove();
-                    thinkingElement = null; // Ensure it's not reused
+                    thinkingElement = null;
                 }
 
                 if (!response.ok) {
@@ -112,18 +113,14 @@ const MessageManager = {
                 const initialAiMessage = {
                     id: aiMessageId,
                     type: 'text',
-                    content: "▍", // Initial cursor or empty
+                    content: "▍",
                     timestamp: new Date().toISOString(),
                     sender: targetId,
-                    isStreaming: true // Custom flag
+                    isStreaming: true
                 };
-                // Add the initial placeholder message to ChatManager.chats AND display it
-                ChatManager.addMessage(targetId, initialAiMessage); // This will also save it initially
+                ChatManager.addMessage(targetId, initialAiMessage);
                 let aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
                 if (!aiMessageElement) {
-                    // If displayMessage hasn't rendered it yet (e.g. due to async operations in ChatManager.addMessage)
-                    // We force a display here. This is a bit of a race condition safeguard.
-                    // Ideally, ChatManager.addMessage guarantees sync display if current chat.
                     MessageManager.displayMessage(initialAiMessage, false);
                     aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
                 }
@@ -136,33 +133,28 @@ const MessageManager = {
                 while (true) {
                     const { value, done: readerDone } = await reader.read();
                     if (readerDone) {
-                        // Process any remaining data in buffer after stream ends
-                        buffer += decoder.decode(); // Final decode for any remaining bytes in decoder
+                        buffer += decoder.decode();
                         break;
                     }
 
                     buffer += decoder.decode(value, { stream: true });
-
                     let stopStreaming = false;
 
-                    // Process buffer for complete JSON objects if it's not just "[DONE]"
                     if (buffer.trim() === "[DONE]") {
-                        stopStreaming = true; // Stop processing if only [DONE] is received
+                        stopStreaming = true;
                     } else if (buffer.includes("[DONE]")) {
                         const partBeforeDone = buffer.substring(0, buffer.indexOf("[DONE]"));
-                        buffer = partBeforeDone; // Process what's before [DONE]
-                        stopStreaming = true; // Signal to stop after this iteration
+                        buffer = partBeforeDone;
+                        stopStreaming = true;
                     }
 
                     let boundary = 0;
-                    let processedSomethingThisIteration = false;
                     while (boundary < buffer.length) {
                         const startIdx = buffer.indexOf('{', boundary);
                         if (startIdx === -1) {
-                            buffer = buffer.substring(boundary); // Keep unprocessed part
+                            buffer = buffer.substring(boundary);
                             break;
                         }
-
                         let openBraces = 0;
                         let endIdx = -1;
                         for (let i = startIdx; i < buffer.length; i++) {
@@ -175,12 +167,10 @@ const MessageManager = {
                                 }
                             }
                         }
-
                         if (endIdx !== -1) {
                             const jsonString = buffer.substring(startIdx, endIdx + 1);
                             try {
                                 const jsonChunk = JSON.parse(jsonString);
-                                processedSomethingThisIteration = true;
                                 if (jsonChunk.choices && jsonChunk.choices[0] && jsonChunk.choices[0].delta) {
                                     const deltaContent = jsonChunk.choices[0].delta.content;
                                     if (deltaContent) {
@@ -190,45 +180,36 @@ const MessageManager = {
                                             chatBox.scrollTop = chatBox.scrollHeight;
                                         }
                                     }
-                                    if (jsonChunk.choices[0].finish_reason === "stop") {
-                                        // Actual content stream might end here
-                                        // We'll wait for [DONE] or readerDone to be sure.
-                                    }
                                 }
                             } catch (e) {
                                 Utils.log(`AI stream: Error parsing JSON chunk: ${e}. Buffer: ${buffer.substring(0, 200)}`, Utils.logLevels.WARN);
-                                // If parse fails, it's risky to advance 'boundary'.
-                                // Better to keep 'buffer' as is and hope next chunk completes it,
-                                // or if it's malformed, it will be skipped.
-                                // For now, we assume brace counting is good enough to get full objects or detect partial ones.
-                                // If endIdx was found but parse failed, it means it's not JSON. We consume it to avoid infinite loop.
                                 Utils.log(`Skipping non-JSON segment: ${jsonString}`, Utils.logLevels.DEBUG);
                             }
                             boundary = endIdx + 1;
                             if (boundary >= buffer.length) buffer = "";
                         } else {
-                            buffer = buffer.substring(startIdx); // Keep partial JSON
+                            buffer = buffer.substring(startIdx);
                             break;
                         }
                     }
-                    if (stopStreaming) break; // Break from reader.read() loop if [DONE] was processed.
+                    if (stopStreaming) break;
                 }
 
-                // Final update to remove cursor and save complete message
                 if (aiMessageElement) {
                     aiMessageElement.innerHTML = MessageManager.formatMessageText(fullAiResponseContent);
                     chatBox.scrollTop = chatBox.scrollHeight;
                 }
 
                 const finalAiMessage = {
-                    id: aiMessageId, // Use the same ID
+                    id: aiMessageId,
                     type: 'text',
-                    content: fullAiResponseContent, // The fully accumulated content
-                    timestamp: initialAiMessage.timestamp, // Use timestamp of the first part of the stream
+                    content: fullAiResponseContent,
+                    timestamp: initialAiMessage.timestamp,
                     sender: targetId,
-                    isStreaming: false // Explicitly mark as complete
+                    isStreaming: false,
+                    isNewlyCompletedAIResponse: true // Flag for fresh AI response
                 };
-                ChatManager.addMessage(targetId, finalAiMessage); // Update/replace in ChatManager.chats and save to DB
+                ChatManager.addMessage(targetId, finalAiMessage);
 
             } catch (error) {
                 if (thinkingElement && thinkingElement.parentNode) {
@@ -236,7 +217,6 @@ const MessageManager = {
                 }
                 Utils.log(`Error communicating with AI (${contact.name}): ${error}`, Utils.logLevels.ERROR);
                 UIManager.showNotification(`Error: Could not get reply from ${contact.name}.`, 'error');
-
                 const errorMessageToUser = {
                     type: 'text',
                     content: `Sorry, an error occurred while I (${contact.name}) was thinking: ${error.message}`,
@@ -248,7 +228,6 @@ const MessageManager = {
             return;
         }
 
-        // ... (rest of the sendMessage logic for non-AI, file/audio sending)
         if (!isGroup && !ConnectionManager.isConnectedTo(targetId)) {
             if (messageText || currentSelectedFile || currentAudioData) {
                 UIManager.showReconnectPrompt(targetId, () => {
@@ -273,7 +252,6 @@ const MessageManager = {
             };
             if (isGroup) GroupManager.broadcastToGroup(targetId, audioMessage);
             else ConnectionManager.sendTo(targetId, audioMessage);
-
             ChatManager.addMessage(targetId, {...audioMessage, sender: UserManager.userId});
             messageSent = true;
             MessageManager.cancelAudioData();
@@ -291,7 +269,6 @@ const MessageManager = {
             };
             if (isGroup) GroupManager.broadcastToGroup(targetId, fileMessage);
             else ConnectionManager.sendTo(targetId, fileMessage);
-
             ChatManager.addMessage(targetId, {...fileMessage, sender: UserManager.userId});
             messageSent = true;
             MessageManager.cancelFileData();
@@ -305,7 +282,6 @@ const MessageManager = {
             };
             if (isGroup) GroupManager.broadcastToGroup(targetId, textMessage);
             else ConnectionManager.sendTo(targetId, textMessage);
-
             ChatManager.addMessage(targetId, { ...textMessage, sender: UserManager.userId });
             messageSent = true;
             input.value = '';
@@ -316,31 +292,49 @@ const MessageManager = {
             input.focus();
         }
     },
+    cleanTextForTts: function(text) {
+        if (typeof text !== 'string') return '';
+        let cleanedText = text;
+
+        // Remove content between *...*
+        cleanedText = cleanedText.replace(/\*.*?\*/g, '');
+
+        // Remove content between 【...】
+        cleanedText = cleanedText.replace(/【.*?】/g, '');
+
+        // Remove content between [...]
+        cleanedText = cleanedText.replace(/\[.*?\]/g, '');
+
+        // Remove content between (...) and （...）
+        cleanedText = cleanedText.replace(/\(.*?\)/g, '');
+        cleanedText = cleanedText.replace(/（.*?）/g, '');
+
+        // Trim whitespace that might be left after removals
+        return cleanedText.trim();
+    },
 
     displayMessage: function(message, isSentByMe) {
         const chatBox = document.getElementById('chatBox');
         let msgDiv = null;
+        let mainContentWrapper = null;
         let contentElement = null;
 
-        // Try to find existing message div if ID is present (for streaming updates)
         if (message.id) {
             msgDiv = chatBox.querySelector(`.message[data-message-id="${message.id}"]`);
         }
 
-        if (msgDiv) { // Message div already exists, we are updating it
-            contentElement = msgDiv.querySelector('.message-content');
-            // Clear existing content if we are about to set new formatted content (for streaming)
-            // If it's a system message or other type, this might need adjustment.
-            // For streaming text, formatMessageText will replace the content.
-        } else { // Create new message div
+        const senderContact = UserManager.contacts[message.sender];
+        const isAIMessage = !isSentByMe && senderContact && senderContact.isAI;
+        const ttsConfig = isAIMessage && senderContact.aiConfig?.tts;
+
+        if (msgDiv) { // Update existing message
+            mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
+            contentElement = mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
+        } else { // Create new message
             msgDiv = document.createElement('div');
             msgDiv.className = `message ${isSentByMe ? 'sent' : 'received'}`;
-            if (message.id) {
-                msgDiv.setAttribute('data-message-id', message.id);
-            }
-            if (message.sender) {
-                msgDiv.setAttribute('data-sender-id', message.sender);
-            }
+            if (message.id) msgDiv.setAttribute('data-message-id', message.id);
+            if (message.sender) msgDiv.setAttribute('data-sender-id', message.sender);
         }
 
         if (message.type === 'system') {
@@ -351,124 +345,286 @@ const MessageManager = {
             }
         }
 
-        let contentHtml = ''; // This will be for initial creation
-        let senderName = '';
-        const senderContact = UserManager.contacts[message.sender];
-
-        if (senderContact && senderContact.isSpecial) {
-            senderName = senderContact.name;
-        } else if (message.originalSenderName) {
-            senderName = message.originalSenderName;
-        } else if (senderContact) {
-            senderName = senderContact.name;
-        } else if (message.sender === UserManager.userId) {
-            senderName = UserManager.userName;
-        } else {
-            senderName = `User ${String(message.sender).substring(0,4)}`;
-        }
-
-        if (!isSentByMe && message.type !== 'system' && !msgDiv.querySelector('.message-sender')) { // Add sender name only if not already present
-            if (ChatManager.currentChatId?.startsWith('group_')) {
-                contentHtml += `<div class="message-sender">${Utils.escapeHtml(message.originalSenderName || senderName)}</div>`;
-            } else if (senderContact && senderContact.isSpecial) {
-                contentHtml += `<div class="message-sender">${Utils.escapeHtml(senderContact.name)}</div>`;
-            }
-        }
-
-        // Determine content based on message type for initial creation
-        // If contentElement exists (updating), this part constructs the HTML for it
-        let messageBodyHtml = '';
-        switch (message.type) {
-            case 'text':
-                messageBodyHtml = `<div class="message-content">${this.formatMessageText(message.content + (message.isStreaming ? "▍" : ""))}</div>`;
-                break;
-            case 'audio':
-                messageBodyHtml = `
-<div class="voice-message">
-    <button class="play-voice-btn" data-audio="${message.data}" onclick="MediaManager.playAudio(this)">▶</button>
-    <span class="voice-duration">${Utils.formatTime(message.duration)}</span>
-</div>`;
-                break;
-            case 'file':
-                const safeFileName = Utils.escapeHtml(message.fileName || 'file');
-                if (message.fileType?.startsWith('image/')) {
-                    messageBodyHtml = `<img src="${message.data}" alt="${safeFileName}" class="file-preview-img" onclick="UIManager.showFullImage('${message.data}', '${safeFileName}')">`;
-                } else if (message.fileType?.startsWith('video/')) {
-                    messageBodyHtml = `
-    <video controls class="file-preview-video" style="max-width:100%;">
-    <source src="${message.data}" type="${message.fileType}">
-    Preview not supported.
-</video>
-<div>${safeFileName}</div>`;
-                } else if (message.fileType?.startsWith('audio/')) {
-                    messageBodyHtml = `
-<div class="file-info">
-    <span class="file-icon">🎵</span>
-<div class="file-details">
-    <div class="file-name">${safeFileName}</div>
-    <audio controls src="${message.data}" style="width:100%"></audio>
-</div>
-</div>`;
-                } else {
-                    messageBodyHtml = `
-<div class="file-info">
-    <span class="file-icon">📄</span>
-<div class="file-details">
-    <div class="file-name">${safeFileName}</div>
-    <div class="file-meta">${MediaManager.formatFileSize(message.fileSize || 0)}</div>
-</div>
-<a href="${message.data}" download="${safeFileName}" class="download-btn">Download</a>
-</div>`;
+        let initialHtmlStructure = '';
+        if (!contentElement) { // Only build structure if creating new message div
+            let senderNameHtml = '';
+            if (!isSentByMe && message.type !== 'system') {
+                const senderName = message.originalSenderName || (senderContact ? senderContact.name : `User ${String(message.sender).substring(0,4)}`);
+                if (ChatManager.currentChatId?.startsWith('group_') || (senderContact && senderContact.isSpecial)) {
+                    senderNameHtml = `<div class="message-sender">${Utils.escapeHtml(senderName)}</div>`;
                 }
-                break;
-            case 'system':
-                messageBodyHtml = `<div class="message-content system-text">${this.formatMessageText(message.content)}</div>`;
-                break;
-            default:
-                messageBodyHtml = `<div class="message-content">[Unsupported message type: ${message.type}]</div>`;
-        }
+            }
+            initialHtmlStructure += senderNameHtml;
 
-        if (contentElement) { // Updating existing message content (e.g. stream)
-            // For streaming, the sender part is already there. Only update the message-content part.
-            if (message.type === 'text') {
-                contentElement.innerHTML = this.formatMessageText(message.content + (message.isStreaming ? "▍" : ""));
-            } // Other types are not typically streamed this way.
-        } else { // Creating new message
-            contentHtml += messageBodyHtml;
-            msgDiv.innerHTML = contentHtml;
+            let messageBodyHtml = '';
+            const textContent = message.content;
+            const showStreamingCursor = isAIMessage && message.isStreaming;
 
-            const timestampDiv = document.createElement('div');
-            timestampDiv.className = 'timestamp';
-            timestampDiv.textContent = message.timestamp ? Utils.formatDate(new Date(message.timestamp), true) : 'sending...';
-            msgDiv.appendChild(timestampDiv);
+            switch (message.type) {
+                case 'text':
+                    if (isAIMessage) {
+                        messageBodyHtml = `
+                            <div class="message-content-wrapper">
+                                <div class="message-content">${this.formatMessageText(textContent + (showStreamingCursor ? "▍" : ""))}</div>
+                                <!-- TTS control will be added here if final & enabled -->
+                            </div>`;
+                    } else {
+                        messageBodyHtml = `<div class="message-content">${this.formatMessageText(textContent)}</div>`;
+                    }
+                    break;
+                case 'audio':
+                    messageBodyHtml = `
+                        <div class="voice-message">
+                            <button class="play-voice-btn" data-audio="${message.data}" onclick="MediaManager.playAudio(this)">▶</button>
+                            <span class="voice-duration">${Utils.formatTime(message.duration)}</span>
+                        </div>`;
+                    break;
+                case 'file':
+                    const safeFileName = Utils.escapeHtml(message.fileName || 'file');
+                    if (message.fileType?.startsWith('image/')) {
+                        messageBodyHtml = `<img src="${message.data}" alt="${safeFileName}" class="file-preview-img" onclick="UIManager.showFullImage('${message.data}', '${safeFileName}')">`;
+                    } else if (message.fileType?.startsWith('video/')) {
+                        messageBodyHtml = `
+                            <video controls class="file-preview-video" style="max-width:100%;">
+                            <source src="${message.data}" type="${message.fileType}">
+                            Preview not supported.
+                            </video>
+                            <div>${safeFileName}</div>`;
+                    } else if (message.fileType?.startsWith('audio/')) {
+                        messageBodyHtml = `
+                            <div class="file-info">
+                                <span class="file-icon">🎵</span>
+                                <div class="file-details">
+                                    <div class="file-name">${safeFileName}</div>
+                                    <audio controls src="${message.data}" style="width:100%"></audio>
+                                </div>
+                            </div>`;
+                    } else {
+                        messageBodyHtml = `
+                            <div class="file-info">
+                                <span class="file-icon">📄</span>
+                                <div class="file-details">
+                                    <div class="file-name">${safeFileName}</div>
+                                    <div class="file-meta">${MediaManager.formatFileSize(message.fileSize || 0)}</div>
+                                </div>
+                                <a href="${message.data}" download="${safeFileName}" class="download-btn">Download</a>
+                            </div>`;
+                    }
+                    break;
+                case 'system':
+                    messageBodyHtml = `<div class="message-content system-text">${this.formatMessageText(textContent)}</div>`;
+                    break;
+                default:
+                    messageBodyHtml = `<div class="message-content">[Unsupported message type: ${message.type}]</div>`;
+            }
+            initialHtmlStructure += messageBodyHtml;
+
+            const timestampStr = message.timestamp ? Utils.formatDate(new Date(message.timestamp), true) : 'sending...';
+            initialHtmlStructure += `<div class="timestamp">${timestampStr}</div>`;
+            msgDiv.innerHTML = initialHtmlStructure;
+
+            mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
+            contentElement = mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
 
             const noMsgPlaceholder = chatBox.querySelector('.system-message:not(.thinking):not(.reconnect-prompt)');
             if (noMsgPlaceholder &&
                 (noMsgPlaceholder.textContent.includes("No messages yet") ||
                     noMsgPlaceholder.textContent.includes("You created this group") ||
                     noMsgPlaceholder.textContent.includes("Start a conversation with"))) {
-                if (!message.isThinking && !message.isStreaming) { // Don't remove for thinking or initial stream message
+                if (!message.isThinking && !message.isStreaming) {
                     noMsgPlaceholder.remove();
                 }
             }
             chatBox.appendChild(msgDiv);
+        } else { // Updating existing message (e.g., streaming AI text)
+            if (contentElement && message.type === 'text') {
+                const textContent = message.content;
+                const showStreamingCursor = isAIMessage && message.isStreaming;
+                contentElement.innerHTML = this.formatMessageText(textContent + (showStreamingCursor ? "▍" : ""));
+            }
         }
 
+        // TTS logic for final AI messages
+        if (message.type === 'text' && isAIMessage && ttsConfig && ttsConfig.enabled &&
+            (message.isStreaming === false || typeof message.isStreaming === 'undefined') &&
+            message.isNewlyCompletedAIResponse === true &&
+            Config.server.ttsApiEndpoint
+        ) {
+            const textForTts = this.cleanTextForTts(message.content);
+            if (textForTts && textForTts.trim() !== "") { // Check cleaned text
+                if (mainContentWrapper) {
+                    const ttsId = message.id || `tts_${Date.now()}`;
+                    const oldTtsControl = mainContentWrapper.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
+                    if (oldTtsControl) oldTtsControl.remove();
+
+                    this.addTtsPlaceholder(mainContentWrapper, ttsId);
+                    this.requestTtsForMessage(textForTts, ttsConfig, mainContentWrapper, ttsId);
+                }
+            }
+        }
         chatBox.scrollTop = chatBox.scrollHeight;
     },
 
     formatMessageText: function(text) {
         if (typeof text !== 'string') return '';
         let escapedText = Utils.escapeHtml(text);
-        // Preserve spaces for the "▍" cursor, then convert actual newlines to <br>
-        escapedText = escapedText.replace(/ /g, ' ').replace(/▍/g, '<span class="streaming-cursor">▍</span>');
+        escapedText = escapedText.replace(/ /g, ' ').replace(/▍/g, '<span class="streaming-cursor">▍</span>');
         let linkedText = escapedText.replace(/\n/g, '<br>');
         const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
         linkedText = linkedText.replace(urlRegex, function(url) {
-            const displayUrl = url.replace(/ /g, ' '); // Display URL without  
+            const displayUrl = url.replace(/ /g, ' ');
             return `<a href="${displayUrl}" target="_blank" rel="noopener noreferrer">${displayUrl}</a>`;
         });
         return linkedText;
+    },
+
+    addTtsPlaceholder: function(parentContainer, ttsId) {
+        const existingControl = parentContainer.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
+        if (existingControl) existingControl.remove();
+
+        const ttsControlContainer = document.createElement('span');
+        ttsControlContainer.className = 'tts-control-container';
+        ttsControlContainer.dataset.ttsId = ttsId;
+
+        const spinner = document.createElement('span');
+        spinner.className = 'tts-loading-spinner';
+        ttsControlContainer.appendChild(spinner);
+        parentContainer.appendChild(ttsControlContainer);
+    },
+
+    requestTtsForMessage: async function(text, ttsConfig, parentContainer, ttsId) {
+        const payload = {
+            access_token: "guest",
+            model_name: ttsConfig.model_name,
+            speaker_name: ttsConfig.speaker_name,
+            prompt_text_lang: ttsConfig.prompt_text_lang || "中文",
+            emotion: ttsConfig.emotion || "默认",
+            text: text, // Use the cleaned text
+            text_lang: ttsConfig.text_lang || "中文",
+            top_k: ttsConfig.top_k || 10,
+            top_p: ttsConfig.top_p || 1,
+            temperature: ttsConfig.temperature || 1,
+            text_split_method: ttsConfig.text_split_method || "按标点符号切",
+            batch_size: ttsConfig.batch_size || 10,
+            batch_threshold: ttsConfig.batch_threshold || 0.75,
+            split_bucket: ttsConfig.split_bucket === undefined ? true : ttsConfig.split_bucket,
+            speed_facter: ttsConfig.speed_facter || 1,
+            fragment_interval: ttsConfig.fragment_interval || 0.3,
+            media_type: ttsConfig.media_type || "wav",
+            parallel_infer: ttsConfig.parallel_infer === undefined ? true : ttsConfig.parallel_infer,
+            repetition_penalty: ttsConfig.repetition_penalty || 1.35,
+            seed: ttsConfig.seed === undefined ? -1 : ttsConfig.seed,
+        };
+
+        try {
+            const response = await fetch(Config.server.ttsApiEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                throw new Error(`TTS API request failed with status ${response.status}: ${errorData}`);
+            }
+
+            const result = await response.json();
+            if (result.audio_url) {
+                this.updateTtsControlToPlay(parentContainer, ttsId, result.audio_url);
+            } else {
+                throw new Error(`TTS API response missing audio_url. Message: ${result.msg || 'Unknown error'}`);
+            }
+        } catch (error) {
+            Utils.log(`Error fetching TTS audio for ttsId ${ttsId}: ${error}`, Utils.logLevels.ERROR);
+            this.updateTtsControlToError(parentContainer, ttsId);
+        }
+    },
+
+    updateTtsControlToPlay: function(parentContainer, ttsId, audioUrl) {
+        const ttsControlContainer = parentContainer.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
+        if (ttsControlContainer) {
+            ttsControlContainer.innerHTML = '';
+            const playButton = document.createElement('button');
+            playButton.className = 'tts-play-button';
+            playButton.dataset.audioUrl = audioUrl;
+            playButton.title = "Play/Pause Speech";
+            playButton.onclick = (e) => {
+                e.stopPropagation();
+                this.playTtsAudioFromControl(playButton);
+            };
+            ttsControlContainer.appendChild(playButton);
+        }
+    },
+
+    playTtsAudioFromControl: function(buttonElement) {
+        const audioUrl = buttonElement.dataset.audioUrl;
+        if (!audioUrl) return;
+
+        if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
+            if (this._currentlyPlayingTtsAudio.paused) {
+                this._currentlyPlayingTtsAudio.play().catch(e => Utils.log("Error resuming TTS audio: " + e, Utils.logLevels.ERROR));
+                buttonElement.classList.add('playing');
+            } else {
+                this._currentlyPlayingTtsAudio.pause();
+                buttonElement.classList.remove('playing');
+            }
+        } else {
+            if (this._currentlyPlayingTtsAudio) {
+                this._currentlyPlayingTtsAudio.pause();
+                if (this._currentlyPlayingTtsButton) {
+                    this._currentlyPlayingTtsButton.classList.remove('playing');
+                }
+            }
+
+            this._currentlyPlayingTtsAudio = new Audio(audioUrl);
+            this._currentlyPlayingTtsButton = buttonElement;
+
+            this._currentlyPlayingTtsAudio.play().then(() => {
+                buttonElement.classList.add('playing');
+            }).catch(e => {
+                Utils.log("Error playing TTS audio: " + e, Utils.logLevels.ERROR);
+                buttonElement.classList.remove('playing');
+                this._currentlyPlayingTtsAudio = null;
+                this._currentlyPlayingTtsButton = null;
+            });
+
+            this._currentlyPlayingTtsAudio.onended = () => {
+                buttonElement.classList.remove('playing');
+                if (this._currentlyPlayingTtsButton === buttonElement) {
+                    this._currentlyPlayingTtsAudio = null;
+                    this._currentlyPlayingTtsButton = null;
+                }
+            };
+            this._currentlyPlayingTtsAudio.onerror = (e) => {
+                Utils.log("Error during TTS audio playback: " + (e.target.error ? e.target.error.message : "Unknown error"), Utils.logLevels.ERROR);
+                buttonElement.classList.remove('playing');
+                const originalContent = buttonElement.innerHTML;
+                buttonElement.innerHTML = '⚠️';
+                buttonElement.title = "Error playing audio";
+                setTimeout(() => {
+                    if(buttonElement.innerHTML === '⚠️') {
+                        buttonElement.innerHTML = originalContent;
+                        buttonElement.title = "Play/Pause Speech";
+                    }
+                }, 2000);
+                if (this._currentlyPlayingTtsButton === buttonElement) {
+                    this._currentlyPlayingTtsAudio = null;
+                    this._currentlyPlayingTtsButton = null;
+                }
+            };
+        }
+    },
+
+    updateTtsControlToError: function(parentContainer, ttsId) {
+        const ttsControlContainer = parentContainer.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
+        if (ttsControlContainer) {
+            ttsControlContainer.innerHTML = '';
+            const errorIcon = document.createElement('span');
+            errorIcon.className = 'tts-error-icon';
+            errorIcon.textContent = '⚠️';
+            errorIcon.title = 'TTS failed';
+            ttsControlContainer.appendChild(errorIcon);
+        }
     },
 
     cancelFileData: function() {

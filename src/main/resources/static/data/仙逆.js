@@ -71,13 +71,13 @@ const SPECIAL_CONTACTS_DEFINITIONS =
         },
         {
             "id": "AI_红蝶柳眉_仙逆",
-            "name": "红蝶/柳眉",
+            "name": "红蝶",
             "avatarText": "蝶",
             "avatarUrl": "/img/head/仙逆/红蝶.png",
             "initialMessage": "王林……你我之间的纠葛，何时能了？[红蝶语气魅惑而幽怨，柳眉则带着一丝清冷与宿命感]",
             "isAI": true,
             "aiConfig": {
-                "systemPrompt": "请模仿仙逆小说中红蝶或柳眉的语气回复我。红蝶妖媚痴缠，带着一丝幽怨；柳眉则清冷决绝，宿命感强。两者都与王林有极深的纠葛。1-5句话，甚至可以用一个语气词，表情。",
+                "systemPrompt": "请模仿仙逆小说中红蝶的语气回复我。红蝶妖媚痴缠，带着一丝幽怨。她与王林有极深的纠葛。1-5句话，甚至可以用一个语气词，表情。",
             },
             "aboutDetails": {
                 "nameForAbout": "红蝶 / 柳眉 (宿命纠缠)",

@@ -1,7 +1,6 @@
 const UIManager = {
     isDetailsPanelVisible: false,
-
-    // Properties for Open Source Info Modal
+// Properties for Open Source Info Modal
     openSourceInfoModal: null,
     closeOpenSourceInfoModalBtn: null,
     permanentlyCloseOpenSourceInfoModalBtn: null,
@@ -9,15 +8,229 @@ const UIManager = {
     openSourceModalAutoCloseTimer: null,
     openSourceModalCountdownInterval: null,
 
-    initOpenSourceModal: function() {
+    // AI Configuration input elements
+    apiEndpointInput: null,
+    apiKeyInput: null,
+    apiModelInput: null,
+    apiMaxTokensInput: null,
+    ttsApiEndpointInput: null, // Already existed, now grouped with AI settings
+
+    // Store bound event listener for details panel TTS config collapsible
+    _boundTtsConfigCollapseListener: null,
+    _boundSaveTtsListener: null, // For saving TTS settings from details panel
+
+    // TTS Configuration fields definition
+    TTS_CONFIG_FIELDS: [
+        { key: 'enabled', label: 'Enable TTS', type: 'checkbox', default: false },
+        { key: 'model_name', label: 'Model Name', type: 'text', default: 'GPT-SoVITS' },
+        { key: 'speaker_name', label: 'Speaker Name', type: 'text', default: 'default_speaker' },
+        { key: 'prompt_text_lang', label: 'Prompt Lang', type: 'select', default: '中文', options: ["中文"] },
+        { key: 'emotion', label: 'Emotion', type: 'text', default: '默认' },
+        { key: 'text_lang', label: 'Text Lang', type: 'select', default: '中文', options: ["中文", "英语", "日语"] },
+        { key: 'text_split_method', label: 'Split Method', type: 'select', default: '按标点符号切', options: ["不切", "按标点符号切", "按标点符号和空格切", "按空格切"] },
+        { key: 'seed', label: 'Seed', type: 'number', default: -1, step:1 },
+
+        // Advanced parameters
+        { key: 'top_k', label: 'Top K', type: 'number', default: 10, step:1, isAdvanced: true },
+        { key: 'top_p', label: 'Top P', type: 'number', default: 1.0, step:0.1, min:0, max:1, isAdvanced: true },
+        { key: 'temperature', label: 'Temperature', type: 'number', default: 1.0, step:0.1, min:0, max:2, isAdvanced: true },
+        { key: 'batch_size', label: 'Batch Size', type: 'number', default: 10, step:1, isAdvanced: true },
+        { key: 'batch_threshold', label: 'Batch Threshold', type: 'number', default: 0.75, step:0.01, min:0, max:1, isAdvanced: true },
+        { key: 'split_bucket', label: 'Split Bucket', type: 'checkbox', default: true, isAdvanced: true },
+        { key: 'speed_facter', label: 'Speed Factor', type: 'number', default: 1.0, step:0.1, min:0.1, max:3.0, isAdvanced: true },
+        { key: 'fragment_interval', label: 'Fragment Int.', type: 'number', default: 0.3, step:0.01, min:0, isAdvanced: true },
+        { key: 'media_type', label: 'Media Type', type: 'select', default: 'wav', options: ["wav", "mp3", "ogg"], isAdvanced: true },
+        { key: 'parallel_infer', label: 'Parallel Infer', type: 'checkbox', default: true, isAdvanced: true },
+        { key: 'repetition_penalty', label: 'Rep. Penalty', type: 'number', default: 1.35, step:0.01, min:1, isAdvanced: true }
+    ],
+
+    // Fallback default values for AI settings if Config.server is not properly initialized
+    FALLBACK_AI_DEFAULTS: {
+        apiEndpoint: '',
+        api_key: '',
+        model: 'default-model',
+        max_tokens: 2048,
+        ttsApiEndpoint: ''
+    },
+
+
+    initOpenSourceModal: function () { // Renamed to reflect broader settings initialization
         this.openSourceInfoModal = document.getElementById('openSourceInfoModal');
         this.closeOpenSourceInfoModalBtn = document.getElementById('closeOpenSourceInfoModalBtn');
         this.permanentlyCloseOpenSourceInfoModalBtn = document.getElementById('permanentlyCloseOpenSourceInfoModalBtn');
         this.openSourceModalTimerSpan = document.getElementById('openSourceModalTimer');
         this._bindOpenSourceInfoModalEvents();
+
+        // AI & API Config collapsible section
+        const collapsibleHeader = document.querySelector('#mainMenuModal .settings-section .collapsible-header');
+        if (collapsibleHeader) {
+            collapsibleHeader.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                const icon = this.querySelector('.collapsible-icon');
+                if (content.style.display === "block") {
+                    content.style.display = "none";
+                    if(icon) icon.textContent = '▼';
+                } else {
+                    content.style.display = "block";
+                    if(icon) icon.textContent = '▲';
+                }
+            });
+        }
+
+        // Get AI and TTS config input elements
+        this.apiEndpointInput = document.getElementById('apiEndpointInput');
+        this.apiKeyInput = document.getElementById('apiKeyInput');
+        this.apiModelInput = document.getElementById('apiModelInput');
+        this.apiMaxTokensInput = document.getElementById('apiMaxTokensInput');
+        this.ttsApiEndpointInput = document.getElementById('ttsApiEndpointInput');
+
+        // Load AI and TTS settings
+        this.loadAISettings();
+
+        // Add blur event listeners to save settings
+        if (this.apiEndpointInput) this.apiEndpointInput.addEventListener('blur', () => this.saveAISetting('apiEndpoint', this.apiEndpointInput.value));
+        if (this.apiKeyInput) this.apiKeyInput.addEventListener('blur', () => this.saveAISetting('api_key', this.apiKeyInput.value)); // storageKey uses underscore for api_key
+        if (this.apiModelInput) this.apiModelInput.addEventListener('blur', () => this.saveAISetting('model', this.apiModelInput.value));
+        if (this.apiMaxTokensInput) this.apiMaxTokensInput.addEventListener('blur', () => {
+            const val = parseInt(this.apiMaxTokensInput.value, 10);
+            let fallbackMaxTokens = (window.Config && window.Config.server && typeof window.Config.server.max_tokens === 'number')
+                ? window.Config.server.max_tokens
+                : this.FALLBACK_AI_DEFAULTS.max_tokens;
+            this.saveAISetting('max_tokens', isNaN(val) ? fallbackMaxTokens : val);
+        });
+        if (this.ttsApiEndpointInput) this.ttsApiEndpointInput.addEventListener('blur', () => this.saveAISetting('ttsApiEndpoint', this.ttsApiEndpointInput.value));
     },
 
-    _bindOpenSourceInfoModalEvents: function() {
+    loadAISettings: function() {
+        // Defensively ensure window.Config and window.Config.server are objects
+        if (typeof window.Config !== 'object' || window.Config === null) {
+            Utils.log(`Warning: window.Config was not a valid object during loadAISettings. Initializing. (was: ${typeof window.Config})`, Utils.logLevels.WARN);
+            window.Config = {};
+        }
+        if (typeof window.Config.server !== 'object' || window.Config.server === null) {
+            Utils.log(`Warning: window.Config.server was not a valid object during loadAISettings. Initializing. (was: ${typeof window.Config.server})`, Utils.logLevels.WARN);
+            window.Config.server = {};
+        }
+
+        const settingsToLoad = [
+            // Note: `defaultValue` here refers to the value potentially pre-set in `Config.server` by other scripts.
+            // If `Config.server` was just initialized to `{}`, these will be `undefined`.
+            { storageKey: 'apiEndpoint', input: this.apiEndpointInput, configKey: 'apiEndpoint', defaultValue: Config.server.apiEndpoint },
+            { storageKey: 'api_key', input: this.apiKeyInput, configKey: 'api_key', defaultValue: Config.server.api_key },
+            { storageKey: 'model', input: this.apiModelInput, configKey: 'model', defaultValue: Config.server.model },
+            { storageKey: 'max_tokens', input: this.apiMaxTokensInput, configKey: 'max_tokens', defaultValue: Config.server.max_tokens, isNumber: true },
+            { storageKey: 'ttsApiEndpoint', input: this.ttsApiEndpointInput, configKey: 'ttsApiEndpoint', defaultValue: Config.server.ttsApiEndpoint }
+        ];
+
+        settingsToLoad.forEach(setting => {
+            const savedValue = localStorage.getItem(`aiSetting_${setting.storageKey}`);
+            // Fallback chain: localStorage -> Config.server.key (initial/pre-set) -> UIManager.FALLBACK_AI_DEFAULTS
+            let valueToSet = savedValue !== null ? savedValue :
+                (setting.defaultValue !== undefined ? setting.defaultValue :
+                    this.FALLBACK_AI_DEFAULTS[setting.configKey]);
+
+            if (setting.isNumber) {
+                if (valueToSet !== null && valueToSet !== undefined) {
+                    const numVal = parseInt(valueToSet, 10);
+                    valueToSet = isNaN(numVal) ? this.FALLBACK_AI_DEFAULTS[setting.configKey] : numVal;
+                } else { // If valueToSet is null or undefined for a number type
+                    valueToSet = this.FALLBACK_AI_DEFAULTS[setting.configKey];
+                }
+            }
+
+            // Ensure valueToSet is not null/undefined before assigning to input or Config
+            if (valueToSet === null || valueToSet === undefined) {
+                valueToSet = this.FALLBACK_AI_DEFAULTS[setting.configKey] !== undefined ? this.FALLBACK_AI_DEFAULTS[setting.configKey] : "";
+            }
+
+
+            if (setting.input) {
+                setting.input.value = valueToSet;
+            } else {
+                Utils.log(`Input element for AI setting ${setting.storageKey} not found. Using default and applying to Config.`, Utils.logLevels.WARN);
+            }
+
+            // Config.server is guaranteed to be an object here
+            Config.server[setting.configKey] = valueToSet;
+            Utils.log(`AI Setting loaded: ${setting.configKey} = ${valueToSet}`, Utils.logLevels.DEBUG);
+        });
+    },
+
+    saveAISetting: function(storageKey, value) {
+        // Validate URL for endpoint settings
+        if ((storageKey === 'apiEndpoint' || storageKey === 'ttsApiEndpoint') && value) {
+            try {
+                new URL(value); // This will throw an error if the URL is invalid
+            } catch (_) {
+                this.showNotification(`Invalid URL for ${storageKey.replace(/_/g, ' ')}. Setting not saved.`, 'error');
+                // Revert input to stored value or default
+                const settingMap = {
+                    apiEndpoint: { input: this.apiEndpointInput, configKey: 'apiEndpoint' },
+                    ttsApiEndpoint: { input: this.ttsApiEndpointInput, configKey: 'ttsApiEndpoint' }
+                };
+                const currentSetting = settingMap[storageKey];
+                if (currentSetting && currentSetting.input) {
+                    const originalValue = localStorage.getItem(`aiSetting_${storageKey}`) ||
+                        (window.Config && window.Config.server && window.Config.server[currentSetting.configKey] !== undefined ? window.Config.server[currentSetting.configKey] :
+                            this.FALLBACK_AI_DEFAULTS[currentSetting.configKey]);
+                    currentSetting.input.value = originalValue !== undefined ? originalValue : "";
+                }
+                return;
+            }
+        }
+
+        // Ensure max_tokens is a positive integer
+        if (storageKey === 'max_tokens') {
+            const numValue = parseInt(value, 10);
+            if (isNaN(numValue) || numValue <= 0) {
+                this.showNotification('Max Tokens must be a positive number. Setting not saved.', 'error');
+                if (this.apiMaxTokensInput) {
+                    const fallbackMaxTokens = localStorage.getItem('aiSetting_max_tokens') ||
+                        ((window.Config && window.Config.server && typeof window.Config.server.max_tokens === 'number')
+                            ? window.Config.server.max_tokens
+                            : this.FALLBACK_AI_DEFAULTS.max_tokens);
+                    this.apiMaxTokensInput.value = fallbackMaxTokens;
+                }
+                return;
+            }
+            value = numValue; // Use the parsed number
+        }
+
+        localStorage.setItem(`aiSetting_${storageKey}`, value);
+        let configWasUpdated = false;
+
+        // Defensively ensure window.Config and window.Config.server are objects
+        if (typeof window.Config !== 'object' || window.Config === null) {
+            Utils.log(`Warning: window.Config was not a valid object during saveAISetting. Initializing. (was: ${typeof window.Config})`, Utils.logLevels.WARN);
+            window.Config = {};
+        }
+        if (typeof window.Config.server !== 'object' || window.Config.server === null) {
+            Utils.log(`Warning: window.Config.server was not a valid object during saveAISetting. Initializing. (was: ${typeof window.Config.server})`, Utils.logLevels.WARN);
+            window.Config.server = {};
+        }
+
+        // At this point, window.Config.server should be an object.
+        try {
+            // Ensure the property exists or can be set
+            window.Config.server[storageKey] = value;
+            configWasUpdated = true;
+            Utils.log(`Config.server.${storageKey} updated in memory to: ${value}`, Utils.logLevels.INFO);
+        } catch (e) {
+            Utils.log(`Error: Failed to set ${storageKey} on Config.server. Error: ${e.message}`, Utils.logLevels.ERROR);
+            // configWasUpdated remains false, will show warning notification
+        }
+
+        const friendlyName = storageKey.charAt(0).toUpperCase() + storageKey.slice(1).replace(/_/g, ' ');
+        if (configWasUpdated) {
+            this.showNotification(`${friendlyName} setting saved and applied.`, 'success');
+        } else {
+            this.showNotification(`${friendlyName} setting saved to storage, but failed to apply to live config. Please refresh.`, 'warning');
+        }
+        Utils.log(`AI Setting save attempt complete for: ${storageKey} = ${value}. Config updated in memory: ${configWasUpdated}`, Utils.logLevels.INFO);
+    },
+
+    _bindOpenSourceInfoModalEvents: function () {
         if (this.closeOpenSourceInfoModalBtn) {
             this.closeOpenSourceInfoModalBtn.addEventListener('click', () => this.hideOpenSourceInfoModal());
         }
@@ -29,7 +242,7 @@ const UIManager = {
         }
     },
 
-    showOpenSourceInfoModal: function() {
+    showOpenSourceInfoModal: function () {
         if (localStorage.getItem('hideOpenSourceModalPermanently') === 'true') {
             return; // Don't show if permanently hidden
         }
@@ -59,7 +272,7 @@ const UIManager = {
         }
     },
 
-    hideOpenSourceInfoModal: function() {
+    hideOpenSourceInfoModal: function () {
         if (this.openSourceInfoModal) {
             this.openSourceInfoModal.style.display = 'none';
         }
@@ -70,7 +283,7 @@ const UIManager = {
         this.openSourceModalCountdownInterval = null;
     },
 
-    updateResponsiveUI: function() {
+    updateResponsiveUI: function () {
         const appContainer = document.querySelector('.app-container');
         if (window.innerWidth <= 768) {
             appContainer.classList.add('mobile-view');
@@ -84,7 +297,7 @@ const UIManager = {
         }
     },
 
-    showChatListArea: function() {
+    showChatListArea: function () {
         const appContainer = document.querySelector('.app-container');
         if (appContainer.classList.contains('mobile-view')) {
             appContainer.classList.remove('chat-view-active');
@@ -94,7 +307,7 @@ const UIManager = {
         this.toggleDetailsPanel(false);
     },
 
-    showChatArea: function() {
+    showChatArea: function () {
         const appContainer = document.querySelector('.app-container');
         const chatAreaEl = document.getElementById('chatArea');
 
@@ -129,7 +342,7 @@ const UIManager = {
         }
     },
 
-    showNoChatSelected: function() {
+    showNoChatSelected: function () {
         document.getElementById('currentChatTitleMain').textContent = 'Select a chat';
         document.getElementById('currentChatStatusMain').textContent = '';
         const avatarEl = document.getElementById('currentChatAvatarMain');
@@ -159,7 +372,7 @@ const UIManager = {
         }
     },
 
-    updateChatHeader: function(title, status, avatarText, isGroup = false, isOwner = false) {
+    updateChatHeader: function (title, status, avatarText, isGroup = false, isOwner = false) {
         document.getElementById('currentChatTitleMain').textContent = Utils.escapeHtml(title);
         document.getElementById('currentChatStatusMain').textContent = Utils.escapeHtml(status);
         const avatarEl = document.getElementById('currentChatAvatarMain');
@@ -195,12 +408,12 @@ const UIManager = {
         document.getElementById('chatDetailsBtnMain').style.display = ChatManager.currentChatId ? 'block' : 'none';
     },
 
-    updateChatHeaderStatus: function(statusText) {
+    updateChatHeaderStatus: function (statusText) {
         const statusEl = document.getElementById('currentChatStatusMain');
         if (statusEl) statusEl.textContent = Utils.escapeHtml(statusText);
     },
 
-    enableChatInterface: function(enabled) {
+    enableChatInterface: function (enabled) {
         const elementsToToggle = [
             'messageInput', 'sendButtonMain', 'attachBtnMain',
             'voiceButtonMain',
@@ -258,7 +471,7 @@ const UIManager = {
         }
     },
 
-    updateConnectionStatusIndicator: function(message, type = 'info') {
+    updateConnectionStatusIndicator: function (message, type = 'info') {
         const statusTextEl = document.getElementById('connectionStatusText');
         const statusContainerEl = document.getElementById('connectionStatusGlobal');
 
@@ -271,7 +484,7 @@ const UIManager = {
         }
     },
 
-    updateNetworkInfoDisplay: function(networkType, webSocketStatus) {
+    updateNetworkInfoDisplay: function (networkType, webSocketStatus) {
         const networkInfoEl = document.getElementById('modalNetworkInfo');
         const qualityIndicator = document.getElementById('modalQualityIndicator');
         const qualityText = document.getElementById('modalQualityText');
@@ -319,7 +532,7 @@ const UIManager = {
         qualityText.textContent = overallQuality;
     },
 
-    checkWebRTCSupport: function() {
+    checkWebRTCSupport: function () {
         if (typeof RTCPeerConnection === 'undefined') {
             this.updateConnectionStatusIndicator('Browser does not support WebRTC.', 'error');
             this.updateNetworkInfoDisplay(null, ConnectionManager.isWebSocketConnected); // Pass current WS status
@@ -328,18 +541,18 @@ const UIManager = {
         return true;
     },
 
-    showNotification: function(message, type = 'info') { // type: 'info', 'success', 'warning', 'error'
+    showNotification: function (message, type = 'info') { // type: 'info', 'success', 'warning', 'error'
         const container = document.querySelector('.notification-container') || this._createNotificationContainer();
 
         const notification = document.createElement('div');
         notification.className = `notification notification-${type}`;
-        const iconMap = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌' };
+        const iconMap = {info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌'};
 
         notification.innerHTML = `
-            <span class="notification-icon">${iconMap[type]}</span>
-            <span class="notification-message">${Utils.escapeHtml(message)}</span>
-            <button class="notification-close" title="Close">×</button>
-        `;
+        <span class="notification-icon">${iconMap[type]}</span>
+        <span class="notification-message">${Utils.escapeHtml(message)}</span>
+        <button class="notification-close" title="Close">×</button>
+    `;
         container.appendChild(notification);
 
         const removeNotification = () => {
@@ -353,14 +566,14 @@ const UIManager = {
         notification.querySelector('.notification-close').onclick = removeNotification;
         setTimeout(removeNotification, type === 'error' ? 8000 : 5000); // Longer display for errors
     },
-    _createNotificationContainer: function() {
+    _createNotificationContainer: function () {
         const container = document.createElement('div');
         container.className = 'notification-container';
         document.body.appendChild(container);
         return container;
     },
 
-    toggleModal: function(modalId, show) {
+    toggleModal: function (modalId, show) {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.style.display = show ? 'flex' : 'none';
@@ -370,7 +583,7 @@ const UIManager = {
         }
     },
 
-    copyUserIdFromModal: function() {
+    copyUserIdFromModal: function () {
         const userId = document.getElementById('modalUserIdValue').textContent;
         if (userId && userId !== "Generating...") {
             navigator.clipboard.writeText(userId)
@@ -378,7 +591,7 @@ const UIManager = {
                 .catch(() => this.showNotification('Failed to copy ID.', 'error'));
         }
     },
-    copySdpTextFromModal: function() {
+    copySdpTextFromModal: function () {
         const sdpText = document.getElementById('modalSdpText').value;
         if (sdpText) {
             navigator.clipboard.writeText(sdpText)
@@ -390,20 +603,20 @@ const UIManager = {
     },
 
 
-    handleAddNewContact: function() {
+    handleAddNewContact: function () {
         const peerId = document.getElementById('newPeerIdInput').value.trim();
         const peerName = document.getElementById('newPeerNameInput').value.trim();
         if (!peerId) {
             UIManager.showNotification('Peer ID is required.', 'warning');
             return;
         }
-        UserManager.addContact(peerId, peerName || `Peer ${peerId.substring(0,4)}`);
+        UserManager.addContact(peerId, peerName || `Peer ${peerId.substring(0, 4)}`);
         document.getElementById('newPeerIdInput').value = '';
         document.getElementById('newPeerNameInput').value = '';
         UIManager.toggleModal('newContactGroupModal', false);
     },
 
-    handleCreateNewGroup: function() {
+    handleCreateNewGroup: function () {
         const groupName = document.getElementById('newGroupNameInput').value.trim();
         if (!groupName) {
             UIManager.showNotification('Group Name is required.', 'warning');
@@ -414,7 +627,7 @@ const UIManager = {
         UIManager.toggleModal('newContactGroupModal', false);
     },
 
-    setActiveTab: function(tabName) { // tabName: 'all', 'contacts', 'groups'
+    setActiveTab: function (tabName) { // tabName: 'all', 'contacts', 'groups'
         document.querySelectorAll('.nav-tabs .nav-tab').forEach(tab => tab.classList.remove('active'));
         let targetTabId = '';
         if (tabName === 'all') targetTabId = 'tabAllChats';
@@ -425,7 +638,7 @@ const UIManager = {
         if (activeTabEl) activeTabEl.classList.add('active');
     },
 
-    toggleDetailsPanel: function(show) {
+    toggleDetailsPanel: function (show) {
         const detailsPanel = document.getElementById('detailsPanel');
         const appContainer = document.querySelector('.app-container');
         this.isDetailsPanelVisible = show;
@@ -447,7 +660,7 @@ const UIManager = {
         }
     },
 
-    updateDetailsPanel: function(chatId, type) {
+    updateDetailsPanel: function (chatId, type) {
         const detailsPanelEl = document.getElementById('detailsPanel'); // Get the panel itself
         const nameEl = document.getElementById('detailsName');
         const idEl = document.getElementById('detailsId');
@@ -467,14 +680,22 @@ const UIManager = {
         const aiContactAboutNameSubEl = document.getElementById('aiContactAboutNameSub');
         const aiContactAboutTextEl = document.getElementById('aiContactAboutText');
 
+        // AI TTS Config Section elements
+        const aiTtsConfigSectionEl = document.getElementById('aiTtsConfigSection');
+        const aiTtsConfigHeaderEl = document.getElementById('aiTtsConfigHeader');
+        const aiTtsConfigContentEl = document.getElementById('aiTtsConfigContent'); // The content area
+        const saveAiTtsSettingsBtnDetails = document.getElementById('saveAiTtsSettingsBtnDetails');
+
+
         // Reset panel class list
         detailsPanelEl.className = 'details-panel';
 
 
-        if(contactActionsEl) contactActionsEl.style.display = 'none';
-        if(groupMgmtEl) groupMgmtEl.style.display = 'none';
-        if(groupActionsEl) groupActionsEl.style.display = 'none';
-        if(aiContactAboutSectionEl) aiContactAboutSectionEl.style.display = 'none';
+        if (contactActionsEl) contactActionsEl.style.display = 'none';
+        if (groupMgmtEl) groupMgmtEl.style.display = 'none';
+        if (groupActionsEl) groupActionsEl.style.display = 'none';
+        if (aiContactAboutSectionEl) aiContactAboutSectionEl.style.display = 'none';
+        if (aiTtsConfigSectionEl) aiTtsConfigSectionEl.style.display = 'none';
 
 
         if (type === 'contact') {
@@ -504,7 +725,7 @@ const UIManager = {
 
             if (contact.isSpecial) {
                 statusEl.textContent = (contact.isAI ? 'AI Assistant' : 'Special Contact') + ' - Always available';
-                if(contactActionsEl) contactActionsEl.style.display = 'none'; // No actions for special contacts
+                if (contactActionsEl) contactActionsEl.style.display = 'none'; // No actions for special contacts
 
                 if (contact.isAI && contact.aboutDetails && aiContactAboutSectionEl) {
                     aiContactAboutSectionEl.style.display = 'block';
@@ -523,11 +744,58 @@ const UIManager = {
                         aiContactAboutTextEl.textContent = contact.aboutDetails.aboutText;
                     }
                 }
+                // AI TTS Configuration - always show for AI contacts
+                if (contact.isAI && aiTtsConfigSectionEl) {
+                    aiTtsConfigSectionEl.style.display = 'block';
+                    this._populateAiTtsConfigurationForm(contact); // Populate the form
+
+                    // Set up save button listener
+                    if (saveAiTtsSettingsBtnDetails) {
+                        if (this._boundSaveTtsListener) { // Remove old if exists
+                            saveAiTtsSettingsBtnDetails.removeEventListener('click', this._boundSaveTtsListener);
+                        }
+                        this._boundSaveTtsListener = this._handleSaveAiTtsSettings.bind(this, contact.id);
+                        saveAiTtsSettingsBtnDetails.addEventListener('click', this._boundSaveTtsListener);
+                    }
+
+                    // Collapsible listener for main TTS config section
+                    if (aiTtsConfigHeaderEl) {
+                        if(this._boundTtsConfigCollapseListener) { // If a listener was previously bound to this element
+                            aiTtsConfigHeaderEl.removeEventListener('click', this._boundTtsConfigCollapseListener);
+                        }
+                        this._boundTtsConfigCollapseListener = function() { // Define new listener
+                            this.classList.toggle('active');
+                            const content = this.nextElementSibling; // aiTtsConfigContentEl
+                            const icon = this.querySelector('.collapsible-icon');
+                            if (content) {
+                                if (content.style.display === "block") {
+                                    content.style.display = "none";
+                                    if(icon) icon.textContent = '▼';
+                                } else {
+                                    content.style.display = "block";
+                                    if(icon) icon.textContent = '▲';
+                                }
+                            }
+                        };
+                        aiTtsConfigHeaderEl.addEventListener('click', this._boundTtsConfigCollapseListener);
+                        // Ensure content is initially collapsed or open based on 'active' class
+                        const icon = aiTtsConfigHeaderEl.querySelector('.collapsible-icon');
+                        if (!aiTtsConfigHeaderEl.classList.contains('active') && aiTtsConfigContentEl) {
+                            aiTtsConfigContentEl.style.display = 'none';
+                            if(icon) icon.textContent = '▼';
+                        } else if (aiTtsConfigContentEl) {
+                            aiTtsConfigContentEl.style.display = 'block';
+                            if(icon) icon.textContent = '▲';
+                        }
+                    }
+                }
+
 
             } else { // Non-special (human) contact
                 statusEl.textContent = ConnectionManager.isConnectedTo(chatId) ? 'Connected' : 'Offline';
-                if(contactActionsEl) contactActionsEl.style.display = 'block'; // Show contact actions
-                if(deleteContactBtn) deleteContactBtn.onclick = () => ChatManager.deleteChat(chatId, 'contact');
+                if (contactActionsEl) contactActionsEl.style.display = 'block'; // Show contact actions
+                if (deleteContactBtn) deleteContactBtn.onclick = () => ChatManager.deleteChat(chatId, 'contact');
+                if (aiTtsConfigSectionEl) aiTtsConfigSectionEl.style.display = 'none'; // Hide AI TTS config for non-AI
             }
 
         } else if (type === 'group') {
@@ -542,14 +810,14 @@ const UIManager = {
             avatarEl.className = 'details-avatar group'; // Reset and add group class
             statusEl.textContent = `${group.members.length} member${group.members.length === 1 ? '' : 's'}`;
 
-            if(groupMgmtEl) groupMgmtEl.style.display = 'block';
-            if(groupActionsEl) groupActionsEl.style.display = 'block';
+            if (groupMgmtEl) groupMgmtEl.style.display = 'block';
+            if (groupActionsEl) groupActionsEl.style.display = 'block';
 
 
             const isOwner = group.owner === UserManager.userId;
             document.getElementById('addGroupMemberArea').style.display = isOwner ? 'block' : 'none';
             const leftMembersAreaEl = document.getElementById('leftMembersArea');
-            if(leftMembersAreaEl) leftMembersAreaEl.style.display = isOwner && group.leftMembers && group.leftMembers.length > 0 ? 'block' : 'none';
+            if (leftMembersAreaEl) leftMembersAreaEl.style.display = isOwner && group.leftMembers && group.leftMembers.length > 0 ? 'block' : 'none';
 
             if (leaveGroupBtn) {
                 if (isOwner) {
@@ -567,10 +835,156 @@ const UIManager = {
             }
             this.updateDetailsPanelMembers(chatId);
             if (aiContactAboutSectionEl) aiContactAboutSectionEl.style.display = 'none'; // Hide AI section for groups
+            if (aiTtsConfigSectionEl) aiTtsConfigSectionEl.style.display = 'none'; // Hide AI TTS config for groups
         }
     },
 
-    updateDetailsPanelMembers: function(groupId) {
+    _populateAiTtsConfigurationForm: function(contact) {
+        const formContainer = document.getElementById('ttsConfigFormContainer');
+        if (!formContainer) return;
+
+        formContainer.innerHTML = ''; // Clear previous form content
+        const ttsSettings = (contact.aiConfig && contact.aiConfig.tts) ? contact.aiConfig.tts : {};
+
+        const createFieldElement = (field, parentEl) => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'tts-config-item';
+
+            const label = document.createElement('label');
+            label.htmlFor = `ttsInput_${field.key}`;
+            label.textContent = field.label + ':';
+            itemDiv.appendChild(label);
+
+            let input;
+            const currentValue = ttsSettings[field.key] !== undefined ? ttsSettings[field.key] : field.default;
+
+            if (field.type === 'checkbox') {
+                input = document.createElement('input');
+                input.type = 'checkbox';
+                input.checked = currentValue;
+            } else if (field.type === 'select') {
+                input = document.createElement('select');
+                (field.options || []).forEach(optValue => {
+                    const option = document.createElement('option');
+                    option.value = optValue;
+                    option.textContent = optValue;
+                    if (optValue === currentValue) option.selected = true;
+                    input.appendChild(option);
+                });
+            } else { // text, number
+                input = document.createElement('input');
+                input.type = field.type;
+                input.value = currentValue;
+                if (field.step !== undefined) input.step = field.step;
+                if (field.min !== undefined) input.min = field.min;
+                if (field.max !== undefined) input.max = field.max;
+                if (field.type === 'text' && field.default !== undefined) input.placeholder = String(field.default);
+            }
+
+            input.id = `ttsInput_${field.key}`;
+            input.dataset.ttsParam = field.key; // Store key for easy retrieval
+            itemDiv.appendChild(input);
+            parentEl.appendChild(itemDiv);
+        };
+
+        const basicFields = this.TTS_CONFIG_FIELDS.filter(field => !field.isAdvanced);
+        const advancedFields = this.TTS_CONFIG_FIELDS.filter(field => field.isAdvanced);
+
+        // Render basic fields directly into formContainer
+        basicFields.forEach(field => createFieldElement(field, formContainer));
+
+        // If there are advanced fields, create a collapsible section for them
+        if (advancedFields.length > 0) {
+            const advancedSectionDiv = document.createElement('div');
+            advancedSectionDiv.className = 'tts-config-section advanced-tts-section';
+
+            const advancedHeader = document.createElement('div');
+            advancedHeader.className = 'collapsible-header tts-advanced-header';
+            advancedHeader.innerHTML = `<h5>Advanced</h5><span class="collapsible-icon">▼</span>`;
+
+            const advancedFieldsContainer = document.createElement('div');
+            advancedFieldsContainer.className = 'collapsible-content tts-advanced-fields-container';
+            advancedFieldsContainer.style.display = 'none'; // Collapsed by default
+
+            let advancedHeaderClickHandler = advancedHeader.getAttribute('data-click-handler-bound');
+            if(advancedHeaderClickHandler !== 'true') {
+                advancedHeader.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    const icon = this.querySelector('.collapsible-icon');
+                    if (advancedFieldsContainer.style.display === "block") {
+                        advancedFieldsContainer.style.display = "none";
+                        if(icon) icon.textContent = '▼';
+                    } else {
+                        advancedFieldsContainer.style.display = "block";
+                        if(icon) icon.textContent = '▲';
+                    }
+                });
+                advancedHeader.setAttribute('data-click-handler-bound', 'true');
+            }
+
+
+            advancedFields.forEach(field => createFieldElement(field, advancedFieldsContainer));
+
+            advancedSectionDiv.appendChild(advancedHeader);
+            advancedSectionDiv.appendChild(advancedFieldsContainer);
+            formContainer.appendChild(advancedSectionDiv);
+        }
+    },
+
+    _handleSaveAiTtsSettings: async function(contactId) {
+        const contact = UserManager.contacts[contactId];
+        if (!contact || !contact.isAI || !contact.aiConfig) {
+            this.showNotification("Error: Contact not found or not an AI contact.", "error");
+            return;
+        }
+
+        if (!contact.aiConfig.tts) {
+            contact.aiConfig.tts = {};
+        }
+
+        let changesMade = false;
+        const newTtsSettings = {}; // Collect new settings here for localStorage
+
+        this.TTS_CONFIG_FIELDS.forEach(field => {
+            const inputElement = document.getElementById(`ttsInput_${field.key}`);
+            if (inputElement) {
+                let newValue;
+                if (field.type === 'checkbox') {
+                    newValue = inputElement.checked;
+                } else if (field.type === 'number') {
+                    newValue = parseFloat(inputElement.value);
+                    if (isNaN(newValue)) newValue = field.default;
+                } else {
+                    newValue = inputElement.value;
+                }
+
+                if (contact.aiConfig.tts[field.key] !== newValue) {
+                    changesMade = true;
+                }
+                contact.aiConfig.tts[field.key] = newValue; // Update in-memory contact object
+                newTtsSettings[field.key] = newValue; // Add to settings for localStorage
+            }
+        });
+
+        if (changesMade) {
+            try {
+                // Save to localStorage (contact-specific key)
+                localStorage.setItem(`ttsConfig_${contactId}`, JSON.stringify(newTtsSettings));
+                Utils.log(`TTS settings for ${contactId} saved to localStorage.`, Utils.logLevels.DEBUG);
+
+                await UserManager.saveContact(contactId); // This saves the updated contact (with new TTS) to IndexedDB
+                this.showNotification("TTS settings saved successfully.", "success");
+            } catch (error) {
+                Utils.log(`Failed to save TTS settings for ${contactId}: ${error}`, Utils.logLevels.ERROR);
+                this.showNotification("Failed to save TTS settings.", "error");
+            }
+        } else {
+            this.showNotification("No changes to TTS settings were made.", "info");
+        }
+    },
+
+
+    updateDetailsPanelMembers: function (groupId) {
         const group = GroupManager.groups[groupId];
         if (!group) return;
 
@@ -579,7 +993,7 @@ const UIManager = {
         document.getElementById('groupMemberCount').textContent = group.members.length;
 
         group.members.forEach(memberId => {
-            const member = UserManager.contacts[memberId] || { id: memberId, name: `User ${memberId.substring(0,4)}` };
+            const member = UserManager.contacts[memberId] || {id: memberId, name: `User ${memberId.substring(0, 4)}`};
             const item = document.createElement('div');
             item.className = 'member-item-detail';
             let html = `<span>${Utils.escapeHtml(member.name)} ${memberId === UserManager.userId ? '(You)' : ''}</span>`;
@@ -620,21 +1034,21 @@ const UIManager = {
                 const item = document.createElement('div');
                 item.className = 'left-member-item-detail';
                 item.innerHTML = `
-                    <span>${Utils.escapeHtml(leftMember.name)} (Left: ${Utils.formatDate(new Date(leftMember.leftTime))})</span>
-                    <button class="re-add-member-btn-detail" data-member-id="${leftMember.id}" data-member-name="${Utils.escapeHtml(leftMember.name)}" title="Re-add member">+</button>
-                `;
+                <span>${Utils.escapeHtml(leftMember.name)} (Left: ${Utils.formatDate(new Date(leftMember.leftTime))})</span>
+                <button class="re-add-member-btn-detail" data-member-id="${leftMember.id}" data-member-name="${Utils.escapeHtml(leftMember.name)}" title="Re-add member">+</button>
+            `;
                 leftMemberListEl.appendChild(item);
             });
             leftMemberListEl.querySelectorAll('.re-add-member-btn-detail').forEach(btn => {
                 btn.onclick = () => GroupManager.addMemberToGroup(groupId, btn.dataset.memberId, btn.dataset.memberName);
             });
-            if(leftMembersAreaEl) leftMembersAreaEl.style.display = 'block';
+            if (leftMembersAreaEl) leftMembersAreaEl.style.display = 'block';
         } else {
-            if(leftMembersAreaEl) leftMembersAreaEl.style.display = 'none';
+            if (leftMembersAreaEl) leftMembersAreaEl.style.display = 'none';
         }
     },
 
-    handleAddMemberToGroupDetails: function() {
+    handleAddMemberToGroupDetails: function () {
         const groupId = ChatManager.currentChatId;
         const memberSelect = document.getElementById('contactsDropdownDetails');
         const memberId = memberSelect.value;
@@ -649,13 +1063,13 @@ const UIManager = {
         }
     },
 
-    filterChatList: function(query) {
+    filterChatList: function (query) {
         // The actual filtering logic is inside ChatManager.renderChatList
         // This function just triggers a re-render
         ChatManager.renderChatList(ChatManager.currentFilter);
     },
 
-    showFullImage: function(src, altText = "Image") {
+    showFullImage: function (src, altText = "Image") {
         const modal = document.createElement('div');
         modal.className = 'modal-like image-viewer'; // Use a class for styling if needed
         modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
@@ -683,7 +1097,7 @@ const UIManager = {
         document.body.appendChild(modal);
     },
 
-    updateChatListItemStatus: function(peerId, isConnected) {
+    updateChatListItemStatus: function (peerId, isConnected) {
         const itemEl = document.querySelector(`.chat-list-item[data-id="${peerId}"]`);
         if (itemEl && itemEl.dataset.type === 'contact') {
             // Do not update for special contacts, as their "online" status is fixed or conceptual
@@ -710,17 +1124,17 @@ const UIManager = {
             }
         }
     },
-    showReconnectPrompt: function(peerId, onReconnectSuccess) {
+    showReconnectPrompt: function (peerId, onReconnectSuccess) {
         const chatBox = document.getElementById('chatBox');
         let promptDiv = chatBox.querySelector(`.system-message.reconnect-prompt[data-peer-id="${peerId}"]`);
-        const peerName = UserManager.contacts[peerId]?.name || `Peer ${peerId.substring(0,4)}`;
+        const peerName = UserManager.contacts[peerId]?.name || `Peer ${peerId.substring(0, 4)}`;
 
         if (promptDiv) { // Prompt already exists, update it
             Utils.log(`Reconnect prompt for ${peerId} already visible. Updating text.`, Utils.logLevels.DEBUG);
             const textElement = promptDiv.querySelector('.reconnect-prompt-text');
             if (textElement) textElement.textContent = `Connection to ${peerName} lost.`;
             const recBtn = promptDiv.querySelector('.btn-reconnect-inline');
-            if(recBtn) recBtn.disabled = false; // Re-enable button if it was disabled
+            if (recBtn) recBtn.disabled = false; // Re-enable button if it was disabled
             return;
         }
 
@@ -728,10 +1142,10 @@ const UIManager = {
         promptDiv.className = 'system-message reconnect-prompt'; // Use system-message for consistent styling
         promptDiv.setAttribute('data-peer-id', peerId);
         promptDiv.innerHTML = `
-            <span class="reconnect-prompt-text">Connection to ${peerName} lost.</span>
-            <button class="btn-reconnect-inline">Reconnect</button>
-            <button class="btn-cancel-reconnect-inline">Dismiss</button>
-        `;
+        <span class="reconnect-prompt-text">Connection to ${peerName} lost.</span>
+        <button class="btn-reconnect-inline">Reconnect</button>
+        <button class="btn-cancel-reconnect-inline">Dismiss</button>
+    `;
         chatBox.appendChild(promptDiv);
         chatBox.scrollTop = chatBox.scrollHeight; // Scroll to show prompt
 
@@ -744,7 +1158,7 @@ const UIManager = {
             EventEmitter.off('connectionEstablished', successHandler);
             EventEmitter.off('connectionFailed', failHandler);
             if (promptDiv && promptDiv.parentNode) {
-                if(removeImmediately){
+                if (removeImmediately) {
                     promptDiv.remove();
                 } else {
                     setTimeout(() => { // Delay removal to let user see status message
@@ -774,7 +1188,7 @@ const UIManager = {
                     reconnectButton.style.display = 'initial'; // Ensure visible
                     reconnectButton.disabled = false; // Re-enable
                 }
-                if(cancelButton) cancelButton.textContent = 'Dismiss'; // Keep as dismiss
+                if (cancelButton) cancelButton.textContent = 'Dismiss'; // Keep as dismiss
             }
         };
 
@@ -784,14 +1198,14 @@ const UIManager = {
         reconnectButton.onclick = () => {
             textElement.textContent = `Attempting to reconnect to ${peerName}...`;
             reconnectButton.disabled = true;
-            ConnectionManager.createOffer(peerId, { isSilent: false }); // Not silent, as user initiated
+            ConnectionManager.createOffer(peerId, {isSilent: false}); // Not silent, as user initiated
         };
         cancelButton.onclick = () => {
             cleanupPrompt(true); // Immediate removal on dismiss
         };
     },
 
-    showConfirmationModal: function(message, onConfirm, onCancel = null, options = {}) {
+    showConfirmationModal: function (message, onConfirm, onCancel = null, options = {}) {
         const existingModal = document.getElementById('genericConfirmationModal');
         if (existingModal) {
             existingModal.remove(); // Remove if one already exists
@@ -851,7 +1265,7 @@ const UIManager = {
         document.body.appendChild(modal);
     },
 
-    showCallingModal: function(peerName, onCancelCall, onStopMusicOnly, callType) {
+    showCallingModal: function (peerName, onCancelCall, onStopMusicOnly, callType) {
         const modal = document.getElementById('callingModal');
         const titleEl = document.getElementById('callingModalTitle');
         const textEl = document.getElementById('callingModalText');
@@ -886,7 +1300,7 @@ const UIManager = {
         modal.style.display = 'flex'; // Show the modal
     },
 
-    hideCallingModal: function() {
+    hideCallingModal: function () {
         const modal = document.getElementById('callingModal');
         if (modal && modal.style.display !== 'none') {
             modal.style.display = 'none';
@@ -894,4 +1308,4 @@ const UIManager = {
             if (cancelBtn) cancelBtn.onclick = null; // Clear the onclick handler
         }
     }
-};
+}

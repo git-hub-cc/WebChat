@@ -29,15 +29,19 @@ const UserManager = {
                 };
                 await DBManager.setItem('user', userData);
             }
-            await this.loadContacts();
-            await this.ensureSpecialContacts();
+            await this.loadContacts(); // Load non-special contacts first
+            await this.ensureSpecialContacts(); // Then ensure special contacts, merging with any existing DB data and localStorage TTS
 
         } catch (error) {
             Utils.log(`User initialization failed: ${error}`, Utils.logLevels.ERROR);
             this.userId = Utils.generateId(8);
             this.userName = `User ${this.userId.substring(0,4)}`;
             this.userSettings.autoConnectEnabled = false;
-            await this.ensureSpecialContacts();
+            // Attempt to ensure special contacts even on some init errors, using defaults.
+            const tempContactsCopy = {...this.contacts}; // Keep non-special if loaded.
+            this.contacts = {}; // Clear to re-initialize special ones cleanly.
+            await this.ensureSpecialContacts(true); // Pass a flag to indicate fallback mode
+            this.contacts = {...this.contacts, ...tempContactsCopy}; // Merge back
         }
         document.getElementById('modalUserIdValue').textContent = this.userId;
         Utils.log(`User initialized: ${this.userId} (${this.userName})`, Utils.logLevels.INFO);
@@ -48,9 +52,10 @@ const UserManager = {
         return SPECIAL_CONTACTS_DEFINITIONS.some(sc => sc.id === contactId);
     },
 
-    ensureSpecialContacts: async function() {
+    ensureSpecialContacts: async function(isFallbackMode = false) {
         for (const scDef of SPECIAL_CONTACTS_DEFINITIONS) {
-            const contactData = {
+            // Start with the definition as the base
+            let contactData = {
                 id: scDef.id,
                 name: scDef.name,
                 lastMessage: scDef.initialMessage,
@@ -58,45 +63,79 @@ const UserManager = {
                 unread: 0,
                 isSpecial: true,
                 avatarText: scDef.avatarText,
-                avatarUrl: scDef.avatarUrl || null, // Add avatarUrl
-                type: 'contact', // Ensure type is set
-                isAI: scDef.isAI || false, // Flag if it's an AI
-                aiConfig: scDef.aiConfig || null, // Store AI config
-                aboutDetails: scDef.aboutDetails || null // Store about details
+                avatarUrl: scDef.avatarUrl || null,
+                type: 'contact',
+                isAI: scDef.isAI || false,
+                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || {})), // Deep copy definition's AI config
+                aboutDetails: scDef.aboutDetails || null
             };
+            // Ensure TTS object exists in AI config from definition
+            if (contactData.isAI && !contactData.aiConfig.tts) {
+                contactData.aiConfig.tts = {};
+            }
 
-            if (!this.contacts[scDef.id]) {
-                Utils.log(`Adding special contact: ${scDef.name}`, Utils.logLevels.INFO);
-                this.contacts[scDef.id] = contactData;
-            } else {
-                this.contacts[scDef.id] = {
-                    ...this.contacts[scDef.id], // Keep existing dynamic fields
-                    id: scDef.id,
-                    name: scDef.name,
-                    isSpecial: true,
-                    avatarText: scDef.avatarText,
-                    avatarUrl: scDef.avatarUrl || this.contacts[scDef.id].avatarUrl || null,
-                    type: 'contact',
-                    isAI: scDef.isAI || false,
-                    aiConfig: scDef.aiConfig || this.contacts[scDef.id].aiConfig || null,
-                    aboutDetails: scDef.aboutDetails || this.contacts[scDef.id].aboutDetails || null
+            // If not in fallback mode, try to load from DB
+            let dbContact = null;
+            if (!isFallbackMode) {
+                dbContact = this.contacts[scDef.id] || await DBManager.getItem('contacts', scDef.id);
+            }
+
+
+            if (dbContact) {
+                // Merge DB data into contactData. DB values override definition defaults.
+                contactData.name = dbContact.name || contactData.name;
+                contactData.lastMessage = dbContact.lastMessage || contactData.lastMessage;
+                contactData.lastTime = dbContact.lastTime || contactData.lastTime;
+                contactData.unread = dbContact.unread || 0;
+                contactData.avatarUrl = dbContact.avatarUrl || contactData.avatarUrl;
+                contactData.aboutDetails = dbContact.aboutDetails || contactData.aboutDetails;
+
+                // Carefully merge aiConfig, especially tts
+                const dbAiConfig = dbContact.aiConfig || {};
+                contactData.aiConfig = {
+                    ...contactData.aiConfig, // Defaults from (copied) definition
+                    ...dbAiConfig,           // Overrides from DB for general AI settings
+                    tts: {
+                        ...(contactData.aiConfig.tts || {}),        // Defaults from definition's TTS
+                        ...((dbAiConfig && dbAiConfig.tts) || {}) // Overrides from DB's TTS
+                    }
                 };
-                if (!this.contacts[scDef.id].lastMessage) {
-                    this.contacts[scDef.id].lastMessage = contactData.initialMessage;
-                    this.contacts[scDef.id].lastTime = contactData.lastTime;
-                }
-                // Ensure aiConfig and aboutDetails are updated if not present or if scDef provides new ones
-                if (!this.contacts[scDef.id].aiConfig && contactData.aiConfig) {
-                    this.contacts[scDef.id].aiConfig = contactData.aiConfig;
-                }
-                if (!this.contacts[scDef.id].aboutDetails && contactData.aboutDetails) {
-                    this.contacts[scDef.id].aboutDetails = contactData.aboutDetails;
+            }
+
+            // If it's an AI contact, try to load TTS settings from localStorage (highest priority for TTS)
+            if (contactData.isAI) {
+                const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${scDef.id}`);
+                if (storedTtsSettingsJson) {
+                    try {
+                        const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
+                        // Merge localStorage TTS settings, these override whatever is in contactData.aiConfig.tts
+                        contactData.aiConfig.tts = {
+                            ...(contactData.aiConfig.tts || {}),
+                            ...storedTtsSettings
+                        };
+                        Utils.log(`Loaded and applied TTS settings for ${scDef.id} from localStorage.`, Utils.logLevels.DEBUG);
+                    } catch (e) {
+                        Utils.log(`Error parsing TTS settings from localStorage for ${scDef.id}: ${e}`, Utils.logLevels.WARN);
+                    }
                 }
             }
-            try {
-                await this.saveContact(scDef.id);
-            } catch (dbError) {
-                Utils.log(`DB error ensuring special contact ${scDef.name}: ${dbError}`, Utils.logLevels.ERROR);
+
+            // Preserve existing lastMessage/Time/Unread if contact was already in memory from loadContacts and is being "ensured"
+            if (this.contacts[scDef.id]) {
+                contactData.lastMessage = this.contacts[scDef.id].lastMessage || contactData.lastMessage;
+                contactData.lastTime = this.contacts[scDef.id].lastTime || contactData.lastTime;
+                contactData.unread = typeof this.contacts[scDef.id].unread === 'number' ? this.contacts[scDef.id].unread : contactData.unread;
+            }
+
+
+            this.contacts[scDef.id] = contactData; // Update in-memory store
+
+            if (!isFallbackMode) {
+                try {
+                    await this.saveContact(scDef.id); // Save the fully merged contact back to DB
+                } catch (dbError) {
+                    Utils.log(`DB error ensuring special contact ${scDef.name} after merge: ${dbError}`, Utils.logLevels.ERROR);
+                }
             }
         }
     },
@@ -127,8 +166,23 @@ const UserManager = {
             const contactItems = await DBManager.getAllItems('contacts');
             if (contactItems && contactItems.length > 0) {
                 contactItems.forEach(contact => {
-                    if (!contact.id.startsWith("AI_") && (!this.isSpecialContact(contact.id) || (!this.contacts[contact.id])) ) {
+                    // Only load non-special contacts here. Special contacts are handled by ensureSpecialContacts.
+                    if (!contact.id.startsWith("AI_") &&!this.isSpecialContact(contact.id)) {
                         this.contacts[contact.id] = contact;
+                        // If non-special contacts could be AI and have TTS, apply localStorage override here too
+                        if (contact.isAI && contact.aiConfig) {
+                            const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${contact.id}`);
+                            if (storedTtsSettingsJson) {
+                                try {
+                                    const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
+                                    if (!contact.aiConfig.tts) contact.aiConfig.tts = {};
+                                    contact.aiConfig.tts = { ...contact.aiConfig.tts, ...storedTtsSettings };
+                                    Utils.log(`Loaded TTS settings for non-special contact ${contact.id} from localStorage.`, Utils.logLevels.DEBUG);
+                                } catch (e) {
+                                    Utils.log(`Error parsing TTS settings from localStorage for ${contact.id}: ${e}`, Utils.logLevels.WARN);
+                                }
+                            }
+                        }
                     }
                 });
             }
@@ -140,8 +194,11 @@ const UserManager = {
     saveContact: async function(contactId) {
         if (this.contacts[contactId]) {
             try {
-                // Ensure aiConfig and aboutDetails are saved
                 const contactToSave = { ...this.contacts[contactId] };
+                // Ensure aiConfig and aiConfig.tts are properly structured if they exist
+                if (contactToSave.isAI && contactToSave.aiConfig && typeof contactToSave.aiConfig.tts === 'undefined') {
+                    contactToSave.aiConfig.tts = {};
+                }
                 await DBManager.setItem('contacts', contactToSave);
             } catch (error) {
                 Utils.log(`Failed to save contact ${contactId}: ${error}`, Utils.logLevels.ERROR);
@@ -181,13 +238,13 @@ const UserManager = {
             lastMessage: '',
             lastTime: new Date().toISOString(),
             unread: 0,
-            isSpecial: false, // Regular contacts are not special
+            isSpecial: false,
             avatarText: name ? name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase(),
-            avatarUrl: null, // Regular contacts don't have custom URLs by default
+            avatarUrl: null,
             type: 'contact',
             isAI: false,
-            aiConfig: null,
-            aboutDetails: null // Regular contacts don't have this by default
+            aiConfig: {},
+            aboutDetails: null
         };
         this.contacts[id] = newContact;
         await this.saveContact(id);
@@ -207,6 +264,8 @@ const UserManager = {
             delete this.contacts[id];
             try {
                 await DBManager.removeItem('contacts', id);
+                // Also remove associated localStorage TTS settings if any
+                localStorage.removeItem(`ttsConfig_${id}`);
                 ChatManager.renderChatList(ChatManager.currentFilter);
                 return true;
             } catch (error) {
@@ -251,19 +310,20 @@ const UserManager = {
             async () => {
                 const contactIdsToRemove = Object.keys(this.contacts).filter(id => !this.isSpecialContact(id));
 
-                const tempContacts = { ...this.contacts }; // Full backup
+                const tempContacts = { ...this.contacts };
                 const specialContactsToKeep = {};
                 SPECIAL_CONTACTS_DEFINITIONS.forEach(scDef => {
                     if (tempContacts[scDef.id]) {
                         specialContactsToKeep[scDef.id] = tempContacts[scDef.id];
                     }
                 });
-                this.contacts = specialContactsToKeep; // Keep only special contacts in memory
+                this.contacts = specialContactsToKeep;
 
                 try {
                     for (const contactId of contactIdsToRemove) {
                         await DBManager.removeItem('contacts', contactId);
-                        await ChatManager.clearChat(contactId); // Clear associated chat history
+                        localStorage.removeItem(`ttsConfig_${contactId}`); // Remove associated localStorage TTS
+                        await ChatManager.clearChat(contactId);
                         if (ConnectionManager.connections[contactId]) {
                             ConnectionManager.close(contactId);
                         }
@@ -273,12 +333,13 @@ const UserManager = {
                         ChatManager.currentChatId = null;
                         UIManager.showNoChatSelected();
                     }
-                    ChatManager.renderChatList(ChatManager.currentFilter); // Re-render the list
+                    ChatManager.renderChatList(ChatManager.currentFilter);
                     UIManager.showNotification("All user-added contacts and their chats cleared.", 'success');
                 } catch (error) {
                     Utils.log("Failed to clear contacts: " + error, Utils.logLevels.ERROR);
                     UIManager.showNotification("Failed to clear contacts from database.", 'error');
-                    this.contacts = tempContacts; // Rollback in-memory state
+                    this.contacts = tempContacts; // Rollback in-memory
+                    // Note: DB and localStorage might be partially cleared. A more robust rollback would re-add them.
                     ChatManager.renderChatList(ChatManager.currentFilter);
                 }
             }

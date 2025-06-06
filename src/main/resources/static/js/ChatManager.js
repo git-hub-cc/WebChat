@@ -28,9 +28,15 @@ const ChatManager = {
     saveCurrentChat: async function() {
         if (this.currentChatId && this.chats[this.currentChatId]) {
             try {
+                // Before saving, ensure any transient flags like isNewlyCompletedAIResponse are removed
+                const messagesForDb = this.chats[this.currentChatId].map(msg => {
+                    const msgCopy = { ...msg };
+                    delete msgCopy.isNewlyCompletedAIResponse;
+                    return msgCopy;
+                });
                 await DBManager.setItem('chats', {
                     id: this.currentChatId,
-                    messages: this.chats[this.currentChatId]
+                    messages: messagesForDb
                 });
             } catch (error) {
                 Utils.log(`保存当前聊天记录失败 (${this.currentChatId}): ${error}`, Utils.logLevels.ERROR);
@@ -199,7 +205,10 @@ const ChatManager = {
             chatBox.appendChild(placeholder);
         } else {
             messages.forEach(msg => {
-                MessageManager.displayMessage(msg, msg.sender === UserManager.userId || msg.originalSender === UserManager.userId);
+                // Ensure historical messages don't accidentally trigger TTS by ensuring the flag is not set
+                const msgToDisplay = { ...msg };
+                delete msgToDisplay.isNewlyCompletedAIResponse;
+                MessageManager.displayMessage(msgToDisplay, msgToDisplay.sender === UserManager.userId || msgToDisplay.originalSender === UserManager.userId);
             });
         }
         chatBox.scrollTop = chatBox.scrollHeight;
@@ -215,13 +224,16 @@ const ChatManager = {
             const existingMsgIndex = this.chats[chatId].findIndex(m => m.id === message.id);
             if (existingMsgIndex !== -1) {
                 // Update existing message. Ensure important fields like timestamp are preserved if not in new `message`
-                this.chats[chatId][existingMsgIndex] = { ...this.chats[chatId][existingMsgIndex], ...message };
+                // Also, carry over the isNewlyCompletedAIResponse flag if it's present in the incoming message
+                this.chats[chatId][existingMsgIndex] = {
+                    ...this.chats[chatId][existingMsgIndex],
+                    ...message
+                };
                 messageExists = true;
             }
         }
 
         if (!messageExists) {
-            // Simple duplicate check for non-ID'd messages (can be improved)
             const lastMsg = this.chats[chatId][this.chats[chatId].length - 1];
             if (lastMsg && !message.id && lastMsg.timestamp === message.timestamp && lastMsg.content === message.content && lastMsg.sender === message.sender) {
                 // Utils.log(`Duplicate message detected for chat ${chatId}. Skipping.`, Utils.logLevels.DEBUG);
@@ -239,9 +251,7 @@ const ChatManager = {
                     noMsgPlaceholder.remove();
                 }
             }
-            // displayMessage will handle finding existing message by ID if it's a stream update
-            // or create a new one.
-            if (!message.isThinking) { // For regular messages or final stream update
+            if (!message.isThinking) {
                 MessageManager.displayMessage(message, message.sender === UserManager.userId || message.originalSender === UserManager.userId);
             }
             if (chatBoxEl) chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
@@ -250,8 +260,6 @@ const ChatManager = {
         const isGroup = chatId.startsWith('group_');
         const isUnread = chatId !== this.currentChatId || !document.hasFocus();
 
-        // Only update last message preview and unread count if it's not a partial stream update
-        // Or, if it's the *final* part of a stream (message.isStreaming is false or absent)
         if (!message.isStreaming) {
             if (isGroup) {
                 const group = GroupManager.groups[chatId];
@@ -268,10 +276,14 @@ const ChatManager = {
             }
         }
 
-        // Save to DB
         try {
-            // Always save the full state of this chat's messages
-            await DBManager.setItem('chats', { id: chatId, messages: this.chats[chatId] });
+            // Create a version of messages for DB storage, stripping the transient flag
+            const messagesForDb = this.chats[chatId].map(msg => {
+                const msgCopy = { ...msg };
+                delete msgCopy.isNewlyCompletedAIResponse;
+                return msgCopy;
+            });
+            await DBManager.setItem('chats', { id: chatId, messages: messagesForDb });
         } catch (error) {
             Utils.log(`保存消息到DB失败 (${chatId}): ${error}`, Utils.logLevels.ERROR);
         }

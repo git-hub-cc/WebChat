@@ -18,6 +18,8 @@ const ThemeLoader = {
         "斗破苍穹-深色": { name: "斗破苍穹", css: "css/斗破苍穹-深色.css", dataJs: "data/斗破苍穹.js" },
         "迷宫饭-浅色": { name: "迷宫饭", css: "css/迷宫饭-浅色.css", dataJs: "data/迷宫饭.js" },
         "迷宫饭-深色": { name: "迷宫饭", css: "css/迷宫饭-深色.css", dataJs: "data/迷宫饭.js" },
+        "原神-浅色": { name: "原神", css: "css/原神-浅色.css", dataJs: "data/原神.js" },
+        "原神-深色": { name: "原神", css: "css/原神-深色.css", dataJs: "data/原神.js" },
     },
     COLOR_SCHEME_KEY: 'selectedColorScheme',
     DEFAULT_COLOR_SCHEME: 'auto', // 'auto', 'light', 'dark'

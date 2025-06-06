@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -30,7 +31,6 @@
         </div>
         <button class="new-chat-fab" id="newChatFab" title="New Chat/Group">+</button>
     </aside>
-
     <!-- Main Chat Area -->
     <main class="chat-area" id="chatArea">
         <div class="chat-area-content">
@@ -106,7 +106,27 @@
                 <h4>Contact Actions</h4>
                 <button id="deleteContactBtnDetails" class="btn btn-danger">Delete Contact</button>
             </div>
-            <!-- End of new section -->
+            <!-- AI TTS Configuration Section -->
+            <div class="details-section" id="aiTtsConfigSection" style="display: none;">
+                <h4 class="collapsible-header" id="aiTtsConfigHeader">
+                    TTS Configuration <span class="collapse-icon">▶</span>
+                </h4>
+                <div class="collapsible-content tts-config-content-details" id="aiTtsConfigContent" style="display: none;">
+                    <div id="ttsConfigFormContainer">
+                        <!-- TTS settings will be dynamically populated here by JS -->
+                    </div>
+                    <button id="saveAiTtsSettingsBtnDetails" class="btn btn-primary" style="margin-top: 15px; width: 100%;">Save TTS Settings</button>
+                </div>
+                <div class="tts-attribution-section">
+                    <p>
+                        <strong>GPT-SoVITS 开发者：</strong>@花儿不哭<br>
+                        <strong>模型训练者：</strong>@红血球AE3803 & @白菜工厂1145号员工<br>
+                        <strong>推理特化包适配 & 在线推理：</strong>@AI-Hobbyist<br>
+                        <strong>当前项目开源地址：</strong><a href="https://github.com/git-hub-cc/P2P-Web-Chat" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/P2P-Web-Chat</a>
+                    </p>
+                </div>
+            </div>
+            <!-- End AI TTS Configuration Section -->
             <div class="details-section" id="detailsGroupManagement">
                 <h4>Members (<span id="groupMemberCount">0</span>)</h4>
                 <div id="groupMemberListDetails" class="member-list-details"></div>
@@ -120,10 +140,6 @@
                     <div id="leftMemberListDetails"></div>
                 </div>
             </div>
-            <div class="details-section">
-                <h4>Shared Media</h4>
-                <p><em>(Shared media feature coming soon)</em></p>
-            </div>
             <div class="details-section" id="groupActionsDetails">
                 <h4>Group Actions</h4>
                 <button id="leaveGroupBtnDetails" class="btn btn-danger">Leave Group</button>
@@ -132,13 +148,11 @@
         </div>
     </aside>
 </div>
-
 <!-- Modals -->
 <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
     <div class="loading-text">Connecting, please wait...</div>
 </div>
-
 <div id="videoCallRequest" class="modal-like video-call-request">
     <div class="modal-content">
         <div class="video-call-avatar">👤</div>
@@ -150,7 +164,6 @@
         </div>
     </div>
 </div>
-
 <div id="callingModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
@@ -165,8 +178,6 @@
         </div>
     </div>
 </div>
-
-
 <div id="videoCallContainer" class="video-call-container-main">
     <div class="video-streams">
         <video id="remoteVideo" autoplay playsinline></video>
@@ -180,7 +191,6 @@
         <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">🔊</button>
     </div>
 </div>
-
 <!-- Main Menu / Settings Modal -->
 <div id="mainMenuModal" class="modal-like">
     <div class="modal-content">
@@ -215,10 +225,39 @@
                     </div>
                 </div>
             </div>
+
+            <div class="settings-section">
+                <h3 class="collapsible-header">
+                    AI & API Configuration <span class="collapse-icon">▶</span>
+                </h3>
+                <div class="collapsible-content" style="display: none;"> <!-- Initially collapsed -->
+                    <div class="settings-item">
+                        <label for="apiEndpointInput">API Endpoint:</label>
+                        <input type="text" id="apiEndpointInput" placeholder="e.g., https://api.example.com/v1/chat/completions">
+                    </div>
+                    <div class="settings-item">
+                        <label for="apiKeyInput">API Key:</label>
+                        <input type="password" id="apiKeyInput" placeholder="Enter your API Key">
+                    </div>
+                    <div class="settings-item">
+                        <label for="apiModelInput">Model Name:</label>
+                        <input type="text" id="apiModelInput" placeholder="e.g., gpt-3.5-turbo">
+                    </div>
+                    <div class="settings-item">
+                        <label for="apiMaxTokensInput">Max Tokens:</label>
+                        <input type="number" id="apiMaxTokensInput" placeholder="e.g., 1000" min="1">
+                    </div>
+                    <div class="settings-item">
+                        <label for="ttsApiEndpointInput">TTS API Endpoint:</label>
+                        <input type="text" id="ttsApiEndpointInput"
+                               placeholder="e.g., http://localhost:8000">
+                    </div>
+                </div>
+            </div>
             <div class="settings-section">
                 <h3>Preferences</h3>
                 <div class="settings-item">
-                    <label for="autoConnectToggle">Auto-connect to Contacts</label>
+                    <label for="autoConnectToggle">Auto-connect:</label>
                     <label class="switch">
                         <input type="checkbox" id="autoConnectToggle">
                         <span class="slider round"></span>
@@ -259,7 +298,6 @@
         </div>
     </div>
 </div>
-
 <!-- New Chat/Group Modal -->
 <div id="newContactGroupModal" class="modal-like">
     <div class="modal-content">
@@ -283,7 +321,6 @@
         </div>
     </div>
 </div>
-
 <div id="openSourceInfoModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
@@ -317,7 +354,6 @@
         </div>
     </div>
 </div>
-
 <!-- Main application scripts -->
 <script src="config/Config.js"></script>
 <script src="js/Utils.js"></script>

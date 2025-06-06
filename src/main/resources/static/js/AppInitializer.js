@@ -24,7 +24,7 @@ const AppInitializer = {
             MediaManager.initVoiceRecording();
             VideoCallManager.init();
 
-            this.setupEventListeners(); // This will also init the Open Source Modal UI elements
+            this.setupEventListeners(); // This will also init the Open Source Modal UI elements and AI settings
             this.initUIMode();
             this.smartBackToChatList();
 
@@ -50,7 +50,7 @@ const AppInitializer = {
             this.startNetworkMonitoring();
             MediaManager.initVoiceRecording(); // Try to init basic media
             VideoCallManager.init();          // Try to init basic video call logic
-            this.setupEventListeners();       // Setup basic listeners and Open Source Modal
+            this.setupEventListeners();       // Setup basic listeners and Open Source Modal & AI settings
             this.initUIMode();
             ThemeLoader.populateSelector();   // Populate selector even in fallback
 
@@ -111,7 +111,7 @@ const AppInitializer = {
     },
 
     setupEventListeners: function () {
-        UIManager.initOpenSourceModal(); // Initialize Open Source Modal elements and bind its events
+        UIManager.initOpenSourceModal(); // Initialize Open Source Modal, AI settings elements and bind events
 
         document.getElementById('messageInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {

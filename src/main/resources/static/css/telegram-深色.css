@@ -298,17 +298,13 @@ input:checked + .slider { background-color: var(--primary-color); }
 
 /* Custom Select for Theme Picker */
 .custom-select {
-    color: var(--text-color);
-    background-color: var(--tg-bg-dark);
     border: 1px solid var(--border-color);
 }
 .custom-select .options {
     border: 1px solid var(--border-color);
     border-top: none;
-    background-color: var(--tg-bg-dark);
 }
 .custom-select .option:hover {
-    background-color: var(--primary-color);
     color: var(--text-color-inverted);
 }
 

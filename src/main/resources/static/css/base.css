@@ -14,7 +14,7 @@
     --hover-bg-color: #f0f0f0;
     --active-bg-color: #e0e0e0;
     --sidebar-width: 320px;
-    --details-panel-width: 280px;
+    --details-panel-width: 320px;
     --header-height: 60px;
     --input-area-height: auto; /* Adjusted by content */
     --border-radius: 8px;
@@ -153,7 +153,7 @@ body {
 .chat-list-item.active .chat-list-name,
 .chat-list-item.active .chat-list-preview,
 .chat-list-item.active .chat-list-time {
-    color: var(--text-color-inverted);
+    /*color: var(--text-color-inverted);*/
 }
 
 
@@ -434,14 +434,75 @@ body {
     color: var(--special-contact-color);
 }
 
+.message .message-content-wrapper { /* New wrapper for AI text + TTS icon */
+    display: flex;
+    align-items: flex-start; /* Align text start with TTS icon start */
+}
+
 .message .message-content {
     white-space: pre-wrap;
+    flex-grow: 1; /* Allow text content to take available space */
 }
 .message .timestamp {
     font-size: 11px;
     color: var(--text-color-light);
     margin-top: 5px;
     text-align: right;
+}
+
+/* TTS Styles */
+.tts-control-container {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 8px;
+    flex-shrink: 0; /* Prevent shrinking if message text is long */
+    padding-top: 2px; /* Small adjustment for vertical alignment with first line of text */
+}
+
+.tts-loading-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: tts-spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes tts-spin {
+    to { transform: rotate(360deg); }
+}
+
+.tts-play-button {
+    background: none;
+    border: none;
+    font-size: 1.1em; /* Adjusted size */
+    cursor: pointer;
+    color: var(--primary-color);
+    padding: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; /* Ensure button has some size */
+    height: 20px;
+}
+.tts-play-button:hover {
+    color: var(--primary-color-dark);
+}
+.tts-play-button.playing::after {
+    content: "❚❚"; /* Pause symbol */
+    font-size: 0.8em; /* Fine-tune symbol size */
+}
+.tts-play-button:not(.playing)::after {
+    content: "▶"; /* Play symbol */
+    font-size: 0.9em; /* Fine-tune symbol size */
+}
+
+.tts-error-icon {
+    color: var(--danger-color);
+    font-size: 1.1em;
+    cursor: default;
 }
 
 
@@ -592,6 +653,7 @@ body {
     100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
 }
 
+/* <<< CHANGE START - Details Panel >>> */
 /* Details Panel */
 .details-panel {
     width: var(--details-panel-width);
@@ -609,6 +671,7 @@ body {
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--border-color);
+    background-color: #f0f2f5; /* Match chat header */
 }
 .details-header h3 {
     font-size: 16px;
@@ -616,23 +679,34 @@ body {
 }
 .details-content {
     flex-grow: 1;
-    padding: 20px; /* Increased padding for better overall look */
-    overflow-y: auto;
+    padding: 15px; /* Increased padding for better overall look */
+    /* overflow-y: auto; */
+    overflow-y: scroll; /* <<< FIX: Force scrollbar space to prevent content width shift on toggle */
+    /* scrollbar-gutter: stable; */ /* Alternative for modern browsers */
+    padding-right: 10px; /* Adjust padding slightly due to scrollbar */
 }
 .details-section {
-    margin-bottom: 20px;
+    margin-bottom: 25px; /* Increase spacing between sections */
+    padding: 0 5px; /* Slight inner padding */
 }
 .details-section h4 {
     font-size: 14px;
     font-weight: 600;
-    color: var(--text-color-light);
-    margin-bottom: 10px; /* Increased for better separation */
+    color: var(--primary-color); /* Make headers stand out */
+    margin-bottom: 12px; /* Increased for better separation */
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 8px; /* Increased for better separation */
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
+/* Specific override for collapsible below */
+#aiTtsConfigSection h4.collapsible-header,
+#aiContactAboutSection h4 {
+    color: var(--text-color-light); /* Revert color for these specific headers if primary is too much */
+}
+
+
 .details-avatar {
     width: 80px;
     height: 80px;
@@ -643,11 +717,13 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 36px;
-    margin: 0 auto 15px auto;
+    margin: 10px auto 15px auto; /* Add top margin */
     overflow: hidden; /* For image avatars */
+    box-shadow: var(--box-shadow);
 }
 #detailsName { text-align: center; font-size: 18px; font-weight: 600; margin-bottom: 5px;}
-#detailsId, #detailsStatus { text-align: center; font-size: 13px; color: var(--text-color-light); margin-bottom: 10px; /* Increased spacing */}
+#detailsId, #detailsStatus { text-align: center; font-size: 13px; color: var(--text-color-light); margin-bottom: 2px; /* Decreased spacing */}
+#detailsStatus { margin-bottom: 15px;} /* Add more space after status */
 
 /* General paragraph styling within details sections for consistency */
 .details-section p {
@@ -665,27 +741,188 @@ body {
 /* AI Contact Specifics */
 #aiContactAboutSection h4 span { /* Style the AI name in the heading */
     color: var(--special-contact-color);
+    font-weight: inherit;
+}
+#aiContactAboutSection h4 {
+    margin-bottom: 15px; /* More space after the About Header */
 }
 #aiContactDetailsContent p strong { /* e.g., "Basic Information", "About AI Name" */
-    color: var(--text-color); /* Make it stand out a bit more */
+    color: var(--text-color);
     font-weight: 600;
-    margin-top: 10px; /* Space above these pseudo-headings */
+    display: block; /* Ensure it's a block element */
+    margin-top: 15px; /* Space above these pseudo-headings */
+    margin-bottom: 8px; /* Space below */
+    font-size: 0.95em;
 }
+/* Remove top margin for the very first "strong" sub-heading */
+#aiContactDetailsContent > p:first-of-type strong {
+    margin-top: 0;
+}
+
 #aiContactBasicInfoList {
     list-style-type: none;
     padding-left: 0;
     margin-bottom: 10px;
+    padding-left: 8px; /* Indent list slightly */
 }
 #aiContactBasicInfoList li {
-    margin-bottom: 5px;
-    font-size: 0.95em;
+    margin-bottom: 6px;
+    font-size: 0.92em;
+    color: var(--text-color-light); /* Softer color for value */
 }
+#aiContactBasicInfoList li strong {
+    color: var(--text-color); /* Keep label color strong */
+    margin-right: 4px;
+}
+
 #aiContactAboutText {
     white-space: pre-wrap;
     font-size: 0.9em;
-    line-height: 1.5;
+    line-height: 1.6; /* Improve readability */
     color: var(--text-color-light);
+    /*background-color: #fff; !* Slight background *!*/
+    padding: 10px;
+    border-radius: var(--border-radius);
+    border: 1px dashed var(--border-color);
 }
+
+/* AI TTS Config Section in Details Panel */
+#aiTtsConfigSection h4.collapsible-header {
+    color: var(--text-color-light); /* Match About header color */
+    border-bottom: 1px solid var(--border-color); /* Ensure border like other h4 */
+    margin-bottom: 0; /* Remove bottom margin, content will provide padding */
+}
+#aiTtsConfigSection .collapsible-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 8px;
+    transition: color 0.2s, border-bottom-color 0.2s;
+}
+#aiTtsConfigSection .collapsible-header:hover {
+    color: var(--primary-color);
+}
+#aiTtsConfigSection .collapsible-header .collapse-icon {
+    transition: transform 0.2s ease-in-out;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+#aiTtsConfigSection .collapsible-header.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color); /* Highlight border when active */
+}
+#aiTtsConfigSection .collapsible-header.active .collapse-icon {
+    transform: rotate(90deg);
+}
+.tts-config-content-details {
+    padding-left: 12px;
+    border-left: 2px solid var(--border-color); /* Slightly darker border */
+    margin-top: 10px; /* Space between header and content */
+    margin-left: 5px; /* Offset border slightly */
+    padding-top: 5px;
+}
+/* Styles for dynamically generated TTS config form items */
+#ttsConfigFormContainer .tts-config-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px; /* Increased margin for better spacing */
+}
+#ttsConfigFormContainer .tts-config-item label {
+    width: 85px; /* Adjusted width for labels */
+    flex-shrink: 0;
+    font-size: 0.88em; /* Slightly smaller label text */
+    color: var(--text-color);
+    margin-right: 10px; /* Increased margin */
+    text-align: right;
+    font-weight: 500;
+}
+
+/* Input & Select Styling */
+#ttsConfigFormContainer .tts-config-item input[type="text"],
+#ttsConfigFormContainer .tts-config-item input[type="number"],
+#ttsConfigFormContainer .tts-config-item select {
+    /* width: 70px; <<< REMOVED: Rely on flex-grow */
+    flex-grow: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius); /* Match theme */
+    font-size: 0.9em; /* Match label size */
+    background-color: #fff; /* Ensure inputs have a background */
+    font-family: var(--font-family);
+    min-width: 50px; /* Prevent collapse */
+    -webkit-appearance: none; /* Remove default styles for select */
+    -moz-appearance: none;
+    appearance: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Custom Arrow for Select */
+#ttsConfigFormContainer .tts-config-item select {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'); /* stroke is --text-color-light */
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    padding-right: 30px; /* Make space for arrow */
+    cursor: pointer;
+}
+
+#ttsConfigFormContainer .tts-config-item input[type="checkbox"] {
+    margin-left: 0;
+    /* transform: scale(0.9); */
+    width: 18px;
+    height: 18px;
+    flex-grow: 0;
+    flex-shrink: 0;
+    accent-color: var(--primary-color); /* Style the check color */
+    margin-right: auto; /* Push subsequent content away, keeps checkbox left-aligned with other inputs */
+    cursor: pointer;
+}
+
+/* Focus Styles */
+#ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]):focus,
+#ttsConfigFormContainer .tts-config-item select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    /* box-shadow: 0 0 0 1px var(--primary-color); */
+    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Match search bar focus */
+}
+#ttsConfigFormContainer .tts-config-item input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+#saveAiTtsSettingsBtnDetails {
+    margin-top: 10px; /* Adjusted margin */
+    width: 100%;
+}
+
+/* TTS Attribution Section */
+.tts-attribution-section {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+    margin-left: 5px; /* Align with collapsible content's left margin */
+    margin-right: 5px; /* Match right padding of .details-content for symmetry */
+}
+.tts-attribution-section p {
+    font-size: 0.88em;
+    color: var(--text-color-light);
+    line-height: 1.6;
+    margin-bottom: 0; /* Remove default paragraph bottom margin */
+}
+.tts-attribution-section p strong {
+    font-weight: 500;
+    color: var(--text-color);
+}
+.tts-attribution-section a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+.tts-attribution-section a:hover {
+    text-decoration: underline;
+}
+/* <<< CHANGE END - Details Panel >>> */
+
 
 .member-list-details .member-item-detail {
     display: flex;
@@ -842,7 +1079,10 @@ body {
 
 .modal-body .settings-section { margin-bottom: 20px; }
 .modal-body .settings-section h3 { font-size: 16px; margin-bottom: 10px; }
-.modal-body input[type="text"], .modal-body textarea {
+.modal-body input[type="text"],
+.modal-body input[type="password"],
+.modal-body input[type="number"],
+.modal-body textarea {
     width: 100%;
     padding: 8px;
     margin-bottom: 10px;
@@ -1034,68 +1274,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
     font-size: 14px;
-}
-/* Add to your css/base.css or relevant theme CSS */
-.custom-select {
-    position: relative;
-     width: 200px; /* Adjust as needed
-    font-family: sans-serif; /* Or inherit from your app's font */
-    user-select: none;
-    color: #333; /* Example text color, adjust to your theme */
-    background-color: #fff; /* Example background, adjust */
-    border: 1px solid #ccc; /* Example border, adjust */
-    border-radius: 4px; /* Optional */
-}
-
-.custom-select .selected {
-    padding: 8px 12px; /* Adjust padding */
-    cursor: pointer;
-    border-radius: 4px; /* Match parent or be specific */
-}
-.custom-select .selected::after { /* Optional: Add a dropdown arrow */
-    content: '▼';
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.8em;
-}
-
-
-.custom-select .options {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    border: 1px solid #ccc;
-    border-top: none; /* Optional: to make it look more connected */
-    background-color: #fff; /* Example background, adjust */
-    display: none;
-    z-index: 1000; /* Ensure it's above other elements in the modal */
-    max-height: 200px; /* Optional: if many themes */
-    overflow-y: auto; /* Optional: if many themes */
-    border-bottom-left-radius: 4px; /* Optional */
-    border-bottom-right-radius: 4px; /* Optional */
-}
-
-.custom-select .option {
-    padding: 8px 12px; /* Adjust padding */
-    cursor: pointer;
-}
-
-.custom-select .option:hover {
-    background-color: var(--primary-color);
-    color: white;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-
+    margin-bottom: 10px; /* Added spacing */
 }
 
 .switch {
     position: relative;
     display: inline-block;
-    width: 50px;
+    width: 46px; /* Adjusted width */
     height: 24px;
 }
 
@@ -1134,13 +1320,13 @@ input:checked + .slider {
 }
 
 input:focus + .slider {
-    box-shadow: 0 0 1px var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Match focus */
 }
 
 input:checked + .slider:before {
-    -webkit-transform: translateX(26px);
-    -ms-transform: translateX(26px);
-    transform: translateX(26px);
+    -webkit-transform: translateX(56px);
+    -ms-transform: translateX(56px);
+    transform: translateX(56px);
 }
 
 .slider.round {
@@ -1185,9 +1371,10 @@ input:checked + .slider:before {
         position: absolute;
         right: 0; top: 0; height: 100%;
         z-index: 20;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.15); /* Add shadow on mobile */
     }
     .app-container.show-details .chat-area {
-        margin-right: var(--details-panel-width);
+        /* margin-right: var(--details-panel-width); */ /* Not needed if absolute */
     }
 }
 
@@ -1306,10 +1493,14 @@ input:checked + .slider:before {
 
 
 .video-call-container-main.pip-mode .video-call-controls {
+    position: relative; /* <<< Change from absolute */
+    bottom: auto; /* <<< Change */
     padding: 6px;
     flex-shrink: 0;
     justify-content: space-around;
-    background-color: rgba(0,0,0,0.5); /* Semi-transparent controls BG */
+    border-radius: 0; /* <<< Change */
+    background-color: rgba(0,0,0,0.6); /* Semi-transparent controls BG */
+    gap: 5px;
 }
 
 .video-call-container-main.pip-mode .video-call-controls .video-call-button {
@@ -1435,3 +1626,141 @@ input:checked + .slider:before {
     display: none;
 }
 
+/* Custom Select Dropdown (Theme, Color Scheme) */
+.custom-select {
+    position: relative;
+    /* width: 200px; */
+    flex-grow: 1; /* Allow to grow */
+    min-width: 150px;
+    font-family: var(--font-family);
+    user-select: none;
+    color: var(--text-color);
+    background-color: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+.custom-select .selected {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.custom-select:focus-within {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0,136,204,0.2);
+}
+
+.custom-select .selected::after { /* Dropdown arrow */
+    content: '▼';
+    font-size: 0.8em;
+    margin-left: 5px;
+    color: var(--text-color-light);
+    transition: transform 0.2s;
+}
+.custom-select.open .selected::after {
+    transform: rotate(180deg);
+}
+.custom-select .options {
+    position: absolute;
+    top: calc(100% + 5px); /* Space below */
+    left: 0;
+    right: 0;
+    border: 1px solid var(--border-color);
+    /* border-top: none; */
+    background-color: #fff;
+    box-shadow: var(--box-shadow);
+    display: none;
+    z-index: 1010; /* Above modal content */
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: var(--border-radius); /* Round corners */
+}
+.custom-select.open .options {
+    display: block;
+}
+.custom-select .option {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+.custom-select .option:hover {
+    background-color: var(--primary-color);
+    color: white;
+    text-shadow: none; /* Removed text-shadow */
+
+}
+.custom-select .option.active-option {
+    background-color: var(--hover-bg-color);
+    font-weight: bold;
+}
+
+/* Collapsible Section in Settings Modal */
+.collapsible-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-weight: 600; /* Make header slightly bolder */
+    border-bottom: 1px solid var(--border-color); /* Add border */
+    margin-bottom: 10px; /* Add space */
+    transition: color 0.2s, border-bottom-color 0.2s;
+}
+.collapsible-header:hover {
+    color: var(--primary-color);
+}
+.collapsible-header.active {
+    border-bottom-color: var(--primary-color); /* Indicate active section */
+    color: var(--primary-color);
+}
+.collapsible-header .collapse-icon {
+    transition: transform 0.2s ease-in-out;
+    font-size: 0.9em;
+    margin-left: 5px;
+}
+.collapsible-header.active .collapse-icon {
+    transform: rotate(90deg);
+}
+.collapsible-content {
+    padding-left: 15px;
+    border-left: 2px solid var(--hover-bg-color);
+    margin-top: 0px; /* Adjusted margin */
+    padding-top: 5px;
+    margin-bottom: 10px;
+    /* display: none; is set inline in HTML initially */
+}
+.settings-section .settings-item label {
+    margin-right: 10px;
+    flex-shrink: 0;
+    width: auto; /* <<< Allow label width to adapt */
+    min-width: 80px;
+    text-align: left; /* <<< Align left in modal */
+    font-size: 0.95em;
+    font-weight: 500;
+}
+/* Specific override for AI config labels */
+.settings-section .collapsible-content .settings-item label {
+    width: 120px; /* Fix width for AI config */
+    text-align: right;
+}
+
+.settings-section .settings-item input[type="text"],
+.settings-section .settings-item input[type="password"],
+.settings-section .settings-item input[type="number"] {
+    flex-grow: 1;
+    min-width: 0; /* Allow shrinking if needed, flex-grow will manage expansion */
+    border-radius: var(--border-radius);
+    padding: 8px 10px;
+}
+.settings-section .settings-item input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Match search bar focus */
+}
+
+#colorSchemeCustomSelectContainer,#themeCustomSelectContainer{
+    color: black;
+}
