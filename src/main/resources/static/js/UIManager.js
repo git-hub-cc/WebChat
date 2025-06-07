@@ -1,3 +1,4 @@
+
 const UIManager = {
     isDetailsPanelVisible: false,
 // Properties for Open Source Info Modal
@@ -105,17 +106,15 @@ const UIManager = {
     loadAISettings: function() {
         // Defensively ensure window.Config and window.Config.server are objects
         if (typeof window.Config !== 'object' || window.Config === null) {
-            Utils.log(`Warning: window.Config was not a valid object during loadAISettings. Initializing. (was: ${typeof window.Config})`, Utils.logLevels.WARN);
+            Utils.log(`CRITICAL: window.Config is not a valid object during AI settings load. This indicates a problem with Config.js loading or execution. Initializing window.Config = {}.`, Utils.logLevels.ERROR);
             window.Config = {};
         }
         if (typeof window.Config.server !== 'object' || window.Config.server === null) {
-            Utils.log(`Warning: window.Config.server was not a valid object during loadAISettings. Initializing. (was: ${typeof window.Config.server})`, Utils.logLevels.WARN);
+            Utils.log(`Warning: window.Config.server was not a valid object during AI settings load. Initializing window.Config.server = {}.`, Utils.logLevels.WARN);
             window.Config.server = {};
         }
 
         const settingsToLoad = [
-            // Note: `defaultValue` here refers to the value potentially pre-set in `Config.server` by other scripts.
-            // If `Config.server` was just initialized to `{}`, these will be `undefined`.
             { storageKey: 'apiEndpoint', input: this.apiEndpointInput, configKey: 'apiEndpoint', defaultValue: Config.server.apiEndpoint },
             { storageKey: 'api_key', input: this.apiKeyInput, configKey: 'api_key', defaultValue: Config.server.api_key },
             { storageKey: 'model', input: this.apiModelInput, configKey: 'model', defaultValue: Config.server.model },
@@ -125,7 +124,6 @@ const UIManager = {
 
         settingsToLoad.forEach(setting => {
             const savedValue = localStorage.getItem(`aiSetting_${setting.storageKey}`);
-            // Fallback chain: localStorage -> Config.server.key (initial/pre-set) -> UIManager.FALLBACK_AI_DEFAULTS
             let valueToSet = savedValue !== null ? savedValue :
                 (setting.defaultValue !== undefined ? setting.defaultValue :
                     this.FALLBACK_AI_DEFAULTS[setting.configKey]);
@@ -134,26 +132,22 @@ const UIManager = {
                 if (valueToSet !== null && valueToSet !== undefined) {
                     const numVal = parseInt(valueToSet, 10);
                     valueToSet = isNaN(numVal) ? this.FALLBACK_AI_DEFAULTS[setting.configKey] : numVal;
-                } else { // If valueToSet is null or undefined for a number type
+                } else {
                     valueToSet = this.FALLBACK_AI_DEFAULTS[setting.configKey];
                 }
             }
 
-            // Ensure valueToSet is not null/undefined before assigning to input or Config
             if (valueToSet === null || valueToSet === undefined) {
                 valueToSet = this.FALLBACK_AI_DEFAULTS[setting.configKey] !== undefined ? this.FALLBACK_AI_DEFAULTS[setting.configKey] : "";
             }
 
-
             if (setting.input) {
                 setting.input.value = valueToSet;
-            } else {
-                Utils.log(`Input element for AI setting ${setting.storageKey} not found. Using default and applying to Config.`, Utils.logLevels.WARN);
             }
-
-            // Config.server is guaranteed to be an object here
-            Config.server[setting.configKey] = valueToSet;
-            Utils.log(`AI Setting loaded: ${setting.configKey} = ${valueToSet}`, Utils.logLevels.DEBUG);
+            // Update the live Config object
+            // window.Config.server is guaranteed to be an object here
+            window.Config.server[setting.configKey] = valueToSet;
+            // Utils.log(`AI Setting loaded & applied: ${setting.configKey} = ${valueToSet}`, Utils.logLevels.DEBUG);
         });
     },
 
@@ -161,10 +155,9 @@ const UIManager = {
         // Validate URL for endpoint settings
         if ((storageKey === 'apiEndpoint' || storageKey === 'ttsApiEndpoint') && value) {
             try {
-                new URL(value); // This will throw an error if the URL is invalid
+                new URL(value);
             } catch (_) {
                 this.showNotification(`Invalid URL for ${storageKey.replace(/_/g, ' ')}. Setting not saved.`, 'error');
-                // Revert input to stored value or default
                 const settingMap = {
                     apiEndpoint: { input: this.apiEndpointInput, configKey: 'apiEndpoint' },
                     ttsApiEndpoint: { input: this.ttsApiEndpointInput, configKey: 'ttsApiEndpoint' }
@@ -180,7 +173,6 @@ const UIManager = {
             }
         }
 
-        // Ensure max_tokens is a positive integer
         if (storageKey === 'max_tokens') {
             const numValue = parseInt(value, 10);
             if (isNaN(numValue) || numValue <= 0) {
@@ -194,40 +186,47 @@ const UIManager = {
                 }
                 return;
             }
-            value = numValue; // Use the parsed number
+            value = numValue;
         }
 
         localStorage.setItem(`aiSetting_${storageKey}`, value);
         let configWasUpdated = false;
 
-        // Defensively ensure window.Config and window.Config.server are objects
-        if (typeof window.Config !== 'object' || window.Config === null) {
-            Utils.log(`Warning: window.Config was not a valid object during saveAISetting. Initializing. (was: ${typeof window.Config})`, Utils.logLevels.WARN);
-            window.Config = {};
-        }
-        if (typeof window.Config.server !== 'object' || window.Config.server === null) {
-            Utils.log(`Warning: window.Config.server was not a valid object during saveAISetting. Initializing. (was: ${typeof window.Config.server})`, Utils.logLevels.WARN);
-            window.Config.server = {};
-        }
+        // Use a fresh reference to the global Config object at the time of saving
+        const globalConfig = window.Config;
 
-        // At this point, window.Config.server should be an object.
-        try {
-            // Ensure the property exists or can be set
-            window.Config.server[storageKey] = value;
-            configWasUpdated = true;
-            Utils.log(`Config.server.${storageKey} updated in memory to: ${value}`, Utils.logLevels.INFO);
-        } catch (e) {
-            Utils.log(`Error: Failed to set ${storageKey} on Config.server. Error: ${e.message}`, Utils.logLevels.ERROR);
-            // configWasUpdated remains false, will show warning notification
+        if (typeof globalConfig !== 'object' || globalConfig === null) {
+            Utils.log(`CRITICAL: window.Config is not a valid object at time of saveAISetting for ${storageKey}. Cannot update in-memory config.`, Utils.logLevels.ERROR);
+        } else if (typeof globalConfig.server !== 'object' || globalConfig.server === null) {
+            Utils.log(`CRITICAL: window.Config.server is not a valid object at time of saveAISetting for ${storageKey}. Initializing it.`, Utils.logLevels.ERROR);
+            globalConfig.server = {}; // Initialize if missing, though loadAISettings should handle this.
+            const previousValue = undefined; // No previous value if server object was just created
+            globalConfig.server[storageKey] = value;
+            if (globalConfig.server[storageKey] === value) {
+                configWasUpdated = true;
+                Utils.log(`Config.server created and ${storageKey} set to: ${value}`, Utils.logLevels.INFO);
+            } else {
+                Utils.log(`CRITICAL: Config.server created, but FAILED to set ${storageKey} to ${value}. Current: ${globalConfig.server[storageKey]}`, Utils.logLevels.ERROR);
+            }
+        } else {
+            const previousValue = globalConfig.server[storageKey];
+            globalConfig.server[storageKey] = value; // Update the property on the existing globalConfig.server
+
+            if (globalConfig.server[storageKey] === value) {
+                configWasUpdated = true;
+                // More detailed log for successful update
+                Utils.log(`UIManager.saveAISetting: Config.server.${storageKey} updated. Old: '${previousValue}', New: '${value}'. Object ID of Config.server: (enable deeper debugging if needed)`, Utils.logLevels.INFO);
+            } else {
+                Utils.log(`CRITICAL: UIManager.saveAISetting: Config.server.${storageKey} FAILED to update in memory. Attempted: '${value}', Current: '${globalConfig.server[storageKey]}', Old: '${previousValue}'.`, Utils.logLevels.ERROR);
+            }
         }
 
         const friendlyName = storageKey.charAt(0).toUpperCase() + storageKey.slice(1).replace(/_/g, ' ');
         if (configWasUpdated) {
             this.showNotification(`${friendlyName} setting saved and applied.`, 'success');
         } else {
-            this.showNotification(`${friendlyName} setting saved to storage, but failed to apply to live config. Please refresh.`, 'warning');
+            this.showNotification(`${friendlyName} setting saved to storage, but FAILED to apply to live config. Please refresh.`, 'error');
         }
-        Utils.log(`AI Setting save attempt complete for: ${storageKey} = ${value}. Config updated in memory: ${configWasUpdated}`, Utils.logLevels.INFO);
     },
 
     _bindOpenSourceInfoModalEvents: function () {
@@ -1307,5 +1306,41 @@ const UIManager = {
             const cancelBtn = document.getElementById('callingModalCancelBtn');
             if (cancelBtn) cancelBtn.onclick = null; // Clear the onclick handler
         }
+    },
+
+    updateCopyIdButtonState: function() {
+        const userIdValueEl = document.getElementById('modalUserIdValue');
+        const copyBtn = document.getElementById('modalCopyIdBtn');
+
+        if (!userIdValueEl || !copyBtn) return;
+
+        if (userIdValueEl.textContent === 'Generating...' || !UserManager.userId) {
+            copyBtn.disabled = true;
+            copyBtn.title = 'User ID not yet generated.';
+            copyBtn.classList.remove('btn-action-themed');
+            copyBtn.classList.add('btn-secondary'); // Ensure it's styled as secondary
+        } else {
+            copyBtn.disabled = false;
+            copyBtn.title = 'Copy User ID';
+            copyBtn.classList.add('btn-action-themed');
+            copyBtn.classList.remove('btn-secondary');
+        }
+    },
+
+    updateCheckNetworkButtonState: function() {
+        const checkBtn = document.getElementById('checkNetworkBtnModal');
+        if (!checkBtn) return;
+
+        const isConnected = ConnectionManager.isWebSocketConnected;
+
+        if (isConnected) {
+            checkBtn.disabled = true;
+            checkBtn.classList.remove('btn-action-themed');
+            checkBtn.classList.add('btn-secondary'); // Ensure it's styled as secondary
+        } else {
+            checkBtn.disabled = false;
+            checkBtn.classList.add('btn-action-themed');
+            checkBtn.classList.remove('btn-secondary');
+        }
     }
-}
+};

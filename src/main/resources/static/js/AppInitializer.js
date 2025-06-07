@@ -158,6 +158,9 @@ const AppInitializer = {
         EventEmitter.on('websocketStatusUpdate', async () => {
             Utils.log('WebSocket status updated event received, refreshing network UI.', Utils.logLevels.DEBUG);
             await this.refreshNetworkStatusUI();
+            if (typeof UIManager !== 'undefined' && UIManager.updateCheckNetworkButtonState) {
+                UIManager.updateCheckNetworkButtonState();
+            }
         });
 
         const voiceButton = document.getElementById('voiceButtonMain');
@@ -180,10 +183,33 @@ const AppInitializer = {
             if (autoConnectToggle && UserManager.userSettings) {
                 autoConnectToggle.checked = UserManager.userSettings.autoConnectEnabled;
             }
+            // Update button states when modal is opened
+            if (typeof UIManager !== 'undefined') {
+                if (UIManager.updateCopyIdButtonState) UIManager.updateCopyIdButtonState();
+                if (UIManager.updateCheckNetworkButtonState) UIManager.updateCheckNetworkButtonState();
+            }
         });
         document.querySelector('.close-modal-btn[data-modal-id="mainMenuModal"]').addEventListener('click', () => UIManager.toggleModal('mainMenuModal', false));
-        document.getElementById('modalCopyIdBtn').addEventListener('click', () => UIManager.copyUserIdFromModal());
-        document.getElementById('checkNetworkBtnModal').addEventListener('click', async () => await this.refreshNetworkStatusUI());
+        document.getElementById('modalCopyIdBtn').addEventListener('click', () => {
+            if (document.getElementById('modalCopyIdBtn').disabled) return;
+            UIManager.copyUserIdFromModal();
+        });
+        document.getElementById('checkNetworkBtnModal').addEventListener('click', async () => {
+            const checkBtn = document.getElementById('checkNetworkBtnModal');
+            if (checkBtn.disabled) { // If button is disabled (meaning already connected)
+                UIManager.showNotification('Currently connected to signaling server.', 'info');
+                return;
+            }
+            UIManager.showNotification('Re-checking network and attempting to connect...', 'info');
+            await this.refreshNetworkStatusUI(); // `this` is AppInitializer instance
+            if (!ConnectionManager.isWebSocketConnected) {
+                Utils.log("Re-check Network button: WebSocket not connected, attempting to connect.", Utils.logLevels.INFO);
+                ConnectionManager.connectWebSocket().catch(err => {
+                    UIManager.showNotification('Failed to re-establish signaling connection.', 'error');
+                    Utils.log(`Manual Re-check Network: connectWebSocket failed: ${err}`, Utils.logLevels.ERROR);
+                });
+            }
+        });
 
         const autoConnectToggle = document.getElementById('autoConnectToggle');
         if (autoConnectToggle) {

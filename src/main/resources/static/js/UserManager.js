@@ -44,6 +44,9 @@ const UserManager = {
             this.contacts = {...this.contacts, ...tempContactsCopy}; // Merge back
         }
         document.getElementById('modalUserIdValue').textContent = this.userId;
+        if (typeof UIManager !== 'undefined' && UIManager.updateCopyIdButtonState) {
+            UIManager.updateCopyIdButtonState();
+        }
         Utils.log(`User initialized: ${this.userId} (${this.userName})`, Utils.logLevels.INFO);
         Utils.log(`User settings loaded: autoConnectEnabled = ${this.userSettings.autoConnectEnabled}`, Utils.logLevels.DEBUG);
     },

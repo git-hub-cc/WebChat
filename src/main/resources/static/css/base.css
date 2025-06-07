@@ -1741,6 +1741,23 @@ input:checked + .slider:before {
     font-size: 0.95em;
     font-weight: 500;
 }
+/* Generic disabled style for all buttons, if not already well-defined */
+.btn:disabled {
+    background-color: #ccc !important; /* Use important to ensure override */
+    color: #666 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+    border-color: #bbb !important; /* if buttons have borders and this is desired */
+}
+
+/* Class for buttons that should take on primary theme color when active/enabled */
+.btn.btn-action-themed {
+    background-color: var(--primary-color);
+    color: white;
+}
+.btn.btn-action-themed:hover:not(:disabled) { /* Only hover effect if not disabled */
+    background-color: var(--primary-color-dark);
+}
 /* Specific override for AI config labels */
 .settings-section .collapsible-content .settings-item label {
     width: 120px; /* Fix width for AI config */

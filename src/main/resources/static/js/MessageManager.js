@@ -1,5 +1,3 @@
-// MessageManager.js
-
 const MessageManager = {
     selectedFile: null,
     audioData: null,
@@ -7,7 +5,7 @@ const MessageManager = {
     _currentlyPlayingTtsAudio: null, // For managing single TTS playback instance
     _currentlyPlayingTtsButton: null, // Tracks which button is playing TTS
 
-    sendMessage: async function() {
+    sendMessage: async function () {
         const input = document.getElementById('messageInput');
         const messageText = input.value.trim();
         const currentSelectedFile = MessageManager.selectedFile;
@@ -69,30 +67,40 @@ const MessageManager = {
                     let role = 'user';
                     if (msg.sender === UserManager.userId) role = 'user';
                     else if (msg.sender === targetId) role = 'assistant';
-                    return { role: role, content: msg.content };
+                    return {role: role, content: msg.content};
                 });
 
                 const aiApiMessages = [
-                    { role: "system", content: contact.aiConfig.systemPrompt }
+                    {role: "system", content: contact.aiConfig.systemPrompt}
                 ];
                 aiApiMessages.push(...contextMessagesForAI);
-                aiApiMessages.push({ role: "user", content: messageText });
+                aiApiMessages.push({role: "user", content: messageText});
+
+                // Log the configuration values MessageManager is about to use
+                const currentConfigForAIRequest = {
+                    endpoint: window.Config.server.apiEndpoint,
+                    keyPresent: !!window.Config.server.api_key,
+                    model: window.Config.server.model,
+                    max_tokens: window.Config.server.max_tokens
+                };
+                Utils.log(`MessageManager: AI request to ${contact.name}. Using Config: Endpoint='${currentConfigForAIRequest.endpoint}', KeyPresent=${currentConfigForAIRequest.keyPresent}, Model='${currentConfigForAIRequest.model}', MaxTokens=${currentConfigForAIRequest.max_tokens}`, Utils.logLevels.DEBUG);
+
 
                 const requestBody = {
-                    model: Config.server.model,
+                    model: currentConfigForAIRequest.model, // Use logged value
                     messages: aiApiMessages,
                     stream: true,
                     temperature: 0.1,
-                    max_tokens: Config.server.max_tokens || 1000
+                    max_tokens: currentConfigForAIRequest.max_tokens || 1000 // Use logged value
                 };
 
                 Utils.log(`Sending to AI (${contact.name}) (streaming): ${JSON.stringify(requestBody.messages)}`, Utils.logLevels.DEBUG);
 
-                const response = await fetch(Config.server.apiEndpoint, {
+                const response = await fetch(currentConfigForAIRequest.endpoint, { // Use logged value
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'authorization': Config.server.api_key,
+                        'authorization': window.Config.server.api_key, // Direct read, assuming it's updated
                     },
                     body: JSON.stringify(requestBody)
                 });
@@ -131,13 +139,13 @@ const MessageManager = {
                 let buffer = "";
 
                 while (true) {
-                    const { value, done: readerDone } = await reader.read();
+                    const {value, done: readerDone} = await reader.read();
                     if (readerDone) {
                         buffer += decoder.decode();
                         break;
                     }
 
-                    buffer += decoder.decode(value, { stream: true });
+                    buffer += decoder.decode(value, {stream: true});
                     let stopStreaming = false;
 
                     if (buffer.trim() === "[DONE]") {
@@ -282,7 +290,7 @@ const MessageManager = {
             };
             if (isGroup) GroupManager.broadcastToGroup(targetId, textMessage);
             else ConnectionManager.sendTo(targetId, textMessage);
-            ChatManager.addMessage(targetId, { ...textMessage, sender: UserManager.userId });
+            ChatManager.addMessage(targetId, {...textMessage, sender: UserManager.userId});
             messageSent = true;
             input.value = '';
             input.style.height = 'auto';
@@ -292,7 +300,7 @@ const MessageManager = {
             input.focus();
         }
     },
-    cleanTextForTts: function(text) {
+    cleanTextForTts: function (text) {
         if (typeof text !== 'string') return '';
         let cleanedText = text;
 
@@ -313,7 +321,7 @@ const MessageManager = {
         return cleanedText.trim();
     },
 
-    displayMessage: function(message, isSentByMe) {
+    displayMessage: function (message, isSentByMe) {
         const chatBox = document.getElementById('chatBox');
         let msgDiv = null;
         let mainContentWrapper = null;
@@ -349,7 +357,7 @@ const MessageManager = {
         if (!contentElement) { // Only build structure if creating new message div
             let senderNameHtml = '';
             if (!isSentByMe && message.type !== 'system') {
-                const senderName = message.originalSenderName || (senderContact ? senderContact.name : `User ${String(message.sender).substring(0,4)}`);
+                const senderName = message.originalSenderName || (senderContact ? senderContact.name : `User ${String(message.sender).substring(0, 4)}`);
                 if (ChatManager.currentChatId?.startsWith('group_') || (senderContact && senderContact.isSpecial)) {
                     senderNameHtml = `<div class="message-sender">${Utils.escapeHtml(senderName)}</div>`;
                 }
@@ -449,42 +457,42 @@ const MessageManager = {
             (message.isStreaming === false || typeof message.isStreaming === 'undefined') &&
             message.isNewlyCompletedAIResponse === true
         ) {
-            // Diagnostic log added
-            if (!Config.server.ttsApiEndpoint ) {
+            const currentTtsApiEndpoint = window.Config.server.ttsApiEndpoint;
+            if (!currentTtsApiEndpoint) {
                 Utils.log("TTS not triggered: Global TTS API Endpoint is not configured in Config.server.ttsApiEndpoint. Please set it in Settings > AI & API Configuration.", Utils.logLevels.WARN);
             } else {
                 const textForTts = this.cleanTextForTts(message.content);
-                if (textForTts && textForTts.trim() !== "") { // Check cleaned text
+                if (textForTts && textForTts.trim() !== "") {
                     if (mainContentWrapper) {
                         const ttsId = message.id || `tts_${Date.now()}`;
                         const oldTtsControl = mainContentWrapper.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
                         if (oldTtsControl) oldTtsControl.remove();
 
                         this.addTtsPlaceholder(mainContentWrapper, ttsId);
-                        this.requestTtsForMessage(textForTts, ttsConfig, mainContentWrapper, ttsId);
+                        this.requestTtsForMessage(textForTts, ttsConfig, mainContentWrapper, ttsId, currentTtsApiEndpoint);
                     }
                 } else {
-                    Utils.log(`TTS not triggered for message ID ${message.id}: Cleaned text is empty. Original: "${message.content.substring(0,50)}..."`, Utils.logLevels.INFO);
+                    Utils.log(`TTS not triggered for message ID ${message.id}: Cleaned text is empty. Original: "${message.content.substring(0, 50)}..."`, Utils.logLevels.INFO);
                 }
             }
         }
         chatBox.scrollTop = chatBox.scrollHeight;
     },
 
-    formatMessageText: function(text) {
+    formatMessageText: function (text) {
         if (typeof text !== 'string') return '';
         let escapedText = Utils.escapeHtml(text);
         escapedText = escapedText.replace(/ /g, ' ').replace(/▍/g, '<span class="streaming-cursor">▍</span>');
         let linkedText = escapedText.replace(/\n/g, '<br>');
         const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
-        linkedText = linkedText.replace(urlRegex, function(url) {
+        linkedText = linkedText.replace(urlRegex, function (url) {
             const displayUrl = url.replace(/ /g, ' ');
             return `<a href="${displayUrl}" target="_blank" rel="noopener noreferrer">${displayUrl}</a>`;
         });
         return linkedText;
     },
 
-    addTtsPlaceholder: function(parentContainer, ttsId) {
+    addTtsPlaceholder: function (parentContainer, ttsId) {
         const existingControl = parentContainer.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
         if (existingControl) existingControl.remove();
 
@@ -498,14 +506,14 @@ const MessageManager = {
         parentContainer.appendChild(ttsControlContainer);
     },
 
-    requestTtsForMessage: async function(text, ttsConfig, parentContainer, ttsId) {
+    requestTtsForMessage: async function (text, ttsConfig, parentContainer, ttsId, ttsApiEndpointToUse) {
         const payload = {
             access_token: "guest",
             model_name: ttsConfig.model_name,
             speaker_name: ttsConfig.speaker_name,
             prompt_text_lang: ttsConfig.prompt_text_lang || "中文",
             emotion: ttsConfig.emotion || "默认",
-            text: text, // Use the cleaned text
+            text: text,
             text_lang: ttsConfig.text_lang || "中文",
             top_k: ttsConfig.top_k || 10,
             top_p: ttsConfig.top_p || 1,
@@ -522,10 +530,12 @@ const MessageManager = {
             seed: ttsConfig.seed === undefined ? -1 : ttsConfig.seed,
         };
 
+        Utils.log(`MessageManager: TTS request. Using Config: Endpoint='${ttsApiEndpointToUse}'`, Utils.logLevels.DEBUG);
+
         try {
-            const response = await fetch(Config.server.ttsApiEndpoint, {
+            const response = await fetch(ttsApiEndpointToUse, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
             });
 
@@ -546,7 +556,7 @@ const MessageManager = {
         }
     },
 
-    updateTtsControlToPlay: function(parentContainer, ttsId, audioUrl) {
+    updateTtsControlToPlay: function (parentContainer, ttsId, audioUrl) {
         const ttsControlContainer = parentContainer.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
         if (ttsControlContainer) {
             ttsControlContainer.innerHTML = '';
@@ -562,7 +572,7 @@ const MessageManager = {
         }
     },
 
-    playTtsAudioFromControl: function(buttonElement) {
+    playTtsAudioFromControl: function (buttonElement) {
         const audioUrl = buttonElement.dataset.audioUrl;
         if (!audioUrl) return;
 
@@ -608,7 +618,7 @@ const MessageManager = {
                 buttonElement.innerHTML = '⚠️';
                 buttonElement.title = "Error playing audio";
                 setTimeout(() => {
-                    if(buttonElement.innerHTML === '⚠️') {
+                    if (buttonElement.innerHTML === '⚠️') {
                         buttonElement.innerHTML = originalContent;
                         buttonElement.title = "Play/Pause Speech";
                     }
@@ -621,7 +631,7 @@ const MessageManager = {
         }
     },
 
-    updateTtsControlToError: function(parentContainer, ttsId) {
+    updateTtsControlToError: function (parentContainer, ttsId) {
         const ttsControlContainer = parentContainer.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
         if (ttsControlContainer) {
             ttsControlContainer.innerHTML = '';
@@ -633,14 +643,14 @@ const MessageManager = {
         }
     },
 
-    cancelFileData: function() {
+    cancelFileData: function () {
         MessageManager.selectedFile = null;
         document.getElementById('filePreviewContainer').innerHTML = '';
         const fileInput = document.getElementById('fileInput');
-        if(fileInput) fileInput.value = '';
+        if (fileInput) fileInput.value = '';
     },
 
-    cancelAudioData: function() {
+    cancelAudioData: function () {
         MessageManager.audioData = null;
         MessageManager.audioDuration = 0;
         document.getElementById('audioPreviewContainer').innerHTML = '';
@@ -648,7 +658,7 @@ const MessageManager = {
         MediaManager.resetRecordingButton();
     },
 
-    clearChat: function() {
+    clearChat: function () {
         if (!ChatManager.currentChatId) {
             UIManager.showNotification('No chat selected to clear.', 'warning');
             return;
