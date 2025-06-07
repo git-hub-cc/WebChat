@@ -912,7 +912,7 @@ const ConnectionManager = {
                 }
                 else { // Unknown data type
                     Utils.log(`Received non-string/non-binary DataChannel message from ${peerId} on DC "${channel.label}". Type: ${typeof rawMessage}. Discarding.`, Utils.logLevels.WARN);
-                    return;
+                    return; // Ignore unknown data type
                 }
 
 

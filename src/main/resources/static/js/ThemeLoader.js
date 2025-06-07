@@ -1,9 +1,9 @@
 const ThemeLoader = {
     themes: {
-        "蜡笔小新-浅色": { name: "蜡笔小新", css: "css/蜡笔小新-浅色.css", dataJs: "data/蜡笔小新.js", defaultSpecialContacts: true },
+        "原神-浅色": { name: "原神（内置tts）", css: "css/原神-浅色.css", dataJs: "data/原神.js", defaultSpecialContacts: true  },
+        "原神-深色": { name: "原神(内置tts)", css: "css/原神-深色.css", dataJs: "data/原神.js" },
+        "蜡笔小新-浅色": { name: "蜡笔小新", css: "css/蜡笔小新-浅色.css", dataJs: "data/蜡笔小新.js"},
         "蜡笔小新-深色": { name: "蜡笔小新", css: "css/蜡笔小新-深色.css", dataJs: "data/蜡笔小新.js" },
-        "telegram-浅色": { name: "telegram", css: "css/telegram-浅色.css", dataJs: null },
-        "telegram-深色": { name: "telegram", css: "css/telegram-深色.css", dataJs: null },
         "仙逆-浅色": { name: "仙逆", css: "css/仙逆-浅色.css", dataJs: "data/仙逆.js" },
         "仙逆-深色": { name: "仙逆", css: "css/仙逆-深色.css", dataJs: "data/仙逆.js" },
         "咒术回战-深色": { name: "咒术回战", css: "css/咒术回战-深色.css", dataJs: "data/咒术回战.js" },
@@ -18,14 +18,14 @@ const ThemeLoader = {
         "斗破苍穹-深色": { name: "斗破苍穹", css: "css/斗破苍穹-深色.css", dataJs: "data/斗破苍穹.js" },
         "迷宫饭-浅色": { name: "迷宫饭", css: "css/迷宫饭-浅色.css", dataJs: "data/迷宫饭.js" },
         "迷宫饭-深色": { name: "迷宫饭", css: "css/迷宫饭-深色.css", dataJs: "data/迷宫饭.js" },
-        "原神-浅色": { name: "原神", css: "css/原神-浅色.css", dataJs: "data/原神.js" },
-        "原神-深色": { name: "原神", css: "css/原神-深色.css", dataJs: "data/原神.js" },
+        "telegram-浅色": { name: "telegram", css: "css/telegram-浅色.css", dataJs: null },
+        "telegram-深色": { name: "telegram", css: "css/telegram-深色.css", dataJs: null },
     },
     COLOR_SCHEME_KEY: 'selectedColorScheme',
-    DEFAULT_COLOR_SCHEME: 'auto', // 'auto', 'light', 'dark'
+    DEFAULT_COLOR_SCHEME: 'light', // 'auto', 'light', 'dark'
 
     _currentEffectiveColorScheme: 'light',
-    _currentThemeKey: '蜡笔小新-浅色',
+    _currentThemeKey: '原神-浅色',
     _systemColorSchemeListener: null,
 
     init: function() {
@@ -123,7 +123,7 @@ const ThemeLoader = {
             return firstKey;
         }
         console.error("CRITICAL: No themes defined. Using hardcoded default.");
-        return '蜡笔小新-浅色';
+        return '原神-浅色';
     },
 
     _setupSystemColorSchemeListener: function(preferredScheme) {

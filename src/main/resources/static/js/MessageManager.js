@@ -447,18 +447,24 @@ const MessageManager = {
         // TTS logic for final AI messages
         if (message.type === 'text' && isAIMessage && ttsConfig && ttsConfig.enabled &&
             (message.isStreaming === false || typeof message.isStreaming === 'undefined') &&
-            message.isNewlyCompletedAIResponse === true &&
-            Config.server.ttsApiEndpoint
+            message.isNewlyCompletedAIResponse === true
         ) {
-            const textForTts = this.cleanTextForTts(message.content);
-            if (textForTts && textForTts.trim() !== "") { // Check cleaned text
-                if (mainContentWrapper) {
-                    const ttsId = message.id || `tts_${Date.now()}`;
-                    const oldTtsControl = mainContentWrapper.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
-                    if (oldTtsControl) oldTtsControl.remove();
+            // Diagnostic log added
+            if (!Config.server.ttsApiEndpoint ) {
+                Utils.log("TTS not triggered: Global TTS API Endpoint is not configured in Config.server.ttsApiEndpoint. Please set it in Settings > AI & API Configuration.", Utils.logLevels.WARN);
+            } else {
+                const textForTts = this.cleanTextForTts(message.content);
+                if (textForTts && textForTts.trim() !== "") { // Check cleaned text
+                    if (mainContentWrapper) {
+                        const ttsId = message.id || `tts_${Date.now()}`;
+                        const oldTtsControl = mainContentWrapper.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
+                        if (oldTtsControl) oldTtsControl.remove();
 
-                    this.addTtsPlaceholder(mainContentWrapper, ttsId);
-                    this.requestTtsForMessage(textForTts, ttsConfig, mainContentWrapper, ttsId);
+                        this.addTtsPlaceholder(mainContentWrapper, ttsId);
+                        this.requestTtsForMessage(textForTts, ttsConfig, mainContentWrapper, ttsId);
+                    }
+                } else {
+                    Utils.log(`TTS not triggered for message ID ${message.id}: Cleaned text is empty. Original: "${message.content.substring(0,50)}..."`, Utils.logLevels.INFO);
                 }
             }
         }

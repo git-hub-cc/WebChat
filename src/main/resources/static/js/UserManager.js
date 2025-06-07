@@ -55,7 +55,7 @@ const UserManager = {
     ensureSpecialContacts: async function(isFallbackMode = false) {
         for (const scDef of SPECIAL_CONTACTS_DEFINITIONS) {
             // Start with the definition as the base
-            let contactData = {
+            let contactDataFromDef = {
                 id: scDef.id,
                 name: scDef.name,
                 lastMessage: scDef.initialMessage,
@@ -69,66 +69,75 @@ const UserManager = {
                 aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || {})), // Deep copy definition's AI config
                 aboutDetails: scDef.aboutDetails || null
             };
-            // Ensure TTS object exists in AI config from definition
-            if (contactData.isAI && !contactData.aiConfig.tts) {
-                contactData.aiConfig.tts = {};
+            // Ensure tts object exists in definition's aiConfig copy
+            if (contactDataFromDef.isAI && !contactDataFromDef.aiConfig.tts) {
+                contactDataFromDef.aiConfig.tts = {};
             }
 
-            // If not in fallback mode, try to load from DB
+            let finalContactData = { ...contactDataFromDef };
+
             let dbContact = null;
             if (!isFallbackMode) {
+                // Prefer existing in-memory version if ensureSpecialContacts is somehow re-run on already loaded contacts
                 dbContact = this.contacts[scDef.id] || await DBManager.getItem('contacts', scDef.id);
             }
 
-
             if (dbContact) {
-                // Merge DB data into contactData. DB values override definition defaults.
-                contactData.name = dbContact.name || contactData.name;
-                contactData.lastMessage = dbContact.lastMessage || contactData.lastMessage;
-                contactData.lastTime = dbContact.lastTime || contactData.lastTime;
-                contactData.unread = dbContact.unread || 0;
-                contactData.avatarUrl = dbContact.avatarUrl || contactData.avatarUrl;
-                contactData.aboutDetails = dbContact.aboutDetails || contactData.aboutDetails;
+                // Merge general fields from DB
+                finalContactData.name = dbContact.name || finalContactData.name;
+                finalContactData.lastMessage = dbContact.lastMessage || finalContactData.lastMessage;
+                finalContactData.lastTime = dbContact.lastTime || finalContactData.lastTime;
+                finalContactData.unread = dbContact.unread || 0; // Keep 0 if undefined
+                finalContactData.avatarUrl = dbContact.avatarUrl || finalContactData.avatarUrl; // Keep def if DB is null
+                finalContactData.aboutDetails = dbContact.aboutDetails || finalContactData.aboutDetails;
 
-                // Carefully merge aiConfig, especially tts
-                const dbAiConfig = dbContact.aiConfig || {};
-                contactData.aiConfig = {
-                    ...contactData.aiConfig, // Defaults from (copied) definition
-                    ...dbAiConfig,           // Overrides from DB for general AI settings
-                    tts: {
-                        ...(contactData.aiConfig.tts || {}),        // Defaults from definition's TTS
-                        ...((dbAiConfig && dbAiConfig.tts) || {}) // Overrides from DB's TTS
-                    }
-                };
+                // Merge aiConfig from DB, but handle TTS separately
+                if (dbContact.aiConfig) {
+                    const { tts: dbTts, ...otherDbAiConfig } = dbContact.aiConfig;
+                    finalContactData.aiConfig = {
+                        ...finalContactData.aiConfig, // from definition
+                        ...otherDbAiConfig,           // other AI config from DB
+                        tts: {
+                            ...(finalContactData.aiConfig.tts || {}), // TTS from definition
+                            ...(dbTts || {})                          // TTS from DB
+                        }
+                    };
+                }
             }
 
-            // If it's an AI contact, try to load TTS settings from localStorage (highest priority for TTS)
-            if (contactData.isAI) {
+            // Ensure tts object exists before localStorage merge
+            if (finalContactData.isAI && !finalContactData.aiConfig.tts) {
+                finalContactData.aiConfig.tts = {};
+            }
+
+            // Apply localStorage TTS settings (highest priority for TTS)
+            if (finalContactData.isAI) {
                 const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${scDef.id}`);
                 if (storedTtsSettingsJson) {
                     try {
                         const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
-                        // Merge localStorage TTS settings, these override whatever is in contactData.aiConfig.tts
-                        contactData.aiConfig.tts = {
-                            ...(contactData.aiConfig.tts || {}),
-                            ...storedTtsSettings
+                        finalContactData.aiConfig.tts = {
+                            ...(finalContactData.aiConfig.tts || {}), // Current merged TTS (Def + DB)
+                            ...storedTtsSettings                     // Override with localStorage
                         };
-                        Utils.log(`Loaded and applied TTS settings for ${scDef.id} from localStorage.`, Utils.logLevels.DEBUG);
+                        Utils.log(`Loaded and applied TTS settings for ${scDef.id} from localStorage. Resulting enabled: ${finalContactData.aiConfig.tts.enabled}`, Utils.logLevels.DEBUG);
                     } catch (e) {
                         Utils.log(`Error parsing TTS settings from localStorage for ${scDef.id}: ${e}`, Utils.logLevels.WARN);
                     }
                 }
             }
 
-            // Preserve existing lastMessage/Time/Unread if contact was already in memory from loadContacts and is being "ensured"
-            if (this.contacts[scDef.id]) {
-                contactData.lastMessage = this.contacts[scDef.id].lastMessage || contactData.lastMessage;
-                contactData.lastTime = this.contacts[scDef.id].lastTime || contactData.lastTime;
-                contactData.unread = typeof this.contacts[scDef.id].unread === 'number' ? this.contacts[scDef.id].unread : contactData.unread;
+            // Preserve existing lastMessage/Time/Unread if contact was already in memory
+            // (this.contacts[scDef.id] would be the version before this full `ensure` logic, potentially just from `loadContacts` if it was a normal contact mistaken for special, or an older ensure pass)
+            // This block is generally for dynamic data if this function were to re-ensure an already active contact.
+            // For aiConfig, the logic above (Def -> DB -> LocalStorage) should be authoritative.
+            if (this.contacts[scDef.id] && this.contacts[scDef.id] !== finalContactData) { // Check if it's not the same object already
+                finalContactData.lastMessage = this.contacts[scDef.id].lastMessage || finalContactData.lastMessage;
+                finalContactData.lastTime = this.contacts[scDef.id].lastTime || finalContactData.lastTime;
+                finalContactData.unread = typeof this.contacts[scDef.id].unread === 'number' ? this.contacts[scDef.id].unread : finalContactData.unread;
             }
 
-
-            this.contacts[scDef.id] = contactData; // Update in-memory store
+            this.contacts[scDef.id] = finalContactData; // Update in-memory store
 
             if (!isFallbackMode) {
                 try {

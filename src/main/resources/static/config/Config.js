@@ -38,7 +38,7 @@ const Config = {
         api_key: "Bearer sk-xxxx",
         model: "qwen-turbo-2025-04-28",
         max_tokens: 1000,
-        ttsApiEndpoint: '', // Default for TTS, also managed by UIManager
+        ttsApiEndpoint: 'https://gsv.ai-lab.top/infer_single', // Default for TTS, also managed by UIManager
     },
     peerConnectionConfig: {
         iceServers: [
