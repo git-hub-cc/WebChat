@@ -1,4 +1,3 @@
-
 const UIManager = {
     isDetailsPanelVisible: false,
 // Properties for Open Source Info Modal
@@ -415,7 +414,7 @@ const UIManager = {
     enableChatInterface: function (enabled) {
         const elementsToToggle = [
             'messageInput', 'sendButtonMain', 'attachBtnMain',
-            'voiceButtonMain',
+            'voiceButtonMain', 'chatDetailsBtnMain'
         ];
         elementsToToggle.forEach(id => {
             const el = document.getElementById(id);
@@ -666,6 +665,8 @@ const UIManager = {
         const avatarEl = document.getElementById('detailsAvatar');
         const statusEl = document.getElementById('detailsStatus');
         const contactActionsEl = document.getElementById('contactActionsDetails');
+        const currentChatActionsEl = document.getElementById('currentChatActionsDetails');
+        const clearCurrentChatBtnDetails = document.getElementById('clearCurrentChatBtnDetails');
         const groupMgmtEl = document.getElementById('detailsGroupManagement');
         const groupActionsEl = document.getElementById('groupActionsDetails');
         const deleteContactBtn = document.getElementById('deleteContactBtnDetails');
@@ -689,6 +690,7 @@ const UIManager = {
         // Reset panel class list
         detailsPanelEl.className = 'details-panel';
 
+        if (currentChatActionsEl) currentChatActionsEl.style.display = 'none';
 
         if (contactActionsEl) contactActionsEl.style.display = 'none';
         if (groupMgmtEl) groupMgmtEl.style.display = 'none';
@@ -697,6 +699,13 @@ const UIManager = {
         if (aiTtsConfigSectionEl) aiTtsConfigSectionEl.style.display = 'none';
 
 
+        // Common actions for any selected chat
+        if (chatId) {
+            if (currentChatActionsEl && clearCurrentChatBtnDetails) {
+                currentChatActionsEl.style.display = 'block';
+                clearCurrentChatBtnDetails.onclick = () => MessageManager.clearChat();
+            }
+        }
         if (type === 'contact') {
             const contact = UserManager.contacts[chatId];
             if (!contact) return;
@@ -724,7 +733,7 @@ const UIManager = {
 
             if (contact.isSpecial) {
                 statusEl.textContent = (contact.isAI ? 'AI Assistant' : 'Special Contact') + ' - Always available';
-                if (contactActionsEl) contactActionsEl.style.display = 'none'; // No actions for special contacts
+                if (contactActionsEl) contactActionsEl.style.display = 'none'; // No "Delete Contact" for special contacts
 
                 if (contact.isAI && contact.aboutDetails && aiContactAboutSectionEl) {
                     aiContactAboutSectionEl.style.display = 'block';
@@ -792,7 +801,7 @@ const UIManager = {
 
             } else { // Non-special (human) contact
                 statusEl.textContent = ConnectionManager.isConnectedTo(chatId) ? 'Connected' : 'Offline';
-                if (contactActionsEl) contactActionsEl.style.display = 'block'; // Show contact actions
+                if (contactActionsEl) contactActionsEl.style.display = 'block'; // Show contact settings (like delete)
                 if (deleteContactBtn) deleteContactBtn.onclick = () => ChatManager.deleteChat(chatId, 'contact');
                 if (aiTtsConfigSectionEl) aiTtsConfigSectionEl.style.display = 'none'; // Hide AI TTS config for non-AI
             }

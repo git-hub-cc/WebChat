@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -47,7 +46,7 @@
                     <button class="header-action-btn" id="videoCallButtonMain" title="Video Call" disabled>📹</button>
                     <button class="header-action-btn" id="audioCallButtonMain" title="Audio Call" disabled>🎤</button>
                     <button class="header-action-btn" id="screenShareButtonMain" title="Share Screen" disabled>🖥️</button>
-                    <button class="header-action-btn" id="chatDetailsBtnMain" title="Chat Info">ℹ️</button>
+                    <button class="header-action-btn" id="chatDetailsBtnMain" title="Chat Info" disabled>ℹ️</button>
                 </div>
             </header>
 
@@ -90,22 +89,16 @@
                 <p id="detailsStatus">Status: </p>
             </div>
             <!-- AI Contact About Section -->
-            <div class="details-section" id="aiContactAboutSection">
+            <div class="details-section" id="aiContactAboutSection" style="display: none;">
                 <h4>About <span id="aiContactAboutName">AI Name</span></h4>
                 <div id="aiContactDetailsContent">
                     <p><strong>基本信息</strong></p>
-                    <ul id="aiContactBasicInfoList">
-                        <!-- Populated by JS: <li><strong>年龄:</strong> 16岁</li> -->
-                    </ul>
+                    <ul id="aiContactBasicInfoList"></ul>
                     <p><strong>关于 <span id="aiContactAboutNameSub">AI Name</span></strong></p>
                     <p id="aiContactAboutText"></p>
                 </div>
             </div>
             <!-- End AI Contact About Section -->
-            <div class="details-section" id="contactActionsDetails">
-                <h4>Contact Actions</h4>
-                <button id="deleteContactBtnDetails" class="btn btn-danger">Delete Contact</button>
-            </div>
             <!-- AI TTS Configuration Section -->
             <div class="details-section" id="aiTtsConfigSection" style="display: none;">
                 <h4 class="collapsible-header" id="aiTtsConfigHeader">
@@ -128,21 +121,32 @@
                 </div>
             </div>
             <!-- End AI TTS Configuration Section -->
-            <div class="details-section" id="detailsGroupManagement">
+            <!-- Chat Actions Section -->
+            <div class="details-section" id="currentChatActionsDetails" style="display: none;">
+                <h4>Chat Actions</h4>
+                <button id="clearCurrentChatBtnDetails" class="btn btn-warning">Clear Chat History</button>
+            </div>
+            <!-- Contact Settings Section -->
+            <div class="details-section" id="contactActionsDetails" style="display: none;">
+                <h4>Contact Settings</h4>
+                <button id="deleteContactBtnDetails" class="btn btn-danger">Delete Contact</button>
+            </div>
+            <!-- Group Management Section -->
+            <div class="details-section" id="detailsGroupManagement" style="display: none;">
                 <h4>Members (<span id="groupMemberCount">0</span>)</h4>
                 <div id="groupMemberListDetails" class="member-list-details"></div>
-                <div id="addGroupMemberArea" class="add-member-details">
+                <div id="addGroupMemberArea" class="add-member-details" style="display: none;">
                     <h5>Add Member</h5>
                     <select id="contactsDropdownDetails"></select>
                     <button id="addMemberBtnDetails" class="btn btn-primary">Add</button>
                 </div>
-                <div id="leftMembersArea" class="left-members-details">
+                <div id="leftMembersArea" class="left-members-details" style="display: none;">
                     <h5>Previously Left Members</h5>
                     <div id="leftMemberListDetails"></div>
                 </div>
             </div>
-            <div class="details-section" id="groupActionsDetails">
-                <h4>Group Actions</h4>
+            <div class="details-section" id="groupActionsDetails" style="display: none;">
+                <h4>Group Settings</h4>
                 <button id="leaveGroupBtnDetails" class="btn btn-danger">Leave Group</button>
                 <button id="dissolveGroupBtnDetails" class="btn btn-danger">Dissolve Group</button>
             </div>

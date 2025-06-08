@@ -12,9 +12,7 @@ const MediaManager = {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             Utils.log('Browser does not support media devices.', Utils.logLevels.WARN);
             if(voiceButton) voiceButton.disabled = true;
-            return;
         }
-        if(voiceButton) voiceButton.disabled = false; // Enable button, permission requested on click
     },
 
     requestMicrophonePermission: async function() {

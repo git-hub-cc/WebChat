@@ -1,4 +1,4 @@
-const Config = {
+const ConfigObj = {
     reconnect: {
         maxAttempts: 3,
         delay: 3000,
@@ -30,7 +30,7 @@ const Config = {
         sessionTime: 5 * 60 * 1000,
     },
     music: '/music/call.mp3',
-    // todo
+    // TODO
     server: {
         signalingServerUrl: 'ws://localhost:8080/signaling',
         // These are defaults; UIManager will load user-configured values from localStorage.
@@ -58,3 +58,4 @@ const Config = {
         sdpSemantics: 'unified-plan',
     },
 }
+window.Config = ConfigObj;
