@@ -982,7 +982,7 @@ const VideoCallManager = {
         if (callContainer) callContainer.style.display = 'none';
         this.hideCallRequest();
 
-        const oldPeerId = this.currentPeerId;
+        const oldPeerId = this.currentPeerId; // Store before nulling
         this.isCallActive = false;
         this.isCallPending = false;
         this.isCaller = false;
@@ -990,23 +990,20 @@ const VideoCallManager = {
         this.isAudioOnly = false;
         this.isScreenSharing = false;
         this.isVideoEnabled = true;
-        this.currentPeerId = null;
+        this.currentPeerId = null; // Null it out for VideoCallManager's state
 
-        if (oldPeerId && ConnectionManager.connections[oldPeerId]) {
-            const pc = ConnectionManager.connections[oldPeerId].peerConnection;
-            if (pc) {
-                pc.getSenders().forEach(sender => {
-                    if (sender.track && (sender.track.kind === 'audio' || sender.track.kind === 'video')) {
-                        try {
-                            pc.removeTrack(sender);
-                        } catch (e) {
-                            Utils.log(`Error removing track from sender for ${oldPeerId}: ${e}`, Utils.logLevels.WARN);
-                        }
-                    }
-                });
-                pc.ontrack = null;
-            }
+        if (oldPeerId) {
+            // Request ConnectionManager to close the P2P connection.
+            // This will trigger underlying RTCPeerConnection.close(),
+            // which in turn should cause connection state changes on the remote peer,
+            // leading to their cleanup.
+            Utils.log(`VideoCallManager.endCallCleanup: Requesting ConnectionManager to close P2P connection to ${oldPeerId}.`, Utils.logLevels.INFO);
+            ConnectionManager.close(oldPeerId, false); // false for notifyPeer, as VideoCallManager has already attempted its own signaling.
         }
+        // Removed the direct pc.removeTrack and pc.ontrack = null here,
+        // as ConnectionManager.close(oldPeerId) should handle the full P2P connection teardown
+        // including the RTCPeerConnection object and its event handlers.
+
         Utils.log('Call resources cleaned up.', Utils.logLevels.INFO);
         this.updateUIForCallType();
     },

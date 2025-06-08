@@ -1,4 +1,3 @@
-
 const ChatManager = {
     currentChatId: null,
     chats: {}, // { chatId: [messages] }
@@ -114,10 +113,20 @@ const ChatManager = {
 
             let avatarContentHtml = '';
             const avatarClass = `chat-list-avatar ${item.isSpecial ? item.id : ''}`;
-            if (item.avatarUrl) {
-                avatarContentHtml = `<img src="${item.avatarUrl}" alt="${Utils.escapeHtml(item.name.charAt(0))}" class="avatar-image">`;
+
+            let fallbackText;
+            if (item.avatarText) {
+                fallbackText = Utils.escapeHtml(item.avatarText);
+            } else if (item.name && item.name.length > 0) {
+                fallbackText = Utils.escapeHtml(item.name.charAt(0).toUpperCase());
             } else {
-                avatarContentHtml = Utils.escapeHtml(item.avatarText);
+                fallbackText = '?';
+            }
+
+            if (item.avatarUrl) {
+                avatarContentHtml = `<img src="${item.avatarUrl}" alt="${fallbackText}" class="avatar-image" data-fallback-text="${fallbackText}" data-entity-id="${item.id}">`;
+            } else {
+                avatarContentHtml = fallbackText;
             }
 
             li.innerHTML = `

@@ -653,7 +653,6 @@ body {
     100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
 }
 
-/* <<< CHANGE START - Details Panel >>> */
 /* Details Panel */
 .details-panel {
     width: var(--details-panel-width);
@@ -679,31 +678,27 @@ body {
 }
 .details-content {
     flex-grow: 1;
-    padding: 15px; /* Increased padding for better overall look */
-    /* overflow-y: auto; */
-    overflow-y: scroll; /* <<< FIX: Force scrollbar space to prevent content width shift on toggle */
-    /* scrollbar-gutter: stable; */ /* Alternative for modern browsers */
-    padding-right: 10px; /* Adjust padding slightly due to scrollbar */
+    padding: 15px;
+    overflow-y: scroll;
+    padding-right: 10px;
 }
 .details-section {
-    margin-bottom: 25px; /* Increase spacing between sections */
-    padding: 0 5px; /* Slight inner padding */
+    margin-bottom: 25px;
+    padding: 0 5px;
 }
 .details-section h4 {
     font-size: 14px;
     font-weight: 600;
-    color: var(--primary-color); /* Make headers stand out */
-    margin-bottom: 12px; /* Increased for better separation */
+    margin-bottom: 12px;
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 8px; /* Increased for better separation */
+    padding-bottom: 8px;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
-/* Specific override for collapsible below */
 #aiTtsConfigSection h4.collapsible-header,
 #aiContactAboutSection h4 {
-    color: var(--text-color-light); /* Revert color for these specific headers if primary is too much */
+    color: var(--text-color-light);
 }
 
 
@@ -717,44 +712,41 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 36px;
-    margin: 10px auto 15px auto; /* Add top margin */
-    overflow: hidden; /* For image avatars */
+    margin: 10px auto 15px auto;
+    overflow: hidden;
     box-shadow: var(--box-shadow);
 }
 #detailsName { text-align: center; font-size: 18px; font-weight: 600; margin-bottom: 5px;}
-#detailsId, #detailsStatus { text-align: center; font-size: 13px; color: var(--text-color-light); margin-bottom: 2px; /* Decreased spacing */}
-#detailsStatus { margin-bottom: 15px;} /* Add more space after status */
+#detailsId, #detailsStatus { text-align: center; font-size: 13px; color: var(--text-color-light); margin-bottom: 2px; }
+#detailsStatus { margin-bottom: 15px;}
 
-/* General paragraph styling within details sections for consistency */
 .details-section p {
     font-size: 14px;
     color: var(--text-color);
     margin-bottom: 8px;
     line-height: 1.5;
 }
-.details-section p strong { /* For sub-headings within paragraphs if used */
+.details-section p strong {
     font-weight: 500;
     display: block;
     margin-bottom: 4px;
 }
 
-/* AI Contact Specifics */
-#aiContactAboutSection h4 span { /* Style the AI name in the heading */
+#aiContactAboutSection h4 span {
     color: var(--special-contact-color);
     font-weight: inherit;
 }
 #aiContactAboutSection h4 {
-    margin-bottom: 15px; /* More space after the About Header */
+    margin-bottom: 15px;
 }
-#aiContactDetailsContent p strong { /* e.g., "Basic Information", "About AI Name" */
+#aiContactDetailsContent p strong {
     color: var(--text-color);
     font-weight: 600;
-    display: block; /* Ensure it's a block element */
-    margin-top: 15px; /* Space above these pseudo-headings */
-    margin-bottom: 8px; /* Space below */
+    display: block;
+    margin-top: 15px;
+    margin-bottom: 8px;
     font-size: 0.95em;
 }
-/* Remove top margin for the very first "strong" sub-heading */
 #aiContactDetailsContent > p:first-of-type strong {
     margin-top: 0;
 }
@@ -763,34 +755,32 @@ body {
     list-style-type: none;
     padding-left: 0;
     margin-bottom: 10px;
-    padding-left: 8px; /* Indent list slightly */
+    padding-left: 8px;
 }
 #aiContactBasicInfoList li {
     margin-bottom: 6px;
     font-size: 0.92em;
-    color: var(--text-color-light); /* Softer color for value */
+    color: var(--text-color-light);
 }
 #aiContactBasicInfoList li strong {
-    color: var(--text-color); /* Keep label color strong */
+    color: var(--text-color);
     margin-right: 4px;
 }
 
 #aiContactAboutText {
     white-space: pre-wrap;
     font-size: 0.9em;
-    line-height: 1.6; /* Improve readability */
+    line-height: 1.6;
     color: var(--text-color-light);
-    /*background-color: #fff; !* Slight background *!*/
     padding: 10px;
     border-radius: var(--border-radius);
     border: 1px dashed var(--border-color);
 }
 
-/* AI TTS Config Section in Details Panel */
 #aiTtsConfigSection h4.collapsible-header {
-    color: var(--text-color-light); /* Match About header color */
-    border-bottom: 1px solid var(--border-color); /* Ensure border like other h4 */
-    margin-bottom: 0; /* Remove bottom margin, content will provide padding */
+    color: var(--text-color-light);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 0;
 }
 #aiTtsConfigSection .collapsible-header {
     cursor: pointer;
@@ -810,81 +800,74 @@ body {
 }
 #aiTtsConfigSection .collapsible-header.active {
     color: var(--primary-color);
-    border-bottom-color: var(--primary-color); /* Highlight border when active */
+    border-bottom-color: var(--primary-color);
 }
 #aiTtsConfigSection .collapsible-header.active .collapse-icon {
     transform: rotate(90deg);
 }
 .tts-config-content-details {
     padding-left: 12px;
-    border-left: 2px solid var(--border-color); /* Slightly darker border */
-    margin-top: 10px; /* Space between header and content */
-    margin-left: 5px; /* Offset border slightly */
+    border-left: 2px solid var(--border-color);
+    margin-top: 10px;
+    margin-left: 5px;
     padding-top: 5px;
 }
-/* Styles for dynamically generated TTS config form items */
 #ttsConfigFormContainer .tts-config-item {
     display: flex;
     align-items: center;
-    margin-bottom: 12px; /* Increased margin for better spacing */
+    margin-bottom: 12px;
 }
 #ttsConfigFormContainer .tts-config-item label {
-    width: 85px; /* Adjusted width for labels */
+    width: 85px;
     flex-shrink: 0;
-    font-size: 0.88em; /* Slightly smaller label text */
+    font-size: 0.88em;
     color: var(--text-color);
-    margin-right: 10px; /* Increased margin */
+    margin-right: 10px;
     text-align: right;
     font-weight: 500;
 }
 
-/* Input & Select Styling */
 #ttsConfigFormContainer .tts-config-item input[type="text"],
 #ttsConfigFormContainer .tts-config-item input[type="number"],
 #ttsConfigFormContainer .tts-config-item select {
-    /* width: 70px; <<< REMOVED: Rely on flex-grow */
     flex-grow: 1;
     padding: 7px 10px;
     border: 1px solid var(--border-color);
-    border-radius: var(--border-radius); /* Match theme */
-    font-size: 0.9em; /* Match label size */
-    background-color: #fff; /* Ensure inputs have a background */
+    border-radius: var(--border-radius);
+    font-size: 0.9em;
+    background-color: #fff;
     font-family: var(--font-family);
-    min-width: 50px; /* Prevent collapse */
-    -webkit-appearance: none; /* Remove default styles for select */
+    min-width: 50px;
+    -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* Custom Arrow for Select */
 #ttsConfigFormContainer .tts-config-item select {
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'); /* stroke is --text-color-light */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
     background-repeat: no-repeat;
     background-position: right 8px center;
-    padding-right: 30px; /* Make space for arrow */
+    padding-right: 30px;
     cursor: pointer;
 }
 
 #ttsConfigFormContainer .tts-config-item input[type="checkbox"] {
     margin-left: 0;
-    /* transform: scale(0.9); */
     width: 18px;
     height: 18px;
     flex-grow: 0;
     flex-shrink: 0;
-    accent-color: var(--primary-color); /* Style the check color */
-    margin-right: auto; /* Push subsequent content away, keeps checkbox left-aligned with other inputs */
+    accent-color: var(--primary-color);
+    margin-right: auto;
     cursor: pointer;
 }
 
-/* Focus Styles */
 #ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]):focus,
 #ttsConfigFormContainer .tts-config-item select:focus {
     outline: none;
     border-color: var(--primary-color);
-    /* box-shadow: 0 0 0 1px var(--primary-color); */
-    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Match search bar focus */
+    box-shadow: 0 0 0 2px rgba(0,136,204,0.2);
 }
 #ttsConfigFormContainer .tts-config-item input[type="checkbox"]:focus-visible {
     outline: 2px solid var(--primary-color);
@@ -892,23 +875,22 @@ body {
 }
 
 #saveAiTtsSettingsBtnDetails {
-    margin-top: 10px; /* Adjusted margin */
+    margin-top: 10px;
     width: 100%;
 }
 
-/* TTS Attribution Section */
 .tts-attribution-section {
     margin-top: 20px;
     padding-top: 15px;
     border-top: 1px solid var(--border-color);
-    margin-left: 5px; /* Align with collapsible content's left margin */
-    margin-right: 5px; /* Match right padding of .details-content for symmetry */
+    margin-left: 5px;
+    margin-right: 5px;
 }
 .tts-attribution-section p {
     font-size: 0.88em;
     color: var(--text-color-light);
     line-height: 1.6;
-    margin-bottom: 0; /* Remove default paragraph bottom margin */
+    margin-bottom: 0;
 }
 .tts-attribution-section p strong {
     font-weight: 500;
@@ -921,14 +903,12 @@ body {
 .tts-attribution-section a:hover {
     text-decoration: underline;
 }
-/* <<< CHANGE END - Details Panel >>> */
-
 
 .member-list-details .member-item-detail {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 0; /* Increased padding */
+    padding: 10px 0;
     font-size: 14px;
 }
 .member-item-detail .owner-badge {
@@ -941,14 +921,14 @@ body {
 .add-member-details select {
     width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid var(--border-color); border-radius: 4px;
 }
-.add-member-details button { /* Specific button styling */
+.add-member-details button {
     width: 100%;
 }
 .left-members-details .left-member-item-detail {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0; /* Adjusted padding */
+    padding: 8px 0;
     font-size: 13px;
     color: var(--text-color-light);
 }
@@ -956,7 +936,6 @@ body {
     background: var(--accent-color); color: white; border:none; border-radius: 4px; padding: 3px 6px; cursor: pointer;
 }
 
-/* Full-width buttons within details sections */
 .details-section .btn {
     width: 100%;
     margin-bottom: 8px;
@@ -969,9 +948,7 @@ body {
 #detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
 #detailsPanelContent #detailsGroupManagement #leftMembersArea,
 #detailsPanelContent #groupActionsDetails,
-#detailsPanelContent #dissolveGroupBtnDetails,
-#mainMenuModal .settings-section.manual-connection-advanced,
-#mainMenuModal #modalResetAllConnectionsBtn {
+#detailsPanelContent #dissolveGroupBtnDetails {
     display: none;
 }
 
@@ -983,7 +960,7 @@ body {
     font-size: 14px;
     font-weight: 500;
     transition: background-color 0.2s, box-shadow 0.2s;
-    display: inline-flex; /* Better alignment for icons if any */
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     text-align: center;
@@ -999,7 +976,7 @@ body {
 
 
 /* Modals (Loading, Video Call, Settings) */
-.loading-overlay { /* Default state is display:flex, managed by JS for hiding */
+.loading-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -1025,7 +1002,6 @@ body {
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 .loading-text { font-size: 18px; font-weight: 500; }
 
-/* Default hidden state for modals, JS will toggle display */
 #videoCallRequest,
 #callingModal,
 #videoCallContainer,
@@ -1041,7 +1017,6 @@ body {
     width: 100%;
     height: 100%;
     background-color: rgba(0,0,0,0.5);
-    /* display: none; Default moved to specific IDs for initial state */
     justify-content: center;
     align-items: center;
     z-index: 1000;
@@ -1067,13 +1042,13 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 .modal-header h2 { font-size: 20px; }
-.close-modal-btn { /* General close button for modals */
+.close-modal-btn {
     background: none;
     border: none;
     font-size: 24px;
     cursor: pointer;
     color: var(--text-color-light);
-    padding: 0; /* Reset padding */
+    padding: 0;
 }
 .close-modal-btn:hover { color: var(--primary-color); }
 
@@ -1098,8 +1073,6 @@ body {
 .manual-connect-step { margin-bottom: 10px; }
 .manual-connect-step button { display: block; width: 100%; margin-bottom: 5px; }
 
-/* Main Menu Modal specific hidden sections (can be toggled by JS) */
-#mainMenuModal .settings-section.manual-connection-advanced,
 #mainMenuModal #modalResetAllConnectionsBtn {
     display: none;
 }
@@ -1109,7 +1082,7 @@ body {
 .video-call-avatar {
     font-size: 40px;
     margin-bottom: 10px;
-    width: 60px; /* Size for request modal avatar */
+    width: 60px;
     height: 60px;
     border-radius: 50%;
     background-color: var(--primary-color);
@@ -1119,11 +1092,10 @@ body {
     justify-content: center;
     margin-left: auto;
     margin-right: auto;
-    overflow: hidden; /* For image */
+    overflow: hidden;
 }
 .video-call-request-buttons { display: flex; justify-content: space-around; margin-top: 20px; }
 
-/* Calling Modal Specifics */
 #callingModal .modal-content {
     max-width: 350px;
     text-align: center;
@@ -1134,20 +1106,18 @@ body {
 }
 #callingModal #callingModalAvatar {
     font-size: 50px;
-    margin: 10px auto 20px auto; /* Ensure margin is applied correctly */
-    /* width, height, bg-color, color, border-radius, display, align, justify, overflow are in .chat-list-avatar or specific rule */
+    margin: 10px auto 20px auto;
 }
 #callingModal #callingModalText {
     margin-bottom: 20px;
 }
 #callingModal .modal-footer {
-    justify-content: center; /* Center the single button */
-    border-top: none; /* Already in main .modal-footer, but ensure it's not overridden if this becomes more specific */
+    justify-content: center;
+    border-top: none;
 }
 #callingModal #callingModalCancelBtn {
-    width: 80%; /* From existing CSS for this button */
-    max-width: 200px; /* From existing CSS */
-    /* flex-grow and margin-left removed as it's a single centered button now */
+    width: 80%;
+    max-width: 200px;
 }
 
 
@@ -1159,7 +1129,6 @@ body {
     height: 100%;
     background: rgba(0, 0, 0, 0.9);
     z-index: 1001;
-    /* display: none; Set by specific ID */
     flex-direction: column;
     align-items: center;
     justify-content: center;
@@ -1189,7 +1158,7 @@ body {
     background-color: #2c2c2c;
 }
 .video-call-container-main.audio-only-mode #localVideo,
-.video-call-container-main.screen-sharing-mode #localVideo { /* Hide local if audio-only OR screen sharing (as viewer) */
+.video-call-container-main.screen-sharing-mode #localVideo {
     display: none !important;
 }
 .video-call-container-main.audio-only-mode .video-streams {
@@ -1275,13 +1244,13 @@ body {
     justify-content: space-between;
     align-items: center;
     font-size: 14px;
-    margin-bottom: 10px; /* Added spacing */
+    margin-bottom: 10px;
 }
 
 .switch {
     position: relative;
     display: inline-block;
-    width: 46px; /* Adjusted width */
+    width: 46px;
     height: 24px;
 }
 
@@ -1320,14 +1289,13 @@ input:checked + .slider {
 }
 
 input:focus + .slider {
-    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Match focus */
+    box-shadow: 0 0 0 2px rgba(0,136,204,0.2);
 }
 
 input:checked + .slider:before {
-    -webkit-transform: translateX(56px);
-    -ms-transform: translateX(56px);
-    transform: translateX(56px);
+    transform: translateX(54px); /* Adjusted for 46px width switch */
 }
+
 
 .slider.round {
     border-radius: 24px;
@@ -1371,10 +1339,9 @@ input:checked + .slider:before {
         position: absolute;
         right: 0; top: 0; height: 100%;
         z-index: 20;
-        box-shadow: -2px 0 10px rgba(0,0,0,0.15); /* Add shadow on mobile */
+        box-shadow: -2px 0 10px rgba(0,0,0,0.15);
     }
     .app-container.show-details .chat-area {
-        /* margin-right: var(--details-panel-width); */ /* Not needed if absolute */
     }
 }
 
@@ -1384,8 +1351,8 @@ input:checked + .slider:before {
     }
     .app-container {
         flex-direction: column;
-        height: 100vh; /* Max height for desktop */
-        max-height: 100vh; /* Max height for desktop */
+        height: 100vh;
+        max-height: 100vh;
         border-radius: 0;
     }
     .sidebar-nav {
@@ -1416,18 +1383,18 @@ input:checked + .slider:before {
         width: 100%;
         max-width: 300px;
         position: fixed;
-        right: -300px; /* Start off-screen */
+        right: -300px;
         top: 0;
         height: 100%;
         z-index: 20;
         transition: right 0.3s ease-in-out;
     }
     .app-container.show-details .details-panel {
-        right: 0; /* Slide in */
+        right: 0;
         display: flex;
     }
     .app-container.show-details .chat-area {
-        margin-right: 0; /* No margin change needed as details panel is fixed */
+        margin-right: 0;
     }
     .video-call-container-main #localVideo {
         width: 90px !important;
@@ -1458,7 +1425,7 @@ input:checked + .slider:before {
     cursor: grab;
     display: flex;
     flex-direction: column;
-    background-color: #2c2c2c; /* Dark background for PiP */
+    background-color: #2c2c2c;
 }
 
 .video-call-container-main.pip-mode .video-streams {
@@ -1484,27 +1451,27 @@ input:checked + .slider:before {
     border-radius: 4px;
     z-index: 1;
     object-fit: cover;
-    display: block !important; /* Ensure local video shows in PiP if available */
+    display: block !important;
 }
 .video-call-container-main.pip-mode.audio-only-mode #localVideo,
 .video-call-container-main.pip-mode.screen-sharing-mode #localVideo {
-    display: none !important; /* Still hide if contextually inappropriate */
+    display: none !important;
 }
 
 
 .video-call-container-main.pip-mode .video-call-controls {
-    position: relative; /* <<< Change from absolute */
-    bottom: auto; /* <<< Change */
+    position: relative;
+    bottom: auto;
     padding: 6px;
     flex-shrink: 0;
     justify-content: space-around;
-    border-radius: 0; /* <<< Change */
-    background-color: rgba(0,0,0,0.6); /* Semi-transparent controls BG */
+    border-radius: 0;
+    background-color: rgba(0,0,0,0.6);
     gap: 5px;
 }
 
 .video-call-container-main.pip-mode .video-call-controls .video-call-button {
-    width: 36px; /* Smaller buttons for PiP */
+    width: 36px;
     height: 36px;
     font-size: 16px;
     margin: 0 2px;
@@ -1529,7 +1496,7 @@ input:checked + .slider:before {
     color: #856404;
     border-left: 4px solid #ffc107;
     padding: 10px 15px;
-    margin: 10px auto; /* Center it */
+    margin: 10px auto;
     font-size: 0.9em;
     border-radius: var(--border-radius);
     max-width: 90%;
@@ -1545,7 +1512,7 @@ input:checked + .slider:before {
     color: white;
     border: none;
     padding: 5px 10px;
-    border-radius: var(--border-radius); /* Consistent radius */
+    border-radius: var(--border-radius);
     cursor: pointer;
     font-size: 0.9em;
     margin-left: 5px;
@@ -1564,34 +1531,32 @@ input:checked + .slider:before {
     background-color: #5a6268;
 }
 
-/* File input is hidden by default, attach button triggers it */
 #fileInput {
     display: none;
 }
 
-/* Outgoing Call Modal Styling */
-#callingModal .modal-content { /* Re-confirming specificity */
+#callingModal .modal-content {
     text-align: center;
     max-width: 350px;
 }
-#callingModal #callingModalAvatar { /* Target the avatar div in callingModal */
+#callingModal #callingModalAvatar {
     font-size: 50px;
-    margin: 10px auto 20px auto; /* Merged from inline */
+    margin: 10px auto 20px auto;
     width: 80px;
     height: 80px;
-    background-color: var(--primary-color); /* Fallback BG */
-    color: white; /* Fallback text color */
+    background-color: var(--primary-color);
+    color: white;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden; /* Important for image */
+    overflow: hidden;
 }
-#callingModal .modal-footer { /* Re-confirming for callingModal */
+#callingModal .modal-footer {
     border-top: none;
     justify-content: center;
 }
-#callingModal #callingModalCancelBtn { /* Re-confirming for callingModal */
+#callingModal #callingModalCancelBtn {
     width: 80%;
     max-width: 200px;
 }
@@ -1599,8 +1564,8 @@ input:checked + .slider:before {
     display: inline-block;
     animation: blink-animation 1s step-end infinite;
     opacity: 1;
-    font-weight: bold; /* Make it more visible */
-    color: var(--primary-color); /* Or a distinct cursor color */
+    font-weight: bold;
+    color: var(--primary-color);
 }
 
 @keyframes blink-animation {
@@ -1609,28 +1574,25 @@ input:checked + .slider:before {
     }
 }
 #openSourceInfoModal .modal-content {
-    max-width: 550px; /* Adjust as needed */
+    max-width: 550px;
 }
 
 #openSourceInfoModal .modal-body img {
-    border-radius: var(--border-radius); /* Consistent rounding */
-    box-shadow: var(--box-shadow);     /* Consistent shadow */
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
 }
 
 #openSourceInfoModal #openSourceModalTimer {
     font-weight: bold;
 }
 
-/* Ensure it's hidden initially */
 #openSourceInfoModal {
     display: none;
 }
 
-/* Custom Select Dropdown (Theme, Color Scheme) */
 .custom-select {
     position: relative;
-    /* width: 200px; */
-    flex-grow: 1; /* Allow to grow */
+    flex-grow: 1;
     min-width: 150px;
     font-family: var(--font-family);
     user-select: none;
@@ -1653,7 +1615,7 @@ input:checked + .slider:before {
     box-shadow: 0 0 0 2px rgba(0,136,204,0.2);
 }
 
-.custom-select .selected::after { /* Dropdown arrow */
+.custom-select .selected::after {
     content: '▼';
     font-size: 0.8em;
     margin-left: 5px;
@@ -1665,18 +1627,17 @@ input:checked + .slider:before {
 }
 .custom-select .options {
     position: absolute;
-    top: calc(100% + 5px); /* Space below */
+    top: calc(100% + 5px);
     left: 0;
     right: 0;
     border: 1px solid var(--border-color);
-    /* border-top: none; */
     background-color: #fff;
     box-shadow: var(--box-shadow);
     display: none;
-    z-index: 1010; /* Above modal content */
+    z-index: 1010;
     max-height: 200px;
     overflow-y: auto;
-    border-radius: var(--border-radius); /* Round corners */
+    border-radius: var(--border-radius);
 }
 .custom-select.open .options {
     display: block;
@@ -1689,7 +1650,7 @@ input:checked + .slider:before {
 .custom-select .option:hover {
     background-color: var(--primary-color);
     color: white;
-    text-shadow: none; /* Removed text-shadow */
+    text-shadow: none;
 
 }
 .custom-select .option.active-option {
@@ -1697,23 +1658,22 @@ input:checked + .slider:before {
     font-weight: bold;
 }
 
-/* Collapsible Section in Settings Modal */
 .collapsible-header {
     cursor: pointer;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    font-weight: 600; /* Make header slightly bolder */
-    border-bottom: 1px solid var(--border-color); /* Add border */
-    margin-bottom: 10px; /* Add space */
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 10px;
     transition: color 0.2s, border-bottom-color 0.2s;
 }
 .collapsible-header:hover {
     color: var(--primary-color);
 }
 .collapsible-header.active {
-    border-bottom-color: var(--primary-color); /* Indicate active section */
+    border-bottom-color: var(--primary-color);
     color: var(--primary-color);
 }
 .collapsible-header .collapse-icon {
@@ -1721,46 +1681,52 @@ input:checked + .slider:before {
     font-size: 0.9em;
     margin-left: 5px;
 }
-.collapsible-header.active .collapse-icon {
-    transform: rotate(90deg);
-}
 .collapsible-content {
     padding-left: 15px;
     border-left: 2px solid var(--hover-bg-color);
-    margin-top: 0px; /* Adjusted margin */
+    margin-top: 0px;
     padding-top: 5px;
     margin-bottom: 10px;
-    /* display: none; is set inline in HTML initially */
 }
+
+/* MODIFIED/ADDED START */
+.modal-body .collapsible-content p { /* Style for descriptive paragraphs inside collapsible modal content */
+    font-size: 0.9em;
+    color: var(--text-color-light);
+    margin-bottom: 15px; /* More space if it's a preamble */
+    line-height: 1.5;
+}
+.modal-body .collapsible-content .manual-connect-step:last-child { /* Remove bottom margin from last step in list */
+    margin-bottom: 0;
+}
+/* MODIFIED/ADDED END */
+
 .settings-section .settings-item label {
     margin-right: 10px;
     flex-shrink: 0;
-    width: auto; /* <<< Allow label width to adapt */
+    width: auto;
     min-width: 80px;
-    text-align: left; /* <<< Align left in modal */
+    text-align: left;
     font-size: 0.95em;
     font-weight: 500;
 }
-/* Generic disabled style for all buttons, if not already well-defined */
 .btn:disabled {
-    background-color: #ccc !important; /* Use important to ensure override */
+    background-color: #ccc !important;
     color: #666 !important;
     cursor: not-allowed !important;
     opacity: 0.7 !important;
-    border-color: #bbb !important; /* if buttons have borders and this is desired */
+    border-color: #bbb !important;
 }
 
-/* Class for buttons that should take on primary theme color when active/enabled */
 .btn.btn-action-themed {
     background-color: var(--primary-color);
     color: white;
 }
-.btn.btn-action-themed:hover:not(:disabled) { /* Only hover effect if not disabled */
+.btn.btn-action-themed:hover:not(:disabled) {
     background-color: var(--primary-color-dark);
 }
-/* Specific override for AI config labels */
 .settings-section .collapsible-content .settings-item label {
-    width: 120px; /* Fix width for AI config */
+    width: 120px;
     text-align: right;
 }
 
@@ -1768,16 +1734,53 @@ input:checked + .slider:before {
 .settings-section .settings-item input[type="password"],
 .settings-section .settings-item input[type="number"] {
     flex-grow: 1;
-    min-width: 0; /* Allow shrinking if needed, flex-grow will manage expansion */
+    min-width: 0;
     border-radius: var(--border-radius);
     padding: 8px 10px;
 }
 .settings-section .settings-item input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Match search bar focus */
+    box-shadow: 0 0 0 2px rgba(0,136,204,0.2);
 }
 
 #colorSchemeCustomSelectContainer,#themeCustomSelectContainer{
     color: black;
+}
+
+/* CSS for avatar fallbacks */
+.avatar-fallback-active {
+    /* Ensures the container still behaves like an avatar if the img is gone */
+    /* Existing styles for .chat-list-avatar, .chat-avatar-main etc. should handle flex centering */
+    /* This class is mostly a marker or for minor overrides if needed. */
+}
+
+.avatar-fallback-text {
+    /* This class is not strictly necessary if avatarContainer.textContent is used directly,
+       and the container itself has font styles. Retained for potential future use. */
+    font-weight: bold;
+    font-size: inherit;
+    color: inherit;
+}
+
+/* Fallback for image messages */
+.image-message-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--secondary-color);
+    color: var(--text-color-light);
+    font-style: italic;
+    min-height: 80px; /* Give it some size */
+    text-align: center;
+}
+
+/* Original class for general image load errors - applied to non-avatar/non-message images */
+.image-load-error {
+    /* Optionally, provide a visual cue for generic broken images */
+    /* content: url('data:image/svg+xml,...'); or border, etc. */
+    /* For now, just a marker class. display:none might be too aggressive globally. */
 }

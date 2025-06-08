@@ -1,4 +1,3 @@
-
 const ConnectionManager = {
     connections: {},
     iceCandidates: {},
@@ -8,9 +7,11 @@ const ConnectionManager = {
     iceGatheringStartTimes: {},
     websocket: null,
     isWebSocketConnected: false,
-    signalingServerUrl: Config.server.signalingServerUrl, // Ensure this matches your server
-    pendingSentChunks: {}, // For Utils.sendInChunks
-    pendingReceivedChunks: {}, // For Utils.reassembleChunk
+    signalingServerUrl: Config.server.signalingServerUrl,
+    pendingSentChunks: {},
+    pendingReceivedChunks: {},
+
+    MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_',
 
     initialize: function() {
         if (!this.isWebSocketConnected && (!this.websocket || this.websocket.readyState === WebSocket.CLOSED)) {
@@ -63,7 +64,6 @@ const ConnectionManager = {
                     const oldStatus = this.isWebSocketConnected;
                     this.isWebSocketConnected = false;
                     if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
-                    // Do not reject here, let onclose handle reconnect attempts
                 };
             } catch (error) {
                 Utils.log('Failed to create WebSocket connection: ' + error, Utils.logLevels.ERROR);
@@ -71,7 +71,7 @@ const ConnectionManager = {
                 const oldStatus = this.isWebSocketConnected;
                 this.isWebSocketConnected = false;
                 if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
-                reject(error); // Reject if initial WebSocket object creation fails
+                reject(error);
             }
         });
     },
@@ -82,7 +82,7 @@ const ConnectionManager = {
             return;
         }
         const message = { type: 'REGISTER', userId: UserManager.userId };
-        this.sendSignalingMessage(message, false); // false for not silent
+        this.sendSignalingMessage(message, false);
     },
 
     sendSignalingMessage: function(message, isInternalSilentFlag = false) {
@@ -92,8 +92,12 @@ const ConnectionManager = {
             Utils.log(`Sent WS: ${message.type} to ${message.targetUserId || 'server'} (from ${message.userId || 'N/A'}) ${message.sdp ? '[SDP]' : ''} ${message.candidate ? '[ICE]' : ''}`, Utils.logLevels.DEBUG);
         } else {
             Utils.log('WebSocket not connected, cannot send signaling message.', Utils.logLevels.ERROR);
-            if (!isInternalSilentFlag) { // Only show notification if not an internal silent operation
-                UIManager.showNotification('Not connected to signaling server. Message not sent.', 'error');
+            if (!isInternalSilentFlag) {
+                if (window.location.protocol === 'file:') {
+                    UIManager.showNotification('Running from local file system. Signaling server might be unavailable. Message not sent.', 'warning');
+                } else {
+                    UIManager.showNotification('Not connected to signaling server. Message not sent.', 'error');
+                }
             }
         }
     },
@@ -103,12 +107,12 @@ const ConnectionManager = {
         const fromUserId = message.fromUserId;
 
         switch (message.type) {
-            case 'SUCCESS': // User registration success
+            case 'SUCCESS':
                 UIManager.updateConnectionStatusIndicator(`User registration successful: ${UserManager.userId.substring(0,8)}...`);
                 this.autoConnectToAllContacts();
                 break;
             case 'ERROR':
-                if (!message.message.includes('不在线')) { // Don't show "not online" as a blocking error notification
+                if (!message.message.includes('不在线')) {
                     UIManager.showNotification(`Signaling error: ${message.message}`, 'error');
                 }
                 Utils.log(`Signaling server error: ${message.message}`, Utils.logLevels.ERROR);
@@ -125,17 +129,15 @@ const ConnectionManager = {
             case 'USER_NOT_FOUND':
                 const connDetails = this.connections[message.targetUserId];
                 const wasSilentAttempt = connDetails?.wasInitiatedSilently || false;
-
-                if (!wasSilentAttempt) { // Only show notification if it wasn't a silent background attempt
+                if (!wasSilentAttempt) {
                     UIManager.showNotification(`User ${UserManager.contacts[message.targetUserId]?.name || message.targetUserId.substring(0,8) + '...'} not found or offline.`, 'warning');
                 }
                 Utils.log(`User ${message.targetUserId} not found. (Silent Attempt: ${wasSilentAttempt})`, Utils.logLevels.WARN);
-
                 if(ChatManager.currentChatId === message.targetUserId && !wasSilentAttempt) {
                     UIManager.updateChatHeaderStatus(`User not found or offline`);
                 }
                 if (this.connections[message.targetUserId]) {
-                    this.close(message.targetUserId, false); // false for notifyPeer
+                    this.close(message.targetUserId, false);
                 }
                 break;
             default:
@@ -144,12 +146,33 @@ const ConnectionManager = {
     },
 
     initConnection: function(peerId, isVideoCall = false) {
-        Utils.log(`Attempting to initialize connection with ${peerId}. Current connection object: ${this.connections[peerId] ? 'exists' : 'null'}`, Utils.logLevels.DEBUG);
+        Utils.log(`Attempting to initialize connection with ${peerId}. Video call: ${isVideoCall}`, Utils.logLevels.DEBUG);
 
-        if (this.connections[peerId]) {
-            Utils.log(`Explicitly closing and deleting existing RTCPeerConnection for ${peerId} before new init.`, Utils.logLevels.WARN);
-            this.close(peerId, false); // false: do not notify peer about this internal reset
+        const existingConnDetails = this.connections[peerId];
+        if (existingConnDetails && existingConnDetails.peerConnection) {
+            const pc = existingConnDetails.peerConnection;
+            const pcSignalingState = pc.signalingState;
+
+            if (pcSignalingState === 'have-local-offer' ||
+                pcSignalingState === 'have-remote-offer') {
+
+                Utils.log(`initConnection: Connection for ${peerId} is in active negotiation (Signaling: ${pcSignalingState}). Re-using existing PeerConnection.`, Utils.logLevels.WARN);
+                existingConnDetails.isVideoCall = isVideoCall;
+                if (!isVideoCall && !pc.ondatachannel) {
+                    pc.ondatachannel = (e) => this.setupDataChannel(e.channel, peerId);
+                    Utils.log(`initConnection: Re-set ondatachannel for reused PC ${peerId}`, Utils.logLevels.DEBUG);
+                }
+                return pc;
+            }
+            Utils.log(`initConnection: Existing RTCPeerConnection for ${peerId} found (Signaling: ${pcSignalingState}, Connection: ${pc.connectionState}). Proceeding with close and re-init.`, Utils.logLevels.INFO);
+            this.close(peerId, false);
         }
+
+        if (peerId === this.MANUAL_PLACEHOLDER_PEER_ID && this.connections[this.MANUAL_PLACEHOLDER_PEER_ID]) {
+            Utils.log(`Explicitly closing and deleting existing RTCPeerConnection for ${this.MANUAL_PLACEHOLDER_PEER_ID} before new manual init.`, Utils.logLevels.WARN);
+            this.close(this.MANUAL_PLACEHOLDER_PEER_ID, false);
+        }
+
         delete this.connections[peerId];
         delete this.iceCandidates[peerId];
         delete this.reconnectAttempts[peerId];
@@ -157,63 +180,57 @@ const ConnectionManager = {
         delete this.iceTimers[peerId];
         delete this.iceGatheringStartTimes[peerId];
 
-
-        Utils.log(`Initializing new RTCPeerConnection for ${peerId}. Video call: ${isVideoCall}`, Utils.logLevels.INFO);
+        Utils.log(`Initializing NEW RTCPeerConnection for ${peerId}. Video call: ${isVideoCall}`, Utils.logLevels.INFO);
 
         try {
             const rtcConfig = Config.peerConnectionConfig;
             Utils.log(`Initializing RTCPeerConnection for ${peerId} with config: ${JSON.stringify(rtcConfig)}`, Utils.logLevels.DEBUG);
-            const pc = new RTCPeerConnection(rtcConfig);
+            const newPc = new RTCPeerConnection(rtcConfig);
             this.connections[peerId] = {
-                peerConnection: pc,
+                peerConnection: newPc,
                 dataChannel: null,
                 isVideoCall: isVideoCall,
-                isAudioOnly: false, // Will be set during call initiation
-                isScreenShare: false, // Will be set during call initiation
-                wasInitiatedSilently: false // Default to not silent
+                isAudioOnly: false,
+                isScreenShare: false,
+                wasInitiatedSilently: false
             };
             this.iceCandidates[peerId] = [];
             this.reconnectAttempts[peerId] = 0;
 
-            pc.onicecandidate = (e) => this.handleIceCandidate(e, peerId);
-            pc.onicegatheringstatechange = () => this.handleIceGatheringStateChange(peerId);
-            pc.oniceconnectionstatechange = () => this.handleIceConnectionStateChange(peerId);
-            pc.onconnectionstatechange = () => this.handleRtcConnectionStateChange(peerId);
+            newPc.onicecandidate = (e) => this.handleIceCandidate(e, peerId);
+            newPc.onicegatheringstatechange = () => this.handleIceGatheringStateChange(peerId);
+            newPc.oniceconnectionstatechange = () => this.handleIceConnectionStateChange(peerId);
+            newPc.onconnectionstatechange = () => this.handleRtcConnectionStateChange(peerId);
 
-            if (isVideoCall) {
-                // ontrack will be handled by VideoCallManager when it sets up the call
-            } else {
-                // For non-video calls, setup data channel immediately if we create one, or wait for ondatachannel
-                pc.ondatachannel = (e) => this.setupDataChannel(e.channel, peerId);
+            if (!isVideoCall) {
+                newPc.ondatachannel = (e) => this.setupDataChannel(e.channel, peerId);
             }
-            return pc;
+            return newPc;
         } catch (error) {
             Utils.log(`CRITICAL: Failed to initialize RTCPeerConnection for ${peerId}: ${error.message}\nStack: ${error.stack}`, Utils.logLevels.ERROR);
             UIManager.showNotification(`Connection setup error for ${peerId}: ${error.message}`, 'error');
-            delete this.connections[peerId]; // Ensure cleanup if init fails
+            delete this.connections[peerId];
             return null;
         }
     },
 
     createOffer: async function(targetPeerId = null, options = {}) {
-        const { isVideoCall = false, isAudioOnly = false, isSilent = false } = options;
+        const { isVideoCall = false, isAudioOnly = false, isSilent = false, isManual = false } = options;
         let promptedForId = false;
 
-        if (UserManager.isSpecialContact(targetPeerId) && UserManager.contacts[targetPeerId]?.isAI) {
-            const contactName = UserManager.contacts[targetPeerId]?.name || "this AI contact";
-            if (!isSilent) UIManager.showNotification(`Cannot establish a P2P connection with ${contactName}. It is an AI contact.`, "info");
-            else Utils.log(`Attempted to create silent P2P offer to AI contact ${contactName}. Skipped.`, Utils.logLevels.DEBUG);
-            return;
-        }
-
-
-        try {
-            // Determine targetPeerId if not provided
+        if (isManual) {
+            Utils.log("Manual offer creation requested.", Utils.logLevels.INFO);
+            targetPeerId = this.MANUAL_PLACEHOLDER_PEER_ID;
+        } else {
+            if (UserManager.isSpecialContact(targetPeerId) && UserManager.contacts[targetPeerId]?.isAI) {
+                if (!isSilent) UIManager.showNotification(`Cannot establish a P2P connection with ${UserManager.contacts[targetPeerId]?.name || "this AI contact"}. It is an AI contact.`, "info");
+                else Utils.log(`Attempted to create silent P2P offer to AI contact ${UserManager.contacts[targetPeerId]?.name}. Skipped.`, Utils.logLevels.DEBUG);
+                return;
+            }
             if (!targetPeerId && ChatManager.currentChatId && ChatManager.currentChatId !== UserManager.userId && !ChatManager.currentChatId.startsWith('group_')) {
                 targetPeerId = ChatManager.currentChatId;
             }
-
-            if (!targetPeerId && !isSilent) { // If still no target and not silent, prompt user
+            if (!targetPeerId && !isSilent) {
                 Utils.log("Target Peer ID missing for createOffer, prompting user.", Utils.logLevels.INFO);
                 targetPeerId = prompt('Enter Peer ID to connect to:');
                 promptedForId = true;
@@ -225,8 +242,6 @@ const ConnectionManager = {
                 Utils.log("Target Peer ID missing for silent createOffer. Aborting this offer.", Utils.logLevels.WARN);
                 return;
             }
-
-            // Prevent connecting to self
             if (targetPeerId === UserManager.userId) {
                 if (!isSilent) UIManager.showNotification("You cannot create an offer to connect to yourself.", "warning");
                 else Utils.log("Attempted to create silent offer to self. Skipped.", Utils.logLevels.DEBUG);
@@ -235,111 +250,126 @@ const ConnectionManager = {
                 }
                 return;
             }
-
-            if (!UserManager.userId) { // Should not happen if app initialized correctly
+            if (!UserManager.userId) {
                 Utils.log("UserManager.userId is null, cannot create offer.", Utils.logLevels.ERROR);
                 if (!isSilent) UIManager.showNotification("Your user ID is not available. Cannot create offer.", "error");
                 return;
             }
-
-            // Ensure WebSocket connection
             if (!this.isWebSocketConnected) {
                 try {
                     if (!isSilent) UIManager.showNotification("Signaling server not connected. Attempting to connect...", "info");
-                    await this.connectWebSocket(); // Ensure connected before proceeding
+                    await this.connectWebSocket();
                 } catch (e) {
                     if (!isSilent) UIManager.showNotification("Signaling server connection failed. Cannot create offer.", "error");
                     return;
                 }
             }
+        }
 
-            Utils.log(`Creating offer for target: ${targetPeerId}, from: ${UserManager.userId}, isVideo: ${isVideoCall}, isAudioOnly: ${isAudioOnly}, silent: ${isSilent}`, Utils.logLevels.DEBUG);
+        Utils.log(`Creating offer for target: ${targetPeerId}, from: ${UserManager.userId}, isVideo: ${isVideoCall}, isAudioOnly: ${isAudioOnly}, silent: ${isSilent}, manual: ${isManual}`, Utils.logLevels.DEBUG);
 
-            const pc = this.initConnection(targetPeerId, isVideoCall);
-            if (!pc) { // initConnection failed
-                if (!isSilent) UIManager.showNotification("Failed to initialize connection for offer.", "error");
-                return;
+        const pc = this.initConnection(targetPeerId, isVideoCall);
+        if (!pc) {
+            if (!isSilent || isManual) UIManager.showNotification("Failed to initialize or retrieve connection for offer.", "error");
+            Utils.log(`createOffer: initConnection returned null for ${targetPeerId}. Aborting offer.`, Utils.logLevels.ERROR);
+            return;
+        }
+
+        if (pc.signalingState === 'have-local-offer') {
+            Utils.log(`createOffer: PeerConnection for ${targetPeerId} is already in 'have-local-offer' state. Not creating a new offer. (Silent: ${isSilent})`, Utils.logLevels.INFO);
+            if (!isSilent) {
+                const contactName = UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0,6);
+                UIManager.showNotification(`An offer to ${contactName} has already been sent. Please wait for a response.`, "info");
             }
-            // Store call type info and silent flag in the connection object
+            return;
+        }
+        if (pc.signalingState === 'have-remote-offer') {
+            Utils.log(`createOffer: PeerConnection for ${targetPeerId} is in 'have-remote-offer' state. An answer should be created, not an offer. Aborting.`, Utils.logLevels.WARN);
+            if (!isSilent) UIManager.showNotification(`Received an offer from this peer. Cannot create a new offer now.`, "info");
+            return;
+        }
+
+        if (this.connections[targetPeerId]) {
             this.connections[targetPeerId].isVideoCall = isVideoCall;
             this.connections[targetPeerId].isAudioOnly = isAudioOnly;
             this.connections[targetPeerId].isScreenShare = options.isScreenShare || false;
-            this.connections[targetPeerId].wasInitiatedSilently = isSilent;
+            this.connections[targetPeerId].wasInitiatedSilently = isSilent && !isManual;
+        } else if (targetPeerId !== this.MANUAL_PLACEHOLDER_PEER_ID) {
+            Utils.log(`CRITICAL: Connection object for ${targetPeerId} not found after initConnection call in createOffer. Re-creating basic entry.`, Utils.logLevels.ERROR);
+            this.connections[targetPeerId] = {
+                peerConnection: pc, dataChannel: null, isVideoCall: isVideoCall, isAudioOnly: isAudioOnly,
+                isScreenShare: options.isScreenShare || false, wasInitiatedSilently: isSilent && !isManual
+            };
+        }
 
-
-            if (!isVideoCall) { // For non-video calls (chat data channels)
-                const dataChannel = pc.createDataChannel('chatChannel', { reliable: true });
-                this.setupDataChannel(dataChannel, targetPeerId);
-            } else { // For video/audio calls
-                // VideoCallManager will add tracks when it starts the call
-                if (VideoCallManager.localStream) { // Ensure local stream is ready
+        if (pc.signalingState === 'stable' || pc.signalingState === 'new') {
+            if (!isVideoCall) {
+                const connEntry = this.connections[targetPeerId];
+                if (!connEntry || !connEntry.dataChannel || connEntry.dataChannel.readyState === 'closed') {
+                    Utils.log(`createOffer: Creating new data channel for ${targetPeerId} (PC state: ${pc.signalingState})`, Utils.logLevels.DEBUG);
+                    const dataChannel = pc.createDataChannel('chatChannel', { reliable: true });
+                    this.setupDataChannel(dataChannel, targetPeerId);
+                } else {
+                    Utils.log(`createOffer: Data channel already exists for ${targetPeerId} (state: ${connEntry.dataChannel.readyState}). Not creating a new one.`, Utils.logLevels.DEBUG);
+                }
+            } else {
+                if (VideoCallManager.localStream) {
+                    pc.getSenders().forEach(sender => {
+                        if(sender.track) {
+                            try { pc.removeTrack(sender); } catch(e) { Utils.log(`Error removing old track: ${e}`, Utils.logLevels.WARN); }
+                        }
+                    });
                     VideoCallManager.localStream.getTracks().forEach(track => {
-                        if((track.kind === 'video' && !isAudioOnly) || track.kind === 'audio') {
+                        if ((track.kind === 'video' && !isAudioOnly) || track.kind === 'audio') {
                             pc.addTrack(track, VideoCallManager.localStream);
                         }
                     });
                 } else {
-                    // This case means VideoCallManager didn't prepare its stream yet.
-                    // The call flow should ensure local stream is acquired before ConnectionManager creates offer for a video call.
                     Utils.log("Local stream not available for video call offer. VideoCallManager should handle this.", Utils.logLevels.WARN);
                 }
             }
+        }
 
-            try {
-                const offerOptions = { // Standard offer options
-                    offerToReceiveAudio: true,
-                    offerToReceiveVideo: isVideoCall && !isAudioOnly // Only offer to receive video if it's a video call
-                };
-                const offer = await pc.createOffer(offerOptions);
-                await pc.setLocalDescription(offer); // Set local description
+        try {
+            const offerOptions = { offerToReceiveAudio: true, offerToReceiveVideo: isVideoCall && !isAudioOnly };
+            const offer = await pc.createOffer(offerOptions);
+            await pc.setLocalDescription(offer);
 
-                Utils.log(`Offer created for ${targetPeerId}. State: ${pc.signalingState}. Sending SDP immediately. ICE will trickle. (Silent: ${isSilent})`, Utils.logLevels.INFO);
-                // Update UI for connecting status if not silent
+            Utils.log(`Offer created for ${targetPeerId}. State: ${pc.signalingState}. (Manual: ${isManual})`, Utils.logLevels.INFO);
+
+            if (!pc.localDescription) {
+                Utils.log(`Cannot process offer for ${targetPeerId}: localDescription is null.`, Utils.logLevels.ERROR);
+                if (!isSilent || isManual) UIManager.showNotification("Error: Could not finalize local connection details.", "error");
+                this.close(targetPeerId); return;
+            }
+
+            if (isManual) {
+                this.waitForIceGatheringComplete(targetPeerId, () => {
+                    this.updateSdpTextInModal(targetPeerId);
+                    UIManager.showNotification("Offer created. Copy the info from 'My Info' and send to peer.", "info");
+                });
+            } else {
                 if (!isSilent && ChatManager.currentChatId === targetPeerId) {
                     const contactName = UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0,8) + '...';
                     UIManager.updateChatHeaderStatus(`Connecting to ${contactName}...`);
-                }
-
-                // Send the offer via signaling server
-                if (!pc.localDescription) { // Should not happen
-                    Utils.log(`Cannot send offer for ${targetPeerId}: localDescription is null immediately after set.`, Utils.logLevels.ERROR);
-                    if (!isSilent) UIManager.showNotification("Error: Could not finalize local connection details early.", "error");
-                    this.close(targetPeerId); return;
                 }
                 const offerMessagePayload = {
                     type: 'OFFER',
                     userId: UserManager.userId,
                     targetUserId: targetPeerId,
-                    sdp: pc.localDescription.sdp, // SDP string
-                    sdpType: pc.localDescription.type, // 'offer'
+                    sdp: pc.localDescription.sdp,
+                    sdpType: pc.localDescription.type,
                     isVideoCall: isVideoCall,
                     isAudioOnly: isAudioOnly,
                     isScreenShare: options.isScreenShare || false,
-                    // candidates will be sent via trickle ICE
                 };
-                this.sendSignalingMessage(offerMessagePayload, isSilent); // Send offer, respecting silent flag for notifications
+                this.sendSignalingMessage(offerMessagePayload, isSilent);
                 Utils.log(`Offer SDP sent to ${targetPeerId} via signaling. (Silent: ${isSilent}) ICE candidates will follow.`, Utils.logLevels.INFO);
-
-                // For manual exchange via modal (if prompted)
-                this.waitForIceGatheringComplete(targetPeerId, () => {
-                    Utils.log(`ICE gathering for ${targetPeerId} considered complete/timed out (non-blocking). Total candidates found so far: ${this.iceCandidates[targetPeerId]?.length || 0}`, Utils.logLevels.DEBUG);
-                    if (promptedForId && document.getElementById('modalSdpText')) {
-                        this.updateSdpTextInModal(targetPeerId);
-                    }
-                });
-
-
-            } catch (error) {
-                Utils.log(`WebRTC error during offer creation for ${targetPeerId}: ${error.message}\nStack: ${error.stack}`, Utils.logLevels.ERROR);
-                if (!isSilent) UIManager.showNotification(`Connection offer error: ${error.message}`, 'error');
-                this.close(targetPeerId); // Clean up failed connection attempt
             }
-        } catch (e) { // Catch unexpected errors in the outer try-catch
-            Utils.log(`UNEXPECTED ERROR in createOffer for ${targetPeerId || 'unknown target'}: ${e.message}\nStack: ${e.stack}`, Utils.logLevels.ERROR);
-            if (!isSilent) UIManager.showNotification("An unexpected error occurred while trying to connect.", "error");
-            if (targetPeerId) { // If targetPeerId was determined, try to close
-                this.close(targetPeerId);
-            }
+        } catch (error) {
+            Utils.log(`WebRTC error during offer creation for ${targetPeerId}: ${error.message}\nStack: ${error.stack}`, Utils.logLevels.ERROR);
+            if (!isSilent || isManual) UIManager.showNotification(`Connection offer error: ${error.message}`, 'error');
+            this.close(targetPeerId);
         }
     },
 
@@ -348,58 +378,54 @@ const ConnectionManager = {
             Utils.log("Auto-connect setting not found or UserManager not fully initialized. Assuming disabled for this attempt.", Utils.logLevels.WARN);
             return;
         }
-
         if (!UserManager.userSettings.autoConnectEnabled) {
             Utils.log("Auto-connect to contacts is disabled by user setting.", Utils.logLevels.INFO);
             return;
         }
-
         Utils.log("Attempting to auto-connect to all contacts (setting is ON).", Utils.logLevels.INFO);
         if (!UserManager.contacts || Object.keys(UserManager.contacts).length === 0) {
             Utils.log("No contacts to auto-connect to.", Utils.logLevels.INFO);
             return;
         }
-
         const contactIds = Object.keys(UserManager.contacts);
-        let offerDelay = 0; // Stagger connection attempts
-
+        let offerDelay = 0;
         for (const contactId of contactIds) {
-            // Skip self, special AI contacts, or already connected/connecting peers
             if (contactId === UserManager.userId || (UserManager.isSpecialContact(contactId) && UserManager.contacts[contactId]?.isAI)) continue;
-
             if (this.isConnectedTo(contactId)) {
                 Utils.log(`Already connected to ${contactId}. Skipping auto-connect.`, Utils.logLevels.DEBUG);
                 continue;
             }
             const existingConn = this.connections[contactId];
-            if (existingConn && (
-                existingConn.peerConnection?.connectionState === 'connecting' ||
-                existingConn.peerConnection?.connectionState === 'new' ||
-                existingConn.dataChannel?.readyState === 'connecting'
-            )) {
-                Utils.log(`Connection attempt already in progress for ${contactId}. Skipping auto-connect.`, Utils.logLevels.DEBUG);
+            if (existingConn && existingConn.peerConnection &&
+                (existingConn.peerConnection.signalingState === 'have-local-offer' ||
+                    existingConn.peerConnection.signalingState === 'have-remote-offer' ||
+                    existingConn.peerConnection.connectionState === 'connecting' ||
+                    (existingConn.dataChannel?.readyState === 'connecting'))) {
+                Utils.log(`Connection attempt already in progress for ${contactId} (signaling: ${existingConn.peerConnection.signalingState}, connection: ${existingConn.peerConnection.connectionState}). Skipping auto-connect.`, Utils.logLevels.DEBUG);
                 continue;
             }
-
-            // Closure to create offer with delay
             ((idToConnect, delay) => {
                 setTimeout(async () => {
                     Utils.log(`Auto-connecting to contact (staggered): ${idToConnect}`, Utils.logLevels.DEBUG);
                     try {
-                        // Auto-connect is for chat data channels, not video. Always silent.
                         await this.createOffer(idToConnect, {isVideoCall: false, isAudioOnly: false, isSilent: true});
                     } catch (error) {
                         Utils.log(`Error during auto-connecting initiation for ${idToConnect}: ${error.message}`, Utils.logLevels.WARN);
                     }
                 }, delay);
             })(contactId, offerDelay);
-
-            offerDelay += 50; // Increment delay for next contact
+            offerDelay += 200;
         }
         Utils.log("Finished dispatching auto-connection attempts to contacts.", Utils.logLevels.INFO);
     },
 
-    handleAnswer: async function() { // For manual SDP exchange via modal
+    handleAnswer: async function(options = {}) {
+        const { isManual = false } = options;
+        if (!isManual) {
+            Utils.log("handleAnswer called without isManual=true. This function is for manual flow. For signaling answers, use handleRemoteAnswer directly.", Utils.logLevels.WARN);
+            return;
+        }
+
         const sdpTextEl = document.getElementById('modalSdpText');
         if (!sdpTextEl || !sdpTextEl.value) {
             UIManager.showNotification("Paste answer info into the text area first.", "warning");
@@ -407,32 +433,49 @@ const ConnectionManager = {
         }
         try {
             const answerDataFromModal = JSON.parse(sdpTextEl.value);
-            sdpTextEl.value = ''; // Clear after parsing
+            sdpTextEl.value = '';
 
-            // Validate answer data structure
             if (!answerDataFromModal.sdp || !answerDataFromModal.sdp.sdp ||
-                answerDataFromModal.sdp.type !== 'answer' || // Must be an answer
+                answerDataFromModal.sdp.type !== 'answer' ||
                 !answerDataFromModal.userId) {
-                UIManager.showNotification("Invalid answer data format in modal. Expected { sdp: {type: 'answer', sdp}, candidates, userId }.", "error");
+                UIManager.showNotification("Invalid answer data format. Expected { sdp: {type: 'answer', ...}, ... }.", "error");
                 Utils.log(`Invalid answer data from modal: ${JSON.stringify(answerDataFromModal)}`, Utils.logLevels.ERROR);
                 return;
             }
-            if (answerDataFromModal.userId === UserManager.userId) { // Cannot answer self
-                UIManager.showNotification("Cannot process an answer from yourself in this way.", "warning");
+            if (answerDataFromModal.userId === UserManager.userId) {
+                UIManager.showNotification("Cannot process an answer from yourself.", "warning");
                 return;
             }
 
             const fromUserId = answerDataFromModal.userId;
-            const conn = this.connections[fromUserId];
+            const placeholderConn = this.connections[this.MANUAL_PLACEHOLDER_PEER_ID];
 
-            if (!conn || !conn.peerConnection) {
-                UIManager.showNotification(`Error: No active offer found for peer ${fromUserId}. Please create an offer first.`, "error");
-                Utils.log(`handleAnswer (manual): No peerConnection object for ${fromUserId} found.`, Utils.logLevels.ERROR);
+            if (!placeholderConn || !placeholderConn.peerConnection) {
+                UIManager.showNotification(`Error: No pending manual offer found. Please create an offer first.`, "error");
+                Utils.log(`handleAnswer (manual): No peerConnection object for ${this.MANUAL_PLACEHOLDER_PEER_ID} found.`, Utils.logLevels.ERROR);
                 return;
             }
 
-            const pc = conn.peerConnection;
-            Utils.log(`handleAnswer (manual): Current signalingState for ${fromUserId} before setting remote answer: ${pc.signalingState}`, Utils.logLevels.DEBUG);
+            this.connections[fromUserId] = placeholderConn;
+            delete this.connections[this.MANUAL_PLACEHOLDER_PEER_ID];
+
+            if (this.iceCandidates[this.MANUAL_PLACEHOLDER_PEER_ID]) {
+                this.iceCandidates[fromUserId] = this.iceCandidates[this.MANUAL_PLACEHOLDER_PEER_ID];
+                delete this.iceCandidates[this.MANUAL_PLACEHOLDER_PEER_ID];
+            }
+            ['reconnectAttempts', 'iceTimers', 'iceGatheringStartTimes', 'connectionTimeouts'].forEach(storeKey => {
+                if (this[storeKey] && this[storeKey][this.MANUAL_PLACEHOLDER_PEER_ID]) {
+                    this[storeKey][fromUserId] = this[storeKey][this.MANUAL_PLACEHOLDER_PEER_ID];
+                    delete this[storeKey][this.MANUAL_PLACEHOLDER_PEER_ID];
+                }
+            });
+
+            if (placeholderConn.dataChannel) {
+                Utils.log(`DataChannel for manual offerer (now ${fromUserId}) was already set up under placeholder. It will resolve to ${fromUserId} on open.`, Utils.logLevels.DEBUG);
+            }
+
+            const pc = placeholderConn.peerConnection;
+            Utils.log(`handleAnswer (manual): PC for ${fromUserId} (was ${this.MANUAL_PLACEHOLDER_PEER_ID}). State: ${pc.signalingState}`, Utils.logLevels.DEBUG);
 
             if (pc.signalingState !== 'have-local-offer') {
                 if (pc.signalingState === 'stable' && this.isConnectedTo(fromUserId)) {
@@ -440,20 +483,26 @@ const ConnectionManager = {
                 } else {
                     UIManager.showNotification(`Error: Connection for ${fromUserId} is in an unexpected state (${pc.signalingState}). Expected 'have-local-offer'.`, "error");
                 }
-                UIManager.toggleModal('mainMenuModal', false); // Close modal
+                UIManager.toggleModal('mainMenuModal', false);
                 return;
             }
-            // Call the generalized handleRemoteAnswer
+
             await this.handleRemoteAnswer(
                 fromUserId,
                 answerDataFromModal.sdp.sdp,
                 answerDataFromModal.candidates,
-                conn.isVideoCall, // Use existing call type info from connection object
-                conn.isAudioOnly,
-                conn.isScreenShare,
-                'answer' // sdpType
+                placeholderConn.isVideoCall,
+                placeholderConn.isAudioOnly,
+                placeholderConn.isScreenShare,
+                'answer'
             );
-            UIManager.toggleModal('mainMenuModal', false); // Close modal on success
+
+            if (fromUserId !== UserManager.userId && !UserManager.contacts[fromUserId]) {
+                await UserManager.addContact(fromUserId, `Peer ${fromUserId.substring(0,4)}`);
+            }
+
+            UIManager.showNotification(`Processing answer from ${UserManager.contacts[fromUserId]?.name || fromUserId.substring(0,6)}...`, "info");
+            UIManager.toggleModal('mainMenuModal', false);
 
         } catch (e) {
             UIManager.showNotification("Error handling answer: " + e.message, "error");
@@ -488,10 +537,8 @@ const ConnectionManager = {
                     UIManager.showNotification(`Connection state error processing answer for ${fromUserId}. State: ${pc.signalingState}.`, 'error');
                 }
             }
-            // Do not close connection here, might be a late answer for an already established conn
             return;
         }
-
 
         try {
             if (typeof sdpString !== 'string') {
@@ -502,11 +549,9 @@ const ConnectionManager = {
             await pc.setRemoteDescription(new RTCSessionDescription(remoteSdpObject));
             Utils.log(`Remote description (answer) set for ${fromUserId}. New state: ${pc.signalingState}. (Silent: ${wasSilentContext})`, Utils.logLevels.INFO);
 
-            // Add ICE candidates that might have been bundled with the answer
             if (candidates && Array.isArray(candidates)) {
                 for (const candidate of candidates) {
                     if (candidate && typeof candidate === 'object') {
-                        // Check if pc.remoteDescription is set and pc is not closed before adding candidate
                         if (pc.remoteDescription && pc.signalingState !== 'closed') {
                             await pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(e => Utils.log(`Error adding remote ICE candidate from answer for ${fromUserId}: ${e}`, Utils.logLevels.WARN));
                         } else {
@@ -520,11 +565,17 @@ const ConnectionManager = {
         } catch (error) {
             Utils.log(`Failed to set remote answer or add ICE for ${fromUserId}: ${error.message} (Signaling state was ${pc.signalingState}) (Silent: ${wasSilentContext})`, Utils.logLevels.ERROR);
             if (!wasSilentContext) UIManager.showNotification(`Error processing connection answer: ${error.message}`, 'error');
-            this.close(fromUserId); // Close connection on error
+            this.close(fromUserId);
         }
     },
 
-    createAnswer: async function() { // For manual SDP exchange via modal
+    createAnswer: async function(options = {}) {
+        const { isManual = false } = options;
+        if (!isManual) {
+            Utils.log("createAnswer called without isManual=true. This function is for manual flow. For signaling offers, use handleRemoteOffer directly.", Utils.logLevels.WARN);
+            return;
+        }
+
         const sdpTextEl = document.getElementById('modalSdpText');
         if (!sdpTextEl || !sdpTextEl.value) {
             UIManager.showNotification("Paste offer info into the text area first.", "warning");
@@ -534,23 +585,21 @@ const ConnectionManager = {
         try {
             offerDataFromModal = JSON.parse(sdpTextEl.value);
 
-            // Validate offer data structure
             if (!offerDataFromModal.sdp || typeof offerDataFromModal.sdp !== 'object' ||
-                offerDataFromModal.sdp.type !== 'offer' || // Must be an offer
+                offerDataFromModal.sdp.type !== 'offer' ||
                 !offerDataFromModal.sdp.sdp || !offerDataFromModal.userId) {
-                UIManager.showNotification("Invalid offer data format in modal. Expected { sdp: {type: 'offer', ...}, ... }.", "error");
+                UIManager.showNotification("Invalid offer data format. Expected { sdp: {type: 'offer', ...}, ... }.", "error");
                 Utils.log(`Pasted offer data for createAnswer was invalid: ${JSON.stringify(offerDataFromModal)}`, Utils.logLevels.ERROR);
                 return;
             }
-            if (offerDataFromModal.userId === UserManager.userId) { // Cannot answer self
-                UIManager.showNotification("Cannot process an offer from yourself in this way.", "warning");
+            if (offerDataFromModal.userId === UserManager.userId) {
+                UIManager.showNotification("Cannot process an offer from yourself.", "warning");
                 return;
             }
 
             const fromUserId = offerDataFromModal.userId;
-            sdpTextEl.value = 'Generating answer...'; // Update modal text
+            sdpTextEl.value = 'Generating answer...';
 
-            // Initialize connection (or get existing if re-answering, though initConnection handles reset)
             const pc = this.initConnection(fromUserId, offerDataFromModal.isVideoCall || false);
             if (!pc) {
                 UIManager.showNotification("Failed to initialize connection to create answer.", "error");
@@ -558,16 +607,13 @@ const ConnectionManager = {
                 return;
             }
 
-            // Update connection object with call type info from offer
             if(this.connections[fromUserId]){
-                this.connections[fromUserId].wasInitiatedSilently = false; // Manual flow is not silent
+                this.connections[fromUserId].wasInitiatedSilently = false;
                 this.connections[fromUserId].isVideoCall = offerDataFromModal.isVideoCall || false;
                 this.connections[fromUserId].isAudioOnly = offerDataFromModal.isAudioOnly || false;
                 this.connections[fromUserId].isScreenShare = offerDataFromModal.isScreenShare || false;
             }
 
-
-            // Call the generalized handleRemoteOffer
             await this.handleRemoteOffer(
                 fromUserId,
                 offerDataFromModal.sdp.sdp,
@@ -575,62 +621,45 @@ const ConnectionManager = {
                 offerDataFromModal.isVideoCall,
                 offerDataFromModal.isAudioOnly,
                 offerDataFromModal.isScreenShare,
-                'offer', // sdpType
-                true // isManualCreateAnswerFlow = true
+                'offer',
+                true
             );
-            // Notification that generation started, modal will update via waitForIceGatheringComplete
             UIManager.showNotification("Answer generation started. Modal will update with info to copy.", "info");
 
         } catch (e) {
             UIManager.showNotification("Error creating answer: " + e.message, "error");
             Utils.log("Error in ConnectionManager.createAnswer (manual): " + e, Utils.logLevels.ERROR);
-            if (sdpTextEl) sdpTextEl.value = `Error: ${e.message}`; // Show error in modal
+            if (sdpTextEl) sdpTextEl.value = `Error: ${e.message}`;
         }
     },
 
     handleRemoteOffer: async function(fromUserId, sdpString, candidates, isVideoCall, isAudioOnly, isScreenShare, sdpTypeFromServer, isManualCreateAnswerFlow = false) {
         Utils.log(`Handling remote offer from ${fromUserId}. isVideo: ${isVideoCall}, isAudioOnly: ${isAudioOnly}, isScreenShare: ${isScreenShare}. ManualFlow: ${isManualCreateAnswerFlow}`, Utils.logLevels.INFO);
 
-        // Add contact if not already known (for non-group, non-video calls initially)
-        if (!UserManager.contacts[fromUserId] && !GroupManager.groups[fromUserId]) { // Check if not group
-            // Only add if not a video call to avoid premature contact add before call confirmation
-            if(!isVideoCall && !fromUserId.startsWith('group_')){
-                UserManager.addContact(fromUserId, `Peer ${fromUserId.substring(0,4)}`);
-            }
+        if (isManualCreateAnswerFlow && fromUserId !== UserManager.userId && !UserManager.contacts[fromUserId]) {
+            await UserManager.addContact(fromUserId, `Peer ${fromUserId.substring(0,4)}`);
         }
-
 
         let pc = this.connections[fromUserId]?.peerConnection;
 
-        // If not manual flow and PC is not stable, re-initialize.
-        // For manual flow, pc should have been initialized by createAnswer.
-        if (!isManualCreateAnswerFlow && (!pc || pc.signalingState !== 'stable')) {
-            if (pc && pc.signalingState !== 'new') { // If exists but not new (e.g. have-local-offer, closed, failed)
-                Utils.log(`handleRemoteOffer (signaling): PC for ${fromUserId} is in state ${pc.signalingState}. Re-initializing.`, Utils.logLevels.DEBUG);
-                pc = this.initConnection(fromUserId, isVideoCall); // Re-init for a fresh start
-            } else if (!pc) { // No PC exists yet
-                pc = this.initConnection(fromUserId, isVideoCall);
-            }
-            if (!pc) { // initConnection failed
-                UIManager.showNotification("Failed to initialize connection to handle offer.", "error");
-                return;
-            }
-        } else if (isManualCreateAnswerFlow && !pc) { // This shouldn't happen if createAnswer called initConnection
-            Utils.log(`handleRemoteOffer (manual flow): pc is unexpectedly null for ${fromUserId}. Aborting.`, Utils.logLevels.ERROR);
-            UIManager.showNotification("Connection object missing, cannot handle offer.", "error");
+        if (!pc) {
+            pc = this.initConnection(fromUserId, isVideoCall);
+        } else if (!isManualCreateAnswerFlow && pc.signalingState !== 'stable' && pc.signalingState !== 'new') {
+            pc = this.initConnection(fromUserId, isVideoCall);
+        }
+
+        if (!pc) {
+            Utils.log(`handleRemoteOffer: PeerConnection for ${fromUserId} could not be obtained/initialized. Aborting.`, Utils.logLevels.ERROR);
+            UIManager.showNotification("Failed to initialize connection to handle offer.", "error");
             return;
         }
 
-
-        // Update connection object details
         if(this.connections[fromUserId]){
-            // If it's a manual flow, it's not silent. Otherwise, preserve existing silent status.
             this.connections[fromUserId].wasInitiatedSilently = this.connections[fromUserId].wasInitiatedSilently && !isManualCreateAnswerFlow;
             this.connections[fromUserId].isVideoCall = isVideoCall;
             this.connections[fromUserId].isAudioOnly = isAudioOnly;
-            this.connections[fromUserId].isScreenShare = isScreenShare || false; // Default to false if undefined
+            this.connections[fromUserId].isScreenShare = isScreenShare || false;
         }
-
 
         try {
             if (typeof sdpString !== 'string' || sdpTypeFromServer !== 'offer') {
@@ -641,7 +670,6 @@ const ConnectionManager = {
             await pc.setRemoteDescription(new RTCSessionDescription(remoteSdpObject));
             Utils.log(`Remote description (offer) set for ${fromUserId}. New state: ${pc.signalingState}.`, Utils.logLevels.INFO);
 
-            // Add ICE candidates bundled with offer
             if (candidates && Array.isArray(candidates)) {
                 for (const candidate of candidates) {
                     if (candidate && typeof candidate === 'object') {
@@ -656,103 +684,94 @@ const ConnectionManager = {
                 }
             }
 
-            // Setup DataChannel if it's a non-video call and we are responder
-            // (ondatachannel event will fire if remote created it)
             if (isVideoCall && VideoCallManager.isCallActive && VideoCallManager.currentPeerId === fromUserId) {
-                // If it's a video call, VideoCallManager handles tracks.
-            } else if (!isVideoCall && !this.connections[fromUserId].dataChannel) {
-                // For chat, if we are responding to an offer, remote should have created the data channel.
-                // We wait for 'ondatachannel' event.
-                Utils.log(`Waiting for remote to create data channel for ${fromUserId}.`, Utils.logLevels.DEBUG);
+            } else if (!isVideoCall && (!this.connections[fromUserId] || !this.connections[fromUserId].dataChannel)) {
+                Utils.log(`Waiting for remote to create data channel for ${fromUserId}. (ondatachannel will fire)`, Utils.logLevels.DEBUG);
             }
 
-            // Create and set local answer
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
-            Utils.log(`Local description (answer) created and set for ${fromUserId}. New state: ${pc.signalingState}. Sending SDP. ICE will trickle...`, Utils.logLevels.INFO);
+            Utils.log(`Local description (answer) created and set for ${fromUserId}. New state: ${pc.signalingState}.`, Utils.logLevels.INFO);
 
-
-            if (!pc.localDescription) { // Should not happen
+            if (!pc.localDescription) {
                 Utils.log(`Cannot send/prepare answer for ${fromUserId}: localDescription is null.`, Utils.logLevels.ERROR);
                 this.close(fromUserId);
                 return;
             }
-            const answerMessagePayload = {
-                type: 'ANSWER',
-                userId: UserManager.userId,
-                targetUserId: fromUserId,
-                sdp: pc.localDescription.sdp, // SDP string
-                sdpType: pc.localDescription.type, // 'answer'
-                isVideoCall: this.connections[fromUserId].isVideoCall, // Reflect current state of connection
-                isAudioOnly: this.connections[fromUserId].isAudioOnly,
-                isScreenShare: this.connections[fromUserId].isScreenShare,
-                // candidates will be sent via trickle ICE
-            };
 
             if (isManualCreateAnswerFlow) {
-                // For manual flow, wait for ICE gathering and then update modal.
                 this.waitForIceGatheringComplete(fromUserId, () => {
-                    Utils.log(`ICE gathering for manual answer to ${fromUserId} considered complete/timed out. Updating modal.`, Utils.logLevels.DEBUG);
-                    this.updateSdpTextInModal(fromUserId); // Update modal with answer SDP and candidates
+                    this.updateSdpTextInModal(fromUserId);
+                    UIManager.showNotification("Answer created. Copy the info from 'My Info' and send back to offerer.", "info");
                 });
             } else {
-                // For automatic flow, send answer via signaling.
-                this.sendSignalingMessage(answerMessagePayload, false); // false: not silent for regular offer handling
+                const answerMessagePayload = {
+                    type: 'ANSWER',
+                    userId: UserManager.userId,
+                    targetUserId: fromUserId,
+                    sdp: pc.localDescription.sdp,
+                    sdpType: pc.localDescription.type,
+                    isVideoCall: this.connections[fromUserId]?.isVideoCall || false,
+                    isAudioOnly: this.connections[fromUserId]?.isAudioOnly || false,
+                    isScreenShare: this.connections[fromUserId]?.isScreenShare || false,
+                };
+                this.sendSignalingMessage(answerMessagePayload, false);
                 Utils.log(`Answer SDP sent to ${fromUserId} via signaling. ICE candidates will follow.`, Utils.logLevels.INFO);
-                this.waitForIceGatheringComplete(fromUserId, () => { // Non-blocking wait for ICE
-                    Utils.log(`ICE gathering for answer to ${fromUserId} considered complete/timed out (non-blocking).`, Utils.logLevels.DEBUG);
-                    // No specific action needed here for automatic flow, ICE trickles.
-                });
             }
 
         } catch (error) {
             Utils.log(`Failed to handle remote offer from ${fromUserId}: ${error.message}\nStack: ${error.stack}`, Utils.logLevels.ERROR);
             UIManager.showNotification(`Error processing connection offer: ${error.message}`, 'error');
-            this.close(fromUserId); // Clean up on error
+            this.close(fromUserId);
         }
     },
 
     handleRemoteIceCandidate: async function(fromUserId, candidate) {
         const conn = this.connections[fromUserId];
-        // Ensure connection, peerConnection, remoteDescription exist and connection is not closed
         if (conn && conn.peerConnection && conn.peerConnection.remoteDescription && conn.peerConnection.signalingState !== 'closed') {
             try {
-                if (candidate && typeof candidate === 'object') { // Basic validation of candidate
-                    await conn.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
-                    Utils.log(`Added remote ICE candidate from ${fromUserId}.`, Utils.logLevels.DEBUG);
+                if (candidate && typeof candidate === 'object') {
+                    if (candidate.candidate || candidate.sdpMid || candidate.sdpMLineIndex !== undefined) {
+                        await conn.peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+                        Utils.log(`Added remote ICE candidate from ${fromUserId}.`, Utils.logLevels.DEBUG);
+                    } else {
+                        Utils.log(`Skipping remote ICE candidate from ${fromUserId} due to missing fields: ${JSON.stringify(candidate)}`, Utils.logLevels.WARN);
+                    }
                 } else {
                     Utils.log(`Skipping invalid remote ICE candidate from ${fromUserId}: ${JSON.stringify(candidate)}`, Utils.logLevels.WARN);
                 }
             } catch (error) {
-                // Log error, but don't necessarily close connection. ICE can be finicky.
                 Utils.log(`Error adding remote ICE candidate from ${fromUserId} (state: ${conn.peerConnection.signalingState}): ${error}`, Utils.logLevels.WARN);
             }
         } else {
             Utils.log(`Received ICE candidate from ${fromUserId}, but no valid connection, remoteDescription, or connection closed. State: ${conn?.peerConnection?.signalingState}. Candidate might be queued or dropped.`, Utils.logLevels.WARN);
-            // Potentially queue candidate if remoteDescription is not yet set (more advanced)
         }
     },
 
     handleIceCandidate: function(event, peerId) {
-        if (event.candidate) { // A new ICE candidate has been found
+        if (event.candidate) {
             if (!this.iceCandidates[peerId]) this.iceCandidates[peerId] = [];
-            this.iceCandidates[peerId].push(event.candidate.toJSON()); // Store for potential manual exchange
+            this.iceCandidates[peerId].push(event.candidate.toJSON());
 
             const connData = this.connections[peerId];
-            // Determine if this candidate should be sent silently (based on original offer/answer context)
-            const sendSilently = connData?.wasInitiatedSilently || false;
+            const isManualContext = peerId === this.MANUAL_PLACEHOLDER_PEER_ID ||
+                (connData && connData.wasInitiatedSilently === false &&
+                    (document.getElementById('modalCreateOfferBtn')?.disabled ||
+                        document.getElementById('modalCreateAnswerBtn')?.disabled)
+                );
 
-            const candidateMessagePayload = {
-                type: 'ICE_CANDIDATE',
-                userId: UserManager.userId,
-                targetUserId: peerId,
-                candidate: event.candidate.toJSON()
-            };
-            this.sendSignalingMessage(candidateMessagePayload, sendSilently); // Send to peer via signaling
+            if (!isManualContext && peerId !== this.MANUAL_PLACEHOLDER_PEER_ID) {
+                const sendSilently = connData?.wasInitiatedSilently || false;
+                const candidateMessagePayload = {
+                    type: 'ICE_CANDIDATE',
+                    userId: UserManager.userId,
+                    targetUserId: peerId,
+                    candidate: event.candidate.toJSON()
+                };
+                this.sendSignalingMessage(candidateMessagePayload, sendSilently);
+            }
         } else {
-            // ICE gathering is complete for this PeerConnection (event.candidate is null)
             Utils.log(`ICE gathering complete for ${peerId} (event.candidate is null).`, Utils.logLevels.DEBUG);
-            // The waitForIceGatheringComplete function handles timeout/completion callbacks.
         }
     },
 
@@ -764,7 +783,6 @@ const ConnectionManager = {
             return;
         }
 
-        // Clear any existing timer for this peerId to prevent multiple callbacks
         if (this.iceTimers[peerId]) {
             clearTimeout(this.iceTimers[peerId]);
             delete this.iceTimers[peerId];
@@ -775,31 +793,31 @@ const ConnectionManager = {
             if (typeof callback === 'function') callback();
         } else {
             Utils.log(`Waiting for ICE gathering to complete for ${peerId}... Current state: ${pc.iceGatheringState}`, Utils.logLevels.DEBUG);
-            this.iceGatheringStartTimes[peerId] = Date.now(); // Record start time for timeout calculation
+            this.iceGatheringStartTimes[peerId] = Date.now();
 
             const iceTimeout = Config.timeouts.iceGathering;
-            let checkInterval; // For periodically checking state
+            let checkInterval;
 
-            const onDone = () => { // Cleanup function
+            const onDone = () => {
                 if(checkInterval) clearInterval(checkInterval);
                 checkInterval = null;
-                if (this.iceTimers[peerId]) { // Ensure timer exists before clearing (it should)
+                const timerExists = !!this.iceTimers[peerId];
+                if (this.iceTimers[peerId]) {
                     clearTimeout(this.iceTimers[peerId]);
                     delete this.iceTimers[peerId];
-                    if (typeof callback === 'function') callback(); // Execute the callback
+                }
+                if (typeof callback === 'function' && timerExists) {
+                    callback();
                 }
             };
 
-            // Set a timeout for ICE gathering
             this.iceTimers[peerId] = setTimeout(() => {
                 Utils.log(`ICE gathering timeout for ${peerId} after ${iceTimeout}ms. Proceeding. State: ${pc.iceGatheringState}`, Utils.logLevels.WARN);
                 onDone();
             }, iceTimeout);
 
-            // Also, poll for completion state, as onicecandidate with null candidate is the primary signal.
-            // This interval is a fallback / complementary check.
             checkInterval = setInterval(() => {
-                if (!this.connections[peerId] || !this.connections[peerId].peerConnection) { // Connection disappeared
+                if (!this.connections[peerId] || !this.connections[peerId].peerConnection) {
                     if(checkInterval) clearInterval(checkInterval);
                     checkInterval = null;
                     if (this.iceTimers[peerId]) clearTimeout(this.iceTimers[peerId]);
@@ -811,167 +829,211 @@ const ConnectionManager = {
                     Utils.log(`ICE gathering reported complete for ${peerId} by interval check.`, Utils.logLevels.DEBUG);
                     onDone();
                 }
-            }, 200); // Check every 200ms
+            }, 200);
         }
     },
 
-    setupDataChannel: function(channel, peerId) {
-        if (!this.connections[peerId]) { // Should not happen if initConnection was successful
-            Utils.log(`Connection object for ${peerId} not found when setting up data channel. Channel name: ${channel.label}`, Utils.logLevels.ERROR);
-            try { channel.close(); } catch(e){ /* ignore close error if already closed */ }
-            return;
-        }
-        // Prevent overwriting an existing open data channel
-        if (this.connections[peerId].dataChannel && this.connections[peerId].dataChannel.readyState === 'open') {
-            Utils.log(`Data channel already exists and is open for ${peerId}. Ignoring new channel: ${channel.label}`, Utils.logLevels.WARN);
-            // If the new channel is different, one might need to decide which one to use or close the old one.
-            // For now, just keep the existing open one.
-            return;
+    setupDataChannel: function(channel, peerIdArg) {
+        let currentContextPeerId = peerIdArg;
+
+        if (currentContextPeerId === this.MANUAL_PLACEHOLDER_PEER_ID) {
+            channel._isManualPlaceholderChannel = true;
         }
 
+        if (!this.connections[currentContextPeerId]) {
+            Utils.log(`Connection object for ${currentContextPeerId} not found when setting up data channel. Channel name: ${channel.label}`, Utils.logLevels.ERROR);
+            try { channel.close(); } catch(e){ /* ignore */ }
+            return;
+        }
+        if (this.connections[currentContextPeerId].dataChannel &&
+            this.connections[currentContextPeerId].dataChannel !== channel &&
+            this.connections[currentContextPeerId].dataChannel.readyState === 'open') {
+            Utils.log(`Data channel already exists and is open for ${currentContextPeerId}. New channel: ${channel.label} is being ignored. Old channel was: ${this.connections[currentContextPeerId].dataChannel.label}`, Utils.logLevels.WARN);
+            try { channel.close(); } catch(e) { Utils.log(`Error closing redundant new channel: ${e}`, Utils.logLevels.WARN); }
+            return;
+        }
+        if (this.connections[currentContextPeerId].dataChannel === channel && channel._listenersAttached) {
+            Utils.log(`setupDataChannel called again for already configured channel ${channel.label} for ${currentContextPeerId}. Listeners not re-attached.`, Utils.logLevels.DEBUG);
+            return;
+        }
 
-        this.connections[peerId].dataChannel = channel;
-        const wasSilentContext = this.connections[peerId].wasInitiatedSilently || false;
-        Utils.log(`Setting up data channel "${channel.label}" for ${peerId}. Silent Context: ${wasSilentContext}`, Utils.logLevels.INFO);
+        this.connections[currentContextPeerId].dataChannel = channel;
+        channel._listenersAttached = true;
+        const wasSilentContext = this.connections[currentContextPeerId]?.wasInitiatedSilently || false;
+        Utils.log(`Setting up data channel "${channel.label}" for connection key ${currentContextPeerId}. Silent Context: ${wasSilentContext}`, Utils.logLevels.INFO);
 
+        channel.onopen = async () => {
+            let finalPeerId = currentContextPeerId;
 
-        channel.onopen = () => {
-            Utils.log(`Data channel with ${peerId} ("${channel.label}") opened. (Silent Context: ${wasSilentContext})`, Utils.logLevels.INFO);
-            const contactName = UserManager.contacts[peerId]?.name || peerId.substring(0,8) + '...';
-            // Update UI only if not a silent connection OR if it's the currently active chat
-            if ((!wasSilentContext || ChatManager.currentChatId === peerId)) {
+            if (channel._isManualPlaceholderChannel) {
+                let resolved = false;
+                for (const actualIdInMap in this.connections) {
+                    if (this.connections[actualIdInMap] && this.connections[actualIdInMap].dataChannel === channel) {
+                        finalPeerId = actualIdInMap;
+                        resolved = true;
+                        Utils.log(`DataChannel.onopen (Offerer A): Resolved ${this.MANUAL_PLACEHOLDER_PEER_ID} to actual peer ${finalPeerId}.`, Utils.logLevels.INFO);
+                        break;
+                    }
+                }
+                if (!resolved) {
+                    Utils.log(`CRITICAL: DataChannel.onopen (Offerer A): Could not resolve placeholder to actual peer ID. Original context ID: ${currentContextPeerId}`, Utils.logLevels.ERROR);
+                    return;
+                }
+            }
+
+            Utils.log(`Data channel with ${finalPeerId} ("${channel.label}") opened. (Silent Context: ${this.connections[finalPeerId]?.wasInitiatedSilently || false})`, Utils.logLevels.INFO);
+            const contactName = UserManager.contacts[finalPeerId]?.name || finalPeerId.substring(0,8) + '...';
+
+            if ((!this.connections[finalPeerId]?.wasInitiatedSilently || ChatManager.currentChatId === finalPeerId)) {
                 UIManager.updateChatHeaderStatus(`Connected to ${contactName}`);
             }
-            EventEmitter.emit('connectionEstablished', peerId);
-            // Enable call buttons if current chat is this peer and it's not a video call context already
-            if (ChatManager.currentChatId === peerId && !this.connections[peerId].isVideoCall) {
-                UIManager.setCallButtonsState(true, peerId);
+
+            // *** MODIFIED SECTION START ***
+            // Check if the peer is already a contact. If not, add them.
+            // This handles cases where the connection is initiated by the other peer (we received an offer).
+            if (finalPeerId !== UserManager.userId &&
+                finalPeerId !== this.MANUAL_PLACEHOLDER_PEER_ID &&
+                !UserManager.contacts[finalPeerId]) {
+
+                Utils.log(`DataChannel.onopen: Peer ${finalPeerId} is not a known contact. Adding them.`, Utils.logLevels.INFO);
+                await UserManager.addContact(finalPeerId, `Peer ${finalPeerId.substring(0,4)}`);
+                // Optionally, open chat if this was an incoming connection that just established
+                // This might be too aggressive if the user wasn't expecting it. Consider a notification instead.
+                // For now, let's not auto-open, but adding contact is good.
             }
-            this.reconnectAttempts[peerId] = 0; // Reset reconnect attempts on successful open
+            // Handle manual connection cases where the contact might need to be added or chat opened.
+            else if (channel._isManualPlaceholderChannel && finalPeerId !== UserManager.userId && finalPeerId !== this.MANUAL_PLACEHOLDER_PEER_ID) {
+                // This is Party A, and connection with Party B (finalPeerId) is now open.
+                // We already add contact for Party B in handleAnswer (for Party A).
+                // Ensure chat is opened if it was for the placeholder.
+                if (ChatManager.currentChatId === null || ChatManager.currentChatId === this.MANUAL_PLACEHOLDER_PEER_ID || ChatManager.currentChatId === currentContextPeerId) {
+                    ChatManager.openChat(finalPeerId, 'contact');
+                }
+            }
+            // *** MODIFIED SECTION END ***
+
+            EventEmitter.emit('connectionEstablished', finalPeerId);
+            if (ChatManager.currentChatId === finalPeerId && this.connections[finalPeerId] && !this.connections[finalPeerId].isVideoCall) {
+                UIManager.setCallButtonsState(true, finalPeerId);
+            }
+            if (this.reconnectAttempts[finalPeerId] !== undefined) this.reconnectAttempts[finalPeerId] = 0;
         };
 
         channel.onclose = () => {
-            Utils.log(`Data channel with ${peerId} ("${channel.label}") closed. (Was Silent Context: ${wasSilentContext})`, Utils.logLevels.INFO);
-            const pcState = this.connections[peerId]?.peerConnection?.connectionState;
-            // Emit disconnected only if PC isn't already definitively closed or failed
+            let finalPeerId = currentContextPeerId;
+            if (channel._isManualPlaceholderChannel) {
+                for (const actualIdInMap in this.connections) {
+                    if (this.connections[actualIdInMap] && this.connections[actualIdInMap].dataChannel === channel) {
+                        finalPeerId = actualIdInMap; break;
+                    }
+                }
+            }
+            Utils.log(`Data channel with ${finalPeerId} ("${channel.label}") closed. (Was Silent Context: ${this.connections[finalPeerId]?.wasInitiatedSilently || false})`, Utils.logLevels.INFO);
+            const pcState = this.connections[finalPeerId]?.peerConnection?.connectionState;
             if (pcState !== 'closed' && pcState !== 'failed') {
-                EventEmitter.emit('connectionDisconnected', peerId);
+                EventEmitter.emit('connectionDisconnected', finalPeerId);
             }
-            if (ChatManager.currentChatId === peerId) { // Update UI for current chat
+            if (ChatManager.currentChatId === finalPeerId) {
                 UIManager.setCallButtonsState(false);
+                if (!this.connections[finalPeerId]?.wasInitiatedSilently) {
+                    UIManager.updateChatHeaderStatus(`Disconnected`);
+                }
             }
-            if (this.connections[peerId]) { // Nullify the dataChannel reference
-                this.connections[peerId].dataChannel = null;
+            if (this.connections[finalPeerId] && this.connections[finalPeerId].dataChannel === channel) {
+                this.connections[finalPeerId].dataChannel = null;
             }
-            // Attempt reconnect if appropriate (e.g., not user-initiated close)
-            // Reconnect logic is primarily tied to iceConnectionStateChange and rtcConnectionStateChange.
-            // A data channel close might trigger those if it's due to underlying transport failure.
+            channel._listenersAttached = false;
         };
 
         channel.onerror = (error) => {
-            Utils.log(`Data channel error with ${peerId} ("${channel.label}"): ${JSON.stringify(error)} (Was Silent: ${wasSilentContext})`, Utils.logLevels.ERROR);
-            // Error on data channel might also trigger other state changes that lead to reconnect attempts.
+            let finalPeerId = currentContextPeerId;
+            if (channel._isManualPlaceholderChannel) { for (const id in this.connections) if(this.connections[id]?.dataChannel === channel) {finalPeerId=id; break;}}
+            Utils.log(`Data channel error with ${finalPeerId} ("${channel.label}"): ${JSON.stringify(error)} (Was Silent: ${this.connections[finalPeerId]?.wasInitiatedSilently || false})`, Utils.logLevels.ERROR);
         };
 
         channel.onmessage = (event) => {
+            let finalPeerId = currentContextPeerId;
+            if (channel._isManualPlaceholderChannel) {
+                let resolved = false;
+                for (const actualIdInMap in this.connections) {
+                    if (this.connections[actualIdInMap] && this.connections[actualIdInMap].dataChannel === channel) {
+                        finalPeerId = actualIdInMap; resolved = true; break;
+                    }
+                }
+                if (!resolved) { Utils.log(`CRITICAL: DataChannel.onmessage: Could not resolve peer ID for manual channel. Original context: ${currentContextPeerId}`, Utils.logLevels.ERROR); return; }
+            }
+
             try {
                 const rawMessage = event.data;
                 let messageObjectToProcess;
 
                 if (typeof rawMessage === 'string') {
                     let parsedJson;
-                    try {
-                        parsedJson = JSON.parse(rawMessage);
-                    } catch (e) { // Handle non-JSON string messages (e.g., plain text test)
-                        Utils.log(`Received malformed JSON or plain text from ${peerId} on DC "${channel.label}": ${String(rawMessage).substring(0,100)}... Error: ${e.message}`, Utils.logLevels.WARN);
-                        // Create a basic message object for plain text for robust handling
-                        messageObjectToProcess = {
-                            type: 'text', // Assume text
-                            content: rawMessage,
-                            sender: peerId, // Set sender
-                            timestamp: new Date().toISOString() // Add timestamp
-                        };
+                    try { parsedJson = JSON.parse(rawMessage); }
+                    catch (e) {
+                        Utils.log(`Received malformed JSON or plain text from ${finalPeerId} on DC "${channel.label}": ${String(rawMessage).substring(0,100)}... Error: ${e.message}`, Utils.logLevels.WARN);
+                        messageObjectToProcess = { type: 'text', content: rawMessage, sender: finalPeerId, timestamp: new Date().toISOString() };
                     }
-
-                    if (parsedJson) { // If JSON parsed successfully
+                    if (parsedJson) {
                         if (parsedJson.type === 'chunk-meta' || parsedJson.type === 'chunk-data') {
-                            const reassembledData = Utils.reassembleChunk(parsedJson, peerId);
-                            if (reassembledData) { // Chunk reassembly complete
-                                messageObjectToProcess = reassembledData;
-                            } else { // Still waiting for more chunks or error in reassembly
-                                return; // Do not process further
-                            }
-                        } else { // Not a chunk, process as is
-                            messageObjectToProcess = parsedJson;
-                        }
+                            const reassembledData = Utils.reassembleChunk(parsedJson, finalPeerId);
+                            if (reassembledData) { messageObjectToProcess = reassembledData; }
+                            else { return; }
+                        } else { messageObjectToProcess = parsedJson; }
                     }
                 } else if (rawMessage instanceof ArrayBuffer || rawMessage instanceof Blob) {
-                    // Binary data received, currently not standard part of app's protocol for chat
-                    Utils.log(`Received binary DataChannel message from ${peerId} on DC "${channel.label}". Length: ${rawMessage.byteLength || rawMessage.size}. Discarding (binary protocol not implemented here).`, Utils.logLevels.WARN);
-                    return; // Ignore binary data for now
-                }
-                else { // Unknown data type
-                    Utils.log(`Received non-string/non-binary DataChannel message from ${peerId} on DC "${channel.label}". Type: ${typeof rawMessage}. Discarding.`, Utils.logLevels.WARN);
-                    return; // Ignore unknown data type
+                    Utils.log(`Received binary DataChannel message from ${finalPeerId} on DC "${channel.label}". Discarding.`, Utils.logLevels.WARN); return;
+                } else {
+                    Utils.log(`Received non-string/non-binary DataChannel message from ${finalPeerId} on DC "${channel.label}". Discarding.`, Utils.logLevels.WARN); return;
                 }
 
-
-                if (!messageObjectToProcess) { // Should ideally not happen if logic above is sound
-                    Utils.log(`Logic error: messageObjectToProcess is undefined before final handling. Raw: ${String(rawMessage).substring(0,100)}`, Utils.logLevels.ERROR);
-                    return;
+                if (!messageObjectToProcess) {
+                    Utils.log(`Logic error: messageObjectToProcess is undefined before final handling. Raw: ${String(rawMessage).substring(0,100)}`, Utils.logLevels.ERROR); return;
                 }
-                // Ensure sender is set, defaulting to peerId if not in message
-                messageObjectToProcess.sender = messageObjectToProcess.sender || peerId;
+                messageObjectToProcess.sender = messageObjectToProcess.sender || finalPeerId;
 
-
-                // Route message based on type
                 if (messageObjectToProcess.type && messageObjectToProcess.type.startsWith('video-call-')) {
-                    VideoCallManager.handleMessage(messageObjectToProcess, peerId);
+                    VideoCallManager.handleMessage(messageObjectToProcess, finalPeerId);
                 } else if (messageObjectToProcess.groupId || messageObjectToProcess.type?.startsWith('group-')) {
                     GroupManager.handleGroupMessage(messageObjectToProcess);
-                } else { // Regular direct message
-                    ChatManager.addMessage(messageObjectToProcess.groupId || peerId, messageObjectToProcess);
+                } else {
+                    ChatManager.addMessage(messageObjectToProcess.groupId || finalPeerId, messageObjectToProcess);
                 }
-
             } catch (e) {
-                Utils.log(`Critical error in DataChannel onmessage from ${peerId} on DC "${channel.label}": ${e.message}. Data: ${String(event.data).substring(0,100)} Stack: ${e.stack}`, Utils.logLevels.ERROR);
+                Utils.log(`Critical error in DataChannel onmessage from ${finalPeerId} on DC "${channel.label}": ${e.message}. Data: ${String(event.data).substring(0,100)} Stack: ${e.stack}`, Utils.logLevels.ERROR);
             }
         };
     },
 
     handleIceConnectionStateChange: function(peerId) {
         const conn = this.connections[peerId];
-        if (!conn || !conn.peerConnection) return; // No connection object
+        if (!conn || !conn.peerConnection) return;
         const pc = conn.peerConnection;
         const wasSilentContext = conn.wasInitiatedSilently || false;
         Utils.log(`ICE connection state for ${peerId}: ${pc.iceConnectionState} (Silent Context: ${wasSilentContext})`, Utils.logLevels.INFO);
 
         switch (pc.iceConnectionState) {
-            case 'connected': // Connection established, but checking continues
-            case 'completed': // All ICE checks successful
-                this.reconnectAttempts[peerId] = 0; // Reset reconnect attempts
-                // Note: 'connected' might still lead to 'disconnected' if checks fail later.
-                // 'completed' is more stable.
+            case 'connected':
+            case 'completed':
+                if (this.reconnectAttempts[peerId] !== undefined) this.reconnectAttempts[peerId] = 0;
                 break;
-            case 'disconnected': // Lost connection, may recover
+            case 'disconnected':
                 Utils.log(`ICE disconnected for ${peerId}. Attempting to reconnect if appropriate...`, Utils.logLevels.WARN);
-                if (!conn.isVideoCall) { // Don't auto-reconnect video calls this way
+                EventEmitter.emit('connectionDisconnected', peerId);
+                if (!conn.isVideoCall) {
                     this.attemptReconnect(peerId);
                 }
-                EventEmitter.emit('connectionDisconnected', peerId); // Notify app
                 break;
-            case 'failed': // Connection failed definitively
+            case 'failed':
                 Utils.log(`ICE connection failed for ${peerId}. (Silent Context: ${wasSilentContext})`, Utils.logLevels.ERROR);
                 if (!wasSilentContext) UIManager.showNotification(`Connection with ${UserManager.contacts[peerId]?.name || peerId.substring(0,8)} failed.`, 'error');
                 EventEmitter.emit('connectionFailed', peerId);
-                this.close(peerId, false); // Close connection, no need to notify peer as it failed
+                this.close(peerId, false);
                 break;
-            case 'closed': // Connection closed
+            case 'closed':
                 Utils.log(`ICE connection closed for ${peerId}.`, Utils.logLevels.INFO);
-                // This state is usually a result of calling pc.close()
-                // If not, it means an abrupt closure.
-                if (this.connections[peerId]) { // Ensure it hasn't been deleted yet
-                    this.close(peerId, false); // Clean up if not already done
+                if (this.connections[peerId]) {
+                    this.close(peerId, false);
                 }
                 break;
         }
@@ -979,7 +1041,7 @@ const ConnectionManager = {
 
     handleRtcConnectionStateChange: function(peerId) {
         const conn = this.connections[peerId];
-        if(!conn || !conn.peerConnection) return; // No connection object
+        if(!conn || !conn.peerConnection) return;
         const pc = conn.peerConnection;
         const wasSilentContext = conn.wasInitiatedSilently || false;
         Utils.log(`RTCPeerConnection state for ${peerId}: ${pc.connectionState} (Silent Context: ${wasSilentContext})`, Utils.logLevels.INFO);
@@ -987,52 +1049,46 @@ const ConnectionManager = {
         switch (pc.connectionState) {
             case "new":
             case "connecting":
-                // Standard intermediate states
                 break;
-            case "connected": // Connection is live
+            case "connected":
                 Utils.log(`RTCPeerConnection to ${peerId} is now 'connected'.`, Utils.logLevels.INFO);
-                this.reconnectAttempts[peerId] = 0; // Reset reconnect attempts
-                if (conn.isVideoCall) { // For video calls, this is a key indicator of success
+                if (this.reconnectAttempts[peerId] !== undefined) this.reconnectAttempts[peerId] = 0;
+                if (conn.isVideoCall || (conn.dataChannel && conn.dataChannel.readyState === 'open' && !conn._emittedEstablished)) {
                     EventEmitter.emit('connectionEstablished', peerId);
+                    conn._emittedEstablished = true;
                 }
-                // For data channels, 'onopen' is the primary success indicator.
-                // However, 'connected' state here is also good news.
                 break;
-            case "disconnected": // Temporary disconnection, might recover
+            case "disconnected":
                 Utils.log(`RTCPeerConnection to ${peerId} is 'disconnected'. (Silent Context: ${wasSilentContext})`, Utils.logLevels.WARN);
                 EventEmitter.emit('connectionDisconnected', peerId);
-                if (!conn.isVideoCall) { // Don't auto-reconnect video calls
+                if (!conn.isVideoCall) {
                     this.attemptReconnect(peerId);
-                } else {
-                    // For video calls, UI might show "reconnecting" status based on this.
                 }
+                conn._emittedEstablished = false;
                 break;
-            case "failed": // Connection failed critically
+            case "failed":
                 Utils.log(`RTCPeerConnection to ${peerId} has 'failed'. (Silent Context: ${wasSilentContext})`, Utils.logLevels.ERROR);
                 if (!wasSilentContext) UIManager.showNotification(`Connection with ${UserManager.contacts[peerId]?.name || peerId.substring(0,8)} has failed critically.`, 'error');
                 EventEmitter.emit('connectionFailed', peerId);
-                this.close(peerId, false); // Close and clean up
+                this.close(peerId, false);
+                conn._emittedEstablished = false;
                 break;
-            case "closed": // Connection was closed
-                Utils.log(`RTCPeerConnection to ${peerId} is 'closed'.`, Utils.logLevels.INFO);
-                // Typically result of local or remote pc.close().
-                if (this.connections[peerId]) { // Ensure not already deleted
-                    this.close(peerId, false); // Clean up
-                }
+            case "closed":
+                Utils.log(`RTCPeerConnection to ${peerId} is 'closed'. (Final cleanup expected by this.close)`, Utils.logLevels.INFO);
+                conn._emittedEstablished = false;
                 break;
         }
     },
 
     attemptReconnect: function(peerId) {
         const conn = this.connections[peerId];
-        // Don't attempt if no connection object, or it's a video call, or already connected/connecting
         if (!conn || conn.isVideoCall) {
             Utils.log(`Skipping reconnect attempt for ${peerId} (no connection or is video call).`, Utils.logLevels.DEBUG);
             return;
         }
         if (this.isConnectedTo(peerId) || conn.peerConnection?.connectionState === 'connecting') {
             Utils.log(`Reconnect attempt for ${peerId} skipped: already connected or connecting.`, Utils.logLevels.DEBUG);
-            this.reconnectAttempts[peerId] = 0; // Reset if somehow called while connected
+            if (this.reconnectAttempts[peerId] !== undefined) this.reconnectAttempts[peerId] = 0;
             return;
         }
 
@@ -1041,26 +1097,32 @@ const ConnectionManager = {
             const delay = Config.reconnect.delay * Math.pow(Config.reconnect.backoffFactor, this.reconnectAttempts[peerId] -1);
             Utils.log(`Attempting to reconnect with ${peerId} (attempt ${this.reconnectAttempts[peerId]}) in ${delay/1000}s...`, Utils.logLevels.INFO);
 
-            if (this.connectionTimeouts[peerId]) clearTimeout(this.connectionTimeouts[peerId]); // Clear existing timeout
+            if (this.connectionTimeouts[peerId]) clearTimeout(this.connectionTimeouts[peerId]);
 
-            // Schedule reconnect attempt
-            this.connectionTimeouts[peerId] = setTimeout(() => {
-                delete this.connectionTimeouts[peerId]; // Remove from active timeouts
-                const currentConn = this.connections[peerId]; // Re-check current connection status
-                if (currentConn && !this.isConnectedTo(peerId) && currentConn.peerConnection.connectionState !== 'connecting') {
+            this.connectionTimeouts[peerId] = setTimeout(async () => {
+                delete this.connectionTimeouts[peerId];
+                const currentConn = this.connections[peerId];
+                if (currentConn && !this.isConnectedTo(peerId) &&
+                    currentConn.peerConnection &&
+                    currentConn.peerConnection.connectionState !== 'connecting' &&
+                    currentConn.peerConnection.signalingState !== 'have-local-offer' &&
+                    currentConn.peerConnection.signalingState !== 'have-remote-offer' ) {
                     Utils.log(`Re-initiating offer to ${peerId} for reconnection.`, Utils.logLevels.INFO);
-                    // Reconnection is always silent for data channels (chat)
-                    this.createOffer(peerId, { isVideoCall: false, isAudioOnly: false, isSilent: true });
+                    if (currentConn.peerConnection.connectionState === 'failed' || currentConn.peerConnection.connectionState === 'closed' || currentConn.peerConnection.connectionState === 'disconnected') {
+                        Utils.log(`Closing stale PC before reconnection attempt for ${peerId}. State: ${currentConn.peerConnection.connectionState}`, Utils.logLevels.DEBUG);
+                        this.close(peerId, false);
+                    }
+                    await this.createOffer(peerId, {isVideoCall: false, isAudioOnly: false, isSilent: true});
                 } else if (this.isConnectedTo(peerId)) {
                     Utils.log(`Reconnection to ${peerId} not needed, already connected. Resetting attempts.`, Utils.logLevels.INFO);
-                    this.reconnectAttempts[peerId] = 0;
+                    if (this.reconnectAttempts[peerId] !== undefined) this.reconnectAttempts[peerId] = 0;
                 } else {
-                    Utils.log(`Reconnection to ${peerId} aborted, connection object no longer valid, already closed, or connecting. State: ${currentConn?.peerConnection?.connectionState}`, Utils.logLevels.INFO);
+                    Utils.log(`Reconnection to ${peerId} aborted, connection object no longer valid, already closed, or actively connecting/negotiating. State: PC=${currentConn?.peerConnection?.connectionState}, Signaling=${currentConn?.peerConnection?.signalingState}`, Utils.logLevels.INFO);
                 }
             }, delay);
-        } else { // Max attempts reached
+        } else {
             Utils.log(`Max reconnection attempts reached for ${peerId}. Closing connection.`, Utils.logLevels.ERROR);
-            this.close(peerId, false); // Give up and close
+            this.close(peerId, false);
         }
     },
 
@@ -1068,62 +1130,50 @@ const ConnectionManager = {
         const conn = this.connections[peerId];
         if (conn && conn.dataChannel && conn.dataChannel.readyState === 'open') {
             try {
-                // Ensure sender and timestamp are set
                 messageObject.sender = messageObject.sender || UserManager.userId;
                 messageObject.timestamp = messageObject.timestamp || new Date().toISOString();
-
                 const messageString = JSON.stringify(messageObject);
-                // Check if message exceeds chunk size
                 if (messageString.length > Config.chunkSize) {
-                    Utils.sendInChunks(messageString,
-                        (chunk) => conn.dataChannel.send(chunk), // Send function
-                        peerId, // Peer ID for logging/tracking
-                        // File ID for chunking, useful for file transfers
-                        (messageObject.type === 'file' || messageObject.type === 'audio') ? (messageObject.fileId || messageObject.fileName || `blob-${Date.now()}`) : undefined
-                    );
-                } else { // Send as a single message
+                    Utils.sendInChunks(messageString, (chunk) => conn.dataChannel.send(chunk), peerId, (messageObject.type === 'file' || messageObject.type === 'audio') ? (messageObject.fileId || messageObject.fileName || `blob-${Date.now()}`) : undefined );
+                } else {
                     conn.dataChannel.send(messageString);
                 }
-                return true; // Message sent (or started sending in chunks)
+                return true;
             } catch (error) {
                 Utils.log(`Error sending message to ${peerId} via DataChannel: ${error}`, Utils.logLevels.ERROR);
-                return false; // Send failed
+                return false;
             }
         } else {
             Utils.log(`Cannot send to ${peerId}: DataChannel not open or connection doesn't exist. DC State: ${conn?.dataChannel?.readyState}, PC State: ${conn?.peerConnection?.connectionState}`, Utils.logLevels.WARN);
-            return false; // Cannot send
+            return false;
         }
     },
 
     isConnectedTo: function(peerId) {
         if (UserManager.isSpecialContact(peerId) && UserManager.contacts[peerId]?.isAI) {
-            return true; // AI contacts are conceptually always "connected"
+            return true;
         }
         const conn = this.connections[peerId];
         if (!conn || !conn.peerConnection) return false;
 
         const pcOverallState = conn.peerConnection.connectionState;
 
-        // A connection is considered "connected" if the PeerConnection state is 'connected'
-        // AND, if it's not a video call, the data channel must also be open.
-        // For video calls, the 'connected' state of PC is sufficient.
         if (pcOverallState === 'connected') {
-            if (conn.isVideoCall) { // For video calls, PC 'connected' is enough
+            if (conn.isVideoCall) {
                 return true;
-            } else if (conn.dataChannel && conn.dataChannel.readyState === 'open') { // For data, DC must be open
+            } else if (conn.dataChannel && conn.dataChannel.readyState === 'open') {
                 return true;
             }
         }
         return false;
     },
 
-    close: function(peerId, notifyPeer = true) { // notifyPeer not currently used, signaling for close not implemented
+    close: function(peerId, notifyPeer = true) {
         const conn = this.connections[peerId];
         if (conn) {
             const wasSilentContext = conn.wasInitiatedSilently || false;
-            Utils.log(`Closing connection with ${peerId}. (Was Silent Context: ${wasSilentContext})`, Utils.logLevels.INFO);
+            Utils.log(`Closing connection with ${peerId}. (Was Silent Context: ${wasSilentContext}) PC State: ${conn.peerConnection?.connectionState}, DC State: ${conn.dataChannel?.readyState}`, Utils.logLevels.INFO);
 
-            // Clear any pending timeouts related to this connection
             if (this.connectionTimeouts[peerId]) {
                 clearTimeout(this.connectionTimeouts[peerId]);
                 delete this.connectionTimeouts[peerId];
@@ -1133,58 +1183,48 @@ const ConnectionManager = {
                 delete this.iceTimers[peerId];
             }
 
-            // Close data channel
             if (conn.dataChannel) {
                 try {
-                    // Remove event listeners to prevent them firing during/after close
                     conn.dataChannel.onopen = null;
                     conn.dataChannel.onmessage = null;
                     conn.dataChannel.onerror = null;
-                    const currentOnClose = conn.dataChannel.onclose; // Preserve for one last fire if needed
+                    const currentOnClose = conn.dataChannel.onclose;
                     conn.dataChannel.onclose = () => {
-                        if (currentOnClose) currentOnClose(); // Call original onclose if it exists
-                        conn.dataChannel = null; // Nullify after close
+                        if (typeof currentOnClose === 'function') currentOnClose();
                     };
                     if (conn.dataChannel.readyState !== 'closed') {
                         conn.dataChannel.close();
-                    } else {
-                        conn.dataChannel = null; // Already closed
                     }
-                } catch (e) { Utils.log(`Error closing data channel for ${peerId}: ${e}`, Utils.logLevels.WARN); conn.dataChannel = null;}
+                } catch (e) { Utils.log(`Error closing data channel for ${peerId}: ${e}`, Utils.logLevels.WARN); }
             }
-            // Close peer connection
             if (conn.peerConnection) {
                 try {
-                    // Remove event listeners
                     conn.peerConnection.onicecandidate = null;
                     conn.peerConnection.onicegatheringstatechange = null;
                     conn.peerConnection.oniceconnectionstatechange = null;
                     conn.peerConnection.onconnectionstatechange = null;
                     conn.peerConnection.ondatachannel = null;
-                    conn.peerConnection.ontrack = null; // Important for video calls
+                    conn.peerConnection.ontrack = null;
                     if (conn.peerConnection.signalingState !== 'closed') {
                         conn.peerConnection.close();
                     }
                 } catch (e) { Utils.log(`Error closing peer connection for ${peerId}: ${e}`, Utils.logLevels.WARN); }
             }
 
-            // Clean up manager's state for this peer
+            const wasConnected = this.isConnectedTo(peerId);
             delete this.connections[peerId];
             delete this.iceCandidates[peerId];
             delete this.reconnectAttempts[peerId];
             delete this.iceGatheringStartTimes[peerId];
 
-
-            // Update UI if this was the current chat
             if (ChatManager.currentChatId === peerId) {
                 const contactName = UserManager.contacts[peerId]?.name || peerId.substring(0,8) + '...';
-                // Only update header if not a silent connection OR it's the current chat
                 if (!wasSilentContext || ChatManager.currentChatId === peerId) {
                     UIManager.updateChatHeaderStatus(`Disconnected from ${contactName}`);
                 }
-                UIManager.setCallButtonsState(false); // Disable call buttons
+                UIManager.setCallButtonsState(false);
             }
-            EventEmitter.emit('connectionClosed', peerId); // Notify app of closure
+            EventEmitter.emit('connectionClosed', peerId);
         } else {
             Utils.log(`Attempted to close non-existent connection for ${peerId}.`, Utils.logLevels.DEBUG);
         }
@@ -1195,89 +1235,70 @@ const ConnectionManager = {
             "Are you sure you want to reset all connections? This will disconnect all active chats and calls.",
             () => {
                 Utils.log("Resetting all connections.", Utils.logLevels.INFO);
-                // Close all peer connections
-                for (const peerId in this.connections) {
-                    this.close(peerId, false); // false: do not try to notify peers during a mass reset
-                }
-                // Clear all connection-related state
-                this.connections = {};
-                this.iceCandidates = {};
-                this.reconnectAttempts = {};
-                this.iceGatheringStartTimes = {};
-                Object.keys(this.connectionTimeouts).forEach(peerId => clearTimeout(this.connectionTimeouts[peerId]));
-                this.connectionTimeouts = {};
-                Object.keys(this.iceTimers).forEach(peerId => clearTimeout(this.iceTimers[peerId]));
-                this.iceTimers = {};
+                const peerIdsToClose = Object.keys(this.connections);
+                peerIdsToClose.forEach(peerId => this.close(peerId, false));
 
-                // Close WebSocket and prevent auto-reconnect, then re-initialize
+                this.connections = {}; this.iceCandidates = {}; this.reconnectAttempts = {}; this.iceGatheringStartTimes = {};
+                Object.keys(this.connectionTimeouts).forEach(peerId => clearTimeout(this.connectionTimeouts[peerId])); this.connectionTimeouts = {};
+                Object.keys(this.iceTimers).forEach(peerId => clearTimeout(this.iceTimers[peerId])); this.iceTimers = {};
+
                 if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                    this.websocket.onclose = null; // Prevent default onclose reconnect logic
+                    this.websocket.onclose = null;
                     this.websocket.close();
                 }
-                this.websocket = null;
-                this.isWebSocketConnected = false;
-                EventEmitter.emit('websocketStatusUpdate'); // Update UI about WS status
+                this.websocket = null; this.isWebSocketConnected = false;
+                EventEmitter.emit('websocketStatusUpdate');
 
-                // Re-initialize WebSocket connection after a short delay
                 setTimeout(() => this.initialize(), 1000);
 
                 UIManager.showNotification("All connections have been reset.", "info");
-                // Update UI for the current chat if it was a P2P chat
                 if (ChatManager.currentChatId && !ChatManager.currentChatId.startsWith("group_") && !UserManager.isSpecialContact(ChatManager.currentChatId)) {
                     UIManager.updateChatHeaderStatus("Disconnected - Connections Reset");
                     UIManager.setCallButtonsState(false);
                 }
-                ChatManager.renderChatList(); // Re-render chat list to update online status dots
+                ChatManager.renderChatList();
             }
         );
     },
 
-    updateSdpTextInModal: function(peerId) {
+    updateSdpTextInModal: function(peerIdToGetSdpFrom) {
         const sdpTextEl = document.getElementById('modalSdpText');
-        if (!sdpTextEl) return; // Modal not open or element doesn't exist
+        if (!sdpTextEl) return;
 
-        const conn = this.connections[peerId];
+        const conn = this.connections[peerIdToGetSdpFrom];
         const pc = conn?.peerConnection;
 
-        if (pc && pc.localDescription) { // Ensure PeerConnection and localDescription exist
-            const sdpType = pc.localDescription.type; // 'offer' or 'answer'
-            const connectionInfo = { // Structure for manual exchange
-                sdp: {
-                    type: sdpType,
-                    sdp: pc.localDescription.sdp
-                },
-                candidates: this.iceCandidates[peerId] || [], // All gathered ICE candidates
+        if (pc && pc.localDescription) {
+            const sdpType = pc.localDescription.type;
+            const connectionInfo = {
+                sdp: { type: sdpType, sdp: pc.localDescription.sdp },
+                candidates: this.iceCandidates[peerIdToGetSdpFrom] || [],
                 userId: UserManager.userId,
-                // Include call type information
                 isVideoCall: conn?.isVideoCall || false,
                 isAudioOnly: conn?.isAudioOnly || false,
                 isScreenShare: conn?.isScreenShare || false,
             };
-            sdpTextEl.value = JSON.stringify(connectionInfo, null, 2); // Pretty print JSON
-            Utils.log(`Updated modalSdpText for ${peerId} with local ${sdpType} and ${connectionInfo.candidates.length} candidates.`, Utils.logLevels.DEBUG);
-        } else { // Still generating or error
-            sdpTextEl.value = `Generating ${pc?.localDescription ? pc.localDescription.type : 'connection info'} for ${peerId}... (ICE State: ${pc?.iceGatheringState})`;
+            sdpTextEl.value = JSON.stringify(connectionInfo, null, 2);
+            Utils.log(`Updated modalSdpText for ${peerIdToGetSdpFrom} with local ${sdpType} and ${connectionInfo.candidates.length} candidates.`, Utils.logLevels.DEBUG);
+        } else {
+            sdpTextEl.value = `Generating ${pc?.localDescription ? pc.localDescription.type : 'info'} for ${peerIdToGetSdpFrom}... (ICE: ${pc?.iceGatheringState})`;
         }
+        UIManager.copySdpTextFromModal();
     },
 
     handleIceGatheringStateChange: function(peerId) {
         const pc = this.connections[peerId]?.peerConnection;
-        if (!pc) return; // No PeerConnection object for this peerId
+        if (!pc) return;
         Utils.log(`ICE gathering state for ${peerId}: ${pc.iceGatheringState}`, Utils.logLevels.DEBUG);
 
         if (pc.iceGatheringState === 'gathering') {
-            // Record start time if not already set for this gathering phase
             if (!this.iceGatheringStartTimes[peerId]) {
                 this.iceGatheringStartTimes[peerId] = Date.now();
             }
         } else if (pc.iceGatheringState === 'complete') {
-            // Calculate duration of ICE gathering if start time was recorded
             const duration = (Date.now() - (this.iceGatheringStartTimes[peerId] || Date.now())) / 1000;
             Utils.log(`ICE gathering reported complete for ${peerId} in ${duration.toFixed(1)}s. Total candidates: ${this.iceCandidates[peerId]?.length || 0}`, Utils.logLevels.DEBUG);
-            // Reset start time for next potential gathering phase
             delete this.iceGatheringStartTimes[peerId];
-            // Any specific actions on ICE completion (like updating modal SDP for manual exchange)
-            // are typically handled by waitForIceGatheringComplete callbacks.
         }
     },
 };

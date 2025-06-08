@@ -24,24 +24,24 @@ const UIManager = {
         { key: 'enabled', label: 'Enable TTS', type: 'checkbox', default: false },
         { key: 'model_name', label: 'Model Name', type: 'text', default: 'GPT-SoVITS' },
         { key: 'speaker_name', label: 'Speaker Name', type: 'text', default: 'default_speaker' },
-        { key: 'prompt_text_lang', label: 'Prompt Lang', type: 'select', default: '中文', options: ["中文"] },
-        { key: 'emotion', label: 'Emotion', type: 'text', default: '默认' },
+        { key: 'prompt_text_lang', label: 'Prompt Lang', type: 'select', default: '中文', options: ["中文", "英语", "日语"] },
+        { key: 'emotion', label: 'Emotion', type: 'text', default: '开心_happy' },
         { key: 'text_lang', label: 'Text Lang', type: 'select', default: '中文', options: ["中文", "英语", "日语"] },
-        { key: 'text_split_method', label: 'Split Method', type: 'select', default: '按标点符号切', options: ["不切", "按标点符号切", "按标点符号和空格切", "按空格切"] },
+        { key: 'text_split_method', label: 'Split Method', type: 'select', default: '按标点符号切', options: ["四句一切", "凑50字一切", "按中文句号。切", "按英文句号.切", "按标点符号切"] },
         { key: 'seed', label: 'Seed', type: 'number', default: -1, step:1 },
 
         // Advanced parameters
-        { key: 'top_k', label: 'Top K', type: 'number', default: 10, step:1, isAdvanced: true },
-        { key: 'top_p', label: 'Top P', type: 'number', default: 1.0, step:0.1, min:0, max:1, isAdvanced: true },
-        { key: 'temperature', label: 'Temperature', type: 'number', default: 1.0, step:0.1, min:0, max:2, isAdvanced: true },
-        { key: 'batch_size', label: 'Batch Size', type: 'number', default: 10, step:1, isAdvanced: true },
+        { key: 'media_type', label: 'Media Type', type: 'select', default: 'wav', options: ["wav", "mp3", "ogg"], isAdvanced: true },
+        { key: 'fragment_interval', label: 'Fragment Int.', type: 'number', default: 0.3, step:0.01, min:0, isAdvanced: true },
+        { key: 'speed_facter', label: 'Speed Factor', type: 'number', default: 1.0, step:0.1, min:0.1, max:3.0, isAdvanced: true },
+        { key: 'parallel_infer', label: 'Parallel Infer', type: 'checkbox', default: true, isAdvanced: true },
         { key: 'batch_threshold', label: 'Batch Threshold', type: 'number', default: 0.75, step:0.01, min:0, max:1, isAdvanced: true },
         { key: 'split_bucket', label: 'Split Bucket', type: 'checkbox', default: true, isAdvanced: true },
-        { key: 'speed_facter', label: 'Speed Factor', type: 'number', default: 1.0, step:0.1, min:0.1, max:3.0, isAdvanced: true },
-        { key: 'fragment_interval', label: 'Fragment Int.', type: 'number', default: 0.3, step:0.01, min:0, isAdvanced: true },
-        { key: 'media_type', label: 'Media Type', type: 'select', default: 'wav', options: ["wav", "mp3", "ogg"], isAdvanced: true },
-        { key: 'parallel_infer', label: 'Parallel Infer', type: 'checkbox', default: true, isAdvanced: true },
-        { key: 'repetition_penalty', label: 'Rep. Penalty', type: 'number', default: 1.35, step:0.01, min:1, isAdvanced: true }
+        { key: 'batch_size', label: 'Batch Size', type: 'number', default: 10, step:1, min:1, max:100, isAdvanced: true },
+        { key: 'top_k', label: 'Top K', type: 'number', default: 10, step:1, min:1, max:100, isAdvanced: true },
+        { key: 'top_p', label: 'Top P', type: 'number', default: 0.01, step:0.01, min:0, max:1, isAdvanced: true },
+        { key: 'temperature', label: 'Temperature', type: 'number', default: 1.0, step:0.01, min:0.01, max:1, isAdvanced: true },
+        { key: 'repetition_penalty', label: 'Rep. Penalty', type: 'number', default: 1.35, step:0.01, min:0, max:2, isAdvanced: true },
     ],
 
     // Fallback default values for AI settings if Config.server is not properly initialized
@@ -61,22 +61,44 @@ const UIManager = {
         this.openSourceModalTimerSpan = document.getElementById('openSourceModalTimer');
         this._bindOpenSourceInfoModalEvents();
 
-        // AI & API Config collapsible section
-        const collapsibleHeader = document.querySelector('#mainMenuModal .settings-section .collapsible-header');
-        if (collapsibleHeader) {
-            collapsibleHeader.addEventListener('click', function() {
+        // --- MODIFIED SECTION FOR COLLAPSIBLES START ---
+        // Get ALL collapsible headers within the main menu modal's settings sections
+        const collapsibleHeaders = document.querySelectorAll('#mainMenuModal .settings-section .collapsible-header');
+
+        collapsibleHeaders.forEach(header => {
+            header.addEventListener('click', function() {
                 this.classList.toggle('active');
-                const content = this.nextElementSibling;
-                const icon = this.querySelector('.collapsible-icon');
-                if (content.style.display === "block") {
-                    content.style.display = "none";
-                    if(icon) icon.textContent = '▼';
-                } else {
-                    content.style.display = "block";
-                    if(icon) icon.textContent = '▲';
+                const content = this.nextElementSibling; // Assumes content is the immediate next sibling
+                const icon = this.querySelector('.collapse-icon');
+
+                if (content && content.classList.contains('collapsible-content')) {
+                    // Check current display state to toggle
+                    // Note: Initial state is set by inline style="display: none;"
+                    if (content.style.display === 'block' || content.style.display === '') { // If it's block or has no inline style (might be set by CSS)
+                        content.style.display = 'none';
+                        if (icon) icon.textContent = '▶'; // Icon for collapsed state
+                    } else {
+                        content.style.display = 'block'; // Or 'flex' if your content needs it
+                        if (icon) icon.textContent = '▼'; // Icon for expanded state
+                    }
                 }
             });
-        }
+
+            // Ensure initial icon state matches content visibility for dynamically added ones (if any)
+            // or if a header starts with 'active' class but content isn't shown by default.
+            // For our case, HTML style="display:none" is the primary driver for initial state.
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.collapse-icon');
+            if (content && content.classList.contains('collapsible-content') && icon) {
+                if (content.style.display === 'none') {
+                    icon.textContent = '▶';
+                    header.classList.remove('active'); // Ensure 'active' class matches
+                } else {
+                    icon.textContent = '▼';
+                }
+            }
+        });
+        // --- MODIFIED SECTION FOR COLLAPSIBLES END ---
 
         // Get AI and TTS config input elements
         this.apiEndpointInput = document.getElementById('apiEndpointInput');
@@ -370,37 +392,59 @@ const UIManager = {
         }
     },
 
-    updateChatHeader: function (title, status, avatarText, isGroup = false, isOwner = false) {
+    updateChatHeader: function (title, status, avatarTextParam, isGroup = false, isOwner = false) {
         document.getElementById('currentChatTitleMain').textContent = Utils.escapeHtml(title);
         document.getElementById('currentChatStatusMain').textContent = Utils.escapeHtml(status);
         const avatarEl = document.getElementById('currentChatAvatarMain');
         const chatHeaderMainEl = document.querySelector('.chat-header-main');
 
-        // Reset character-specific classes from header first
         if (chatHeaderMainEl) {
-            chatHeaderMainEl.className = 'chat-header-main';
+            chatHeaderMainEl.className = 'chat-header-main'; // Reset classes
         }
-
         avatarEl.className = 'chat-avatar-main'; // Reset classes
         if (isGroup) avatarEl.classList.add('group');
 
         const currentContact = UserManager.contacts[ChatManager.currentChatId];
-        let avatarContentHtml = Utils.escapeHtml(avatarText) || Utils.escapeHtml(title).charAt(0).toUpperCase();
 
-        if (currentContact) {
-            if (currentContact.isSpecial) {
-                avatarEl.classList.add('special-avatar', currentContact.id); // Add character ID class to avatar
-                if (chatHeaderMainEl) {
-                    chatHeaderMainEl.classList.add(`current-chat-${currentContact.id}`); // Add character ID class to header
-                }
-            }
-            if (currentContact.avatarUrl) { // Check for custom avatar URL
-                avatarContentHtml = `<img src="${currentContact.avatarUrl}" alt="${Utils.escapeHtml(title.charAt(0))}" class="avatar-image">`;
-            }
-        } else if (isGroup) {
-            avatarContentHtml = Utils.escapeHtml(avatarText); // Ensure group avatar text is used
+        // Determine the text/character to display if no image or as fallback
+        let finalAvatarTextForDisplay;
+        if (avatarTextParam) {
+            finalAvatarTextForDisplay = Utils.escapeHtml(avatarTextParam);
+        } else if (title && title.length > 0) {
+            finalAvatarTextForDisplay = Utils.escapeHtml(title.charAt(0).toUpperCase());
+        } else {
+            finalAvatarTextForDisplay = '?';
         }
 
+        let avatarContentHtml;
+        if (currentContact && currentContact.avatarUrl) {
+            // Fallback text for the <img> tag itself
+            let imgFallbackText;
+            if (currentContact.avatarText) {
+                imgFallbackText = Utils.escapeHtml(currentContact.avatarText);
+            } else if (currentContact.name && currentContact.name.length > 0) {
+                imgFallbackText = Utils.escapeHtml(currentContact.name.charAt(0).toUpperCase());
+            } else {
+                imgFallbackText = '?';
+            }
+            avatarContentHtml = `<img src="${currentContact.avatarUrl}" alt="${imgFallbackText}" class="avatar-image" data-fallback-text="${imgFallbackText}" data-entity-id="${currentContact.id}">`;
+
+            if (currentContact.isSpecial) {
+                avatarEl.classList.add('special-avatar', currentContact.id);
+                if (chatHeaderMainEl) {
+                    chatHeaderMainEl.classList.add(`current-chat-${currentContact.id}`);
+                }
+            }
+        } else {
+            // No image URL, display text-based avatar
+            avatarContentHtml = finalAvatarTextForDisplay;
+            if (currentContact && currentContact.isSpecial) {
+                avatarEl.classList.add('special-avatar', currentContact.id);
+                if (chatHeaderMainEl) {
+                    chatHeaderMainEl.classList.add(`current-chat-${currentContact.id}`);
+                }
+            }
+        }
         avatarEl.innerHTML = avatarContentHtml;
 
         document.getElementById('chatDetailsBtnMain').style.display = ChatManager.currentChatId ? 'block' : 'none';
@@ -723,10 +767,22 @@ const UIManager = {
             idEl.textContent = `ID: ${contact.id}`;
 
             avatarEl.className = 'details-avatar'; // Reset
-            let avatarContentHtml = Utils.escapeHtml(contact.avatarText || contact.name.charAt(0).toUpperCase());
-            if (contact.isSpecial) avatarEl.classList.add('special-avatar', contact.id); // Add char ID
+
+            let fallbackTextForDetails;
+            if (contact.avatarText) {
+                fallbackTextForDetails = Utils.escapeHtml(contact.avatarText);
+            } else if (contact.name && contact.name.length > 0) {
+                fallbackTextForDetails = Utils.escapeHtml(contact.name.charAt(0).toUpperCase());
+            } else {
+                fallbackTextForDetails = '?';
+            }
+
+            let avatarContentHtml;
+            if (contact.isSpecial) avatarEl.classList.add('special-avatar', contact.id);
             if (contact.avatarUrl) {
-                avatarContentHtml = `<img src="${contact.avatarUrl}" alt="${Utils.escapeHtml(contact.name.charAt(0))}" class="avatar-image">`;
+                avatarContentHtml = `<img src="${contact.avatarUrl}" alt="${fallbackTextForDetails}" class="avatar-image" data-fallback-text="${fallbackTextForDetails}" data-entity-id="${contact.id}">`;
+            } else {
+                avatarContentHtml = fallbackTextForDetails;
             }
             avatarEl.innerHTML = avatarContentHtml;
 
@@ -908,7 +964,7 @@ const UIManager = {
 
             const advancedHeader = document.createElement('div');
             advancedHeader.className = 'collapsible-header tts-advanced-header';
-            advancedHeader.innerHTML = `<h5>Advanced</h5><span class="collapsible-icon">▼</span>`;
+            advancedHeader.innerHTML = `<h5>Advanced</h5><span class="collapsible-icon">▶</span>`;
 
             const advancedFieldsContainer = document.createElement('div');
             advancedFieldsContainer.className = 'collapsible-content tts-advanced-fields-container';
@@ -921,10 +977,10 @@ const UIManager = {
                     const icon = this.querySelector('.collapsible-icon');
                     if (advancedFieldsContainer.style.display === "block") {
                         advancedFieldsContainer.style.display = "none";
-                        if(icon) icon.textContent = '▼';
+                        if(icon) icon.textContent = '▶';
                     } else {
                         advancedFieldsContainer.style.display = "block";
-                        if(icon) icon.textContent = '▲';
+                        if(icon) icon.textContent = '▼';
                     }
                 });
                 advancedHeader.setAttribute('data-click-handler-bound', 'true');
@@ -1288,24 +1344,34 @@ const UIManager = {
         titleEl.textContent = `${callType}...`;
         textEl.textContent = `Contacting ${Utils.escapeHtml(peerName)}...`;
 
-        // Avatar logic for calling modal
-        let avatarContentHtml = (Utils.escapeHtml(peerName).charAt(0) || 'P').toUpperCase();
-        const peerContact = UserManager.contacts[VideoCallManager.currentPeerId]; // Assuming VideoCallManager.currentPeerId is set
+        let avatarContentHtml;
+        const peerContact = UserManager.contacts[VideoCallManager.currentPeerId];
 
-        avatarEl.className = 'video-call-avatar'; // Reset class, specific styles will be applied by CSS based on peerContact.id
+        let fallbackTextForCallingModal;
+        if (peerContact && peerContact.avatarText) {
+            fallbackTextForCallingModal = Utils.escapeHtml(peerContact.avatarText);
+        } else if (peerName && peerName.length > 0) {
+            fallbackTextForCallingModal = Utils.escapeHtml(peerName.charAt(0).toUpperCase());
+        } else {
+            fallbackTextForCallingModal = '?';
+        }
+
+        avatarEl.className = 'video-call-avatar';
         if (peerContact && peerContact.isSpecial) {
-            avatarEl.classList.add(peerContact.id); // Add character-specific class e.g. "AI_王林"
+            avatarEl.classList.add(peerContact.id);
         }
 
         if (peerContact && peerContact.avatarUrl) {
-            avatarContentHtml = `<img src="${peerContact.avatarUrl}" alt="${Utils.escapeHtml(peerName.charAt(0))}" class="avatar-image">`;
+            avatarContentHtml = `<img src="${peerContact.avatarUrl}" alt="${fallbackTextForCallingModal}" class="avatar-image" data-fallback-text="${fallbackTextForCallingModal}" data-entity-id="${peerContact.id}">`;
+        } else {
+            avatarContentHtml = fallbackTextForCallingModal;
         }
         avatarEl.innerHTML = avatarContentHtml;
 
 
-        cancelBtn.onclick = onCancelCall; // Set the cancel action
+        cancelBtn.onclick = onCancelCall;
 
-        modal.style.display = 'flex'; // Show the modal
+        modal.style.display = 'flex';
     },
 
     hideCallingModal: function () {

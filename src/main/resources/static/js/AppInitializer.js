@@ -2,6 +2,10 @@ const AppInitializer = {
 
     init: async function () {
         Utils.setLogLevelFromConfig();
+
+        // Initialize global image error handler first
+        this.initializeGlobalImageErrorHandler(); // <<< BARU DITAMBAHKAN
+
         if (!UIManager.checkWebRTCSupport()) return;
 
         // ThemeLoader.init() is already called via inline script in index.html
@@ -36,7 +40,7 @@ const AppInitializer = {
             // Note: The loading overlay is now hidden by the MutationObserver in setupEventListeners
             // which will then trigger the UIManager.showOpenSourceInfoModal()
         } catch (error) {
-            Utils.log(`应用初始化失败: ${error}`, Utils.logLevels.ERROR);
+            Utils.log(`应用初始化失败: ${error.stack || error}`, Utils.logLevels.ERROR); // Log stack trace if available
             UIManager.showNotification('应用初始化失败，部分功能可能无法使用.', 'error');
 
             // Fallback initialization for essential UI if main init fails
@@ -64,6 +68,67 @@ const AppInitializer = {
         }
     },
 
+    initializeGlobalImageErrorHandler: function() { // <<< FUNGSI BARU
+        document.addEventListener('error', function(event) {
+            const imgElement = event.target;
+            if (imgElement && imgElement.tagName === 'IMG') {
+                // Mencegah loop jika kita mencoba mengganti src dan itu juga gagal (nama kelas diubah)
+                if (imgElement.classList.contains('image-load-error-processed')) {
+                    return;
+                }
+                imgElement.classList.add('image-load-error-processed'); // Tandai bahwa kita sudah mencoba
+
+                Utils.log(`Gambar gagal dimuat: ${imgElement.src}. Mencoba fallback.`, Utils.logLevels.WARN);
+
+                if (imgElement.classList.contains('avatar-image')) {
+                    const fallbackText = imgElement.dataset.fallbackText || imgElement.alt || '?';
+                    const entityId = imgElement.dataset.entityId;
+                    const avatarContainer = imgElement.parentElement;
+
+                    // Check if the parent is one of our designated avatar containers
+                    if (avatarContainer && (
+                        avatarContainer.classList.contains('chat-list-avatar') ||
+                        avatarContainer.classList.contains('chat-avatar-main') ||
+                        avatarContainer.classList.contains('details-avatar') ||
+                        avatarContainer.classList.contains('video-call-avatar') // Added for calling modal avatars
+                    )) {
+                        avatarContainer.innerHTML = ''; // Clear the failed <img>
+                        avatarContainer.textContent = fallbackText; // Set the fallback text
+                        // Add a class to avatarContainer for any specific styling if needed for text
+                        avatarContainer.classList.add('avatar-fallback-active');
+                        Utils.log(`Fallback avatar disetel untuk ${entityId || 'unknown entity'} dengan teks: ${fallbackText}`, Utils.logLevels.INFO);
+                    } else {
+                        // If it's an avatar-image but not in a known container, or parent is null
+                        imgElement.style.display = 'none'; // Fallback to just hiding it
+                        Utils.log(`Avatar image ${imgElement.src} (ID: ${entityId}) tidak dalam container yang dikenal atau parent tidak ada, disembunyikan.`, Utils.logLevels.WARN);
+                    }
+                } else if (imgElement.classList.contains('file-preview-img')) { // Handle image messages
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'image-message-fallback';
+                    placeholder.textContent = '[Image not available]';
+
+                    if (imgElement.parentElement) {
+                        try {
+                            imgElement.parentElement.replaceChild(placeholder, imgElement);
+                        } catch (e) {
+                            Utils.log(`Gagal mengganti image message dengan fallback: ${e.message}`, Utils.logLevels.WARN);
+                            imgElement.style.display = 'none';
+                        }
+                    } else {
+                        imgElement.style.display = 'none';
+                    }
+                    Utils.log(`Fallback teks disetel untuk pesan gambar: ${imgElement.src}`, Utils.logLevels.INFO);
+                } else {
+                    // For other images, add class and optionally hide
+                    imgElement.classList.add('image-load-error'); // General error class
+                    // imgElement.style.display = 'none'; // Optionally hide all other unhandled failed images
+                    Utils.log(`Gambar ${imgElement.src} gagal dimuat, kelas error umum ditambahkan.`, Utils.logLevels.WARN);
+                }
+            }
+        }, true); // true untuk menggunakan capture phase
+        Utils.log("Global image error handler initialized.", Utils.logLevels.INFO);
+    },
+
     initUIMode: function() {
         UIManager.updateResponsiveUI();
         window.addEventListener('resize', UIManager.updateResponsiveUI.bind(UIManager));
@@ -75,7 +140,7 @@ const AppInitializer = {
             const wsStatus = ConnectionManager.isWebSocketConnected;
             UIManager.updateNetworkInfoDisplay(networkType, wsStatus);
         } catch (error) {
-            Utils.log(`Error in refreshNetworkStatusUI during Utils.checkNetworkType: ${error}`, Utils.logLevels.ERROR);
+            Utils.log(`Error in refreshNetworkStatusUI during Utils.checkNetworkType: ${error.message || error}`, Utils.logLevels.ERROR);
             UIManager.updateNetworkInfoDisplay({ error: "WebRTC check failed" }, ConnectionManager.isWebSocketConnected);
         }
     },
@@ -88,12 +153,13 @@ const AppInitializer = {
     handleNetworkChange: async function () {
         if (navigator.onLine) {
             UIManager.updateConnectionStatusIndicator('Network reconnected. Attempting to restore connections...');
-            ConnectionManager.initialize();
+            ConnectionManager.initialize(); // Re-initialize or attempt to reconnect
         } else {
             UIManager.updateConnectionStatusIndicator('Network disconnected.');
         }
         await this.refreshNetworkStatusUI();
     },
+
     smartBackToChatList: function (){
         history.pushState(null, null, location.href);
         window.addEventListener('popstate', function(event) {
@@ -102,11 +168,14 @@ const AppInitializer = {
                 const computedStyle = window.getComputedStyle(btn);
                 const displayProperty = computedStyle.getPropertyValue('display');
                 if (displayProperty === "block"){
-                    history.pushState(null, null, location.href);
-                    UIManager.showChatListArea()
-                    console.log("用户尝试返回，猜测可能需要返回聊天列表。");
+                    // If back button is visible (meaning we are in chat view on mobile),
+                    // prevent default back and show chat list.
+                    history.pushState(null, null, location.href); // Push state again to override browser's back
+                    UIManager.showChatListArea();
+                    Utils.log("Pengguna mencoba kembali dari tampilan chat, menampilkan daftar chat.", Utils.logLevels.DEBUG);
                 }
             }
+            // If not in chat view (btn not 'block'), let the browser handle back normally.
         });
     },
 
@@ -164,18 +233,21 @@ const AppInitializer = {
         });
 
         const voiceButton = document.getElementById('voiceButtonMain');
-        if ('ontouchstart' in window) {
-            voiceButton.addEventListener('touchstart', (e) => { e.preventDefault(); MediaManager.startRecording(); });
-            voiceButton.addEventListener('touchend', (e) => { e.preventDefault(); MediaManager.stopRecording(); });
-        } else {
-            voiceButton.addEventListener('mousedown', MediaManager.startRecording.bind(MediaManager));
-            voiceButton.addEventListener('mouseup', MediaManager.stopRecording.bind(MediaManager));
-            voiceButton.addEventListener('mouseleave', () => {
-                if (MediaManager.mediaRecorder && MediaManager.mediaRecorder.state === 'recording') {
-                    MediaManager.stopRecording();
-                }
-            });
+        if (voiceButton) { // Check if element exists
+            if ('ontouchstart' in window) {
+                voiceButton.addEventListener('touchstart', (e) => { e.preventDefault(); MediaManager.startRecording(); });
+                voiceButton.addEventListener('touchend', (e) => { e.preventDefault(); MediaManager.stopRecording(); });
+            } else {
+                voiceButton.addEventListener('mousedown', MediaManager.startRecording.bind(MediaManager));
+                voiceButton.addEventListener('mouseup', MediaManager.stopRecording.bind(MediaManager));
+                voiceButton.addEventListener('mouseleave', () => {
+                    if (MediaManager.mediaRecorder && MediaManager.mediaRecorder.state === 'recording') {
+                        MediaManager.stopRecording();
+                    }
+                });
+            }
         }
+
 
         document.getElementById('mainMenuBtn').addEventListener('click', () => {
             UIManager.toggleModal('mainMenuModal', true);
@@ -189,14 +261,18 @@ const AppInitializer = {
                 if (UIManager.updateCheckNetworkButtonState) UIManager.updateCheckNetworkButtonState();
             }
         });
-        document.querySelector('.close-modal-btn[data-modal-id="mainMenuModal"]').addEventListener('click', () => UIManager.toggleModal('mainMenuModal', false));
-        document.getElementById('modalCopyIdBtn').addEventListener('click', () => {
-            if (document.getElementById('modalCopyIdBtn').disabled) return;
+        const closeMainMenuBtn = document.querySelector('.close-modal-btn[data-modal-id="mainMenuModal"]');
+        if (closeMainMenuBtn) closeMainMenuBtn.addEventListener('click', () => UIManager.toggleModal('mainMenuModal', false));
+
+        const modalCopyIdBtn = document.getElementById('modalCopyIdBtn');
+        if (modalCopyIdBtn) modalCopyIdBtn.addEventListener('click', () => {
+            if (modalCopyIdBtn.disabled) return;
             UIManager.copyUserIdFromModal();
         });
-        document.getElementById('checkNetworkBtnModal').addEventListener('click', async () => {
-            const checkBtn = document.getElementById('checkNetworkBtnModal');
-            if (checkBtn.disabled) { // If button is disabled (meaning already connected)
+
+        const checkNetworkBtnModal = document.getElementById('checkNetworkBtnModal');
+        if (checkNetworkBtnModal) checkNetworkBtnModal.addEventListener('click', async () => {
+            if (checkNetworkBtnModal.disabled) { // If button is disabled (meaning already connected)
                 UIManager.showNotification('Currently connected to signaling server.', 'info');
                 return;
             }
@@ -206,7 +282,7 @@ const AppInitializer = {
                 Utils.log("Re-check Network button: WebSocket not connected, attempting to connect.", Utils.logLevels.INFO);
                 ConnectionManager.connectWebSocket().catch(err => {
                     UIManager.showNotification('Failed to re-establish signaling connection.', 'error');
-                    Utils.log(`Manual Re-check Network: connectWebSocket failed: ${err}`, Utils.logLevels.ERROR);
+                    Utils.log(`Manual Re-check Network: connectWebSocket failed: ${err.message || err}`, Utils.logLevels.ERROR);
                 });
             }
         });
@@ -229,52 +305,96 @@ const AppInitializer = {
         }
 
 
-        document.getElementById('modalResetAllConnectionsBtn').addEventListener('click', () => ConnectionManager.resetAllConnections());
-        document.getElementById('modalClearContactsBtn').addEventListener('click', () => UserManager.clearAllContacts());
-        document.getElementById('modalClearAllChatsBtn').addEventListener('click', () => ChatManager.clearAllChats());
+        const modalResetAllConnectionsBtn = document.getElementById('modalResetAllConnectionsBtn');
+        if (modalResetAllConnectionsBtn) modalResetAllConnectionsBtn.addEventListener('click', () => ConnectionManager.resetAllConnections());
+
+        const modalClearContactsBtn = document.getElementById('modalClearContactsBtn');
+        if (modalClearContactsBtn) modalClearContactsBtn.addEventListener('click', () => UserManager.clearAllContacts());
+
+        const modalClearAllChatsBtn = document.getElementById('modalClearAllChatsBtn');
+        if (modalClearAllChatsBtn) modalClearAllChatsBtn.addEventListener('click', () => ChatManager.clearAllChats());
 
 
-        document.getElementById('newChatFab').addEventListener('click', () => UIManager.toggleModal('newContactGroupModal', true));
-        document.querySelector('.close-modal-btn[data-modal-id="newContactGroupModal"]').addEventListener('click', () => UIManager.toggleModal('newContactGroupModal', false));
-        document.getElementById('confirmNewContactBtn').addEventListener('click', UIManager.handleAddNewContact);
-        document.getElementById('confirmNewGroupBtnModal').addEventListener('click', UIManager.handleCreateNewGroup);
+        const newChatFab = document.getElementById('newChatFab');
+        if (newChatFab) newChatFab.addEventListener('click', () => UIManager.toggleModal('newContactGroupModal', true));
 
-        document.getElementById('videoCallButtonMain').onclick = () => VideoCallManager.initiateCall(ChatManager.currentChatId);
-        document.getElementById('audioCallButtonMain').onclick = () => VideoCallManager.initiateAudioCall(ChatManager.currentChatId);
-        document.getElementById('screenShareButtonMain').onclick = () => VideoCallManager.initiateScreenShare(ChatManager.currentChatId);
-        document.getElementById('chatDetailsBtnMain').addEventListener('click', () => UIManager.toggleDetailsPanel(true));
+        const closeNewContactGroupModalBtn = document.querySelector('.close-modal-btn[data-modal-id="newContactGroupModal"]');
+        if (closeNewContactGroupModalBtn) closeNewContactGroupModalBtn.addEventListener('click', () => UIManager.toggleModal('newContactGroupModal', false));
 
-        document.getElementById('closeDetailsBtnMain').addEventListener('click', () => UIManager.toggleDetailsPanel(false));
-        document.getElementById('addMemberBtnDetails').addEventListener('click', UIManager.handleAddMemberToGroupDetails);
+        const confirmNewContactBtn = document.getElementById('confirmNewContactBtn');
+        if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', UIManager.handleAddNewContact);
 
-        document.getElementById('tabAllChats').addEventListener('click', () => ChatManager.renderChatList('all'));
-        document.getElementById('tabContacts').addEventListener('click', () => UserManager.renderContactListForSidebar());
-        document.getElementById('tabGroups').addEventListener('click', () => GroupManager.renderGroupListForSidebar());
+        const confirmNewGroupBtnModal = document.getElementById('confirmNewGroupBtnModal');
+        if (confirmNewGroupBtnModal) confirmNewGroupBtnModal.addEventListener('click', UIManager.handleCreateNewGroup);
 
-        document.getElementById('chatSearchInput').addEventListener('input', (e) => UIManager.filterChatList(e.target.value));
+        const videoCallButtonMain = document.getElementById('videoCallButtonMain');
+        if (videoCallButtonMain) videoCallButtonMain.onclick = () => VideoCallManager.initiateCall(ChatManager.currentChatId);
 
-        document.getElementById('sendButtonMain').addEventListener('click', MessageManager.sendMessage);
-        document.getElementById('attachBtnMain').addEventListener('click', () => document.getElementById('fileInput').click());
-        document.getElementById('fileInput').addEventListener('change', MediaManager.handleFileSelect.bind(MediaManager));
+        const audioCallButtonMain = document.getElementById('audioCallButtonMain');
+        if (audioCallButtonMain) audioCallButtonMain.onclick = () => VideoCallManager.initiateAudioCall(ChatManager.currentChatId);
+
+        const screenShareButtonMain = document.getElementById('screenShareButtonMain');
+        if (screenShareButtonMain) screenShareButtonMain.onclick = () => VideoCallManager.initiateScreenShare(ChatManager.currentChatId);
+
+        const chatDetailsBtnMain = document.getElementById('chatDetailsBtnMain');
+        if (chatDetailsBtnMain) chatDetailsBtnMain.addEventListener('click', () => UIManager.toggleDetailsPanel(true));
+
+        const closeDetailsBtnMain = document.getElementById('closeDetailsBtnMain');
+        if (closeDetailsBtnMain) closeDetailsBtnMain.addEventListener('click', () => UIManager.toggleDetailsPanel(false));
+
+        const addMemberBtnDetails = document.getElementById('addMemberBtnDetails');
+        if (addMemberBtnDetails) addMemberBtnDetails.addEventListener('click', UIManager.handleAddMemberToGroupDetails);
+
+        const tabAllChats = document.getElementById('tabAllChats');
+        if (tabAllChats) tabAllChats.addEventListener('click', () => ChatManager.renderChatList('all'));
+
+        const tabContacts = document.getElementById('tabContacts');
+        if (tabContacts) tabContacts.addEventListener('click', () => UserManager.renderContactListForSidebar());
+
+        const tabGroups = document.getElementById('tabGroups');
+        if (tabGroups) tabGroups.addEventListener('click', () => GroupManager.renderGroupListForSidebar());
+
+        const chatSearchInput = document.getElementById('chatSearchInput');
+        if (chatSearchInput) chatSearchInput.addEventListener('input', (e) => UIManager.filterChatList(e.target.value));
+
+        const sendButtonMain = document.getElementById('sendButtonMain');
+        if (sendButtonMain) sendButtonMain.addEventListener('click', MessageManager.sendMessage);
+
+        const attachBtnMain = document.getElementById('attachBtnMain');
+        if (attachBtnMain) attachBtnMain.addEventListener('click', () => {
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput) fileInput.click();
+        });
+
+        const fileInput = document.getElementById('fileInput');
+        if (fileInput) fileInput.addEventListener('change', MediaManager.handleFileSelect.bind(MediaManager));
 
 
-        document.getElementById('backToListBtn').addEventListener('click', () => UIManager.showChatListArea());
+        const backToListBtn = document.getElementById('backToListBtn');
+        if (backToListBtn) backToListBtn.addEventListener('click', () => UIManager.showChatListArea());
 
         window.addEventListener('error', (event) => {
-            Utils.log(`应用错误: ${event.message} at ${event.filename}:${event.lineno}`, Utils.logLevels.ERROR);
+            // Menggunakan event.error jika ada, untuk stack trace yang lebih baik
+            const errorDetails = event.error ? (event.error.stack || event.error.message) : event.message;
+            Utils.log(`Global window error: ${errorDetails} at ${event.filename}:${event.lineno}`, Utils.logLevels.ERROR);
             UIManager.showNotification('An application error occurred. Check console for details.', 'error');
         });
 
         window.addEventListener('unhandledrejection', function(event) {
-            Utils.log(`未处理的Promise拒绝: ${event.reason}`, Utils.logLevels.ERROR);
-            UIManager.showNotification('Lost connection to the server.', 'error');
+            const reason = event.reason instanceof Error ? (event.reason.stack || event.reason.message) : event.reason;
+            Utils.log(`Unhandled Promise rejection: ${reason}`, Utils.logLevels.ERROR);
+            // Pesan "Lost connection to the server" mungkin tidak selalu akurat untuk semua unhandled rejection.
+            // Lebih baik memberikan pesan yang lebih umum atau spesifik jika bisa diidentifikasi.
+            UIManager.showNotification('An unexpected error occurred. Check console.', 'error');
         });
 
         window.addEventListener('beforeunload', () => {
             MediaManager.releaseAudioResources();
             VideoCallManager.releaseMediaResources();
             for (const peerId in ConnectionManager.connections) {
-                ConnectionManager.close(peerId);
+                if (ConnectionManager.connections.hasOwnProperty(peerId)) {
+                    ConnectionManager.close(peerId, true); // true untuk menandakan ini adalah penutupan paksa/final
+                }
             }
         });
 
@@ -283,11 +403,17 @@ const AppInitializer = {
         if (connectionStatusTextEl && loadingOverlay) {
             const observer = new MutationObserver(() => {
                 const statusText = connectionStatusTextEl.textContent.toLowerCase();
-                if (statusText.includes('user registration successful') || statusText.includes('signaling server connected') || statusText.includes('loaded from local') || statusText.includes('using existing id')) {
+                if (statusText.includes('user registration successful') ||
+                    statusText.includes('signaling server connected') ||
+                    statusText.includes('loaded from local') ||
+                    statusText.includes('using existing id') ||
+                    statusText.includes('initialized. ready to connect') // Tambahan untuk status awal sukses
+                ) {
                     setTimeout(() => {
                         if (loadingOverlay.style.display !== 'none') {
                             loadingOverlay.style.display = 'none';
-                            UIManager.showOpenSourceInfoModal(); // Show the modal after loading overlay is hidden
+                            // Hanya tampilkan modal open source jika belum pernah ditutup secara permanen
+                            UIManager.showOpenSourceInfoModal();
                         }
                     }, 500); // Delay to ensure UI settles
                 }

@@ -257,6 +257,25 @@
                         <input type="text" id="ttsApiEndpointInput"
                                placeholder="e.g., http://localhost:8000/infer_single">
                     </div>
+                    <h4 class="collapsible-header">
+                        Advanced <span class="collapse-icon">▶</span>
+                    </h4>
+                    <div class="collapsible-content" style="display: none;">
+                        <p>For connecting if signaling server fails or for direct peer connection.</p>
+                        <div class="manual-connect-step">
+                            <button onclick="ConnectionManager.createOffer(null, { isManual: true })" id="modalCreateOfferBtn" class="btn">1. Create Offer</button>
+                        </div>
+                        <div class="manual-connect-step">
+                            <button onclick="ConnectionManager.createAnswer({ isManual: true })" id="modalCreateAnswerBtn" class="btn">2. Create Answer (after pasting offer)</button>
+                        </div>
+                        <div class="manual-connect-step">
+                            <button onclick="ConnectionManager.handleAnswer({ isManual: true })" id="modalHandleAnswerBtn" class="btn">3. Accept Answer (after pasting answer)</button>
+                        </div>
+                        <div class="manual-connect-step">
+                            <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="Paste peer's connection info here..."></textarea>
+                            <button onclick="UIManager.copySdpTextFromModal()" class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="settings-section">
@@ -276,23 +295,6 @@
                     Quality: <div class="quality-indicator" id="modalQualityIndicator"></div> <span id="modalQualityText">N/A</span>
                 </div>
                 <button id="checkNetworkBtnModal" class="btn btn-secondary">Re-check Network</button>
-            </div>
-            <div class="settings-section manual-connection-advanced">
-                <h3>Manual Connection (Advanced)</h3>
-                <p>For connecting if signaling server fails or for direct peer connection.</p>
-                <div class="manual-connect-step">
-                    <button onclick="ConnectionManager.createOffer()" id="modalCreateOfferBtn" class="btn">1. Create Offer</button>
-                </div>
-                <div class="manual-connect-step">
-                    <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="Paste peer's connection info here..."></textarea>
-                    <button onclick="UIManager.copySdpTextFromModal()" class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
-                </div>
-                <div class="manual-connect-step">
-                    <button onclick="ConnectionManager.createAnswer()" id="modalCreateAnswerBtn" class="btn">2. Create Answer (after pasting offer)</button>
-                </div>
-                <div class="manual-connect-step">
-                    <button onclick="ConnectionManager.handleAnswer()" id="modalHandleAnswerBtn" class="btn">3. Accept Answer (after pasting answer)</button>
-                </div>
             </div>
             <div class="settings-section">
                 <h3>Danger Zone</h3>

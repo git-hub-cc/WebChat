@@ -312,44 +312,21 @@ const MessageManager = {
         if (typeof text !== 'string') return '';
         let cleanedText = text;
 
-        // Remove content between *...*
+        // 1. Remove content between specified delimiters (original logic)
         cleanedText = cleanedText.replace(/\*.*?\*/g, '');
-
-        // Remove content between 【...】
         cleanedText = cleanedText.replace(/【.*?】/g, '');
-
-        // Remove content between [...]
         cleanedText = cleanedText.replace(/\[.*?\]/g, '');
-
-        // Remove content between (...) and （...）
         cleanedText = cleanedText.replace(/\(.*?\)/g, '');
         cleanedText = cleanedText.replace(/（.*?）/g, '');
 
-        // Define characters to be treated as "special" and replaced by a comma.
-        // This targets symbols often not meant for direct speech or remnants of formatting.
-        // Excludes common math/currency symbols like $, %, +, = that TTS might handle.
-        const specialCharsToCommaRegex = /[~*_#^|<>`{}\\]/g; // Added backslash here
-        cleanedText = cleanedText.replace(specialCharsToCommaRegex, ',');
+        // 2. Define allowed characters and punctuation:
+        const allowedCharsRegex = /[^\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff65-\uff9f\u3000-\u303f\uff01-\uff5ea-zA-Z0-9\s.,!?;:'"-]/g;
+        cleanedText = cleanedText.replace(allowedCharsRegex, ' ');
 
-        // Normalize spaces around commas and consolidate multiple commas:
-        // 1. Ensure no multiple spaces around a comma, and convert "word , word" to "word,word"
-        cleanedText = cleanedText.replace(/\s*,\s*/g, ',');
-        // 2. Consolidate multiple commas into a single comma, e.g., ",,," becomes ","
-        cleanedText = cleanedText.replace(/,{2,}/g, ',');
+        // 3. Collapse multiple consecutive spaces
+        cleanedText = cleanedText.replace(/\s+/g, ' ');
 
-        // Remove leading or trailing commas that might have resulted from replacements
-        cleanedText = cleanedText.replace(/^,|,$/g, '');
-
-        // Remove commas if they are adjacent to other significant punctuation marks.
-        // This avoids outputs like "Hello!," or ",Hello?"
-        // ([.。！？\?，。！？、；：]) captures common Western and CJK punctuation.
-        const puncGroup = "([.。！？\\?，。！？、；：])"; // Note: \? needs to be escaped in string for regex
-        // Punctuation followed by a comma (and optional spaces): Punc , -> Punc
-        cleanedText = cleanedText.replace(new RegExp(puncGroup + "\\s*,", 'g'), '$1');
-        // Comma followed by punctuation (and optional spaces): , Punc -> Punc
-        cleanedText = cleanedText.replace(new RegExp(",\\s*" + puncGroup, 'g'), '$1');
-
-        // Trim whitespace that might be left at the ends after all operations
+        // 4. Trim whitespace
         return cleanedText.trim();
     },
 
@@ -562,7 +539,7 @@ const MessageManager = {
             seed: ttsConfig.seed === undefined ? -1 : ttsConfig.seed,
         };
 
-        Utils.log(`MessageManager: TTS request. Using Config: Endpoint='${ttsApiEndpointToUse}'`, Utils.logLevels.DEBUG);
+        Utils.log(`MessageManager: TTS request. Using Config: Endpoint='${ttsApiEndpointToUse}' for ttsId ${ttsId}`, Utils.logLevels.DEBUG);
 
         try {
             const response = await fetch(ttsApiEndpointToUse, {
@@ -577,13 +554,41 @@ const MessageManager = {
             }
 
             const result = await response.json();
+
+            // --- START OF MODIFIED SECTION ---
             if (result.audio_url) {
-                this.updateTtsControlToPlay(parentContainer, ttsId, result.audio_url);
+                try {
+                    Utils.log(`MessageManager: Preloading TTS audio from ${result.audio_url} for ttsId ${ttsId}`, Utils.logLevels.DEBUG);
+                    const audioResponse = await fetch(result.audio_url);
+                    if (!audioResponse.ok) {
+                        const errorText = await audioResponse.text().catch(() => "Could not read error response body");
+                        throw new Error(`Failed to fetch TTS audio file. Status: ${audioResponse.status}. URL: ${result.audio_url}. Response: ${errorText.substring(0,100)}`);
+                    }
+                    const audioBlob = await audioResponse.blob();
+                    if (audioBlob.size === 0) {
+                        throw new Error(`Failed to fetch TTS audio file: Received empty blob. URL: ${result.audio_url}`);
+                    }
+                    const preloadedAudioObjectURL = URL.createObjectURL(audioBlob);
+
+                    Utils.log(`MessageManager: TTS audio preloaded successfully for ttsId ${ttsId}. Object URL: ${preloadedAudioObjectURL}`, Utils.logLevels.DEBUG);
+                    this.updateTtsControlToPlay(parentContainer, ttsId, preloadedAudioObjectURL); // Use preloaded Object URL
+                } catch (preloadError) {
+                    Utils.log(`Error preloading TTS audio for ttsId ${ttsId} (URL: ${result.audio_url}): ${preloadError.message}`, Utils.logLevels.ERROR);
+                    if (Utils.logLevel <= Utils.logLevels.DEBUG && preloadError.stack) {
+                        Utils.log(preloadError.stack, Utils.logLevels.DEBUG);
+                    }
+                    this.updateTtsControlToError(parentContainer, ttsId);
+                }
             } else {
                 throw new Error(`TTS API response missing audio_url. Message: ${result.msg || 'Unknown error'}`);
             }
-        } catch (error) {
-            Utils.log(`Error fetching TTS audio for ttsId ${ttsId}: ${error}`, Utils.logLevels.ERROR);
+            // --- END OF MODIFIED SECTION ---
+
+        } catch (error) { // Catches errors from TTS API request or missing audio_url
+            Utils.log(`Error processing TTS for ttsId ${ttsId}: ${error.message}`, Utils.logLevels.ERROR);
+            if (Utils.logLevel <= Utils.logLevels.DEBUG && error.stack) {
+                Utils.log(error.stack, Utils.logLevels.DEBUG);
+            }
             this.updateTtsControlToError(parentContainer, ttsId);
         }
     },
@@ -594,7 +599,7 @@ const MessageManager = {
             ttsControlContainer.innerHTML = '';
             const playButton = document.createElement('button');
             playButton.className = 'tts-play-button';
-            playButton.dataset.audioUrl = audioUrl;
+            playButton.dataset.audioUrl = audioUrl; // This might be a blob: URL now
             playButton.title = "Play/Pause Speech";
             playButton.onclick = (e) => {
                 e.stopPropagation();
@@ -606,56 +611,99 @@ const MessageManager = {
 
     playTtsAudioFromControl: function (buttonElement) {
         const audioUrl = buttonElement.dataset.audioUrl;
-        if (!audioUrl) return;
+        if (!audioUrl) {
+            Utils.log("TTS play button clicked but no audioUrl found in dataset.", Utils.logLevels.WARN);
+            return;
+        }
 
+        // Helper to clean up the current audio instance if it's an object URL we manage
+        const revokeCurrentAudioObjectURL = (audioInstance) => {
+            // Check if audioInstance exists, has a src, it's a blob URL, and was marked as managed
+            if (audioInstance && audioInstance.src && audioInstance.src.startsWith('blob:') && audioInstance.dataset.managedObjectURL === 'true') {
+                URL.revokeObjectURL(audioInstance.src);
+                Utils.log(`Revoked object URL: ${audioInstance.src}`, Utils.logLevels.DEBUG);
+                delete audioInstance.dataset.managedObjectURL; // Clean up the marker
+            }
+        };
+
+        // If the clicked button is already associated with the currently playing/paused audio
         if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
             if (this._currentlyPlayingTtsAudio.paused) {
-                this._currentlyPlayingTtsAudio.play().catch(e => Utils.log("Error resuming TTS audio: " + e, Utils.logLevels.ERROR));
+                this._currentlyPlayingTtsAudio.play().catch(e => {
+                    Utils.log("Error resuming TTS audio: " + e, Utils.logLevels.ERROR);
+                    // Optionally, briefly show error on button
+                });
                 buttonElement.classList.add('playing');
             } else {
                 this._currentlyPlayingTtsAudio.pause();
                 buttonElement.classList.remove('playing');
             }
         } else {
+            // Stop and clean up any previously playing TTS audio
             if (this._currentlyPlayingTtsAudio) {
                 this._currentlyPlayingTtsAudio.pause();
+                revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
                 if (this._currentlyPlayingTtsButton) {
                     this._currentlyPlayingTtsButton.classList.remove('playing');
                 }
             }
 
+            // Create and play new audio
             this._currentlyPlayingTtsAudio = new Audio(audioUrl);
             this._currentlyPlayingTtsButton = buttonElement;
+
+            // If the audioUrl is a blob URL (our preloaded one), mark it for management
+            if (audioUrl.startsWith('blob:')) {
+                this._currentlyPlayingTtsAudio.dataset.managedObjectURL = 'true';
+            }
 
             this._currentlyPlayingTtsAudio.play().then(() => {
                 buttonElement.classList.add('playing');
             }).catch(e => {
                 Utils.log("Error playing TTS audio: " + e, Utils.logLevels.ERROR);
                 buttonElement.classList.remove('playing');
+
+                const originalButtonContent = buttonElement.innerHTML; // Assuming play button has an icon/text
+                buttonElement.innerHTML = '⚠️';
+                buttonElement.title = "Error initiating audio";
+                setTimeout(() => {
+                    if (buttonElement.innerHTML === '⚠️') {
+                        buttonElement.innerHTML = originalButtonContent;
+                        buttonElement.title = "Play/Pause Speech";
+                    }
+                }, 2000);
+
+                revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
                 this._currentlyPlayingTtsAudio = null;
                 this._currentlyPlayingTtsButton = null;
             });
 
             this._currentlyPlayingTtsAudio.onended = () => {
                 buttonElement.classList.remove('playing');
-                if (this._currentlyPlayingTtsButton === buttonElement) {
+                if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
+                    revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
                     this._currentlyPlayingTtsAudio = null;
                     this._currentlyPlayingTtsButton = null;
                 }
             };
-            this._currentlyPlayingTtsAudio.onerror = (e) => {
-                Utils.log("Error during TTS audio playback: " + (e.target.error ? e.target.error.message : "Unknown error"), Utils.logLevels.ERROR);
+
+            this._currentlyPlayingTtsAudio.onerror = (event) => {
+                const errorMessage = event.target.error ? event.target.error.message : "Unknown audio playback error";
+                Utils.log(`Error during TTS audio playback: ${errorMessage}`, Utils.logLevels.ERROR);
                 buttonElement.classList.remove('playing');
-                const originalContent = buttonElement.innerHTML;
+
+                const originalButtonContentOnError = buttonElement.innerHTML;
                 buttonElement.innerHTML = '⚠️';
                 buttonElement.title = "Error playing audio";
                 setTimeout(() => {
                     if (buttonElement.innerHTML === '⚠️') {
-                        buttonElement.innerHTML = originalContent;
+                        buttonElement.innerHTML = originalButtonContentOnError;
                         buttonElement.title = "Play/Pause Speech";
                     }
                 }, 2000);
-                if (this._currentlyPlayingTtsButton === buttonElement) {
+
+                if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
+                    revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
                     this._currentlyPlayingTtsAudio = null;
                     this._currentlyPlayingTtsButton = null;
                 }
