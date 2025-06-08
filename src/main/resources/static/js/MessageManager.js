@@ -74,7 +74,15 @@ const MessageManager = {
                     {role: "system", content: contact.aiConfig.systemPrompt}
                 ];
                 aiApiMessages.push(...contextMessagesForAI);
-                aiApiMessages.push({role: "user", content: messageText});
+
+                // Find the last user message and append dateTimeString
+                for (let i = aiApiMessages.length - 1; i >= 0; i--) {
+                    if (aiApiMessages[i].role === 'user') {
+                        const dateTimeString = ` [Sent at: ${new Date().toLocaleString()}]`;
+                        aiApiMessages[i].content += dateTimeString;
+                        break; // Stop after modifying the last user message
+                    }
+                }
 
                 // Log the configuration values MessageManager is about to use
                 const currentConfigForAIRequest = {
@@ -317,7 +325,31 @@ const MessageManager = {
         cleanedText = cleanedText.replace(/\(.*?\)/g, '');
         cleanedText = cleanedText.replace(/（.*?）/g, '');
 
-        // Trim whitespace that might be left after removals
+        // Define characters to be treated as "special" and replaced by a comma.
+        // This targets symbols often not meant for direct speech or remnants of formatting.
+        // Excludes common math/currency symbols like $, %, +, = that TTS might handle.
+        const specialCharsToCommaRegex = /[~*_#^|<>`{}\\]/g; // Added backslash here
+        cleanedText = cleanedText.replace(specialCharsToCommaRegex, ',');
+
+        // Normalize spaces around commas and consolidate multiple commas:
+        // 1. Ensure no multiple spaces around a comma, and convert "word , word" to "word,word"
+        cleanedText = cleanedText.replace(/\s*,\s*/g, ',');
+        // 2. Consolidate multiple commas into a single comma, e.g., ",,," becomes ","
+        cleanedText = cleanedText.replace(/,{2,}/g, ',');
+
+        // Remove leading or trailing commas that might have resulted from replacements
+        cleanedText = cleanedText.replace(/^,|,$/g, '');
+
+        // Remove commas if they are adjacent to other significant punctuation marks.
+        // This avoids outputs like "Hello!," or ",Hello?"
+        // ([.。！？\?，。！？、；：]) captures common Western and CJK punctuation.
+        const puncGroup = "([.。！？\\?，。！？、；：])"; // Note: \? needs to be escaped in string for regex
+        // Punctuation followed by a comma (and optional spaces): Punc , -> Punc
+        cleanedText = cleanedText.replace(new RegExp(puncGroup + "\\s*,", 'g'), '$1');
+        // Comma followed by punctuation (and optional spaces): , Punc -> Punc
+        cleanedText = cleanedText.replace(new RegExp(",\\s*" + puncGroup, 'g'), '$1');
+
+        // Trim whitespace that might be left at the ends after all operations
         return cleanedText.trim();
     },
 
