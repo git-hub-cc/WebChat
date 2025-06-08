@@ -1,4 +1,4 @@
-const SPECIAL_CONTACTS_DEFINITIONS =
+SPECIAL_CONTACTS_DEFINITIONS =
     [
         {
             "id": "AI_萧炎_斗破苍穹",

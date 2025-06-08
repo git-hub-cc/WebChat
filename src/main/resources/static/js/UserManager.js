@@ -1,6 +1,3 @@
-if (typeof SPECIAL_CONTACTS_DEFINITIONS === 'undefined'){
-    SPECIAL_CONTACTS_DEFINITIONS = [];
-}
 const UserManager = {
     userId: null,
     userName: 'Me',
@@ -166,7 +163,7 @@ const UserManager = {
                 await DBManager.setItem('user', updatedUserData);
             } catch (error) {
                 Utils.log(`Failed to save setting ${settingKey}: ${error}`, Utils.logLevels.ERROR);
-                UIManager.showNotification('Failed to save setting.', 'error');
+                NotificationManager.showNotification('Failed to save setting.', 'error');
             }
         } else {
             Utils.log(`Attempted to update unknown setting: ${settingKey}`, Utils.logLevels.WARN);
@@ -220,26 +217,33 @@ const UserManager = {
 
     renderContactListForSidebar: function() {
         ChatManager.currentFilter = 'contacts';
-        UIManager.setActiveTab('contacts');
+        SidebarUIManager.setActiveTab('contacts');
         ChatManager.renderChatList('contacts');
     },
 
     addContact: async function(id, name) {
         if (id === this.userId) {
-            UIManager.showNotification("You cannot add yourself as a contact.", "error");
+            NotificationManager.showNotification("You cannot add yourself as a contact.", "error");
             return false;
         }
         if (this.isSpecialContact(id)) {
             const specialContactName = SPECIAL_CONTACTS_DEFINITIONS.find(sc => sc.id === id)?.name || "this special contact";
-            UIManager.showNotification(`${specialContactName} is a built-in contact and cannot be added manually.`, "warning");
+            NotificationManager.showNotification(`${specialContactName} is a built-in contact and cannot be added manually.`, "warning");
             return true;
         }
         if (this.contacts[id]) {
-            UIManager.showNotification("This contact already exists.", "warning");
+            NotificationManager.showNotification("This contact already exists.", "warning");
             if (name && this.contacts[id].name !== name) {
                 this.contacts[id].name = name;
                 await this.saveContact(id);
                 ChatManager.renderChatList(ChatManager.currentFilter);
+            }
+            // MODIFIED: Attempt connection even if contact exists but was perhaps offline before.
+            // Check if not already connected or in a connection attempt state.
+            const existingConn = ConnectionManager.connections[id];
+            if (!ConnectionManager.isConnectedTo(id) &&
+                (!existingConn || (existingConn.peerConnection && existingConn.peerConnection.signalingState === 'stable' && existingConn.peerConnection.connectionState !== 'connecting'))) {
+                ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
         }
@@ -261,14 +265,19 @@ const UserManager = {
         this.contacts[id] = newContact;
         await this.saveContact(id);
         ChatManager.renderChatList(ChatManager.currentFilter);
-        UIManager.showNotification(`Contact "${newContact.name}" added.`, 'success');
+        NotificationManager.showNotification(`Contact "${newContact.name}" added.`, 'success');
+
+        // MODIFIED: Attempt to connect to the new contact silently
+        ConnectionManager.createOffer(id, { isSilent: true });
+        Utils.log(`Attempting initial connection to new contact: ${id}`, Utils.logLevels.INFO);
+
         return true;
     },
 
     removeContact: async function(id) {
         if (this.isSpecialContact(id)) {
             const specialContactName = SPECIAL_CONTACTS_DEFINITIONS.find(sc => sc.id === id)?.name || "This special contact";
-            UIManager.showNotification(`${specialContactName} is a built-in contact and cannot be removed.`, "warning");
+            NotificationManager.showNotification(`${specialContactName} is a built-in contact and cannot be removed.`, "warning");
             return false;
         }
         if (this.contacts[id]) {
@@ -317,7 +326,7 @@ const UserManager = {
     },
 
     clearAllContacts: async function() {
-        UIManager.showConfirmationModal(
+        ModalManager.showConfirmationModal(
             "Are you sure you want to delete ALL user-added contacts? This will also clear their chat histories. Built-in special contacts will remain.",
             async () => {
                 const contactIdsToRemove = Object.keys(this.contacts).filter(id => !this.isSpecialContact(id));
@@ -343,13 +352,13 @@ const UserManager = {
 
                     if (ChatManager.currentChatId && !ChatManager.currentChatId.startsWith('group_') && contactIdsToRemove.includes(ChatManager.currentChatId)) {
                         ChatManager.currentChatId = null;
-                        UIManager.showNoChatSelected();
+                        ChatAreaUIManager.showNoChatSelected();
                     }
                     ChatManager.renderChatList(ChatManager.currentFilter);
-                    UIManager.showNotification("All user-added contacts and their chats cleared.", 'success');
+                    NotificationManager.showNotification("All user-added contacts and their chats cleared.", 'success');
                 } catch (error) {
                     Utils.log("Failed to clear contacts: " + error, Utils.logLevels.ERROR);
-                    UIManager.showNotification("Failed to clear contacts from database.", 'error');
+                    NotificationManager.showNotification("Failed to clear contacts from database.", 'error');
                     this.contacts = tempContacts; // Rollback in-memory
                     // Note: DB and localStorage might be partially cleared. A more robust rollback would re-add them.
                     ChatManager.renderChatList(ChatManager.currentFilter);

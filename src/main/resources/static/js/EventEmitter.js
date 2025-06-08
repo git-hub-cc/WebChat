@@ -1,4 +1,3 @@
-
 const EventEmitter = {
     events: {},
 
@@ -20,8 +19,6 @@ const EventEmitter = {
                     Utils.log(`Error in event listener for ${event}: ${e.message}\n${e.stack}`, Utils.logLevels.ERROR);
                 }
             });
-        } else {
-            // Utils.log(`No listeners for event: ${event}`, Utils.logLevels.DEBUG);
         }
     },
 

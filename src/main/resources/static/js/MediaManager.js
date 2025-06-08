@@ -1,11 +1,13 @@
-
+// MODIFIED: MediaManager.js
+// - UI preview logic moved to MediaUIManager.js.
+// - Calls MediaUIManager for UI updates.
 const MediaManager = {
     mediaRecorder: null,
     audioChunks: [],
     recordingTimer: null,
     recordingStartTime: null,
     recordingDuration: 0,
-    audioStream: null, // Store the stream to release it
+    audioStream: null,
 
     initVoiceRecording: function() {
         const voiceButton = document.getElementById('voiceButtonMain');
@@ -13,89 +15,58 @@ const MediaManager = {
             Utils.log('Browser does not support media devices.', Utils.logLevels.WARN);
             if(voiceButton) voiceButton.disabled = true;
         }
+        // Event listeners for voiceButton (mousedown, mouseup, touchstart, touchend)
+        // are complex and could be managed here or in ChatAreaUIManager.
+        // For now, keeping them in AppInitializer/ChatAreaUIManager as they trigger MediaManager methods.
     },
 
     requestMicrophonePermission: async function() {
-        if (this.mediaRecorder && this.audioStream && this.audioStream.active) {
-            // Check if an old stream is still active from a previous interaction
-            if (this.mediaRecorder.state === "inactive") {
-                // Stream exists but recorder is inactive, likely safe to reuse or re-init
-            } else {
-                return true; // Already has an active recorder and stream
-            }
-        }
-
-        // Release any existing stream before getting a new one
+        if (this.mediaRecorder && this.audioStream?.active && this.mediaRecorder.state !== "inactive") return true;
         this.releaseAudioResources();
-
         try {
             this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: Config.media.audioConstraints || true });
-            const options = { mimeType: 'audio/webm;codecs=opus' }; // Prefer Opus
+            const options = { mimeType: 'audio/webm;codecs=opus' };
             if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                options.mimeType = 'audio/ogg;codecs=opus'; // Firefox Opus
-                if(!MediaRecorder.isTypeSupported(options.mimeType)){
-                    options.mimeType = 'audio/webm'; // Fallback
-                }
+                options.mimeType = 'audio/ogg;codecs=opus';
+                if(!MediaRecorder.isTypeSupported(options.mimeType)) options.mimeType = 'audio/webm';
             }
-
             this.mediaRecorder = new MediaRecorder(this.audioStream, options);
-
-            this.mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) this.audioChunks.push(event.data);
-            };
-
+            this.mediaRecorder.ondataavailable = (event) => { if (event.data.size > 0) this.audioChunks.push(event.data); };
             this.mediaRecorder.onstop = () => {
-                if (this.audioChunks.length === 0) {
-                    Utils.log("No audio data recorded.", Utils.logLevels.WARN);
-                    this.releaseAudioResources(); // Ensure resources are released
-                    return;
-                }
+                if (this.audioChunks.length === 0) { Utils.log("No audio data recorded.", Utils.logLevels.WARN); this.releaseAudioResources(); return; }
                 const audioBlob = new Blob(this.audioChunks, { type: this.mediaRecorder.mimeType });
                 const reader = new FileReader();
                 reader.onloadend = () => {
-                    MessageManager.audioData = reader.result; // base64 data
+                    MessageManager.audioData = reader.result;
                     MessageManager.audioDuration = this.recordingDuration;
-                    this.displayAudioPreview(reader.result, this.recordingDuration);
-                    // Don't release here, preview might want to play. Release after sending or cancelling.
+                    if (typeof MediaUIManager !== 'undefined') MediaUIManager.displayAudioPreview(reader.result, this.recordingDuration);
                 };
                 reader.readAsDataURL(audioBlob);
-                this.audioChunks = []; // Clear for next recording
+                this.audioChunks = [];
             };
             Utils.log('Microphone permission granted.', Utils.logLevels.INFO);
             return true;
         } catch (error) {
-            Utils.log(`Error getting microphone permission: ${error}`, Utils.logLevels.ERROR);
-            UIManager.showNotification('Microphone access denied or unavailable.', 'error');
+            Utils.log(`Error getting mic permission: ${error}`, Utils.logLevels.ERROR);
+            NotificationManager.showNotification('Microphone access denied or unavailable.', 'error');
             const voiceButton = document.getElementById('voiceButtonMain');
             if(voiceButton) voiceButton.disabled = true;
-            this.releaseAudioResources(); // Clean up
+            this.releaseAudioResources();
             return false;
         }
     },
 
     startRecording: async function() {
-        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') return; // Already recording
-
+        if (this.mediaRecorder && this.mediaRecorder.state === 'recording') return;
         const permissionGranted = await this.requestMicrophonePermission();
         if (!permissionGranted) return;
-
         try {
             this.audioChunks = [];
             this.mediaRecorder.start();
             this.recordingStartTime = Date.now();
             this.recordingDuration = 0;
-
-            const voiceButton = document.getElementById('voiceButtonMain');
-            const voiceTimerEl = document.createElement('span'); // Create timer dynamically
-            voiceTimerEl.id = 'recordingVoiceTimer';
-            voiceTimerEl.className = 'audio-timer-indicator';
-            voiceButton.classList.add('recording');
-            voiceButton.innerHTML = '🛑'; // Stop icon
-            voiceButton.appendChild(voiceTimerEl);
-
-
-            this.updateRecordingTimer(); // Initial display
-            this.recordingTimer = setInterval(() => this.updateRecordingTimer(), 1000);
+            if (typeof MediaUIManager !== 'undefined') MediaUIManager.setRecordingButtonActive(true);
+            this._updateRecordingTimerInterval(); // Start UI timer updates
             Utils.log('Audio recording started.', Utils.logLevels.INFO);
         } catch (error) {
             Utils.log(`Failed to start recording: ${error}`, Utils.logLevels.ERROR);
@@ -105,17 +76,15 @@ const MediaManager = {
 
     stopRecording: function() {
         if (!this.mediaRecorder || this.mediaRecorder.state !== 'recording') {
-            // If stop is called when not recording (e.g. mouseleave after permission denied)
-            this.resetRecordingButton();
-            this.releaseAudioResources(); // Ensure resources are freed
+            if (typeof MediaUIManager !== 'undefined') MediaUIManager.setRecordingButtonActive(false);
+            this.releaseAudioResources();
             return;
         }
-
         try {
-            this.mediaRecorder.stop(); // This will trigger ondataavailable and onstop
+            this.mediaRecorder.stop(); // Triggers ondataavailable and onstop
             clearInterval(this.recordingTimer);
             this.recordingTimer = null;
-            this.resetRecordingButton();
+            if (typeof MediaUIManager !== 'undefined') MediaUIManager.setRecordingButtonActive(false);
             Utils.log('Audio recording stopped.', Utils.logLevels.INFO);
         } catch (error) {
             Utils.log(`Failed to stop recording: ${error}`, Utils.logLevels.ERROR);
@@ -123,199 +92,75 @@ const MediaManager = {
         }
     },
 
-    resetRecordingButton: function() {
-        const voiceButton = document.getElementById('voiceButtonMain');
-        if (voiceButton) {
-            voiceButton.classList.remove('recording');
-            voiceButton.innerHTML = '🎙️'; // Record icon
-            const timerEl = document.getElementById('recordingVoiceTimer');
-            if(timerEl) timerEl.remove();
-        }
+    _updateRecordingTimerInterval: function() { // Renamed to avoid conflict with UI function
+        if (this.recordingTimer) clearInterval(this.recordingTimer); // Clear existing if any
+        const updateUI = () => {
+            if (!this.recordingStartTime) return;
+            const elapsedSeconds = Math.floor((Date.now() - this.recordingStartTime) / 1000);
+            this.recordingDuration = elapsedSeconds;
+            if (typeof MediaUIManager !== 'undefined') MediaUIManager.updateRecordingButtonTimerUI(elapsedSeconds, Config.media.maxAudioDuration);
+            if (elapsedSeconds >= Config.media.maxAudioDuration) this.stopRecording();
+        };
+        updateUI(); // Initial call
+        this.recordingTimer = setInterval(updateUI, 1000);
     },
 
-    updateRecordingTimer: function() {
-        if (!this.recordingStartTime) return; // Guard against timer firing after stop
-        const now = Date.now();
-        const elapsedSeconds = Math.floor((now - this.recordingStartTime) / 1000);
-        this.recordingDuration = elapsedSeconds;
+    // resetRecordingButton and updateRecordingTimer are now in MediaUIManager
 
-        const voiceTimerEl = document.getElementById('recordingVoiceTimer');
-        if (voiceTimerEl) {
-            voiceTimerEl.textContent = Utils.formatTime(elapsedSeconds);
-        }
-
-        if (elapsedSeconds >= Config.media.maxAudioDuration) {
-            this.stopRecording();
-            UIManager.showNotification(`Max recording time of ${Config.media.maxAudioDuration}s reached.`, 'info');
-        }
-    },
-
-    displayAudioPreview: function (audioDataUrl, duration) {
-        const container = document.getElementById('audioPreviewContainer');
-        if (!container) {
-            Utils.log("Error: audioPreviewContainer not found in DOM.", Utils.logLevels.ERROR);
-            return;
-        }
-        const formattedDuration = Utils.formatTime(duration);
-
-        container.innerHTML = `
-            <div class="voice-message-preview">
-                <span>🎙️ Voice Message (${formattedDuration})</span>
-                <audio controls src="${audioDataUrl}" style="display:none;"></audio> 
-                <button class="btn-play-preview">Play</button>
-                <button class="btn-cancel-preview">Cancel</button> 
-            </div>
-        `;
-        const playBtn = container.querySelector('.btn-play-preview');
-        const cancelBtn = container.querySelector('.btn-cancel-preview');
-        const audioEl = container.querySelector('audio');
-
-        if (playBtn && audioEl) {
-            playBtn.onclick = () => {
-                if (audioEl.paused) {
-                    audioEl.play().catch(e => Utils.log("Error playing preview audio: " + e, Utils.logLevels.ERROR));
-                    playBtn.textContent = "Pause";
-                } else {
-                    audioEl.pause();
-                    playBtn.textContent = "Play";
-                }
-            };
-            audioEl.onended = () => {
-                playBtn.textContent = "Play";
-            }
-        } else {
-            Utils.log("Audio preview: Play button or audio element not found.", Utils.logLevels.ERROR);
-        }
-
-        if (cancelBtn) {
-            cancelBtn.onclick = () => { MessageManager.cancelAudioData(); };
-        } else {
-            Utils.log("Audio preview: Cancel button not found.", Utils.logLevels.ERROR);
-        }
-    },
-
-    playAudio: function(buttonElement) {
+    playAudio: function(buttonElement) { // This is for playing received/sent voice messages, not previews
         const audioDataUrl = buttonElement.dataset.audio;
         if (!audioDataUrl) return;
-
         const existingAudio = buttonElement.querySelector('audio.playing-audio-instance');
-        if (existingAudio) {
-            existingAudio.pause();
-            existingAudio.remove();
-            buttonElement.innerHTML = '▶';
-            return;
-        }
+        if (existingAudio) { existingAudio.pause(); existingAudio.remove(); buttonElement.innerHTML = '▶'; return; }
 
         document.querySelectorAll('audio.playing-audio-instance').forEach(aud => {
             aud.pause();
-            const btn = aud.closest('.voice-message').querySelector('.play-voice-btn');
+            const btn = aud.closest('.voice-message')?.querySelector('.play-voice-btn');
             if(btn) btn.innerHTML = '▶';
             aud.remove();
-
         });
-
 
         const audio = new Audio(audioDataUrl);
         audio.className = "playing-audio-instance";
         buttonElement.innerHTML = '❚❚';
-
-        audio.play().catch(e => {
-            Utils.log("Error playing audio: "+e, Utils.logLevels.ERROR);
-            buttonElement.innerHTML = '▶';
-        });
-
-        audio.onended = () => {
-            buttonElement.innerHTML = '▶';
-            audio.remove();
-        };
-        audio.onerror = () => {
-            buttonElement.innerHTML = '⚠️';
-            setTimeout(() => {buttonElement.innerHTML = '▶'; audio.remove();}, 2000);
-        };
+        audio.play().catch(e => { Utils.log("Error playing audio: "+e, Utils.logLevels.ERROR); buttonElement.innerHTML = '▶'; });
+        audio.onended = () => { buttonElement.innerHTML = '▶'; audio.remove(); };
+        audio.onerror = () => { buttonElement.innerHTML = '⚠️'; setTimeout(() => {buttonElement.innerHTML = '▶'; audio.remove();}, 2000); };
     },
 
     releaseAudioResources: function() {
-        if (this.audioStream) {
-            this.audioStream.getTracks().forEach(track => track.stop());
-            this.audioStream = null;
-            Utils.log('Microphone stream released.', Utils.logLevels.INFO);
-        }
-        if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
-            try {
-                this.mediaRecorder.stop();
-            } catch(e) { /* ignore */ }
-        }
-        this.mediaRecorder = null;
-        this.audioChunks = [];
+        if (this.audioStream) { this.audioStream.getTracks().forEach(track => track.stop()); this.audioStream = null; Utils.log('Mic stream released.', Utils.logLevels.INFO); }
+        if (this.mediaRecorder?.state !== "inactive") try { this.mediaRecorder.stop(); } catch(e) { /* ignore */ }
+        this.mediaRecorder = null; this.audioChunks = [];
+        if (this.recordingTimer) { clearInterval(this.recordingTimer); this.recordingTimer = null; }
     },
 
-    formatFileSize: function(bytes) {
+    formatFileSize: function(bytes) { // Utility, can stay here or move to Utils.js
         if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        const k = 1024; const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     },
 
-    displayFilePreview: function(fileObj) {
-        const container = document.getElementById('filePreviewContainer');
-        if (!container) {
-            Utils.log("Error: filePreviewContainer not found.", Utils.logLevels.ERROR);
-            return;
-        }
-        container.innerHTML = '';
-
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'file-preview-item';
-
-        let contentHtml = '';
-        if (fileObj.type.startsWith('image/')) {
-            contentHtml = `<img src="${fileObj.data}" alt="Preview" style="max-height: 50px; border-radius: 4px; margin-right: 8px;"> ${Utils.escapeHtml(fileObj.name)}`;
-        } else if (fileObj.type.startsWith('video/')) {
-            contentHtml = `🎬 ${Utils.escapeHtml(fileObj.name)} (Video)`;
-        } else {
-            contentHtml = `📄 ${Utils.escapeHtml(fileObj.name)} (${this.formatFileSize(fileObj.size)})`;
-        }
-
-        previewDiv.innerHTML = `
-            <span>${contentHtml}</span>
-            <button class="cancel-file-preview" title="Remove attachment">✕</button>
-        `;
-        container.appendChild(previewDiv);
-
-        const cancelBtn = container.querySelector('.cancel-file-preview');
-        if (cancelBtn) {
-            cancelBtn.onclick = () => MessageManager.cancelFileData();
-        } else {
-            Utils.log("File preview: Cancel button not found.", Utils.logLevels.ERROR);
-        }
-    },
+    // displayFilePreview is now in MediaUIManager
 
     handleFileSelect: async function(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         if (file.size > Config.media.maxFileSize) {
-            UIManager.showNotification(`File too large. Max size: ${this.formatFileSize(Config.media.maxFileSize)}.`, 'error');
-            event.target.value = '';
-            return;
+            NotificationManager.showNotification(`File too large. Max: ${this.formatFileSize(Config.media.maxFileSize)}.`, 'error');
+            event.target.value = ''; return;
         }
-
         try {
             const reader = new FileReader();
             reader.onload = (e) => {
-                MessageManager.selectedFile = {
-                    data: e.target.result,
-                    type: file.type,
-                    name: file.name,
-                    size: file.size
-                };
-                this.displayFilePreview(MessageManager.selectedFile);
+                MessageManager.selectedFile = { data: e.target.result, type: file.type, name: file.name, size: file.size };
+                if (typeof MediaUIManager !== 'undefined') MediaUIManager.displayFilePreview(MessageManager.selectedFile);
             };
             reader.readAsDataURL(file);
         } catch (error) {
             Utils.log(`Error handling file select: ${error}`, Utils.logLevels.ERROR);
-            UIManager.showNotification('Error processing file.', 'error');
+            NotificationManager.showNotification('Error processing file.', 'error');
         }
         event.target.value = '';
     },

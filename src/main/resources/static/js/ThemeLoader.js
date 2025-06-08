@@ -1,3 +1,6 @@
+// MODIFIED: ThemeLoader.js
+// - populateSelector logic (creating dropdowns) is fully moved to SettingsUIManager.
+// - This file now focuses purely on determining which theme to load (CSS/DataJS).
 const ThemeLoader = {
     themes: {
         "原神-浅色": { name: "原神（内置tts）", css: "css/原神-浅色.css", dataJs: "data/原神.js", defaultSpecialContacts: true  },
@@ -22,13 +25,12 @@ const ThemeLoader = {
         "telegram-深色": { name: "telegram", css: "css/telegram-深色.css", dataJs: null },
     },
     COLOR_SCHEME_KEY: 'selectedColorScheme',
-    DEFAULT_COLOR_SCHEME: 'light', // 'auto', 'light', 'dark'
-
-    _currentEffectiveColorScheme: 'light',
-    _currentThemeKey: '原神-浅色',
+    DEFAULT_COLOR_SCHEME: 'light',
+    _currentEffectiveColorScheme: 'light', // Will be set in init
+    _currentThemeKey: null, // Will be set in init
     _systemColorSchemeListener: null,
 
-    init: function() {
+    init: function() { // This function runs very early (called directly in index.html or by AppInitializer very early)
         const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
         this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
 
@@ -37,6 +39,7 @@ const ThemeLoader = {
 
         if (savedThemeKey && this.themes[savedThemeKey] && this._isThemeCompatible(savedThemeKey, this._currentEffectiveColorScheme)) {
             themeToLoad = this.themes[savedThemeKey];
+            this._currentThemeKey = savedThemeKey;
         } else {
             let newThemeKey;
             if (savedThemeKey && this.themes[savedThemeKey]) { // If saved theme existed but was incompatible
@@ -48,86 +51,79 @@ const ThemeLoader = {
                 }
             }
 
-            if (!newThemeKey) { // Or if savedThemeKey was null/invalid
+            if (!newThemeKey) { // Or if savedThemeKey was null/invalid or no counterpart found
                 newThemeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
             }
-
-            savedThemeKey = newThemeKey;
-            themeToLoad = this.themes[savedThemeKey];
-            localStorage.setItem('selectedTheme', savedThemeKey);
+            this._currentThemeKey = newThemeKey; // Update the internal current theme key
+            themeToLoad = this.themes[newThemeKey];
+            localStorage.setItem('selectedTheme', newThemeKey);
         }
-
-        this._currentThemeKey = savedThemeKey;
-        const theme = themeToLoad;
 
         const themeStylesheet = document.getElementById('theme-stylesheet');
         if (themeStylesheet) {
-            if (theme && theme.css) {
-                themeStylesheet.setAttribute('href', theme.css);
+            if (themeToLoad && themeToLoad.css) {
+                themeStylesheet.setAttribute('href', themeToLoad.css);
             } else {
-                themeStylesheet.setAttribute('href', '');
-                console.warn("Theme object or theme.css is missing for key:", savedThemeKey);
+                themeStylesheet.setAttribute('href', ''); // Fallback to no theme CSS
+                console.warn("Theme object or theme.css is missing for key:", this._currentThemeKey);
             }
         } else {
-            console.warn("Theme stylesheet element 'theme-stylesheet' not found.");
+            console.error("Critical: Theme stylesheet element 'theme-stylesheet' not found.");
         }
 
-        if (theme && theme.dataJs) {
-            document.write(`<script src="${theme.dataJs}"><\/script>`);
+        // Load theme-specific data (SPECIAL_CONTACTS_DEFINITIONS)
+        // This needs to happen before UserManager.init()
+        if (themeToLoad && themeToLoad.dataJs) {
+            // Using document.write is generally okay here because ThemeLoader.init() is called
+            // very early in the page load, before the DOM is fully parsed.
+            document.write(`<script src="${themeToLoad.dataJs}"><\/script>`);
         } else {
+            // Ensure SPECIAL_CONTACTS_DEFINITIONS is defined globally if no dataJs is present
             if (typeof SPECIAL_CONTACTS_DEFINITIONS === 'undefined') {
                 document.write(`<script>var SPECIAL_CONTACTS_DEFINITIONS = [];<\/script>`);
             }
         }
-        this._setupSystemColorSchemeListener(preferredColorScheme);
+        this._setupSystemColorSchemeListener(preferredColorScheme); // Setup listener for 'auto'
     },
 
     _getBaseThemeName: function(themeKey) {
-        if (!themeKey) return "unknown"; // Return a placeholder for safety
+        if (!themeKey) return "unknown";
         return themeKey.replace(/-浅色$/, "").replace(/-深色$/, "");
     },
 
     _isThemeCompatible: function(themeKey, colorScheme) { // colorScheme is 'light' or 'dark'
         if (!this.themes[themeKey]) return false;
-        // The themeKey itself contains the scheme information (e.g., "theme-浅色" or "theme-深色")
-        if (colorScheme === 'light') {
-            return themeKey.endsWith('-浅色');
-        } else if (colorScheme === 'dark') {
-            return themeKey.endsWith('-深色');
-        }
-        return false; // Should not happen if colorScheme is always 'light' or 'dark'
+        if (colorScheme === 'light') return themeKey.endsWith('-浅色');
+        if (colorScheme === 'dark') return themeKey.endsWith('-深色');
+        return false;
     },
 
     _getEffectiveColorScheme: function(preferredScheme) {
         if (preferredScheme === 'light') return 'light';
         if (preferredScheme === 'dark') return 'dark';
-        // For 'auto', determine from system
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             return 'dark';
         }
-        return 'light';
+        return 'light'; // Default for 'auto' if system preference is not dark or not detectable
     },
 
     _findFallbackThemeKeyForScheme: function(colorScheme) {
         const suffix = colorScheme === 'light' ? '-浅色' : '-深色';
         for (const key in this.themes) {
-            // Use the key itself for checking the suffix
-            if (key.endsWith(suffix)) {
-                return key;
-            }
+            if (key.endsWith(suffix)) return key;
         }
-        // Fallback if no theme matches the desired scheme, pick first available of any scheme
         const firstKey = Object.keys(this.themes)[0];
         if (firstKey) {
-            console.warn(`No themes for scheme '${colorScheme}', falling back to first available theme: ${firstKey}`);
+            console.warn(`No themes found for scheme '${colorScheme}', falling back to first available: ${firstKey}`);
             return firstKey;
         }
-        console.error("CRITICAL: No themes defined. Using hardcoded default.");
-        return '原神-浅色';
+        console.error("CRITICAL: No themes defined in ThemeLoader.themes. Using hardcoded default.");
+        return '原神-浅色'; // Absolute fallback
     },
 
     _setupSystemColorSchemeListener: function(preferredScheme) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        // Remove any existing listener before adding a new one
         if (this._systemColorSchemeListener) {
             mediaQuery.removeEventListener('change', this._systemColorSchemeListener);
             this._systemColorSchemeListener = null;
@@ -137,177 +133,45 @@ const ThemeLoader = {
             this._systemColorSchemeListener = (e) => {
                 const newSystemEffectiveColorScheme = e.matches ? 'dark' : 'light';
                 if (newSystemEffectiveColorScheme !== this._currentEffectiveColorScheme) {
+                    // Update the effective scheme used by SettingsUIManager for filtering themes
                     this._currentEffectiveColorScheme = newSystemEffectiveColorScheme;
-                    const baseName = this._getBaseThemeName(this._currentThemeKey);
+                    const currentBaseName = this._getBaseThemeName(this._currentThemeKey);
                     const newSuffix = newSystemEffectiveColorScheme === 'light' ? '浅色' : '深色';
-                    let newThemeKey = `${baseName}-${newSuffix}`;
+                    let newThemeToApplyKey = `${currentBaseName}-${newSuffix}`;
 
-                    if (!this.themes[newThemeKey] || !this._isThemeCompatible(newThemeKey, newSystemEffectiveColorScheme)) {
-                        newThemeKey = this._findFallbackThemeKeyForScheme(newSystemEffectiveColorScheme);
+                    // Check if the new counterpart theme exists
+                    if (!this.themes[newThemeToApplyKey] || !this._isThemeCompatible(newThemeToApplyKey, newSystemEffectiveColorScheme)) {
+                        newThemeToApplyKey = this._findFallbackThemeKeyForScheme(newSystemEffectiveColorScheme);
                     }
-                    this.applyTheme(newThemeKey);
+                    this.applyTheme(newThemeToApplyKey); // This will reload the page
                 }
             };
             mediaQuery.addEventListener('change', this._systemColorSchemeListener);
         }
     },
 
-    populateSelector: function() {
-        this._populateColorSchemeSelector();
-        this._populateThemeSelectorWithOptions();
-
-        // Global click listener to close dropdowns
-        document.addEventListener('click', (e) => {
-            const themeCustomSelect = document.getElementById('themeCustomSelectContainer');
-            const themeOptions = document.getElementById('themeOptionsContainer');
-            if (themeCustomSelect && !themeCustomSelect.contains(e.target) && themeOptions) {
-                themeOptions.style.display = 'none';
-            }
-
-            const colorSchemeCustomSelect = document.getElementById('colorSchemeCustomSelectContainer');
-            const colorSchemeOptions = document.getElementById('colorSchemeOptionsContainer');
-            if (colorSchemeCustomSelect && !colorSchemeCustomSelect.contains(e.target) && colorSchemeOptions) {
-                colorSchemeOptions.style.display = 'none';
-            }
-        });
-    },
-
-    _populateColorSchemeSelector: function() {
-        const container = document.getElementById('colorSchemeCustomSelectContainer');
-        const selectedDisplay = document.getElementById('colorSchemeSelectedValue');
-        const optionsContainer = document.getElementById('colorSchemeOptionsContainer');
-
-        if (!container || !selectedDisplay || !optionsContainer) {
-            console.warn("Custom color scheme selector elements not found.");
-            return;
-        }
-
-        const schemes = {
-            'auto': 'Auto (System)',
-            'light': 'Light Mode',
-            'dark': 'Dark Mode'
-        };
-        const currentPreferredScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
-
-        selectedDisplay.textContent = schemes[currentPreferredScheme];
-        optionsContainer.innerHTML = '';
-
-        for (const key in schemes) {
-            const optionDiv = document.createElement('div');
-            optionDiv.classList.add('option');
-            optionDiv.textContent = schemes[key];
-            optionDiv.dataset.schemeKey = key;
-
-            optionDiv.addEventListener('click', () => {
-                const selectedSchemeKey = optionDiv.dataset.schemeKey;
-                localStorage.setItem(this.COLOR_SCHEME_KEY, selectedSchemeKey);
-
-                const newEffectiveColorScheme = this._getEffectiveColorScheme(selectedSchemeKey);
-                this._setupSystemColorSchemeListener(selectedSchemeKey);
-
-                if (newEffectiveColorScheme !== this._currentEffectiveColorScheme) {
-                    this._currentEffectiveColorScheme = newEffectiveColorScheme;
-                    const currentBaseName = this._getBaseThemeName(this._currentThemeKey);
-                    const newSuffix = newEffectiveColorScheme === 'light' ? '浅色' : '深色';
-                    let newThemeToApply = `${currentBaseName}-${newSuffix}`;
-
-                    if (!this.themes[newThemeToApply] || !this._isThemeCompatible(newThemeToApply, newEffectiveColorScheme)) {
-                        newThemeToApply = this._findFallbackThemeKeyForScheme(newEffectiveColorScheme);
-                    }
-                    this.applyTheme(newThemeToApply);
-                } else {
-                    selectedDisplay.textContent = schemes[selectedSchemeKey];
-                    optionsContainer.style.display = 'none';
-                    this._populateThemeSelectorWithOptions();
-                }
-            });
-            optionsContainer.appendChild(optionDiv);
-        }
-
-        selectedDisplay.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const currentDisplayState = optionsContainer.style.display;
-            // Close other dropdowns if any are open
-            document.querySelectorAll('.custom-select .options').forEach(opt => {
-                if (opt !== optionsContainer) opt.style.display = 'none';
-            });
-            optionsContainer.style.display = currentDisplayState === 'block' ? 'none' : 'block';
-        });
-    },
-
-    _populateThemeSelectorWithOptions: function() {
-        const customSelectContainer = document.getElementById('themeCustomSelectContainer');
-        const selectedDisplay = document.getElementById('themeSelectedValue');
-        const optionsContainer = document.getElementById('themeOptionsContainer');
-
-        if (!customSelectContainer || !selectedDisplay || !optionsContainer) {
-            console.warn("Custom theme selector elements not found. Cannot populate.");
-            return;
-        }
-
-        optionsContainer.innerHTML = '';
-
-        const filteredThemes = {};
-        for (const key in this.themes) {
-            if (this._isThemeCompatible(key, this._currentEffectiveColorScheme)) {
-                filteredThemes[key] = this.themes[key];
-            }
-        }
-
-        let themeKeyForDisplay = this._currentThemeKey;
-        // Ensure the current theme key is actually compatible and present in filtered list
-        if (!filteredThemes[themeKeyForDisplay]) {
-            themeKeyForDisplay = Object.keys(filteredThemes)[0] || this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
-        }
-
-        selectedDisplay.textContent = this.themes[themeKeyForDisplay]?.name || 'Select Theme';
-        selectedDisplay.dataset.currentThemeKey = themeKeyForDisplay;
-
-        if (Object.keys(filteredThemes).length === 0) {
-            selectedDisplay.textContent = "No themes";
-            const optionDiv = document.createElement('div');
-            optionDiv.classList.add('option');
-            optionDiv.textContent = `No ${this._currentEffectiveColorScheme} themes available`;
-            optionDiv.style.pointerEvents = "none";
-            optionDiv.style.opacity = "0.7";
-            optionsContainer.appendChild(optionDiv);
-        } else {
-            for (const key in filteredThemes) {
-                const theme = filteredThemes[key];
-                const optionDiv = document.createElement('div');
-                optionDiv.classList.add('option');
-                optionDiv.textContent = theme.name;
-                optionDiv.dataset.themeKey = key;
-
-                optionDiv.addEventListener('click', () => {
-                    const selectedKey = optionDiv.dataset.themeKey;
-                    if (selectedKey !== (localStorage.getItem('selectedTheme') || this._currentThemeKey)) {
-                        this.applyTheme(selectedKey);
-                    } else {
-                        optionsContainer.style.display = 'none';
-                    }
-                });
-                optionsContainer.appendChild(optionDiv);
-            }
-        }
-
-        selectedDisplay.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const currentDisplayState = optionsContainer.style.display;
-            // Close other dropdowns if any are open
-            document.querySelectorAll('.custom-select .options').forEach(opt => {
-                if (opt !== optionsContainer) opt.style.display = 'none';
-            });
-            optionsContainer.style.display = currentDisplayState === 'block' ? 'none' : 'block';
-        });
-    },
+    // populateSelector is REMOVED from here. SettingsUIManager will handle its own UI.
+    // SettingsUIManager can access ThemeLoader.themes and ThemeLoader._currentEffectiveColorScheme
+    // to build the dropdowns appropriately.
 
     applyTheme: function(themeKey) {
         if (!this.themes[themeKey]) {
-            console.error(`Attempted to apply invalid theme: ${themeKey}. Falling back.`);
+            console.error(`Attempted to apply invalid theme key: ${themeKey}. Falling back.`);
+            // Fallback to a theme compatible with the current effective color scheme
             themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
         }
         localStorage.setItem('selectedTheme', themeKey);
+        // Reloading the page is a simple way to apply new CSS and new data.js (for SPECIAL_CONTACTS_DEFINITIONS)
         window.location.reload();
+    },
+
+    // Getter for SettingsUIManager to know the current state
+    getCurrentEffectiveColorScheme: function() {
+        return this._currentEffectiveColorScheme;
+    },
+    getCurrentThemeKey: function() {
+        return this._currentThemeKey;
     }
 };
+
+ThemeLoader.init();

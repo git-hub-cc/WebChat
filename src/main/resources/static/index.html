@@ -273,7 +273,7 @@
                         </div>
                         <div class="manual-connect-step">
                             <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="Paste peer's connection info here..."></textarea>
-                            <button onclick="UIManager.copySdpTextFromModal()" class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
+                            <button onclick="SettingsUIManager.copySdpTextFromModal()" class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
                         </div>
                     </div>
                 </div>
@@ -361,20 +361,46 @@
         </div>
     </div>
 </div>
+<script>
+    window.SPECIAL_CONTACTS_DEFINITIONS = [];
+</script>
 <!-- Main application scripts -->
-<script src="config/Config.js"></script>
+<script src="config/Config.js"></script> <!-- Config should be early -->
+
+<!-- Utilities -->
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>
 <script src="js/DBManager.js"></script>
-<script src="js/ConnectionManager.js"></script>
-<script src="js/UIManager.js"></script>
-<script src="js/MediaManager.js"></script>
-<script src="js/VideoCallManager.js"></script>
-<script src="js/MessageManager.js"></script>
-<script src="js/ChatManager.js"></script>
+
+<!-- Core Logic Managers -->
 <script src="js/UserManager.js"></script>
+<script src="js/ConnectionManager.js"></script>
+<script src="js/MediaManager.js"></script> <!-- Core Media Logic -->
+<script src="js/VideoCallManager.js"></script> <!-- Core Video Call Logic -->
+<script src="js/MessageManager.js"></script> <!-- Core Message Logic -->
+<script src="js/ChatManager.js"></script>
 <script src="js/GroupManager.js"></script>
+
+<!-- Specialized Handlers/Managers (often used by core logic or specific UI parts) -->
+<script src="js/MessageTtsHandler.js"></script>
+<script src="js/TtsUIManager.js"></script> <!-- For Details Panel TTS Config Form -->
+
+<!-- UI Component Managers -->
+<script src="js/UIManager.js"></script> <!-- Slimmed down UIManager -->
+<script src="js/ModalManager.js"></script>
+<script src="js/NotificationManager.js"></script>
+<script src="js/SettingsUIManager.js"></script>
+<script src="js/LayoutManager.js"></script>
+<script src="js/ChatAreaUIManager.js"></script>
+<script src="js/SidebarUIManager.js"></script>
+<script src="js/DetailsPanelUIManager.js"></script>
+<script src="js/VideoCallUIManager.js"></script> <!-- Video Call specific UI -->
+<script src="js/MediaUIManager.js"></script> <!-- Media Previews UI -->
+
+<!-- Theme Loader (loads theme CSS and data JS with SPECIAL_CONTACTS_DEFINITIONS) -->
 <script src="js/ThemeLoader.js"></script>
+
+<!-- App Initializer (should be last or near last) -->
 <script src="js/AppInitializer.js"></script>
 </body>
 </html>

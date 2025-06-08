@@ -1,4 +1,4 @@
-const SPECIAL_CONTACTS_DEFINITIONS =
+SPECIAL_CONTACTS_DEFINITIONS =
     [
         {
             "id": "AI_Traveler_原神",

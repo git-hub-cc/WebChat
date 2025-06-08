@@ -25,14 +25,6 @@ const Utils = {
             else if (level === this.logLevels.DEBUG) console.debug(logMessage);
             else if (level === this.logLevels.WARN) console.warn(logMessage);
             else if (level === this.logLevels.INFO) console.info(logMessage);
-
-            // UI debug output (optional, can be removed if not needed)
-            // const debugInfo = document.getElementById('debugInfo'); // Assuming a debug panel
-            // if (debugInfo) {
-            //     debugInfo.innerHTML = `${Utils.escapeHtml(logMessage)}<br>` + debugInfo.innerHTML;
-            //     const lines = debugInfo.innerHTML.split('<br>');
-            //     if (lines.length > 50) debugInfo.innerHTML = lines.slice(0, 50).join('<br>');
-            // }
         }
     },
 
@@ -77,7 +69,7 @@ const Utils = {
 
             const hasIPv4 = candidates.some(c => c.address && c.address.includes('.'));
             const hasIPv6 = candidates.some(c => c.address && c.address.includes(':'));
-            const hasRelay = candidates.some(c => c.type === 'relay'); // Note: Will only be true if TURN server in default config or mDNS relay
+            const hasRelay = candidates.some(c => c.type === 'relay');
             const hasUdp = candidates.some(c => c.protocol === 'udp');
             const hasTcp = candidates.some(c => c.protocol === 'tcp');
 
@@ -117,13 +109,10 @@ const Utils = {
         ConnectionManager.pendingSentChunks[currentFileId] = {
             total: totalChunks,
             sent: 0,
-            data: dataString // Store the full data string temporarily
+            data: dataString
         };
 
-
-        // Send chunks with a small delay to avoid overwhelming the data channel
         for (let i = 0; i < totalChunks; i++) {
-            // Closure to capture current i
             ((currentIndex) => {
                 setTimeout(() => {
                     const start = currentIndex * chunkSize;
@@ -137,7 +126,6 @@ const Utils = {
                         payload: chunkData
                     }));
 
-                    // Update sent count and clean up if all sent
                     const pending = ConnectionManager.pendingSentChunks[currentFileId];
                     if (pending) {
                         pending.sent++;
@@ -146,7 +134,7 @@ const Utils = {
                             Utils.log(`All chunks for ${currentFileId} sent to ${peerId}.`, Utils.logLevels.INFO);
                         }
                     }
-                }, currentIndex * 20); // Increased delay slightly, 20ms. Adjust as needed.
+                }, currentIndex * 20);
             })(i);
         }
     },
@@ -162,10 +150,10 @@ const Utils = {
                 total: message.totalChunks,
                 received: 0,
                 chunks: new Array(message.totalChunks),
-                originalType: message.originalType // Storing the original type (e.g., 'file')
+                originalType: message.originalType
             };
             Utils.log(`Receiving chunked data ${message.chunkId} from ${peerId}, total: ${message.totalChunks}. Original type: ${message.originalType}`, Utils.logLevels.DEBUG);
-            return null; // Explicitly return null for chunk-meta
+            return null;
         }
 
         if (message.type === 'chunk-data') {
@@ -174,30 +162,25 @@ const Utils = {
                 assembly.chunks[message.index] = message.payload;
                 assembly.received++;
 
-                // Utils.log(`Received chunk ${message.index + 1}/${assembly.total} for ${message.chunkId} (original type: ${assembly.originalType})`, Utils.logLevels.DEBUG);
-
-
                 if (assembly.received === assembly.total) {
                     const fullDataString = assembly.chunks.join('');
-                    const assembledId = assembly.id; // Store before deleting
-                    const originalType = assembly.originalType; // Store before deleting
-                    delete peerChunks[message.chunkId]; // Clean up before parsing, in case parsing fails
+                    const assembledId = assembly.id;
+                    const originalType = assembly.originalType;
+                    delete peerChunks[message.chunkId];
 
                     Utils.log(`All chunks for ${assembledId} received from ${peerId}. Reassembled. Original type was: ${originalType}. Full length: ${fullDataString.length}`, Utils.logLevels.INFO);
                     try {
                         const reassembledMessage = JSON.parse(fullDataString);
-                        // Verify original type integrity
                         if (reassembledMessage.type !== originalType) {
-                            Utils.log(`Reassembled message type (${reassembledMessage.type}) differs from stored original type (${originalType}) for ID ${assembledId}. This might indicate an issue if original message structure is unexpected. Using reassembled type.`, Utils.logLevels.WARN);
-                            // The type from fullDataString (reassembledMessage.type) should be the authoritative one.
+                            Utils.log(`Reassembled message type (${reassembledMessage.type}) differs from stored original type (${originalType}) for ID ${assembledId}. Using reassembled type.`, Utils.logLevels.WARN);
                         }
                         return reassembledMessage;
                     } catch (e) {
                         Utils.log(`Error parsing reassembled message from ${peerId} (ID: ${assembledId}, OriginalType: ${originalType}): ${e.message}`, Utils.logLevels.ERROR);
-                        return null; // Error during reassembly or parse
+                        return null;
                     }
                 }
-                return null; // Still waiting for more chunks
+                return null;
             } else if (assembly && assembly.chunks[message.index] !== undefined) {
                 Utils.log(`Duplicate chunk ${message.index} for ${message.chunkId} (original type: ${assembly.originalType}) from ${peerId}. Ignoring.`, Utils.logLevels.WARN);
                 return null;
@@ -206,11 +189,7 @@ const Utils = {
                 return null;
             }
         }
-
-        // If message.type is neither 'chunk-meta' nor 'chunk-data'
-        // This case means reassembleChunk was called with an already fully formed message.
-        // This shouldn't happen if the ConnectionManager.onmessage logic is correct, as it checks type before calling.
-        Utils.log(`Utils.reassembleChunk received non-chunk message type: ${message.type} from ${peerId}. This is unexpected. Returning null.`, Utils.logLevels.WARN);
+        Utils.log(`Utils.reassembleChunk received non-chunk message type: ${message.type} from ${peerId}. Returning null.`, Utils.logLevels.WARN);
         return null;
     },
 

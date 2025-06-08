@@ -1,9 +1,8 @@
-
+// MODIFIED: VideoCallManager.js
+// - Modified endCall and related cleanup to only stop media, not close the RTCPeerConnection.
 const VideoCallManager = {
     localStream: null,
     remoteStream: null,
-    localVideo: null,
-    remoteVideo: null,
     currentPeerId: null,
     isCallActive: false,
     isCaller: false,
@@ -12,69 +11,28 @@ const VideoCallManager = {
     isVideoEnabled: true,
     isAudioOnly: false,
     callRequestTimeout: null,
-    isScreenSharing: false, // New state for screen sharing
+    isScreenSharing: false,
     statsInterval: null,
-    isPipMode: false, // For Picture-in-Picture mode
-    pipButton: null,
-    dragInfo: { // For PiP dragging
-        active: false,
-        currentX: 0,
-        currentY: 0,
-        initialX: 0,
-        initialY: 0,
-        xOffset: 0,
-        yOffset: 0,
-        draggedElement: null
-    },
     musicPlayer: null,
     isMusicPlaying: false,
-    _boundEnableMusicPlay: null, // For removing event listener
+    _boundEnableMusicPlay: null,
 
-    audioConstraints: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-    },
-
+    audioConstraints: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
     codecPreferences: {
-        audio: [
-            {
-                mimeType: 'audio/opus',
-                clockRate: 48000,
-                channels: 2,
-                sdpFmtpLine: 'minptime=10;useinbandfec=1;stereo=1;maxaveragebitrate=128000;dtx=0'
-            }
-        ],
+        audio: [{ mimeType: 'audio/opus', clockRate: 48000, channels: 2, sdpFmtpLine: 'minptime=10;useinbandfec=1;stereo=1;maxaveragebitrate=128000;dtx=0' }],
         video: [{mimeType: 'video/VP9'}, {mimeType: 'video/VP8'}, {mimeType: 'video/H264'}]
     },
 
     init: function () {
-        this.localVideo = document.getElementById('localVideo');
-        this.remoteVideo = document.getElementById('remoteVideo');
-        this.pipButton = document.getElementById('togglePipBtn'); // Get PiP button
-
         try {
-            this.musicPlayer = new Audio(Config.music); // Assuming music.mp3 is in the root
+            this.musicPlayer = new Audio(Config.music);
             this.musicPlayer.loop = true;
-            this.musicPlayer.addEventListener('ended', () => {
-                if (this.isMusicPlaying) {
-                    this.musicPlayer.currentTime = 0;
-                    this.musicPlayer.play().catch(e => Utils.log(`Music loop error: ${e}`, Utils.logLevels.WARN));
-                }
-            }, false);
-        } catch (e) {
-            Utils.log(`Error initializing Audio object for music: ${e}`, Utils.logLevels.ERROR);
-            this.musicPlayer = null;
-        }
-
+            this.musicPlayer.addEventListener('ended', () => { if (this.isMusicPlaying) this.musicPlayer.play().catch(e => Utils.log(`Music loop error: ${e}`, Utils.logLevels.WARN)); });
+        } catch (e) { Utils.log(`Error initializing music: ${e}`, Utils.logLevels.ERROR); this.musicPlayer = null; }
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            Utils.log('Browser does not support media devices (getUserMedia). Call functions will be disabled.', Utils.logLevels.ERROR);
+            Utils.log('Browser does not support media devices. Call functions disabled.', Utils.logLevels.ERROR);
             return false;
-        }
-
-        if (this.pipButton) {
-            this.pipButton.addEventListener('click', () => this.togglePipMode());
         }
         return true;
     },
@@ -83,8 +41,7 @@ const VideoCallManager = {
         if (this.musicPlayer && this.musicPlayer.paused && !this.isMusicPlaying) {
             Utils.log("Attempting to play music...", Utils.logLevels.DEBUG);
             this.musicPlayer.play().then(() => {
-                this.isMusicPlaying = true;
-                Utils.log("Music started playing.", Utils.logLevels.INFO);
+                this.isMusicPlaying = true; Utils.log("Music playing.", Utils.logLevels.INFO);
                 if (isRetry && this._boundEnableMusicPlay) {
                     document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
                     document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
@@ -93,28 +50,18 @@ const VideoCallManager = {
             }).catch(error => {
                 Utils.log(`Error playing music: ${error.name} - ${error.message}`, Utils.logLevels.ERROR);
                 if (error.name === 'NotAllowedError' && !isRetry) {
-                    UIManager.showNotification("Music playback blocked. Click/tap anywhere to enable.", "warning");
+                    NotificationManager.showNotification("Music blocked. Click/tap to enable.", "warning");
                     this._boundEnableMusicPlay = () => this.playMusic(true);
                     document.body.addEventListener('click', this._boundEnableMusicPlay, {once: true, capture: true});
-                    document.body.addEventListener('touchstart', this._boundEnableMusicPlay, {
-                        once: true,
-                        capture: true
-                    });
+                    document.body.addEventListener('touchstart', this._boundEnableMusicPlay, {once: true, capture: true});
                 }
             });
-        } else if (this.isMusicPlaying) {
-            Utils.log("Music is already playing or play attempt in progress.", Utils.logLevels.DEBUG);
-        } else if (!this.musicPlayer) {
-            Utils.log("Music player not available.", Utils.logLevels.WARN);
         }
     },
 
     stopMusic: function () {
         if (this.musicPlayer && (!this.musicPlayer.paused || this.isMusicPlaying)) {
-            this.musicPlayer.pause();
-            this.musicPlayer.currentTime = 0;
-            this.isMusicPlaying = false;
-            Utils.log("Music stopped.", Utils.logLevels.INFO);
+            this.musicPlayer.pause(); this.musicPlayer.currentTime = 0; this.isMusicPlaying = false; Utils.log("Music stopped.", Utils.logLevels.INFO);
             if (this._boundEnableMusicPlay) {
                 document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
                 document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
@@ -123,503 +70,252 @@ const VideoCallManager = {
         }
     },
 
-    initiateAudioCall: function (peerId) {
-        this.initiateCall(peerId, true);
+    updateCurrentCallUIState: function() {
+        if (typeof VideoCallUIManager !== 'undefined') {
+            VideoCallUIManager.updateUIForCallState({
+                isCallActive: this.isCallActive,
+                isAudioOnly: this.isAudioOnly,
+                isScreenSharing: this.isScreenSharing,
+                isVideoEnabled: this.isVideoEnabled,
+                isAudioMuted: this.isAudioMuted,
+            });
+        }
     },
 
+    initiateAudioCall: function (peerId) { this.initiateCall(peerId, true); },
+
     initiateScreenShare: async function (peerId) {
-        if (this.isCallActive || this.isCallPending) {
-            UIManager.showNotification('A call or share is already active or pending.', 'warning');
-            return;
-        }
+        if (this.isCallActive || this.isCallPending) { NotificationManager.showNotification('A call/share is already active/pending.', 'warning'); return; }
         if (!peerId) peerId = ChatManager.currentChatId;
-        if (!peerId) {
-            UIManager.showNotification('Please select a chat partner to share screen with.', 'warning');
-            return;
-        }
-        if (!ConnectionManager.isConnectedTo(peerId)) {
-            UIManager.showNotification('Not connected to peer. Cannot initiate screen share.', 'error');
-            return;
-        }
+        if (!peerId) { NotificationManager.showNotification('Select a partner to share screen with.', 'warning'); return; }
+        if (!ConnectionManager.isConnectedTo(peerId)) { NotificationManager.showNotification('Not connected to peer.', 'error'); return; }
 
-        this.isScreenSharing = true;
-        this.isAudioOnly = false;       // Screen share implies video (the screen itself)
-        this.isVideoEnabled = true; // The screen track is considered the video
-        this.isAudioMuted = false;      // User can mute audio if they wish
-
+        this.isScreenSharing = true; this.isAudioOnly = false; this.isVideoEnabled = true; this.isAudioMuted = false;
         try {
-            this.currentPeerId = peerId; // Set currentPeerId here for UIManager.showCallingModal
-            this.isCaller = true;
-            this.isCallPending = true;
-
-            ConnectionManager.sendTo(peerId, {
-                type: 'video-call-request',
-                audioOnly: this.isAudioOnly, // will be false
-                isScreenShare: this.isScreenSharing, // true
-                sender: UserManager.userId
-            });
-
-            UIManager.showCallingModal(
-                UserManager.contacts[peerId]?.name || 'peer',
-                () => this.endCall(), // onCancelCall
-                () => this.stopMusic(), // onStopMusicOnly
-                'Screen Share'
-            );
+            this.currentPeerId = peerId; this.isCaller = true; this.isCallPending = true;
+            ConnectionManager.sendTo(peerId, { type: 'video-call-request', audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
+            ModalManager.showCallingModal(UserManager.contacts[peerId]?.name || 'peer', () => this.hangUpMedia(), () => this.stopMusic(), 'Screen Share');
             this.playMusic();
-
-
             this.callRequestTimeout = setTimeout(() => {
-                if (this.isCallPending) {
-                    ConnectionManager.sendTo(this.currentPeerId, {
-                        type: 'video-call-cancel',
-                        sender: UserManager.userId
-                    });
-                    this.endCall(); // endCall will call endCallCleanup which stops music and hides modal
-                }
+                if (this.isCallPending) { ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-cancel', sender: UserManager.userId }); this.cancelPendingCall(); }
             }, 30000);
         } catch (error) {
             Utils.log(`Failed to initiate screen share: ${error.message}`, Utils.logLevels.ERROR);
-            UIManager.showNotification('Failed to initiate screen share.', 'error');
-            this.endCallCleanup();
+            NotificationManager.showNotification('Failed to initiate screen share.', 'error'); this.cleanupCallMediaAndState();
         }
     },
 
     initiateCall: async function (peerId, audioOnly = false) {
-        if (this.isCallActive || this.isCallPending) {
-            UIManager.showNotification('A call is already active or pending.', 'warning');
-            return;
-        }
+        if (this.isCallActive || this.isCallPending) { NotificationManager.showNotification('A call is already active/pending.', 'warning'); return; }
         if (!peerId) peerId = ChatManager.currentChatId;
-        if (!peerId) {
-            UIManager.showNotification('Please select a chat partner to call.', 'warning');
-            return;
-        }
-        if (!ConnectionManager.isConnectedTo(peerId)) {
-            UIManager.showNotification('Not connected to peer. Cannot initiate call.', 'error');
-            return;
-        }
+        if (!peerId) { NotificationManager.showNotification('Select a partner to call.', 'warning'); return; }
+        if (!ConnectionManager.isConnectedTo(peerId)) { NotificationManager.showNotification('Not connected to peer.', 'error'); return; }
 
-        this.isAudioOnly = audioOnly;
-        this.isScreenSharing = false; // Explicitly not screen sharing for regular call
-        this.isVideoEnabled = !audioOnly;
-        this.isAudioMuted = false;
-
+        this.isAudioOnly = audioOnly; this.isScreenSharing = false; this.isVideoEnabled = !audioOnly; this.isAudioMuted = false;
         try {
-            this.currentPeerId = peerId; // Set currentPeerId here for UIManager.showCallingModal
-            this.isCaller = true;
-            this.isCallPending = true;
-
-            ConnectionManager.sendTo(peerId, {
-                type: 'video-call-request',
-                audioOnly: this.isAudioOnly,
-                isScreenShare: this.isScreenSharing, // will be false
-                sender: UserManager.userId
-            });
-
-            UIManager.showCallingModal(
-                UserManager.contacts[peerId]?.name || 'peer',
-                () => this.endCall(), // onCancelCall
-                () => this.stopMusic(), // onStopMusicOnly
-                this.isAudioOnly ? 'Audio Call' : 'Video Call'
-            );
+            this.currentPeerId = peerId; this.isCaller = true; this.isCallPending = true;
+            ConnectionManager.sendTo(peerId, { type: 'video-call-request', audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
+            ModalManager.showCallingModal(UserManager.contacts[peerId]?.name || 'peer', () => this.hangUpMedia(), () => this.stopMusic(), this.isAudioOnly ? 'Audio Call' : 'Video Call');
             this.playMusic();
-
             this.callRequestTimeout = setTimeout(() => {
-                if (this.isCallPending) {
-                    ConnectionManager.sendTo(this.currentPeerId, {
-                        type: 'video-call-cancel',
-                        sender: UserManager.userId
-                    });
-                    this.endCall(); // endCall will call endCallCleanup
-                }
+                if (this.isCallPending) { ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-cancel', sender: UserManager.userId }); this.cancelPendingCall(); }
             }, 30000);
         } catch (error) {
             Utils.log(`Failed to initiate call: ${error.message}`, Utils.logLevels.ERROR);
-            UIManager.showNotification('Failed to initiate call.', 'error');
-            this.endCallCleanup();
+            NotificationManager.showNotification('Failed to initiate call.', 'error'); this.cleanupCallMediaAndState();
         }
     },
 
     showCallRequest: function (peerId, audioOnly = false, isScreenShare = false) {
-        this.currentPeerId = peerId;
-        this.isAudioOnly = audioOnly;
-        this.isScreenSharing = isScreenShare;
-        this.isVideoEnabled = !audioOnly;
-        this.isAudioMuted = false;
-        this.isCaller = false;
-
-        const requestModal = document.getElementById('videoCallRequest');
-        const requestTitle = requestModal.querySelector('h3');
-        const requestDesc = requestModal.querySelector('p');
-        const avatarEl = requestModal.querySelector('.video-call-avatar');
-
-        const peerName = UserManager.contacts[peerId]?.name || `Peer ${peerId.substring(0, 4)}`;
-        let avatarContentHtml = (UserManager.contacts[peerId]?.name?.charAt(0).toUpperCase() || 'P');
-
-        const peerContact = UserManager.contacts[peerId];
-        if (peerContact && peerContact.avatarUrl) {
-            avatarContentHtml = `<img src="${peerContact.avatarUrl}" alt="${Utils.escapeHtml(peerName.charAt(0))}" class="avatar-image">`;
-        } else {
-            avatarContentHtml = Utils.escapeHtml(avatarContentHtml); // Escape if it's text
-        }
-        if (avatarEl) avatarEl.innerHTML = avatarContentHtml;
-
-
-        let callTypeString = "Video Call";
-        if (this.isScreenSharing) {
-            callTypeString = "Screen Share";
-        } else if (this.isAudioOnly) {
-            callTypeString = "Audio Call";
-        }
-        if (requestTitle) requestTitle.textContent = `${callTypeString} Request`;
-        if (requestDesc) requestDesc.textContent = `${peerName} ${this.isScreenSharing ? 'wants to share screen' : 'is calling'}...`;
-        requestModal.style.display = 'flex';
+        this.currentPeerId = peerId; this.isAudioOnly = audioOnly; this.isScreenSharing = isScreenShare;
+        this.isVideoEnabled = !audioOnly; this.isAudioMuted = false; this.isCaller = false;
+        ModalManager.showCallRequest(peerId, audioOnly, isScreenShare);
         this.playMusic();
     },
 
-    hideCallRequest: function () {
-        const requestModal = document.getElementById('videoCallRequest');
-        if (requestModal) requestModal.style.display = 'none';
-    },
-
     acceptCall: async function () {
-        this.hideCallRequest();
-        this.stopMusic(); // Callee stops music on accept
-        if (!this.currentPeerId) {
-            UIManager.showNotification('Invalid call request.', 'error');
-            return;
-        }
+        ModalManager.hideCallRequest(); this.stopMusic();
+        if (!this.currentPeerId) { NotificationManager.showNotification('Invalid call request.', 'error'); return; }
         try {
-            if (this.isScreenSharing) {
-                this.isVideoEnabled = false;
-            }
-
+            if (this.isScreenSharing) this.isVideoEnabled = false;
             await this.startLocalStreamAndSignal(false);
-
-            ConnectionManager.sendTo(this.currentPeerId, {
-                type: 'video-call-accepted',
-                audioOnly: this.isAudioOnly,
-                isScreenShare: this.isScreenSharing,
-                sender: UserManager.userId
-            });
+            ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-accepted', audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
         } catch (error) {
             Utils.log(`Failed to accept call: ${error.message}`, Utils.logLevels.ERROR);
-            UIManager.showNotification(`Accept call failed: ${error.message}`, 'error');
-            ConnectionManager.sendTo(this.currentPeerId, {
-                type: 'video-call-rejected',
-                reason: 'device_error',
-                sender: UserManager.userId
-            });
-            this.endCallCleanup();
+            NotificationManager.showNotification(`Accept call failed: ${error.message}`, 'error');
+            ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-rejected', reason: 'device_error', sender: UserManager.userId });
+            this.cleanupCallMediaAndState();
         }
     },
 
     rejectCall: function () {
-        this.hideCallRequest();
-        this.stopMusic(); // Callee stops music on reject
+        ModalManager.hideCallRequest(); this.stopMusic();
         if (!this.currentPeerId) return;
-        ConnectionManager.sendTo(this.currentPeerId, {
-            type: 'video-call-rejected',
-            reason: 'user_rejected',
-            sender: UserManager.userId
-        });
-        this.endCallCleanup();
+        ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-rejected', reason: 'user_rejected', sender: UserManager.userId });
+        this.cleanupCallMediaAndState(false); // Do not close PC, just reset state
         Utils.log('Rejected call request.', Utils.logLevels.INFO);
     },
 
     startLocalStreamAndSignal: async function (isOfferCreatorForMedia) {
         let attemptLocalCameraVideoSending = !this.isAudioOnly && !this.isScreenSharing;
-
         try {
             if (this.isScreenSharing) {
                 if (this.isCaller) {
                     this.localStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
                     this.isVideoEnabled = true;
-
                     const screenTrack = this.localStream.getVideoTracks()[0];
-                    if (screenTrack) {
-                        screenTrack.onended = () => {
-                            Utils.log("Screen sharing ended by user (browser UI).", Utils.logLevels.INFO);
-                            this.endCall();
-                        };
-                    }
+                    if (screenTrack) screenTrack.onended = () => { Utils.log("Screen sharing ended by user.", Utils.logLevels.INFO); this.hangUpMedia(); };
                     if (this.localStream.getAudioTracks().length === 0) {
                         try {
-                            const micStream = await navigator.mediaDevices.getUserMedia({
-                                audio: this.audioConstraints,
-                                video: false
-                            });
+                            const micStream = await navigator.mediaDevices.getUserMedia({ audio: this.audioConstraints, video: false });
                             micStream.getAudioTracks().forEach(track => this.localStream.addTrack(track));
-                            Utils.log("Added microphone audio to screen share stream.", Utils.logLevels.INFO);
-                        } catch (micError) {
-                            Utils.log(`Could not get microphone audio for screen share: ${micError.message}`, Utils.logLevels.WARN);
-                        }
+                        } catch (micError) { Utils.log(`Could not get mic for screen share: ${micError.message}`, Utils.logLevels.WARN); }
                     }
                 } else {
-                    this.localStream = await navigator.mediaDevices.getUserMedia({
-                        video: false,
-                        audio: this.audioConstraints
-                    });
+                    this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.audioConstraints });
                     this.isVideoEnabled = false;
                 }
             } else {
                 if (attemptLocalCameraVideoSending) {
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     if (!devices.some(d => d.kind === 'videoinput')) {
-                        if (!this.isAudioOnly) UIManager.showNotification('No camera detected. You will send audio only for this video call.', 'warning');
+                        if (!this.isAudioOnly) NotificationManager.showNotification('No camera. Audio only.', 'warning');
                         attemptLocalCameraVideoSending = false;
                     }
                 }
-                this.localStream = await navigator.mediaDevices.getUserMedia({
-                    video: attemptLocalCameraVideoSending,
-                    audio: this.audioConstraints
-                });
-                this.isVideoEnabled = attemptLocalCameraVideoSending && this.localStream.getVideoTracks().length > 0 && this.localStream.getVideoTracks()[0].readyState !== 'ended';
-
-                if (attemptLocalCameraVideoSending && !this.isVideoEnabled) {
-                    if (!this.isAudioOnly) UIManager.showNotification('Could not use camera. Sending audio only for this video call.', 'warning');
-                }
+                this.localStream = await navigator.mediaDevices.getUserMedia({ video: attemptLocalCameraVideoSending, audio: this.audioConstraints });
+                this.isVideoEnabled = attemptLocalCameraVideoSending && this.localStream.getVideoTracks()[0]?.readyState !== 'ended';
+                if (attemptLocalCameraVideoSending && !this.isVideoEnabled && !this.isAudioOnly) NotificationManager.showNotification('Camera error. Audio only.', 'warning');
             }
         } catch (getUserMediaError) {
-            Utils.log(`getUserMedia/getDisplayMedia error: ${getUserMediaError.name} - ${getUserMediaError.message}`, Utils.logLevels.ERROR);
+            Utils.log(`getUserMedia/getDisplayMedia error: ${getUserMediaError.name}`, Utils.logLevels.ERROR);
             this.isVideoEnabled = false;
-            if (this.isScreenSharing && this.isCaller) {
-                UIManager.showNotification(`Screen share error: ${getUserMediaError.name}. Call cannot proceed.`, 'error');
-                this.endCallCleanup();
-                throw getUserMediaError;
-            } else if (!this.isScreenSharing && attemptLocalCameraVideoSending && !this.isAudioOnly) {
-                UIManager.showNotification(`Camera error: ${getUserMediaError.name}. Switching to audio only.`, 'error');
-            }
+            if (this.isScreenSharing && this.isCaller) { NotificationManager.showNotification(`Screen share error: ${getUserMediaError.name}.`, 'error'); this.cleanupCallMediaAndState(); throw getUserMediaError; }
+            else if (!this.isScreenSharing && attemptLocalCameraVideoSending && !this.isAudioOnly) NotificationManager.showNotification(`Camera error: ${getUserMediaError.name}. Audio only.`, 'error');
             try {
                 if (this.localStream) this.localStream.getTracks().forEach(t => t.stop());
-                this.localStream = await navigator.mediaDevices.getUserMedia({
-                    video: false,
-                    audio: this.audioConstraints
-                });
-                this.isAudioOnly = true;
-                this.isVideoEnabled = false;
-                if (this.isScreenSharing) this.isScreenSharing = false;
-            } catch (audioError) {
-                Utils.log(`Fallback audio getUserMedia error: ${audioError.name}`, Utils.logLevels.ERROR);
-                this.endCallCleanup();
-                throw audioError;
-            }
+                this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.audioConstraints });
+                this.isAudioOnly = true; this.isVideoEnabled = false; if(this.isScreenSharing) this.isScreenSharing = false;
+            } catch (audioError) { Utils.log(`Fallback audio error: ${audioError.name}`, Utils.logLevels.ERROR); this.cleanupCallMediaAndState(); throw audioError; }
         }
 
-        if (this.localStream.getAudioTracks()[0]) {
-            this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
+        if (this.localStream.getAudioTracks()[0]) this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
+        if (this.localStream.getVideoTracks()[0]) this.localStream.getVideoTracks()[0].enabled = this.isVideoEnabled;
+
+        if (typeof VideoCallUIManager !== 'undefined') {
+            VideoCallUIManager.setLocalStream(this.localStream);
+            VideoCallUIManager.showCallContainer(true);
         }
-        if (this.localStream.getVideoTracks()[0]) {
-            this.localStream.getVideoTracks()[0].enabled = this.isVideoEnabled;
-        }
-
-        if (this.isScreenSharing && this.isCaller) {
-            this.localVideo.srcObject = null;
-            this.localVideo.style.display = 'none';
-        } else if (this.isScreenSharing && !this.isCaller) {
-            this.localVideo.srcObject = null;
-            this.localVideo.style.display = 'none';
-        } else {
-            if (!this.isAudioOnly && this.isVideoEnabled) {
-                this.localVideo.srcObject = this.localStream;
-                this.localVideo.style.display = 'block';
-            } else {
-                this.localVideo.srcObject = null;
-                this.localVideo.style.display = 'none';
-            }
-        }
-
-        this.isCallActive = true;
-        this.isCallPending = false;
-
-        this.updateUIForCallType();
-        document.getElementById('videoCallContainer').style.display = 'flex';
-
+        this.isCallActive = true; this.isCallPending = false;
+        this.updateCurrentCallUIState();
         await this.setupPeerConnection(isOfferCreatorForMedia);
-
         if (this.statsInterval) clearInterval(this.statsInterval);
         this.statsInterval = setInterval(() => this.collectAndSendStats(), 5000);
     },
 
     setupPeerConnection: async function (isOfferCreatorForMedia) {
         const conn = ConnectionManager.connections[this.currentPeerId];
-        if (!conn || !conn.peerConnection) {
-            Utils.log("setupPeerConnection: No PeerConnection found.", Utils.logLevels.ERROR);
-            this.endCall();
-            return;
-        }
+        if (!conn || !conn.peerConnection) { Utils.log("setupPeerConnection: No PeerConnection.", Utils.logLevels.ERROR); this.hangUpMedia(); return; }
         const pc = conn.peerConnection;
-
-        pc.getSenders().forEach(sender => {
-            if (sender.track) {
-                try {
-                    pc.removeTrack(sender);
-                } catch (e) {
-                    Utils.log("Error removing old track from sender: " + e, Utils.logLevels.WARN);
-                }
-            }
-        });
+        // Hapus trek lama sebelum menambahkan yang baru jika ini adalah renegosiasi atau awal panggilan baru pada PC yang ada
+        pc.getSenders().forEach(sender => { if (sender.track) try {pc.removeTrack(sender);} catch(e){Utils.log("Err removing old track: "+e,Utils.logLevels.WARN);}});
 
         this.localStream.getTracks().forEach(track => {
-            if (track.kind === 'audio') {
-                pc.addTrack(track, this.localStream);
-            } else if (track.kind === 'video' && this.isVideoEnabled) {
-                if ((!this.isScreenSharing && this.isVideoEnabled) || (this.isScreenSharing && this.isCaller && this.isVideoEnabled)) {
+            if (track.kind === 'audio' || (track.kind === 'video' && this.isVideoEnabled && ((!this.isScreenSharing) || (this.isScreenSharing && this.isCaller)))) {
+                try {
                     pc.addTrack(track, this.localStream);
+                } catch(e) {
+                    Utils.log(`Error adding track ${track.kind} to PC: ${e.message}`, Utils.logLevels.ERROR);
                 }
             }
         });
-
         this.setCodecPreferences(pc);
-
         pc.ontrack = (event) => {
-            Utils.log(`ontrack event: track kind=${event.track.kind}, id=${event.track.id}, streams associated: ${event.streams.length}`, Utils.logLevels.DEBUG);
-
             const trackHandler = (track) => {
                 if (!track._videoManagerListenersAttached) {
-                    track.onunmute = () => {
-                        Utils.log(`Remote track ${track.id} (${track.kind}) unmuted.`, Utils.logLevels.DEBUG);
-                        this.updateUIForCallType();
-                        if (track.kind === 'video' && this.remoteVideo && this.remoteVideo.paused) {
-                            this.remoteVideo.play().catch(e => Utils.log(`Error playing remote video on unmute: ${e}`, Utils.logLevels.WARN));
-                        }
-                    };
-                    track.onmute = () => {
-                        Utils.log(`Remote track ${track.id} (${track.kind}) muted.`, Utils.logLevels.DEBUG);
-                        this.updateUIForCallType();
-                    };
-                    track.onended = () => {
+                    track.onunmute = () => { Utils.log(`Remote track ${track.id} (${track.kind}) unmuted.`, Utils.logLevels.DEBUG); this.updateCurrentCallUIState(); if (track.kind === 'video' && VideoCallUIManager.remoteVideo?.paused) VideoCallUIManager.remoteVideo.play().catch(e => Utils.log(`Error playing remote video: ${e}`,Utils.logLevels.WARN)); };
+                    track.onmute = () => { Utils.log(`Remote track ${track.id} (${track.kind}) muted.`, Utils.logLevels.DEBUG); this.updateCurrentCallUIState(); };
+                    track.onended = () => { // Penting untuk menangani ketika trek jarak jauh dihentikan
                         Utils.log(`Remote track ${track.id} (${track.kind}) ended.`, Utils.logLevels.DEBUG);
-                        if (this.remoteStream && this.remoteStream.getTrackById(track.id)) {
-                            try {
-                                this.remoteStream.removeTrack(track);
-                                Utils.log(`Removed track ${track.id} from remoteStream.`, Utils.logLevels.DEBUG);
-                            } catch (e) {
-                                Utils.log(`Error removing track ${track.id} from remoteStream: ${e}`, Utils.logLevels.WARN);
-                            }
+                        if (this.remoteStream?.getTrackById(track.id)) try {this.remoteStream.removeTrack(track);}catch(e){Utils.log("Err removing track from remote: "+e,Utils.logLevels.WARN);}
+                        if (track.kind === 'video' && this.isScreenSharing && !this.isCaller) { Utils.log("Remote screen share ended. Ending call aspect.", Utils.logLevels.INFO); this.hangUpMedia(false); /*false: jangan kirim video-call-end karena ini reaksi terhadap trek yang berakhir*/ }
+                        else if (this.remoteStream && this.remoteStream.getTracks().length === 0) { // Jika semua trek jarak jauh hilang
+                            if(VideoCallUIManager.remoteVideo) VideoCallUIManager.remoteVideo.srcObject = null;
+                            this.remoteStream = null;
+                            Utils.log("All remote tracks ended. Call aspect might be over.", Utils.logLevels.INFO);
+                            // Pertimbangkan apakah ini juga harus memicu hangUpMedia() jika belum
                         }
-                        if (track.kind === 'video' && this.isScreenSharing && !this.isCaller) {
-                            Utils.log("Remote screen share track ended. Ending call.", Utils.logLevels.INFO);
-                            this.endCall();
-                        } else {
-                            this.updateUIForCallType();
-                        }
+                        this.updateCurrentCallUIState();
                     };
                     track._videoManagerListenersAttached = true;
                 }
             };
-
             if (event.streams && event.streams[0]) {
-                const incomingStream = event.streams[0];
-                if (this.remoteVideo.srcObject !== incomingStream) {
-                    this.remoteVideo.srcObject = incomingStream;
-                    this.remoteStream = incomingStream;
-                    Utils.log(`Assigned event.streams[0] (id: ${this.remoteStream.id}) to remoteVideo.srcObject.`, Utils.logLevels.INFO);
+                if (VideoCallUIManager.remoteVideo?.srcObject !== event.streams[0]) {
+                    if (typeof VideoCallUIManager !== 'undefined') VideoCallUIManager.setRemoteStream(event.streams[0]);
+                    this.remoteStream = event.streams[0];
                 }
-                if (this.remoteStream) {
-                    this.remoteStream.getTracks().forEach(t => trackHandler(t));
-                }
-                if (event.track) {
-                    trackHandler(event.track);
-                }
-
+                if (this.remoteStream) this.remoteStream.getTracks().forEach(t => trackHandler(t));
+                if (event.track) trackHandler(event.track);
             } else if (event.track) {
                 if (!this.remoteStream) {
                     this.remoteStream = new MediaStream();
-                    if (!this.remoteVideo.srcObject || !(this.remoteVideo.srcObject instanceof MediaStream) || this.remoteVideo.srcObject.getTracks().length === 0) {
-                        this.remoteVideo.srcObject = this.remoteStream;
-                    }
-                    Utils.log(`Initialized new remoteStream (event.track w/o event.streams[0]). Current srcObject: ${this.remoteVideo.srcObject === this.remoteStream ? 'this.remoteStream' : 'other stream'}.`, Utils.logLevels.INFO);
+                    if (typeof VideoCallUIManager !== 'undefined' && (!VideoCallUIManager.remoteVideo?.srcObject || VideoCallUIManager.remoteVideo.srcObject.getTracks().length === 0)) VideoCallUIManager.setRemoteStream(this.remoteStream);
                 }
-                if (!this.remoteStream.getTrackById(event.track.id)) {
-                    this.remoteStream.addTrack(event.track);
-                    Utils.log(`Added event.track (id: ${event.track.id}, kind: ${event.track.kind}) to manually managed remoteStream.`, Utils.logLevels.INFO);
-                }
-                if(this.remoteVideo.srcObject !== this.remoteStream && this.remoteStream.getTracks().length > 0) {
-                    this.remoteVideo.srcObject = this.remoteStream;
-                }
+                if (!this.remoteStream.getTrackById(event.track.id)) this.remoteStream.addTrack(event.track);
+                if (typeof VideoCallUIManager !== 'undefined' && VideoCallUIManager.remoteVideo?.srcObject !== this.remoteStream && this.remoteStream.getTracks().length > 0) VideoCallUIManager.setRemoteStream(this.remoteStream);
                 trackHandler(event.track);
             }
-
-            this.updateUIForCallType();
+            this.updateCurrentCallUIState();
         };
-
-        this.setupConnectionMonitoring(pc);
-
-        if (isOfferCreatorForMedia) {
-            await this.createAndSendOffer();
-        }
+        this.setupConnectionMonitoring(pc); // Monitor ICE state, tapi JANGAN panggil endCall/hangUpMedia dari sini jika PC state berubah jadi disconnected
+        if (isOfferCreatorForMedia) await this.createAndSendOffer();
     },
 
     setupConnectionMonitoring: function (pc) {
         pc.oniceconnectionstatechange = () => {
             Utils.log(`Call ICE State: ${pc.iceConnectionState} for ${this.currentPeerId}`, Utils.logLevels.DEBUG);
-            if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'closed') {
+            // JANGAN panggil hangUpMedia() atau endCall() secara otomatis dari sini
+            // jika tujuannya adalah untuk mempertahankan PC.
+            // Biarkan logika aplikasi (misalnya, batas waktu, keputusan pengguna) yang menanganinya.
+            // Anda mungkin ingin menampilkan notifikasi jika koneksi ICE 'failed'.
+            if (this.isCallActive && (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'closed')) {
                 if (this.isCallActive) {
-                    UIManager.showNotification('Call connection issue detected.', 'warning');
-                    if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'closed') {
-                        this.endCall();
-                    }
+                    NotificationManager.showNotification('Call connection issue (ICE). Media may be affected.', 'warning');
+                    // Jika state menjadi 'closed' atau 'failed' secara permanen, PC mungkin tidak dapat digunakan lagi.
+                    // Jika Anda ingin mencoba memulihkan PC, itu akan menjadi logika yang lebih kompleks.
+                    // Untuk saat ini, asumsikan DataChannel masih bisa berfungsi jika hanya media yang bermasalah.
                 }
             }
         };
     },
-
     setCodecPreferences: function (pc) {
-        if (typeof RTCRtpTransceiver === 'undefined' || !('setCodecPreferences' in RTCRtpTransceiver.prototype)) {
-            Utils.log("setCodecPreferences not supported by this browser.", Utils.logLevels.WARN);
-            return;
-        }
+        if (typeof RTCRtpTransceiver === 'undefined' || !('setCodecPreferences' in RTCRtpTransceiver.prototype)) { Utils.log("setCodecPreferences not supported.", Utils.logLevels.WARN); return; }
         try {
             pc.getTransceivers().forEach(transceiver => {
                 if (!transceiver.sender || !transceiver.sender.track) return;
                 const kind = transceiver.sender.track.kind;
-
                 if (kind === 'audio') {
                     const {codecs} = RTCRtpSender.getCapabilities('audio');
-                    const preferredAudio = this.codecPreferences.audio
-                        .map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase() && (!pref.sdpFmtpLine || (c.sdpFmtpLine && c.sdpFmtpLine.includes(pref.sdpFmtpLine.split(';')[0])))))
-                        .filter(c => c);
-                    if (preferredAudio.length > 0) {
-                        try {
-                            transceiver.setCodecPreferences(preferredAudio);
-                        } catch (e) {
-                            Utils.log(`Failed to set audio codec prefs for transceiver: ${e.message}`, Utils.logLevels.WARN);
-                        }
-                    }
+                    const preferredAudio = this.codecPreferences.audio.map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase() && (!pref.sdpFmtpLine || (c.sdpFmtpLine && c.sdpFmtpLine.includes(pref.sdpFmtpLine.split(';')[0]))))).filter(c => c);
+                    if (preferredAudio.length > 0) try {transceiver.setCodecPreferences(preferredAudio);}catch(e){Utils.log(`Failed to set audio codec prefs: ${e.message}`,Utils.logLevels.WARN);}
                 } else if (kind === 'video' && !this.isAudioOnly) {
                     const {codecs} = RTCRtpSender.getCapabilities('video');
-                    const preferredVideo = this.codecPreferences.video
-                        .map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase()))
-                        .filter(c => c);
-                    if (preferredVideo.length > 0) {
-                        try {
-                            transceiver.setCodecPreferences(preferredVideo);
-                        } catch (e) {
-                            Utils.log(`Failed to set video codec prefs for transceiver: ${e.message}`, Utils.logLevels.WARN);
-                        }
-                    }
+                    const preferredVideo = this.codecPreferences.video.map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase())).filter(c => c);
+                    if (preferredVideo.length > 0) try {transceiver.setCodecPreferences(preferredVideo);}catch(e){Utils.log(`Failed to set video codec prefs: ${e.message}`,Utils.logLevels.WARN);}
                 }
             });
-        } catch (error) {
-            Utils.log(`Error iterating transceivers for codec preferences: ${error.message}`, Utils.logLevels.WARN);
-        }
+        } catch (error) { Utils.log(`Error in setCodecPreferences: ${error.message}`, Utils.logLevels.WARN); }
     },
-
     modifySdpForOpus: function (sdp) {
-        const opusRegex = /a=rtpmap:(\d+) opus\/48000\/2/gm;
-        let match;
-        let modifiedSdp = sdp;
+        const opusRegex = /a=rtpmap:(\d+) opus\/48000\/2/gm; let match; let modifiedSdp = sdp;
         const opusTargetParams = this.codecPreferences.audio.find(p => p.mimeType === 'audio/opus')?.sdpFmtpLine || 'minptime=10;useinbandfec=1';
-
         while ((match = opusRegex.exec(sdp)) !== null) {
-            const opusPayloadType = match[1];
-            const rtpmapLineSignature = `a=rtpmap:${opusPayloadType} opus/48000/2`;
+            const opusPayloadType = match[1]; const rtpmapLineSignature = `a=rtpmap:${opusPayloadType} opus/48000/2`;
             const fmtpLineForPayload = `a=fmtp:${opusPayloadType} ${opusTargetParams}`;
             const existingFmtpRegex = new RegExp(`^a=fmtp:${opusPayloadType} .*(\\r\\n)?`, 'm');
-            if (existingFmtpRegex.test(modifiedSdp)) {
-                modifiedSdp = modifiedSdp.replace(existingFmtpRegex, fmtpLineForPayload + (RegExp.$2 || '\r\n'));
-            } else {
+            if (existingFmtpRegex.test(modifiedSdp)) modifiedSdp = modifiedSdp.replace(existingFmtpRegex, fmtpLineForPayload + (RegExp.$2 || '\r\n'));
+            else {
                 const rtpmapLineIndex = modifiedSdp.indexOf(rtpmapLineSignature);
                 if (rtpmapLineIndex !== -1) {
                     const endOfRtpmapLine = modifiedSdp.indexOf('\n', rtpmapLineIndex);
@@ -627,73 +323,44 @@ const VideoCallManager = {
                     modifiedSdp = modifiedSdp.slice(0, insertPosition) + `\r\n${fmtpLineForPayload}` + modifiedSdp.slice(insertPosition);
                 }
             }
-        }
-        return modifiedSdp;
+        } return modifiedSdp;
     },
 
     createAndSendOffer: async function () {
         if (!this.currentPeerId || !this.isCallActive) return;
         const conn = ConnectionManager.connections[this.currentPeerId];
-        if (!conn || !conn.peerConnection) {
-            Utils.log("No PC to create offer", Utils.logLevels.ERROR);
-            return;
-        }
+        if (!conn || !conn.peerConnection) { Utils.log("No PC for offer", Utils.logLevels.ERROR); return; }
         try {
+            // Jika Anda hanya menghapus trek, Anda mungkin perlu mengatur ulang transceivers
+            // atau menegosiasikan ulang dengan cara tertentu yang menunjukkan tidak ada media.
+            // Cara sederhana adalah offerToReceiveAudio/Video = false jika tidak ada trek lokal.
             const offerOptions = {
-                offerToReceiveAudio: true,
-                offerToReceiveVideo: !this.isAudioOnly || this.isScreenSharing,
+                offerToReceiveAudio: true, // Selalu siap menerima audio
+                offerToReceiveVideo: !this.isAudioOnly || this.isScreenSharing // Siap menerima video jika bukan audio-only atau jika screen share
             };
+
             const offer = await conn.peerConnection.createOffer(offerOptions);
-            let sdp = this.modifySdpForOpus(offer.sdp);
-            const modifiedOffer = new RTCSessionDescription({type: 'offer', sdp: sdp});
+            const modifiedOffer = new RTCSessionDescription({type: 'offer', sdp: this.modifySdpForOpus(offer.sdp)});
             await conn.peerConnection.setLocalDescription(modifiedOffer);
-            ConnectionManager.sendTo(this.currentPeerId, {
-                type: 'video-call-offer',
-                sdp: conn.peerConnection.localDescription,
-                audioOnly: this.isAudioOnly,
-                isScreenShare: this.isScreenSharing,
-                sender: UserManager.userId
-            });
-        } catch (e) {
-            Utils.log("Error creating/sending offer: " + e, Utils.logLevels.ERROR);
-            this.endCall();
-        }
+            ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-offer', sdp: conn.peerConnection.localDescription, audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
+        } catch (e) { Utils.log("Error creating/sending offer: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
     },
 
     handleOffer: async function (sdpOffer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
         const conn = ConnectionManager.connections[peerId];
-        if (!conn || !conn.peerConnection) {
-            Utils.log("No PC to handle offer", Utils.logLevels.ERROR);
-            return;
-        }
+        if (!conn || !conn.peerConnection) { Utils.log("No PC to handle offer", Utils.logLevels.ERROR); return; }
         try {
             await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpOffer));
-
             if (!this.isCallActive) {
-                this.isScreenSharing = remoteIsScreenShare;
-                this.isAudioOnly = remoteIsAudioOnly && !remoteIsScreenShare;
-                this.currentPeerId = peerId;
-                this.isCaller = false;
-                this.isVideoEnabled = !this.isAudioOnly && !this.isScreenSharing;
-
+                this.isScreenSharing = remoteIsScreenShare; this.isAudioOnly = remoteIsAudioOnly && !remoteIsScreenShare;
+                this.currentPeerId = peerId; this.isCaller = false; this.isVideoEnabled = !this.isAudioOnly && !this.isScreenSharing;
                 await this.startLocalStreamAndSignal(false);
             }
-
             const answer = await conn.peerConnection.createAnswer();
-            let sdp = this.modifySdpForOpus(answer.sdp);
-            const modifiedAnswer = new RTCSessionDescription({type: 'answer', sdp: sdp});
+            const modifiedAnswer = new RTCSessionDescription({type: 'answer', sdp: this.modifySdpForOpus(answer.sdp)});
             await conn.peerConnection.setLocalDescription(modifiedAnswer);
-            ConnectionManager.sendTo(peerId, {
-                type: 'video-call-answer',
-                sdp: conn.peerConnection.localDescription,
-                audioOnly: this.isAudioOnly,
-                isScreenShare: this.isScreenSharing,
-                sender: UserManager.userId
-            });
-        } catch (e) {
-            Utils.log("Error handling offer: " + e, Utils.logLevels.ERROR);
-            this.endCall();
-        }
+            ConnectionManager.sendTo(peerId, { type: 'video-call-answer', sdp: conn.peerConnection.localDescription, audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
+        } catch (e) { Utils.log("Error handling offer: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
     },
 
     handleAnswer: async function (sdpAnswer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
@@ -701,316 +368,118 @@ const VideoCallManager = {
         const conn = ConnectionManager.connections[peerId];
         if (!conn || !conn.peerConnection) return;
         try {
-            if (remoteIsAudioOnly !== this.isAudioOnly) {
-                Utils.log(`Warning: Mismatch in audioOnly state from answer. Peer: ${remoteIsAudioOnly}, Self: ${this.isAudioOnly}. Using self's state.`, Utils.logLevels.WARN);
-            }
-            if (remoteIsScreenShare !== this.isScreenSharing) {
-                Utils.log(`Warning: Mismatch in isScreenShare state from answer. Peer: ${remoteIsScreenShare}, Self: ${this.isScreenSharing}. Using self's state.`, Utils.logLevels.WARN);
-            }
             await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpAnswer));
-            Utils.log(`Answer from ${peerId} processed. Call should be established/updated.`, Utils.logLevels.INFO);
-        } catch (e) {
-            Utils.log("Error handling answer: " + e, Utils.logLevels.ERROR);
-            this.endCall();
-        }
+            Utils.log(`Answer from ${peerId} processed.`, Utils.logLevels.INFO);
+        } catch (e) { Utils.log("Error handling answer: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
     },
 
     toggleCamera: function () {
-        if (!this.isCallActive) return;
-        if (this.isAudioOnly) {
-            UIManager.showNotification("Camera is not available in an audio-only call.", "warning");
+        if (!this.isCallActive || !this.localStream || this.isAudioOnly || this.isScreenSharing) {
+            if(this.isAudioOnly) NotificationManager.showNotification("Camera N/A in audio call.", "warning");
+            if(this.isScreenSharing) NotificationManager.showNotification("Camera N/A during screen share.", "warning");
             return;
         }
-        if (this.isScreenSharing) {
-            UIManager.showNotification("Camera cannot be toggled while screen sharing.", "warning");
-            return;
-        }
-        const videoTrack = this.localStream ? this.localStream.getVideoTracks()[0] : null;
-        if (!videoTrack) {
-            UIManager.showNotification('Local video stream is not available. Cannot toggle camera state.', 'warning');
-            return;
-        }
-        this.isVideoEnabled = !this.isVideoEnabled;
-        videoTrack.enabled = this.isVideoEnabled;
-        this.updateUIForCallType();
+        const videoTrack = this.localStream.getVideoTracks()[0];
+        if (!videoTrack) { NotificationManager.showNotification('Local video N/A.', 'warning'); return; }
+        this.isVideoEnabled = !this.isVideoEnabled; videoTrack.enabled = this.isVideoEnabled;
+        this.updateCurrentCallUIState();
     },
 
     toggleAudio: function () {
         if (!this.isCallActive || !this.localStream || !this.localStream.getAudioTracks()[0]) return;
-        this.isAudioMuted = !this.isAudioMuted;
-        this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
-        this.updateUIForCallType();
+        this.isAudioMuted = !this.isAudioMuted; this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
+        this.updateCurrentCallUIState();
     },
 
     toggleAudioOnly: async function () {
-        if (this.isCallActive) {
-            UIManager.showNotification("Cannot switch call mode (Audio/Video) while a call is active.", "warning");
-            return;
-        }
-        Utils.log("toggleAudioOnly called when no call is active. Current isAudioOnly: " + this.isAudioOnly, Utils.logLevels.INFO);
+        if (this.isCallActive) { NotificationManager.showNotification("Cannot switch mode mid-call.", "warning"); return; }
+        this.isAudioOnly = !this.isAudioOnly;
+        Utils.log("Toggled AudioOnly mode (pre-call): " + this.isAudioOnly, Utils.logLevels.INFO);
+        this.updateCurrentCallUIState();
     },
 
-    updateUIForCallType: function () {
-        const callContainer = document.getElementById('videoCallContainer');
-        const localVideoEl = this.localVideo;
-        const remoteVideoEl = this.remoteVideo;
-        const audioOnlyBtn = document.getElementById('audioOnlyBtn');
-        const cameraBtn = document.getElementById('toggleCameraBtn');
-        const audioBtn = document.getElementById('toggleAudioBtn');
-        const pipBtn = this.pipButton;
+    // BARU: Fungsi untuk hanya menghentikan media, bukan seluruh koneksi
+    hangUpMedia: function(notifyPeer = true) {
+        Utils.log(`Hanging up media for peer ${this.currentPeerId}. Notify: ${notifyPeer}`, Utils.logLevels.INFO);
+        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
 
-        if (!callContainer) return;
-
-        if (this.isScreenSharing) {
-            callContainer.classList.add('screen-sharing-mode');
-            callContainer.classList.remove('audio-only-mode');
-        } else {
-            callContainer.classList.remove('screen-sharing-mode');
-            callContainer.classList.toggle('audio-only-mode', this.isAudioOnly);
-        }
-        callContainer.classList.toggle('pip-mode', this.isPipMode && this.isCallActive);
-
-
-        if (localVideoEl) {
-            if (this.isScreenSharing && !this.isCaller) {
-                localVideoEl.style.display = 'none';
-            } else if (this.isScreenSharing && this.isCaller) {
-                localVideoEl.style.display = 'none';
-            } else if (!this.isAudioOnly && this.isVideoEnabled) {
-                localVideoEl.style.display = 'block';
-            } else {
-                localVideoEl.style.display = 'none';
-            }
-        }
-
-
-        if (remoteVideoEl) {
-            const currentRemoteStream = remoteVideoEl.srcObject;
-            const hasRemoteVideoTrack = currentRemoteStream && currentRemoteStream instanceof MediaStream &&
-                currentRemoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
-
-            if ((this.isScreenSharing && hasRemoteVideoTrack) || (!this.isAudioOnly && hasRemoteVideoTrack)) {
-                remoteVideoEl.style.display = 'block';
-                if (remoteVideoEl.paused) {
-                    remoteVideoEl.play().catch(e => Utils.log(`Error playing remote video: ${e.name} - ${e.message}`, Utils.logLevels.WARN));
-                }
-            } else {
-                remoteVideoEl.style.display = 'none';
-            }
-        }
-
-        if (audioOnlyBtn) {
-            audioOnlyBtn.style.display = this.isCallActive ? 'none' : 'inline-block';
-            if (!this.isCallActive) {
-                audioOnlyBtn.style.background = this.isAudioOnly ? 'var(--primary-color)' : '#fff';
-                audioOnlyBtn.style.color = this.isAudioOnly ? 'white' : 'var(--text-color)';
-                audioOnlyBtn.innerHTML = this.isAudioOnly ? '🎬' : '🔊';
-                audioOnlyBtn.title = this.isAudioOnly ? 'Switch to Video Call' : 'Switch to Audio-Only Call';
-            }
-        }
-
-        if (pipBtn) {
-            pipBtn.style.display = this.isCallActive ? 'inline-block' : 'none';
-            if (this.isCallActive) {
-                pipBtn.innerHTML = this.isPipMode ? '📺' : '🖼️';
-                pipBtn.title = this.isPipMode ? 'Maximize Video' : 'Minimize Video';
-            }
-        }
-
-        if (cameraBtn) {
-            const disableCameraToggle = this.isAudioOnly || this.isScreenSharing;
-            cameraBtn.style.display = disableCameraToggle ? 'none' : 'inline-block';
-            if (!disableCameraToggle) {
-                cameraBtn.innerHTML = this.isVideoEnabled ? '📹' : '🚫';
-                cameraBtn.style.background = this.isVideoEnabled ? '#fff' : '#666';
-                cameraBtn.style.color = this.isVideoEnabled ? 'var(--text-color)' : 'white';
-                cameraBtn.title = this.isVideoEnabled ? 'Turn Camera Off' : 'Turn Camera On';
-            }
-        }
-        if (audioBtn) {
-            audioBtn.innerHTML = this.isAudioMuted ? '🔇' : '🎤';
-            audioBtn.style.background = this.isAudioMuted ? '#666' : '#fff';
-            audioBtn.style.color = this.isAudioMuted ? 'white' : 'var(--text-color)';
-            audioBtn.title = this.isAudioMuted ? 'Unmute Microphone' : 'Mute Microphone';
-        }
-    },
-
-    togglePipMode: function () {
-        if (!this.isCallActive) return;
-
-        this.isPipMode = !this.isPipMode;
-        const callContainer = document.getElementById('videoCallContainer');
-
-        callContainer.classList.toggle('pip-mode', this.isPipMode);
-
-        if (this.isPipMode) {
-            this.initPipDraggable(callContainer);
-            callContainer.style.left = callContainer.dataset.pipLeft || `${window.innerWidth - callContainer.offsetWidth - 20}px`;
-            callContainer.style.top = callContainer.dataset.pipTop || `${window.innerHeight - callContainer.offsetHeight - 20}px`;
-            callContainer.style.right = 'auto';
-            callContainer.style.bottom = 'auto';
-        } else {
-            this.removePipDraggable(callContainer);
-            if (callContainer.style.left && callContainer.style.left !== 'auto') {
-                callContainer.dataset.pipLeft = callContainer.style.left;
-            }
-            if (callContainer.style.top && callContainer.style.top !== 'auto') {
-                callContainer.dataset.pipTop = callContainer.style.top;
-            }
-            callContainer.style.left = '';
-            callContainer.style.top = '';
-            callContainer.style.right = '';
-            callContainer.style.bottom = '';
-        }
-        this.updateUIForCallType();
-    },
-
-    initPipDraggable: function (element) {
-        element.addEventListener("mousedown", this._boundDragStart = this._boundDragStart || this.dragStart.bind(this));
-        element.addEventListener("touchstart", this._boundDragStartTouch = this._boundDragStartTouch || this.dragStart.bind(this), {passive: false});
-    },
-
-    removePipDraggable: function (element) {
-        element.removeEventListener("mousedown", this._boundDragStart);
-        element.removeEventListener("touchstart", this._boundDragStartTouch);
-        document.removeEventListener("mousemove", this._boundDrag);
-        document.removeEventListener("mouseup", this._boundDragEnd);
-        document.removeEventListener("touchmove", this._boundDragTouch);
-        document.removeEventListener("touchend", this._boundDragEndTouch);
-    },
-
-    dragStart: function (e) {
-        if (e.target.classList.contains('video-call-button') || e.target.closest('.video-call-button')) {
-            return;
-        }
-        if (!this.isPipMode || !this.isCallActive) return;
-
-        this.dragInfo.draggedElement = document.getElementById('videoCallContainer');
-        this.dragInfo.active = true;
-        this.dragInfo.draggedElement.style.cursor = 'grabbing';
-
-        const rect = this.dragInfo.draggedElement.getBoundingClientRect();
-
-        if (e.type === "touchstart") {
-            this.dragInfo.initialX = e.touches[0].clientX - rect.left;
-            this.dragInfo.initialY = e.touches[0].clientY - rect.top;
-            document.addEventListener("touchmove", this._boundDragTouch = this._boundDragTouch || this.drag.bind(this), {passive: false});
-            document.addEventListener("touchend", this._boundDragEndTouch = this._boundDragEndTouch || this.dragEnd.bind(this));
-            e.preventDefault();
-        } else {
-            this.dragInfo.initialX = e.clientX - rect.left;
-            this.dragInfo.initialY = e.clientY - rect.top;
-            document.addEventListener("mousemove", this._boundDrag = this._boundDrag || this.drag.bind(this));
-            document.addEventListener("mouseup", this._boundDragEnd = this._boundDragEnd || this.dragEnd.bind(this));
-        }
-    },
-
-    drag: function (e) {
-        if (!this.dragInfo.active) return;
-
-        let currentX, currentY;
-        if (e.type === "touchmove") {
-            e.preventDefault();
-            currentX = e.touches[0].clientX - this.dragInfo.initialX;
-            currentY = e.touches[0].clientY - this.dragInfo.initialY;
-        } else {
-            currentX = e.clientX - this.dragInfo.initialX;
-            currentY = e.clientY - this.dragInfo.initialY;
-        }
-
-        const container = this.dragInfo.draggedElement;
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        currentX = Math.max(0, Math.min(currentX, viewportWidth - container.offsetWidth));
-        currentY = Math.max(0, Math.min(currentY, viewportHeight - container.offsetHeight));
-
-        container.style.left = currentX + "px";
-        container.style.top = currentY + "px";
-    },
-
-    dragEnd: function () {
-        if (!this.dragInfo.active) return;
-        this.dragInfo.active = false;
-        if (this.dragInfo.draggedElement) {
-            this.dragInfo.draggedElement.style.cursor = 'grab';
-            this.dragInfo.draggedElement.dataset.pipLeft = this.dragInfo.draggedElement.style.left;
-            this.dragInfo.draggedElement.dataset.pipTop = this.dragInfo.draggedElement.style.top;
-        }
-
-        document.removeEventListener("mousemove", this._boundDrag);
-        document.removeEventListener("mouseup", this._boundDragEnd);
-        document.removeEventListener("touchmove", this._boundDragTouch);
-        document.removeEventListener("touchend", this._boundDragEndTouch);
-    },
-
-    endCall: function () {
-        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-        this.callRequestTimeout = null;
-
-        if ((this.isCallActive || this.isCallPending) && this.currentPeerId) {
+        if (notifyPeer && (this.isCallActive || this.isCallPending) && this.currentPeerId) {
             ConnectionManager.sendTo(this.currentPeerId, {type: 'video-call-end', sender: UserManager.userId});
         }
-        this.endCallCleanup();
+        this.cleanupCallMediaAndState(false); // false: JANGAN tutup RTCPeerConnection
     },
 
-    endCallCleanup: function () {
-        this.stopMusic();
-        UIManager.hideCallingModal();
+    // BARU: Fungsi untuk membatalkan panggilan yang tertunda
+    cancelPendingCall: function() {
+        Utils.log(`Cancelling pending call for peer ${this.currentPeerId}.`, Utils.logLevels.INFO);
+        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
+        // Tidak perlu mengirim video-call-cancel jika sudah dikirim sebelumnya
+        this.cleanupCallMediaAndState(false); // false: JANGAN tutup RTCPeerConnection
+    },
 
-        if (this.statsInterval) clearInterval(this.statsInterval);
-        this.statsInterval = null;
-        this.releaseMediaResources();
-        if (this.localVideo) this.localVideo.srcObject = null;
-        if (this.remoteVideo) {
-            this.remoteVideo.srcObject = null;
-            this.remoteVideo.style.display = 'none';
+    // DIMODIFIKASI: cleanupCallMediaAndState untuk menerima argumen closePeerConnection
+    cleanupCallMediaAndState: function (closePeerConnection = true) {
+        Utils.log(`Cleaning up call media and state. Close PC: ${closePeerConnection}`, Utils.logLevels.INFO);
+        this.stopMusic(); ModalManager.hideCallingModal();
+        if (this.statsInterval) clearInterval(this.statsInterval); this.statsInterval = null;
+
+        this.releaseMediaResources(); // Hentikan trek lokal
+
+        // Hapus trek dari RTCPeerConnection
+        const peerIdToClean = this.currentPeerId; // Simpan sebelum di-null-kan
+        if (peerIdToClean) {
+            const conn = ConnectionManager.connections[peerIdToClean];
+            if (conn && conn.peerConnection) {
+                conn.peerConnection.getSenders().forEach(sender => {
+                    if (sender.track) {
+                        try {
+                            conn.peerConnection.removeTrack(sender);
+                            Utils.log(`Removed track ${sender.track.kind} from PC for ${peerIdToClean}`, Utils.logLevels.DEBUG);
+                        } catch (e) {
+                            Utils.log(`Error removing track from PC for ${peerIdToClean}: ${e.message}`, Utils.logLevels.WARN);
+                        }
+                    }
+                });
+                // Setelah menghapus trek, Anda mungkin perlu menegosiasikan ulang
+                // jika ingin memberi tahu peer lain secara formal bahwa trek telah hilang.
+                // Namun, event 'onended' pada trek jarak jauh seharusnya sudah cukup.
+                // Jika tidak, Anda bisa memanggil `this.createAndSendOffer()` di sini jika `this.isCaller`.
+            }
+        }
+
+
+        if (typeof VideoCallUIManager !== 'undefined') {
+            VideoCallUIManager.setLocalStream(null);
+            VideoCallUIManager.setRemoteStream(null);
+            VideoCallUIManager.showCallContainer(false);
+            VideoCallUIManager.resetPipVisuals();
         }
         this.remoteStream = null;
+        ModalManager.hideCallRequest();
 
-        const callContainer = document.getElementById('videoCallContainer');
-        if (this.isPipMode) {
-            this.isPipMode = false;
-            this.removePipDraggable(callContainer);
-            callContainer.classList.remove('pip-mode');
-            callContainer.style.left = '';
-            callContainer.style.top = '';
-            callContainer.style.right = '';
-            callContainer.style.bottom = '';
+        const oldPeerIdForPCClosure = this.currentPeerId; // Simpan untuk penutupan PC jika diperlukan
+
+        this.isCallActive = false; this.isCallPending = false; this.isCaller = false;
+        this.isAudioMuted = false; this.isAudioOnly = false; this.isScreenSharing = false; this.isVideoEnabled = true;
+        this.currentPeerId = null; // Penting: reset currentPeerId setelah digunakan untuk mengambil koneksi
+
+        if (closePeerConnection && oldPeerIdForPCClosure) {
+            Utils.log(`Closing RTCPeerConnection with ${oldPeerIdForPCClosure} as part of full call end.`, Utils.logLevels.INFO);
+            ConnectionManager.close(oldPeerIdForPCClosure, false); // false: jangan kirim sinyal 'close' tambahan
+        } else if (oldPeerIdForPCClosure) {
+            Utils.log(`RTCPeerConnection with ${oldPeerIdForPCClosure} RETAINED. Media hung up.`, Utils.logLevels.INFO);
         }
 
-        if (callContainer) callContainer.style.display = 'none';
-        this.hideCallRequest();
-
-        const oldPeerId = this.currentPeerId; // Store before nulling
-        this.isCallActive = false;
-        this.isCallPending = false;
-        this.isCaller = false;
-        this.isAudioMuted = false;
-        this.isAudioOnly = false;
-        this.isScreenSharing = false;
-        this.isVideoEnabled = true;
-        this.currentPeerId = null; // Null it out for VideoCallManager's state
-
-        if (oldPeerId) {
-            // Request ConnectionManager to close the P2P connection.
-            // This will trigger underlying RTCPeerConnection.close(),
-            // which in turn should cause connection state changes on the remote peer,
-            // leading to their cleanup.
-            Utils.log(`VideoCallManager.endCallCleanup: Requesting ConnectionManager to close P2P connection to ${oldPeerId}.`, Utils.logLevels.INFO);
-            ConnectionManager.close(oldPeerId, false); // false for notifyPeer, as VideoCallManager has already attempted its own signaling.
-        }
-        // Removed the direct pc.removeTrack and pc.ontrack = null here,
-        // as ConnectionManager.close(oldPeerId) should handle the full P2P connection teardown
-        // including the RTCPeerConnection object and its event handlers.
-
-        Utils.log('Call resources cleaned up.', Utils.logLevels.INFO);
-        this.updateUIForCallType();
+        Utils.log('Call media and state cleaned up.', Utils.logLevels.INFO);
+        this.updateCurrentCallUIState(); // Perbarui UI terakhir kali
     },
 
     releaseMediaResources: function () {
         if (this.localStream) {
-            this.localStream.getTracks().forEach(track => track.stop());
+            this.localStream.getTracks().forEach(track => {
+                track.stop();
+                Utils.log(`Stopped local track: ${track.kind} id: ${track.id}`, Utils.logLevels.DEBUG);
+            });
             this.localStream = null;
         }
     },
@@ -1018,99 +487,56 @@ const VideoCallManager = {
     handleMessage: function (message, peerId) {
         switch (message.type) {
             case 'video-call-request':
-                if (!this.isCallActive && !this.isCallPending) {
-                    this.isCallPending = true;
-                    this.showCallRequest(peerId, message.audioOnly || false, message.isScreenShare || false);
-                } else {
-                    ConnectionManager.sendTo(peerId, {
-                        type: 'video-call-rejected',
-                        reason: 'busy',
-                        sender: UserManager.userId
-                    });
-                }
+                if (!this.isCallActive && !this.isCallPending) { this.isCallPending = true; this.showCallRequest(peerId, message.audioOnly || false, message.isScreenShare || false); }
+                else ConnectionManager.sendTo(peerId, { type: 'video-call-rejected', reason: 'busy', sender: UserManager.userId });
                 break;
             case 'video-call-accepted':
                 if (this.isCallPending && this.isCaller && this.currentPeerId === peerId) {
-                    this.stopMusic();
-                    UIManager.hideCallingModal();
-                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-                    this.callRequestTimeout = null;
-                    this.isAudioOnly = message.audioOnly || false;
-                    this.isScreenSharing = message.isScreenShare || false;
+                    this.stopMusic(); ModalManager.hideCallingModal();
+                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
+                    this.isAudioOnly = message.audioOnly || false; this.isScreenSharing = message.isScreenShare || false;
                     this.startLocalStreamAndSignal(true);
                 }
                 break;
             case 'video-call-rejected':
                 if (this.isCallPending && this.currentPeerId === peerId) {
-                    if (this.isCaller) {
-                        this.stopMusic();
-                        UIManager.hideCallingModal();
-                    }
-                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-                    this.callRequestTimeout = null;
-                    UIManager.showNotification(`Call rejected by ${UserManager.contacts[peerId]?.name || 'peer'}. Reason: ${message.reason || 'N/A'}`, 'warning');
-                    this.endCallCleanup();
+                    if (this.isCaller) { this.stopMusic(); ModalManager.hideCallingModal(); }
+                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
+                    NotificationManager.showNotification(`Call rejected by ${UserManager.contacts[peerId]?.name || 'peer'}. Reason: ${message.reason || 'N/A'}`, 'warning');
+                    this.cleanupCallMediaAndState(false); // false: JANGAN tutup PC
                 }
                 break;
             case 'video-call-cancel':
                 if (this.isCallPending && this.currentPeerId === peerId) {
-                    if (!this.isCaller) {
-                        this.stopMusic();
-                        this.hideCallRequest();
-                    }
-                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-                    this.callRequestTimeout = null;
-                    if (!this.isCaller) {
-                        UIManager.showNotification(`Call cancelled by ${UserManager.contacts[peerId]?.name || 'peer'}.`, 'warning');
-                    }
-                    this.endCallCleanup();
+                    if (!this.isCaller) { this.stopMusic(); ModalManager.hideCallRequest(); }
+                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
+                    if (!this.isCaller) NotificationManager.showNotification(`Call cancelled by ${UserManager.contacts[peerId]?.name || 'peer'}.`, 'warning');
+                    this.cleanupCallMediaAndState(false); // false: JANGAN tutup PC
                 }
                 break;
             case 'video-call-offer':
-                const remoteIsAudioOnlyOffer = message.audioOnly || false;
-                const remoteIsScreenShareOffer = message.isScreenShare || false;
-                if (!this.isCallActive && !this.isCallPending) {
-                    this.isCallPending = true;
-                    this.handleOffer(message.sdp, peerId, remoteIsAudioOnlyOffer, remoteIsScreenShareOffer);
-                } else if (this.isCallActive && this.currentPeerId === peerId) {
-                    this.handleOffer(message.sdp, peerId, remoteIsAudioOnlyOffer, remoteIsScreenShareOffer);
-                }
+                if (!this.isCallActive && !this.isCallPending) { this.isCallPending = true; this.handleOffer(message.sdp, peerId, message.audioOnly || false, message.isScreenShare || false); }
+                else if (this.isCallActive && this.currentPeerId === peerId) this.handleOffer(message.sdp, peerId, message.audioOnly || false, message.isScreenShare || false);
                 break;
             case 'video-call-answer':
-                const remoteIsAudioOnlyAnswer = message.audioOnly || false;
-                const remoteIsScreenShareAnswer = message.isScreenShare || false;
-                if (this.isCallActive && this.currentPeerId === peerId) {
-                    this.handleAnswer(message.sdp, peerId, remoteIsAudioOnlyAnswer, remoteIsScreenShareAnswer);
-                }
+                if (this.isCallActive && this.currentPeerId === peerId) this.handleAnswer(message.sdp, peerId, message.audioOnly || false, message.isScreenShare || false);
                 break;
-            case 'video-call-mode-change':
-                if (this.isCallActive && this.currentPeerId === peerId) {
-                    Utils.log(`Received deprecated 'video-call-mode-change'. Ignoring.`, Utils.logLevels.WARN);
-                }
-                break;
-            case 'video-call-end':
+            case 'video-call-end': // Pesan ini sekarang berarti "media telah berakhir"
                 if ((this.isCallActive || this.isCallPending) && this.currentPeerId === peerId) {
-                    this.endCallCleanup();
-                    UIManager.showNotification(`${UserManager.contacts[peerId]?.name || 'Peer'} ended the call.`, 'info');
+                    NotificationManager.showNotification(`${UserManager.contacts[peerId]?.name || 'Peer'} ended the call media.`, 'info');
+                    this.cleanupCallMediaAndState(false); // false: JANGAN tutup PC
                 }
                 break;
-            case 'video-call-stats':
-                if (this.isCallActive && this.currentPeerId === peerId) {
-                    this.handleCallStats(message.stats);
-                }
-                break;
+            case 'video-call-stats': if (this.isCallActive && this.currentPeerId === peerId) this.handleCallStats(message.stats); break;
         }
     },
     handleCallStats: function (stats) {
-        if (stats && typeof stats.rtt === 'number') {
-            Utils.log(`Call RTT to ${this.currentPeerId}: ${stats.rtt}ms. Packets Lost: ${stats.packetsLost || 'N/A'}`, Utils.logLevels.DEBUG);
-        }
+        if (stats && typeof stats.rtt === 'number') Utils.log(`Call RTT to ${this.currentPeerId}: ${stats.rtt}ms. Lost: ${stats.packetsLost || 'N/A'}`, Utils.logLevels.DEBUG);
     },
     collectAndSendStats: async function () {
         if (!this.isCallActive || !this.currentPeerId) return;
         const conn = ConnectionManager.connections[this.currentPeerId];
         if (!conn || !conn.peerConnection || typeof conn.peerConnection.getStats !== 'function') return;
-
         try {
             const reports = await conn.peerConnection.getStats(null);
             let relevantStats = {rtt: null, packetsLost: null, jitter: null, bytesSent: null, bytesReceived: null};
@@ -1120,22 +546,10 @@ const VideoCallManager = {
                     if (report.packetsLost !== undefined) relevantStats.packetsLost = report.packetsLost;
                     if (report.jitter !== undefined) relevantStats.jitter = report.jitter;
                 }
-                if (report.type === 'outbound-rtp' && report.kind === 'audio') {
-                    if (report.bytesSent !== undefined) relevantStats.bytesSent = report.bytesSent;
-                }
-                if (report.type === 'inbound-rtp' && report.kind === 'audio') {
-                    if (report.bytesReceived !== undefined) relevantStats.bytesReceived = report.bytesReceived;
-                }
+                if (report.type === 'outbound-rtp' && report.kind === 'audio') if (report.bytesSent !== undefined) relevantStats.bytesSent = report.bytesSent;
+                if (report.type === 'inbound-rtp' && report.kind === 'audio') if (report.bytesReceived !== undefined) relevantStats.bytesReceived = report.bytesReceived;
             });
-            if (relevantStats.rtt !== null) {
-                ConnectionManager.sendTo(this.currentPeerId, {
-                    type: 'video-call-stats',
-                    stats: relevantStats,
-                    sender: UserManager.userId
-                });
-            }
-        } catch (e) {
-            Utils.log("Error collecting WebRTC stats: " + e, Utils.logLevels.WARN);
-        }
+            if (relevantStats.rtt !== null) ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-stats', stats: relevantStats, sender: UserManager.userId });
+        } catch (e) { Utils.log("Error collecting WebRTC stats: " + e, Utils.logLevels.WARN); }
     }
-}
+};
