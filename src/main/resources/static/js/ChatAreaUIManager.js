@@ -1,7 +1,8 @@
-// MODIFIED: ChatAreaUIManager.js
-// - Added voiceButtonMain event listeners for recording.
+// MODIFIED: ChatAreaUIManager.js (已翻译为中文)
+// - 添加了用于录音的 voiceButtonMain 事件监听器。
+// - 添加了用于文件发送的拖放事件监听器。
 const ChatAreaUIManager = {
-    // DOM Elements
+    // DOM 元素
     chatAreaEl: null,
     chatHeaderTitleEl: null,
     chatHeaderStatusEl: null,
@@ -50,22 +51,22 @@ const ChatAreaUIManager = {
         if (this.sendButtonEl) this.sendButtonEl.addEventListener('click', MessageManager.sendMessage);
 
         if (this.attachButtonEl) this.attachButtonEl.addEventListener('click', () => {
-            const fileInput = document.getElementById('fileInput'); // fileInput is in index.html
+            const fileInput = document.getElementById('fileInput'); // fileInput 在 index.html 中
             if (fileInput) fileInput.click();
         });
 
-        // Bind voice button events for recording
+        // 绑定语音按钮事件用于录音
         if (this.voiceButtonEl) {
-            if ('ontouchstart' in window) { // Check for touch support
+            if ('ontouchstart' in window) { // 检查是否支持触摸
                 this.voiceButtonEl.addEventListener('touchstart', (e) => {
-                    e.preventDefault(); // Prevent default touch actions like scrolling or zooming
+                    e.preventDefault(); // 阻止默认的触摸操作，如滚动或缩放
                     if (!this.voiceButtonEl.disabled) MediaManager.startRecording();
                 });
                 this.voiceButtonEl.addEventListener('touchend', (e) => {
                     e.preventDefault();
                     if (!this.voiceButtonEl.disabled) MediaManager.stopRecording();
                 });
-            } else { // Mouse events
+            } else { // 鼠标事件
                 this.voiceButtonEl.addEventListener('mousedown', () => {
                     if (!this.voiceButtonEl.disabled) MediaManager.startRecording();
                 });
@@ -73,7 +74,7 @@ const ChatAreaUIManager = {
                     if (!this.voiceButtonEl.disabled) MediaManager.stopRecording();
                 });
                 this.voiceButtonEl.addEventListener('mouseleave', () => {
-                    // Only stop if recording and mouse leaves button while pressed
+                    // 仅当正在录音且鼠标在按下的状态下离开按钮时才停止
                     if (!this.voiceButtonEl.disabled && MediaManager.mediaRecorder && MediaManager.mediaRecorder.state === 'recording') {
                         MediaManager.stopRecording();
                     }
@@ -81,8 +82,8 @@ const ChatAreaUIManager = {
             }
         }
 
-        // Call buttons - onclicks are set dynamically by setCallButtonsState or VideoCallManager
-        // But we can set initial shells or ensure they call VideoCallManager correctly.
+        // 通话按钮 - onclick 事件由 setCallButtonsState 或 VideoCallManager 动态设置。
+        // 但我们可以设置初始框架或确保它们正确调用 VideoCallManager。
         if (this.videoCallButtonEl) this.videoCallButtonEl.onclick = () => {
             if(!this.videoCallButtonEl.disabled) VideoCallManager.initiateCall(ChatManager.currentChatId);
         };
@@ -97,6 +98,59 @@ const ChatAreaUIManager = {
         if (this.chatDetailsButtonEl) this.chatDetailsButtonEl.addEventListener('click', () => {
             if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.toggleDetailsPanel(true);
         });
+
+        // 文件发送的拖放事件监听器
+        if (this.chatAreaEl) {
+            let dragCounter = 0;
+
+            this.chatAreaEl.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+                    dragCounter++;
+                    if (dragCounter === 1) {
+                        this.chatAreaEl.classList.add('drag-over');
+                    }
+                }
+            });
+
+            this.chatAreaEl.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) {
+                    e.dataTransfer.dropEffect = 'copy'; // 显示复制光标
+                } else {
+                    e.dataTransfer.dropEffect = 'none';
+                }
+            });
+
+            this.chatAreaEl.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragCounter--;
+                if (dragCounter === 0) {
+                    this.chatAreaEl.classList.remove('drag-over');
+                }
+            });
+
+            this.chatAreaEl.addEventListener('drop', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragCounter = 0;
+                this.chatAreaEl.classList.remove('drag-over');
+
+                if (!ChatManager.currentChatId) {
+                    NotificationManager.showNotification('发送文件前请先选择一个聊天。', 'warning');
+                    return;
+                }
+
+                if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+                    const file = e.dataTransfer.files[0];
+                    // 对现有 audioData 的检查现在位于 MediaManager.processFile 内部
+                    MediaManager.processFile(file);
+                }
+            });
+        }
     },
 
     showChatArea: function () {
@@ -107,7 +161,7 @@ const ChatAreaUIManager = {
     },
 
     showNoChatSelected: function () {
-        if (this.chatHeaderTitleEl) this.chatHeaderTitleEl.textContent = 'Select a chat';
+        if (this.chatHeaderTitleEl) this.chatHeaderTitleEl.textContent = '选择一个聊天';
         if (this.chatHeaderStatusEl) this.chatHeaderStatusEl.textContent = '';
         if (this.chatHeaderAvatarEl) {
             this.chatHeaderAvatarEl.innerHTML = '';
@@ -165,7 +219,7 @@ const ChatAreaUIManager = {
         ];
         elementsToToggle.forEach(el => { if (el) el.disabled = !enabled; });
 
-        // Pass currentChatId to setCallButtonsState for context
+        // 将 currentChatId 传递给 setCallButtonsState 作为上下文
         this.setCallButtonsState(enabled && ChatManager.currentChatId ? ConnectionManager.isConnectedTo(ChatManager.currentChatId) : false, ChatManager.currentChatId);
 
         if (enabled && this.messageInputEl) {
@@ -176,7 +230,7 @@ const ChatAreaUIManager = {
     },
 
     setCallButtonsState: function(enabled, peerIdContext = null) {
-        // Use peerIdContext which should be ChatManager.currentChatId when called from enableChatInterface or openChat
+        // 使用 peerIdContext，它在从 enableChatInterface 或 openChat 调用时应为 ChatManager.currentChatId
         const targetPeerForCall = peerIdContext || ChatManager.currentChatId;
 
         const isGroupChat = targetPeerForCall?.startsWith('group_');
@@ -184,28 +238,28 @@ const ChatAreaUIManager = {
         const isSpecialChat = currentContact && currentContact.isSpecial;
 
         const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
-        // A call is possible if 'enabled' (peer connected or conditions met), not a group, and not a special contact (unless special contacts can be called)
+        // 只有在 'enabled' (对方已连接或满足条件)、不是群聊、也不是特殊联系人(除非特殊联系人可通话)的情况下，才能进行通话
         const finalEnabledState = enabled && targetPeerForCall && !isGroupChat && !isSpecialChat;
 
         if (this.videoCallButtonEl) this.videoCallButtonEl.disabled = !finalEnabledState;
         if (this.audioCallButtonEl) this.audioCallButtonEl.disabled = !finalEnabledState;
         if (this.screenShareButtonEl) this.screenShareButtonEl.disabled = !finalEnabledState || !canShareScreen;
 
-        // Update onclick handlers to ensure they use the correct targetPeerForCall
+        // 更新 onclick 处理程序以确保它们使用正确的 targetPeerForCall
         if (finalEnabledState) {
             if (this.videoCallButtonEl) this.videoCallButtonEl.onclick = () => VideoCallManager.initiateCall(targetPeerForCall);
             if (this.audioCallButtonEl) this.audioCallButtonEl.onclick = () => VideoCallManager.initiateAudioCall(targetPeerForCall);
             if (this.screenShareButtonEl && canShareScreen) this.screenShareButtonEl.onclick = () => VideoCallManager.initiateScreenShare(targetPeerForCall);
         } else {
-            // Clear onclicks if not enabled to prevent outdated calls
+            // 如果未启用，则清除 onclick 以防止过时的调用
             if (this.videoCallButtonEl) this.videoCallButtonEl.onclick = null;
             if (this.audioCallButtonEl) this.audioCallButtonEl.onclick = null;
             if (this.screenShareButtonEl) this.screenShareButtonEl.onclick = null;
         }
     },
 
-    setCallButtonsStateForPeer: function(peerId, enabled) { // Called by EventEmitter
-        if (ChatManager.currentChatId === peerId) { // Only update if the event is for the currently active chat
+    setCallButtonsStateForPeer: function(peerId, enabled) { // 由 EventEmitter 调用
+        if (ChatManager.currentChatId === peerId) { // 仅当事件针对当前活动聊天时才更新
             this.setCallButtonsState(enabled, peerId);
         }
     },
@@ -213,11 +267,11 @@ const ChatAreaUIManager = {
     showReconnectPrompt: function (peerId, onReconnectSuccess) {
         if (!this.chatBoxEl) return;
         let promptDiv = this.chatBoxEl.querySelector(`.system-message.reconnect-prompt[data-peer-id="${peerId}"]`);
-        const peerName = UserManager.contacts[peerId]?.name || `Peer ${peerId.substring(0, 4)}`;
+        const peerName = UserManager.contacts[peerId]?.name || `用户 ${peerId.substring(0, 4)}`;
 
         if (promptDiv) {
             const textElement = promptDiv.querySelector('.reconnect-prompt-text');
-            if (textElement) textElement.textContent = `Connection to ${peerName} lost.`;
+            if (textElement) textElement.textContent = `与 ${peerName} 的连接已断开。`;
             const recBtn = promptDiv.querySelector('.btn-reconnect-inline');
             if (recBtn) recBtn.disabled = false;
             return;
@@ -227,9 +281,9 @@ const ChatAreaUIManager = {
         promptDiv.className = 'system-message reconnect-prompt';
         promptDiv.setAttribute('data-peer-id', peerId);
         promptDiv.innerHTML = `
-            <span class="reconnect-prompt-text">Connection to ${peerName} lost.</span>
-            <button class="btn-reconnect-inline">Reconnect</button>
-            <button class="btn-cancel-reconnect-inline">Dismiss</button>
+            <span class="reconnect-prompt-text">与 ${peerName} 的连接已断开。</span>
+            <button class="btn-reconnect-inline">重新连接</button>
+            <button class="btn-cancel-reconnect-inline">忽略</button>
         `;
         this.chatBoxEl.appendChild(promptDiv);
         this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight;
@@ -244,31 +298,31 @@ const ChatAreaUIManager = {
             EventEmitter.off('connectionFailed', failHandler);
             if (promptDiv && promptDiv.parentNode) {
                 if (removeImmediately) promptDiv.remove();
-                else setTimeout(() => { if (promptDiv && promptDiv.parentNode) promptDiv.remove(); }, textElement.textContent.includes("Failed") ? 5000 : 3000);
+                else setTimeout(() => { if (promptDiv && promptDiv.parentNode) promptDiv.remove(); }, textElement.textContent.includes("失败") ? 5000 : 3000);
             }
         };
 
         successHandler = (connectedPeerId) => {
             if (connectedPeerId === peerId) {
-                textElement.textContent = `Reconnected to ${peerName}.`;
+                textElement.textContent = `已重新连接到 ${peerName}。`;
                 if (reconnectButton) reconnectButton.style.display = 'none';
-                if (cancelButton) { cancelButton.textContent = 'OK'; cancelButton.onclick = () => cleanupPrompt(true); }
+                if (cancelButton) { cancelButton.textContent = '好的'; cancelButton.onclick = () => cleanupPrompt(true); }
                 if (typeof onReconnectSuccess === 'function') onReconnectSuccess();
                 cleanupPrompt();
             }
         };
         failHandler = (failedPeerId) => {
             if (failedPeerId === peerId) {
-                textElement.textContent = `Failed to reconnect to ${peerName}. Try manual connection or refresh.`;
+                textElement.textContent = `无法重新连接到 ${peerName}。请尝试手动连接或刷新页面。`;
                 if (reconnectButton) { reconnectButton.style.display = 'initial'; reconnectButton.disabled = false; }
-                if (cancelButton) cancelButton.textContent = 'Dismiss';
+                if (cancelButton) cancelButton.textContent = '忽略';
             }
         };
 
         EventEmitter.on('connectionEstablished', successHandler);
         EventEmitter.on('connectionFailed', failHandler);
         reconnectButton.onclick = () => {
-            textElement.textContent = `Attempting to reconnect to ${peerName}...`;
+            textElement.textContent = `正在尝试重新连接到 ${peerName}...`;
             reconnectButton.disabled = true;
             ConnectionManager.createOffer(peerId, {isSilent: false});
         };

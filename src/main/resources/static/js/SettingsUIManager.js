@@ -1,20 +1,20 @@
-// MODIFIED: SettingsUIManager.js
-// Added theme selector population and event handling.
-// Refined color scheme change logic; 'auto' mode inconsistency likely requires fixes in ThemeLoader.js.
+// MODIFIED: SettingsUIManager.js (已翻译为中文)
+// 添加了主题选择器的填充和事件处理。
+// 优化了配色方案更改逻辑；'自动'模式的不一致性可能需要修复 ThemeLoader.js。
 const SettingsUIManager = {
-    // ... (previous properties from Part 1)
+    // ... (来自第一部分的先前属性)
     colorSchemeSelectedValueEl: null,
     colorSchemeOptionsContainerEl: null,
     themeSelectedValueEl: null,
     themeOptionsContainerEl: null,
 
-    // Fallback default values for AI settings if Config.server is not properly initialized
+    // 如果 Config.server 未正确初始化，AI 设置的备用默认值
     FALLBACK_AI_DEFAULTS: {
         apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: ''
     },
 
     init: function() {
-        // AI and TTS config input elements
+        // AI 和 TTS 配置输入元素
         this.apiEndpointInput = document.getElementById('apiEndpointInput');
         this.apiKeyInput = document.getElementById('apiKeyInput');
         this.apiModelInput = document.getElementById('apiModelInput');
@@ -26,7 +26,7 @@ const SettingsUIManager = {
         this.checkNetworkBtnModal = document.getElementById('checkNetworkBtnModal');
         this.modalUserIdValue = document.getElementById('modalUserIdValue');
 
-        // Theme and Color Scheme selectors
+        // 主题和配色方案选择器
         this.colorSchemeSelectedValueEl = document.getElementById('colorSchemeSelectedValue');
         this.colorSchemeOptionsContainerEl = document.getElementById('colorSchemeOptionsContainer');
         this.themeSelectedValueEl = document.getElementById('themeSelectedValue');
@@ -34,14 +34,14 @@ const SettingsUIManager = {
 
         this.loadAISettings();
         this.bindEvents();
-        this.initThemeSelectors(); // Populate theme selectors
+        this.initThemeSelectors(); // 填充主题选择器
     },
 
     bindEvents: function() {
-        // ... (previous AI, Preferences, Network, User ID, Danger Zone event bindings from Part 1)
-        // Add blur event listeners to save settings
+        // ... (来自第一部分的 AI、偏好、网络、用户ID、危险区域的事件绑定)
+        // 添加 blur 事件监听器以保存设置
         if (this.apiEndpointInput) this.apiEndpointInput.addEventListener('blur', () => this.saveAISetting('apiEndpoint', this.apiEndpointInput.value));
-        if (this.apiKeyInput) this.apiKeyInput.addEventListener('blur', () => this.saveAISetting('api_key', this.apiKeyInput.value)); // storageKey uses underscore for api_key
+        if (this.apiKeyInput) this.apiKeyInput.addEventListener('blur', () => this.saveAISetting('api_key', this.apiKeyInput.value)); // storageKey 对 api_key 使用下划线
         if (this.apiModelInput) this.apiModelInput.addEventListener('blur', () => this.saveAISetting('model', this.apiModelInput.value));
         if (this.apiMaxTokensInput) this.apiMaxTokensInput.addEventListener('blur', () => {
             const val = parseInt(this.apiMaxTokensInput.value, 10);
@@ -52,50 +52,50 @@ const SettingsUIManager = {
         });
         if (this.ttsApiEndpointInput) this.ttsApiEndpointInput.addEventListener('blur', () => this.saveAISetting('ttsApiEndpoint', this.ttsApiEndpointInput.value));
 
-        // Preferences
+        // 偏好设置
         if (this.autoConnectToggle) {
             this.autoConnectToggle.addEventListener('change', (event) => {
                 if (UserManager.userSettings) {
                     UserManager.updateUserSetting('autoConnectEnabled', event.target.checked);
                     if (event.target.checked) {
-                        NotificationManager.showNotification('Auto-connect enabled. Will attempt on next app start or successful signaling connection.', 'info');
+                        NotificationManager.showNotification('自动连接已启用。将在下次应用启动或成功连接信令服务器时尝试连接。', 'info');
                         if (ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN) {
                             ConnectionManager.autoConnectToAllContacts();
                         }
                     } else {
-                        NotificationManager.showNotification('Auto-connect disabled.', 'info');
+                        NotificationManager.showNotification('自动连接已禁用。', 'info');
                     }
                 }
             });
         }
-        // Network Status
+        // 网络状态
         if (this.checkNetworkBtnModal) this.checkNetworkBtnModal.addEventListener('click', async () => {
             if (this.checkNetworkBtnModal.disabled) {
-                NotificationManager.showNotification('Currently connected to signaling server.', 'info');
+                NotificationManager.showNotification('当前已连接到信令服务器。', 'info');
                 return;
             }
-            NotificationManager.showNotification('Re-checking network and attempting to connect...', 'info');
+            NotificationManager.showNotification('正在重新检查网络并尝试连接...', 'info');
             await AppInitializer.refreshNetworkStatusUI();
             if (!ConnectionManager.isWebSocketConnected) {
-                Utils.log("Re-check Network button: WebSocket not connected, attempting to connect.", Utils.logLevels.INFO);
+                Utils.log("“重新检查网络”按钮: WebSocket 未连接，正在尝试连接。", Utils.logLevels.INFO);
                 ConnectionManager.connectWebSocket().catch(err => {
-                    NotificationManager.showNotification('Failed to re-establish signaling connection.', 'error');
-                    Utils.log(`Manual Re-check Network: connectWebSocket failed: ${err.message || err}`, Utils.logLevels.ERROR);
+                    NotificationManager.showNotification('重新建立信令连接失败。', 'error');
+                    Utils.log(`手动重新检查网络: connectWebSocket 失败: ${err.message || err}`, Utils.logLevels.ERROR);
                 });
             }
         });
 
-        // User ID
+        // 用户 ID
         if (this.modalCopyIdBtn) this.modalCopyIdBtn.addEventListener('click', () => {
             if (this.modalCopyIdBtn.disabled) return;
             this.copyUserIdFromModal();
         });
-        // SDP Text Area Copy
+        // SDP 文本区域复制
         const modalCopySdpBtn = document.getElementById('modalCopySdpBtn');
         if(modalCopySdpBtn) modalCopySdpBtn.addEventListener('click', () => this.copySdpTextFromModal());
 
 
-        // Danger Zone
+        // 操作区域
         const modalResetAllConnectionsBtn = document.getElementById('modalResetAllConnectionsBtn');
         if (modalResetAllConnectionsBtn) modalResetAllConnectionsBtn.addEventListener('click', () => ConnectionManager.resetAllConnections());
 
@@ -106,10 +106,10 @@ const SettingsUIManager = {
         if (modalClearAllChatsBtn) modalClearAllChatsBtn.addEventListener('click', () => ChatManager.clearAllChats());
 
 
-        // Collapsible sections in Main Menu (AI & Advanced)
+        // 主菜单中的可折叠部分 (AI & 高级选项)
         const collapsibleHeaders = document.querySelectorAll('#mainMenuModal .settings-section .collapsible-header');
         collapsibleHeaders.forEach(header => {
-            header.addEventListener('click', function() { // Use function() for `this`
+            header.addEventListener('click', function() { // 使用 function() 以便 `this` 正确指向
                 this.classList.toggle('active');
                 const content = this.nextElementSibling;
                 const icon = this.querySelector('.collapse-icon');
@@ -123,7 +123,7 @@ const SettingsUIManager = {
                     }
                 }
             });
-            // Ensure initial icon state is correct based on display style
+            // 根据显示样式确保初始图标状态正确
             const content = header.nextElementSibling;
             const icon = header.querySelector('.collapse-icon');
             if (content && content.classList.contains('collapsible-content') && icon) {
@@ -131,7 +131,7 @@ const SettingsUIManager = {
             }
         });
 
-        // Global click listener to close custom dropdowns (for themes)
+        // 全局点击监听器以关闭自定义下拉菜单（用于主题）
         document.addEventListener('click', (e) => {
             const themeCustomSelect = document.getElementById('themeCustomSelectContainer');
             if (this.themeOptionsContainerEl && themeCustomSelect && !themeCustomSelect.contains(e.target)) {
@@ -151,10 +151,10 @@ const SettingsUIManager = {
 
     _populateColorSchemeSelector: function() {
         if (!this.colorSchemeSelectedValueEl || !this.colorSchemeOptionsContainerEl) {
-            console.warn("Custom color scheme selector elements not found.");
+            console.warn("未找到自定义配色方案选择器元素。");
             return;
         }
-        const schemes = { 'auto': 'Auto (Browser)', 'light': 'Light Mode', 'dark': 'Dark Mode' };
+        const schemes = { 'auto': '自动 (浏览器)', 'light': '浅色模式', 'dark': '深色模式' };
         const currentPreferredScheme = localStorage.getItem(ThemeLoader.COLOR_SCHEME_KEY) || ThemeLoader.DEFAULT_COLOR_SCHEME;
 
         this.colorSchemeSelectedValueEl.textContent = schemes[currentPreferredScheme];
@@ -168,61 +168,34 @@ const SettingsUIManager = {
             optionDiv.addEventListener('click', () => {
                 const selectedSchemeKey = optionDiv.dataset.schemeKey; // 'auto', 'light', or 'dark'
 
-                // Update stored preference
                 localStorage.setItem(ThemeLoader.COLOR_SCHEME_KEY, selectedSchemeKey);
 
-                // ThemeLoader.init() upon page reload is responsible for setting up the
-                // correct system color scheme listener if selectedSchemeKey is 'auto'.
-
-                // Determine the effective color scheme that should result from this selection.
-                // For 'auto', this means querying the current system preference.
                 const newEffectiveColorScheme = ThemeLoader._getEffectiveColorScheme(selectedSchemeKey);
-
-                // Get the effective color scheme of the currently loaded theme.
                 const currentActualEffectiveColorScheme = ThemeLoader.getCurrentEffectiveColorScheme();
 
-                // A page reload (via ThemeLoader.applyTheme) is triggered if:
-                // 1. 'Auto' mode is selected (to ensure ThemeLoader.init() correctly processes it with current system state).
-                // 2. An explicit scheme ('light'/'dark') is selected which differs from the current theme's effective scheme.
                 if (selectedSchemeKey === 'auto' || newEffectiveColorScheme !== currentActualEffectiveColorScheme) {
                     let themeToApply;
                     const currentThemeBaseName = ThemeLoader._getBaseThemeName(ThemeLoader.getCurrentThemeKey());
-
-                    // Use ThemeLoader constants for suffixes if available, otherwise default.
-                    // Ensure ThemeLoader and its properties exist before accessing.
-                    const lightSuffix = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.LIGHT_THEME_SUFFIX === 'string')
-                        ? ThemeLoader.LIGHT_THEME_SUFFIX : '浅色';
-                    const darkSuffix = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.DARK_THEME_SUFFIX === 'string')
-                        ? ThemeLoader.DARK_THEME_SUFFIX : '深色';
-
-                    // Determine the target suffix based on the newEffectiveColorScheme
+                    const lightSuffix = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.LIGHT_THEME_SUFFIX === 'string') ? ThemeLoader.LIGHT_THEME_SUFFIX : '浅色';
+                    const darkSuffix = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.DARK_THEME_SUFFIX === 'string') ? ThemeLoader.DARK_THEME_SUFFIX : '深色';
                     const targetSuffix = newEffectiveColorScheme === 'light' ? lightSuffix : darkSuffix;
                     let candidateTheme = `${currentThemeBaseName}-${targetSuffix}`;
 
                     if (ThemeLoader.themes[candidateTheme] && ThemeLoader._isThemeCompatible(candidateTheme, newEffectiveColorScheme)) {
                         themeToApply = candidateTheme;
                     } else {
-                        // Fallback if the current theme doesn't have a direct variant for the new scheme
                         themeToApply = ThemeLoader._findFallbackThemeKeyForScheme(newEffectiveColorScheme);
                     }
 
                     if (!ThemeLoader.themes[themeToApply]) {
-                        // This is a deeper issue if no fallback exists or was found.
-                        // Reload with the current theme key. ThemeLoader.init() on reload will have to
-                        // make the final decision based on COLOR_SCHEME_KEY (now 'auto' or explicit).
-                        console.error(`[SettingsUIManager] Critical: No valid theme (candidate or fallback) found for target scheme '${newEffectiveColorScheme}'. Reloading with current theme '${ThemeLoader.getCurrentThemeKey()}'.`);
-                        NotificationManager.showNotification('Error determining an appropriate theme. Attempting default reload.', 'error');
-                        themeToApply = ThemeLoader.getCurrentThemeKey(); // Or a known global default theme.
+                        console.error(`[SettingsUIManager] 严重错误: 未找到目标方案 '${newEffectiveColorScheme}' 的有效主题（候选或备用）。正在使用当前主题 '${ThemeLoader.getCurrentThemeKey()}' 重新加载。`);
+                        NotificationManager.showNotification('确定合适的主题时出错。正在尝试默认重新加载。', 'error');
+                        themeToApply = ThemeLoader.getCurrentThemeKey();
                     }
-
-                    ThemeLoader.applyTheme(themeToApply); // This reloads the page
+                    ThemeLoader.applyTheme(themeToApply); // 这会重新加载页面
                 } else {
-                    // This block executes if an explicit scheme ('light' or 'dark') was selected,
-                    // AND it matches the current theme's effective scheme (no change needed).
-                    // No reload necessary. Just update UI elements.
                     this.colorSchemeSelectedValueEl.textContent = schemes[selectedSchemeKey];
                     this.colorSchemeOptionsContainerEl.style.display = 'none';
-                    // Re-filter theme options for the current (and unchanged) scheme.
                     this._populateThemeSelectorWithOptions();
                 }
             });
@@ -239,10 +212,10 @@ const SettingsUIManager = {
 
     _populateThemeSelectorWithOptions: function() {
         if (!this.themeSelectedValueEl || !this.themeOptionsContainerEl) {
-            console.warn("Custom theme selector elements not found.");
+            console.warn("未找到自定义主题选择器元素。");
             return;
         }
-        this.themeOptionsContainerEl.innerHTML = ''; // Clear previous options
+        this.themeOptionsContainerEl.innerHTML = ''; // 清除之前的选项
         const currentEffectiveColorScheme = ThemeLoader.getCurrentEffectiveColorScheme();
         const filteredThemes = {};
 
@@ -260,15 +233,15 @@ const SettingsUIManager = {
         const themeForDisplayObject = ThemeLoader.themes[themeKeyForDisplay];
         this.themeSelectedValueEl.textContent = (themeForDisplayObject && themeForDisplayObject.name)
             ? themeForDisplayObject.name
-            : 'Select Theme';
+            : '选择主题';
 
         this.themeSelectedValueEl.dataset.currentThemeKey = themeKeyForDisplay || '';
 
         if (Object.keys(filteredThemes).length === 0) {
-            this.themeSelectedValueEl.textContent = "No themes";
+            this.themeSelectedValueEl.textContent = "无可用主题";
             const optionDiv = document.createElement('div');
             optionDiv.classList.add('option');
-            optionDiv.textContent = `No ${currentEffectiveColorScheme} themes available`;
+            optionDiv.textContent = `没有可用的 ${currentEffectiveColorScheme === 'light' ? '浅色' : '深色'} 主题`;
             optionDiv.style.pointerEvents = "none";
             optionDiv.style.opacity = "0.7";
             this.themeOptionsContainerEl.appendChild(optionDiv);
@@ -300,7 +273,6 @@ const SettingsUIManager = {
         });
     },
 
-    // ... (loadAISetting, saveAISetting, copyUserIdFromModal, updateCopyIdButtonState, updateCheckNetworkButtonState, updateMainMenuControlsState, updateNetworkInfoDisplay from Part 1)
     loadAISettings: function() {
         if (typeof window.Config !== 'object' || window.Config === null) window.Config = {};
         if (typeof window.Config.server !== 'object' || window.Config.server === null) window.Config.server = {};
@@ -328,7 +300,7 @@ const SettingsUIManager = {
         if ((storageKey === 'apiEndpoint' || storageKey === 'ttsApiEndpoint') && value) {
             try { new URL(value); }
             catch (_) {
-                NotificationManager.showNotification(`Invalid URL for ${storageKey.replace(/_/g, ' ')}. Not saved.`, 'error');
+                NotificationManager.showNotification(`${storageKey.replace(/_/g, ' ')} 的 URL 无效。未保存。`, 'error');
                 const inputEl = storageKey === 'apiEndpoint' ? this.apiEndpointInput : this.ttsApiEndpointInput;
                 const configKey = storageKey === 'apiEndpoint' ? 'apiEndpoint' : 'ttsApiEndpoint';
                 if (inputEl) inputEl.value = localStorage.getItem(`aiSetting_${storageKey}`) || (window.Config?.server?.[configKey] ?? this.FALLBACK_AI_DEFAULTS[configKey] ?? "");
@@ -338,7 +310,7 @@ const SettingsUIManager = {
         if (storageKey === 'max_tokens') {
             const numValue = parseInt(value, 10);
             if (isNaN(numValue) || numValue <= 0) {
-                NotificationManager.showNotification('Max Tokens must be positive. Not saved.', 'error');
+                NotificationManager.showNotification('最大令牌数必须为正数。未保存。', 'error');
                 if (this.apiMaxTokensInput) this.apiMaxTokensInput.value = localStorage.getItem('aiSetting_max_tokens') || (window.Config?.server?.max_tokens ?? this.FALLBACK_AI_DEFAULTS.max_tokens);
                 return;
             }
@@ -347,34 +319,34 @@ const SettingsUIManager = {
         localStorage.setItem(`aiSetting_${storageKey}`, value);
         let configUpdated = false;
         if (window.Config && window.Config.server) { window.Config.server[storageKey] = value; configUpdated = true; }
-        else { Utils.log(`CRITICAL: window.Config.server N/A when saving AI setting ${storageKey}.`, Utils.logLevels.ERROR); }
+        else { Utils.log(`严重错误: 保存 AI 设置 ${storageKey} 时 window.Config.server 不可用。`, Utils.logLevels.ERROR); }
         const friendlyName = storageKey.charAt(0).toUpperCase() + storageKey.slice(1).replace(/_/g, ' ');
-        if (configUpdated) NotificationManager.showNotification(`${friendlyName} setting saved & applied.`, 'success');
-        else NotificationManager.showNotification(`${friendlyName} saved to storage, FAILED to apply live. Refresh.`, 'error');
+        if (configUpdated) NotificationManager.showNotification(`${friendlyName} 设置已保存并应用。`, 'success');
+        else NotificationManager.showNotification(`${friendlyName} 已保存到存储，但实时应用失败。请刷新。`, 'error');
     },
     copyUserIdFromModal: function () {
         const userId = this.modalUserIdValue?.textContent;
-        if (userId && userId !== "Generating...") {
+        if (userId && userId !== "生成中...") {
             navigator.clipboard.writeText(userId)
-                .then(() => NotificationManager.showNotification('User ID copied!', 'success'))
-                .catch(() => NotificationManager.showNotification('Failed to copy ID.', 'error'));
+                .then(() => NotificationManager.showNotification('用户 ID 已复制！', 'success'))
+                .catch(() => NotificationManager.showNotification('复制 ID 失败。', 'error'));
         }
     },
     copySdpTextFromModal: function () {
         const sdpTextEl = document.getElementById('modalSdpText');
         if (sdpTextEl && sdpTextEl.value) {
             navigator.clipboard.writeText(sdpTextEl.value)
-                .then(() => NotificationManager.showNotification('Connection Info copied!', 'success'))
-                .catch(() => NotificationManager.showNotification('Failed to copy info.', 'error'));
+                .then(() => NotificationManager.showNotification('连接信息已复制！', 'success'))
+                .catch(() => NotificationManager.showNotification('复制信息失败。', 'error'));
         } else {
-            NotificationManager.showNotification('No connection info to copy.', 'warning');
+            NotificationManager.showNotification('没有可复制的连接信息。', 'warning');
         }
     },
     updateCopyIdButtonState: function() {
         if (!this.modalUserIdValue || !this.modalCopyIdBtn) return;
-        const userIdReady = this.modalUserIdValue.textContent !== 'Generating...' && UserManager.userId;
+        const userIdReady = this.modalUserIdValue.textContent !== '生成中...' && UserManager.userId;
         this.modalCopyIdBtn.disabled = !userIdReady;
-        this.modalCopyIdBtn.title = userIdReady ? 'Copy User ID' : 'User ID not yet generated.';
+        this.modalCopyIdBtn.title = userIdReady ? '复制用户 ID' : '用户 ID 尚未生成。';
         this.modalCopyIdBtn.classList.toggle('btn-action-themed', userIdReady);
         this.modalCopyIdBtn.classList.toggle('btn-secondary', !userIdReady);
     },
@@ -397,20 +369,20 @@ const SettingsUIManager = {
         const qualityIndicator = document.getElementById('modalQualityIndicator');
         const qualityText = document.getElementById('modalQualityText');
         if (!networkInfoEl || !qualityIndicator || !qualityText) return;
-        let html = ''; let overallQuality = 'N/A'; let qualityClass = '';
+        let html = ''; let overallQuality = '未知'; let qualityClass = '';
         if (networkType && networkType.error === null) {
             html += `IPv4: ${networkType.ipv4?'✓':'✗'} | IPv6: ${networkType.ipv6?'✓':'✗'} <br>`;
-            html += `UDP: ${networkType.udp?'✓':'✗'} | TCP: ${networkType.tcp?'✓':'✗'} | Relay: ${networkType.relay?'✓':'?'} <br>`;
-        } else html += 'WebRTC Network detection: ' + (networkType?.error || 'Failed/Unsupported') + '.<br>';
-        html += `Signaling Server: ${webSocketStatus ? '<span style="color: green;">Connected</span>' : '<span style="color: var(--danger-color, red);">Disconnected</span>'}`;
+            html += `UDP: ${networkType.udp?'✓':'✗'} | TCP: ${networkType.tcp?'✓':'✗'} | 中继: ${networkType.relay?'✓':'?'} <br>`;
+        } else html += 'WebRTC 网络检测: ' + (networkType?.error || '失败/不支持') + '.<br>';
+        html += `信令服务器: ${webSocketStatus ? '<span style="color: green;">已连接</span>' : '<span style="color: var(--danger-color, red);">已断开</span>'}`;
         networkInfoEl.innerHTML = html;
-        if (!webSocketStatus) { overallQuality = 'Signaling Offline'; qualityClass = 'quality-poor'; }
+        if (!webSocketStatus) { overallQuality = '信令离线'; qualityClass = 'quality-poor'; }
         else if (networkType && networkType.error === null) {
-            if (networkType.udp) { overallQuality = 'Good'; qualityClass = 'quality-good'; }
-            else if (networkType.tcp) { overallQuality = 'Limited (TCP Fallback)'; qualityClass = 'quality-medium'; }
-            else if (networkType.relay) { overallQuality = 'Relay Only'; qualityClass = 'quality-medium'; }
-            else { overallQuality = 'Poor (WebRTC P2P Failed)'; qualityClass = 'quality-poor'; }
-        } else { overallQuality = 'WebRTC Check Failed'; qualityClass = 'quality-poor'; }
+            if (networkType.udp) { overallQuality = '良好'; qualityClass = 'quality-good'; }
+            else if (networkType.tcp) { overallQuality = '受限 (TCP 回退)'; qualityClass = 'quality-medium'; }
+            else if (networkType.relay) { overallQuality = '仅中继'; qualityClass = 'quality-medium'; }
+            else { overallQuality = '差 (WebRTC P2P 失败)'; qualityClass = 'quality-poor'; }
+        } else { overallQuality = 'WebRTC 检查失败'; qualityClass = 'quality-poor'; }
         qualityIndicator.className = `quality-indicator ${qualityClass}`;
         qualityText.textContent = overallQuality;
     },

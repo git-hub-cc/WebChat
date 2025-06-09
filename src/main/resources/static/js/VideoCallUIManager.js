@@ -1,7 +1,7 @@
-// VideoCallUIManager.js
-// Responsibilities:
-// - Managing UI elements for video calls (local/remote video, call controls).
-// - Handling Picture-in-Picture (PiP) mode UI and drag functionality.
+// VideoCallUIManager.js (已翻译)
+// 职责:
+// - 管理视频通话的 UI 元素（本地/远程视频、通话控制）。
+// - 处理画中画 (PiP) 模式的 UI 和拖动功能。
 const VideoCallUIManager = {
     localVideo: null,
     remoteVideo: null,
@@ -56,7 +56,7 @@ const VideoCallUIManager = {
     showCallContainer: function(display = true) {
         if (this.callContainer) {
             this.callContainer.style.display = display ? 'flex' : 'none';
-            if (!display) { // If hiding, ensure PiP mode is also reset visually
+            if (!display) { // 如果隐藏，确保 PiP 模式的视觉效果也被重置
                 this.resetPipVisuals();
             }
         }
@@ -64,17 +64,16 @@ const VideoCallUIManager = {
 
     updateUIForCallState: function(callState) {
         if (!this.callContainer || !this.localVideo || !this.remoteVideo || !this.audioOnlyBtn || !this.cameraBtn || !this.audioBtn || !this.pipButton) {
-            Utils.log("VideoCallUIManager: Not all UI elements found, cannot update.", Utils.logLevels.WARN);
+            Utils.log("VideoCallUIManager: 未找到所有 UI 元素，无法更新。", Utils.logLevels.WARN);
             return;
         }
 
         if (callState.isCallActive) {
-            this.showCallContainer(true); // Ensure container is visible if call is active
+            this.showCallContainer(true); // 如果通话激活，确保容器可见
         } else {
-            this.showCallContainer(false); // Hide if no call active
-            return; // No further UI updates needed if call is not active
+            this.showCallContainer(false); // 如果没有通话，则隐藏
+            return; // 如果通话未激活，则无需进一步的 UI 更新
         }
-
 
         if (callState.isScreenSharing) {
             this.callContainer.classList.add('screen-sharing-mode');
@@ -85,74 +84,73 @@ const VideoCallUIManager = {
         }
         this.callContainer.classList.toggle('pip-mode', this.isPipMode && callState.isCallActive);
 
-        // Local video display logic
+        // 本地视频显示逻辑
         const showLocalVideo = VideoCallManager.localStream && !callState.isAudioOnly && callState.isVideoEnabled;
         if (callState.isScreenSharing) {
-            if (VideoCallManager.isCaller) { // Current user is sharing screen
+            if (VideoCallManager.isCaller) { // 当前用户正在共享屏幕
                 this.localVideo.style.display = 'none';
                 this.localVideo.srcObject = null;
-            } else { // Peer is sharing screen
+            } else { // 对方正在共享屏幕
                 this.localVideo.style.display = showLocalVideo ? 'block' : 'none';
                 if(showLocalVideo) this.localVideo.srcObject = VideoCallManager.localStream;
                 else this.localVideo.srcObject = null;
             }
-        } else { // Regular video/audio call
+        } else { // 常规视频/音频通话
             this.localVideo.style.display = showLocalVideo ? 'block' : 'none';
             if(showLocalVideo) this.localVideo.srcObject = VideoCallManager.localStream;
             else this.localVideo.srcObject = null;
         }
 
-
-        // Remote video display logic
-        const currentRemoteStream = this.remoteVideo.srcObject; // VideoCallManager.remoteStream
+        // 远程视频显示逻辑
+        const currentRemoteStream = this.remoteVideo.srcObject;
         const hasRemoteVideoTrack = currentRemoteStream && currentRemoteStream instanceof MediaStream &&
             currentRemoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
 
         if ((callState.isScreenSharing && hasRemoteVideoTrack) || (!callState.isAudioOnly && hasRemoteVideoTrack)) {
             this.remoteVideo.style.display = 'block';
             if (this.remoteVideo.paused) {
-                this.remoteVideo.play().catch(e => Utils.log(`Error playing remote video: ${e.name} - ${e.message}`, Utils.logLevels.WARN));
+                this.remoteVideo.play().catch(e => Utils.log(`播放远程视频时出错: ${e.name} - ${e.message}`, Utils.logLevels.WARN));
             }
         } else {
             this.remoteVideo.style.display = 'none';
         }
 
-        // Update button states and appearances
-        this.audioOnlyBtn.style.display = callState.isCallActive ? 'none' : 'inline-block'; // Only show pre-call
+        // 更新按钮状态和外观
+        this.audioOnlyBtn.style.display = callState.isCallActive ? 'none' : 'inline-block'; // 仅在通话前显示
         if (!callState.isCallActive) {
             this.audioOnlyBtn.style.background = callState.isAudioOnly ? 'var(--primary-color)' : '#fff';
             this.audioOnlyBtn.style.color = callState.isAudioOnly ? 'white' : 'var(--text-color)';
             this.audioOnlyBtn.innerHTML = callState.isAudioOnly ? '🎬' : '🔊';
-            this.audioOnlyBtn.title = callState.isAudioOnly ? 'Switch to Video Call' : 'Switch to Audio-Only Call';
+            this.audioOnlyBtn.title = callState.isAudioOnly ? '切换到视频通话' : '切换到纯音频通话';
         }
 
         this.pipButton.style.display = callState.isCallActive ? 'inline-block' : 'none';
         if (callState.isCallActive) {
             this.pipButton.innerHTML = this.isPipMode ? '📺' : '🖼️';
-            this.pipButton.title = this.isPipMode ? 'Maximize Video' : 'Minimize Video (PiP)';
+            this.pipButton.title = this.isPipMode ? '最大化视频' : '最小化视频 (画中画)';
         }
 
-        // Disable camera toggle if audio-only or if user is the one sharing their screen
+        // 如果是纯音频或用户正在共享屏幕，则禁用摄像头切换
         const disableCameraToggle = callState.isAudioOnly || (callState.isScreenSharing && VideoCallManager.isCaller);
         this.cameraBtn.style.display = disableCameraToggle ? 'none' : 'inline-block';
         if (!disableCameraToggle) {
             this.cameraBtn.innerHTML = callState.isVideoEnabled ? '📹' : '🚫';
             this.cameraBtn.style.background = callState.isVideoEnabled ? '#fff' : '#666';
             this.cameraBtn.style.color = callState.isVideoEnabled ? 'var(--text-color)' : 'white';
-            this.cameraBtn.title = callState.isVideoEnabled ? 'Turn Camera Off' : 'Turn Camera On';
+            this.cameraBtn.title = callState.isVideoEnabled ? '关闭摄像头' : '打开摄像头';
         }
 
         this.audioBtn.innerHTML = callState.isAudioMuted ? '🔇' : '🎤';
         this.audioBtn.style.background = callState.isAudioMuted ? '#666' : '#fff';
         this.audioBtn.style.color = callState.isAudioMuted ? 'white' : 'var(--text-color)';
-        this.audioBtn.title = callState.isAudioMuted ? 'Unmute Microphone' : 'Mute Microphone';
+        this.audioBtn.title = callState.isAudioMuted ? '取消静音' : '静音';
     },
 
     setLocalStream: function(stream) {
         if (this.localVideo) {
             this.localVideo.srcObject = stream;
-            if (stream && this.localVideo.paused) { // Autoplay if stream is set
-                this.localVideo.play().catch(e => Utils.log(`Error playing local video: ${e.name}`, Utils.logLevels.WARN));
+            if (stream && this.localVideo.paused) { // 如果设置了流，则自动播放
+                this.localVideo.play().catch(e => Utils.log(`播放本地视频时出错: ${e.name}`, Utils.logLevels.WARN));
             }
         }
     },
@@ -160,8 +158,8 @@ const VideoCallUIManager = {
     setRemoteStream: function(stream) {
         if (this.remoteVideo) {
             this.remoteVideo.srcObject = stream;
-            if (stream && this.remoteVideo.paused) { // Autoplay if stream is set
-                this.remoteVideo.play().catch(e => Utils.log(`Error playing remote video: ${e.name}`, Utils.logLevels.WARN));
+            if (stream && this.remoteVideo.paused) { // 如果设置了流，则自动播放
+                this.remoteVideo.play().catch(e => Utils.log(`播放远程视频时出错: ${e.name}`, Utils.logLevels.WARN));
             }
         }
     },
@@ -176,8 +174,8 @@ const VideoCallUIManager = {
             this.initPipDraggable(this.callContainer);
             const lastLeft = this.callContainer.dataset.pipLeft;
             const lastTop = this.callContainer.dataset.pipTop;
-            const containerWidth = this.callContainer.offsetWidth || 320; // Fallback width
-            const containerHeight = this.callContainer.offsetHeight || 180; // Fallback height
+            const containerWidth = this.callContainer.offsetWidth || 320; // 备用宽度
+            const containerHeight = this.callContainer.offsetHeight || 180; // 备用高度
             const defaultLeft = `${window.innerWidth - containerWidth - 20}px`;
             const defaultTop = `${window.innerHeight - containerHeight - 20}px`;
 
@@ -271,14 +269,14 @@ const VideoCallUIManager = {
         document.removeEventListener("touchend", this._boundDragEndTouch);
     },
 
-    resetPipVisuals: function() { // Renamed from resetPipOnEndCall, more generic
-        this.isPipMode = false; // Ensure PiP state is false
+    resetPipVisuals: function() { // 从 resetPipOnEndCall 重命名，更通用
+        this.isPipMode = false; // 确保 PiP 状态为 false
         if (this.callContainer) {
             this.removePipDraggable(this.callContainer);
             this.callContainer.classList.remove('pip-mode');
             this.callContainer.style.left = ''; this.callContainer.style.top = '';
             this.callContainer.style.right = ''; this.callContainer.style.bottom = '';
-            // delete this.callContainer.dataset.pipLeft; // Optionally reset saved positions
+            // delete this.callContainer.dataset.pipLeft; // 可选：重置保存的位置
             // delete this.callContainer.dataset.pipTop;
         }
     }

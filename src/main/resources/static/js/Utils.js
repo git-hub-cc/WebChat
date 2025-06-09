@@ -1,13 +1,13 @@
-const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, ALL: 4 }; // Private-like variable
+const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, ALL: 4 }; // 类私有变量
 
 const Utils = {
     logLevels: _Utils_logLevels,
-    currentLogLevel: _Utils_logLevels.DEBUG, // Default, can be overridden by setLogLevelFromConfig
+    currentLogLevel: _Utils_logLevels.DEBUG, // 默认值，可由 setLogLevelFromConfig 覆盖
 
     setLogLevelFromConfig: function() {
         if (typeof Config !== 'undefined' && Config.logLevel && typeof Config.logLevel === 'string') {
             this.currentLogLevel = this.logLevels[Config.logLevel.toUpperCase()] || this.logLevels.DEBUG;
-            // console.log(`Utils: Log level set to ${Config.logLevel} (${this.currentLogLevel})`); // For sanity check during init
+            // console.log(`Utils: 日志级别已设置为 ${Config.logLevel} (${this.currentLogLevel})`); // 用于初始化时的健全性检查
         }
     },
 
@@ -19,7 +19,7 @@ const Utils = {
 
             const logMessage = `[${timestamp}] ${prefix} ${message}`;
 
-            // console output
+            // console 输出
             if (level === this.logLevels.ALL) console.log(logMessage);
             else if (level === this.logLevels.ERROR) console.error(logMessage);
             else if (level === this.logLevels.DEBUG) console.debug(logMessage);
@@ -39,7 +39,7 @@ const Utils = {
 
     checkNetworkType: async function () {
         try {
-            const pc = new RTCPeerConnection(); // Using default config for basic host candidate gathering
+            const pc = new RTCPeerConnection(); // 使用默认配置进行基本的主机候选者收集
             const candidates = [];
             let candidateGatheringDone = false;
 
@@ -83,7 +83,7 @@ const Utils = {
                 error: null
             };
         } catch (error) {
-            Utils.log(`Network type check failed: ${error.message}`, Utils.logLevels.ERROR);
+            Utils.log(`网络类型检查失败: ${error.message}`, Utils.logLevels.ERROR);
             return { ipv4: false, ipv6: false, relay: false, udp: false, tcp: false, count: 0, error: error.message };
         }
     },
@@ -96,7 +96,7 @@ const Utils = {
         const totalChunks = Math.ceil(dataString.length / chunkSize);
         const currentFileId = fileId || `${Date.now()}-${Utils.generateId(6)}`;
 
-        Utils.log(`Sending large data to ${peerId} (ID: ${currentFileId}) in ${totalChunks} chunks.`, Utils.logLevels.INFO);
+        Utils.log(`正在向 ${peerId} (ID: ${currentFileId}) 发送大数据，共 ${totalChunks} 个分片。`, Utils.logLevels.INFO);
 
         sendFunc(JSON.stringify({
             type: 'chunk-meta',
@@ -131,7 +131,7 @@ const Utils = {
                         pending.sent++;
                         if (pending.sent === pending.total) {
                             delete ConnectionManager.pendingSentChunks[currentFileId];
-                            Utils.log(`All chunks for ${currentFileId} sent to ${peerId}.`, Utils.logLevels.INFO);
+                            Utils.log(`已向 ${peerId} 发送完 ${currentFileId} 的所有分片。`, Utils.logLevels.INFO);
                         }
                     }
                 }, currentIndex * 20);
@@ -152,7 +152,7 @@ const Utils = {
                 chunks: new Array(message.totalChunks),
                 originalType: message.originalType
             };
-            Utils.log(`Receiving chunked data ${message.chunkId} from ${peerId}, total: ${message.totalChunks}. Original type: ${message.originalType}`, Utils.logLevels.DEBUG);
+            Utils.log(`正在从 ${peerId} 接收分片数据 ${message.chunkId}，总数: ${message.totalChunks}。原始类型: ${message.originalType}`, Utils.logLevels.DEBUG);
             return null;
         }
 
@@ -168,28 +168,28 @@ const Utils = {
                     const originalType = assembly.originalType;
                     delete peerChunks[message.chunkId];
 
-                    Utils.log(`All chunks for ${assembledId} received from ${peerId}. Reassembled. Original type was: ${originalType}. Full length: ${fullDataString.length}`, Utils.logLevels.INFO);
+                    Utils.log(`已从 ${peerId} 接收完 ${assembledId} 的所有分片。已重组。原始类型为: ${originalType}。总长度: ${fullDataString.length}`, Utils.logLevels.INFO);
                     try {
                         const reassembledMessage = JSON.parse(fullDataString);
                         if (reassembledMessage.type !== originalType) {
-                            Utils.log(`Reassembled message type (${reassembledMessage.type}) differs from stored original type (${originalType}) for ID ${assembledId}. Using reassembled type.`, Utils.logLevels.WARN);
+                            Utils.log(`重组后的消息类型 (${reassembledMessage.type}) 与存储的原始类型 (${originalType}) (ID: ${assembledId}) 不同。将使用重组后的类型。`, Utils.logLevels.WARN);
                         }
                         return reassembledMessage;
                     } catch (e) {
-                        Utils.log(`Error parsing reassembled message from ${peerId} (ID: ${assembledId}, OriginalType: ${originalType}): ${e.message}`, Utils.logLevels.ERROR);
+                        Utils.log(`解析来自 ${peerId} 的重组消息时出错 (ID: ${assembledId}, 原始类型: ${originalType}): ${e.message}`, Utils.logLevels.ERROR);
                         return null;
                     }
                 }
                 return null;
             } else if (assembly && assembly.chunks[message.index] !== undefined) {
-                Utils.log(`Duplicate chunk ${message.index} for ${message.chunkId} (original type: ${assembly.originalType}) from ${peerId}. Ignoring.`, Utils.logLevels.WARN);
+                Utils.log(`收到来自 ${peerId} 的重复分片 ${message.index} (ID: ${message.chunkId}, 原始类型: ${assembly.originalType})。正在忽略。`, Utils.logLevels.WARN);
                 return null;
             } else {
-                Utils.log(`Received chunk-data for unknown/completed assembly ${message.chunkId} (Type in msg: ${message.type}) from ${peerId}. Ignoring.`, Utils.logLevels.WARN);
+                Utils.log(`收到来自 ${peerId} 的未知/已完成组合的分片数据 ${message.chunkId} (消息中类型: ${message.type})。正在忽略。`, Utils.logLevels.WARN);
                 return null;
             }
         }
-        Utils.log(`Utils.reassembleChunk received non-chunk message type: ${message.type} from ${peerId}. Returning null.`, Utils.logLevels.WARN);
+        Utils.log(`Utils.reassembleChunk 收到来自 ${peerId} 的非分片消息类型: ${message.type}。返回 null。`, Utils.logLevels.WARN);
         return null;
     },
 
@@ -205,7 +205,7 @@ const Utils = {
 
     formatDate: function(dateObj, includeTime = true) {
         if (!(dateObj instanceof Date) || isNaN(dateObj)) {
-            return 'Invalid Date';
+            return '无效日期';
         }
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -213,14 +213,14 @@ const Utils = {
         yesterday.setDate(today.getDate() - 1);
 
         let dateString;
-        if (dateObj >= today) { // Today
-            dateString = includeTime ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today';
-        } else if (dateObj >= yesterday) { // Yesterday
-            dateString = 'Yesterday' + (includeTime ? ` ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '');
-        } else if (dateObj.getFullYear() === now.getFullYear()){ // This year, but older than yesterday
+        if (dateObj >= today) { // 今天
+            dateString = includeTime ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '今天';
+        } else if (dateObj >= yesterday) { // 昨天
+            dateString = '昨天' + (includeTime ? ` ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '');
+        } else if (dateObj.getFullYear() === now.getFullYear()){ // 今年，但比昨天更早
             dateString = dateObj.toLocaleDateString([], { month: 'short', day: 'numeric' }) + (includeTime ? ` ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '');
         }
-        else { // Older than this year
+        else { // 比今年更早
             dateString = dateObj.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) + (includeTime ? ` ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '');
         }
         return dateString;

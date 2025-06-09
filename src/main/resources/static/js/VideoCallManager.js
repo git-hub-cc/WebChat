@@ -1,5 +1,5 @@
-// MODIFIED: VideoCallManager.js
-// - Modified endCall and related cleanup to only stop media, not close the RTCPeerConnection.
+// MODIFIED: VideoCallManager.js (已翻译为中文)
+// - 修改了 endCall 及相关清理逻辑，使其只停止媒体流，不关闭 RTCPeerConnection。
 const VideoCallManager = {
     localStream: null,
     remoteStream: null,
@@ -27,11 +27,11 @@ const VideoCallManager = {
         try {
             this.musicPlayer = new Audio(Config.music);
             this.musicPlayer.loop = true;
-            this.musicPlayer.addEventListener('ended', () => { if (this.isMusicPlaying) this.musicPlayer.play().catch(e => Utils.log(`Music loop error: ${e}`, Utils.logLevels.WARN)); });
-        } catch (e) { Utils.log(`Error initializing music: ${e}`, Utils.logLevels.ERROR); this.musicPlayer = null; }
+            this.musicPlayer.addEventListener('ended', () => { if (this.isMusicPlaying) this.musicPlayer.play().catch(e => Utils.log(`音乐循环播放错误: ${e}`, Utils.logLevels.WARN)); });
+        } catch (e) { Utils.log(`初始化音乐时出错: ${e}`, Utils.logLevels.ERROR); this.musicPlayer = null; }
 
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            Utils.log('Browser does not support media devices. Call functions disabled.', Utils.logLevels.ERROR);
+            Utils.log('浏览器不支持媒体设备。通话功能已禁用。', Utils.logLevels.ERROR);
             return false;
         }
         return true;
@@ -39,18 +39,18 @@ const VideoCallManager = {
 
     playMusic: function (isRetry = false) {
         if (this.musicPlayer && this.musicPlayer.paused && !this.isMusicPlaying) {
-            Utils.log("Attempting to play music...", Utils.logLevels.DEBUG);
+            Utils.log("正在尝试播放音乐...", Utils.logLevels.DEBUG);
             this.musicPlayer.play().then(() => {
-                this.isMusicPlaying = true; Utils.log("Music playing.", Utils.logLevels.INFO);
+                this.isMusicPlaying = true; Utils.log("音乐正在播放。", Utils.logLevels.INFO);
                 if (isRetry && this._boundEnableMusicPlay) {
                     document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
                     document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
                     delete this._boundEnableMusicPlay;
                 }
             }).catch(error => {
-                Utils.log(`Error playing music: ${error.name} - ${error.message}`, Utils.logLevels.ERROR);
+                Utils.log(`播放音乐时出错: ${error.name} - ${error.message}`, Utils.logLevels.ERROR);
                 if (error.name === 'NotAllowedError' && !isRetry) {
-                    NotificationManager.showNotification("Music blocked. Click/tap to enable.", "warning");
+                    NotificationManager.showNotification("音乐播放被阻止。请点击/触摸以启用。", "warning");
                     this._boundEnableMusicPlay = () => this.playMusic(true);
                     document.body.addEventListener('click', this._boundEnableMusicPlay, {once: true, capture: true});
                     document.body.addEventListener('touchstart', this._boundEnableMusicPlay, {once: true, capture: true});
@@ -61,7 +61,7 @@ const VideoCallManager = {
 
     stopMusic: function () {
         if (this.musicPlayer && (!this.musicPlayer.paused || this.isMusicPlaying)) {
-            this.musicPlayer.pause(); this.musicPlayer.currentTime = 0; this.isMusicPlaying = false; Utils.log("Music stopped.", Utils.logLevels.INFO);
+            this.musicPlayer.pause(); this.musicPlayer.currentTime = 0; this.isMusicPlaying = false; Utils.log("音乐已停止。", Utils.logLevels.INFO);
             if (this._boundEnableMusicPlay) {
                 document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
                 document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
@@ -85,44 +85,44 @@ const VideoCallManager = {
     initiateAudioCall: function (peerId) { this.initiateCall(peerId, true); },
 
     initiateScreenShare: async function (peerId) {
-        if (this.isCallActive || this.isCallPending) { NotificationManager.showNotification('A call/share is already active/pending.', 'warning'); return; }
+        if (this.isCallActive || this.isCallPending) { NotificationManager.showNotification('已有通话/共享正在进行或等待中。', 'warning'); return; }
         if (!peerId) peerId = ChatManager.currentChatId;
-        if (!peerId) { NotificationManager.showNotification('Select a partner to share screen with.', 'warning'); return; }
-        if (!ConnectionManager.isConnectedTo(peerId)) { NotificationManager.showNotification('Not connected to peer.', 'error'); return; }
+        if (!peerId) { NotificationManager.showNotification('请选择一个伙伴以共享屏幕。', 'warning'); return; }
+        if (!ConnectionManager.isConnectedTo(peerId)) { NotificationManager.showNotification('未连接到对方。', 'error'); return; }
 
         this.isScreenSharing = true; this.isAudioOnly = false; this.isVideoEnabled = true; this.isAudioMuted = false;
         try {
             this.currentPeerId = peerId; this.isCaller = true; this.isCallPending = true;
             ConnectionManager.sendTo(peerId, { type: 'video-call-request', audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
-            ModalManager.showCallingModal(UserManager.contacts[peerId]?.name || 'peer', () => this.hangUpMedia(), () => this.stopMusic(), 'Screen Share');
+            ModalManager.showCallingModal(UserManager.contacts[peerId]?.name || '对方', () => this.hangUpMedia(), () => this.stopMusic(), '屏幕共享');
             this.playMusic();
             this.callRequestTimeout = setTimeout(() => {
                 if (this.isCallPending) { ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-cancel', sender: UserManager.userId }); this.cancelPendingCall(); }
             }, 30000);
         } catch (error) {
-            Utils.log(`Failed to initiate screen share: ${error.message}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('Failed to initiate screen share.', 'error'); this.cleanupCallMediaAndState();
+            Utils.log(`发起屏幕共享失败: ${error.message}`, Utils.logLevels.ERROR);
+            NotificationManager.showNotification('发起屏幕共享失败。', 'error'); this.cleanupCallMediaAndState();
         }
     },
 
     initiateCall: async function (peerId, audioOnly = false) {
-        if (this.isCallActive || this.isCallPending) { NotificationManager.showNotification('A call is already active/pending.', 'warning'); return; }
+        if (this.isCallActive || this.isCallPending) { NotificationManager.showNotification('已有通话正在进行或等待中。', 'warning'); return; }
         if (!peerId) peerId = ChatManager.currentChatId;
-        if (!peerId) { NotificationManager.showNotification('Select a partner to call.', 'warning'); return; }
-        if (!ConnectionManager.isConnectedTo(peerId)) { NotificationManager.showNotification('Not connected to peer.', 'error'); return; }
+        if (!peerId) { NotificationManager.showNotification('请选择一个伙伴进行通话。', 'warning'); return; }
+        if (!ConnectionManager.isConnectedTo(peerId)) { NotificationManager.showNotification('未连接到对方。', 'error'); return; }
 
         this.isAudioOnly = audioOnly; this.isScreenSharing = false; this.isVideoEnabled = !audioOnly; this.isAudioMuted = false;
         try {
             this.currentPeerId = peerId; this.isCaller = true; this.isCallPending = true;
             ConnectionManager.sendTo(peerId, { type: 'video-call-request', audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
-            ModalManager.showCallingModal(UserManager.contacts[peerId]?.name || 'peer', () => this.hangUpMedia(), () => this.stopMusic(), this.isAudioOnly ? 'Audio Call' : 'Video Call');
+            ModalManager.showCallingModal(UserManager.contacts[peerId]?.name || '对方', () => this.hangUpMedia(), () => this.stopMusic(), this.isAudioOnly ? '语音通话' : '视频通话');
             this.playMusic();
             this.callRequestTimeout = setTimeout(() => {
                 if (this.isCallPending) { ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-cancel', sender: UserManager.userId }); this.cancelPendingCall(); }
             }, 30000);
         } catch (error) {
-            Utils.log(`Failed to initiate call: ${error.message}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('Failed to initiate call.', 'error'); this.cleanupCallMediaAndState();
+            Utils.log(`发起通话失败: ${error.message}`, Utils.logLevels.ERROR);
+            NotificationManager.showNotification('发起通话失败。', 'error'); this.cleanupCallMediaAndState();
         }
     },
 
@@ -135,14 +135,14 @@ const VideoCallManager = {
 
     acceptCall: async function () {
         ModalManager.hideCallRequest(); this.stopMusic();
-        if (!this.currentPeerId) { NotificationManager.showNotification('Invalid call request.', 'error'); return; }
+        if (!this.currentPeerId) { NotificationManager.showNotification('无效的通话请求。', 'error'); return; }
         try {
             if (this.isScreenSharing) this.isVideoEnabled = false;
             await this.startLocalStreamAndSignal(false);
             ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-accepted', audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
         } catch (error) {
-            Utils.log(`Failed to accept call: ${error.message}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification(`Accept call failed: ${error.message}`, 'error');
+            Utils.log(`接听通话失败: ${error.message}`, Utils.logLevels.ERROR);
+            NotificationManager.showNotification(`接听通话失败: ${error.message}`, 'error');
             ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-rejected', reason: 'device_error', sender: UserManager.userId });
             this.cleanupCallMediaAndState();
         }
@@ -152,8 +152,8 @@ const VideoCallManager = {
         ModalManager.hideCallRequest(); this.stopMusic();
         if (!this.currentPeerId) return;
         ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-rejected', reason: 'user_rejected', sender: UserManager.userId });
-        this.cleanupCallMediaAndState(false); // Do not close PC, just reset state
-        Utils.log('Rejected call request.', Utils.logLevels.INFO);
+        this.cleanupCallMediaAndState(false); // false: 不关闭 PC，只重置状态
+        Utils.log('已拒绝通话请求。', Utils.logLevels.INFO);
     },
 
     startLocalStreamAndSignal: async function (isOfferCreatorForMedia) {
@@ -164,12 +164,12 @@ const VideoCallManager = {
                     this.localStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
                     this.isVideoEnabled = true;
                     const screenTrack = this.localStream.getVideoTracks()[0];
-                    if (screenTrack) screenTrack.onended = () => { Utils.log("Screen sharing ended by user.", Utils.logLevels.INFO); this.hangUpMedia(); };
+                    if (screenTrack) screenTrack.onended = () => { Utils.log("用户已结束屏幕共享。", Utils.logLevels.INFO); this.hangUpMedia(); };
                     if (this.localStream.getAudioTracks().length === 0) {
                         try {
                             const micStream = await navigator.mediaDevices.getUserMedia({ audio: this.audioConstraints, video: false });
                             micStream.getAudioTracks().forEach(track => this.localStream.addTrack(track));
-                        } catch (micError) { Utils.log(`Could not get mic for screen share: ${micError.message}`, Utils.logLevels.WARN); }
+                        } catch (micError) { Utils.log(`无法为屏幕共享获取麦克风: ${micError.message}`, Utils.logLevels.WARN); }
                     }
                 } else {
                     this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.audioConstraints });
@@ -179,24 +179,24 @@ const VideoCallManager = {
                 if (attemptLocalCameraVideoSending) {
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     if (!devices.some(d => d.kind === 'videoinput')) {
-                        if (!this.isAudioOnly) NotificationManager.showNotification('No camera. Audio only.', 'warning');
+                        if (!this.isAudioOnly) NotificationManager.showNotification('没有摄像头。仅音频通话。', 'warning');
                         attemptLocalCameraVideoSending = false;
                     }
                 }
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: attemptLocalCameraVideoSending, audio: this.audioConstraints });
                 this.isVideoEnabled = attemptLocalCameraVideoSending && this.localStream.getVideoTracks()[0]?.readyState !== 'ended';
-                if (attemptLocalCameraVideoSending && !this.isVideoEnabled && !this.isAudioOnly) NotificationManager.showNotification('Camera error. Audio only.', 'warning');
+                if (attemptLocalCameraVideoSending && !this.isVideoEnabled && !this.isAudioOnly) NotificationManager.showNotification('摄像头错误。仅音频通话。', 'warning');
             }
         } catch (getUserMediaError) {
-            Utils.log(`getUserMedia/getDisplayMedia error: ${getUserMediaError.name}`, Utils.logLevels.ERROR);
+            Utils.log(`getUserMedia/getDisplayMedia 错误: ${getUserMediaError.name}`, Utils.logLevels.ERROR);
             this.isVideoEnabled = false;
-            if (this.isScreenSharing && this.isCaller) { NotificationManager.showNotification(`Screen share error: ${getUserMediaError.name}.`, 'error'); this.cleanupCallMediaAndState(); throw getUserMediaError; }
-            else if (!this.isScreenSharing && attemptLocalCameraVideoSending && !this.isAudioOnly) NotificationManager.showNotification(`Camera error: ${getUserMediaError.name}. Audio only.`, 'error');
+            if (this.isScreenSharing && this.isCaller) { NotificationManager.showNotification(`屏幕共享错误: ${getUserMediaError.name}。`, 'error'); this.cleanupCallMediaAndState(); throw getUserMediaError; }
+            else if (!this.isScreenSharing && attemptLocalCameraVideoSending && !this.isAudioOnly) NotificationManager.showNotification(`摄像头错误: ${getUserMediaError.name}。仅音频通话。`, 'error');
             try {
                 if (this.localStream) this.localStream.getTracks().forEach(t => t.stop());
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.audioConstraints });
                 this.isAudioOnly = true; this.isVideoEnabled = false; if(this.isScreenSharing) this.isScreenSharing = false;
-            } catch (audioError) { Utils.log(`Fallback audio error: ${audioError.name}`, Utils.logLevels.ERROR); this.cleanupCallMediaAndState(); throw audioError; }
+            } catch (audioError) { Utils.log(`备用音频错误: ${audioError.name}`, Utils.logLevels.ERROR); this.cleanupCallMediaAndState(); throw audioError; }
         }
 
         if (this.localStream.getAudioTracks()[0]) this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
@@ -215,17 +215,17 @@ const VideoCallManager = {
 
     setupPeerConnection: async function (isOfferCreatorForMedia) {
         const conn = ConnectionManager.connections[this.currentPeerId];
-        if (!conn || !conn.peerConnection) { Utils.log("setupPeerConnection: No PeerConnection.", Utils.logLevels.ERROR); this.hangUpMedia(); return; }
+        if (!conn || !conn.peerConnection) { Utils.log("setupPeerConnection: 没有 PeerConnection。", Utils.logLevels.ERROR); this.hangUpMedia(); return; }
         const pc = conn.peerConnection;
-        // Hapus trek lama sebelum menambahkan yang baru jika ini adalah renegosiasi atau awal panggilan baru pada PC yang ada
-        pc.getSenders().forEach(sender => { if (sender.track) try {pc.removeTrack(sender);} catch(e){Utils.log("Err removing old track: "+e,Utils.logLevels.WARN);}});
+        // 如果是重新协商或在新连接上开始新通话，先移除旧轨道
+        pc.getSenders().forEach(sender => { if (sender.track) try {pc.removeTrack(sender);} catch(e){Utils.log("移除旧轨道时出错: "+e,Utils.logLevels.WARN);}});
 
         this.localStream.getTracks().forEach(track => {
             if (track.kind === 'audio' || (track.kind === 'video' && this.isVideoEnabled && ((!this.isScreenSharing) || (this.isScreenSharing && this.isCaller)))) {
                 try {
                     pc.addTrack(track, this.localStream);
                 } catch(e) {
-                    Utils.log(`Error adding track ${track.kind} to PC: ${e.message}`, Utils.logLevels.ERROR);
+                    Utils.log(`向 PC 添加轨道 ${track.kind} 时出错: ${e.message}`, Utils.logLevels.ERROR);
                 }
             }
         });
@@ -233,17 +233,17 @@ const VideoCallManager = {
         pc.ontrack = (event) => {
             const trackHandler = (track) => {
                 if (!track._videoManagerListenersAttached) {
-                    track.onunmute = () => { Utils.log(`Remote track ${track.id} (${track.kind}) unmuted.`, Utils.logLevels.DEBUG); this.updateCurrentCallUIState(); if (track.kind === 'video' && VideoCallUIManager.remoteVideo?.paused) VideoCallUIManager.remoteVideo.play().catch(e => Utils.log(`Error playing remote video: ${e}`,Utils.logLevels.WARN)); };
-                    track.onmute = () => { Utils.log(`Remote track ${track.id} (${track.kind}) muted.`, Utils.logLevels.DEBUG); this.updateCurrentCallUIState(); };
-                    track.onended = () => { // Penting untuk menangani ketika trek jarak jauh dihentikan
-                        Utils.log(`Remote track ${track.id} (${track.kind}) ended.`, Utils.logLevels.DEBUG);
-                        if (this.remoteStream?.getTrackById(track.id)) try {this.remoteStream.removeTrack(track);}catch(e){Utils.log("Err removing track from remote: "+e,Utils.logLevels.WARN);}
-                        if (track.kind === 'video' && this.isScreenSharing && !this.isCaller) { Utils.log("Remote screen share ended. Ending call aspect.", Utils.logLevels.INFO); this.hangUpMedia(false); /*false: jangan kirim video-call-end karena ini reaksi terhadap trek yang berakhir*/ }
-                        else if (this.remoteStream && this.remoteStream.getTracks().length === 0) { // Jika semua trek jarak jauh hilang
+                    track.onunmute = () => { Utils.log(`远程轨道 ${track.id} (${track.kind}) 已取消静音。`, Utils.logLevels.DEBUG); this.updateCurrentCallUIState(); if (track.kind === 'video' && VideoCallUIManager.remoteVideo?.paused) VideoCallUIManager.remoteVideo.play().catch(e => Utils.log(`播放远程视频时出错: ${e}`,Utils.logLevels.WARN)); };
+                    track.onmute = () => { Utils.log(`远程轨道 ${track.id} (${track.kind}) 已静音。`, Utils.logLevels.DEBUG); this.updateCurrentCallUIState(); };
+                    track.onended = () => { // 重要：处理远程轨道结束的情况
+                        Utils.log(`远程轨道 ${track.id} (${track.kind}) 已结束。`, Utils.logLevels.DEBUG);
+                        if (this.remoteStream?.getTrackById(track.id)) try {this.remoteStream.removeTrack(track);}catch(e){Utils.log("从远程流移除轨道时出错: "+e,Utils.logLevels.WARN);}
+                        if (track.kind === 'video' && this.isScreenSharing && !this.isCaller) { Utils.log("远程屏幕共享已结束。正在结束通话部分。", Utils.logLevels.INFO); this.hangUpMedia(false); /*false: 不发送 video-call-end，因为这是对轨道结束的反应*/ }
+                        else if (this.remoteStream && this.remoteStream.getTracks().length === 0) { // 如果所有远程轨道都消失了
                             if(VideoCallUIManager.remoteVideo) VideoCallUIManager.remoteVideo.srcObject = null;
                             this.remoteStream = null;
-                            Utils.log("All remote tracks ended. Call aspect might be over.", Utils.logLevels.INFO);
-                            // Pertimbangkan apakah ini juga harus memicu hangUpMedia() jika belum
+                            Utils.log("所有远程轨道已结束。通话部分可能已结束。", Utils.logLevels.INFO);
+                            // 考虑这是否也应该在尚未触发的情况下触发 hangUpMedia()
                         }
                         this.updateCurrentCallUIState();
                     };
@@ -268,29 +268,28 @@ const VideoCallManager = {
             }
             this.updateCurrentCallUIState();
         };
-        this.setupConnectionMonitoring(pc); // Monitor ICE state, tapi JANGAN panggil endCall/hangUpMedia dari sini jika PC state berubah jadi disconnected
+        this.setupConnectionMonitoring(pc); // 监控 ICE 状态，但如果 PC 状态变为 disconnected，不要从这里调用 endCall/hangUpMedia
         if (isOfferCreatorForMedia) await this.createAndSendOffer();
     },
 
     setupConnectionMonitoring: function (pc) {
         pc.oniceconnectionstatechange = () => {
-            Utils.log(`Call ICE State: ${pc.iceConnectionState} for ${this.currentPeerId}`, Utils.logLevels.DEBUG);
-            // JANGAN panggil hangUpMedia() atau endCall() secara otomatis dari sini
-            // jika tujuannya adalah untuk mempertahankan PC.
-            // Biarkan logika aplikasi (misalnya, batas waktu, keputusan pengguna) yang menanganinya.
-            // Anda mungkin ingin menampilkan notifikasi jika koneksi ICE 'failed'.
-            if (this.isCallActive && (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'closed')) {
+            Utils.log(`通话 ICE 状态: ${pc.iceConnectionState} (for ${this.currentPeerId})`, Utils.logLevels.DEBUG);
+            // 如果目标是保留 PC，不要从这里自动调用 hangUpMedia() 或 endCall()。
+            // 让应用逻辑（如超时、用户决定）来处理。
+            // 如果连接 ICE 'failed'，你可能想显示一个通知。
+            if (this.isCallActive && (pc.iceconnectionState === 'failed' || pc.iceconnectionState === 'disconnected' || pc.iceconnectionState === 'closed')) {
                 if (this.isCallActive) {
-                    NotificationManager.showNotification('Call connection issue (ICE). Media may be affected.', 'warning');
-                    // Jika state menjadi 'closed' atau 'failed' secara permanen, PC mungkin tidak dapat digunakan lagi.
-                    // Jika Anda ingin mencoba memulihkan PC, itu akan menjadi logika yang lebih kompleks.
-                    // Untuk saat ini, asumsikan DataChannel masih bisa berfungsi jika hanya media yang bermasalah.
+                    NotificationManager.showNotification('通话连接问题 (ICE)。媒体可能受影响。', 'warning');
+                    // 如果状态永久变为 'closed' 或 'failed'，PC 可能无法再使用。
+                    // 如果你想尝试恢复 PC，那将是更复杂的逻辑。
+                    // 目前，假设如果只是媒体有问题，DataChannel 仍然可以工作。
                 }
             }
         };
     },
     setCodecPreferences: function (pc) {
-        if (typeof RTCRtpTransceiver === 'undefined' || !('setCodecPreferences' in RTCRtpTransceiver.prototype)) { Utils.log("setCodecPreferences not supported.", Utils.logLevels.WARN); return; }
+        if (typeof RTCRtpTransceiver === 'undefined' || !('setCodecPreferences' in RTCRtpTransceiver.prototype)) { Utils.log("setCodecPreferences 不受支持。", Utils.logLevels.WARN); return; }
         try {
             pc.getTransceivers().forEach(transceiver => {
                 if (!transceiver.sender || !transceiver.sender.track) return;
@@ -298,14 +297,14 @@ const VideoCallManager = {
                 if (kind === 'audio') {
                     const {codecs} = RTCRtpSender.getCapabilities('audio');
                     const preferredAudio = this.codecPreferences.audio.map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase() && (!pref.sdpFmtpLine || (c.sdpFmtpLine && c.sdpFmtpLine.includes(pref.sdpFmtpLine.split(';')[0]))))).filter(c => c);
-                    if (preferredAudio.length > 0) try {transceiver.setCodecPreferences(preferredAudio);}catch(e){Utils.log(`Failed to set audio codec prefs: ${e.message}`,Utils.logLevels.WARN);}
+                    if (preferredAudio.length > 0) try {transceiver.setCodecPreferences(preferredAudio);}catch(e){Utils.log(`设置音频编解码器首选项失败: ${e.message}`,Utils.logLevels.WARN);}
                 } else if (kind === 'video' && !this.isAudioOnly) {
                     const {codecs} = RTCRtpSender.getCapabilities('video');
                     const preferredVideo = this.codecPreferences.video.map(pref => codecs.find(c => c.mimeType.toLowerCase() === pref.mimeType.toLowerCase())).filter(c => c);
-                    if (preferredVideo.length > 0) try {transceiver.setCodecPreferences(preferredVideo);}catch(e){Utils.log(`Failed to set video codec prefs: ${e.message}`,Utils.logLevels.WARN);}
+                    if (preferredVideo.length > 0) try {transceiver.setCodecPreferences(preferredVideo);}catch(e){Utils.log(`设置视频编解码器首选项失败: ${e.message}`,Utils.logLevels.WARN);}
                 }
             });
-        } catch (error) { Utils.log(`Error in setCodecPreferences: ${error.message}`, Utils.logLevels.WARN); }
+        } catch (error) { Utils.log(`setCodecPreferences 出错: ${error.message}`, Utils.logLevels.WARN); }
     },
     modifySdpForOpus: function (sdp) {
         const opusRegex = /a=rtpmap:(\d+) opus\/48000\/2/gm; let match; let modifiedSdp = sdp;
@@ -329,26 +328,25 @@ const VideoCallManager = {
     createAndSendOffer: async function () {
         if (!this.currentPeerId || !this.isCallActive) return;
         const conn = ConnectionManager.connections[this.currentPeerId];
-        if (!conn || !conn.peerConnection) { Utils.log("No PC for offer", Utils.logLevels.ERROR); return; }
+        if (!conn || !conn.peerConnection) { Utils.log("没有 PC 用于创建提议", Utils.logLevels.ERROR); return; }
         try {
-            // Jika Anda hanya menghapus trek, Anda mungkin perlu mengatur ulang transceivers
-            // atau menegosiasikan ulang dengan cara tertentu yang menunjukkan tidak ada media.
-            // Cara sederhana adalah offerToReceiveAudio/Video = false jika tidak ada trek lokal.
+            // 如果你只移除轨道，你可能需要重置收发器或以某种方式重新协商以表明没有媒体。
+            // 一种简单的方法是，如果没有本地轨道，则 offerToReceiveAudio/Video = false。
             const offerOptions = {
-                offerToReceiveAudio: true, // Selalu siap menerima audio
-                offerToReceiveVideo: !this.isAudioOnly || this.isScreenSharing // Siap menerima video jika bukan audio-only atau jika screen share
+                offerToReceiveAudio: true, // 始终准备好接收音频
+                offerToReceiveVideo: !this.isAudioOnly || this.isScreenSharing // 如果不是纯音频或正在共享屏幕，则准备好接收视频
             };
 
             const offer = await conn.peerConnection.createOffer(offerOptions);
             const modifiedOffer = new RTCSessionDescription({type: 'offer', sdp: this.modifySdpForOpus(offer.sdp)});
             await conn.peerConnection.setLocalDescription(modifiedOffer);
             ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-offer', sdp: conn.peerConnection.localDescription, audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
-        } catch (e) { Utils.log("Error creating/sending offer: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
+        } catch (e) { Utils.log("创建/发送提议时出错: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
     },
 
     handleOffer: async function (sdpOffer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
         const conn = ConnectionManager.connections[peerId];
-        if (!conn || !conn.peerConnection) { Utils.log("No PC to handle offer", Utils.logLevels.ERROR); return; }
+        if (!conn || !conn.peerConnection) { Utils.log("没有 PC 来处理提议", Utils.logLevels.ERROR); return; }
         try {
             await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpOffer));
             if (!this.isCallActive) {
@@ -360,7 +358,7 @@ const VideoCallManager = {
             const modifiedAnswer = new RTCSessionDescription({type: 'answer', sdp: this.modifySdpForOpus(answer.sdp)});
             await conn.peerConnection.setLocalDescription(modifiedAnswer);
             ConnectionManager.sendTo(peerId, { type: 'video-call-answer', sdp: conn.peerConnection.localDescription, audioOnly: this.isAudioOnly, isScreenShare: this.isScreenSharing, sender: UserManager.userId });
-        } catch (e) { Utils.log("Error handling offer: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
+        } catch (e) { Utils.log("处理提议时出错: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
     },
 
     handleAnswer: async function (sdpAnswer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
@@ -369,18 +367,18 @@ const VideoCallManager = {
         if (!conn || !conn.peerConnection) return;
         try {
             await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpAnswer));
-            Utils.log(`Answer from ${peerId} processed.`, Utils.logLevels.INFO);
-        } catch (e) { Utils.log("Error handling answer: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
+            Utils.log(`来自 ${peerId} 的应答已处理。`, Utils.logLevels.INFO);
+        } catch (e) { Utils.log("处理应答时出错: " + e, Utils.logLevels.ERROR); this.hangUpMedia(); }
     },
 
     toggleCamera: function () {
         if (!this.isCallActive || !this.localStream || this.isAudioOnly || this.isScreenSharing) {
-            if(this.isAudioOnly) NotificationManager.showNotification("Camera N/A in audio call.", "warning");
-            if(this.isScreenSharing) NotificationManager.showNotification("Camera N/A during screen share.", "warning");
+            if(this.isAudioOnly) NotificationManager.showNotification("纯音频通话中摄像头不可用。", "warning");
+            if(this.isScreenSharing) NotificationManager.showNotification("屏幕共享期间摄像头不可用。", "warning");
             return;
         }
         const videoTrack = this.localStream.getVideoTracks()[0];
-        if (!videoTrack) { NotificationManager.showNotification('Local video N/A.', 'warning'); return; }
+        if (!videoTrack) { NotificationManager.showNotification('本地视频不可用。', 'warning'); return; }
         this.isVideoEnabled = !this.isVideoEnabled; videoTrack.enabled = this.isVideoEnabled;
         this.updateCurrentCallUIState();
     },
@@ -392,41 +390,41 @@ const VideoCallManager = {
     },
 
     toggleAudioOnly: async function () {
-        if (this.isCallActive) { NotificationManager.showNotification("Cannot switch mode mid-call.", "warning"); return; }
+        if (this.isCallActive) { NotificationManager.showNotification("通话中无法切换模式。", "warning"); return; }
         this.isAudioOnly = !this.isAudioOnly;
-        Utils.log("Toggled AudioOnly mode (pre-call): " + this.isAudioOnly, Utils.logLevels.INFO);
+        Utils.log("已切换纯音频模式 (通话前): " + this.isAudioOnly, Utils.logLevels.INFO);
         this.updateCurrentCallUIState();
     },
 
-    // BARU: Fungsi untuk hanya menghentikan media, bukan seluruh koneksi
+    // 新增: 只挂断媒体，不关闭整个连接的函数
     hangUpMedia: function(notifyPeer = true) {
-        Utils.log(`Hanging up media for peer ${this.currentPeerId}. Notify: ${notifyPeer}`, Utils.logLevels.INFO);
+        Utils.log(`正在为对方 ${this.currentPeerId} 挂断媒体。通知: ${notifyPeer}`, Utils.logLevels.INFO);
         if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
 
         if (notifyPeer && (this.isCallActive || this.isCallPending) && this.currentPeerId) {
             ConnectionManager.sendTo(this.currentPeerId, {type: 'video-call-end', sender: UserManager.userId});
         }
-        this.cleanupCallMediaAndState(false); // false: JANGAN tutup RTCPeerConnection
+        this.cleanupCallMediaAndState(false); // false: 不要关闭 RTCPeerConnection
     },
 
-    // BARU: Fungsi untuk membatalkan panggilan yang tertunda
+    // 新增: 取消等待中通话的函数
     cancelPendingCall: function() {
-        Utils.log(`Cancelling pending call for peer ${this.currentPeerId}.`, Utils.logLevels.INFO);
+        Utils.log(`正在为对方 ${this.currentPeerId} 取消等待中的通话。`, Utils.logLevels.INFO);
         if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
-        // Tidak perlu mengirim video-call-cancel jika sudah dikirim sebelumnya
-        this.cleanupCallMediaAndState(false); // false: JANGAN tutup RTCPeerConnection
+        // 如果之前已经发送过 video-call-cancel，则无需再次发送
+        this.cleanupCallMediaAndState(false); // false: 不要关闭 RTCPeerConnection
     },
 
-    // DIMODIFIKASI: cleanupCallMediaAndState untuk menerima argumen closePeerConnection
+    // 修改: cleanupCallMediaAndState 接受 closePeerConnection 参数
     cleanupCallMediaAndState: function (closePeerConnection = true) {
-        Utils.log(`Cleaning up call media and state. Close PC: ${closePeerConnection}`, Utils.logLevels.INFO);
+        Utils.log(`正在清理通话媒体和状态。关闭 PC: ${closePeerConnection}`, Utils.logLevels.INFO);
         this.stopMusic(); ModalManager.hideCallingModal();
         if (this.statsInterval) clearInterval(this.statsInterval); this.statsInterval = null;
 
-        this.releaseMediaResources(); // Hentikan trek lokal
+        this.releaseMediaResources(); // 停止本地轨道
 
-        // Hapus trek dari RTCPeerConnection
-        const peerIdToClean = this.currentPeerId; // Simpan sebelum di-null-kan
+        // 从 RTCPeerConnection 中移除轨道
+        const peerIdToClean = this.currentPeerId; // 在置为 null 之前保存
         if (peerIdToClean) {
             const conn = ConnectionManager.connections[peerIdToClean];
             if (conn && conn.peerConnection) {
@@ -434,19 +432,17 @@ const VideoCallManager = {
                     if (sender.track) {
                         try {
                             conn.peerConnection.removeTrack(sender);
-                            Utils.log(`Removed track ${sender.track.kind} from PC for ${peerIdToClean}`, Utils.logLevels.DEBUG);
+                            Utils.log(`已从 ${peerIdToClean} 的 PC 中移除轨道 ${sender.track.kind}`, Utils.logLevels.DEBUG);
                         } catch (e) {
-                            Utils.log(`Error removing track from PC for ${peerIdToClean}: ${e.message}`, Utils.logLevels.WARN);
+                            Utils.log(`从 ${peerIdToClean} 的 PC 中移除轨道时出错: ${e.message}`, Utils.logLevels.WARN);
                         }
                     }
                 });
-                // Setelah menghapus trek, Anda mungkin perlu menegosiasikan ulang
-                // jika ingin memberi tahu peer lain secara formal bahwa trek telah hilang.
-                // Namun, event 'onended' pada trek jarak jauh seharusnya sudah cukup.
-                // Jika tidak, Anda bisa memanggil `this.createAndSendOffer()` di sini jika `this.isCaller`.
+                // 移除轨道后，如果想正式通知对方轨道已消失，你可能需要重新协商。
+                // 然而，远程轨道的 'onended' 事件应该足够了。
+                // 如果不够，如果 `this.isCaller`，可以在这里调用 `this.createAndSendOffer()`。
             }
         }
-
 
         if (typeof VideoCallUIManager !== 'undefined') {
             VideoCallUIManager.setLocalStream(null);
@@ -457,28 +453,28 @@ const VideoCallManager = {
         this.remoteStream = null;
         ModalManager.hideCallRequest();
 
-        const oldPeerIdForPCClosure = this.currentPeerId; // Simpan untuk penutupan PC jika diperlukan
+        const oldPeerIdForPCClosure = this.currentPeerId; // 保存以便在需要时关闭 PC
 
         this.isCallActive = false; this.isCallPending = false; this.isCaller = false;
         this.isAudioMuted = false; this.isAudioOnly = false; this.isScreenSharing = false; this.isVideoEnabled = true;
-        this.currentPeerId = null; // Penting: reset currentPeerId setelah digunakan untuk mengambil koneksi
+        this.currentPeerId = null; // 重要：在用于获取连接后重置 currentPeerId
 
         if (closePeerConnection && oldPeerIdForPCClosure) {
-            Utils.log(`Closing RTCPeerConnection with ${oldPeerIdForPCClosure} as part of full call end.`, Utils.logLevels.INFO);
-            ConnectionManager.close(oldPeerIdForPCClosure, false); // false: jangan kirim sinyal 'close' tambahan
+            Utils.log(`作为完整通话结束的一部分，正在关闭与 ${oldPeerIdForPCClosure} 的 RTCPeerConnection。`, Utils.logLevels.INFO);
+            ConnectionManager.close(oldPeerIdForPCClosure, false); // false: 不发送额外的 'close' 信号
         } else if (oldPeerIdForPCClosure) {
-            Utils.log(`RTCPeerConnection with ${oldPeerIdForPCClosure} RETAINED. Media hung up.`, Utils.logLevels.INFO);
+            Utils.log(`与 ${oldPeerIdForPCClosure} 的 RTCPeerConnection 已保留。媒体已挂断。`, Utils.logLevels.INFO);
         }
 
-        Utils.log('Call media and state cleaned up.', Utils.logLevels.INFO);
-        this.updateCurrentCallUIState(); // Perbarui UI terakhir kali
+        Utils.log('通话媒体和状态已清理。', Utils.logLevels.INFO);
+        this.updateCurrentCallUIState(); // 最后更新一次 UI
     },
 
     releaseMediaResources: function () {
         if (this.localStream) {
             this.localStream.getTracks().forEach(track => {
                 track.stop();
-                Utils.log(`Stopped local track: ${track.kind} id: ${track.id}`, Utils.logLevels.DEBUG);
+                Utils.log(`已停止本地轨道: ${track.kind} id: ${track.id}`, Utils.logLevels.DEBUG);
             });
             this.localStream = null;
         }
@@ -502,16 +498,16 @@ const VideoCallManager = {
                 if (this.isCallPending && this.currentPeerId === peerId) {
                     if (this.isCaller) { this.stopMusic(); ModalManager.hideCallingModal(); }
                     if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
-                    NotificationManager.showNotification(`Call rejected by ${UserManager.contacts[peerId]?.name || 'peer'}. Reason: ${message.reason || 'N/A'}`, 'warning');
-                    this.cleanupCallMediaAndState(false); // false: JANGAN tutup PC
+                    NotificationManager.showNotification(`通话被 ${UserManager.contacts[peerId]?.name || '对方'} 拒绝。原因: ${message.reason || 'N/A'}`, 'warning');
+                    this.cleanupCallMediaAndState(false); // false: 不要关闭 PC
                 }
                 break;
             case 'video-call-cancel':
                 if (this.isCallPending && this.currentPeerId === peerId) {
                     if (!this.isCaller) { this.stopMusic(); ModalManager.hideCallRequest(); }
                     if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout); this.callRequestTimeout = null;
-                    if (!this.isCaller) NotificationManager.showNotification(`Call cancelled by ${UserManager.contacts[peerId]?.name || 'peer'}.`, 'warning');
-                    this.cleanupCallMediaAndState(false); // false: JANGAN tutup PC
+                    if (!this.isCaller) NotificationManager.showNotification(`通话被 ${UserManager.contacts[peerId]?.name || '对方'} 取消。`, 'warning');
+                    this.cleanupCallMediaAndState(false); // false: 不要关闭 PC
                 }
                 break;
             case 'video-call-offer':
@@ -521,17 +517,17 @@ const VideoCallManager = {
             case 'video-call-answer':
                 if (this.isCallActive && this.currentPeerId === peerId) this.handleAnswer(message.sdp, peerId, message.audioOnly || false, message.isScreenShare || false);
                 break;
-            case 'video-call-end': // Pesan ini sekarang berarti "media telah berakhir"
+            case 'video-call-end': // 此消息现在意味着“媒体已结束”
                 if ((this.isCallActive || this.isCallPending) && this.currentPeerId === peerId) {
-                    NotificationManager.showNotification(`${UserManager.contacts[peerId]?.name || 'Peer'} ended the call media.`, 'info');
-                    this.cleanupCallMediaAndState(false); // false: JANGAN tutup PC
+                    NotificationManager.showNotification(`${UserManager.contacts[peerId]?.name || '对方'} 结束了通话媒体。`, 'info');
+                    this.cleanupCallMediaAndState(false); // false: 不要关闭 PC
                 }
                 break;
             case 'video-call-stats': if (this.isCallActive && this.currentPeerId === peerId) this.handleCallStats(message.stats); break;
         }
     },
     handleCallStats: function (stats) {
-        if (stats && typeof stats.rtt === 'number') Utils.log(`Call RTT to ${this.currentPeerId}: ${stats.rtt}ms. Lost: ${stats.packetsLost || 'N/A'}`, Utils.logLevels.DEBUG);
+        if (stats && typeof stats.rtt === 'number') Utils.log(`到 ${this.currentPeerId} 的通话 RTT: ${stats.rtt}ms. 丢包: ${stats.packetsLost || 'N/A'}`, Utils.logLevels.DEBUG);
     },
     collectAndSendStats: async function () {
         if (!this.isCallActive || !this.currentPeerId) return;
@@ -550,6 +546,6 @@ const VideoCallManager = {
                 if (report.type === 'inbound-rtp' && report.kind === 'audio') if (report.bytesReceived !== undefined) relevantStats.bytesReceived = report.bytesReceived;
             });
             if (relevantStats.rtt !== null) ConnectionManager.sendTo(this.currentPeerId, { type: 'video-call-stats', stats: relevantStats, sender: UserManager.userId });
-        } catch (e) { Utils.log("Error collecting WebRTC stats: " + e, Utils.logLevels.WARN); }
+        } catch (e) { Utils.log("收集 WebRTC 统计数据时出错: " + e, Utils.logLevels.WARN); }
     }
 };

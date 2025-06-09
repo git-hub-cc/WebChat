@@ -3,122 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P Chat Modern</title>
+    <title>P2P 聊天</title>
     <link rel="stylesheet" href="css/base.css">
-    <!-- Placeholder for theme-specific CSS -->
+    <!-- 主题特定 CSS 占位符 -->
     <link rel="stylesheet" href="css/原神-浅色.css">
     <link id="theme-stylesheet" rel="stylesheet" href="css/原神-浅色.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
 <div class="app-container">
-    <!-- Left Sidebar (Navigation) -->
+    <!-- 左侧边栏 (导航) -->
     <aside class="sidebar-nav" id="sidebarNav">
         <div class="sidebar-header">
-            <button class="menu-btn" id="mainMenuBtn" title="Menu">☰</button>
-            <input type="search" class="search-bar" id="chatSearchInput" placeholder="Search...">
+            <button class="menu-btn" id="mainMenuBtn" title="菜单">☰</button>
+            <input type="search" class="search-bar" id="chatSearchInput" placeholder="搜索...">
         </div>
         <div class="nav-tabs">
-            <button class="nav-tab active" data-tab-target="all-chats" id="tabAllChats">All</button>
-            <button class="nav-tab" data-tab-target="contacts-list" id="tabContacts">Contacts</button>
-            <button class="nav-tab" data-tab-target="groups-list" id="tabGroups">Groups</button>
+            <button class="nav-tab active" data-tab-target="all-chats" id="tabAllChats">全部</button>
+            <button class="nav-tab" data-tab-target="contacts-list" id="tabContacts">联系人</button>
+            <button class="nav-tab" data-tab-target="groups-list" id="tabGroups">群组</button>
         </div>
         <div class="chat-list-container">
             <ul id="chatListNav">
-                <!-- Chat items will be populated here by JS -->
-                <li class="chat-list-item-empty">No chats yet.</li>
+                <!-- 聊天项目将由 JS 在此处填充 -->
+                <li class="chat-list-item-empty">暂无聊天。</li>
             </ul>
         </div>
-        <button class="new-chat-fab" id="newChatFab" title="New Chat/Group">+</button>
+        <button class="new-chat-fab" id="newChatFab" title="新聊天/群组">+</button>
     </aside>
-    <!-- Main Chat Area -->
+    <!-- 主聊天区 -->
     <main class="chat-area" id="chatArea">
         <div class="chat-area-content">
             <header class="chat-header-main">
-                <button class="back-to-list-btn" id="backToListBtn" title="Back to list">←</button>
+                <button class="back-to-list-btn" id="backToListBtn" title="返回列表">←</button>
                 <div class="chat-info-main">
                     <div class="chat-avatar-main" id="currentChatAvatarMain"></div>
                     <div class="chat-details-main-header">
-                        <div class="chat-title-main" id="currentChatTitleMain">Select a chat</div>
+                        <div class="chat-title-main" id="currentChatTitleMain">选择一个聊天</div>
                         <div class="chat-status-main" id="currentChatStatusMain"></div>
                     </div>
                 </div>
                 <div class="chat-actions-main">
-                    <button class="header-action-btn" id="videoCallButtonMain" title="Video Call" disabled>📹</button>
-                    <button class="header-action-btn" id="audioCallButtonMain" title="Audio Call" disabled>🎤</button>
-                    <button class="header-action-btn" id="screenShareButtonMain" title="Share Screen" disabled>🖥️</button>
-                    <button class="header-action-btn" id="chatDetailsBtnMain" title="Chat Info" disabled>ℹ️</button>
+                    <button class="header-action-btn" id="videoCallButtonMain" title="视频通话" disabled>📹</button>
+                    <button class="header-action-btn" id="audioCallButtonMain" title="语音通话" disabled>🎤</button>
+                    <button class="header-action-btn" id="screenShareButtonMain" title="屏幕共享" disabled>🖥️</button>
+                    <button class="header-action-btn" id="chatDetailsBtnMain" title="聊天信息" disabled>ℹ️</button>
                 </div>
             </header>
 
             <div class="no-chat-selected" id="noChatSelectedScreen">
                 <div class="logo-placeholder">💬</div>
-                <h2>P2P Modern Chat</h2>
-                <p>Select a chat from the list to start messaging, or create a new one.</p>
-                <p id="connectionStatusGlobal" class="status-indicator">Status: <span id="connectionStatusText">Initializing...</span></p>
+                <h2>P2P 现代聊天</h2>
+                <p>从列表中选择聊天开始，或创建一个新聊天。</p>
+                <p id="connectionStatusGlobal" class="status-indicator">状态: <span id="connectionStatusText">初始化中...</span></p>
             </div>
             <div class="chat-messages-container" id="chatBox">
-                <!-- Messages will be populated here. noChatSelectedScreen is no longer a child. -->
+                <!-- 消息将在此处填充。noChatSelectedScreen 不再是其子元素。 -->
             </div>
 
             <footer class="chat-input-container">
                 <div id="filePreviewContainer" class="file-preview-input"></div>
                 <div id="audioPreviewContainer" class="audio-preview-input"></div>
                 <div class="input-row">
-                    <button class="icon-btn attach-btn" id="attachBtnMain" title="Attach file" disabled>📎</button>
+                    <button class="icon-btn attach-btn" id="attachBtnMain" title="附加文件" disabled>📎</button>
                     <input type="file" id="fileInput" onchange="MediaManager.handleFileSelect(event)">
-                    <textarea id="messageInput" placeholder="Write a message..." disabled></textarea>
-                    <!-- <button class="icon-btn emoji-btn" id="emojiBtnMain" title="Emoji" disabled>😊</button> -->
-                    <button class="icon-btn send-btn" id="sendButtonMain" title="Send" disabled>➤</button>
-                    <button class="icon-btn record-btn" id="voiceButtonMain" title="Record voice" disabled>🎙️</button>
+                    <textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
+                    <!-- <button class="icon-btn emoji-btn" id="emojiBtnMain" title="表情" disabled>😊</button> -->
+                    <button class="icon-btn send-btn" id="sendButtonMain" title="发送" disabled>➤</button>
+                    <button class="icon-btn record-btn" id="voiceButtonMain" title="录制语音" disabled>🎙️</button>
                 </div>
             </footer>
         </div>
+        <!-- 为拖放功能添加 -->
+        <div class="drop-overlay" id="dropOverlay">
+            <div class="drop-overlay-text">拖拽文件到此处发送</div>
+        </div>
     </main>
 
-    <!-- Right Details Panel -->
+    <!-- 右侧详情面板 -->
     <aside class="details-panel" id="detailsPanel">
         <header class="details-header">
-            <h3 id="detailsPanelTitle">Chat Info</h3>
-            <button class="icon-btn close-details-btn" id="closeDetailsBtnMain" title="Close details">✕</button>
+            <h3 id="detailsPanelTitle">聊天信息</h3>
+            <button class="icon-btn close-details-btn" id="closeDetailsBtnMain" title="关闭详情">✕</button>
         </header>
         <div class="details-content" id="detailsPanelContent">
             <div class="details-section" id="detailsContactInfo">
                 <div class="details-avatar" id="detailsAvatar"></div>
-                <h4 id="detailsName">Name</h4>
+                <h4 id="detailsName">名称</h4>
                 <p id="detailsId">ID: </p>
-                <p id="detailsStatus">Status: </p>
+                <p id="detailsStatus">状态: </p>
             </div>
-            <!-- AI Contact About Section -->
+            <!-- AI 联系人“关于”部分 -->
             <div class="details-section" id="aiContactAboutSection" style="display: none;">
-                <h4>About <span id="aiContactAboutName">AI Name</span></h4>
+                <h4>关于 <span id="aiContactAboutName">AI 名称</span></h4>
                 <div id="aiContactDetailsContent">
                     <p><strong>基本信息</strong></p>
                     <ul id="aiContactBasicInfoList"></ul>
-                    <p><strong>关于 <span id="aiContactAboutNameSub">AI Name</span></strong></p>
+                    <p><strong>关于 <span id="aiContactAboutNameSub">AI 名称</span></strong></p>
                     <p id="aiContactAboutText"></p>
                 </div>
             </div>
-            <!-- End AI Contact About Section -->
-            <!-- AI TTS Configuration Section -->
+            <!-- AI 联系人“关于”部分结束 -->
+            <!-- AI TTS 配置部分 -->
             <div class="details-section" id="aiTtsConfigSection" style="display: none;">
                 <h4 class="collapsible-header" id="aiTtsConfigHeader">
-                    TTS Configuration <span class="collapse-icon">▶</span>
+                    TTS 配置 <span class="collapse-icon">▶</span>
                 </h4>
                 <div class="collapsible-content tts-config-content-details" id="aiTtsConfigContent" style="display: none;">
                     <div id="ttsConfigFormContainer">
-                        <!-- TTS settings will be dynamically populated here by JS -->
+                        <!-- TTS 设置将由 JS 在此动态填充 -->
                     </div>
-                    <button id="saveAiTtsSettingsBtnDetails" class="btn btn-primary" style="margin-top: 15px; width: 100%;">Save TTS Settings</button>
+                    <button id="saveAiTtsSettingsBtnDetails" class="btn btn-primary" style="margin-top: 15px; width: 100%;">保存 TTS 设置</button>
                 </div>
-                <p>
-                    <strong>GPT-SoVITS 开发者：</strong><a href="https://space.bilibili.com/5760446" target="_blank" rel="noopener noreferrer" >@花儿不哭</a><br>
-                    <strong>模型训练者：</strong><a href="https://space.bilibili.com/6589795" target="_blank" rel="noopener noreferrer" >@红血球AE3803</a>  <a href="https://space.bilibili.com/518098961" target="_blank" rel="noopener noreferrer" >@白菜工厂1145号员工</a><br>
-                    <strong>推理特化包适配 & 在线推理：</strong><a href="https://gsv.acgnai.top/" target="_blank" rel="noopener noreferrer" >@AI-Hobbyist</a><br>
-                </p>
+                <div class="tts-attribution-section">
+                    <p>
+                        <strong>GPT-SoVITS 开发者：</strong><a href="https://space.bilibili.com/5760446" target="_blank" rel="noopener noreferrer" >@花儿不哭</a><br>
+                        <strong>模型训练者：</strong><a href="https://space.bilibili.com/6589795" target="_blank" rel="noopener noreferrer" >@红血球AE3803</a>  <a href="https://space.bilibili.com/518098961" target="_blank" rel="noopener noreferrer" >@白菜工厂1145号员工</a><br>
+                        <strong>推理特化包适配 & 在线推理：</strong><a href="https://gsv.acgnai.top/" target="_blank" rel="noopener noreferrer" >@AI-Hobbyist</a><br>
+                    </p>
+                </div>
                 <div class="tts-attribution-section">
                     <h5 class="collapsible-header attribution-sub-header" id="ttsAttributionCollapsibleTrigger">
-                        More <span class="collapse-icon">▶</span>
+                        更多 <span class="collapse-icon">▶</span>
                     </h5>
                     <div class="collapsible-content attribution-sub-content" id="ttsAttributionCollapsibleContent" style="display: none;">
                         <p>
@@ -131,66 +137,66 @@
                     </div>
                 </div>
             </div>
-            <!-- End AI TTS Configuration Section -->
-            <!-- Chat Actions Section -->
+            <!-- AI TTS 配置部分结束 -->
+            <!-- 聊天操作部分 -->
             <div class="details-section" id="currentChatActionsDetails" style="display: none;">
-                <h4>Chat Actions</h4>
-                <button id="clearCurrentChatBtnDetails" class="btn btn-warning">Clear Chat History</button>
+                <h4>聊天操作</h4>
+                <button id="clearCurrentChatBtnDetails" class="btn btn-warning">清空聊天记录</button>
             </div>
-            <!-- Contact Settings Section -->
+            <!-- 联系人设置部分 -->
             <div class="details-section" id="contactActionsDetails" style="display: none;">
-                <h4>Contact Settings</h4>
-                <button id="deleteContactBtnDetails" class="btn btn-danger">Delete Contact</button>
+                <h4>联系人设置</h4>
+                <button id="deleteContactBtnDetails" class="btn btn-danger">删除联系人</button>
             </div>
-            <!-- Group Management Section -->
+            <!-- 群组管理部分 -->
             <div class="details-section" id="detailsGroupManagement" style="display: none;">
-                <h4>Members (<span id="groupMemberCount">0</span>)</h4>
+                <h4>成员 (<span id="groupMemberCount">0</span>)</h4>
                 <div id="groupMemberListDetails" class="member-list-details"></div>
                 <div id="addGroupMemberArea" class="add-member-details" style="display: none;">
-                    <h5>Add Member</h5>
+                    <h5>添加成员</h5>
                     <select id="contactsDropdownDetails"></select>
-                    <button id="addMemberBtnDetails" class="btn btn-primary">Add</button>
+                    <button id="addMemberBtnDetails" class="btn btn-primary">添加</button>
                 </div>
                 <div id="leftMembersArea" class="left-members-details" style="display: none;">
-                    <h5>Previously Left Members</h5>
+                    <h5>已退出的成员</h5>
                     <div id="leftMemberListDetails"></div>
                 </div>
             </div>
             <div class="details-section" id="groupActionsDetails" style="display: none;">
-                <h4>Group Settings</h4>
-                <button id="leaveGroupBtnDetails" class="btn btn-danger">Leave Group</button>
-                <button id="dissolveGroupBtnDetails" class="btn btn-danger">Dissolve Group</button>
+                <h4>群组设置</h4>
+                <button id="leaveGroupBtnDetails" class="btn btn-danger">退出群组</button>
+                <button id="dissolveGroupBtnDetails" class="btn btn-danger">解散群组</button>
             </div>
         </div>
     </aside>
 </div>
-<!-- Modals -->
+<!-- 模态框 -->
 <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
-    <div class="loading-text">Connecting, please wait...</div>
+    <div class="loading-text">连接中，请稍候...</div>
 </div>
 <div id="videoCallRequest" class="modal-like video-call-request">
     <div class="modal-content">
         <div class="video-call-avatar">👤</div>
-        <h3>Video Call Request</h3>
-        <p>Incoming call...</p>
+        <h3>视频通话请求</h3>
+        <p>来电...</p>
         <div class="video-call-request-buttons">
-            <button class="btn btn-danger reject-call" onclick="VideoCallManager.rejectCall()">Reject</button>
-            <button class="btn btn-success accept-call" onclick="VideoCallManager.acceptCall()">Accept</button>
+            <button class="btn btn-danger reject-call" onclick="VideoCallManager.rejectCall()">拒绝</button>
+            <button class="btn btn-success accept-call" onclick="VideoCallManager.acceptCall()">接听</button>
         </div>
     </div>
 </div>
 <div id="callingModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 id="callingModalTitle">Calling...</h2>
+            <h2 id="callingModalTitle">呼叫中...</h2>
         </div>
         <div class="modal-body">
             <div class="video-call-avatar" id="callingModalAvatar">👤</div>
-            <p id="callingModalText">Contacting [Peer Name]...</p>
+            <p id="callingModalText">正在联系 [对方名称]...</p>
         </div>
         <div class="modal-footer">
-            <button id="callingModalCancelBtn" class="btn btn-danger">Cancel Call</button>
+            <button id="callingModalCancelBtn" class="btn btn-danger">取消呼叫</button>
         </div>
     </div>
 </div>
@@ -202,40 +208,40 @@
     <div class="video-call-controls">
         <button class="video-call-button toggle-camera" id="toggleCameraBtn" onclick="VideoCallManager.toggleCamera()">📹</button>
         <button class="video-call-button mute-audio" id="toggleAudioBtn" onclick="VideoCallManager.toggleAudio()">🎤</button>
-        <button class="video-call-button toggle-pip" id="togglePipBtn" title="Minimize Video">🖼️</button>
+        <button class="video-call-button toggle-pip" id="togglePipBtn" title="画中画">🖼️</button>
         <button class="video-call-button end-call" onclick="VideoCallManager.endCall()">📞</button>
         <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">🔊</button>
     </div>
 </div>
-<!-- Main Menu / Settings Modal -->
+<!-- 主菜单 / 设置模态框 -->
 <div id="mainMenuModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Menu & Settings</h2>
+            <h2>菜单与设置</h2>
             <button class="icon-btn close-modal-btn" data-modal-id="mainMenuModal">✕</button>
         </div>
         <div class="modal-body">
             <div class="settings-section">
-                <h3>Your User ID</h3>
+                <h3>您的用户 ID</h3>
                 <div class="user-id-display">
-                    <span id="modalUserIdValue">Generating...</span>
-                    <button id="modalCopyIdBtn" class="btn btn-secondary">Copy ID</button>
+                    <span id="modalUserIdValue">生成中...</span>
+                    <button id="modalCopyIdBtn" class="btn btn-secondary">复制 ID</button>
                 </div>
             </div>
             <div class="settings-section">
-                <h3>Theme</h3>
+                <h3>主题</h3>
                 <div class="settings-item">
-                    <label for="colorSchemeCustomSelectContainer">Color Scheme:</label>
+                    <label for="colorSchemeCustomSelectContainer">配色方案:</label>
                     <div class="custom-select" id="colorSchemeCustomSelectContainer">
-                        <div class="selected" id="colorSchemeSelectedValue">Auto (Browser)</div>
+                        <div class="selected" id="colorSchemeSelectedValue">自动 (浏览器)</div>
                         <div class="options" id="colorSchemeOptionsContainer">
                         </div>
                     </div>
                 </div>
                 <div class="settings-item">
-                    <label for="themeCustomSelectContainer">Select Theme:</label>
+                    <label for="themeCustomSelectContainer">选择主题:</label>
                     <div class="custom-select" id="themeCustomSelectContainer">
-                        <div class="selected" id="themeSelectedValue">Select a Theme</div>
+                        <div class="selected" id="themeSelectedValue">选择一个主题</div>
                         <div class="options" id="themeOptionsContainer">
                         </div>
                     </div>
@@ -244,55 +250,55 @@
 
             <div class="settings-section">
                 <h3 class="collapsible-header">
-                    AI & API Configuration <span class="collapse-icon">▶</span>
+                    AI 与 API 配置 <span class="collapse-icon">▶</span>
                 </h3>
-                <div class="collapsible-content" style="display: none;"> <!-- Initially collapsed -->
+                <div class="collapsible-content" style="display: none;"> <!-- 初始折叠 -->
                     <div class="settings-item">
-                        <label for="apiEndpointInput">API Endpoint:</label>
-                        <input type="text" id="apiEndpointInput" placeholder="e.g., https://api.openai.com/v1/chat/completions">
+                        <label for="apiEndpointInput">API 端点:</label>
+                        <input type="text" id="apiEndpointInput" placeholder="例如: https://api.openai.com/v1/chat/completions">
                     </div>
                     <div class="settings-item">
-                        <label for="apiKeyInput">API Key:</label>
-                        <input type="password" id="apiKeyInput" placeholder="e.g., Bearer sk-xxxx">
+                        <label for="apiKeyInput">API 密钥:</label>
+                        <input type="password" id="apiKeyInput" placeholder="例如: Bearer sk-xxxx">
                     </div>
                     <div class="settings-item">
-                        <label for="apiModelInput">Model Name:</label>
-                        <input type="text" id="apiModelInput" placeholder="e.g., gpt-4o">
+                        <label for="apiModelInput">模型名称:</label>
+                        <input type="text" id="apiModelInput" placeholder="例如: gpt-4o">
                     </div>
                     <div class="settings-item">
-                        <label for="apiMaxTokensInput">Max Tokens:</label>
-                        <input type="number" id="apiMaxTokensInput" placeholder="e.g., 1000" min="1">
+                        <label for="apiMaxTokensInput">最大令牌数:</label>
+                        <input type="number" id="apiMaxTokensInput" placeholder="例如: 1000" min="1">
                     </div>
                     <div class="settings-item">
-                        <label for="ttsApiEndpointInput">TTS API Endpoint:</label>
+                        <label for="ttsApiEndpointInput">TTS API 端点:</label>
                         <input type="text" id="ttsApiEndpointInput"
-                               placeholder="e.g., http://localhost:8000/infer_single">
+                               placeholder="例如: http://localhost:8000/infer_single">
                     </div>
                     <h4 class="collapsible-header">
-                        Advanced <span class="collapse-icon">▶</span>
+                        高级选项 <span class="collapse-icon">▶</span>
                     </h4>
                     <div class="collapsible-content" style="display: none;">
-                        <p>For connecting if signaling server fails or for direct peer connection.</p>
+                        <p>用于信令服务器故障或需要直接点对点连接时。</p>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.createOffer(null, { isManual: true })" id="modalCreateOfferBtn" class="btn">1. Create Offer</button>
+                            <button onclick="ConnectionManager.createOffer(null, { isManual: true })" id="modalCreateOfferBtn" class="btn">1. 创建连接提议</button>
                         </div>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.createAnswer({ isManual: true })" id="modalCreateAnswerBtn" class="btn">2. Create Answer (after pasting offer)</button>
+                            <button onclick="ConnectionManager.createAnswer({ isManual: true })" id="modalCreateAnswerBtn" class="btn">2. 创建应答 (粘贴提议后)</button>
                         </div>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.handleAnswer({ isManual: true })" id="modalHandleAnswerBtn" class="btn">3. Accept Answer (after pasting answer)</button>
+                            <button onclick="ConnectionManager.handleAnswer({ isManual: true })" id="modalHandleAnswerBtn" class="btn">3. 接受应答 (粘贴应答后)</button>
                         </div>
                         <div class="manual-connect-step">
-                            <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="Paste peer's connection info here..."></textarea>
-                            <button class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
+                            <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="在此粘贴对方的连接信息..."></textarea>
+                            <button class="btn btn-secondary" id="modalCopySdpBtn">复制我的信息</button>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="settings-section">
-                <h3>Preferences</h3>
+                <h3>偏好设置</h3>
                 <div class="settings-item">
-                    <label for="autoConnectToggle">Auto-connect:</label>
+                    <label for="autoConnectToggle">自动连接:</label>
                     <label class="switch">
                         <input type="checkbox" id="autoConnectToggle">
                         <span class="slider round"></span>
@@ -300,41 +306,41 @@
                 </div>
             </div>
             <div class="settings-section">
-                <h3>Network Status</h3>
-                <div id="modalNetworkInfo">Detecting...</div>
+                <h3>网络状态</h3>
+                <div id="modalNetworkInfo">检测中...</div>
                 <div class="connection-quality">
-                    Quality: <div class="quality-indicator" id="modalQualityIndicator"></div> <span id="modalQualityText">N/A</span>
+                    质量: <div class="quality-indicator" id="modalQualityIndicator"></div> <span id="modalQualityText">未知</span>
                 </div>
-                <button id="checkNetworkBtnModal" class="btn btn-secondary">Re-check Network</button>
+                <button id="checkNetworkBtnModal" class="btn btn-secondary">重新检测网络</button>
             </div>
             <div class="settings-section">
-                <h3>Danger Zone</h3>
-                <button id="modalResetAllConnectionsBtn" class="btn btn-danger">Reset All Connections</button>
-                <button id="modalClearContactsBtn" class="btn btn-danger">Clear All Contacts</button>
-                <button id="modalClearAllChatsBtn" class="btn btn-danger">Clear All Chat History</button>
+                <h3>操作</h3>
+                <button id="modalResetAllConnectionsBtn" class="btn btn-danger">重置所有连接</button>
+                <button id="modalClearContactsBtn" class="btn btn-danger">清空所有联系人</button>
+                <button id="modalClearAllChatsBtn" class="btn btn-danger">清空所有聊天记录</button>
             </div>
         </div>
     </div>
 </div>
-<!-- New Chat/Group Modal -->
+<!-- 新建聊天/群组模态框 -->
 <div id="newContactGroupModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>New Chat / Group</h2>
+            <h2>新建聊天 / 群组</h2>
             <button class="icon-btn close-modal-btn" data-modal-id="newContactGroupModal">✕</button>
         </div>
         <div class="modal-body">
             <div class="settings-section">
-                <h3>Add New Contact</h3>
-                <input type="text" id="newPeerIdInput" placeholder="Enter Peer ID">
-                <input type="text" id="newPeerNameInput" placeholder="Enter Peer Nickname (Optional)">
-                <button id="confirmNewContactBtn" class="btn btn-primary">Add Contact</button>
+                <h3>添加新联系人</h3>
+                <input type="text" id="newPeerIdInput" placeholder="输入对方 ID">
+                <input type="text" id="newPeerNameInput" placeholder="输入对方昵称 (可选)">
+                <button id="confirmNewContactBtn" class="btn btn-primary">添加联系人</button>
             </div>
             <hr>
             <div class="settings-section">
-                <h3>Create New Group</h3>
-                <input type="text" id="newGroupNameInput" placeholder="Enter Group Name">
-                <button id="confirmNewGroupBtnModal" class="btn btn-primary">Create Group</button>
+                <h3>创建新群组</h3>
+                <input type="text" id="newGroupNameInput" placeholder="输入群组名称">
+                <button id="confirmNewGroupBtnModal" class="btn btn-primary">创建群组</button>
             </div>
         </div>
     </div>
@@ -342,62 +348,62 @@
 <div id="openSourceInfoModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>Project Open Source! 🚀</h2>
-            <button class="icon-btn close-modal-btn" id="closeOpenSourceInfoModalBtn" title="Close">✕</button>
+            <h2>项目已开源！🚀</h2>
+            <button class="icon-btn close-modal-btn" id="closeOpenSourceInfoModalBtn" title="关闭">✕</button>
         </div>
         <div class="modal-body" style="text-align: center;">
             <p>
-                P2P-Web-Chat is now open source! We're excited to share it with the community.
+                P2P-Web-Chat 现已开源！我们很高兴能与社区分享。
             </p>
             <p>
-                You can find the source code and contribute on GitHub:
+                您可以在 GitHub 上找到源代码并参与贡献：
                 <br>
                 <a href="https://github.com/git-hub-cc/P2P-Web-Chat" target="_blank" rel="noopener noreferrer">
                     https://github.com/git-hub-cc/P2P-Web-Chat
                 </a>
             </p>
             <p>
-                If you encounter any issues or have suggestions, please open an issue on GitHub.
+                如果您遇到任何问题或有建议，请在 GitHub 上提交 issue。
             </p>
             <p>
-                For urgent matters, you can reach out via WeChat:
+                如有紧急事宜，您可以通过微信联系我们：
             </p>
-            <img src="/img/wechat.png" alt="WeChat QR Code" style="max-width: 150px; margin: 10px auto; display: block; border: 1px solid var(--border-color);">
+            <img src="/img/wechat.png" alt="微信二维码" style="max-width: 150px; margin: 10px auto; display: block; border: 1px solid var(--border-color);">
             <p style="font-size: 0.9em; color: var(--text-color-light);">
-                This message will auto-close in <span id="openSourceModalTimer">15</span> seconds.
+                此消息将在 <span id="openSourceModalTimer">8</span> 秒后自动关闭。
             </p>
         </div>
         <div class="modal-footer">
-            <button id="permanentlyCloseOpenSourceInfoModalBtn" class="btn btn-secondary">Don't Show Again</button>
+            <button id="permanentlyCloseOpenSourceInfoModalBtn" class="btn btn-secondary">不再显示</button>
         </div>
     </div>
 </div>
 <script>
     window.SPECIAL_CONTACTS_DEFINITIONS = [];
 </script>
-<!-- Main application scripts -->
-<script src="config/Config.js"></script> <!-- Config should be early -->
+<!-- 主应用程序脚本 -->
+<script src="config/Config.js"></script> <!-- 配置应首先加载 -->
 
-<!-- Utilities -->
+<!-- 工具类 -->
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>
 <script src="js/DBManager.js"></script>
 
-<!-- Core Logic Managers -->
+<!-- 核心逻辑管理器 -->
 <script src="js/UserManager.js"></script>
 <script src="js/ConnectionManager.js"></script>
-<script src="js/MediaManager.js"></script> <!-- Core Media Logic -->
-<script src="js/VideoCallManager.js"></script> <!-- Core Video Call Logic -->
-<script src="js/MessageManager.js"></script> <!-- Core Message Logic -->
+<script src="js/MediaManager.js"></script> <!-- 核心媒体逻辑 -->
+<script src="js/VideoCallManager.js"></script> <!-- 核心视频通话逻辑 -->
+<script src="js/MessageManager.js"></script> <!-- 核心消息逻辑 -->
 <script src="js/ChatManager.js"></script>
 <script src="js/GroupManager.js"></script>
 
-<!-- Specialized Handlers/Managers (often used by core logic or specific UI parts) -->
+<!-- 专业处理器/管理器 (通常由核心逻辑或特定UI部分使用) -->
 <script src="js/MessageTtsHandler.js"></script>
-<script src="js/TtsUIManager.js"></script> <!-- For Details Panel TTS Config Form -->
+<script src="js/TtsUIManager.js"></script> <!-- 用于详情面板的TTS配置表单 -->
 
-<!-- UI Component Managers -->
-<script src="js/UIManager.js"></script> <!-- Slimmed down UIManager -->
+<!-- UI组件管理器 -->
+<script src="js/UIManager.js"></script> <!-- 精简的 UIManager -->
 <script src="js/ModalManager.js"></script>
 <script src="js/NotificationManager.js"></script>
 <script src="js/SettingsUIManager.js"></script>
@@ -405,13 +411,13 @@
 <script src="js/ChatAreaUIManager.js"></script>
 <script src="js/SidebarUIManager.js"></script>
 <script src="js/DetailsPanelUIManager.js"></script>
-<script src="js/VideoCallUIManager.js"></script> <!-- Video Call specific UI -->
-<script src="js/MediaUIManager.js"></script> <!-- Media Previews UI -->
+<script src="js/VideoCallUIManager.js"></script> <!-- 视频通话特定UI -->
+<script src="js/MediaUIManager.js"></script> <!-- 媒体预览UI -->
 
-<!-- Theme Loader (loads theme CSS and data JS with SPECIAL_CONTACTS_DEFINITIONS) -->
+<!-- 主题加载器 (加载主题CSS和包含SPECIAL_CONTACTS_DEFINITIONS的数据JS) -->
 <script src="js/ThemeLoader.js"></script>
 
-<!-- App Initializer (should be last or near last) -->
+<!-- 应用初始化程序 (应放在最后或接近最后) -->
 <script src="js/AppInitializer.js"></script>
 </body>
 </html>

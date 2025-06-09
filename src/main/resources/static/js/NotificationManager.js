@@ -1,8 +1,8 @@
-// NEW FILE: NotificationManager.js
-// Responsibilities:
-// - Displaying and managing UI notifications.
+// 新文件: NotificationManager.js (已翻译)
+// 职责:
+// - 显示和管理 UI 通知。
 const NotificationManager = {
-    showNotification: function (message, type = 'info') { // type: 'info', 'success', 'warning', 'error'
+    showNotification: function (message, type = 'info') { // type: 'info' (信息), 'success' (成功), 'warning' (警告), 'error' (错误)
         const container = document.querySelector('.notification-container') || this._createNotificationContainer();
 
         const notification = document.createElement('div');
@@ -12,7 +12,7 @@ const NotificationManager = {
         notification.innerHTML = `
         <span class="notification-icon">${iconMap[type]}</span>
         <span class="notification-message">${Utils.escapeHtml(message)}</span>
-        <button class="notification-close" title="Close">×</button>
+        <button class="notification-close" title="关闭">×</button>
     `;
         container.appendChild(notification);
 

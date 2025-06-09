@@ -284,7 +284,7 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--gs-starlight-blue); text-shadow: 0 0 3px rgba(var(--gs-starlight-blue-rgb),0.5); }
 
-.chat-messages-container { padding: 15px; background-color: rgba(var(--gs-dawn-beige-bg-rgb), 0.3); /* Very subtle beige in chat */ }
+.chat-messages-container { padding: 15px; /* Very subtle beige in chat */ }
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     content: "✨"; /* 用闪烁的星星代替“空” */

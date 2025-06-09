@@ -1,8 +1,8 @@
-package com.example.p2pwebchatboot.handler;
+package com.p2pChat.handler;
 
-import com.example.p2pwebchatboot.model.MessageType;
-import com.example.p2pwebchatboot.model.SignalingMessage;
-import com.example.p2pwebchatboot.service.UserSessionService;
+import com.p2pChat.model.MessageType;
+import com.p2pChat.model.SignalingMessage;
+import com.p2pChat.service.UserSessionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

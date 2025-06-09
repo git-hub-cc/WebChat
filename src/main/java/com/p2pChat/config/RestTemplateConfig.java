@@ -1,4 +1,4 @@
-package com.example.p2pwebchatboot.config;
+package com.p2pChat.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

@@ -77,18 +77,7 @@ Here are some glimpses of the application in action, showcasing different featur
 **Video Call:**
 *   Video Call with Picture-in-Picture (PiP) enabled:
     ![Video Call with PiP](screenshots/Video%20Call%20with%20PiP/04.png)
-*   Picture-in-Picture window detail:
-    ![Video Call PiP Window](screenshots/Video%20Call%20with%20PiP/02.png)
-
-**Settings & Configuration:**
-*   Settings Modal with Theme Selector:
-    ![Settings Modal - Theme Selector](screenshots/Settings%20Modal%20-%20Themes/img.png)
-*   AI Contact Details with TTS Configuration:
-    ![AI Contact TTS Configuration](screenshots/AI%20Contact%20-%20TTS%20Config/img.png)
-
 **Theme Examples:**
-*   Renegade Immortal Theme (Light Mode):
-    ![Renegade Immortal Theme - Light](screenshots/Themes/%E4%BB%99%E9%80%86-%E6%B5%85%E8%89%B2.png)
 *   Crayon Shin-chan Theme (Light Mode):
     ![Crayon Shin-chan Theme - Light](screenshots/Themes/%E8%9C%A1%E7%AC%94%E5%B0%8F%E6%96%B0-%E6%B5%85%E8%89%B2.png)
 *   Delicious in Dungeon Theme (Light Mode):

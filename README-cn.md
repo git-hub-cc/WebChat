@@ -77,18 +77,8 @@ https://175.178.216.24/
 **视频通话：**
 *   启用画中画（PiP）模式的视频通话：
     ![启用画中画的视频通话](screenshots/Video%20Call%20with%20PiP/04.png)
-*   画中画窗口详情：
-    ![视频通话画中画窗口](screenshots/Video%20Call%20with%20PiP/02.png)
-
-**设置与配置：**
-*   设置弹窗（含主题选择器）：
-    ![设置弹窗 - 主题选择器](screenshots/Settings%20Modal%20-%20Themes/img.png)
-*   AI 联系人详情（含 TTS 配置）：
-    ![AI 联系人 TTS 配置](screenshots/AI%20Contact%20-%20TTS%20Config/img.png)
 
 **主题示例：**
-*   仙逆主题（浅色模式）：
-    ![仙逆主题 - 浅色](screenshots/Themes/%E4%BB%99%E9%80%86-%E6%B5%85%E8%89%B2.png)
 *   蜡笔小新主题（浅色模式）：
     ![蜡笔小新主题 - 浅色](screenshots/Themes/%E8%9C%A1%E7%AC%94%E5%B0%8F%E6%96%B0-%E6%B5%85%E8%89%B2.png)
 *   迷宫饭主题（浅色模式）：

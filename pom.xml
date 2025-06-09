@@ -8,7 +8,7 @@
         <version>3.5.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.example</groupId>
+    <groupId>com.p2pChat</groupId>
     <artifactId>P2P-Web-Chat-Boot</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>P2P-Web-Chat-Boot</name>

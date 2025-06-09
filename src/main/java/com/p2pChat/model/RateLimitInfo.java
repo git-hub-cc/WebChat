@@ -1,4 +1,4 @@
-package com.example.p2pwebchatboot.model;
+package com.p2pChat.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDate;

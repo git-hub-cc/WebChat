@@ -1,14 +1,14 @@
-// MODIFIED: UIManager.js (Further reduced)
+// MODIFIED: UIManager.js (已进一步精简) (已翻译)
 const UIManager = {
     checkWebRTCSupport: function () {
         if (typeof RTCPeerConnection === 'undefined') {
-            LayoutManager.updateConnectionStatusIndicator('Browser does not support WebRTC.', 'error');
+            LayoutManager.updateConnectionStatusIndicator('浏览器不支持 WebRTC。', 'error');
             return false;
         }
         return true;
     },
 
-    showFullImage: function (src, altText = "Image") {
+    showFullImage: function (src, altText = "图片") {
         const modal = document.createElement('div');
         modal.className = 'modal-like image-viewer';
         modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
@@ -33,6 +33,6 @@ const UIManager = {
         modal.onclick = () => modal.remove();
         document.body.appendChild(modal);
     },
-    // Properties previously here (isDetailsPanelVisible, _boundTtsConfigCollapseListener, _boundSaveTtsListener)
-    // are now managed within DetailsPanelUIManager and TtsUIManager.
+    // 先前在此处的属性 (isDetailsPanelVisible, _boundTtsConfigCollapseListener, _boundSaveTtsListener)
+    // 现已分别由 DetailsPanelUIManager 和 TtsUIManager 管理。
 };

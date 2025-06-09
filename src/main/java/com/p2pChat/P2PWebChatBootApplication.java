@@ -1,4 +1,4 @@
-package com.example.p2pwebchatboot;
+package com.p2pChat;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

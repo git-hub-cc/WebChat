@@ -197,6 +197,32 @@ body {
     background-color: #e5ddd5; /* Themed, default from original base */
     position: relative;
 }
+
+/* ADDED FOR DRAG-N-DROP */
+.drop-overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 136, 204, 0.7); /* Themed: --primary-color with alpha */
+    color: var(--text-color-inverted);
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    pointer-events: none; /* Prevents it from capturing the event itself */
+    border: 3px dashed var(--text-color-inverted);
+    border-radius: var(--border-radius);
+}
+.chat-area.drag-over .drop-overlay {
+    display: flex;
+}
+.drop-overlay-text {
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+/* END ADDED FOR DRAG-N-DROP */
+
 .chat-area-content { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
 
 .chat-header-main {
@@ -295,6 +321,7 @@ body {
     animation: tts-spin 1s linear infinite; display: inline-block;
 }
 @keyframes tts-spin { to { transform: rotate(360deg); } }
+
 .tts-play-button {
     background: none; border: none; font-size: 1.1em; cursor: pointer;
     color: var(--primary-color); padding: 0; line-height: 1;
@@ -303,7 +330,28 @@ body {
 .tts-play-button:hover { color: var(--primary-color-dark); }
 .tts-play-button.playing::after { content: "❚❚"; font-size: 0.8em; }
 .tts-play-button:not(.playing)::after { content: "▶"; font-size: 0.9em; }
-.tts-error-icon { color: var(--danger-color); font-size: 1.1em; cursor: default; }
+
+.tts-error-icon {
+    color: var(--danger-color); font-size: 1.1em;
+}
+
+.tts-retry-button {
+    background: none;
+    border: none;
+    font-size: 1.1em;
+    color: var(--danger-color);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+}
+.tts-retry-button:hover {
+    filter: brightness(0.8);
+}
 
 
 /* File/Image/Audio in messages */
@@ -338,7 +386,7 @@ body {
     margin-bottom: 5px; background: var(--secondary-color);
     border-radius: var(--border-radius); font-size: 13px;
 }
-.file-preview-item, .voice-message-preview { display: flex; align-items: center; }
+.file-preview-item, .voice-message-preview { display: flex; align-items: center; padding: 5px 8px; }
 .file-preview-item button, .voice-message-preview button {
     background: var(--danger-color); color: var(--text-color-inverted);
     font-size: 12px; padding: 3px 8px; border-radius: 4px; border:none;
@@ -499,6 +547,23 @@ body {
 .tts-attribution-section {
     margin-left: 5px; margin-right: 5px;
 }
+.tts-attribution-section .attribution-sub-header {
+    font-size: 1em; font-weight: 500; margin-top: 15px; margin-bottom: 0;
+    padding-bottom: 6px; color: var(--text-color-light);
+    border-bottom: 1px dashed var(--border-color);
+}
+.tts-attribution-section .attribution-sub-header:hover { color: var(--primary-color); }
+.tts-attribution-section .attribution-sub-header.active {
+    color: var(--primary-color); border-bottom-style: solid; border-bottom-color: var(--primary-color);
+}
+.tts-attribution-section .attribution-sub-content {
+    font-size: 0.85em; padding-left: 12px; margin-top: 8px;
+    border-left: 2px solid var(--hover-bg-color);
+}
+.tts-attribution-section .attribution-sub-content p { margin-bottom: 6px; color: var(--text-color-light); }
+.tts-attribution-section .attribution-sub-content p strong { color: var(--text-color); }
+.tts-attribution-section a { color: var(--primary-color); text-decoration: none; }
+.tts-attribution-section a:hover { text-decoration: underline; }
 
 /* Group Management in Details */
 .member-list-details .member-item-detail {
@@ -775,7 +840,7 @@ body {
 }
 input:checked + .slider { background-color: var(--primary-color); }
 input:focus + .slider { box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Themed primary alpha */ }
-input:checked + .slider:before { transform: translateX(22px); } /* Adjusted for 46px width (46 - 18 - 3 - 3 = 22) */
+input:checked + .slider:before { transform: translateX(54px); } /* Adjusted for 46px width (46 - 18 - 3 - 3 = 22) */
 .slider.round { border-radius: 24px; }
 .slider.round:before { border-radius: 50%; }
 

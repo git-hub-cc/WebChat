@@ -1,4 +1,4 @@
-package com.example.p2pwebchatboot.service;
+package com.p2pChat.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

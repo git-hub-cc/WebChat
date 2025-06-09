@@ -1,6 +1,6 @@
-// MODIFIED: ThemeLoader.js
-// - populateSelector logic (creating dropdowns) is fully moved to SettingsUIManager.
-// - This file now focuses purely on determining which theme to load (CSS/DataJS).
+// MODIFIED: ThemeLoader.js (已翻译为中文)
+// - populateSelector 逻辑（创建下拉菜单）已完全移至 SettingsUIManager。
+// - 此文件现在纯粹专注于确定要加载哪个主题（CSS/DataJS）。
 const ThemeLoader = {
     themes: {
         "原神-浅色": { name: "原神（内置tts）", css: "css/原神-浅色.css", dataJs: "data/原神.js", defaultSpecialContacts: true  },
@@ -26,11 +26,11 @@ const ThemeLoader = {
     },
     COLOR_SCHEME_KEY: 'selectedColorScheme',
     DEFAULT_COLOR_SCHEME: 'light',
-    _currentEffectiveColorScheme: 'light', // Will be set in init
-    _currentThemeKey: null, // Will be set in init
+    _currentEffectiveColorScheme: 'light', // 将在 init 中设置
+    _currentThemeKey: null, // 将在 init 中设置
     _systemColorSchemeListener: null,
 
-    init: function() { // This function runs very early (called directly in index.html or by AppInitializer very early)
+    init: function() { // 此函数在页面加载的极早期运行（在 index.html 中直接调用或由 AppInitializer 极早期调用）
         const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
         this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
 
@@ -42,7 +42,7 @@ const ThemeLoader = {
             this._currentThemeKey = savedThemeKey;
         } else {
             let newThemeKey;
-            if (savedThemeKey && this.themes[savedThemeKey]) { // If saved theme existed but was incompatible
+            if (savedThemeKey && this.themes[savedThemeKey]) { // 如果保存的主题存在但不兼容
                 const baseName = this._getBaseThemeName(savedThemeKey);
                 const suffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
                 const counterpartKey = `${baseName}-${suffix}`;
@@ -51,10 +51,10 @@ const ThemeLoader = {
                 }
             }
 
-            if (!newThemeKey) { // Or if savedThemeKey was null/invalid or no counterpart found
+            if (!newThemeKey) { // 或者如果 savedThemeKey 为 null/无效或未找到对应版本
                 newThemeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
             }
-            this._currentThemeKey = newThemeKey; // Update the internal current theme key
+            this._currentThemeKey = newThemeKey; // 更新内部当前主题键
             themeToLoad = this.themes[newThemeKey];
             localStorage.setItem('selectedTheme', newThemeKey);
         }
@@ -64,26 +64,26 @@ const ThemeLoader = {
             if (themeToLoad && themeToLoad.css) {
                 themeStylesheet.setAttribute('href', themeToLoad.css);
             } else {
-                themeStylesheet.setAttribute('href', ''); // Fallback to no theme CSS
-                console.warn("Theme object or theme.css is missing for key:", this._currentThemeKey);
+                themeStylesheet.setAttribute('href', ''); // 回退到无主题 CSS
+                console.warn("主题对象或 theme.css 在键值下缺失:", this._currentThemeKey);
             }
         } else {
-            console.error("Critical: Theme stylesheet element 'theme-stylesheet' not found.");
+            console.error("严重错误: 未找到主题样式表元素 'theme-stylesheet'。");
         }
 
-        // Load theme-specific data (SPECIAL_CONTACTS_DEFINITIONS)
-        // This needs to happen before UserManager.init()
+        // 加载主题特定数据 (SPECIAL_CONTACTS_DEFINITIONS)
+        // 这需要在 UserManager.init() 之前发生
         if (themeToLoad && themeToLoad.dataJs) {
-            // Using document.write is generally okay here because ThemeLoader.init() is called
-            // very early in the page load, before the DOM is fully parsed.
+            // 在这里使用 document.write 通常是可以的，因为 ThemeLoader.init()
+            // 在页面加载的非常早期，DOM 完全解析之前被调用。
             document.write(`<script src="${themeToLoad.dataJs}"><\/script>`);
         } else {
-            // Ensure SPECIAL_CONTACTS_DEFINITIONS is defined globally if no dataJs is present
+            // 如果没有 dataJs，确保 SPECIAL_CONTACTS_DEFINITIONS 被全局定义
             if (typeof SPECIAL_CONTACTS_DEFINITIONS === 'undefined') {
                 document.write(`<script>var SPECIAL_CONTACTS_DEFINITIONS = [];<\/script>`);
             }
         }
-        this._setupSystemColorSchemeListener(preferredColorScheme); // Setup listener for 'auto'
+        this._setupSystemColorSchemeListener(preferredColorScheme); // 为 'auto' 设置监听器
     },
 
     _getBaseThemeName: function(themeKey) {
@@ -91,7 +91,7 @@ const ThemeLoader = {
         return themeKey.replace(/-浅色$/, "").replace(/-深色$/, "");
     },
 
-    _isThemeCompatible: function(themeKey, colorScheme) { // colorScheme is 'light' or 'dark'
+    _isThemeCompatible: function(themeKey, colorScheme) { // colorScheme 是 'light' 或 'dark'
         if (!this.themes[themeKey]) return false;
         if (colorScheme === 'light') return themeKey.endsWith('-浅色');
         if (colorScheme === 'dark') return themeKey.endsWith('-深色');
@@ -104,7 +104,7 @@ const ThemeLoader = {
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             return 'dark';
         }
-        return 'light'; // Default for 'auto' if system preference is not dark or not detectable
+        return 'light'; // 如果系统偏好不是深色或无法检测，则为 'auto' 的默认值
     },
 
     _findFallbackThemeKeyForScheme: function(colorScheme) {
@@ -114,16 +114,16 @@ const ThemeLoader = {
         }
         const firstKey = Object.keys(this.themes)[0];
         if (firstKey) {
-            console.warn(`No themes found for scheme '${colorScheme}', falling back to first available: ${firstKey}`);
+            console.warn(`未找到方案 '${colorScheme}' 的主题，回退到第一个可用的主题: ${firstKey}`);
             return firstKey;
         }
-        console.error("CRITICAL: No themes defined in ThemeLoader.themes. Using hardcoded default.");
-        return '原神-浅色'; // Absolute fallback
+        console.error("严重错误: ThemeLoader.themes 中未定义任何主题。正在使用硬编码的默认值。");
+        return '原神-浅色'; // 绝对回退
     },
 
     _setupSystemColorSchemeListener: function(preferredScheme) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        // Remove any existing listener before adding a new one
+        // 在添加新监听器之前移除任何现有的监听器
         if (this._systemColorSchemeListener) {
             mediaQuery.removeEventListener('change', this._systemColorSchemeListener);
             this._systemColorSchemeListener = null;
@@ -133,39 +133,39 @@ const ThemeLoader = {
             this._systemColorSchemeListener = (e) => {
                 const newSystemEffectiveColorScheme = e.matches ? 'dark' : 'light';
                 if (newSystemEffectiveColorScheme !== this._currentEffectiveColorScheme) {
-                    // Update the effective scheme used by SettingsUIManager for filtering themes
+                    // 更新 SettingsUIManager 用于筛选主题的有效方案
                     this._currentEffectiveColorScheme = newSystemEffectiveColorScheme;
                     const currentBaseName = this._getBaseThemeName(this._currentThemeKey);
                     const newSuffix = newSystemEffectiveColorScheme === 'light' ? '浅色' : '深色';
                     let newThemeToApplyKey = `${currentBaseName}-${newSuffix}`;
 
-                    // Check if the new counterpart theme exists
+                    // 检查新的对应主题是否存在
                     if (!this.themes[newThemeToApplyKey] || !this._isThemeCompatible(newThemeToApplyKey, newSystemEffectiveColorScheme)) {
                         newThemeToApplyKey = this._findFallbackThemeKeyForScheme(newSystemEffectiveColorScheme);
                     }
-                    this.applyTheme(newThemeToApplyKey); // This will reload the page
+                    this.applyTheme(newThemeToApplyKey); // 这会重新加载页面
                 }
             };
             mediaQuery.addEventListener('change', this._systemColorSchemeListener);
         }
     },
 
-    // populateSelector is REMOVED from here. SettingsUIManager will handle its own UI.
-    // SettingsUIManager can access ThemeLoader.themes and ThemeLoader._currentEffectiveColorScheme
-    // to build the dropdowns appropriately.
+    // populateSelector 已从此文件中移除。SettingsUIManager 将处理其自己的 UI。
+    // SettingsUIManager 可以访问 ThemeLoader.themes 和 ThemeLoader._currentEffectiveColorScheme
+    // 来适当地构建下拉菜单。
 
     applyTheme: function(themeKey) {
         if (!this.themes[themeKey]) {
-            console.error(`Attempted to apply invalid theme key: ${themeKey}. Falling back.`);
-            // Fallback to a theme compatible with the current effective color scheme
+            console.error(`尝试应用无效的主题键: ${themeKey}。正在回退。`);
+            // 回退到与当前有效配色方案兼容的主题
             themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
         }
         localStorage.setItem('selectedTheme', themeKey);
-        // Reloading the page is a simple way to apply new CSS and new data.js (for SPECIAL_CONTACTS_DEFINITIONS)
+        // 重新加载页面是应用新 CSS 和新 data.js (用于 SPECIAL_CONTACTS_DEFINITIONS) 的一种简单方法
         window.location.reload();
     },
 
-    // Getter for SettingsUIManager to know the current state
+    // Getter，供 SettingsUIManager 了解当前状态
     getCurrentEffectiveColorScheme: function() {
         return this._currentEffectiveColorScheme;
     },

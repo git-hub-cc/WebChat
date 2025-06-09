@@ -1,6 +1,6 @@
-package com.example.p2pwebchatboot.controller;
+package com.p2pChat.controller;
 
-import com.example.p2pwebchatboot.service.UserSessionService;
+import com.p2pChat.service.UserSessionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

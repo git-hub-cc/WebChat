@@ -1,11 +1,12 @@
+// MODIFIED: UserManager.js (已翻译为中文)
 const UserManager = {
     userId: null,
-    userName: 'Me',
+    userName: '我',
     contacts: {},
     userSettings: {
         autoConnectEnabled: true,
     },
-    SPECIAL_CONTACTS_DEFINITIONS: SPECIAL_CONTACTS_DEFINITIONS, // Expose for other modules if needed
+    SPECIAL_CONTACTS_DEFINITIONS: SPECIAL_CONTACTS_DEFINITIONS, // 如果需要，暴露给其他模块
 
     init: async function() {
         try {
@@ -13,11 +14,11 @@ const UserManager = {
             let userData = await DBManager.getItem('user', 'currentUser');
             if (userData && userData.userId) {
                 this.userId = userData.userId;
-                this.userName = userData.userName || `User ${this.userId.substring(0,4)}`;
+                this.userName = userData.userName || `用户 ${this.userId.substring(0,4)}`;
                 this.userSettings.autoConnectEnabled = typeof userData.autoConnectEnabled === 'boolean' ? userData.autoConnectEnabled : false;
             } else {
                 this.userId = Utils.generateId(8);
-                this.userName = `User ${this.userId.substring(0,4)}`;
+                this.userName = `用户 ${this.userId.substring(0,4)}`;
                 userData = {
                     id: 'currentUser',
                     userId: this.userId,
@@ -26,26 +27,26 @@ const UserManager = {
                 };
                 await DBManager.setItem('user', userData);
             }
-            await this.loadContacts(); // Load non-special contacts first
-            await this.ensureSpecialContacts(); // Then ensure special contacts, merging with any existing DB data and localStorage TTS
+            await this.loadContacts(); // 首先加载非特殊联系人
+            await this.ensureSpecialContacts(); // 然后确保特殊联系人存在，并与任何现有的数据库数据和 localStorage TTS 设置合并
 
         } catch (error) {
-            Utils.log(`User initialization failed: ${error}`, Utils.logLevels.ERROR);
+            Utils.log(`用户初始化失败: ${error}`, Utils.logLevels.ERROR);
             this.userId = Utils.generateId(8);
-            this.userName = `User ${this.userId.substring(0,4)}`;
+            this.userName = `用户 ${this.userId.substring(0,4)}`;
             this.userSettings.autoConnectEnabled = false;
-            // Attempt to ensure special contacts even on some init errors, using defaults.
-            const tempContactsCopy = {...this.contacts}; // Keep non-special if loaded.
-            this.contacts = {}; // Clear to re-initialize special ones cleanly.
-            await this.ensureSpecialContacts(true); // Pass a flag to indicate fallback mode
-            this.contacts = {...this.contacts, ...tempContactsCopy}; // Merge back
+            // 即使在某些初始化错误时，也尝试使用默认值确保特殊联系人存在。
+            const tempContactsCopy = {...this.contacts}; // 保留已加载的非特殊联系人。
+            this.contacts = {}; // 清空以便干净地重新初始化特殊联系人。
+            await this.ensureSpecialContacts(true); // 传递一个标志表示回退模式
+            this.contacts = {...this.contacts, ...tempContactsCopy}; // 合并回来
         }
         document.getElementById('modalUserIdValue').textContent = this.userId;
-        if (typeof UIManager !== 'undefined' && UIManager.updateCopyIdButtonState) {
-            UIManager.updateCopyIdButtonState();
+        if (typeof SettingsUIManager !== 'undefined' && SettingsUIManager.updateCopyIdButtonState) {
+            SettingsUIManager.updateCopyIdButtonState();
         }
-        Utils.log(`User initialized: ${this.userId} (${this.userName})`, Utils.logLevels.INFO);
-        Utils.log(`User settings loaded: autoConnectEnabled = ${this.userSettings.autoConnectEnabled}`, Utils.logLevels.DEBUG);
+        Utils.log(`用户已初始化: ${this.userId} (${this.userName})`, Utils.logLevels.INFO);
+        Utils.log(`用户设置已加载: autoConnectEnabled = ${this.userSettings.autoConnectEnabled}`, Utils.logLevels.DEBUG);
     },
 
     isSpecialContact: function(contactId) {
@@ -54,7 +55,7 @@ const UserManager = {
 
     ensureSpecialContacts: async function(isFallbackMode = false) {
         for (const scDef of SPECIAL_CONTACTS_DEFINITIONS) {
-            // Start with the definition as the base
+            // 以定义作为基础
             let contactDataFromDef = {
                 id: scDef.id,
                 name: scDef.name,
@@ -66,10 +67,10 @@ const UserManager = {
                 avatarUrl: scDef.avatarUrl || null,
                 type: 'contact',
                 isAI: scDef.isAI || false,
-                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || {})), // Deep copy definition's AI config
+                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || {})), // 深拷贝定义的 AI 配置
                 aboutDetails: scDef.aboutDetails || null
             };
-            // Ensure tts object exists in definition's aiConfig copy
+            // 确保定义的 aiConfig 副本中存在 tts 对象
             if (contactDataFromDef.isAI && !contactDataFromDef.aiConfig.tts) {
                 contactDataFromDef.aiConfig.tts = {};
             }
@@ -78,72 +79,71 @@ const UserManager = {
 
             let dbContact = null;
             if (!isFallbackMode) {
-                // Prefer existing in-memory version if ensureSpecialContacts is somehow re-run on already loaded contacts
+                // 如果 ensureSpecialContacts 在已加载联系人上被重新运行，优先使用内存中的版本
                 dbContact = this.contacts[scDef.id] || await DBManager.getItem('contacts', scDef.id);
             }
 
             if (dbContact) {
-                // Merge general fields from DB
+                // 从数据库合并通用字段
                 finalContactData.name = dbContact.name || finalContactData.name;
                 finalContactData.lastMessage = dbContact.lastMessage || finalContactData.lastMessage;
                 finalContactData.lastTime = dbContact.lastTime || finalContactData.lastTime;
-                finalContactData.unread = dbContact.unread || 0; // Keep 0 if undefined
-                finalContactData.avatarUrl = dbContact.avatarUrl || finalContactData.avatarUrl; // Keep def if DB is null
+                finalContactData.unread = dbContact.unread || 0; // 如果未定义则保持为 0
+                finalContactData.avatarUrl = dbContact.avatarUrl || finalContactData.avatarUrl; // 如果数据库为 null 则保留定义
                 finalContactData.aboutDetails = dbContact.aboutDetails || finalContactData.aboutDetails;
 
-                // Merge aiConfig from DB, but handle TTS separately
+                // 从数据库合并 aiConfig，但单独处理 TTS
                 if (dbContact.aiConfig) {
                     const { tts: dbTts, ...otherDbAiConfig } = dbContact.aiConfig;
                     finalContactData.aiConfig = {
-                        ...finalContactData.aiConfig, // from definition
-                        ...otherDbAiConfig,           // other AI config from DB
+                        ...finalContactData.aiConfig, // 来自定义
+                        ...otherDbAiConfig,           // 来自数据库的其他 AI 配置
                         tts: {
-                            ...(finalContactData.aiConfig.tts || {}), // TTS from definition
-                            ...(dbTts || {})                          // TTS from DB
+                            ...(finalContactData.aiConfig.tts || {}), // 来自定义的 TTS
+                            ...(dbTts || {})                          // 来自数据库的 TTS
                         }
                     };
                 }
             }
 
-            // Ensure tts object exists before localStorage merge
+            // 在 localStorage 合并之前确保 tts 对象存在
             if (finalContactData.isAI && !finalContactData.aiConfig.tts) {
                 finalContactData.aiConfig.tts = {};
             }
 
-            // Apply localStorage TTS settings (highest priority for TTS)
+            // 应用 localStorage TTS 设置（TTS 的最高优先级）
             if (finalContactData.isAI) {
                 const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${scDef.id}`);
                 if (storedTtsSettingsJson) {
                     try {
                         const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
                         finalContactData.aiConfig.tts = {
-                            ...(finalContactData.aiConfig.tts || {}), // Current merged TTS (Def + DB)
-                            ...storedTtsSettings                     // Override with localStorage
+                            ...(finalContactData.aiConfig.tts || {}), // 当前合并的 TTS (定义 + 数据库)
+                            ...storedTtsSettings                     // 用 localStorage 覆盖
                         };
-                        Utils.log(`Loaded and applied TTS settings for ${scDef.id} from localStorage. Resulting enabled: ${finalContactData.aiConfig.tts.enabled}`, Utils.logLevels.DEBUG);
+                        Utils.log(`已从 localStorage 加载并应用 ${scDef.id} 的 TTS 设置。最终启用状态: ${finalContactData.aiConfig.tts.enabled}`, Utils.logLevels.DEBUG);
                     } catch (e) {
-                        Utils.log(`Error parsing TTS settings from localStorage for ${scDef.id}: ${e}`, Utils.logLevels.WARN);
+                        Utils.log(`从 localStorage 解析 ${scDef.id} 的 TTS 设置时出错: ${e}`, Utils.logLevels.WARN);
                     }
                 }
             }
 
-            // Preserve existing lastMessage/Time/Unread if contact was already in memory
-            // (this.contacts[scDef.id] would be the version before this full `ensure` logic, potentially just from `loadContacts` if it was a normal contact mistaken for special, or an older ensure pass)
-            // This block is generally for dynamic data if this function were to re-ensure an already active contact.
-            // For aiConfig, the logic above (Def -> DB -> LocalStorage) should be authoritative.
-            if (this.contacts[scDef.id] && this.contacts[scDef.id] !== finalContactData) { // Check if it's not the same object already
+            // 如果联系人已在内存中，则保留现有的 lastMessage/Time/Unread
+            // （如果此函数重新确保一个已激活的联系人，这个块通常用于动态数据）。
+            // 对于 aiConfig，上面的逻辑（定义 -> 数据库 -> LocalStorage）应该是权威的。
+            if (this.contacts[scDef.id] && this.contacts[scDef.id] !== finalContactData) {
                 finalContactData.lastMessage = this.contacts[scDef.id].lastMessage || finalContactData.lastMessage;
                 finalContactData.lastTime = this.contacts[scDef.id].lastTime || finalContactData.lastTime;
                 finalContactData.unread = typeof this.contacts[scDef.id].unread === 'number' ? this.contacts[scDef.id].unread : finalContactData.unread;
             }
 
-            this.contacts[scDef.id] = finalContactData; // Update in-memory store
+            this.contacts[scDef.id] = finalContactData; // 更新内存存储
 
             if (!isFallbackMode) {
                 try {
-                    await this.saveContact(scDef.id); // Save the fully merged contact back to DB
+                    await this.saveContact(scDef.id); // 将完全合并的联系人保存回数据库
                 } catch (dbError) {
-                    Utils.log(`DB error ensuring special contact ${scDef.name} after merge: ${dbError}`, Utils.logLevels.ERROR);
+                    Utils.log(`合并后确保特殊联系人 ${scDef.name} 时数据库出错: ${dbError}`, Utils.logLevels.ERROR);
                 }
             }
         }
@@ -152,7 +152,7 @@ const UserManager = {
     updateUserSetting: async function(settingKey, value) {
         if (this.userSettings.hasOwnProperty(settingKey)) {
             this.userSettings[settingKey] = value;
-            Utils.log(`User setting updated: ${settingKey} = ${value}`, Utils.logLevels.INFO);
+            Utils.log(`用户设置已更新: ${settingKey} = ${value}`, Utils.logLevels.INFO);
 
             try {
                 const userData = await DBManager.getItem('user', 'currentUser') ||
@@ -162,11 +162,11 @@ const UserManager = {
 
                 await DBManager.setItem('user', updatedUserData);
             } catch (error) {
-                Utils.log(`Failed to save setting ${settingKey}: ${error}`, Utils.logLevels.ERROR);
-                NotificationManager.showNotification('Failed to save setting.', 'error');
+                Utils.log(`保存设置 ${settingKey} 失败: ${error}`, Utils.logLevels.ERROR);
+                NotificationManager.showNotification('保存设置失败。', 'error');
             }
         } else {
-            Utils.log(`Attempted to update unknown setting: ${settingKey}`, Utils.logLevels.WARN);
+            Utils.log(`尝试更新未知设置: ${settingKey}`, Utils.logLevels.WARN);
         }
     },
 
@@ -175,10 +175,10 @@ const UserManager = {
             const contactItems = await DBManager.getAllItems('contacts');
             if (contactItems && contactItems.length > 0) {
                 contactItems.forEach(contact => {
-                    // Only load non-special contacts here. Special contacts are handled by ensureSpecialContacts.
-                    if (!contact.id.startsWith("AI_") &&!this.isSpecialContact(contact.id)) {
+                    // 只加载非特殊联系人。特殊联系人由 ensureSpecialContacts 处理。
+                    if (!contact.id.startsWith("AI_") && !this.isSpecialContact(contact.id)) {
                         this.contacts[contact.id] = contact;
-                        // If non-special contacts could be AI and have TTS, apply localStorage override here too
+                        // 如果非特殊联系人可能是 AI 并有 TTS，也在此处应用 localStorage 覆盖
                         if (contact.isAI && contact.aiConfig) {
                             const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${contact.id}`);
                             if (storedTtsSettingsJson) {
@@ -186,9 +186,9 @@ const UserManager = {
                                     const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
                                     if (!contact.aiConfig.tts) contact.aiConfig.tts = {};
                                     contact.aiConfig.tts = { ...contact.aiConfig.tts, ...storedTtsSettings };
-                                    Utils.log(`Loaded TTS settings for non-special contact ${contact.id} from localStorage.`, Utils.logLevels.DEBUG);
+                                    Utils.log(`从 localStorage 加载了非特殊联系人 ${contact.id} 的 TTS 设置。`, Utils.logLevels.DEBUG);
                                 } catch (e) {
-                                    Utils.log(`Error parsing TTS settings from localStorage for ${contact.id}: ${e}`, Utils.logLevels.WARN);
+                                    Utils.log(`从 localStorage 解析 ${contact.id} 的 TTS 设置时出错: ${e}`, Utils.logLevels.WARN);
                                 }
                             }
                         }
@@ -196,7 +196,7 @@ const UserManager = {
                 });
             }
         } catch (error) {
-            Utils.log(`Failed to load contacts: ${error}`, Utils.logLevels.ERROR);
+            Utils.log(`加载联系人失败: ${error}`, Utils.logLevels.ERROR);
         }
     },
 
@@ -204,13 +204,13 @@ const UserManager = {
         if (this.contacts[contactId]) {
             try {
                 const contactToSave = { ...this.contacts[contactId] };
-                // Ensure aiConfig and aiConfig.tts are properly structured if they exist
+                // 确保 aiConfig 和 aiConfig.tts 在存在时结构正确
                 if (contactToSave.isAI && contactToSave.aiConfig && typeof contactToSave.aiConfig.tts === 'undefined') {
                     contactToSave.aiConfig.tts = {};
                 }
                 await DBManager.setItem('contacts', contactToSave);
             } catch (error) {
-                Utils.log(`Failed to save contact ${contactId}: ${error}`, Utils.logLevels.ERROR);
+                Utils.log(`保存联系人 ${contactId} 失败: ${error}`, Utils.logLevels.ERROR);
             }
         }
     },
@@ -223,23 +223,21 @@ const UserManager = {
 
     addContact: async function(id, name) {
         if (id === this.userId) {
-            NotificationManager.showNotification("You cannot add yourself as a contact.", "error");
+            NotificationManager.showNotification("您不能添加自己为联系人。", "error");
             return false;
         }
         if (this.isSpecialContact(id)) {
-            const specialContactName = SPECIAL_CONTACTS_DEFINITIONS.find(sc => sc.id === id)?.name || "this special contact";
-            NotificationManager.showNotification(`${specialContactName} is a built-in contact and cannot be added manually.`, "warning");
+            const specialContactName = SPECIAL_CONTACTS_DEFINITIONS.find(sc => sc.id === id)?.name || "这个特殊联系人";
+            NotificationManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
             return true;
         }
         if (this.contacts[id]) {
-            NotificationManager.showNotification("This contact already exists.", "warning");
+            NotificationManager.showNotification("该联系人已存在。", "warning");
             if (name && this.contacts[id].name !== name) {
                 this.contacts[id].name = name;
                 await this.saveContact(id);
                 ChatManager.renderChatList(ChatManager.currentFilter);
             }
-            // MODIFIED: Attempt connection even if contact exists but was perhaps offline before.
-            // Check if not already connected or in a connection attempt state.
             const existingConn = ConnectionManager.connections[id];
             if (!ConnectionManager.isConnectedTo(id) &&
                 (!existingConn || (existingConn.peerConnection && existingConn.peerConnection.signalingState === 'stable' && existingConn.peerConnection.connectionState !== 'connecting'))) {
@@ -250,7 +248,7 @@ const UserManager = {
 
         const newContact = {
             id: id,
-            name: name || `Peer ${id.substring(0, 4)}`,
+            name: name || `用户 ${id.substring(0, 4)}`,
             lastMessage: '',
             lastTime: new Date().toISOString(),
             unread: 0,
@@ -265,19 +263,18 @@ const UserManager = {
         this.contacts[id] = newContact;
         await this.saveContact(id);
         ChatManager.renderChatList(ChatManager.currentFilter);
-        NotificationManager.showNotification(`Contact "${newContact.name}" added.`, 'success');
+        NotificationManager.showNotification(`联系人 "${newContact.name}" 已添加。`, 'success');
 
-        // MODIFIED: Attempt to connect to the new contact silently
         ConnectionManager.createOffer(id, { isSilent: true });
-        Utils.log(`Attempting initial connection to new contact: ${id}`, Utils.logLevels.INFO);
+        Utils.log(`尝试与新联系人建立初始连接: ${id}`, Utils.logLevels.INFO);
 
         return true;
     },
 
     removeContact: async function(id) {
         if (this.isSpecialContact(id)) {
-            const specialContactName = SPECIAL_CONTACTS_DEFINITIONS.find(sc => sc.id === id)?.name || "This special contact";
-            NotificationManager.showNotification(`${specialContactName} is a built-in contact and cannot be removed.`, "warning");
+            const specialContactName = SPECIAL_CONTACTS_DEFINITIONS.find(sc => sc.id === id)?.name || "这个特殊联系人";
+            NotificationManager.showNotification(`${specialContactName} 是内置联系人，不能被移除。`, "warning");
             return false;
         }
         if (this.contacts[id]) {
@@ -285,12 +282,11 @@ const UserManager = {
             delete this.contacts[id];
             try {
                 await DBManager.removeItem('contacts', id);
-                // Also remove associated localStorage TTS settings if any
                 localStorage.removeItem(`ttsConfig_${id}`);
                 ChatManager.renderChatList(ChatManager.currentFilter);
                 return true;
             } catch (error) {
-                Utils.log(`Failed to remove contact ${id} from DB: ${error}`, Utils.logLevels.ERROR);
+                Utils.log(`从数据库移除联系人 ${id} 失败: ${error}`, Utils.logLevels.ERROR);
                 this.contacts[id] = tempContact;
                 ChatManager.renderChatList(ChatManager.currentFilter);
                 return false;
@@ -312,7 +308,7 @@ const UserManager = {
             await this.saveContact(id);
             ChatManager.renderChatList(ChatManager.currentFilter);
         } else {
-            Utils.log(`Attempted to update last message for non-existent contact: ${id}`, Utils.logLevels.WARN);
+            Utils.log(`尝试为不存在的联系人更新最后一条消息: ${id}`, Utils.logLevels.WARN);
         }
     },
 
@@ -327,7 +323,7 @@ const UserManager = {
 
     clearAllContacts: async function() {
         ModalManager.showConfirmationModal(
-            "Are you sure you want to delete ALL user-added contacts? This will also clear their chat histories. Built-in special contacts will remain.",
+            "您确定要删除所有用户添加的联系人吗？这也会清空他们的聊天记录。内置的特殊联系人将保留。",
             async () => {
                 const contactIdsToRemove = Object.keys(this.contacts).filter(id => !this.isSpecialContact(id));
 
@@ -343,7 +339,7 @@ const UserManager = {
                 try {
                     for (const contactId of contactIdsToRemove) {
                         await DBManager.removeItem('contacts', contactId);
-                        localStorage.removeItem(`ttsConfig_${contactId}`); // Remove associated localStorage TTS
+                        localStorage.removeItem(`ttsConfig_${contactId}`);
                         await ChatManager.clearChat(contactId);
                         if (ConnectionManager.connections[contactId]) {
                             ConnectionManager.close(contactId);
@@ -355,12 +351,11 @@ const UserManager = {
                         ChatAreaUIManager.showNoChatSelected();
                     }
                     ChatManager.renderChatList(ChatManager.currentFilter);
-                    NotificationManager.showNotification("All user-added contacts and their chats cleared.", 'success');
+                    NotificationManager.showNotification("所有用户添加的联系人及其聊天记录已清空。", 'success');
                 } catch (error) {
-                    Utils.log("Failed to clear contacts: " + error, Utils.logLevels.ERROR);
-                    NotificationManager.showNotification("Failed to clear contacts from database.", 'error');
-                    this.contacts = tempContacts; // Rollback in-memory
-                    // Note: DB and localStorage might be partially cleared. A more robust rollback would re-add them.
+                    Utils.log("清空联系人失败: " + error, Utils.logLevels.ERROR);
+                    NotificationManager.showNotification("从数据库清空联系人失败。", 'error');
+                    this.contacts = tempContacts;
                     ChatManager.renderChatList(ChatManager.currentFilter);
                 }
             }
@@ -376,11 +371,11 @@ const UserManager = {
         if (senderContact && senderContact.isSpecial) {
             senderName = senderContact.name;
         } else if (isMyMessage) {
-            senderName = "You";
+            senderName = "您";
         } else if (senderContact) {
             senderName = senderContact.name;
         } else {
-            senderName = "Peer";
+            senderName = "对方";
         }
 
 
@@ -389,21 +384,21 @@ const UserManager = {
                 preview = `${senderName}: ${message.content}`;
                 break;
             case 'image':
-                preview = `${senderName}: [Image]`;
+                preview = `${senderName}: [图片]`;
                 break;
             case 'file':
-                if (message.fileType && message.fileType.startsWith('image/')) preview = `${senderName}: [Image]`;
-                else if (message.fileType && message.fileType.startsWith('video/')) preview = `${senderName}: [Video]`;
-                else if (message.fileType && message.fileType.startsWith('audio/')) preview = `${senderName}: [Audio File]`;
-                else preview = `${senderName}: [File] ${message.fileName || ''}`;
+                if (message.fileType && message.fileType.startsWith('image/')) preview = `${senderName}: [图片]`;
+                else if (message.fileType && message.fileType.startsWith('video/')) preview = `${senderName}: [视频]`;
+                else if (message.fileType && message.fileType.startsWith('audio/')) preview = `${senderName}: [音频文件]`;
+                else preview = `${senderName}: [文件] ${message.fileName || ''}`;
                 break;
             case 'audio':
-                preview = `${senderName}: [Voice Message]`;
+                preview = `${senderName}: [语音消息]`;
                 break;
             case 'system':
                 return message.content.length > 35 ? message.content.substring(0, 32) + "..." : message.content;
             default:
-                preview = `${senderName}: [New Message]`;
+                preview = `${senderName}: [新消息]`;
         }
         return preview.length > 35 ? preview.substring(0, 32) + "..." : preview;
     }

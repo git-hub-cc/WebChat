@@ -1,6 +1,5 @@
-// NEW FILE: MessageTtsHandler.js
-// Responsibilities:
-// - Handling TTS for individual AI messages (cleaning text, requesting TTS, updating controls).
+// MODIFIED: MessageTtsHandler.js (已翻译为中文)
+// - 将重试按钮的类名更改为 `tts-retry-button` 以便进行特定样式设置。
 const MessageTtsHandler = {
     _currentlyPlayingTtsAudio: null,
     _currentlyPlayingTtsButton: null,
@@ -13,6 +12,7 @@ const MessageTtsHandler = {
         cleanedText = cleanedText.replace(/\[.*?\]/g, '');
         cleanedText = cleanedText.replace(/\(.*?\)/g, '');
         cleanedText = cleanedText.replace(/（.*?）/g, '');
+        // 移除非中文、日文、拉丁字母、数字和基本标点符号的字符
         const allowedCharsRegex = /[^\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff65-\uff9f\u3000-\u303f\uff01-\uff5ea-zA-Z0-9\s.,!?;:'"-]/g;
         cleanedText = cleanedText.replace(allowedCharsRegex, ' ');
         cleanedText = cleanedText.replace(/\s+/g, ' ');
@@ -35,8 +35,8 @@ const MessageTtsHandler = {
     requestTtsForMessage: async function (text, ttsConfig, parentContainer, ttsId) {
         const currentTtsApiEndpoint = window.Config?.server?.ttsApiEndpoint;
         if (!currentTtsApiEndpoint) {
-            Utils.log("TTS not triggered: Global TTS API Endpoint is not configured.", Utils.logLevels.WARN);
-            this.updateTtsControlToError(parentContainer, ttsId, "TTS endpoint not configured");
+            Utils.log("TTS 未触发: 全局 TTS API 端点未配置。", Utils.logLevels.WARN);
+            this.updateTtsControlToError(parentContainer, ttsId, "TTS 端点未配置");
             return;
         }
 
@@ -51,7 +51,7 @@ const MessageTtsHandler = {
             media_type: ttsConfig.media_type || "wav", parallel_infer: ttsConfig.parallel_infer === undefined ? true : ttsConfig.parallel_infer,
             repetition_penalty: ttsConfig.repetition_penalty || 1.35, seed: ttsConfig.seed === undefined ? -1 : ttsConfig.seed,
         };
-        Utils.log(`MessageTtsHandler: TTS request. Endpoint='${currentTtsApiEndpoint}' for ttsId ${ttsId}`, Utils.logLevels.DEBUG);
+        Utils.log(`MessageTtsHandler: TTS 请求。端点='${currentTtsApiEndpoint}'，ttsId 为 ${ttsId}`, Utils.logLevels.DEBUG);
 
         try {
             const response = await fetch(currentTtsApiEndpoint, {
@@ -59,37 +59,37 @@ const MessageTtsHandler = {
             });
             if (!response.ok) {
                 const errorData = await response.text();
-                throw new Error(`TTS API request failed status ${response.status}: ${errorData.substring(0,150)}`);
+                throw new Error(`TTS API 请求失败，状态码 ${response.status}: ${errorData.substring(0,150)}`);
             }
             const result = await response.json();
             if (result.audio_url) {
                 this._preloadAndSetAudio(result.audio_url, parentContainer, ttsId);
             } else {
-                throw new Error(`TTS API response missing audio_url. Msg: ${result.msg || 'Unknown error'}`);
+                throw new Error(`TTS API 响应缺少 audio_url。消息: ${result.msg || '未知错误'}`);
             }
         } catch (error) {
-            Utils.log(`Error processing TTS for ttsId ${ttsId}: ${error.message}`, Utils.logLevels.ERROR);
+            Utils.log(`处理 ttsId ${ttsId} 的 TTS 时出错: ${error.message}`, Utils.logLevels.ERROR);
             if (Utils.logLevel <= Utils.logLevels.DEBUG && error.stack) Utils.log(error.stack, Utils.logLevels.DEBUG);
             this.updateTtsControlToError(parentContainer, ttsId, error.message);
         }
     },
     _preloadAndSetAudio: async function(audioUrl, parentContainer, ttsId) {
         try {
-            Utils.log(`MessageTtsHandler: Preloading TTS audio from ${audioUrl} for ttsId ${ttsId}`, Utils.logLevels.DEBUG);
+            Utils.log(`MessageTtsHandler: 正在为 ttsId ${ttsId} 预加载来自 ${audioUrl} 的 TTS 音频`, Utils.logLevels.DEBUG);
             const audioResponse = await fetch(audioUrl);
             if (!audioResponse.ok) {
-                const errorText = await audioResponse.text().catch(() => "Could not read error response body");
-                throw new Error(`Failed to fetch TTS audio. Status: ${audioResponse.status}. URL: ${audioUrl}. Response: ${errorText.substring(0,100)}`);
+                const errorText = await audioResponse.text().catch(() => "无法读取错误响应体");
+                throw new Error(`获取 TTS 音频失败。状态: ${audioResponse.status}。URL: ${audioUrl}。响应: ${errorText.substring(0,100)}`);
             }
             const audioBlob = await audioResponse.blob();
-            if (audioBlob.size === 0) throw new Error(`Failed to fetch TTS: Received empty blob. URL: ${audioUrl}`);
+            if (audioBlob.size === 0) throw new Error(`获取 TTS 失败: 收到空的 blob。URL: ${audioUrl}`);
             const preloadedAudioObjectURL = URL.createObjectURL(audioBlob);
-            Utils.log(`MessageTtsHandler: TTS audio preloaded for ttsId ${ttsId}. Object URL: ${preloadedAudioObjectURL}`, Utils.logLevels.DEBUG);
+            Utils.log(`MessageTtsHandler: ttsId ${ttsId} 的 TTS 音频已预加载。Object URL: ${preloadedAudioObjectURL}`, Utils.logLevels.DEBUG);
             this.updateTtsControlToPlay(parentContainer, ttsId, preloadedAudioObjectURL);
         } catch (preloadError) {
-            Utils.log(`Error preloading TTS audio for ttsId ${ttsId} (URL: ${audioUrl}): ${preloadError.message}`, Utils.logLevels.ERROR);
+            Utils.log(`预加载 ttsId ${ttsId} 的 TTS 音频时出错 (URL: ${audioUrl}): ${preloadError.message}`, Utils.logLevels.ERROR);
             if (Utils.logLevel <= Utils.logLevels.DEBUG && preloadError.stack) Utils.log(preloadError.stack, Utils.logLevels.DEBUG);
-            this.updateTtsControlToError(parentContainer, ttsId, "Audio load failed");
+            this.updateTtsControlToError(parentContainer, ttsId, "音频加载失败");
         }
     },
 
@@ -101,7 +101,7 @@ const MessageTtsHandler = {
             const playButton = document.createElement('button');
             playButton.className = 'tts-play-button';
             playButton.dataset.audioUrl = audioUrl;
-            playButton.title = "Play/Pause Speech";
+            playButton.title = "播放/暂停语音";
             playButton.onclick = (e) => { e.stopPropagation(); this.playTtsAudioFromControl(playButton); };
             ttsControlContainer.appendChild(playButton);
         }
@@ -114,14 +114,14 @@ const MessageTtsHandler = {
         const revokeCurrentAudioObjectURL = (audioInstance) => {
             if (audioInstance && audioInstance.src && audioInstance.src.startsWith('blob:') && audioInstance.dataset.managedObjectURL === 'true') {
                 URL.revokeObjectURL(audioInstance.src);
-                Utils.log(`Revoked object URL: ${audioInstance.src}`, Utils.logLevels.DEBUG);
+                Utils.log(`已撤销 object URL: ${audioInstance.src}`, Utils.logLevels.DEBUG);
                 delete audioInstance.dataset.managedObjectURL;
             }
         };
 
         if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
             if (this._currentlyPlayingTtsAudio.paused) {
-                this._currentlyPlayingTtsAudio.play().catch(e => Utils.log("Error resuming TTS audio: " + e, Utils.logLevels.ERROR));
+                this._currentlyPlayingTtsAudio.play().catch(e => Utils.log("恢复播放 TTS 音频时出错: " + e, Utils.logLevels.ERROR));
                 buttonElement.classList.add('playing');
             } else {
                 this._currentlyPlayingTtsAudio.pause();
@@ -139,10 +139,10 @@ const MessageTtsHandler = {
 
             this._currentlyPlayingTtsAudio.play().then(() => buttonElement.classList.add('playing'))
                 .catch(e => {
-                    Utils.log("Error playing TTS audio: " + e, Utils.logLevels.ERROR);
+                    Utils.log("播放 TTS 音频时出错: " + e, Utils.logLevels.ERROR);
                     buttonElement.classList.remove('playing');
-                    buttonElement.innerHTML = '⚠️'; buttonElement.title = "Error initiating audio";
-                    setTimeout(() => { if (buttonElement.innerHTML === '⚠️') { buttonElement.innerHTML = ''; buttonElement.title = "Play/Pause Speech"; } }, 2000);
+                    buttonElement.innerHTML = '⚠️'; buttonElement.title = "初始化音频时出错";
+                    setTimeout(() => { if (buttonElement.innerHTML === '⚠️') { buttonElement.innerHTML = ''; buttonElement.title = "播放/暂停语音"; } }, 2000);
                     revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
                     this._currentlyPlayingTtsAudio = null; this._currentlyPlayingTtsButton = null;
                 });
@@ -154,10 +154,10 @@ const MessageTtsHandler = {
                 }
             };
             this._currentlyPlayingTtsAudio.onerror = (event) => {
-                Utils.log(`Error during TTS audio playback: ${event.target.error ? event.target.error.message : "Unknown"}`, Utils.logLevels.ERROR);
+                Utils.log(`TTS 音频播放期间出错: ${event.target.error ? event.target.error.message : "未知错误"}`, Utils.logLevels.ERROR);
                 buttonElement.classList.remove('playing');
-                buttonElement.innerHTML = '⚠️'; buttonElement.title = "Error playing audio";
-                setTimeout(() => { if (buttonElement.innerHTML === '⚠️') { buttonElement.innerHTML = ''; buttonElement.title = "Play/Pause Speech"; } }, 2000);
+                buttonElement.innerHTML = '⚠️'; buttonElement.title = "播放音频时出错";
+                setTimeout(() => { if (buttonElement.innerHTML === '⚠️') { buttonElement.innerHTML = ''; buttonElement.title = "播放/暂停语音"; } }, 2000);
                 if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
                     revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
                     this._currentlyPlayingTtsAudio = null; this._currentlyPlayingTtsButton = null;
@@ -166,15 +166,52 @@ const MessageTtsHandler = {
         }
     },
 
-    updateTtsControlToError: function (parentContainer, ttsId, errorMessage = "TTS failed") {
+    updateTtsControlToError: function (parentContainer, ttsId, errorMessage = "TTS 失败") {
         const ttsControlContainer = parentContainer.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
         if (ttsControlContainer) {
             ttsControlContainer.innerHTML = '';
-            const errorIcon = document.createElement('span');
-            errorIcon.className = 'tts-error-icon';
-            errorIcon.textContent = '⚠️';
-            errorIcon.title = errorMessage;
-            ttsControlContainer.appendChild(errorIcon);
+            const errorButton = document.createElement('button');
+            errorButton.className = 'tts-retry-button'; // 使用新的特定类名
+            errorButton.textContent = '⚠️';
+            errorButton.title = `TTS 错误: ${errorMessage.substring(0,100)}。点击重试。`;
+
+            errorButton.onclick = (e) => {
+                e.stopPropagation();
+                const messageElement = parentContainer.closest('.message');
+                if (!messageElement) {
+                    Utils.log("无法找到 TTS 重试的父消息元素。", Utils.logLevels.ERROR);
+                    return;
+                }
+
+                const senderId = messageElement.dataset.senderId;
+                const contact = UserManager.contacts[senderId];
+                const messageContentElement = messageElement.querySelector('.message-content');
+
+                if (!contact || !contact.isAI || !contact.aiConfig || !contact.aiConfig.tts) {
+                    Utils.log(`无法重试 TTS: 未找到联系人 ${senderId} 或 TTS 配置。`, Utils.logLevels.ERROR);
+                    NotificationManager.showNotification("无法重试 TTS: 缺少配置。", "error");
+                    return;
+                }
+                if (!messageContentElement) {
+                    Utils.log("无法重试 TTS: 未找到消息内容元素。", Utils.logLevels.ERROR);
+                    NotificationManager.showNotification("无法重试 TTS: 缺少消息内容。", "error");
+                    return;
+                }
+
+                const rawText = messageContentElement.textContent;
+                const cleanedText = this.cleanTextForTts(rawText);
+                const currentTtsConfig = contact.aiConfig.tts;
+
+                if (cleanedText && currentTtsConfig) {
+                    Utils.log(`正在为 ttsId ${ttsId} 重试 TTS。清理后的文本: "${cleanedText.substring(0,50)}..."`, Utils.logLevels.INFO);
+                    this.addTtsPlaceholder(parentContainer, ttsId);
+                    this.requestTtsForMessage(cleanedText, currentTtsConfig, parentContainer, ttsId);
+                } else {
+                    Utils.log(`无法为 ttsId ${ttsId} 重试 TTS: 清理后的文本或 TTS 配置为空。`, Utils.logLevels.WARN);
+                    NotificationManager.showNotification("无法重试 TTS: 缺少必要数据。", "error");
+                }
+            };
+            ttsControlContainer.appendChild(errorButton);
         }
     }
 };

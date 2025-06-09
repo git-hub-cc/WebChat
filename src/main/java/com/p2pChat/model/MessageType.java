@@ -1,4 +1,4 @@
-package com.example.p2pwebchatboot.model;
+package com.p2pChat.model;
 
 /**
  * Enumerates the types of signaling messages used in WebSocket communication.

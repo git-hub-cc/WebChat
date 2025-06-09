@@ -1,6 +1,6 @@
-package com.example.p2pwebchatboot.config;
+package com.p2pChat.config;
 
-import com.example.p2pwebchatboot.handler.SignalingWebSocketHandler;
+import com.p2pChat.handler.SignalingWebSocketHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;

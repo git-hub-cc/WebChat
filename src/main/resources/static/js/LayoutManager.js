@@ -1,7 +1,7 @@
-// NEW FILE: LayoutManager.js
-// Responsibilities:
-// - Managing responsive UI layout (mobile vs. desktop).
-// - Showing/hiding major app sections (sidebar, chat area) for mobile view.
+// 新文件: LayoutManager.js (已翻译)
+// 职责:
+// - 管理响应式 UI 布局（移动端 vs. 桌面端）。
+// - 在移动端视图下显示/隐藏主要应用区域（侧边栏、聊天区）。
 const LayoutManager = {
     appContainer: null,
     sidebarNav: null,
@@ -14,7 +14,7 @@ const LayoutManager = {
         this.chatAreaEl = document.getElementById('chatArea');
         this.backToListBtn = document.getElementById('backToListBtn');
 
-        this.updateResponsiveUI(); // Initial check
+        this.updateResponsiveUI(); // 初始检查
         window.addEventListener('resize', this.updateResponsiveUI.bind(this));
 
         if (this.backToListBtn) {
@@ -27,7 +27,7 @@ const LayoutManager = {
 
         if (window.innerWidth <= 768) {
             this.appContainer.classList.add('mobile-view');
-            // If not actively in chat view on mobile, show chat list
+            // 如果在移动端未处于活动聊天视图，则显示聊天列表
             if (!this.appContainer.classList.contains('chat-view-active')) {
                 this.showChatListArea();
             }
@@ -44,13 +44,13 @@ const LayoutManager = {
             if (this.sidebarNav) this.sidebarNav.style.display = 'flex';
             if (this.chatAreaEl) this.chatAreaEl.style.display = 'none';
         }
-        // When showing chat list, details panel should be hidden if visible
+        // 当显示聊天列表时，如果详情面板可见，则应将其隐藏
         if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.isDetailsPanelVisible) {
             DetailsPanelUIManager.toggleDetailsPanel(false);
         }
     },
 
-    showChatAreaLayout: function () { // Renamed to avoid conflict with ChatAreaUIManager's showChatArea
+    showChatAreaLayout: function () { // 已重命名以避免与 ChatAreaUIManager 的 showChatArea 冲突
         if (!this.appContainer || !this.chatAreaEl) return;
 
         if (this.appContainer.classList.contains('mobile-view')) {
@@ -58,7 +58,7 @@ const LayoutManager = {
             if (this.sidebarNav) this.sidebarNav.style.display = 'none';
             this.chatAreaEl.style.display = 'flex';
         } else {
-            // Desktop view, ensure chat area is visible if it was hidden
+            // 桌面视图下，确保聊天区域可见（如果之前被隐藏）
             this.chatAreaEl.style.display = 'flex';
         }
     },

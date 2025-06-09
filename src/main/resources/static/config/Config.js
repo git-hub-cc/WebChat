@@ -27,7 +27,7 @@ const ConfigObj = {
     },
     logLevel: 'DEBUG', // Set to DEBUG for easier troubleshooting, change to INFO/ERROR for prod
     ai: {
-        sessionTime: 5 * 60 * 1000,
+        sessionTime: 10 * 60 * 1000,
     },
     music: '/music/call.mp3',
     // TODO
