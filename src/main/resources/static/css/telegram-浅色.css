@@ -1,324 +1,405 @@
 :root {
     /* Telegram Light Theme Palette */
-    --tg-blue-light-rgb: 0, 136, 204;       /* 经典 Telegram 蓝 (Classic Telegram Blue) */
-    --tg-blue-light: rgb(var(--tg-blue-light-rgb));
-    --tg-blue-light-darker-rgb: 0, 119, 179; /* 经典 Telegram 蓝 (暗) */
-    --tg-blue-light-darker: rgb(var(--tg-blue-light-darker-rgb));
+    --tg-primary-blue-rgb: 0, 136, 204;         /* Telegram 主蓝色 */
+    --tg-primary-blue: rgb(var(--tg-primary-blue-rgb));
+    --tg-light-blue-secondary-rgb: 102, 178, 222; /* 较浅的蓝色，用于强调或背景 */
+    --tg-light-blue-secondary: rgb(var(--tg-light-blue-secondary-rgb));
 
-    --tg-bg-light-rgb: 255, 255, 255;       /* 白色背景 (White Background) */
-    --tg-bg-light: rgb(var(--tg-bg-light-rgb));
-    --tg-panel-light-rgb: 240, 242, 245;    /* 浅灰色面板 (Light Gray Panel - for sidebars, headers) */
-    --tg-panel-light: rgb(var(--tg-panel-light-rgb));
-    --tg-chat-bg-light-rgb: 229, 221, 213;   /* 聊天背景 (Chat Background - like WhatsApp/Telegram default wallpaper) */
-    --tg-chat-bg-light: rgb(var(--tg-chat-bg-light-rgb));
+    --tg-background-main-rgb: 242, 242, 242;    /* 主应用背景 (非常浅的灰) */
+    --tg-background-main: rgb(var(--tg-background-main-rgb));
+    --tg-background-sidebar-rgb: 247, 247, 247; /* 侧边栏/列表背景 (比主背景略白一点) */
+    --tg-background-sidebar: rgb(var(--tg-background-sidebar-rgb));
+    --tg-background-chat-rgb: 234, 237, 240;    /* 聊天区域背景 (带细微纹理感的浅灰) */
+    --tg-background-chat: rgb(var(--tg-background-chat-rgb));
 
+    --tg-sent-bubble-rgb: 225, 243, 216;       /* 发送消息气泡 (淡绿色) */
+    --tg-sent-bubble: rgb(var(--tg-sent-bubble-rgb));
+    --tg-received-bubble-rgb: 255, 255, 255;    /* 接收消息气泡 (白色) */
+    --tg-received-bubble: rgb(var(--tg-received-bubble-rgb));
 
-    --tg-text-dark-rgb: 33, 33, 33;         /* 深灰色文字 (Dark Gray Text) */
-    --tg-text-dark: rgb(var(--tg-text-dark-rgb));
-    --tg-text-medium-gray-rgb: 117, 117, 117;/* 中灰色文字 (Medium Gray Text - for previews, timestamps) */
-    --tg-text-medium-gray: rgb(var(--tg-text-medium-gray-rgb));
-    --tg-text-inverted-light-rgb: 255, 255, 255; /* 白色反相文字 (White Inverted Text - on blue buttons) */
-    --tg-text-inverted-light: rgb(var(--tg-text-inverted-light-rgb));
+    --tg-text-primary-rgb: 33, 33, 33;          /* 主要文字 (深灰色) */
+    --tg-text-primary: rgb(var(--tg-text-primary-rgb));
+    --tg-text-secondary-rgb: 117, 117, 117;     /* 次要文字 (中灰色) */
+    --tg-text-secondary: rgb(var(--tg-text-secondary-rgb));
+    --tg-text-white-rgb: 255, 255, 255;
+    --tg-text-white: rgb(var(--tg-text-white-rgb));
 
-    --tg-border-light-rgb: 224, 224, 224;   /* 浅灰色边框 (Light Gray Border) */
-    --tg-border-light: rgb(var(--tg-border-light-rgb));
-
-    --tg-sent-bubble-light-rgb: 225, 255, 199; /* 淡绿色已发送气泡 (Light Green Sent Bubble) */
-    --tg-sent-bubble-light: rgb(var(--tg-sent-bubble-light-rgb));
-    --tg-received-bubble-light-rgb: 255, 255, 255; /* 白色已接收气泡 (White Received Bubble) */
-    --tg-received-bubble-light: rgb(var(--tg-received-bubble-light-rgb));
-
-    --tg-accent-green-rgb: 76, 175, 80;     /* 绿色强调 (Green Accent - for online, success) */
+    --tg-accent-green-rgb: 76, 175, 80;         /* 强调绿 (在线状态) */
     --tg-accent-green: rgb(var(--tg-accent-green-rgb));
-    --tg-danger-red-rgb: 244, 67, 54;       /* 红色危险 (Red Danger) */
-    --tg-danger-red: rgb(var(--tg-danger-red-rgb));
-    --tg-warning-orange-rgb: 255, 152, 0;   /* 橙色警告 (Orange Warning) */
+    --tg-error-red-rgb: 222, 50, 50;            /* 错误红 */
+    --tg-error-red: rgb(var(--tg-error-red-rgb));
+    --tg-warning-orange-rgb: 255, 152, 0;       /* 警告橙 */
     --tg-warning-orange: rgb(var(--tg-warning-orange-rgb));
 
+    --tg-border-light-rgb: 224, 224, 224;       /* 浅色边框 */
+    --tg-border-light: rgb(var(--tg-border-light-rgb));
+    --tg-icon-gray-rgb: 158, 158, 158;         /* 图标灰色 */
+    --tg-icon-gray: rgb(var(--tg-icon-gray-rgb));
 
-    /* Override P2P Chat variables */
-    --primary-color: var(--tg-blue-light);
-    --primary-color-dark: var(--tg-blue-light-darker);
-    --secondary-color: var(--tg-panel-light); /* Main app panels like sidebar, header */
-    --text-color: var(--tg-text-dark);
-    --text-color-light: var(--tg-text-medium-gray);
-    --text-color-inverted: var(--tg-text-inverted-light);
+    /* 角色特定颜色 (Telegram风格下) */
+    --tg-ai-contact-primary: var(--tg-primary-blue); /* AI角色主色调，也用作选中背景 */
+    --tg-ai-contact-secondary: rgba(var(--tg-primary-blue-rgb), 0.1); /* AI列表项的次级背景（如悬停），这里未使用 */
+    --tg-ai-avatar-text: var(--tg-text-white); /* 用于深色AI头像背景的文字 */
+    --tg-ai-message-sender: var(--tg-primary-blue); /* AI消息发送者名字颜色 */
+    --tg-ai-text-on-light-selection-bg: var(--tg-text-primary); /* 用于AI角色列表项选中时（如果背景是浅色）的文字颜色 */
+
+
+    /* 覆盖 P2P Chat 原有变量 */
+    --primary-color: var(--tg-primary-blue);
+    --primary-color-dark: rgb(0, 119, 179);
+    --secondary-color: var(--tg-background-sidebar); /* 应用面板主背景 */
+    --text-color: var(--tg-text-primary);
+    --text-color-light: var(--tg-text-secondary);
+    --text-color-inverted: var(--tg-text-white);
     --accent-color: var(--tg-accent-green);
-    --danger-color: var(--tg-danger-red);
+    --danger-color: var(--tg-error-red);
     --warning-color: var(--tg-warning-orange);
 
-    --sent-bg-color: var(--tg-sent-bubble-light);
-    --received-bg-color: var(--tg-received-bubble-light);
+    --sent-bg-color: var(--tg-sent-bubble);
+    --received-bg-color: var(--tg-received-bubble);
 
     --border-color: var(--tg-border-light);
-    --hover-bg-color: rgba(0, 0, 0, 0.04); /* Subtle dark hover */
-    --active-bg-color: rgba(var(--tg-blue-light-rgb), 0.1); /* Light blue active state */
-
-    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* Standard system fonts like Telegram */
-    --box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 1px 1px rgba(0,0,0,0.06); /* Softer shadow for light theme */
-    --special-contact-color: var(--tg-blue-light); /* AI contacts will use primary blue */
+    --hover-bg-color: rgba(var(--tg-primary-blue-rgb), 0.08); /* 蓝色系的悬停 */
+    --active-bg-color: var(--primary-color); /* 普通激活背景用主蓝色 */
+    --sidebar-width: 320px;
+    --header-height: 56px; /* Telegram 头部通常较窄 */
+    --border-radius: 8px;
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    --box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Telegram 阴影较轻 */
+    --special-contact-color: var(--tg-ai-contact-primary); /* 默认特殊联系人颜色 */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: var(--font-family);
-    background-color: var(--tg-chat-bg-light); /* Default chat background, often a pattern in Telegram */
+    font-family: var(--font-family), serif;
+    background-color: var(--tg-background-main);
     color: var(--text-color);
-    line-height: 1.6;
+    line-height: 1.5; /* Telegram 行距较紧凑 */
     overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    /* Use a very subtle gradient for the overall page, or keep it simple */
-    background: linear-gradient(to bottom right, #e0eafc, #cfdef3); /* Light blueish gradient */
+    background-image: linear-gradient(to bottom, #eff3f6, #dde2e7);
 }
 
 .app-container {
     display: flex;
     width: 100%;
     max-width: 1400px;
-    height: 90vh;
-    max-height: 90vh;
-    background-color: var(--tg-bg-light); /* Main app container is white */
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    background-color: var(--secondary-color); /* 侧边栏背景色 */
+    box-shadow: 0 1px 5px rgba(0,0,0,0.1);
     border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
     overflow: hidden;
 }
 
-/* --- Scrollbar --- */
+/* --- 滚动条美化 (Telegram 风格细滚动条) --- */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: rgba(var(--tg-panel-light-rgb), 0.5); }
-::-webkit-scrollbar-thumb { background: rgba(var(--tg-text-medium-gray-rgb), 0.4); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(var(--tg-text-medium-gray-rgb), 0.6); }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.3); }
 
 /* --- Sidebar Navigation --- */
 .sidebar-nav {
-    background-color: var(--secondary-color); /* Light gray panel */
+    background-color: var(--secondary-color); /* --tg-background-sidebar */
     border-right: 1px solid var(--border-color);
 }
 .sidebar-header {
+    padding: 8px 12px; /* 略微紧凑 */
+    height: var(--header-height);
     background-color: var(--secondary-color);
 }
-.menu-btn { color: var(--text-color-light); }
+.menu-btn { color: var(--tg-icon-gray); margin-right: 15px; }
 .menu-btn:hover { color: var(--primary-color); }
 .search-bar {
-    background-color: var(--tg-bg-light); /* White search bar */
-    border: 1px solid var(--border-color);
+    background-color: var(--tg-background-main); /* 搜索框用更浅的灰色 */
+    border: 1px solid transparent; /* 无边框，焦点时显示 */
     color: var(--text-color);
+    border-radius: 18px;
+    padding: 7px 12px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 1px rgba(var(--tg-blue-light-rgb),0.3);
+    background-color: var(--tg-received-bubble); /* 焦点时白色 */
+    box-shadow: 0 0 0 1px var(--primary-color);
 }
-.nav-tabs { border-bottom: 1px solid var(--border-color); }
-.nav-tab { color: var(--text-color-light); }
+.nav-tabs { border-bottom: 1px solid var(--border-color); padding: 8px 0; }
+.nav-tab { color: var(--text-color-light); font-weight: 500; padding: 6px 10px; }
 .nav-tab:hover { color: var(--primary-color); }
 .nav-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
 
-.chat-list-item { border-bottom: 1px solid var(--border-color); }
+.chat-list-item { padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
 .chat-list-item:hover { background-color: var(--hover-bg-color); }
-.chat-list-item.active {
-    background-color: var(--primary-color);
+
+/* 普通选中 (非AI角色) */
+.chat-list-item.active:not(.special-contact) { /* 确保不影响AI角色的特殊选中样式 */
+    background-color: var(--active-bg-color); /* 即 var(--primary-color) */
 }
-.chat-list-item.active .chat-list-name,
-.chat-list-item.active .chat-list-preview,
-.chat-list-item.active .chat-list-time {
+.chat-list-item.active:not(.special-contact) .chat-list-name,
+.chat-list-item.active:not(.special-contact) .chat-list-preview,
+.chat-list-item.active .chat-list-name:not(.special-contact .chat-list-name),
+.chat-list-item.active:not(.special-contact) .chat-list-time {
+    color: var(--text-color-inverted); /* 选中项文字反白 */
+}
+
+.chat-list-avatar {
+    width: 42px; height: 42px; /* Telegram 头像略大 */
+    background-color: var(--tg-light-blue-secondary); /* 默认头像背景 */
     color: var(--text-color-inverted);
+    font-size: 18px;
 }
-.chat-list-avatar { /* Default avatar style */
-    background-color: var(--tg-blue-light);
-    color: var(--tg-text-inverted-light);
-    font-family: var(--font-family);
-    border: none;
+
+/* --- AI 角色特定样式 (AI_CONTACT_CLASS 是一个占位符, JS会替换成具体角色类名) --- */
+.chat-list-item.special-contact.AI_CONTACT_CLASS .chat-list-avatar,
+.chat-avatar-main.AI_CONTACT_CLASS, .details-avatar.AI_CONTACT_CLASS, #callingModalAvatar.AI_CONTACT_CLASS {
+    background-color: var(--tg-ai-contact-primary);
+    color: var(--tg-ai-avatar-text);
 }
-.chat-list-item.group .chat-list-avatar {
-    background-color: var(--tg-accent-green);
+
+/* AI 角色列表选中 */
+.chat-list-item.active.AI_CONTACT_CLASS {
+    background-color: var(--tg-ai-contact-primary);
+    /* 如果想让AI选中背景更淡，可以用: background-color: var(--tg-ai-contact-secondary); */
 }
+
+/* AI 角色选中的列表项内的文字颜色 */
+.chat-list-item.active.AI_CONTACT_CLASS .chat-list-name,
+.chat-list-item.active.AI_CONTACT_CLASS .chat-list-preview,
+.chat-list-item.active.AI_CONTACT_CLASS .chat-list-time {
+    color: var(--tg-ai-text-on-light-selection-bg); /* 使用深色文字以保证在各种AI主色背景下的可读性 */
+}
+/* 如果 --tg-ai-contact-primary 总是深色，则用下面这行替换上面的 color 规则: */
+/* color: var(--tg-ai-avatar-text); */
+
+
+.chat-header-main.current-chat-AI_CONTACT_CLASS .chat-title-main { color: var(--tg-ai-message-sender); }
+.message.received[data-sender-id^="AI_"] .message-sender { color: var(--tg-ai-message-sender); }
+.details-panel.AI_CONTACT_CLASS #aiContactAboutSection h4 span,
+.details-panel.AI_CONTACT_CLASS #detailsName { color: var(--tg-ai-contact-primary); }
+
+
+.chat-list-badge {
+    background-color: var(--primary-color); /* 徽标用主蓝色 */
+    color: var(--text-color-inverted);
+    border-radius: 12px; /* 更圆的徽章 */
+    padding: 1px 7px;
+    font-size: 11px;
+    min-width: 20px;
+    line-height: 1.5;
+}
+.new-chat-fab {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    width: 56px; height: 56px;
+}
+.new-chat-fab:hover { background-color: var(--primary-color-dark); }
 
 /* --- Main Chat Area --- */
 .chat-area {
-    background-color: var(--tg-chat-bg-light); /* The patterned/colored background for messages */
+    background-color: var(--tg-background-chat);
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAAAoAQMAAAAChZ4TAAAABlBMVEUKCoP///8vjBuaAAAAAXRSTlMAQObYZgAAABZJREFUOI1jYMAHGAwYFBgMGADdGgAnEQJ1YQAAAABJRU5ErkJggg==");
+    background-repeat: repeat;
+    background-size: 320px 32px;
+    background-blend-mode: overlay;
 }
 .chat-header-main {
-    background-color: var(--secondary-color); /* Light gray panel */
+    background-color: var(--secondary-color); /* 与侧边栏一致 */
+    height: var(--header-height);
+    border-bottom: 1px solid var(--border-color);
 }
-.chat-avatar-main {
-    background-color: var(--tg-blue-light);
-    color: var(--tg-text-inverted-light);
-    border: 1px solid var(--border-color);
-}
-.chat-title-main { font-weight: 600; }
-.header-action-btn { color: var(--text-color-light); }
+.chat-avatar-main { border: none; }
+.chat-title-main { font-weight: 500; }
+.header-action-btn { color: var(--tg-icon-gray); }
 .header-action-btn:hover { color: var(--primary-color); }
 
-.chat-messages-container { padding: 15px; } /* Already has flex from base */
+.chat-messages-container { padding: 10px 16px; }
+.no-chat-selected { color: var(--text-color-light); }
 .no-chat-selected .logo-placeholder {
-    font-size: 60px;
-    color: rgba(var(--tg-text-dark-rgb), 0.3);
+    font-family: var(--font-family), serif;
+    content: "💬";
+    font-size: 50px;
+    color: var(--tg-icon-gray);
+    opacity: 0.6;
 }
 .status-indicator.global {
-    background-color: rgba(var(--tg-text-dark-rgb), 0.05);
-    border: 1px solid var(--border-color);
+    background-color: rgba(var(--tg-primary-blue-rgb), 0.1);
+    border: none;
     color: var(--primary-color);
+    padding: 5px 10px;
+    border-radius: 15px;
 }
 
-/* Message Bubbles */
+/* 消息气泡 */
 .message {
-    border: none; /* Telegram messages usually don't have borders */
-    box-shadow: var(--box-shadow);
+    border: none;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.08);
+    padding: 7px 12px;
+    border-radius: var(--border-radius);
+    max-width: 75%;
 }
 .message.sent {
     background-color: var(--sent-bg-color);
-    /* border-left: none; */
+    color: var(--text-color);
+    border-bottom-right-radius: 2px;
 }
 .message.received {
     background-color: var(--received-bg-color);
-    /* border-right: none; */
+    border-bottom-left-radius: 2px;
 }
 .message.system {
-    background-color: rgba(var(--tg-panel-light-rgb), 0.8);
-    color: var(--text-color-light);
-    border: none;
+    background-color: rgba(var(--tg-primary-blue-rgb), 0.12);
+    color: var(--primary-color);
+    font-style: normal;
+    font-size: 13px;
     box-shadow: none;
+    border-radius: 15px;
 }
 .message-sender {
-    color: var(--primary-color); /* Sender name in primary color for received messages */
+    color: var(--primary-color);
+    font-weight: 500;
+    font-size: 13px;
+    margin-bottom: 2px;
 }
-.message.received[data-sender-id="fixed_contact_ai_yuuka_hayase"] .message-sender, /* Example special contact */
-.message.received[data-sender-id^="AI_"] .message-sender { /* Generic AI prefix */
-    color: var(--special-contact-color); /* Use special color or primary for AI */
+.message .timestamp {
+    font-size: 11px;
+    color: var(--text-color-light);
+    opacity: 0.9;
+    margin-top: 3px;
 }
-.message .timestamp { color: var(--text-color-light); opacity: 0.9; }
+.message.sent .timestamp { color: #65a052; }
 
-.chat-input-container {
-    background-color: var(--secondary-color); /* Light gray panel */
-}
+
+.chat-input-container { background-color: var(--secondary-color); padding: 8px 12px; }
 #messageInput {
-    background-color: var(--tg-bg-light); /* White input field */
+    background-color: var(--tg-received-bubble);
     border: 1px solid var(--border-color);
     color: var(--text-color);
+    border-radius: 18px;
+    padding: 9px 15px;
+    min-height: 20px;
+    line-height: 1.4;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 1px rgba(var(--tg-blue-light-rgb),0.3);
+    box-shadow: 0 0 0 1px var(--primary-color);
 }
-.icon-btn { color: var(--text-color-light); }
-.icon-btn:hover { color: var(--primary-color); background-color: rgba(var(--tg-blue-light-rgb),0.05); }
-#sendButtonMain { color: var(--primary-color); } /* Explicitly Telegram blue */
-#voiceButtonMain.recording { color: var(--danger-color); animation: pulse-light 1.5s infinite; }
-@keyframes pulse-light {
-    0% { box-shadow: 0 0 0 0 rgba(var(--tg-danger-red-rgb), 0.5); }
-    70% { box-shadow: 0 0 0 10px rgba(var(--tg-danger-red-rgb), 0); }
-    100% { box-shadow: 0 0 0 0 rgba(var(--tg-danger-red-rgb), 0); }
+.icon-btn { color: var(--tg-icon-gray); padding: 7px; }
+.icon-btn:hover { color: var(--primary-color); background-color: transparent; }
+#sendButtonMain { color: var(--primary-color); font-weight: 500; }
+#sendButtonMain:hover { text-shadow: none; }
+#voiceButtonMain.recording { color: var(--danger-color); animation: tg-pulse 1.5s infinite; }
+@keyframes tg-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--tg-error-red-rgb), 0.5); }
+    70% { box-shadow: 0 0 0 8px rgba(var(--tg-error-red-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--tg-error-red-rgb), 0); }
 }
 
 /* --- Details Panel --- */
-.details-panel {
-    background-color: var(--secondary-color); /* Light gray panel */
-    border-left: 1px solid var(--border-color);
-}
-.details-header {
-    background-color: var(--secondary-color);
-}
-.details-avatar {
-    background-color: var(--primary-color);
-    color: var(--text-color-inverted);
-    border: 2px solid var(--tg-bg-light); /* White border around avatar */
-    box-shadow: 0 0 5px rgba(0,0,0,0.1);
-}
-#detailsName { text-shadow: none; }
+.details-panel { background-color: var(--secondary-color); border-left: 1px solid var(--border-color); }
+.details-header { background-color: var(--secondary-color); height: var(--header-height); }
+.details-avatar { border: none; }
+#detailsName { font-weight: 500; }
 #aiContactDetailsContent {
-    background-color: var(--tg-bg-light); /* White content area within details */
+    background-color: var(--tg-background-main);
     border: 1px solid var(--border-color);
-    padding: 10px;
     border-radius: var(--border-radius);
 }
-#aiContactDetailsContent p strong { color: var(--primary-color); border-bottom: 1px solid rgba(var(--tg-blue-light-rgb), 0.2); }
-#aiContactBasicInfoList li { border-bottom: 1px dotted rgba(var(--tg-border-light-rgb), 0.7); }
+#aiContactDetailsContent p strong { color: var(--primary-color); border-bottom: none; }
+#aiContactBasicInfoList li { border-bottom: 1px dotted rgba(var(--tg-text-primary-rgb), 0.1); }
 #aiContactAboutText { color: var(--text-color-light); }
 
-/* Buttons */
+/* 通用按钮样式 */
 .btn {
-    text-transform: none; /* Telegram buttons are usually not all-caps */
-    letter-spacing: normal;
-    box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+    border-radius: var(--border-radius);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: none;
+    padding: 8px 16px;
 }
 .btn-primary { background-color: var(--primary-color); color: var(--text-color-inverted); border: none; }
 .btn-primary:hover { background-color: var(--primary-color-dark); }
-.btn-secondary { background-color: var(--tg-border-light); color: var(--text-color); border: none; } /* e.g. Copy ID button */
-.btn-secondary:hover { background-color: #d0d0d0; }
+.btn-secondary {
+    background-color: var(--tg-border-light);
+    color: var(--primary-color);
+    border: none;
+}
+.btn-secondary:hover { background-color: #dcdcdc; }
 .btn-danger { background-color: var(--danger-color); color: var(--text-color-inverted); border: none; }
-.btn-danger:hover { background-color: rgb(211, 47, 47); }
-.btn-success { background-color: var(--accent-color); color: var(--text-color-inverted); border: none; }
-.btn-success:hover { background-color: rgb(67, 160, 71); }
+.btn-danger:hover { background-color: rgb(200, 40, 40); }
+.btn-success { background-color: var(--accent-color); color: var(--text-color-inverted); border: none;}
+.btn-success:hover { background-color: rgb(60, 150, 65); }
 
 /* --- Modals --- */
-.loading-overlay { background-color: rgba(var(--tg-panel-light-rgb), 0.8); color: var(--text-color); }
+.loading-overlay { background-color: rgba(var(--tg-background-main-rgb), 0.8); }
 .loading-spinner {
     border-top-color: var(--primary-color);
     border-left-color: var(--primary-color);
-    border-bottom-color: rgba(var(--tg-blue-light-rgb),0.2);
-    border-right-color: rgba(var(--tg-blue-light-rgb),0.2);
+    border-bottom-color: rgba(var(--tg-primary-blue-rgb),0.2);
+    border-right-color: rgba(var(--tg-primary-blue-rgb),0.2);
 }
 .modal-content {
-    background-color: var(--tg-bg-light); /* White modal background */
-    border: 1px solid var(--border-color);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    background-color: var(--secondary-color);
+    border: none;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    border-radius: var(--border-radius);
 }
-.modal-header h2 { color: var(--primary-color); }
+.modal-header h2 { color: var(--text-color); font-size: 18px; font-weight: 500; }
 .close-modal-btn:hover { color: var(--primary-color); }
 .modal-body input[type="text"], .modal-body textarea {
-    background-color: var(--tg-bg-light);
+    background-color: var(--tg-received-bubble);
     color: var(--text-color);
     border: 1px solid var(--border-color);
 }
+.modal-body input[type="text"]:focus, .modal-body textarea:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 1px var(--primary-color);
+}
 .user-id-display #modalUserIdValue {
-    background: var(--tg-panel-light);
+    background: var(--tg-background-main);
     color: var(--primary-color);
     border: 1px dashed var(--primary-color);
+    font-weight: 500;
 }
 
 /* Video Call */
-.video-call-avatar { background-color: var(--primary-color); border: 1px solid var(--border-color); }
+.video-call-avatar { background-color: var(--tg-light-blue-secondary); border: none; }
 .video-call-button.end-call { background: var(--danger-color); }
 .video-call-button.active { background: var(--primary-color); color: var(--text-color-inverted); }
-.video-call-button.mute-audio, .video-call-button.toggle-camera, .video-call-button.audio-only, .video-call-button.toggle-pip {
-    background: rgba(var(--tg-bg-light-rgb),0.9); color: var(--text-color);
-}
-
 
 /* Toggle Switch */
 input:checked + .slider { background-color: var(--primary-color); }
-.slider { background-color: var(--tg-border-light); }
-.slider:before { background-color: var(--tg-bg-light); }
+.slider { background-color: #bdc1c5; }
+.slider:before { background-color: var(--tg-text-white); box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 
-
-/* Custom Select for Theme Picker */
-.custom-select {
-    color: var(--text-color);
-    background-color: var(--tg-bg-light);
-    border: 1px solid var(--border-color);
+/* 确保特定隐藏部分被隐藏 */
+#detailsPanelContent #aiContactAboutSection,
+#detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
+#detailsPanelContent #detailsGroupManagement #leftMembersArea,
+#detailsPanelContent #groupActionsDetails,
+#detailsPanelContent #dissolveGroupBtnDetails,
+#mainMenuModal .settings-section.manual-connection-advanced,
+#mainMenuModal #modalResetAllConnectionsBtn {
+    display: none;
 }
-.custom-select .options {
-    border: 1px solid var(--border-color);
-    border-top: none;
-    background-color: var(--tg-bg-light);
-}
-.custom-select .option:hover {
-    background-color: var(--primary-color);
-    color: var(--text-color-inverted);
+/* 特定于AI角色显示"关于"区域的样式 */
+.details-panel.AI_CONTACT_CLASS #aiContactAboutSection {
+    display: block;
 }
 
-/* Notification */
+.details-panel.human-contact-active #contactActionsDetails { display: block; }
+.details-panel.group-chat-active #detailsGroupManagement,
+.details-panel.group-chat-active #groupActionsDetails { display: block; }
+
 .notification {
-    background: var(--tg-bg-light);
-    border-left-color: var(--primary-color);
+    background: var(--tg-received-bubble);
+    border-left: 4px solid var(--primary-color);
     color: var(--text-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
-.notification.notification-success { border-left-color: var(--accent-color); }
-.notification.notification-warning { border-left-color: var(--warning-color); }
-.notification.notification-error { border-left-color: var(--danger-color); }

@@ -77,8 +77,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: var(--font-family);
-    background-color: var(--gs-night-indigo-bg); /* 最底层背景 */
+    font-family: var(--font-family), serif;
+    /* 最底层背景 */
     color: var(--text-color);
     line-height: 1.6;
     overflow: hidden;
@@ -86,8 +86,7 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background: radial-gradient(ellipse at center, rgba(var(--gs-abyss-violet-panel-rgb),0.25) 0%, var(--gs-night-indigo-bg) 70%),
-    linear-gradient(to bottom right, rgba(var(--gs-night-indigo-bg-rgb),0.95), rgba(var(--gs-electro-luminous-purple-rgb),0.1));
+    background: var(--gs-night-indigo-bg) radial-gradient(ellipse at center, rgba(var(--gs-abyss-violet-panel-rgb), 0.25) 0%, var(--gs-night-indigo-bg) 70%);
     background-blend-mode: overlay, normal;
 }
 
@@ -143,7 +142,7 @@ body {
 .chat-list-item.active .chat-list-name { color: var(--gs-electro-luminous-purple); font-weight: bold; }
 .chat-list-avatar {
     background-color: var(--gs-border-obsidian-violet);
-    font-family: var(--font-family);
+    font-family: var(--font-family), serif;
     border: 1px solid rgba(var(--gs-text-starlight-silver-rgb), 0.12);
     color: var(--gs-text-starlight-silver);
 }
@@ -269,7 +268,7 @@ body {
 
 .chat-messages-container { padding: 15px; }
 .no-chat-selected .logo-placeholder {
-    font-family: var(--font-family);
+    font-family: var(--font-family), serif;
     content: "🌀"; /* Elemental Swirl / Abyss Portal like */
     font-size: 60px;
     color: rgba(var(--gs-electro-luminous-purple-rgb), 0.35);

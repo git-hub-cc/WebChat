@@ -61,7 +61,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: var(--font-family);
+    font-family: var(--font-family), serif;
     background-color: var(--tg-bg-dark);
     color: var(--text-color);
     line-height: 1.6;
@@ -131,7 +131,7 @@ body {
 .chat-list-avatar {
     background-color: var(--tg-blue-dark-accent);
     color: var(--tg-text-inverted-dark);
-    font-family: var(--font-family);
+    font-family: var(--font-family), serif;
     border: none;
 }
 .chat-list-item.group .chat-list-avatar {

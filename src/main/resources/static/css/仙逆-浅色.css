@@ -62,8 +62,8 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    font-family: var(--font-family);
-    background-color: var(--xn-misty-white-bg); /* 最底层背景 */
+    font-family: var(--font-family), serif;
+    /* 最底层背景 */
     color: var(--text-color);
     line-height: 1.6;
     overflow: hidden;
@@ -71,9 +71,7 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background: linear-gradient(135deg, rgba(var(--xn-misty-white-bg-rgb),0.9), rgba(var(--xn-ancient-stone-panel-rgb),0.8)),
-    radial-gradient(ellipse at top left, rgba(var(--xn-sky-blue-accent-rgb),0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at bottom right, rgba(var(--xn-cinnabar-red-rgb),0.08) 0%, transparent 60%);
+    background: var(--xn-misty-white-bg) linear-gradient(135deg, rgba(var(--xn-misty-white-bg-rgb), 0.9), rgba(var(--xn-ancient-stone-panel-rgb), 0.8)) radial-gradient(ellipse at top left, rgba(var(--xn-sky-blue-accent-rgb), 0.1) 0%, transparent 50%) radial-gradient(ellipse at bottom right, rgba(var(--xn-cinnabar-red-rgb), 0.08) 0%, transparent 60%);
     background-blend-mode: normal, overlay, overlay;
 }
 

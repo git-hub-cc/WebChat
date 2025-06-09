@@ -58,7 +58,7 @@
 }
 
 body {
-    font-family: var(--font-family);
+    font-family: var(--font-family), serif;
     background-color: var(--cs-shinchan-yellow); /* 最底层用小新黄 */
     color: var(--text-color);
     line-height: 1.5;
@@ -245,7 +245,7 @@ body {
     background-color: var(--cs-shiro-white);
     border: 2px solid var(--cs-border-brown);
     border-radius: 20px;
-    font-family: var(--font-family); /* Ensure input uses the theme font */
+    font-family: var(--font-family), serif; /* Ensure input uses the theme font */
 }
 #messageInput:focus { border-color: var(--cs-shinchan-red); box-shadow: 0 0 0 2px rgba(var(--cs-shinchan-red-rgb),0.2); }
 .icon-btn:hover { color: var(--cs-shinchan-red); background-color: rgba(var(--cs-shinchan-yellow-rgb),0.5); }
