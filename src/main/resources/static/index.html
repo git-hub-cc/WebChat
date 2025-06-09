@@ -6,7 +6,8 @@
     <title>P2P Chat Modern</title>
     <link rel="stylesheet" href="css/base.css">
     <!-- Placeholder for theme-specific CSS -->
-    <link id="theme-stylesheet" rel="stylesheet" href="css/原神-深色.css">
+    <link rel="stylesheet" href="css/原神-浅色.css">
+    <link id="theme-stylesheet" rel="stylesheet" href="css/原神-浅色.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -110,14 +111,24 @@
                     </div>
                     <button id="saveAiTtsSettingsBtnDetails" class="btn btn-primary" style="margin-top: 15px; width: 100%;">Save TTS Settings</button>
                 </div>
+                <p>
+                    <strong>GPT-SoVITS 开发者：</strong><a href="https://space.bilibili.com/5760446" target="_blank" rel="noopener noreferrer" >@花儿不哭</a><br>
+                    <strong>模型训练者：</strong><a href="https://space.bilibili.com/6589795" target="_blank" rel="noopener noreferrer" >@红血球AE3803</a>  <a href="https://space.bilibili.com/518098961" target="_blank" rel="noopener noreferrer" >@白菜工厂1145号员工</a><br>
+                    <strong>推理特化包适配 & 在线推理：</strong><a href="https://gsv.acgnai.top/" target="_blank" rel="noopener noreferrer" >@AI-Hobbyist</a><br>
+                </p>
                 <div class="tts-attribution-section">
-                    <p>
-                        <strong>GPT-SoVITS 开发者：</strong><a href="https://space.bilibili.com/5760446" target="_blank" rel="noopener noreferrer" >@花儿不哭</a><br>
-                        <strong>模型训练者：</strong><a href="https://space.bilibili.com/6589795" target="_blank" rel="noopener noreferrer" >@红血球AE3803</a>  <a href="https://space.bilibili.com/518098961" target="_blank" rel="noopener noreferrer" >@白菜工厂1145号员工</a><br>
-                        <strong>推理特化包适配 & 在线推理：</strong><a href="https://gsv.acgnai.top/" target="_blank" rel="noopener noreferrer" >@AI-Hobbyist</a><br>
-                        <a href="https://gsv.acgnai.top/" target="_blank" rel="noopener noreferrer" >网站预览</a><br>
-                        <strong>当前项目开源地址：</strong><a href="https://github.com/git-hub-cc/P2P-Web-Chat" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/P2P-Web-Chat</a>
-                    </p>
+                    <h5 class="collapsible-header attribution-sub-header" id="ttsAttributionCollapsibleTrigger">
+                        More <span class="collapse-icon">▶</span>
+                    </h5>
+                    <div class="collapsible-content attribution-sub-content" id="ttsAttributionCollapsibleContent" style="display: none;">
+                        <p>
+                            <strong>对话AI：</strong><a href="https://bailian.console.aliyun.com/" target="_blank" rel="noopener noreferrer" >阿里</a><br>
+                            <strong>页面布局：</strong><a href="https://web.telegram.org/" target="_blank" rel="noopener noreferrer" >telegram</a><br>
+                            <strong>素材资源：</strong><a href="#" target="_blank" rel="noopener noreferrer" >网络</a><br>
+                            <strong>主题概念：</strong><a href="https://space.bilibili.com/1290496974" target="_blank" rel="noopener noreferrer" >@卤v</a><br>
+                            <strong>当前项目开源地址：</strong><a href="https://github.com/git-hub-cc/P2P-Web-Chat" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/P2P-Web-Chat</a>
+                        </p>
+                    </div>
                 </div>
             </div>
             <!-- End AI TTS Configuration Section -->
@@ -216,7 +227,7 @@
                 <div class="settings-item">
                     <label for="colorSchemeCustomSelectContainer">Color Scheme:</label>
                     <div class="custom-select" id="colorSchemeCustomSelectContainer">
-                        <div class="selected" id="colorSchemeSelectedValue">Auto (System)</div>
+                        <div class="selected" id="colorSchemeSelectedValue">Auto (Browser)</div>
                         <div class="options" id="colorSchemeOptionsContainer">
                         </div>
                     </div>
@@ -273,7 +284,7 @@
                         </div>
                         <div class="manual-connect-step">
                             <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="Paste peer's connection info here..."></textarea>
-                            <button onclick="SettingsUIManager.copySdpTextFromModal()" class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
+                            <button class="btn btn-secondary" id="modalCopySdpBtn">Copy My Info</button>
                         </div>
                     </div>
                 </div>

@@ -449,7 +449,7 @@ body {
 }
 
 /* TTS Config in Details */
-#aiTtsConfigSection .collapsible-header {
+#aiTtsConfigSection .collapsible-header { /* This is for the "TTS Configuration" H4 */
     cursor: pointer; display: flex; justify-content: space-between; align-items: center;
     padding-bottom: 8px; transition: color 0.2s, border-bottom-color 0.2s;
     color: var(--text-color-light); border-bottom: 1px solid var(--border-color); margin-bottom: 0;
@@ -457,8 +457,9 @@ body {
 #aiTtsConfigSection .collapsible-header:hover { color: var(--primary-color); }
 #aiTtsConfigSection .collapsible-header .collapse-icon { transition: transform 0.2s ease-in-out; font-size: 0.9em; margin-left: 5px; }
 #aiTtsConfigSection .collapsible-header.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-#aiTtsConfigSection .collapsible-header.active .collapse-icon { transform: rotate(90deg); }
-.tts-config-content-details {
+/* The .active .collapse-icon rotation is handled by the general rule further down */
+
+.tts-config-content-details { /* This is for the content directly under "TTS Configuration" H4 */
     padding-left: 12px; border-left: 2px solid var(--border-color);
     margin-top: 10px; margin-left: 5px; padding-top: 5px;
 }
@@ -496,13 +497,8 @@ body {
 #saveAiTtsSettingsBtnDetails { margin-top: 10px; width: 100%; }
 
 .tts-attribution-section {
-    margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);
     margin-left: 5px; margin-right: 5px;
 }
-.tts-attribution-section p { font-size: 0.88em; color: var(--text-color-light); line-height: 1.6; margin-bottom: 0; }
-.tts-attribution-section p strong { font-weight: 500; color: var(--text-color); }
-.tts-attribution-section a { color: var(--primary-color); text-decoration: none; }
-.tts-attribution-section a:hover { text-decoration: underline; }
 
 /* Group Management in Details */
 .member-list-details .member-item-detail {
@@ -779,7 +775,7 @@ body {
 }
 input:checked + .slider { background-color: var(--primary-color); }
 input:focus + .slider { box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Themed primary alpha */ }
-input:checked + .slider:before { transform: translateX(54px); } /* Adjusted for 46px width */
+input:checked + .slider:before { transform: translateX(22px); } /* Adjusted for 46px width (46 - 18 - 3 - 3 = 22) */
 .slider.round { border-radius: 24px; }
 .slider.round:before { border-radius: 50%; }
 
@@ -880,9 +876,13 @@ input:checked + .slider:before { transform: translateX(54px); } /* Adjusted for 
 .collapsible-header:hover { color: var(--primary-color); }
 .collapsible-header.active { border-bottom-color: var(--primary-color); color: var(--primary-color); }
 .collapsible-header .collapse-icon { transition: transform 0.2s ease-in-out; font-size: 0.9em; margin-left: 5px; }
+.collapsible-header.active .collapse-icon {
+    transform: rotate(90deg);
+}
 .collapsible-content {
     padding-left: 15px; border-left: 2px solid var(--hover-bg-color);
     margin-top: 0px; padding-top: 5px; margin-bottom: 10px;
+    /* display: none; by default via HTML style attribute or JS control */
 }
 .modal-body .collapsible-content p { font-size: 0.9em; color: var(--text-color-light); margin-bottom: 15px; line-height: 1.5; }
 .modal-body .collapsible-content .manual-connect-step:last-child { margin-bottom: 0; }
@@ -897,7 +897,7 @@ input:checked + .slider:before { transform: translateX(54px); } /* Adjusted for 
 .settings-section .settings-item input[type="password"],
 .settings-section .settings-item input[type="number"] {
     flex-grow: 1; min-width: 0; border-radius: var(--border-radius);
-    padding: 8px 10px; background-color: #fff; /* Themed */
+    padding: 8px 10px; background-color: var(--secondary-color); /* Themed */
 }
 .settings-section .settings-item input:focus {
     outline: none; border-color: var(--primary-color);

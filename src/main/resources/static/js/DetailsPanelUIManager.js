@@ -1,9 +1,5 @@
-// NEW FILE: DetailsPanelUIManager.js
-// Responsibilities:
-// - Managing UI elements and interactions within the details panel.
-// - Displaying contact/group information.
-// - Handling group member management UI.
-// - Integrating TTSUIManager for AI contact TTS settings.
+// MODIFIED: DetailsPanelUIManager.js
+// - Added event listener for the "Attributions" collapsible sub-section within TTS settings.
 const DetailsPanelUIManager = {
     isDetailsPanelVisible: false,
     _boundTtsConfigCollapseListener: null, // Main TTS section collapsible
@@ -40,6 +36,10 @@ const DetailsPanelUIManager = {
     addMemberBtnDetailsEl: null,
     leftMemberListDetailsEl: null,
 
+    // NEW for attribution collapsible
+    ttsAttributionHeaderEl: null,
+    ttsAttributionContentEl: null,
+
 
     init: function() {
         this.detailsPanelEl = document.getElementById('detailsPanel');
@@ -73,6 +73,9 @@ const DetailsPanelUIManager = {
         this.addMemberBtnDetailsEl = document.getElementById('addMemberBtnDetails');
         this.leftMemberListDetailsEl = document.getElementById('leftMemberListDetails');
 
+        // NEW: Initialize attribution collapsible elements
+        this.ttsAttributionHeaderEl = document.getElementById('ttsAttributionCollapsibleTrigger');
+        this.ttsAttributionContentEl = document.getElementById('ttsAttributionCollapsibleContent');
 
         this.bindEvents();
     },
@@ -86,6 +89,34 @@ const DetailsPanelUIManager = {
         }
         // Event listeners for clearCurrentChatBtnDetails, deleteContactBtnDetails, leaveGroupBtnDetails,
         // dissolveGroupBtnDetails, saveAiTtsSettingsBtnDetails are set dynamically in updateDetailsPanel.
+
+        // NEW: Bind event for the TTS Attribution collapsible
+        if (this.ttsAttributionHeaderEl && this.ttsAttributionContentEl) {
+            this.ttsAttributionHeaderEl.addEventListener('click', () => {
+                const header = this.ttsAttributionHeaderEl;
+                const content = this.ttsAttributionContentEl;
+
+                header.classList.toggle('active');
+                const icon = header.querySelector('.collapse-icon');
+
+                if (content.style.display === "block" || content.style.display === "") {
+                    content.style.display = "none";
+                    if(icon) icon.textContent = '▶';
+                } else {
+                    content.style.display = "block";
+                    if(icon) icon.textContent = '▼';
+                }
+            });
+            // Ensure initial icon state is correct
+            const icon = this.ttsAttributionHeaderEl.querySelector('.collapse-icon');
+            if (this.ttsAttributionContentEl.style.display === 'none') { // HTML default is display: none;
+                if(icon) icon.textContent = '▶';
+                this.ttsAttributionHeaderEl.classList.remove('active');
+            } else {
+                if(icon) icon.textContent = '▼';
+                this.ttsAttributionHeaderEl.classList.add('active');
+            }
+        }
     },
 
     toggleDetailsPanel: function (show) {
@@ -207,29 +238,31 @@ const DetailsPanelUIManager = {
             if (this._boundTtsConfigCollapseListener) {
                 this.aiTtsConfigHeaderEl.removeEventListener('click', this._boundTtsConfigCollapseListener);
             }
-            this._boundTtsConfigCollapseListener = function() {
+            this._boundTtsConfigCollapseListener = function() { // `this` here is the header element
                 this.classList.toggle('active');
                 const content = this.nextElementSibling; // aiTtsConfigContentEl
                 const icon = this.querySelector('.collapse-icon');
                 if (content) {
-                    if (content.style.display === "block") {
+                    if (content.style.display === "block" || content.style.display === "") {
                         content.style.display = "none";
-                        if(icon) icon.textContent = '▶'; // Collapsed
+                        if(icon) icon.textContent = '▶';
                     } else {
                         content.style.display = "block";
-                        if(icon) icon.textContent = '▼'; // Expanded
+                        if(icon) icon.textContent = '▼';
                     }
                 }
             };
             this.aiTtsConfigHeaderEl.addEventListener('click', this._boundTtsConfigCollapseListener);
+
+            // Ensure initial state matches for the main TTS collapsible section
             const icon = this.aiTtsConfigHeaderEl.querySelector('.collapse-icon');
-            if (this.aiTtsConfigContentEl) { // Ensure initial state matches
-                if (!this.aiTtsConfigHeaderEl.classList.contains('active')) {
-                    this.aiTtsConfigContentEl.style.display = 'none';
+            if (this.aiTtsConfigContentEl) {
+                if (this.aiTtsConfigContentEl.style.display === 'none') { // Check if initially collapsed
                     if(icon) icon.textContent = '▶';
+                    this.aiTtsConfigHeaderEl.classList.remove('active');
                 } else {
-                    this.aiTtsConfigContentEl.style.display = 'block';
                     if(icon) icon.textContent = '▼';
+                    this.aiTtsConfigHeaderEl.classList.add('active');
                 }
             }
         }

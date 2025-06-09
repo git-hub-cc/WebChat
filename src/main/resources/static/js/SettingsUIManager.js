@@ -1,5 +1,6 @@
 // MODIFIED: SettingsUIManager.js
 // Added theme selector population and event handling.
+// Refined color scheme change logic; 'auto' mode inconsistency likely requires fixes in ThemeLoader.js.
 const SettingsUIManager = {
     // ... (previous properties from Part 1)
     colorSchemeSelectedValueEl: null,
@@ -153,7 +154,7 @@ const SettingsUIManager = {
             console.warn("Custom color scheme selector elements not found.");
             return;
         }
-        const schemes = { 'auto': 'Auto (System)', 'light': 'Light Mode', 'dark': 'Dark Mode' };
+        const schemes = { 'auto': 'Auto (Browser)', 'light': 'Light Mode', 'dark': 'Dark Mode' };
         const currentPreferredScheme = localStorage.getItem(ThemeLoader.COLOR_SCHEME_KEY) || ThemeLoader.DEFAULT_COLOR_SCHEME;
 
         this.colorSchemeSelectedValueEl.textContent = schemes[currentPreferredScheme];
@@ -165,27 +166,64 @@ const SettingsUIManager = {
             optionDiv.textContent = schemes[key];
             optionDiv.dataset.schemeKey = key;
             optionDiv.addEventListener('click', () => {
-                const selectedSchemeKey = optionDiv.dataset.schemeKey;
-                localStorage.setItem(ThemeLoader.COLOR_SCHEME_KEY, selectedSchemeKey);
-                // ThemeLoader.applyTheme will handle the reload and re-evaluation
-                // We just need to trigger it if the *effective* scheme changes and a different theme variant is needed.
-                const newEffectiveColorScheme = ThemeLoader._getEffectiveColorScheme(selectedSchemeKey); // Use ThemeLoader's internal logic
-                ThemeLoader._setupSystemColorSchemeListener(selectedSchemeKey); // Update listener
+                const selectedSchemeKey = optionDiv.dataset.schemeKey; // 'auto', 'light', or 'dark'
 
-                if (newEffectiveColorScheme !== ThemeLoader.getCurrentEffectiveColorScheme()) {
-                    // Effective scheme changed, find the counterpart theme and apply
-                    const currentBaseName = ThemeLoader._getBaseThemeName(ThemeLoader.getCurrentThemeKey());
-                    const newSuffix = newEffectiveColorScheme === 'light' ? '浅色' : '深色';
-                    let newThemeToApply = `${currentBaseName}-${newSuffix}`;
-                    if (!ThemeLoader.themes[newThemeToApply] || !ThemeLoader._isThemeCompatible(newThemeToApply, newEffectiveColorScheme)) {
-                        newThemeToApply = ThemeLoader._findFallbackThemeKeyForScheme(newEffectiveColorScheme);
+                // Update stored preference
+                localStorage.setItem(ThemeLoader.COLOR_SCHEME_KEY, selectedSchemeKey);
+
+                // ThemeLoader.init() upon page reload is responsible for setting up the
+                // correct system color scheme listener if selectedSchemeKey is 'auto'.
+
+                // Determine the effective color scheme that should result from this selection.
+                // For 'auto', this means querying the current system preference.
+                const newEffectiveColorScheme = ThemeLoader._getEffectiveColorScheme(selectedSchemeKey);
+
+                // Get the effective color scheme of the currently loaded theme.
+                const currentActualEffectiveColorScheme = ThemeLoader.getCurrentEffectiveColorScheme();
+
+                // A page reload (via ThemeLoader.applyTheme) is triggered if:
+                // 1. 'Auto' mode is selected (to ensure ThemeLoader.init() correctly processes it with current system state).
+                // 2. An explicit scheme ('light'/'dark') is selected which differs from the current theme's effective scheme.
+                if (selectedSchemeKey === 'auto' || newEffectiveColorScheme !== currentActualEffectiveColorScheme) {
+                    let themeToApply;
+                    const currentThemeBaseName = ThemeLoader._getBaseThemeName(ThemeLoader.getCurrentThemeKey());
+
+                    // Use ThemeLoader constants for suffixes if available, otherwise default.
+                    // Ensure ThemeLoader and its properties exist before accessing.
+                    const lightSuffix = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.LIGHT_THEME_SUFFIX === 'string')
+                        ? ThemeLoader.LIGHT_THEME_SUFFIX : '浅色';
+                    const darkSuffix = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.DARK_THEME_SUFFIX === 'string')
+                        ? ThemeLoader.DARK_THEME_SUFFIX : '深色';
+
+                    // Determine the target suffix based on the newEffectiveColorScheme
+                    const targetSuffix = newEffectiveColorScheme === 'light' ? lightSuffix : darkSuffix;
+                    let candidateTheme = `${currentThemeBaseName}-${targetSuffix}`;
+
+                    if (ThemeLoader.themes[candidateTheme] && ThemeLoader._isThemeCompatible(candidateTheme, newEffectiveColorScheme)) {
+                        themeToApply = candidateTheme;
+                    } else {
+                        // Fallback if the current theme doesn't have a direct variant for the new scheme
+                        themeToApply = ThemeLoader._findFallbackThemeKeyForScheme(newEffectiveColorScheme);
                     }
-                    ThemeLoader.applyTheme(newThemeToApply); // This reloads the page
+
+                    if (!ThemeLoader.themes[themeToApply]) {
+                        // This is a deeper issue if no fallback exists or was found.
+                        // Reload with the current theme key. ThemeLoader.init() on reload will have to
+                        // make the final decision based on COLOR_SCHEME_KEY (now 'auto' or explicit).
+                        console.error(`[SettingsUIManager] Critical: No valid theme (candidate or fallback) found for target scheme '${newEffectiveColorScheme}'. Reloading with current theme '${ThemeLoader.getCurrentThemeKey()}'.`);
+                        NotificationManager.showNotification('Error determining an appropriate theme. Attempting default reload.', 'error');
+                        themeToApply = ThemeLoader.getCurrentThemeKey(); // Or a known global default theme.
+                    }
+
+                    ThemeLoader.applyTheme(themeToApply); // This reloads the page
                 } else {
-                    // Effective scheme didn't change, just update display and re-populate theme options if needed
+                    // This block executes if an explicit scheme ('light' or 'dark') was selected,
+                    // AND it matches the current theme's effective scheme (no change needed).
+                    // No reload necessary. Just update UI elements.
                     this.colorSchemeSelectedValueEl.textContent = schemes[selectedSchemeKey];
                     this.colorSchemeOptionsContainerEl.style.display = 'none';
-                    this._populateThemeSelectorWithOptions(); // Re-filter themes for the current (but possibly newly confirmed) scheme
+                    // Re-filter theme options for the current (and unchanged) scheme.
+                    this._populateThemeSelectorWithOptions();
                 }
             });
             this.colorSchemeOptionsContainerEl.appendChild(optionDiv);
@@ -204,29 +242,35 @@ const SettingsUIManager = {
             console.warn("Custom theme selector elements not found.");
             return;
         }
-        this.themeOptionsContainerEl.innerHTML = '';
+        this.themeOptionsContainerEl.innerHTML = ''; // Clear previous options
         const currentEffectiveColorScheme = ThemeLoader.getCurrentEffectiveColorScheme();
         const filteredThemes = {};
+
         for (const key in ThemeLoader.themes) {
-            if (ThemeLoader._isThemeCompatible(key, currentEffectiveColorScheme)) { // Use ThemeLoader's internal logic
+            if (ThemeLoader._isThemeCompatible(key, currentEffectiveColorScheme)) {
                 filteredThemes[key] = ThemeLoader.themes[key];
             }
         }
 
         let themeKeyForDisplay = ThemeLoader.getCurrentThemeKey();
-        if (!filteredThemes[themeKeyForDisplay]) { // If current theme isn't compatible, find a fallback
+        if (!filteredThemes[themeKeyForDisplay]) {
             themeKeyForDisplay = Object.keys(filteredThemes)[0] || ThemeLoader._findFallbackThemeKeyForScheme(currentEffectiveColorScheme);
         }
 
-        this.themeSelectedValueEl.textContent = ThemeLoader.themes[themeKeyForDisplay]?.name || 'Select Theme';
-        this.themeSelectedValueEl.dataset.currentThemeKey = themeKeyForDisplay;
+        const themeForDisplayObject = ThemeLoader.themes[themeKeyForDisplay];
+        this.themeSelectedValueEl.textContent = (themeForDisplayObject && themeForDisplayObject.name)
+            ? themeForDisplayObject.name
+            : 'Select Theme';
+
+        this.themeSelectedValueEl.dataset.currentThemeKey = themeKeyForDisplay || '';
 
         if (Object.keys(filteredThemes).length === 0) {
             this.themeSelectedValueEl.textContent = "No themes";
             const optionDiv = document.createElement('div');
             optionDiv.classList.add('option');
-            optionDiv.textContent = `No ${currentEffectiveColorScheme} themes`;
-            optionDiv.style.pointerEvents = "none"; optionDiv.style.opacity = "0.7";
+            optionDiv.textContent = `No ${currentEffectiveColorScheme} themes available`;
+            optionDiv.style.pointerEvents = "none";
+            optionDiv.style.opacity = "0.7";
             this.themeOptionsContainerEl.appendChild(optionDiv);
         } else {
             for (const key in filteredThemes) {
@@ -237,9 +281,8 @@ const SettingsUIManager = {
                 optionDiv.dataset.themeKey = key;
                 optionDiv.addEventListener('click', () => {
                     const selectedKey = optionDiv.dataset.themeKey;
-                    // Only apply if different from current selection to avoid unnecessary reloads
                     if (selectedKey !== ThemeLoader.getCurrentThemeKey()) {
-                        ThemeLoader.applyTheme(selectedKey); // This reloads the page
+                        ThemeLoader.applyTheme(selectedKey);
                     }
                     this.themeOptionsContainerEl.style.display = 'none';
                 });
@@ -250,13 +293,15 @@ const SettingsUIManager = {
         this.themeSelectedValueEl.addEventListener('click', (event) => {
             event.stopPropagation();
             const currentDisplayState = this.themeOptionsContainerEl.style.display;
-            document.querySelectorAll('.custom-select .options').forEach(opt => { if (opt !== this.themeOptionsContainerEl) opt.style.display = 'none'; });
+            document.querySelectorAll('.custom-select .options').forEach(opt => {
+                if (opt !== this.themeOptionsContainerEl) opt.style.display = 'none';
+            });
             this.themeOptionsContainerEl.style.display = currentDisplayState === 'block' ? 'none' : 'block';
         });
     },
 
     // ... (loadAISetting, saveAISetting, copyUserIdFromModal, updateCopyIdButtonState, updateCheckNetworkButtonState, updateMainMenuControlsState, updateNetworkInfoDisplay from Part 1)
-    loadAISettings: function() { // from Part 1
+    loadAISettings: function() {
         if (typeof window.Config !== 'object' || window.Config === null) window.Config = {};
         if (typeof window.Config.server !== 'object' || window.Config.server === null) window.Config.server = {};
 
@@ -279,7 +324,7 @@ const SettingsUIManager = {
             window.Config.server[setting.configKey] = valueToSet;
         });
     },
-    saveAISetting: function(storageKey, value) { // from Part 1
+    saveAISetting: function(storageKey, value) {
         if ((storageKey === 'apiEndpoint' || storageKey === 'ttsApiEndpoint') && value) {
             try { new URL(value); }
             catch (_) {
@@ -307,7 +352,7 @@ const SettingsUIManager = {
         if (configUpdated) NotificationManager.showNotification(`${friendlyName} setting saved & applied.`, 'success');
         else NotificationManager.showNotification(`${friendlyName} saved to storage, FAILED to apply live. Refresh.`, 'error');
     },
-    copyUserIdFromModal: function () { // from Part 1
+    copyUserIdFromModal: function () {
         const userId = this.modalUserIdValue?.textContent;
         if (userId && userId !== "Generating...") {
             navigator.clipboard.writeText(userId)
@@ -325,7 +370,7 @@ const SettingsUIManager = {
             NotificationManager.showNotification('No connection info to copy.', 'warning');
         }
     },
-    updateCopyIdButtonState: function() { // from Part 1
+    updateCopyIdButtonState: function() {
         if (!this.modalUserIdValue || !this.modalCopyIdBtn) return;
         const userIdReady = this.modalUserIdValue.textContent !== 'Generating...' && UserManager.userId;
         this.modalCopyIdBtn.disabled = !userIdReady;
@@ -333,21 +378,21 @@ const SettingsUIManager = {
         this.modalCopyIdBtn.classList.toggle('btn-action-themed', userIdReady);
         this.modalCopyIdBtn.classList.toggle('btn-secondary', !userIdReady);
     },
-    updateCheckNetworkButtonState: function() { // from Part 1
+    updateCheckNetworkButtonState: function() {
         if (!this.checkNetworkBtnModal) return;
         const isConnected = ConnectionManager.isWebSocketConnected;
         this.checkNetworkBtnModal.disabled = isConnected;
         this.checkNetworkBtnModal.classList.toggle('btn-action-themed', !isConnected);
         this.checkNetworkBtnModal.classList.toggle('btn-secondary', isConnected);
     },
-    updateMainMenuControlsState: function() { // from Part 1
+    updateMainMenuControlsState: function() {
         if (this.autoConnectToggle && UserManager.userSettings) {
             this.autoConnectToggle.checked = UserManager.userSettings.autoConnectEnabled;
         }
         this.updateCopyIdButtonState();
         this.updateCheckNetworkButtonState();
     },
-    updateNetworkInfoDisplay: function (networkType, webSocketStatus) { // from Part 1
+    updateNetworkInfoDisplay: function (networkType, webSocketStatus) {
         const networkInfoEl = document.getElementById('modalNetworkInfo');
         const qualityIndicator = document.getElementById('modalQualityIndicator');
         const qualityText = document.getElementById('modalQualityText');
