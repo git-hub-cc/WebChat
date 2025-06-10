@@ -36,7 +36,9 @@ allowed:
 openai:
   api:
     base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1" # Base URL for the OpenAI compatible API endpoint.
+    model: "qwen-turbo-2025-04-28"
     api_key: "Bearer sk-xxxx" # Example API Key (replace with your actual key).
 
 app:
   summary_prompt: "请你扮演一个高效的会议纪要员，阅读下面的对话。用一段精炼的话，告诉我：这个用户是谁（身份、情绪）？他到底想干什么（核心目标）？对话中最重要的信息点有哪些（比如关键数据或概念）？以及我们最后定了什么事，下一步该做什么（共识与行动）？"
+  event_mood_prompt: "基于以下角色设定，为其生成一个今天发生的、符合其人设的随机小事件和当前的心情。请严格以JSON格式返回，必须包含 'event' 和 'mood' 两个键，不要包含任何其他说明文字。\n\n角色设定：\n%s"

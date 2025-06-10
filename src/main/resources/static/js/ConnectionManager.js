@@ -1,4 +1,6 @@
-// NO CHANGE IN THIS PART (ConnectionManager.js) -- 此部分无变动 (ConnectionManager.js)
+// MODIFIED: ConnectionManager.js (已翻译为中文)
+// - 实现了心跳机制 (PING) 以保持 WebSocket 连接活跃。
+// - 实现了指数退避重连策略，并限制最多 10 次尝试。
 const ConnectionManager = {
     connections: {},
     iceCandidates: {},
@@ -11,6 +13,10 @@ const ConnectionManager = {
     signalingServerUrl: Config.server.signalingServerUrl,
     pendingSentChunks: {},
     pendingReceivedChunks: {},
+
+    // 新增：用于心跳和重连策略的状态
+    heartbeatInterval: null,
+    wsReconnectAttempts: 0,
 
     MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_',
 
@@ -34,9 +40,11 @@ const ConnectionManager = {
 
                 this.websocket.onopen = () => {
                     this.isWebSocketConnected = true;
+                    this.wsReconnectAttempts = 0; // 连接成功，重置重连计数器
                     LayoutManager.updateConnectionStatusIndicator('信令服务器已连接。');
                     Utils.log('WebSocket 连接已建立。', Utils.logLevels.INFO);
                     this.registerUser();
+                    this.startHeartbeat(); // 启动心跳
                     EventEmitter.emit('websocketStatusUpdate');
                     resolve();
                 };
@@ -44,6 +52,11 @@ const ConnectionManager = {
                 this.websocket.onmessage = (event) => {
                     try {
                         const message = JSON.parse(event.data);
+                        // 如果服务器回复 PONG，我们可以在这里处理，但通常不需要
+                        if (message.type === 'PONG') {
+                            Utils.log('收到 WebSocket 心跳回复 (PONG)', Utils.logLevels.DEBUG);
+                            return;
+                        }
                         this.handleSignalingMessage(message);
                     } catch (e) {
                         Utils.log('解析信令消息时出错: ' + e, Utils.logLevels.ERROR);
@@ -53,10 +66,25 @@ const ConnectionManager = {
                 this.websocket.onclose = () => {
                     const oldStatus = this.isWebSocketConnected;
                     this.isWebSocketConnected = false;
-                    LayoutManager.updateConnectionStatusIndicator('信令服务器已断开。正在尝试重新连接...');
-                    Utils.log('WebSocket 连接已关闭。3秒后重新连接...', Utils.logLevels.WARN);
-                    if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
-                    setTimeout(() => this.connectWebSocket(), 3000);
+                    this.stopHeartbeat(); // 连接关闭，停止心跳
+
+                    this.wsReconnectAttempts++;
+                    Utils.log(`WebSocket 连接已关闭。正在进行第 ${this.wsReconnectAttempts} 次重连尝试...`, Utils.logLevels.WARN);
+
+                    if (this.wsReconnectAttempts <= 10) {
+                        // 使用指数退避策略计算延迟
+                        const delay = Math.min(30000, 1000 * Math.pow(2, this.wsReconnectAttempts)); // 延迟加倍，最多30秒
+                        LayoutManager.updateConnectionStatusIndicator(`信令服务器已断开。${delay / 1000}秒后尝试重连...`);
+                        Utils.log(`下一次重连将在 ${delay / 1000} 秒后。`, Utils.logLevels.WARN);
+
+                        if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
+                        setTimeout(() => this.connectWebSocket(), delay);
+                    } else {
+                        LayoutManager.updateConnectionStatusIndicator('信令服务器连接失败。自动重连已停止。');
+                        NotificationManager.showNotification('无法连接到信令服务器。请检查您的网络并手动刷新或重新连接。', 'error');
+                        Utils.log('已达到最大重连次数 (10)，停止自动重连。', Utils.logLevels.ERROR);
+                        if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
+                    }
                 };
 
                 this.websocket.onerror = (error) => {
@@ -65,6 +93,7 @@ const ConnectionManager = {
                     const oldStatus = this.isWebSocketConnected;
                     this.isWebSocketConnected = false;
                     if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
+                    // onerror 事件通常也会触发 onclose，所以重连逻辑会在那里处理
                 };
             } catch (error) {
                 Utils.log('创建 WebSocket 连接失败: ' + error, Utils.logLevels.ERROR);
@@ -75,6 +104,25 @@ const ConnectionManager = {
                 reject(error);
             }
         });
+    },
+
+    startHeartbeat: function() {
+        this.stopHeartbeat(); // 确保只有一个心跳定时器在运行
+        this.heartbeatInterval = setInterval(() => {
+            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                // 发送一个轻量级的 PING 消息
+                this.websocket.send(JSON.stringify({ type: 'PING' }));
+                Utils.log('发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
+            }
+        }, 25000); // 每 25 秒发送一次
+    },
+
+    stopHeartbeat: function() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+            Utils.log('已停止 WebSocket 心跳', Utils.logLevels.DEBUG);
+        }
     },
 
     registerUser: function() {
@@ -514,8 +562,13 @@ const ConnectionManager = {
             this.connections = {}; this.iceCandidates = {}; this.reconnectAttempts = {}; this.iceGatheringStartTimes = {};
             Object.keys(this.connectionTimeouts).forEach(id=>clearTimeout(this.connectionTimeouts[id]));this.connectionTimeouts={};
             Object.keys(this.iceTimers).forEach(id=>clearTimeout(this.iceTimers[id]));this.iceTimers={};
-            if (this.websocket?.readyState === WebSocket.OPEN) { this.websocket.onclose = null; this.websocket.close(); }
-            this.websocket = null; this.isWebSocketConnected = false; EventEmitter.emit('websocketStatusUpdate');
+            if (this.websocket?.readyState === WebSocket.OPEN || this.websocket?.readyState === WebSocket.CONNECTING) {
+                this.websocket.onclose = null; // 阻止自动重连
+                this.websocket.close();
+            }
+            this.stopHeartbeat();
+            this.websocket = null; this.isWebSocketConnected = false; this.wsReconnectAttempts = 0;
+            EventEmitter.emit('websocketStatusUpdate');
             setTimeout(() => this.initialize(), 1000);
             NotificationManager.showNotification("所有连接已重置。", "info");
             if (ChatManager.currentChatId && !ChatManager.currentChatId.startsWith("group_") && !UserManager.isSpecialContact(ChatManager.currentChatId) && typeof ChatAreaUIManager !== 'undefined') {

@@ -14,6 +14,7 @@ import org.springframework.web.socket.*;
  * Handles WebSocket messages for WebRTC signaling.
  * Manages user registration and forwards signaling messages (offer, answer, ICE candidates)
  * between connected peers.
+ * Also handles ping/pong for keep-alive.
  */
 @Component
 public class SignalingWebSocketHandler implements WebSocketHandler {
@@ -39,6 +40,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             SignalingMessage signalingMessage = objectMapper.readValue(payload, SignalingMessage.class);
 
             // Log message details, avoiding overly verbose SDP content in general logs
+            // MODIFIED: Added specific logging for PING type
             if (signalingMessage.getType() == MessageType.OFFER || signalingMessage.getType() == MessageType.ANSWER) {
                 logger.info("收到消息类型: {} | 来自会话: {} | 目标用户: {} | 视频通话: {} | 纯音频: {} | 屏幕共享: {}",
                         signalingMessage.getType(), session.getId(), signalingMessage.getTargetUserId(),
@@ -46,6 +48,9 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             } else if (signalingMessage.getType() == MessageType.ICE_CANDIDATE) {
                 logger.info("收到消息类型: {} | 来自会话: {} | 发送者: {} | 目标用户: {}",
                         signalingMessage.getType(), session.getId(), signalingMessage.getUserId(), signalingMessage.getTargetUserId());
+            } else if (signalingMessage.getType() == MessageType.PING) {
+                // Keep ping logs at DEBUG level to avoid flooding the INFO logs
+                logger.debug("收到消息类型: PING | 来自会话: {}", session.getId());
             }
             else {
                 logger.info("收到消息: {} | 来自会话: {}", signalingMessage, session.getId());
@@ -91,10 +96,25 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             case ICE_CANDIDATE:
                 handleIceCandidate(session, message);
                 break;
+            // MODIFIED: Added PING case for heartbeat mechanism
+            case PING:
+                handlePing(session);
+                break;
             default:
                 logger.warn("收到未知的消息类型: {} | 来自会话: {}", message.getType(), session.getId());
                 sendErrorMessage(session, "未知的消息类型: " + message.getType());
         }
+    }
+
+    // MODIFIED: New method to handle heartbeat pings
+    /**
+     * Responds to a client's ping message with a pong to keep the connection alive.
+     * @param session The WebSocket session that sent the ping.
+     */
+    private void handlePing(WebSocketSession session) {
+        SignalingMessage pongMessage = new SignalingMessage(MessageType.PONG, "pong");
+        sendMessage(session, pongMessage);
+        logger.debug("已向会话 {} 发送 Pong 回复", session.getId());
     }
 
     private void handleRegister(WebSocketSession session, SignalingMessage message) {
@@ -192,7 +212,8 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             return;
         }
         String targetUserId = message.getTargetUserId();
-        logger.info("用户 {} 向用户 {} 发送 ICE candidate", senderUserId, targetUserId);
+        // Use debug level for ICE candidate logging to avoid flooding INFO logs
+        logger.debug("用户 {} 向用户 {} 发送 ICE candidate", senderUserId, targetUserId);
 
         WebSocketSession targetSession = userSessionService.getUserSession(targetUserId);
         if (targetSession == null || !targetSession.isOpen()) {
@@ -214,7 +235,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         // If they are separate fields in SignalingMessage, forward them too.
 
         sendMessage(targetSession, forwardMessage);
-        // logger.debug("ICE Candidate 已从 {} 转发给用户 {}", senderUserId, targetUserId); // Can be too verbose
+        logger.debug("ICE Candidate 已从 {} 转发给用户 {}", senderUserId, targetUserId);
     }
 
     private void sendMessage(WebSocketSession session, SignalingMessage message) {

@@ -10,5 +10,5 @@ public enum MessageType {
     ICE_CANDIDATE,  // WebRTC ICE candidate
     ERROR,          // Error message from server to client
     USER_NOT_FOUND, // Indicates target user for a message was not found
-    SUCCESS         // Generic success message from server to client
+    PING, PONG, SUCCESS         // Generic success message from server to client
 }
