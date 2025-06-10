@@ -194,7 +194,11 @@ const Utils = {
     },
 
     generateId: function(length = 8) {
-        return Math.random().toString(36).substring(2, 2 + length);
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+
+        return Array.from({ length }, () =>
+            chars.charAt(Math.floor(Math.random() * chars.length))
+        ).join('');
     },
 
     formatTime: function(totalSeconds) {

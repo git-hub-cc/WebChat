@@ -57,7 +57,7 @@ public class OpenAIConfig {
      * 这样做可以将所有外部化配置都集中在配置类中管理。
      * 使用 @Qualifier("summaryPrompt") 来唯一标识这个Bean。
      *
-     * @param prompt 从 application.properties 读取的提示词字符串
+     * @param prompt 从 application.yml 读取的提示词字符串
      * @return 摘要提示词
      */
     @Bean("summaryPrompt")
@@ -68,7 +68,7 @@ public class OpenAIConfig {
 
     /**
      * [新增] 将生成事件和心情的提示词作为一个Bean提供。
-     * @param prompt 从 application.properties 读取的提示词字符串
+     * @param prompt 从 application.yml 读取的提示词字符串
      * @return 事件/心情提示词
      */
     @Bean("eventMoodPrompt")
