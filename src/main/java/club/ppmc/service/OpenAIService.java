@@ -1,4 +1,4 @@
-package com.p2pChat.service;
+package club.ppmc.service;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

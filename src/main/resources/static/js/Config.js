@@ -32,9 +32,9 @@ const Config = {
     music: '/music/call.mp3',
     // TODO
     server: {
-        signalingServerUrl: 'wss://175.178.216.24/signaling',
+        signalingServerUrl: 'ws://localhost:8080/signaling',
         // These are defaults; UIManager will load user-configured values from localStorage.
-        apiEndpoint: 'https://175.178.216.24/v1/chat/completions',
+        apiEndpoint: 'http://localhost:8080/v1/chat/completions',
         api_key: "Bearer sk-xxxx",
         model: "qwen-turbo-2025-04-28",
         max_tokens: 2048,

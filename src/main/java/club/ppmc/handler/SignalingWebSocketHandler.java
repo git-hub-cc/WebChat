@@ -1,8 +1,8 @@
-package com.p2pChat.handler;
+package club.ppmc.handler;
 
-import com.p2pChat.model.MessageType;
-import com.p2pChat.model.SignalingMessage;
-import com.p2pChat.service.UserSessionService;
+import club.ppmc.dto.MessageType;
+import club.ppmc.dto.SignalingMessage;
+import club.ppmc.service.UserSessionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

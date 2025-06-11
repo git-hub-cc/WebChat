@@ -1,4 +1,4 @@
-package com.p2pChat.model;
+package club.ppmc.dto;
 
 /**
  * Enumerates the types of signaling messages used in WebSocket communication.
@@ -10,5 +10,7 @@ public enum MessageType {
     ICE_CANDIDATE,  // WebRTC ICE candidate
     ERROR,          // Error message from server to client
     USER_NOT_FOUND, // Indicates target user for a message was not found
-    PING, PONG, SUCCESS         // Generic success message from server to client
+    PING,
+    PONG,
+    SUCCESS         // Generic success message from server to client
 }

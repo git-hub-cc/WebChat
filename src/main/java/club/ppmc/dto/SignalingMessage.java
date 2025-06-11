@@ -1,4 +1,4 @@
-package com.p2pChat.model;
+package club.ppmc.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.List;

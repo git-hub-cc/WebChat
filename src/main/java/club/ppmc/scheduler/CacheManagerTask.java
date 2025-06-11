@@ -1,6 +1,6 @@
-package com.p2pChat.scheduler; // 建议放在一个新的包，如 'scheduler' 或 'tasks'
+package club.ppmc.scheduler; // 建议放在一个新的包，如 'scheduler' 或 'tasks'
 
-import com.p2pChat.service.OpenAIService;
+import club.ppmc.service.OpenAIService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

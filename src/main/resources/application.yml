@@ -5,12 +5,12 @@ server:
 # Spring application specific configuration
 spring:
   application:
-    name: webrtc-signaling-server # Name of the application, used in logging and management endpoints.
+    name: Web-Chat # Name of the application, used in logging and management endpoints.
 
 # Logging configuration
 logging:
   level:
-    com.example.p2pwebchatboot: INFO # Default log level for the application's main package. Change to DEBUG for more verbose logging.
+    club.ppmc: DEBUG # Default log level for the application's main package. Change to DEBUG for more verbose logging.
     org.springframework.web.socket: DEBUG # Detailed logging for Spring WebSocket interactions, helpful for debugging WebSocket issues.
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

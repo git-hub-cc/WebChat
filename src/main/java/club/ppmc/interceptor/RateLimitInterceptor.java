@@ -1,6 +1,6 @@
-package com.p2pChat.interceptor;
+package club.ppmc.interceptor;
 
-import com.p2pChat.model.RateLimitInfo;
+import club.ppmc.model.RateLimitInfo;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;

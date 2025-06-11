@@ -1,4 +1,4 @@
-package com.p2pChat.model;
+package club.ppmc.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDate;

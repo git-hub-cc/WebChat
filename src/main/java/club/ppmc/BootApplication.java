@@ -1,4 +1,4 @@
-package com.p2pChat;
+package club.ppmc;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -10,14 +10,14 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  */
 @SpringBootApplication
 @EnableScheduling
-public class P2PWebChatBootApplication {
+public class BootApplication {
 
     /**
      * The main method that serves as the application's entry point.
      * @param args Command line arguments passed to the application.
      */
     public static void main(String[] args) {
-        SpringApplication.run(P2PWebChatBootApplication.class, args);
+        SpringApplication.run(BootApplication.class, args);
     }
 
 }

@@ -8,11 +8,11 @@
         <version>3.5.0</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
-    <groupId>com.p2pChat</groupId>
-    <artifactId>P2P-Web-Chat-Boot</artifactId>
+    <groupId>club.ppmc</groupId>
+    <artifactId>Web-Chat</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>P2P-Web-Chat-Boot</name>
-    <description>P2P-Web-Chat-Boot</description>
+    <name>Web-Chat</name>
+    <description>A feature-rich, modern Peer-to-Peer (P2P) web chat application built with vanilla JavaScript, HTML, and CSS for the frontend, and Java Spring Boot for the backend. It utilizes WebRTC for direct P2P communication, supporting text, file sharing, voice messages, and real-time audio/video/screen-sharing calls. Initial peer discovery is handled by a WebSocket-based signaling server (implemented in Java Spring Boot). P2P communication minimizes reliance on a central server (except for signaling and optional TURN relay services), while AI chat and TTS functionalities are proxied through the backend to external services. The application is deeply integrated with themable AI assistant contacts featuring Text-to-Speech (TTS), dynamic context (like daily random events and moods), and smart summarization for long conversations, offering a more vivid interactive experience.</description>
     <url/>
     <licenses>
         <license/>

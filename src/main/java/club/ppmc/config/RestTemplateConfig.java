@@ -1,4 +1,4 @@
-package com.p2pChat.config;
+package club.ppmc.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

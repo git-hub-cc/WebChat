@@ -3,7 +3,7 @@
 [![GitHub stars](https://img.shields.io/github/stars/git-hub-cc/P2P-Web-Chat.svg?style=social)](https://github.com/git-hub-cc/P2P-Web-Chat/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/git-hub-cc/P2P-Web-Chat.svg?style=social)](https://github.com/git-hub-cc/P2P-Web-Chat/network/members)
 
-[中文版](./README.zh-CN.md)
+[中文版](./README-cn.md)
 
 A feature-rich, modern Peer-to-Peer (P2P) web chat application built with vanilla JavaScript, HTML, and CSS for the frontend, and Java Spring Boot for the backend. It utilizes WebRTC for direct P2P communication, supporting text, file sharing, voice messages, and real-time audio/video/screen-sharing calls. Initial peer discovery is handled by a WebSocket-based signaling server (implemented in Java Spring Boot). P2P communication minimizes reliance on a central server (except for signaling and optional TURN relay services), while AI chat and TTS functionalities are proxied through the backend to external services. The application is deeply integrated with themable AI assistant contacts featuring Text-to-Speech (TTS), dynamic context (like daily random events and moods), and smart summarization for long conversations, offering a more vivid interactive experience.
 

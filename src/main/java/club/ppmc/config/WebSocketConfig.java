@@ -1,6 +1,6 @@
-package com.p2pChat.config;
+package club.ppmc.config;
 
-import com.p2pChat.handler.SignalingWebSocketHandler;
+import club.ppmc.handler.SignalingWebSocketHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
