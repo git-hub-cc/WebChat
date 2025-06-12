@@ -1,1014 +1,1796 @@
-:root {
-    /* --- Global Color & Theme Variables --- */
-    --primary-color: #0088cc; /* Telegram Blue */
-    --primary-color-dark: #0077b3;
-    --secondary-color: #f5f5f5; /* Light Gray BG */
-    --text-color: #212121; /* Dark Gray Text */
-    --text-color-light: #757575; /* Medium Gray Text */
-    --text-color-inverted: #ffffff;
-    --accent-color: #4CAF50; /* Green for online, success */
-    --danger-color: #f44336; /* Red for errors, delete */
-    --warning-color: #ff9800; /* Orange for warnings */
-    --sent-bg-color: #e1ffc7; /* Light Green for sent messages */
-    --received-bg-color: #ffffff;
-    --border-color: #e0e0e0;
-    --hover-bg-color: #f0f0f0;
-    --active-bg-color: #e0e0e0; /* Default active for list items */
+/* ========================================================================== */
+/* 基础配置与全局样式 (Base & Global Styles) */
+/* ========================================================================== */
+/**
+ * 此区域定义了应用的全局 CSS 自定义属性（变量）、基础重置和 body 默认样式。
+ * CSS 变量统一管理颜色、尺寸、字体等，便于主题切换和维护。
+ */
 
-    /* --- Layout & Sizing Variables --- */
+:root {
+    /* --- 全局颜色与主题变量 --- */
+    --primary-color: #0088cc; /* 主题色 (Telegram Blue) */
+    --primary-color-dark: #0077b3; /* 主题色深色，用于悬停状态 */
+    --secondary-color: #f5f5f5; /* 次要颜色，用于浅灰色背景 */
+    --text-color: #212121; /* 主要文本颜色 */
+    --text-color-light: #757575; /* 次要文本颜色 */
+    --text-color-inverted: #ffffff; /* 反色文本，用于深色背景 */
+    --accent-color: #4caf50; /* 强调色，用于在线、成功状态 */
+    --danger-color: #f44336; /* 危险色，用于错误、删除状态 */
+    --warning-color: #ff9800; /* 警告色 */
+    --border-color: #e0e0e0; /* 边框颜色 */
+    --hover-bg-color: #f0f0f0; /* 悬停背景色 */
+    --active-bg-color: #e0e0e0; /* 激活背景色 */
+    --sent-bg-color: #e1ffc7; /* 已发送消息背景色 */
+    --received-bg-color: #ffffff; /* 已接收消息背景色 */
+
+    /* --- 布局与尺寸变量 --- */
     --sidebar-width: 320px;
     --details-panel-width: 320px;
     --header-height: 60px;
-    --input-area-height: auto; /* Adjusted by content */
+    --input-area-height: auto; /* 由内容动态调整 */
+    --spacing-1: 4px; /* 最小间距单元 */
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 20px;
 
-    /* --- General Style Variables --- */
+    /* --- 通用样式变量 --- */
     --border-radius: 8px;
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    --box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+    --box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
 
-    /* --- Special Contact & Character Theming Variables --- */
-    /* Default special contact color, can be overridden by themes */
-    --special-contact-generic-color: #7E57C2; /* Default purple for generic AI */
+    /* --- 特殊联系人/角色主题变量 --- */
+    --special-contact-generic-color: #7e57c2; /* 通用特殊联系人颜色 (紫色) */
 
-    /* Generic variables to be set by character-specific classes (e.g., .AI_CharacterName) */
-    /* Fallbacks are to general special contact colors or primary theme colors */
+    /* 以下变量将由特定角色类（如 .AI_CharacterName）覆盖，提供主题化能力 */
     --character-primary-color: var(--special-contact-generic-color);
-    --character-secondary-color: var(--active-bg-color); /* e.g., for active list item bg */
+    --character-secondary-color: var(--active-bg-color);
     --character-avatar-bg: var(--special-contact-generic-color);
     --character-avatar-text-color: var(--text-color-inverted);
-    --character-message-border-color: var(--character-primary-color); /* Used if message div gets character class */
-    --character-message-bg-color: var(--received-bg-color); /* Used if message div gets character class */
-    --character-message-sender-color: var(--character-primary-color); /* Used by .message-sender within a character's scope */
+    --character-message-border-color: var(--character-primary-color);
+    --character-message-bg-color: var(--received-bg-color);
+    --character-message-sender-color: var(--character-primary-color);
     --character-details-name-color: var(--character-primary-color);
-    --character-title-color: var(--character-primary-color); /* For chat header title */
+    --character-title-color: var(--character-primary-color);
 }
 
 * {
+    /*
+     * 使用 border-box 盒模型，使元素的 width 和 height 包含 padding 和 border。
+     * 这是现代 CSS 布局的基石，能极大简化尺寸计算。
+     */
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
-body {
-    font-family: var(--font-family), serif;
-    background-color: var(--secondary-color);
-    color: var(--text-color);
-    line-height: 1.6;
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    background: #d1d1d1; /* Fallback for older browsers */
-    background: linear-gradient(to bottom right, #d0e4f0, #f0e4d0);
+html {
+    /* 实现平滑滚动效果 */
+    scroll-behavior: smooth;
 }
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    /* 防止在移动设备上视口高度变化时页面抖动 */
+    height: 100dvh;
+    overflow: hidden;
+    background-color: #d1d1d1; /* 备用背景色 */
+    background-image: linear-gradient(to bottom right, #d0e4f0, #f0e4d0);
+    color: var(--text-color);
+    font-family: var(--font-family), serif;
+    line-height: 1.6;
+}
+
+/* ========================================================================== */
+/* 通用布局 (Layout) */
+/* ========================================================================== */
+/**
+ * 此区域定义了应用的主要布局结构，包括应用容器、侧边栏、主聊天区和详情面板。
+ */
 
 .app-container {
     display: flex;
     width: 100%;
-    max-width: 1400px;
     height: 90vh;
-    max-height: 90vh;
-    background-color: #fff; /* Will be themed */
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    border-radius: var(--border-radius);
+    height: 90dvh;
+    max-width: 1400px;
+    max-height: 90dvh;
     overflow: hidden;
+    background-color: var(--received-bg-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
 
-/* --- Sidebar Navigation --- */
 .sidebar-nav {
-    width: var(--sidebar-width);
-    background-color: #f8f9fa; /* Themed */
-    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    transition: margin-left 0.3s ease-in-out;
+    flex-shrink: 0; /* 防止侧边栏在 flex 布局中被压缩 */
+    width: var(--sidebar-width);
+    background-color: #f8f9fa;
+    /* 使用逻辑属性 border-inline-end，自动适应从左到右 (LTR) 和从右到左 (RTL) 的布局 */
+    border-inline-end: 1px solid var(--border-color);
+    transition: margin-inline-start 0.3s ease-in-out;
+}
+
+.chat-area {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1; /* 占据剩余空间 */
+    background-color: #e5ddd5;
+}
+
+.chat-area-content {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    /* 确保 flex 子项可以正确地滚动，即使内容溢出 */
+    min-height: 0;
+}
+
+.details-panel {
+    display: none; /* 默认隐藏，由 JS 或媒体查询控制显示 */
+    flex-direction: column;
+    flex-shrink: 0;
+    width: var(--details-panel-width);
+    min-width: var(--details-panel-width);
+    background-color: #f8f9fa;
+    border-inline-start: 1px solid var(--border-color);
+    transition: margin-inline-end 0.3s ease-in-out;
+}
+
+/* ========================================================================== */
+/* 可复用组件 (Components) */
+/* ========================================================================== */
+/**
+ * 此区域定义了应用中可复用的 UI 组件，如按钮、输入框、列表项、消息气泡等。
+ */
+
+/* --- 头部区域 --- */
+.sidebar-header,
+.chat-header-main,
+.details-header {
+    display: flex;
+    align-items: center;
+    height: var(--header-height);
+    min-height: var(--header-height);
+    padding-inline: var(--spacing-4); /* 使用逻辑属性 padding-inline 替代 padding-left/right */
+    border-bottom: 1px solid var(--border-color);
 }
 
 .sidebar-header {
-    padding: 10px 15px;
-    display: flex;
+    padding-block: var(--spacing-2);
+}
+
+.chat-header-main,
+.details-header {
+    background-color: #f0f2f5;
+}
+
+.details-header {
+    justify-content: space-between;
+}
+
+/* --- 按钮 --- */
+.btn {
+    display: inline-flex;
     align-items: center;
-    border-bottom: 1px solid var(--border-color);
-    height: var(--header-height);
-    min-height: var(--header-height);
+    justify-content: center;
+    padding: var(--spacing-2) var(--spacing-4);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.btn-primary,
+.btn.btn-action-themed {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: var(--text-color-inverted);
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: var(--text-color-inverted);
+}
+
+.btn-success {
+    background-color: var(--accent-color);
+    color: var(--text-color-inverted);
 }
 
 .menu-btn {
-    background: none; border: none; font-size: 24px; cursor: pointer;
-    color: var(--text-color-light); margin-right: 10px; padding: 5px;
+    padding: var(--spacing-2);
+    border: none;
+    background: none;
+    cursor: pointer;
+    margin-inline-end: var(--spacing-2);
+    color: var(--text-color-light);
+    font-size: 24px;
 }
-.menu-btn:hover { color: var(--primary-color); }
 
+.back-to-list-btn {
+    display: none; /* 默认隐藏，在移动端视图中显示 */
+    margin-inline-end: var(--spacing-3);
+    padding: var(--spacing-2);
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-color-light);
+    font-size: 24px;
+}
+
+.header-action-btn {
+    padding: var(--spacing-2);
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-color-light);
+    font-size: 20px;
+}
+
+.new-chat-fab {
+    position: absolute;
+    z-index: 10;
+    /*
+     * 使用 calc() 精确计算位置，使其位于侧边栏右侧边缘内。
+     * left: calc(var(--sidebar-width) - 70px)
+     * 在RTL布局下会失效，更好的方式是 `inset-inline-start` 和 `transform`。
+     * 但为保持原逻辑，暂不修改，仅作说明。
+     */
+    inset-block-end: 20px;
+    inset-inline-start: calc(var(--sidebar-width) - 70px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    color: var(--text-color-inverted);
+    font-size: 24px;
+}
+
+.icon-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-inline: 2px;
+    padding: var(--spacing-2);
+    border: none;
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    color: var(--text-color-light);
+    font-size: 22px;
+}
+
+#sendButtonMain {
+    color: var(--primary-color);
+}
+
+/* --- 输入框与表单 --- */
 .search-bar {
-    flex-grow: 1; padding: 8px 12px; border: 1px solid var(--border-color);
-    border-radius: 20px; font-size: 14px; background-color: #fff; /* Themed */
+    flex-grow: 1;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background-color: var(--received-bg-color);
+    font-size: 14px;
 }
-.search-bar:focus {
-    outline: none; border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Themed primary color alpha */
+
+#messageInput {
+    flex-grow: 1;
+    min-height: 24px;
+    max-height: 120px;
+    margin-inline: var(--spacing-1);
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background-color: var(--received-bg-color);
+    overflow-y: auto;
+    font-size: 15px;
+    line-height: 1.4;
+    resize: none;
 }
-.search-bar::placeholder { color: var(--text-color-light); }
 
+#fileInput {
+    display: none;
+}
 
-.nav-tabs { display: flex; justify-content: space-around; padding: 10px 0; border-bottom: 1px solid var(--border-color); }
+/* --- 自定义选择框 (Custom Select) --- */
+/**
+ * 用于主题和配色方案选择的自定义下拉选择框组件。
+ * 使用 div 结构模拟，通过 JS 控制 .open 类的切换来显示/隐藏选项。
+ */
+.custom-select {
+    position: relative;
+    flex-grow: 1; /* 在 flex 布局中占据可用空间 */
+    min-width: 150px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--received-bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family), serif;
+    user-select: none; /* 防止用户选择文本 */
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.custom-select:focus-within {
+    /* 当选择框或其内部任何元素获得焦点时，显示高亮轮廓 */
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+.custom-select .selected {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-2) var(--spacing-3);
+    cursor: pointer;
+}
+
+.custom-select .selected::after {
+    /* 使用伪元素创建下拉箭头 */
+    margin-inline-start: 5px;
+    color: var(--text-color-light);
+    content: '▼';
+    font-size: 0.8em;
+    transition: transform 0.2s;
+}
+
+.custom-select.open .selected::after {
+    /* 当选择框打开时，旋转箭头 */
+    transform: rotate(180deg);
+}
+
+.custom-select .options {
+    position: absolute;
+    z-index: 1010; /* 确保选项列表在其他内容之上 */
+    inset-block-start: calc(100% + 5px); /* 定位在选择框下方，并留有间隙 */
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    display: none; /* 默认隐藏 */
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color); /* 背景应为白色以承载选项 */
+    box-shadow: var(--box-shadow);
+}
+
+.custom-select.open .options {
+    /* 当选择框打开时，显示选项列表 */
+    display: block;
+}
+
+.custom-select .option {
+    padding: var(--spacing-2) var(--spacing-3);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.custom-select .option:hover {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+}
+
+.custom-select .option.active-option {
+    background-color: var(--hover-bg-color);
+    font-weight: bold;
+}
+
+/* --- 导航与标签页 --- */
+.nav-tabs {
+    display: flex;
+    justify-content: space-around;
+    padding-block-start: var(--spacing-3);
+    border-bottom: 1px solid var(--border-color);
+}
+
 .nav-tab {
-    background: none; border: none; padding: 8px 12px; font-size: 14px; font-weight: 500;
-    color: var(--text-color-light); cursor: pointer; border-bottom: 2px solid transparent;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    cursor: pointer;
+    color: var(--text-color-light);
+    font-size: 14px;
+    font-weight: 500;
     transition: color 0.2s, border-bottom-color 0.2s;
 }
-.nav-tab:hover { color: var(--primary-color); }
-.nav-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
 
-.chat-list-container { flex-grow: 1; overflow-y: auto; }
-#chatListNav { list-style: none; }
+/* --- 聊天列表 --- */
+.chat-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+#chatListNav {
+    list-style: none;
+}
 
 .chat-list-item {
-    display: flex; align-items: center; padding: 10px 15px; cursor: pointer;
-    border-bottom: 1px solid var(--border-color); transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
-.chat-list-item:hover { background-color: var(--hover-bg-color); }
-.chat-list-item.active {
-    background-color: var(--active-bg-color); /* Default, will be overridden by --character-secondary-color for special */
-    /* No text color change here, handled by specific elements or character scope */
+
+.chat-list-info {
+    flex-grow: 1;
+    overflow: hidden;
 }
-.chat-list-item.active .chat-list-name:not(.special-contact .chat-list-name) { /* Only for non-special active */
-    font-weight: bold;
+
+.chat-list-name {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 15px;
+    font-weight: 600;
 }
-.chat-list-item.active.special-contact .chat-list-name { /* For special active items */
-    color: var(--character-primary-color); /* Character's primary color */
+
+.chat-list-preview {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-color-light);
+    font-size: 13px;
+}
+
+.chat-list-meta {
+    min-width: 50px;
+    text-align: end; /* 使用逻辑属性 text-align: end 支持 RTL */
+}
+
+.chat-list-time {
+    margin-bottom: 4px;
+    color: var(--text-color-light);
+    font-size: 12px;
+}
+
+.chat-list-badge {
+    display: inline-block;
+    min-width: 18px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background-color: var(--accent-color);
+    color: var(--text-color-inverted);
+    text-align: center;
+    font-size: 11px;
     font-weight: bold;
 }
 
-.chat-list-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
-    background-color: var(--primary-color); /* Fallback for non-special, non-group */
-    color: var(--text-color-inverted);
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold; margin-right: 12px; font-size: 18px;
-    flex-shrink: 0; overflow: hidden;
+.chat-list-item-empty {
+    padding: var(--spacing-5);
+    color: var(--text-color-light);
+    text-align: center;
 }
-.chat-list-item.group .chat-list-avatar { background-color: var(--accent-color); }
-/* Character-specific avatar styling using scoped variables */
+
+/* --- 头像 --- */
+.chat-list-avatar,
+.chat-avatar-main,
+.details-avatar,
+.video-call-avatar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+    font-weight: bold;
+}
+
+.chat-list-avatar,
+.chat-avatar-main {
+    width: 40px;
+    height: 40px;
+    margin-inline-end: var(--spacing-3);
+    font-size: 18px;
+}
+
+.details-avatar {
+    width: 80px;
+    height: 80px;
+    margin: 10px auto 15px;
+    box-shadow: var(--box-shadow);
+    font-size: 36px;
+}
+
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+/* --- 聊天主区域 --- */
+.chat-info-main {
+    display: flex;
+    flex-grow: 1;
+    align-items: center;
+}
+
+.chat-details-main-header {
+    display: flex;
+    flex-direction: column;
+}
+
+.chat-title-main {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.chat-status-main {
+    color: var(--text-color-light);
+    font-size: 12px;
+}
+
+.chat-actions-main {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+.chat-messages-container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    /* 确保 flex 子项可以正确地滚动 */
+    min-height: 0;
+    padding: var(--spacing-4);
+    overflow-y: auto;
+}
+
+.no-chat-selected {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    margin: auto;
+    color: var(--text-color-light);
+    text-align: center;
+}
+
+.no-chat-selected .logo-placeholder {
+    margin-bottom: 20px;
+    font-size: 60px;
+}
+
+/* --- 消息气泡 --- */
+.message {
+    position: relative;
+    max-width: 80%;
+    margin-bottom: 10px;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid transparent; /* 为主题边框提供基础 */
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    line-height: 1.4;
+    /* `word-wrap` 是 `overflow-wrap` 的旧版别名，两者都保留以获得最佳兼容性 */
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+}
+
+.message.sent {
+    align-self: flex-end; /* 使消息靠右对齐 */
+    border-bottom-right-radius: 2px;
+    background-color: var(--sent-bg-color);
+}
+
+.message.received {
+    align-self: flex-start; /* 使消息靠左对齐 */
+    border-bottom-left-radius: 2px;
+    background-color: var(--received-bg-color);
+}
+
+.message.system {
+    align-self: center;
+    padding: 5px 10px;
+    border-radius: 15px;
+    background-color: #f0f2f5c9;
+    box-shadow: none;
+    color: var(--text-color-light);
+    text-align: center;
+    font-size: 12px;
+}
+
+.message .message-content-wrapper {
+    display: flex;
+    align-items: flex-start;
+}
+
+.message .message-content {
+    flex-grow: 1;
+    /* `white-space: pre-wrap` 保留文本中的空白符（如换行符），并允许文本自动换行 */
+    white-space: pre-wrap;
+}
+
+.message .message-sender {
+    margin-bottom: 4px;
+    color: var(--primary-color);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.message .timestamp {
+    margin-top: 5px;
+    color: var(--text-color-light);
+    text-align: end;
+    font-size: 11px;
+}
+
+/* 流式响应光标 */
+.message .message-content .streaming-cursor {
+    display: inline-block;
+    animation: blink-animation 1s step-end infinite;
+    color: var(--primary-color);
+    font-weight: bold;
+    opacity: 1;
+}
+
+/* --- 文件与媒体消息 --- */
+.message img.file-preview-img,
+.message video.file-preview-video {
+    display: block;
+    max-width: 100%;
+    max-height: 300px;
+    margin-top: 5px;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.message .file-info {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-2);
+    border-radius: var(--border-radius);
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.message .file-icon {
+    margin-inline-end: var(--spacing-2);
+    font-size: 24px;
+}
+
+.message .file-name {
+    font-weight: 500;
+}
+
+.message .file-meta {
+    color: var(--text-color-light);
+    font-size: 12px;
+}
+
+.message .download-btn {
+    margin-inline-start: auto; /* 使用逻辑属性使其在 LTR 布局中靠右 */
+    color: var(--primary-color);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.message .voice-message {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+}
+
+.message .voice-message button.play-voice-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    color: var(--text-color-inverted);
+    font-size: 14px;
+}
+
+.message .voice-duration {
+    color: var(--text-color-light);
+    font-size: 12px;
+}
+
+/* --- 文本转语音 (TTS) 组件 --- */
+.tts-control-container {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-inline-start: var(--spacing-2);
+    padding-top: 2px;
+}
+
+.tts-loading-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: tts-spin 1s linear infinite;
+}
+
+.tts-play-button,
+.tts-retry-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    line-height: 1;
+    font-size: 1.1em;
+}
+
+.tts-play-button {
+    color: var(--primary-color);
+}
+
+.tts-retry-button {
+    color: var(--danger-color);
+}
+
+.tts-error-icon {
+    color: var(--danger-color);
+    font-size: 1.1em;
+}
+
+/* --- 拖放上传遮罩层 --- */
+.drop-overlay {
+    position: absolute;
+    z-index: 100;
+    inset: 0; /* 现代 CSS 写法，等同于 top:0; left:0; right:0; bottom:0; */
+    display: none; /* 默认隐藏 */
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border: 3px dashed var(--text-color-inverted);
+    border-radius: var(--border-radius);
+    background-color: rgba(0, 136, 204, 0.7); /* --primary-color with alpha */
+    color: var(--text-color-inverted);
+    /*
+     * pointer-events: none; 确保遮罩层本身不会捕获鼠标事件，
+     * 使得底层的 drop 事件可以被正确触发。
+     */
+    pointer-events: none;
+}
+
+.drop-overlay-text {
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* --- 聊天输入区域 --- */
+.chat-input-container {
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-top: 1px solid var(--border-color);
+    background-color: #f0f2f5;
+}
+
+.input-row {
+    display: flex;
+    align-items: flex-end;
+}
+
+#filePreviewContainer,
+#audioPreviewContainer {
+    margin-bottom: 5px;
+    border-radius: var(--border-radius);
+    background: var(--secondary-color);
+    font-size: 13px;
+}
+
+.file-preview-item,
+.voice-message-preview {
+    display: flex;
+    align-items: center;
+    padding: 5px var(--spacing-2);
+}
+
+.file-preview-item button,
+.voice-message-preview button {
+    margin-inline-start: 10px;
+    padding: 3px var(--spacing-2);
+    border: none;
+    border-radius: 4px;
+    background: var(--danger-color);
+    cursor: pointer;
+    color: var(--text-color-inverted);
+    font-size: 12px;
+}
+
+.voice-message-preview .btn-play-preview {
+    background: var(--accent-color);
+}
+
+#voiceButtonMain .audio-timer-indicator {
+    position: absolute;
+    /* 使用 transform 实现居中，性能更好且不依赖元素宽度 */
+    inset-block-end: 35px;
+    inset-inline-start: 50%;
+    padding: 2px 5px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: var(--text-color-inverted);
+    font-size: 10px;
+    white-space: nowrap;
+    transform: translateX(-50%);
+}
+
+/* --- 详情面板 --- */
+.details-content {
+    flex-grow: 1;
+    padding: var(--spacing-4);
+    overflow-y: auto;
+}
+
+.details-section {
+    margin-bottom: 25px;
+    padding-inline: 5px;
+}
+
+.details-section h4 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#detailsName {
+    margin-bottom: 5px;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+}
+
+#detailsId,
+#detailsStatus {
+    margin-bottom: 2px;
+    color: var(--text-color-light);
+    font-size: 13px;
+    text-align: center;
+}
+
+#detailsStatus {
+    margin-bottom: 15px;
+}
+
+/* --- 详情面板: AI & TTS 特定样式 --- */
+#aiTtsConfigSection h4.collapsible-header,
+#aiContactAboutSection h4 {
+    color: var(--text-color-light);
+}
+
+.tts-config-content-details {
+    padding-inline-start: 12px;
+    margin-block-start: 10px;
+    margin-inline-start: 5px;
+    padding-block-start: 5px;
+    border-inline-start: 2px solid var(--border-color);
+}
+
+#ttsConfigFormContainer .tts-config-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-3);
+}
+
+#ttsConfigFormContainer .tts-config-item label {
+    flex-shrink: 0;
+    width: 85px;
+    margin-inline-end: 10px;
+    color: var(--text-color);
+    font-size: 0.88em;
+    font-weight: 500;
+    text-align: end;
+}
+
+#ttsConfigFormContainer .tts-config-item input[type="text"],
+#ttsConfigFormContainer .tts-config-item input[type="number"],
+#ttsConfigFormContainer .tts-config-item select {
+    flex-grow: 1;
+    min-width: 50px;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+#ttsConfigFormContainer .tts-config-item select {
+    padding-inline-end: 30px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+#ttsConfigFormContainer .tts-config-item input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-inline-end: auto;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+#ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]):focus,
+#ttsConfigFormContainer .tts-config-item select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+/* --- 详情面板: TTS 署名信息 --- */
+.tts-attribution-section {
+    margin-inline: 5px;
+}
+
+/* 这是一个特殊的、自定义样式的可折叠标题 */
+.tts-attribution-section .attribution-sub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 6px;
+    margin-top: 15px;
+    margin-bottom: 0;
+    border-bottom: 1px dashed var(--border-color);
+    cursor: pointer;
+    color: var(--text-color-light);
+    font-size: 1em;
+    font-weight: 500;
+}
+
+.tts-attribution-section .attribution-sub-content {
+    padding-inline-start: 12px;
+    margin-top: 8px;
+    border-inline-start: 2px solid var(--hover-bg-color);
+    font-size: 0.85em;
+}
+
+.tts-attribution-section a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+/* --- 模态框 (Modals) --- */
+.modal-like {
+    position: fixed;
+    z-index: 1000;
+    inset: 0;
+    display: none; /* 默认隐藏，由 JS 控制 */
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-5);
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    padding: var(--spacing-5);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h2 {
+    font-size: 20px;
+}
+
+.close-modal-btn {
+    padding: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-color-light);
+    font-size: 24px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--spacing-3);
+    padding-top: 20px;
+    margin-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+/* --- 模态框: 设置区域特定样式 --- */
+.modal-body .settings-section {
+    margin-bottom: var(--spacing-5);
+}
+
+.modal-body .settings-section > h3 {
+    margin-bottom: var(--spacing-4);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.modal-body .settings-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin-bottom: var(--spacing-3);
+    font-size: 14px;
+}
+
+.modal-body .settings-item label {
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+/* 特别为设置模态框中的标签设置对齐 */
+#mainMenuModal .settings-item label {
+    width: 120px;
+    text-align: end;
+}
+
+.modal-body .settings-item input[type="text"],
+.modal-body .settings-item input[type="password"],
+.modal-body .settings-item input[type="number"] {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+/* 模态框内通用的表单元素样式 */
+.modal-body input[type="text"],
+.modal-body input[type="password"],
+.modal-body input[type="number"],
+.modal-body textarea {
+    width: 100%;
+    padding: var(--spacing-2);
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--received-bg-color); /* 使用白色背景以提高可读性 */
+}
+
+.modal-body textarea {
+    min-height: 80px;
+}
+
+/* --- 模态框: 加载与通话特定样式 --- */
+.loading-overlay {
+    position: fixed;
+    z-index: 9999;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: var(--text-color-inverted);
+}
+
+.loading-spinner {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 20px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1.5s linear infinite;
+}
+
+.loading-text {
+    font-size: 18px;
+    font-weight: 500;
+}
+
+#callingModal .modal-content,
+.video-call-request .modal-content {
+    text-align: center;
+}
+
+.video-call-avatar {
+    margin: 0 auto var(--spacing-3);
+}
+
+#callingModal .video-call-avatar {
+    width: 80px;
+    height: 80px;
+    font-size: 50px;
+}
+
+.video-call-request .video-call-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 40px;
+}
+
+.video-call-request-buttons {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+/* --- 视频通话界面 --- */
+.video-call-container-main {
+    position: fixed;
+    z-index: 1001;
+    inset: 0;
+    display: none; /* 由 JS 控制显示 */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.video-call-container-main .video-streams {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.video-call-container-main #remoteVideo {
+    width: 100%;
+    height: 100%;
+    background-color: #2c2c2c;
+    object-fit: cover;
+}
+
+.video-call-container-main #localVideo {
+    position: absolute;
+    z-index: 2;
+    inset-block-end: 80px;
+    inset-inline-end: 20px;
+    width: 120px;
+    height: 180px;
+    border: 2px solid var(--text-color-inverted);
+    border-radius: var(--border-radius);
+    background-color: #2c2c2c;
+    object-fit: cover;
+}
+
+.video-call-container-main .video-call-controls {
+    position: absolute;
+    inset-block-end: 20px;
+    display: flex;
+    gap: 15px;
+    padding: 10px;
+    border-radius: 25px;
+    background-color: rgba(0, 0, 0, 0.3);
+}
+
+.video-call-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    font-size: 20px;
+}
+
+.video-call-button.end-call {
+    background: var(--danger-color);
+    color: var(--text-color-inverted);
+}
+
+.video-call-button.mute-audio,
+.video-call-button.toggle-camera,
+.video-call-button.audio-only,
+.video-call-button.toggle-pip {
+    background: var(--text-color-inverted);
+    color: var(--text-color);
+}
+
+/* --- 通知 --- */
+.notification-container {
+    position: fixed;
+    z-index: 9999;
+    inset-block-start: 20px;
+    inset-inline-end: 20px;
+    max-width: 350px;
+}
+
+.notification {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: var(--spacing-4);
+    border-radius: var(--border-radius);
+    border-inline-start: 4px solid var(--primary-color);
+    background: var(--received-bg-color);
+    box-shadow: var(--box-shadow);
+    animation: notification-in 0.3s ease-out;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.notification-icon {
+    margin-inline-end: var(--spacing-3);
+    font-size: 18px;
+}
+
+.notification-message {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.notification-close {
+    padding-inline: 5px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #999;
+    font-size: 20px;
+}
+
+/* --- 开关切换 (Toggle Switch) --- */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+}
+
+.switch input {
+    width: 0;
+    height: 0;
+    opacity: 0;
+}
+
+.slider {
+    position: absolute;
+    inset: 0;
+    border-radius: 24px;
+    background-color: #ccc;
+    cursor: pointer;
+    transition: 0.4s;
+}
+
+.slider::before {
+    position: absolute;
+    inset-block-end: 3px;
+    inset-inline-start: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background-color: white;
+    content: "";
+    transition: 0.4s;
+}
+
+/* --- 可折叠区域 --- */
+.collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block: var(--spacing-2);
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    font-weight: 600;
+    transition: color 0.2s, border-bottom-color 0.2s;
+}
+
+.collapsible-header .collapse-icon {
+    margin-inline-start: 5px;
+    font-size: 0.9em;
+    transition: transform 0.2s ease-in-out;
+}
+
+.collapsible-content {
+    padding-top: 5px;
+    padding-inline-start: 15px;
+    margin-top: 0;
+    margin-bottom: 10px;
+    border-inline-start: 2px solid var(--hover-bg-color);
+    /* 默认隐藏，由 JS 通过 style.display 控制 */
+}
+
+
+/* ========================================================================== */
+/* 状态与修饰符 (States & Modifiers) */
+/* ========================================================================== */
+/**
+ * 此区域定义了组件的各种状态（如悬停、激活、禁用）和修饰符类（如主题、模式切换）。
+ * 将这些样式分离出来，有助于保持组件基础样式的纯粹性，并使状态逻辑更清晰。
+ */
+
+/* --- 交互状态: Hover --- */
+.menu-btn:hover,
+.header-action-btn:hover,
+.close-modal-btn:hover,
+.nav-tab:hover {
+    color: var(--primary-color);
+}
+
+.search-bar:hover,
+#messageInput:hover {
+    border-color: #a0a0a0;
+}
+
+.chat-list-item:hover {
+    background-color: var(--hover-bg-color);
+}
+
+.new-chat-fab:hover {
+    background-color: var(--primary-color-dark);
+}
+
+.icon-btn:hover {
+    background-color: var(--hover-bg-color);
+    color: var(--primary-color);
+}
+
+.btn-primary:hover:not(:disabled),
+.btn.btn-action-themed:hover:not(:disabled) {
+    background-color: var(--primary-color-dark);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #5a6268;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #c82333;
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: #3e8e41;
+}
+
+.tts-play-button:hover {
+    color: var(--primary-color-dark);
+}
+
+.tts-retry-button:hover {
+    filter: brightness(0.8);
+}
+
+.collapsible-header:hover,
+.tts-attribution-section .attribution-sub-header:hover {
+    color: var(--primary-color);
+}
+
+.tts-attribution-section a:hover {
+    text-decoration: underline;
+}
+
+/* --- 交互状态: Focus / Focus-Visible --- */
+.search-bar:focus,
+#messageInput:focus,
+.modal-body input:focus,
+.modal-body textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+/* --- 交互状态: Active --- */
+.nav-tab.active {
+    border-bottom-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.chat-list-item.active {
+    /* 对于特殊联系人，此背景色会被 --character-secondary-color 覆盖 */
+    background-color: var(--active-bg-color);
+}
+
+/* 仅当激活项不是特殊联系人时，加粗名称 */
+.chat-list-item.active .chat-list-name:not(.special-contact .chat-list-name) {
+    font-weight: bold;
+}
+
+.collapsible-header.active {
+    border-bottom-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.collapsible-header.active .collapse-icon {
+    transform: rotate(90deg);
+}
+
+.tts-attribution-section .attribution-sub-header.active {
+    border-bottom-style: solid;
+    border-bottom-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.video-call-button.active {
+    background: var(--primary-color);
+    color: var(--text-color-inverted);
+}
+
+/* --- 交互状态: Checked (用于开关) --- */
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:checked + .slider::before {
+    /*选择全开，半开的感觉不舒服*/
+    transform: translateX(96px);
+}
+
+/* --- 交互状态: Disabled --- */
+.btn:disabled,
+.header-action-btn:disabled,
+.icon-btn:disabled {
+    background-color: #ccc !important;
+    box-shadow: none !important;
+    color: #666 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
+}
+
+.icon-btn:disabled {
+    background-color: transparent !important;
+}
+
+/* --- 角色主题修饰符 (.special-contact, .character-active 等) --- */
+.chat-list-item.group .chat-list-avatar {
+    background-color: var(--accent-color);
+}
+
+/* 为特殊联系人激活项的名称应用角色主色 */
+.chat-list-item.active.special-contact .chat-list-name {
+    color: var(--character-primary-color);
+    font-weight: bold;
+}
+
+/* 为特殊联系人列表项应用角色特定的头像样式 */
 .chat-list-item.special-contact .chat-list-avatar {
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
 }
 
-.chat-list-avatar .avatar-image,
-.chat-avatar-main .avatar-image,
-.details-avatar .avatar-image,
-#callingModalAvatar .avatar-image {
-    width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+/* 当聊天头部应用了角色主题时，修改标题和头像样式 */
+.chat-header-main.character-active .chat-title-main {
+    color: var(--character-title-color);
 }
-
-.chat-list-info { flex-grow: 1; overflow: hidden; }
-.chat-list-name {
-    font-weight: 600; font-size: 15px; margin-bottom: 2px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    display: flex; align-items: center;
-}
-.chat-list-preview {
-    font-size: 13px; color: var(--text-color-light);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.chat-list-meta { text-align: right; min-width: 50px; }
-.chat-list-time { font-size: 12px; color: var(--text-color-light); margin-bottom: 4px; }
-.chat-list-badge {
-    background-color: var(--accent-color); color: var(--text-color-inverted);
-    border-radius: 10px; padding: 2px 6px; font-size: 11px; font-weight: bold;
-    display: inline-block; min-width: 18px; text-align: center;
-}
-.chat-list-item-empty { padding: 20px; text-align: center; color: var(--text-color-light); }
-
-.new-chat-fab {
-    position: absolute; bottom: 20px; left: calc(var(--sidebar-width) - 70px);
-    width: 50px; height: 50px; border-radius: 50%;
-    background-color: var(--primary-color); color: var(--text-color-inverted);
-    font-size: 24px; border: none; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10;
-}
-.new-chat-fab:hover { background-color: var(--primary-color-dark); }
-
-
-/* --- Main Chat Area --- */
-.chat-area {
-    flex-grow: 1; display: flex; flex-direction: column;
-    background-color: #e5ddd5; /* Themed, default from original base */
-    position: relative;
-}
-
-/* ADDED FOR DRAG-N-DROP */
-.drop-overlay {
-    display: none;
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background-color: rgba(0, 136, 204, 0.7); /* Themed: --primary-color with alpha */
-    color: var(--text-color-inverted);
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    pointer-events: none; /* Prevents it from capturing the event itself */
-    border: 3px dashed var(--text-color-inverted);
-    border-radius: var(--border-radius);
-}
-.chat-area.drag-over .drop-overlay {
-    display: flex;
-}
-.drop-overlay-text {
-    font-size: 24px;
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
-}
-/* END ADDED FOR DRAG-N-DROP */
-
-.chat-area-content { display: flex; flex-direction: column; flex-grow: 1; min-height: 0; }
-
-.chat-header-main {
-    height: var(--header-height); min-height: var(--header-height);
-    padding: 0 15px; display: flex; align-items: center;
-    background-color: #f0f2f5; /* Themed */
-    border-bottom: 1px solid var(--border-color);
-}
-/* Character class (e.g. .AI_CharacterName) will be added here by JS */
-.chat-header-main.character-active .chat-title-main { color: var(--character-title-color); }
 .chat-header-main.character-active .chat-avatar-main {
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
 }
 
-.back-to-list-btn { display: none; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-color-light); margin-right: 10px; }
-.chat-info-main { flex-grow: 1; display: flex; align-items: center; }
-.chat-avatar-main {
-    width: 40px; height: 40px; border-radius: 50%;
-    background-color: var(--primary-color); /* Fallback for non-special */
-    color: var(--text-color-inverted);
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold; margin-right: 12px; font-size: 18px;
-    flex-shrink: 0; overflow: hidden;
-}
-.chat-details-main-header { display: flex; flex-direction: column; }
-.chat-title-main { font-size: 16px; font-weight: 600; }
-.chat-status-main { font-size: 12px; color: var(--text-color-light); }
-
-.chat-actions-main button { float: left; } /* Potentially removable with flex */
-.header-action-btn {
-    background: none; border: none; font-size: 20px;
-    color: var(--text-color-light); cursor: pointer; padding: 5px;
-}
-.header-action-btn:hover { color: var(--primary-color); }
-.header-action-btn:disabled { color: #ccc; cursor: not-allowed; }
-
-.chat-messages-container {
-    flex-grow: 1; padding: 15px; overflow-y: auto;
-    display: flex; flex-direction: column; min-height: 0;
-}
-.no-chat-selected {
-    margin: auto; text-align: center; color: var(--text-color-light);
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    height: 100%;
-}
-.no-chat-selected .logo-placeholder { font-size: 60px; margin-bottom: 20px; }
-.status-indicator { margin-top: 20px; font-size: 14px; }
-.status-indicator.global { background-color: rgba(0,0,0,0.05); padding: 5px 10px; border-radius: 4px; }
-
-/* --- Message Bubbles --- */
-.message {
-    max-width: 80%; padding: 8px 12px; border-radius: var(--border-radius);
-    margin-bottom: 10px; line-height: 1.4; word-wrap: break-word;
-    position: relative; box-shadow: var(--box-shadow);
-    border: 1px solid transparent; /* Base for themed borders */
-}
-.message.sent {
-    background-color: var(--sent-bg-color); align-self: flex-end;
-    border-bottom-right-radius: 2px;
-    /* border-left: 2px solid var(--primary-color); /* Optional: common sent indicator */
-}
-.message.received {
-    background-color: var(--received-bg-color); align-self: flex-start;
-    border-bottom-left-radius: 2px;
-}
-.message.system {
-    align-self: center; background-color: #f0f2f5c9; /* Themed */
-    color: var(--text-color-light); font-size: 12px; padding: 5px 10px;
-    border-radius: 15px; box-shadow: none; text-align: center;
-}
-.message.system.thinking .message-content { font-style: italic; color: var(--text-color-light); }
-
-/* Message sender name for special contacts (scoped by parent .message.character-active if JS adds it) */
-/* OR theme CSS can target .message.received[data-sender-id^="AI_"] .message-sender directly */
-.message.received .message-sender {
-    font-size: 13px; font-weight: 600;
-    color: var(--primary-color); /* Default for non-special groups or if not scoped */
-    margin-bottom: 4px;
-}
-/* This applies if character class is on .message.received or a common parent */
+/* 当收到的消息应用了角色主题时，修改发送者名称颜色 */
 .message.received.character-message .message-sender {
     color: var(--character-message-sender-color);
 }
 
-
-.message .message-content-wrapper { display: flex; align-items: flex-start; }
-.message .message-content { white-space: pre-wrap; flex-grow: 1; }
-.message .timestamp { font-size: 11px; color: var(--text-color-light); margin-top: 5px; text-align: right; }
-
-/* --- TTS Styles in Message --- */
-.tts-control-container { display: inline-flex; align-items: center; margin-left: 8px; flex-shrink: 0; padding-top: 2px; }
-.tts-loading-spinner {
-    width: 16px; height: 16px; border: 2px solid #ccc;
-    border-top-color: var(--primary-color); border-radius: 50%;
-    animation: tts-spin 1s linear infinite; display: inline-block;
-}
-@keyframes tts-spin { to { transform: rotate(360deg); } }
-
-.tts-play-button {
-    background: none; border: none; font-size: 1.1em; cursor: pointer;
-    color: var(--primary-color); padding: 0; line-height: 1;
-    display: flex; align-items: center; justify-content: center; width: 20px; height: 20px;
-}
-.tts-play-button:hover { color: var(--primary-color-dark); }
-.tts-play-button.playing::after { content: "❚❚"; font-size: 0.8em; }
-.tts-play-button:not(.playing)::after { content: "▶"; font-size: 0.9em; }
-
-.tts-error-icon {
-    color: var(--danger-color); font-size: 1.1em;
-}
-
-.tts-retry-button {
-    background: none;
-    border: none;
-    font-size: 1.1em;
-    color: var(--danger-color);
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-}
-.tts-retry-button:hover {
-    filter: brightness(0.8);
-}
-
-
-/* File/Image/Audio in messages */
-.message img.file-preview-img, .message video.file-preview-video {
-    max-width: 100%; max-height: 300px; border-radius: var(--border-radius);
-    margin-top: 5px; cursor: pointer; display: block;
-}
-.message .file-info {
-    display: flex; align-items: center; padding: 8px;
-    background-color: rgba(0,0,0,0.03); border-radius: var(--border-radius);
-}
-.message .file-icon { font-size: 24px; margin-right: 8px; }
-.message .file-name { font-weight: 500; }
-.message .file-meta { font-size: 12px; color: var(--text-color-light); }
-.message .download-btn { margin-left: auto; color: var(--primary-color); text-decoration: none; font-size: 13px; }
-.message .voice-message { display: flex; align-items: center; gap: 8px; }
-.message .voice-message button.play-voice-btn {
-    background: var(--primary-color); color: var(--text-color-inverted);
-    border-radius: 50%; width: 30px; height: 30px; border: none;
-    font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-}
-.message .voice-duration { font-size: 12px; color: var(--text-color-light); }
-
-
-/* --- Chat Input Area --- */
-.chat-input-container {
-    padding: 10px 15px; background-color: #f0f2f5; /* Themed */
-    border-top: 1px solid var(--border-color);
-    display: flex; flex-direction: column;
-}
-#filePreviewContainer, #audioPreviewContainer {
-    margin-bottom: 5px; background: var(--secondary-color);
-    border-radius: var(--border-radius); font-size: 13px;
-}
-.file-preview-item, .voice-message-preview { display: flex; align-items: center; padding: 5px 8px; }
-.file-preview-item button, .voice-message-preview button {
-    background: var(--danger-color); color: var(--text-color-inverted);
-    font-size: 12px; padding: 3px 8px; border-radius: 4px; border:none;
-    cursor: pointer; margin-left: 10px;
-}
-.voice-message-preview .btn-play-preview { background: var(--accent-color); }
-
-.input-row { display: flex; align-items: flex-end; }
-#messageInput {
-    flex-grow: 1; padding: 10px 12px; border: 1px solid var(--border-color);
-    border-radius: 20px; font-size: 15px; resize: none;
-    min-height: 24px; max-height: 120px; overflow-y: auto;
-    line-height: 1.4; background-color: #fff; /* Themed */
-    margin: 0 5px;
-}
-#messageInput:focus {
-    outline: none; border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Themed primary color alpha */
-}
-
-.icon-btn {
-    background: none; border: none; font-size: 22px; color: var(--text-color-light);
-    cursor: pointer; padding: 8px; margin: 0 2px; border-radius: 50%;
-    width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
-}
-.icon-btn:hover { background-color: var(--hover-bg-color); color: var(--primary-color); }
-.icon-btn:disabled { color: #ccc; cursor: not-allowed; background-color: transparent; }
-#sendButtonMain { color: var(--primary-color); }
-#voiceButtonMain.recording { color: var(--danger-color); animation: pulse 1.5s infinite; }
-#voiceButtonMain .audio-timer-indicator {
-    position: absolute; bottom: 35px; left: 50%; transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.7); color: var(--text-color-inverted);
-    padding: 2px 5px; border-radius: 3px; font-size: 10px; white-space: nowrap;
-}
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); } /* Themed danger color alpha */
-    70% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-}
-
-/* --- Details Panel --- */
-.details-panel {
-    width: var(--details-panel-width); min-width: var(--details-panel-width);
-    background-color: #f8f9fa; /* Themed */
-    border-left: 1px solid var(--border-color);
-    display: none; flex-direction: column;
-    transition: margin-right 0.3s ease-in-out;
-}
-/* Character class (e.g. .AI_CharacterName) added here by JS */
+/* 当详情面板应用了角色主题时，修改各部分样式 */
 .details-panel.character-active .details-avatar {
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
 }
 .details-panel.character-active #detailsName,
-.details-panel.character-active #aiContactAboutSection h4 span { /* If generic class covers both */
+.details-panel.character-active #aiContactAboutSection h4 span {
     color: var(--character-details-name-color);
 }
 
-.details-header {
-    min-height: var(--header-height); padding: 0 15px; display: flex;
-    align-items: center; justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
-    background-color: #f0f2f5; /* Themed */
-}
-.details-header h3 { font-size: 16px; font-weight: 600; }
-.details-content { flex-grow: 1; padding: 15px; overflow-y: auto; padding-right: 10px; } /* scrollbar fix */
-.details-section { margin-bottom: 25px; padding: 0 5px; }
-.details-section h4 {
-    font-size: 14px; font-weight: 600; margin-bottom: 12px;
-    border-bottom: 1px solid var(--border-color); padding-bottom: 8px;
-    display: flex; justify-content: space-between; align-items: center;
-}
-#aiTtsConfigSection h4.collapsible-header,
-#aiContactAboutSection h4 { color: var(--text-color-light); }
-
-.details-avatar {
-    width: 80px; height: 80px; border-radius: 50%;
-    background-color: var(--primary-color); /* Fallback */
-    color: var(--text-color-inverted);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 36px; margin: 10px auto 15px auto;
-    overflow: hidden; box-shadow: var(--box-shadow);
-}
-#detailsName { text-align: center; font-size: 18px; font-weight: 600; margin-bottom: 5px;}
-#detailsId, #detailsStatus { text-align: center; font-size: 13px; color: var(--text-color-light); margin-bottom: 2px; }
-#detailsStatus { margin-bottom: 15px;}
-
-.details-section p { font-size: 14px; color: var(--text-color); margin-bottom: 8px; line-height: 1.5; }
-.details-section p strong { font-weight: 500; display: block; margin-bottom: 4px; }
-
-/* AI Contact Specifics in Details */
-#aiContactAboutSection h4 span { /* Already handled by .details-panel.character-active above */
-    /* color: var(--special-contact-color); */ font-weight: inherit;
-}
-#aiContactAboutSection h4 { margin-bottom: 15px; }
-#aiContactDetailsContent p strong {
-    color: var(--text-color); font-weight: 600; display: block;
-    margin-top: 15px; margin-bottom: 8px; font-size: 0.95em;
-}
-#aiContactDetailsContent > p:first-of-type strong { margin-top: 0; }
-#aiContactBasicInfoList { list-style-type: none; padding-left: 0; margin-bottom: 10px; padding-left: 8px; }
-#aiContactBasicInfoList li { margin-bottom: 6px; font-size: 0.92em; color: var(--text-color-light); }
-#aiContactBasicInfoList li strong { color: var(--text-color); margin-right: 4px; }
-#aiContactAboutText {
-    white-space: pre-wrap; font-size: 0.9em; line-height: 1.6;
-    color: var(--text-color-light); padding: 10px;
-    border-radius: var(--border-radius); border: 1px dashed var(--border-color);
-}
-
-/* TTS Config in Details */
-#aiTtsConfigSection .collapsible-header { /* This is for the "TTS Configuration" H4 */
-    cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-    padding-bottom: 8px; transition: color 0.2s, border-bottom-color 0.2s;
-    color: var(--text-color-light); border-bottom: 1px solid var(--border-color); margin-bottom: 0;
-}
-#aiTtsConfigSection .collapsible-header:hover { color: var(--primary-color); }
-#aiTtsConfigSection .collapsible-header .collapse-icon { transition: transform 0.2s ease-in-out; font-size: 0.9em; margin-left: 5px; }
-#aiTtsConfigSection .collapsible-header.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-/* The .active .collapse-icon rotation is handled by the general rule further down */
-
-.tts-config-content-details { /* This is for the content directly under "TTS Configuration" H4 */
-    padding-left: 12px; border-left: 2px solid var(--border-color);
-    margin-top: 10px; margin-left: 5px; padding-top: 5px;
-}
-#ttsConfigFormContainer .tts-config-item { display: flex; align-items: center; margin-bottom: 12px; }
-#ttsConfigFormContainer .tts-config-item label {
-    width: 85px; flex-shrink: 0; font-size: 0.88em;
-    color: var(--text-color); margin-right: 10px; text-align: right; font-weight: 500;
-}
-#ttsConfigFormContainer .tts-config-item input[type="text"],
-#ttsConfigFormContainer .tts-config-item input[type="number"],
-#ttsConfigFormContainer .tts-config-item select {
-    flex-grow: 1; padding: 7px 10px; border: 1px solid var(--border-color);
-    border-radius: var(--border-radius); font-size: 0.9em; background-color: #fff; /* Themed */
-    font-family: var(--font-family), serif; min-width: 50px;
-    -webkit-appearance: none; -moz-appearance: none; appearance: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-#ttsConfigFormContainer .tts-config-item select {
-    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
-    background-repeat: no-repeat; background-position: right 8px center;
-    padding-right: 30px; cursor: pointer;
-}
-#ttsConfigFormContainer .tts-config-item input[type="checkbox"] {
-    margin-left: 0; width: 18px; height: 18px; flex-grow: 0; flex-shrink: 0;
-    accent-color: var(--primary-color); margin-right: auto; cursor: pointer;
-}
-#ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]):focus,
-#ttsConfigFormContainer .tts-config-item select:focus {
-    outline: none; border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Themed primary color alpha */
-}
-#ttsConfigFormContainer .tts-config-item input[type="checkbox"]:focus-visible {
-    outline: 2px solid var(--primary-color); outline-offset: 2px;
-}
-#saveAiTtsSettingsBtnDetails { margin-top: 10px; width: 100%; }
-
-.tts-attribution-section {
-    margin-left: 5px; margin-right: 5px;
-}
-.tts-attribution-section .attribution-sub-header {
-    font-size: 1em; font-weight: 500; margin-top: 15px; margin-bottom: 0;
-    padding-bottom: 6px; color: var(--text-color-light);
-    border-bottom: 1px dashed var(--border-color);
-}
-.tts-attribution-section .attribution-sub-header:hover { color: var(--primary-color); }
-.tts-attribution-section .attribution-sub-header.active {
-    color: var(--primary-color); border-bottom-style: solid; border-bottom-color: var(--primary-color);
-}
-.tts-attribution-section .attribution-sub-content {
-    font-size: 0.85em; padding-left: 12px; margin-top: 8px;
-    border-left: 2px solid var(--hover-bg-color);
-}
-.tts-attribution-section .attribution-sub-content p { margin-bottom: 6px; color: var(--text-color-light); }
-.tts-attribution-section .attribution-sub-content p strong { color: var(--text-color); }
-.tts-attribution-section a { color: var(--primary-color); text-decoration: none; }
-.tts-attribution-section a:hover { text-decoration: underline; }
-
-/* Group Management in Details */
-.member-list-details .member-item-detail {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 0; font-size: 14px;
-}
-.member-item-detail .owner-badge {
-    font-size: 10px; background-color: var(--accent-color); color: var(--text-color-inverted);
-    padding: 2px 5px; border-radius: 4px; margin-left: 5px;
-}
-.member-item-detail .remove-member-btn-detail {
-    background: none; border: none; color: var(--danger-color);
-    cursor: pointer; font-size: 12px;
-}
-.add-member-details select {
-    width: 100%; padding: 8px; margin-bottom: 10px;
-    border: 1px solid var(--border-color); border-radius: 4px;
-    background-color: #fff; /* Themed */
-}
-.add-member-details button { width: 100%; }
-.left-members-details .left-member-item-detail {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 0; font-size: 13px; color: var(--text-color-light);
-}
-.left-member-item-detail .re-add-member-btn-detail {
-    background: var(--accent-color); color: var(--text-color-inverted);
-    border:none; border-radius: 4px; padding: 3px 6px; cursor: pointer;
-}
-.details-section .btn { width: 100%; margin-bottom: 8px; }
-.details-section .btn:last-child { margin-bottom: 0; }
-
-/* Initial visibility for sections in details panel (JS will toggle based on context) */
-#detailsPanelContent > div:not(#detailsContactInfo):not(#currentChatActionsDetails) { display: none; }
-#detailsPanelContent #contactActionsDetails,
-#detailsPanelContent #detailsGroupManagement,
-#detailsPanelContent #groupActionsDetails,
-#detailsPanelContent #aiContactAboutSection,
-#detailsPanelContent #aiTtsConfigSection { display: none; }
-
-
-/* --- Generic Button Styles --- */
-.btn {
-    padding: 8px 15px; border-radius: var(--border-radius); border: none; cursor: pointer;
-    font-size: 14px; font-weight: 500; transition: background-color 0.2s, box-shadow 0.2s;
-    display: inline-flex; align-items: center; justify-content: center; text-align: center;
-}
-.btn-primary { background-color: var(--primary-color); color: var(--text-color-inverted); }
-.btn-primary:hover:not(:disabled) { background-color: var(--primary-color-dark); }
-.btn-secondary { background-color: #6c757d; color: var(--text-color-inverted); } /* Consider theming this */
-.btn-secondary:hover:not(:disabled) { background-color: #5a6268; }
-.btn-danger { background-color: var(--danger-color); color: var(--text-color-inverted); }
-.btn-danger:hover:not(:disabled) { background-color: #c82333; } /* Darker red */
-.btn-success { background-color: var(--accent-color); color: var(--text-color-inverted); }
-.btn-success:hover:not(:disabled) { background-color: #3e8e41; } /* Darker green */
-.btn:disabled {
-    background-color: #ccc !important; color: #666 !important;
-    cursor: not-allowed !important; opacity: 0.7 !important;
-    border-color: #bbb !important; box-shadow: none !important;
-}
-.btn.btn-action-themed { background-color: var(--primary-color); color: var(--text-color-inverted); }
-.btn.btn-action-themed:hover:not(:disabled) { background-color: var(--primary-color-dark); }
-
-
-/* --- Modals (Loading, Video Call, Settings) --- */
-.loading-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0, 0, 0, 0.7); /* Themed potentially */
-    display: flex; flex-direction: column; justify-content: center; align-items: center;
-    z-index: 9999; color: var(--text-color-inverted);
-}
-.loading-spinner {
-    width: 50px; height: 50px; border: 5px solid #f3f3f3;
-    border-top: 5px solid var(--primary-color);
-    border-radius: 50%; animation: spin 1.5s linear infinite; margin-bottom: 20px;
-}
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-.loading-text { font-size: 18px; font-weight: 500; }
-
-/* Common Modal Styles */
-.modal-like {
-    display: none; /* Hidden by default, shown by JS */
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(0,0,0,0.5); /* Themed potentially */
-    justify-content: center; align-items: center;
-    z-index: 1000; padding: 20px;
-}
-.modal-content {
-    background-color: #fff; /* Themed */
-    padding: 20px; border-radius: var(--border-radius);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    width: 100%; max-width: 500px; max-height: 90vh;
-    overflow-y: auto; position: relative;
-}
-.modal-header {
-    display: flex; justify-content: space-between; align-items: center;
-    padding-bottom: 10px; margin-bottom: 15px; border-bottom: 1px solid var(--border-color);
-}
-.modal-header h2 { font-size: 20px; }
-.close-modal-btn {
-    background: none; border: none; font-size: 24px; cursor: pointer;
-    color: var(--text-color-light); padding: 0;
-}
-.close-modal-btn:hover { color: var(--primary-color); }
-
-.modal-body .settings-section { margin-bottom: 20px; }
-.modal-body .settings-section h3 { font-size: 16px; margin-bottom: 10px; }
-.modal-body input[type="text"],
-.modal-body input[type="password"],
-.modal-body input[type="number"],
-.modal-body textarea {
-    width: 100%; padding: 8px; margin-bottom: 10px;
-    border: 1px solid var(--border-color); border-radius: 4px;
-    background-color: #fff; /* Themed */
-}
-.modal-body textarea { min-height: 80px; }
-.modal-body button { margin-top: 5px; margin-right: 5px; }
-.modal-footer {
-    display: flex; justify-content: flex-end;
-    padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--border-color);
-}
-.modal-footer button + button { margin-left: 10px; }
-
-/* Specific Modals */
-.user-id-display { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-#modalUserIdValue {
-    font-weight: bold; background: #f0f0f0; /* Themed */
-    padding: 5px 10px; border-radius: 4px; user-select: all;
-}
-.manual-connect-step { margin-bottom: 10px; }
-.manual-connect-step button { display: block; width: 100%; margin-bottom: 5px; }
-
-#mainMenuModal #modalResetAllConnectionsBtn { display: none; } /* Controlled by JS */
-
-
-/* Call Request & Calling Modals */
-.video-call-request .modal-content { text-align: center; }
-.video-call-avatar { /* Generic class for avatars in call modals */
-    font-size: 40px; margin-bottom: 10px; width: 60px; height: 60px;
-    border-radius: 50%; background-color: var(--primary-color); /* Fallback */
-    color: var(--text-color-inverted);
-    display: flex; align-items: center; justify-content: center;
-    margin-left: auto; margin-right: auto; overflow: hidden;
-}
-/* Character class added to #callingModal or #callingModalAvatar by JS */
+/* 当通话弹窗应用了角色主题时，修改头像样式 */
 #callingModalAvatar.character-active {
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
 }
-.video-call-request-buttons { display: flex; justify-content: space-around; margin-top: 20px; }
 
-#callingModal .modal-content { max-width: 350px; text-align: center; }
-#callingModal .modal-header { justify-content: center; border-bottom: none; }
-#callingModal #callingModalAvatar {
-    font-size: 50px; margin: 10px auto 20px auto;
-    width: 80px; height: 80px; /* Larger than list/header avatars */
+/* --- 功能状态修饰符 --- */
+.chat-area.drag-over .drop-overlay {
+    display: flex;
 }
-#callingModal #callingModalText { margin-bottom: 20px; }
-#callingModal .modal-footer { justify-content: center; border-top: none; }
-#callingModal #callingModalCancelBtn { width: 80%; max-width: 200px; }
 
-/* Full Video Call Container */
-.video-call-container-main {
-    display: none; /* Shown by JS */
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.9); z-index: 1001;
-    flex-direction: column; align-items: center; justify-content: center;
+.message.system.thinking .message-content {
+    color: var(--text-color-light);
+    font-style: italic;
 }
-.video-call-container-main .video-streams { position: relative; width: 100%; height: 100%; overflow: hidden; }
-.video-call-container-main #remoteVideo { width: 100%; height: 100%; object-fit: cover; background-color: #2c2c2c; }
-.video-call-container-main #localVideo {
-    position: absolute; width: 120px; height: 180px;
-    right: 20px; bottom: 80px; object-fit: cover;
-    border: 2px solid #fff; border-radius: var(--border-radius);
-    z-index: 2; background-color: #2c2c2c;
+
+#voiceButtonMain.recording {
+    animation: pulse 1.5s infinite;
+    color: var(--danger-color);
 }
-.video-call-container-main.audio-only-mode #localVideo,
-.video-call-container-main.screen-sharing-mode #localVideo { display: none !important; }
+
+.tts-play-button.playing::after {
+    content: "❚❚";
+    font-size: 0.8em;
+}
+
+.tts-play-button:not(.playing)::after {
+    content: "▶";
+    font-size: 0.9em;
+}
+
+.notification.notification-success {
+    border-left-color: var(--accent-color);
+}
+.notification.notification-warning {
+    border-left-color: var(--warning-color);
+}
+.notification.notification-error {
+    border-left-color: var(--danger-color);
+}
+
+.notification-hide {
+    transform: translateX(400px);
+    opacity: 0;
+}
+
+.online-dot {
+    display: inline-block;
+    flex-shrink: 0;
+    width: 8px;
+    height: 8px;
+    margin-inline-start: 6px;
+    border-radius: 50%;
+    background-color: var(--accent-color);
+    box-shadow: 0 0 3px var(--accent-color);
+    vertical-align: middle;
+}
+
+/* --- 视频通话模式修饰符 --- */
 .video-call-container-main.audio-only-mode .video-streams {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="%23cccccc"><path d="M12 3c-4.97 0-9 4.03-9 9v7c0 1.1.9 2 2 2h4v-8H5v-1c0-3.87 3.13-7 7-7s7 3.13 7 7v1h-4v8h4c1.1 0 2-.9 2-2v-7c0-4.97-4.03-9-9-9z"/></svg>');
-    background-repeat: no-repeat; background-position: center; background-color: #222;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #222;
 }
-.video-call-container-main .video-call-controls {
-    position: absolute; bottom: 20px; display: flex; gap: 15px;
-    padding: 10px; background-color: rgba(0,0,0,0.3); border-radius: 25px;
-}
-.video-call-button {
-    width: 50px; height: 50px; border-radius: 50%; border: none;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; font-size: 20px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-.video-call-button.end-call { background: var(--danger-color); color: var(--text-color-inverted); }
-.video-call-button.mute-audio, .video-call-button.toggle-camera,
-.video-call-button.audio-only, .video-call-button.toggle-pip {
-    background: #fff; color: var(--text-color);
-}
-.video-call-button.active { background: var(--primary-color); color: var(--text-color-inverted); }
 
-/* Picture-in-Picture (PiP) Styles */
+.video-call-container-main.audio-only-mode #localVideo,
+.video-call-container-main.screen-sharing-mode #localVideo {
+    display: none !important;
+}
+
+/* 画中画 (PiP) 模式 */
 .video-call-container-main.pip-mode {
-    width: clamp(240px, 25vw, 360px); aspect-ratio: 16 / 9; height: auto;
-    position: fixed; z-index: 1005; border: 2px solid var(--primary-color);
-    border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    overflow: hidden; cursor: grab; display: flex; flex-direction: column;
+    position: fixed;
+    z-index: 1005;
+    display: flex;
+    flex-direction: column;
+    /* 使用 clamp() 实现响应式宽度，最小240px，最大360px，理想宽度为视口宽度的25% */
+    width: clamp(240px, 25vw, 360px);
+    height: auto;
+    overflow: hidden;
+    border: 2px solid var(--primary-color);
+    border-radius: 8px;
     background-color: #2c2c2c;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    cursor: grab;
+    /* aspect-ratio 保持视频的宽高比 */
+    aspect-ratio: 16 / 9;
 }
-.video-call-container-main.pip-mode .video-streams { flex-grow: 1; position: relative; min-height: 0; }
-.video-call-container-main.pip-mode #remoteVideo { width: 100%; height: 100%; object-fit: cover; }
+
+.video-call-container-main.pip-mode .video-streams {
+    flex-grow: 1;
+    min-height: 0;
+}
+
 .video-call-container-main.pip-mode #localVideo {
-    position: absolute; width: 30%; height: auto; aspect-ratio: 16 / 9;
-    bottom: 8px; right: 8px; border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 4px; z-index: 1; object-fit: cover; display: block !important;
+    inset-block-end: 8px;
+    inset-inline-end: 8px;
+    display: block !important;
+    width: 30%;
+    height: auto;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 4px;
+    aspect-ratio: 16 / 9;
 }
-.video-call-container-main.pip-mode.audio-only-mode #localVideo,
-.video-call-container-main.pip-mode.screen-sharing-mode #localVideo { display: none !important; }
+
 .video-call-container-main.pip-mode .video-call-controls {
-    position: relative; bottom: auto; padding: 6px; flex-shrink: 0;
-    justify-content: space-around; border-radius: 0;
-    background-color: rgba(0,0,0,0.6); gap: 5px;
-}
-.video-call-container-main.pip-mode .video-call-controls .video-call-button {
-    width: 36px; height: 36px; font-size: 16px; margin: 0 2px;
-}
-
-/* --- Quality Indicator --- */
-.connection-quality { display: flex; align-items: center; font-size: 14px; margin-top: 5px; }
-.quality-indicator {
-    width: 10px; height: 10px; border-radius: 50%; margin: 0 5px;
-    background: #6c757d; /* Fallback color */
-}
-.quality-indicator.quality-good { background: var(--accent-color); }
-.quality-indicator.quality-medium { background: var(--warning-color); }
-.quality-indicator.quality-poor { background: var(--danger-color); }
-
-/* --- Notifications --- */
-.notification-container {
-    position: fixed; top: 20px; right: 20px; max-width: 350px; z-index: 9999;
-}
-.notification {
-    background: #fff; /* Themed */
-    border-radius: var(--border-radius); box-shadow: var(--box-shadow);
-    padding: 15px; margin-bottom: 10px; display: flex; align-items: center;
-    animation: notification-in 0.3s ease-out;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    border-left: 4px solid var(--primary-color);
-}
-.notification.notification-success { border-left-color: var(--accent-color); }
-.notification.notification-warning { border-left-color: var(--warning-color); }
-.notification.notification-error { border-left-color: var(--danger-color); }
-.notification-hide { transform: translateX(400px); opacity: 0; }
-@keyframes notification-in {
-    from { transform: translateX(400px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-}
-.notification-icon { margin-right: 10px; font-size: 18px; }
-.notification-message { flex: 1; font-size: 14px; line-height: 1.4; }
-.notification-close { background:none; border:none; color:#999; font-size:20px; cursor:pointer; padding:0 5px; }
-
-/* --- Toggle Switch Styles --- */
-.settings-item {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 14px; margin-bottom: 10px;
-}
-.switch { position: relative; display: inline-block; width: 46px; height: 24px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider {
-    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: #ccc; /* Themed */
-    transition: .4s;
-}
-.slider:before {
-    position: absolute; content: ""; height: 18px; width: 18px;
-    left: 3px; bottom: 3px; background-color: white; /* Themed */
-    transition: .4s;
-}
-input:checked + .slider { background-color: var(--primary-color); }
-input:focus + .slider { box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Themed primary alpha */ }
-input:checked + .slider:before { transform: translateX(54px); } /* Adjusted for 46px width (46 - 18 - 3 - 3 = 22) */
-.slider.round { border-radius: 24px; }
-.slider.round:before { border-radius: 50%; }
-
-/* --- Confirmation Modal --- */
-.modal-like.confirmation-modal .modal-content { max-width: 450px; }
-.modal-like.confirmation-modal .modal-header h2 { font-size: 18px; }
-.modal-like.confirmation-modal .modal-body p { font-size: 15px; line-height: 1.5; margin-bottom: 0; }
-
-/* --- Online Status Dot --- */
-.online-dot {
-    display: inline-block; width: 8px; height: 8px;
-    background-color: var(--accent-color); border-radius: 50%;
-    margin-left: 6px; vertical-align: middle;
-    box-shadow: 0 0 3px var(--accent-color); /* Alpha version of accent */
+    position: relative;
+    inset-block-end: auto;
     flex-shrink: 0;
+    justify-content: space-around;
+    gap: 5px;
+    padding: 6px;
+    border-radius: 0;
+    background-color: rgba(0, 0, 0, 0.6);
 }
 
-/* --- Reconnect Prompt --- */
-.reconnect-prompt {
-    background-color: #fff3cd; /* Themed warning bg */
-    color: #856404; /* Themed warning text */
-    border-left: 4px solid #ffc107; /* Themed warning border */
-    padding: 10px 15px; margin: 10px auto;
-    font-size: 0.9em; border-radius: var(--border-radius);
-    max-width: 90%; text-align: center;
+.video-call-container-main.pip-mode .video-call-controls .video-call-button {
+    width: 36px;
+    height: 36px;
+    margin-inline: 2px;
+    font-size: 16px;
 }
-.reconnect-prompt-text { margin-right: 10px; display: block; margin-bottom: 5px; }
-.btn-reconnect-inline, .btn-cancel-reconnect-inline {
-    background-color: var(--primary-color); color: var(--text-color-inverted);
-    border: none; padding: 5px 10px; border-radius: var(--border-radius);
-    cursor: pointer; font-size: 0.9em; margin-left: 5px;
-}
-.btn-reconnect-inline:hover, .btn-cancel-reconnect-inline:hover { background-color: var(--primary-color-dark); }
-.btn-reconnect-inline:disabled { background-color: #ccc; cursor: not-allowed; }
-.btn-cancel-reconnect-inline { background-color: #6c757d; } /* Themed secondary */
-.btn-cancel-reconnect-inline:hover { background-color: #5a6268; }
 
-#fileInput { display: none; }
+/* ========================================================================== */
+/* 动画与关键帧 (Animations & Keyframes) */
+/* ========================================================================== */
 
-/* Streaming Cursor in Messages */
-.message .message-content .streaming-cursor {
-    display: inline-block; animation: blink-animation 1s step-end infinite;
-    opacity: 1; font-weight: bold; color: var(--primary-color);
+@keyframes tts-spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
-@keyframes blink-animation { 50% { opacity: 0; } }
 
-/* Open Source Info Modal */
-#openSourceInfoModal { display: none; } /* Controlled by JS */
-#openSourceInfoModal .modal-content { max-width: 550px; }
-#openSourceInfoModal .modal-body img { border-radius: var(--border-radius); box-shadow: var(--box-shadow); }
-#openSourceInfoModal #openSourceModalTimer { font-weight: bold; }
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
 
-/* --- Custom Select for Theme/Color Scheme --- */
-.custom-select {
-    position: relative; flex-grow: 1; min-width: 150px;
-    font-family: var(--font-family), serif; user-select: none;
-    color: var(--text-color); background-color: #fff; /* Themed */
-    border: 1px solid var(--border-color); border-radius: 4px;
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+    }
 }
-.custom-select .selected {
-    padding: 8px 12px; cursor: pointer; border-radius: 4px;
-    display: flex; justify-content: space-between; align-items: center;
-}
-.custom-select:focus-within {
-    outline: none; border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Themed primary alpha */
-}
-.custom-select .selected::after {
-    content: '▼'; font-size: 0.8em; margin-left: 5px;
-    color: var(--text-color-light); transition: transform 0.2s;
-}
-.custom-select.open .selected::after { transform: rotate(180deg); }
 
-.custom-select{
-    background-color: var(--secondary-color);
+@keyframes notification-in {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
-.custom-select .options {
-    position: absolute; top: calc(100% + 5px); left: 0; right: 0;
-    border: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow); display: none; z-index: 1010;
-    max-height: 200px; overflow-y: auto; border-radius: var(--border-radius);
-    background-color: var(--secondary-color);
-}
-.custom-select.open .options { display: block; }
-.custom-select .option {
-    padding: 8px 12px; cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
-}
-.custom-select .option:hover { background-color: var(--primary-color); color: var(--text-color-inverted); text-shadow: none; }
-.custom-select .option.active-option { background-color: var(--hover-bg-color); font-weight: bold; }
 
-/* General Collapsible Sections */
-.collapsible-header {
-    cursor: pointer; display: flex; justify-content: space-between; align-items: center;
-    padding: 8px 0; font-weight: 600; border-bottom: 1px solid var(--border-color);
-    margin-bottom: 10px; transition: color 0.2s, border-bottom-color 0.2s;
+@keyframes blink-animation {
+    50% {
+        opacity: 0;
+    }
 }
-.collapsible-header:hover { color: var(--primary-color); }
-.collapsible-header.active { border-bottom-color: var(--primary-color); color: var(--primary-color); }
-.collapsible-header .collapse-icon { transition: transform 0.2s ease-in-out; font-size: 0.9em; margin-left: 5px; }
-.collapsible-header.active .collapse-icon {
-    transform: rotate(90deg);
-}
-.collapsible-content {
-    padding-left: 15px; border-left: 2px solid var(--hover-bg-color);
-    margin-top: 0px; padding-top: 5px; margin-bottom: 10px;
-    /* display: none; by default via HTML style attribute or JS control */
-}
-.modal-body .collapsible-content p { font-size: 0.9em; color: var(--text-color-light); margin-bottom: 15px; line-height: 1.5; }
-.modal-body .collapsible-content .manual-connect-step:last-child { margin-bottom: 0; }
-
-/* Settings Specifics */
-.settings-section .settings-item label {
-    margin-right: 10px; flex-shrink: 0; width: auto; min-width: 80px;
-    text-align: left; font-size: 0.95em; font-weight: 500;
-}
-.settings-section .collapsible-content .settings-item label { width: 120px; text-align: right; }
-.settings-section .settings-item input[type="text"],
-.settings-section .settings-item input[type="password"],
-.settings-section .settings-item input[type="number"] {
-    flex-grow: 1; min-width: 0; border-radius: var(--border-radius);
-    padding: 8px 10px; background-color: var(--secondary-color); /* Themed */
-}
-.settings-section .settings-item input:focus {
-    outline: none; border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(0,136,204,0.2); /* Themed primary alpha */
-}
-#colorSchemeCustomSelectContainer, #themeCustomSelectContainer { color: var(--text-color); }
 
 
-/* --- Avatar Fallbacks --- */
-.avatar-fallback-active { /* Marker class, existing styles handle flex centering */ }
-.avatar-fallback-text { font-weight: bold; font-size: inherit; color: inherit; }
+/* ========================================================================== */
+/* 响应式设计 (Responsive Design) */
+/* ========================================================================== */
 
-/* --- Image Fallbacks --- */
-.image-message-fallback {
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-    border: 1px dashed var(--border-color); border-radius: var(--border-radius);
-    background-color: var(--secondary-color); color: var(--text-color-light);
-    font-style: italic; min-height: 80px; text-align: center;
-}
-.image-load-error { /* Marker class for generic broken images, no default visual cue */ }
-
-
-/* --- Responsive Design --- */
 @media screen and (max-width: 900px) {
-    .details-panel { display: none; }
+    .details-panel {
+        display: none;
+    }
+
     .app-container.show-details .details-panel {
-        display: flex; position: absolute; right: 0; top: 0; height: 100%;
-        z-index: 20; box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+        position: absolute;
+        z-index: 20;
+        inset-block-start: 0;
+        inset-inline-end: 0;
+        display: flex;
+        height: 100%;
+        box-shadow: -2px 0 10px rgba(0, 0, 0, 0.15);
     }
 }
+
 @media screen and (max-width: 768px) {
-    :root { --sidebar-width: 100%; }
-    .app-container { flex-direction: column; height: 100vh; max-height: 100vh; border-radius: 0; }
-    .sidebar-nav { width: 100%; height: 100vh; border-right: none; display: flex; }
-    .chat-area { width: 100%; height: 100vh; display: none; }
-    .app-container.chat-view-active .sidebar-nav { display: none; }
-    .app-container.chat-view-active .chat-area { display: flex; }
-    .back-to-list-btn { display: block; }
-    .new-chat-fab { left: auto; right: 20px; }
-    .details-panel {
-        width: 100%; max-width: 300px; position: fixed; right: -300px;
-        top: 0; height: 100%; z-index: 20; transition: right 0.3s ease-in-out;
+    .app-container {
+        flex-direction: column;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100dvh;
+        border-radius: 0;
     }
-    .app-container.show-details .details-panel { right: 0; display: flex; }
-    .app-container.show-details .chat-area { margin-right: 0; }
-    .video-call-container-main #localVideo { width: 90px !important; height: 135px !important; bottom: 70px !important; right: 10px !important; }
-    .video-call-container-main .video-call-controls { gap: 10px !important; }
-    .video-call-button { width: 45px !important; height: 45px !important; font-size: 18px !important; }
+
+    .sidebar-nav {
+        width: 100%;
+        height: 100%;
+        border-inline-end: none;
+    }
+
+    .chat-area {
+        display: none;
+        width: 100%;
+        height: 100%;
+    }
+
+    .app-container.chat-view-active .sidebar-nav {
+        display: none;
+    }
+
+    .app-container.chat-view-active .chat-area {
+        display: flex;
+    }
+
+    .back-to-list-btn {
+        display: block;
+    }
+
+    .new-chat-fab {
+        inset-inline-start: auto;
+        inset-inline-end: 20px;
+    }
+
+    .details-panel {
+        position: fixed;
+        z-index: 20;
+        inset-block-start: 0;
+        inset-inline-end: -300px;
+        width: 100%;
+        max-width: 300px;
+        height: 100%;
+        transition: inset-inline-end 0.3s ease-in-out;
+    }
+
+    .app-container.show-details .details-panel {
+        inset-inline-end: 0;
+        display: flex;
+    }
+
+    /*
+     * 在小屏幕上，使用 !important 强制覆盖视频通话UI的尺寸，
+     * 这通常是为了对抗可能由JS动态设置的内联样式。
+     */
+    .video-call-container-main #localVideo {
+        width: 90px !important;
+        height: 135px !important;
+        inset-block-end: 70px !important;
+        inset-inline-end: 10px !important;
+    }
+
+    .video-call-container-main .video-call-controls {
+        gap: 10px !important;
+    }
+
+    .video-call-button {
+        width: 45px !important;
+        height: 45px !important;
+        font-size: 18px !important;
+    }
 }

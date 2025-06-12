@@ -1,148 +1,126 @@
+/**
+ * 此服务类负责管理所有活跃用户的WebSocket会话。
+ *
+ * 主要职责:
+ * - 线程安全地处理用户注册、注销和查询操作。
+ * - 维护用户ID到`WebSocketSession`的正向映射和会话ID到用户ID的反向映射，以实现高效查找。
+ * - 处理会话的清理逻辑，包括因断开或被新会话取代而产生的陈旧会话。
+ *
+ * 关联:
+ * - `SignalingWebSocketHandler`: 依赖此服务来管理用户注册和消息转发。
+ * - `MonitorController`: 依赖此服务来获取在线用户总数。
+ */
 package club.ppmc.service;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-/**
- * Service for managing user WebSocket sessions.
- * Handles registration, removal, and lookup of user sessions.
- * Uses ConcurrentHashMaps for thread-safe access.
- */
 @Service
 public class UserSessionService {
     private static final Logger logger = LoggerFactory.getLogger(UserSessionService.class);
 
-    // Maps user ID to their active WebSocket session
+    // 映射: userId -> WebSocketSession，用于根据用户ID查找会话。
     private final Map<String, WebSocketSession> userSessions = new ConcurrentHashMap<>();
-    // Maps WebSocket session ID to user ID for quick reverse lookup
+    // 映射: sessionId -> userId，用于根据会话ID反向查找用户ID，主要用于断开连接时清理。
     private final Map<String, String> sessionToUserMap = new ConcurrentHashMap<>();
 
     /**
-     * Registers a user with their WebSocket session.
-     * @param userId The ID of the user to register.
-     * @param session The WebSocket session of the user.
-     * @return true if registration was successful, false otherwise (e.g., user ID already in use by an active session).
+     * 注册一个用户及其关联的WebSocket会话。
+     *
+     * @param userId  要注册的用户的ID。
+     * @param session 用户的WebSocket会话。
+     * @return 如果注册成功，返回`true`；如果用户ID已被一个活跃会话占用，则返回`false`。
      */
     public boolean registerUser(String userId, WebSocketSession session) {
         if (userId == null || userId.trim().isEmpty() || session == null) {
-            logger.warn("尝试使用空的 UserID 或 Session 进行用户注册。");
+            logger.warn("尝试使用无效的UserID或Session进行注册，操作被拒绝。");
             return false;
         }
 
-        // Atomically check and put if absent, or if existing session is different and closed
-        WebSocketSession oldSessionForUser = userSessions.get(userId);
+        // 核心逻辑: 原子地检查并更新会话，处理并发和陈旧会话问题。
+        // compute方法确保对同一个userId的操作是线程安全的。
+        var oldSession = userSessions.compute(userId, (key, existingSession) -> {
+            // Case 1: 用户ID已绑定到一个不同的、仍然活跃的会话。注册失败。
+            if (existingSession != null && existingSession.isOpen() && !existingSession.getId().equals(session.getId())) {
+                logger.warn("用户ID '{}' 已被活跃会话 {} 占用。新会话 {} 的注册被拒绝。",
+                        userId, existingSession.getId(), session.getId());
+                return existingSession; // 返回旧会话，不作更改
+            }
+            // Case 2: 用户ID未被绑定，或绑定到一个已关闭的会话，或就是当前这个会话。可以注册/更新。
+            return session; // 将新的会话与userId关联
+        });
 
-        // Case 1: User ID is already registered with a DIFFERENT, ACTIVE session.
-        if (oldSessionForUser != null && oldSessionForUser.isOpen() && !oldSessionForUser.getId().equals(session.getId())) {
-            logger.warn("用户ID '{}' 已被活动会话 {} 注册。新会话 {} 的注册被拒绝。", userId, oldSessionForUser.getId(), session.getId());
-            return false;
+        // 如果compute方法返回的是新会话，说明注册成功。
+        if (session.getId().equals(oldSession.getId())) {
+            sessionToUserMap.put(session.getId(), userId);
+            logger.info("用户 '{}' 已成功注册/更新会话ID '{}'。", userId, session.getId());
+            return true;
         }
 
-        // Case 2: User ID is registered with an old, CLOSED session, or this is a new user.
-        // Or, user ID is registered with THIS session (e.g. re-register attempt from same client after brief disconnect/reconnect managed by client).
-        if (oldSessionForUser != null && !oldSessionForUser.isOpen()) {
-            logger.info("清理用户 '{}' 的旧的已关闭会话 {}，准备进行新注册。", userId, oldSessionForUser.getId());
-            removeUserInternal(oldSessionForUser.getId(), userId); // Clean up old session fully
-        }
-
-        // Proceed with registration
-        userSessions.put(userId, session);
-        sessionToUserMap.put(session.getId(), userId);
-        logger.info("用户 '{}' 已通过会话ID '{}' 注册。", userId, session.getId());
-        return true;
+        return false; // 注册失败 (Case 1)
     }
 
     /**
-     * Removes a user based on their WebSocket session.
-     * Cleans up mappings in both userSessions and sessionToUserMap.
-     * @param session The WebSocket session of the user to remove.
+     * 根据WebSocket会话移除用户。在会话关闭时调用。
+     *
+     * @param session 要移除的用户所关联的WebSocket会话。
      */
     public void removeUser(WebSocketSession session) {
         if (session == null) return;
-        String sessionId = session.getId();
-        String userId = sessionToUserMap.remove(sessionId); // Remove from reverse map first
+        var sessionId = session.getId();
+        var userId = sessionToUserMap.remove(sessionId);
 
         if (userId != null) {
-            // Only remove from userSessions if the session being removed is the one currently mapped to the userId.
-            // This prevents inadvertently removing a user if they quickly reconnected with a new session.
-            WebSocketSession currentSessionForUser = userSessions.get(userId);
-            if (currentSessionForUser != null && currentSessionForUser.getId().equals(sessionId)) {
-                userSessions.remove(userId);
-                logger.info("用户 '{}' (会话 {}) 已移除。", userId, sessionId);
-            } else if (currentSessionForUser != null) {
-                // This means the session being closed (sessionId) is an older session for this userId.
-                // The user already has a newer active session (currentSessionForUser.getId()).
-                logger.info("会话 {} (用户 '{}') 已断开, 但用户已有一个更新的活动会话 {}。主用户会话映射未更改。",
-                        sessionId, userId, currentSessionForUser.getId());
-            } else {
-                // UserID was in sessionToUserMap, but not in userSessions. This implies userSessions[userId] was already removed or replaced.
-                logger.info("会话 {} (用户 '{}') 已断开。用户未在活动的 userSessions 映射中找到 (可能已被移除或新会话已取代)。", sessionId, userId);
-            }
+            // 关键检查: 仅当映射中的会话确实是当前要移除的会话时，才执行移除操作。
+            // 这可以防止因竞态条件（如用户快速重连）而错误地移除了新的、活跃的会话。
+            userSessions.remove(userId, session);
+            logger.info("用户 '{}' (会话 {}) 已被移除。", userId, sessionId);
         } else {
-            logger.warn("尝试移除会话ID '{}' 对应的用户失败，未找到该会话的用户映射。", sessionId);
+            logger.debug("尝试移除一个未注册的会话: {}", sessionId);
         }
     }
 
     /**
-     * Internal helper to remove user session ensuring consistency.
-     */
-    private void removeUserInternal(String sessionId, String userId) {
-        sessionToUserMap.remove(sessionId);
-        // Only remove from userSessions if the session ID matches the one stored for the user.
-        // This guards against race conditions if the user re-registers quickly.
-        WebSocketSession currentMappedSession = userSessions.get(userId);
-        if (currentMappedSession != null && currentMappedSession.getId().equals(sessionId)) {
-            userSessions.remove(userId);
-        }
-    }
-
-
-    /**
-     * Retrieves the active WebSocket session for a given user ID.
-     * @param userId The ID of the user.
-     * @return The WebSocketSession if the user is online and session is open, otherwise null.
-     *         Also cleans up stale (closed) sessions if found for the user ID.
+     * 根据用户ID获取其活跃的WebSocket会话。
+     *
+     * @param userId 用户的ID。
+     * @return 如果用户在线且会话是打开的，则返回`WebSocketSession`；否则返回`null`。
      */
     public WebSocketSession getUserSession(String userId) {
         if (userId == null) return null;
-        WebSocketSession session = userSessions.get(userId);
+        var session = userSessions.get(userId);
 
-        if (session != null) {
-            if (session.isOpen()) {
-                return session;
-            } else {
-                // Session found but it's closed. This is a stale entry. Clean it up.
-                logger.warn("用户 '{}' 存在会话 {} 但会话已关闭。正在清理...", userId, session.getId());
-                removeUser(session); // This will clear it from both maps if it's the mapped session
-                return null; // Return null as the session is not usable
-            }
+        if (session != null && session.isOpen()) {
+            return session;
+        } else if (session != null) {
+            // 发现陈旧会话（已关闭但未被清理），主动清理。
+            logger.warn("为用户 '{}' 找到一个已关闭的陈旧会话 {}，正在清理...", userId, session.getId());
+            removeUser(session);
+            return null;
         }
-        return null; // User not found
+        return null;
     }
 
     /**
-     * Retrieves the user ID associated with a given WebSocket session ID.
-     * @param session The WebSocket session.
-     * @return The user ID, or null if the session is not registered.
+     * 根据WebSocket会话获取其关联的用户ID。
+     *
+     * @param session WebSocket会话。
+     * @return 如果会话已注册，则返回用户ID；否则返回`null`。
      */
     public String getUserId(WebSocketSession session) {
-        if (session == null) return null;
-        return sessionToUserMap.get(session.getId());
+        return session != null ? sessionToUserMap.get(session.getId()) : null;
     }
 
     /**
-     * Gets the current count of online (registered) users.
-     * @return The number of online users.
+     * 获取当前在线（已注册）的用户数量。
+     *
+     * @return 在线用户数。
      */
     public int getOnlineUserCount() {
-        // The size of userSessions reflects users with an assigned session.
-        // We could filter for session.isOpen() for a more "strictly active" count,
-        // but cleanup logic aims to keep userSessions mostly accurate.
         return userSessions.size();
     }
 }

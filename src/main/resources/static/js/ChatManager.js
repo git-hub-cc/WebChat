@@ -1,17 +1,37 @@
-// MODIFIED: ChatManager.js (已翻译为中文)
-// - 对 UIManager 的面板更新调用现在转到 DetailsPanelUIManager。
-// - 对 UIManager 的聊天区域更新调用现在转到 ChatAreaUIManager。
-// - 对 UIManager 的侧边栏更新调用现在转到 SidebarUIManager。
+/**
+ * @file ChatManager.js
+ * @description 核心聊天管理器，负责管理所有聊天会话的数据、状态和 UI 渲染。
+ * @module ChatManager
+ * @exports {object} ChatManager - 对外暴露的单例对象，包含所有聊天管理功能。
+ * @property {string|null} currentChatId - 当前活动的聊天 ID。
+ * @property {object} chats - 存储所有聊天消息的对象，格式为 { chatId: [messages] }。
+ * @property {function} init - 初始化模块，从数据库加载聊天记录。
+ * @property {function} renderChatList - 根据筛选条件渲染侧边栏的聊天列表。
+ * @property {function} openChat - 打开指定的聊天会话，加载其历史记录并更新 UI。
+ * @property {function} addMessage -向指定聊天添加一条消息，并更新 UI 和数据库。
+ * @property {function} clearChat - 清空指定聊天的所有消息。
+ * @property {function} clearAllChats - 清空所有聊天的消息。
+ * @dependencies DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationManager, Utils, ModalManager
+ * @dependents AppInitializer (进行初始化), 几乎所有其他管理器都会直接或间接与之交互。
+ */
 const ChatManager = {
     currentChatId: null,
-    chats: {}, // { chatId: [messages] }
-    currentFilter: 'all', // 'all', 'contacts', 'groups'
+    chats: {}, // 结构: { chatId: [messages] }
+    currentFilter: 'all', // 'all' (全部), 'contacts' (联系人), 'groups' (群组)
 
+    /**
+     * 初始化聊天管理器，从数据库加载所有聊天记录。
+     * @returns {Promise<void>}
+     */
     init: async function() {
         await this.loadChats();
-        this.renderChatList(this.currentFilter); // 初始渲染
+        this.renderChatList(this.currentFilter); // 初始渲染聊天列表
     },
 
+    /**
+     * 从 IndexedDB 加载所有聊天记录到内存中。
+     * @returns {Promise<void>}
+     */
     loadChats: async function() {
         try {
             await DBManager.init();
@@ -27,9 +47,14 @@ const ChatManager = {
         }
     },
 
+    /**
+     * 将当前活动聊天的消息保存到数据库。
+     * @returns {Promise<void>}
+     */
     saveCurrentChat: async function() {
         if (this.currentChatId && this.chats[this.currentChatId]) {
             try {
+                // 在保存到数据库前，移除临时的 UI 状态属性
                 const messagesForDb = this.chats[this.currentChatId].map(msg => {
                     const msgCopy = { ...msg };
                     delete msgCopy.isNewlyCompletedAIResponse;
@@ -45,6 +70,10 @@ const ChatManager = {
         }
     },
 
+    /**
+     * 根据筛选条件渲染侧边栏的聊天列表。
+     * @param {string} [filter='all'] - 筛选条件 ('all', 'contacts', 'groups')。
+     */
     renderChatList: function(filter = 'all') {
         this.currentFilter = filter;
         const chatListEl = document.getElementById('chatListNav');
@@ -54,9 +83,11 @@ const ChatManager = {
         }
         chatListEl.innerHTML = '';
 
-        if (typeof SidebarUIManager !== 'undefined') SidebarUIManager.setActiveTab(filter); // 更新侧边栏中的活动标签
+        // 更新侧边栏 UI 管理器中的活动标签页
+        if (typeof SidebarUIManager !== 'undefined') SidebarUIManager.setActiveTab(filter);
 
         let itemsToRender = [];
+        // 根据筛选条件从 UserManager 和 GroupManager 收集要渲染的项目
         if (filter === 'all' || filter === 'contacts') {
             Object.values(UserManager.contacts).forEach(contact => {
                 itemsToRender.push({
@@ -80,8 +111,10 @@ const ChatManager = {
             });
         }
 
+        // 按最后一条消息的时间降序排序
         itemsToRender.sort((a, b) => (b.lastTime && a.lastTime) ? new Date(b.lastTime) - new Date(a.lastTime) : (b.lastTime ? 1 : -1));
 
+        // 应用搜索查询
         const chatSearchInputEl = document.getElementById('chatSearchInput');
         const searchQuery = chatSearchInputEl ? chatSearchInputEl.value.toLowerCase() : "";
         if (searchQuery) {
@@ -94,6 +127,7 @@ const ChatManager = {
             return;
         }
 
+        // 渲染每个聊天项
         itemsToRender.forEach(item => {
             const li = document.createElement('li');
             li.className = `chat-list-item ${item.id === this.currentChatId ? 'active' : ''} ${item.type === 'group' ? 'group' : ''}`;
@@ -101,10 +135,12 @@ const ChatManager = {
             li.setAttribute('data-id', item.id);
             li.setAttribute('data-type', item.type);
             const formattedTime = item.lastTime ? Utils.formatDate(new Date(item.lastTime)) : '';
+            // 在线状态指示器
             let statusIndicator = '';
             if (item.type === 'contact' && (item.online || UserManager.isSpecialContact(item.id))) {
                 statusIndicator = '<span class="online-dot" title="已连接"></span>';
             }
+            // 头像内容
             let avatarContentHtml = '';
             const avatarClass = `chat-list-avatar ${item.isSpecial ? item.id : ''}`;
             let fallbackText = (item.avatarText) ? Utils.escapeHtml(item.avatarText) :
@@ -115,21 +151,27 @@ const ChatManager = {
                 avatarContentHtml = fallbackText;
             }
             li.innerHTML = `
-                <div class="${avatarClass}">${avatarContentHtml}</div>
-                <div class="chat-list-info">
-                    <div class="chat-list-name">${Utils.escapeHtml(item.name)} ${statusIndicator}</div>
-                    <div class="chat-list-preview">${Utils.escapeHtml(item.lastMessage)}</div>
-                </div>
-                <div class="chat-list-meta">
-                    <div class="chat-list-time">${formattedTime}</div>
-                    ${item.unread > 0 ? `<div class="chat-list-badge">${item.unread > 99 ? '99+' : item.unread}</div>` : ''}
-                </div>`;
+    <div class="${avatarClass}">${avatarContentHtml}</div>
+<div class="chat-list-info">
+    <div class="chat-list-name">${Utils.escapeHtml(item.name)} ${statusIndicator}</div>
+    <div class="chat-list-preview">${Utils.escapeHtml(item.lastMessage)}</div>
+</div>
+<div class="chat-list-meta">
+    <div class="chat-list-time">${formattedTime}</div>
+    ${item.unread > 0 ? `<div class="chat-list-badge">${item.unread > 99 ? '99+' : item.unread}</div>` : ''}
+</div>`;
             li.addEventListener('click', () => this.openChat(item.id, item.type));
             chatListEl.appendChild(li);
         });
     },
 
+    /**
+     * 打开指定的聊天会话。
+     * @param {string} chatId - 要打开的聊天的 ID。
+     * @param {string} type - 聊天类型 ('contact' 或 'group')。
+     */
     openChat: function(chatId, type) {
+        // 保存上一个聊天的状态
         if (this.currentChatId) {
             this.saveCurrentChat();
             const prevActive = document.querySelector(`#chatListNav .chat-list-item.active`);
@@ -138,11 +180,13 @@ const ChatManager = {
         this.currentChatId = chatId;
         if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showChatArea();
 
+        // 激活新的聊天项
         const currentActive = document.querySelector(`#chatListNav .chat-list-item[data-id="${chatId}"]`);
         if (currentActive) currentActive.classList.add('active');
 
+        // 根据类型委托给相应的管理器处理
         if (type === 'group') {
-            GroupManager.openGroup(chatId); // GroupManager 会调用 ChatAreaUIManager.updateChatHeader
+            GroupManager.openGroup(chatId);
         } else {
             const contact = UserManager.contacts[chatId];
             if (contact && typeof ChatAreaUIManager !== 'undefined') {
@@ -159,18 +203,24 @@ const ChatManager = {
         if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.enableChatInterface(true);
         this.loadChatHistory(chatId);
 
+        // 重置并聚焦输入框
         const messageInput = document.getElementById('messageInput');
         if (messageInput) {
             messageInput.value = '';
             messageInput.style.height = 'auto';
             setTimeout(() => messageInput.focus(), 0);
         }
+        // 打开新聊天时，关闭详情面板并为其准备新内容
         if (typeof DetailsPanelUIManager !== 'undefined') {
-            DetailsPanelUIManager.toggleDetailsPanel(false); // 打开新聊天时关闭详情
-            DetailsPanelUIManager.updateDetailsPanel(chatId, type); // 更新内容（初始时将是隐藏的）
+            DetailsPanelUIManager.toggleDetailsPanel(false);
+            DetailsPanelUIManager.updateDetailsPanel(chatId, type);
         }
     },
 
+    /**
+     * 加载并显示指定聊天的历史消息。
+     * @param {string} chatId - 要加载历史记录的聊天 ID。
+     */
     loadChatHistory: function(chatId) {
         const chatBox = document.getElementById('chatBox');
         if (!chatBox) {
@@ -181,6 +231,7 @@ const ChatManager = {
         const messages = this.chats[chatId] || [];
         const contact = UserManager.contacts[chatId];
 
+        // 如果没有消息，显示占位符文本
         if (messages.length === 0 && chatId) {
             const placeholder = document.createElement('div');
             placeholder.className = "system-message";
@@ -192,16 +243,23 @@ const ChatManager = {
         } else {
             messages.forEach(msg => {
                 const msgToDisplay = { ...msg };
-                delete msgToDisplay.isNewlyCompletedAIResponse;
+                delete msgToDisplay.isNewlyCompletedAIResponse; // 不传递临时状态
                 MessageManager.displayMessage(msgToDisplay, msgToDisplay.sender === UserManager.userId || msgToDisplay.originalSender === UserManager.userId);
             });
         }
         chatBox.scrollTop = chatBox.scrollHeight;
     },
 
+    /**
+     * 向指定聊天添加一条消息，并更新 UI 和数据库。
+     * @param {string} chatId - 目标聊天的 ID。
+     * @param {object} message - 要添加的消息对象。
+     * @returns {Promise<void>}
+     */
     addMessage: async function(chatId, message) {
         if (!this.chats[chatId]) this.chats[chatId] = [];
         let messageExists = false;
+        // 如果消息有 ID，检查是否为更新操作
         if (message.id) {
             const existingMsgIndex = this.chats[chatId].findIndex(m => m.id === message.id);
             if (existingMsgIndex !== -1) {
@@ -213,6 +271,7 @@ const ChatManager = {
             this.chats[chatId].push(message);
         }
 
+        // 如果是当前聊天，则实时更新 UI
         if (chatId === this.currentChatId) {
             const chatBoxEl = document.getElementById('chatBox');
             if (chatBoxEl) {
@@ -221,6 +280,7 @@ const ChatManager = {
                     noMsgPlaceholder.remove();
                 }
             }
+            // 不显示临时的“正在思考”消息，它们由 displayMessage 直接处理
             if (!message.isThinking) {
                 MessageManager.displayMessage(message, message.sender === UserManager.userId || message.originalSender === UserManager.userId);
             }
@@ -230,6 +290,7 @@ const ChatManager = {
         const isGroup = chatId.startsWith('group_');
         const isUnread = chatId !== this.currentChatId || !document.hasFocus();
 
+        // 对于非流式消息，更新侧边栏的最后一条消息预览
         if (!message.isStreaming) {
             if (isGroup) {
                 if (GroupManager.groups[chatId]) await GroupManager.updateGroupLastMessage(chatId, GroupManager.formatMessagePreview(message), isUnread);
@@ -237,6 +298,7 @@ const ChatManager = {
                 if (UserManager.contacts[chatId]) await UserManager.updateContactLastMessage(chatId, UserManager.formatMessagePreview(message), isUnread);
             }
         }
+        // 将更新后的消息列表保存到数据库
         try {
             const messagesForDb = this.chats[chatId].map(msg => {
                 const msgCopy = { ...msg };
@@ -249,12 +311,18 @@ const ChatManager = {
         }
     },
 
+    /**
+     * 清空指定聊天的所有消息。
+     * @param {string} chatId - 要清空的聊天 ID。
+     * @returns {Promise<boolean>} - 操作是否成功。
+     */
     clearChat: async function(chatId) {
         if (chatId && this.chats[chatId]) {
             this.chats[chatId] = [];
             try {
                 await DBManager.setItem('chats', { id: chatId, messages: [] });
                 if (chatId === this.currentChatId) this.loadChatHistory(chatId);
+                // 更新侧边栏预览
                 if (chatId.startsWith('group_')) GroupManager.updateGroupLastMessage(chatId, '聊天记录已清空', false, true);
                 else UserManager.updateContactLastMessage(chatId, '聊天记录已清空', false, true);
                 return true;
@@ -267,14 +335,19 @@ const ChatManager = {
         return false;
     },
 
+    /**
+     * 清空所有聊天的聊天记录。
+     * @returns {Promise<void>}
+     */
     clearAllChats: async function() {
-        ModalManager.showConfirmationModal( // 使用 ModalManager
+        ModalManager.showConfirmationModal(
             '您确定要清空所有聊天记录吗？此操作无法撤销。',
             async () => {
                 const chatIdsToClear = Object.keys(this.chats);
                 this.chats = {};
                 try {
                     for (const id of chatIdsToClear) await DBManager.setItem('chats', { id: id, messages: [] });
+                    // 更新所有联系人和群组的侧边栏预览
                     Object.values(UserManager.contacts).forEach(c => {
                         if (c.isSpecial) {
                             const specialDef = UserManager.SPECIAL_CONTACTS_DEFINITIONS.find(sd => sd.id === c.id);
@@ -282,12 +355,14 @@ const ChatManager = {
                         } else UserManager.updateContactLastMessage(c.id, '聊天记录已清空', false, true);
                     });
                     Object.values(GroupManager.groups).forEach(g => GroupManager.updateGroupLastMessage(g.id, '聊天记录已清空', false, true));
+                    // 如果当前聊天被清空，重新加载
                     if (this.currentChatId) this.loadChatHistory(this.currentChatId);
                     this.renderChatList(this.currentFilter);
-                    NotificationManager.showNotification('所有聊天记录已清空。', 'success'); // 使用 NotificationManager
+                    NotificationManager.showNotification('所有聊天记录已清空。', 'success');
                 } catch (error) {
                     Utils.log('清空所有聊天记录失败: ' + error, Utils.logLevels.ERROR);
                     NotificationManager.showNotification('从数据库清空所有聊天记录失败。', 'error');
+                    // 失败时从数据库重新加载以恢复状态
                     await this.loadChats();
                     this.renderChatList(this.currentFilter);
                 }
@@ -295,9 +370,17 @@ const ChatManager = {
         );
     },
 
+    /**
+     * 删除一个聊天（联系人或群组）。
+     * 对于联系人，是“删除联系人”。
+     * 对于群组，是“退出”或“解散”。
+     * @param {string} chatId - 要删除的聊天 ID。
+     * @param {string} type - 聊天类型 ('contact' 或 'group')。
+     */
     deleteChat: function(chatId, type) {
         const entity = type === 'group' ? GroupManager.groups[chatId] : UserManager.contacts[chatId];
         if (!entity) { NotificationManager.showNotification(`${type === 'group' ? '群组' : '联系人'}未找到。`, 'error'); return; }
+        // 特殊联系人不能被删除
         if (type === 'contact' && entity.isSpecial) {
             NotificationManager.showNotification(`${entity.name} 是内置联系人，无法删除。如果需要，您可以清空聊天记录。`, 'warning');
             return;
@@ -310,10 +393,12 @@ const ChatManager = {
 
         ModalManager.showConfirmationModal(confirmMessage, async () => {
             await this.clearChat(chatId);
+            // 委托给相应的管理器执行删除操作
             if (type === 'group') {
                 if (entity.owner === UserManager.userId) await GroupManager.dissolveGroup(chatId);
                 else await GroupManager.leaveGroup(chatId);
             } else await UserManager.removeContact(chatId);
+            // 如果删除的是当前聊天，则返回到“未选择聊天”界面
             if (chatId === this.currentChatId) {
                 this.currentChatId = null;
                 if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showNoChatSelected();

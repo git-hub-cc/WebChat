@@ -1,31 +1,53 @@
-// MODIFIED: ConnectionManager.js (已翻译为中文)
-// - 实现了心跳机制 (PING) 以保持 WebSocket 连接活跃。
-// - 实现了指数退避重连策略，并限制最多 10 次尝试。
+/**
+ * @file ConnectionManager.js
+ * @description 核心连接管理器，负责处理 WebRTC 对等连接和与信令服务器的 WebSocket 通信。
+ *              实现了心跳机制以保持 WebSocket 活跃，以及指数退避的自动重连策略。
+ * @module ConnectionManager
+ * @exports {object} ConnectionManager - 对外暴露的单例对象，包含所有连接管理功能。
+ * @property {function} initialize - 初始化并连接到 WebSocket 信令服务器。
+ * @property {function} createOffer - 创建并发送一个 WebRTC 连接提议给对等端。
+ * @property {function} handleRemoteOffer - 处理远端发送的连接提议并创建应答。
+ * @property {function} handleRemoteAnswer - 处理远端发送的应答。
+ * @property {function} sendTo - 通过已建立的数据通道向指定对等端发送消息。
+ * @property {function} close - 关闭与指定对等端的连接。
+ * @property {function} resetAllConnections - 重置所有连接和 WebSocket。
+ * @property {boolean} isWebSocketConnected - 指示当前是否已连接到 WebSocket 服务器。
+ * @dependencies UserManager, ChatManager, Config, Utils, NotificationManager, EventEmitter, LayoutManager, VideoCallManager, ModalManager
+ * @dependents AppInitializer (初始化), UserManager (自动连接), GroupManager (广播), VideoCallManager (建立媒体流)
+ */
 const ConnectionManager = {
-    connections: {},
-    iceCandidates: {},
-    connectionTimeouts: {},
-    reconnectAttempts: {},
-    iceTimers: {},
-    iceGatheringStartTimes: {},
+    connections: {},            // 存储 RTCPeerConnection 实例 { peerId: { peerConnection, dataChannel, ... } }
+    iceCandidates: {},          // 存储为手动交换准备的 ICE 候选者 { peerId: [candidates] }
+    connectionTimeouts: {},     // 存储重连定时器
+    reconnectAttempts: {},      // 存储重连尝试次数 { peerId: count }
+    iceTimers: {},              // 存储 ICE 收集超时定时器
+    iceGatheringStartTimes: {}, // 记录 ICE 收集开始时间
     websocket: null,
     isWebSocketConnected: false,
     signalingServerUrl: Config.server.signalingServerUrl,
-    pendingSentChunks: {},
-    pendingReceivedChunks: {},
+    pendingSentChunks: {},      // 存储待发送的分片数据
+    pendingReceivedChunks: {},  // 存储待接收的分片数据
 
-    // 新增：用于心跳和重连策略的状态
-    heartbeatInterval: null,
-    wsReconnectAttempts: 0,
+    // 新增：用于心跳和 WebSocket 重连策略的状态
+    heartbeatInterval: null,    // WebSocket 心跳定时器
+    wsReconnectAttempts: 0,     // WebSocket 重连尝试次数
 
-    MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_',
+    MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_', // 手动连接流程中的占位符 ID
 
+    /**
+     * 初始化 WebSocket 连接。如果未连接，则尝试连接。
+     */
     initialize: function() {
         if (!this.isWebSocketConnected && (!this.websocket || this.websocket.readyState === WebSocket.CLOSED)) {
             this.connectWebSocket();
         }
     },
 
+    /**
+     * 建立与信令服务器的 WebSocket 连接，并设置事件处理器。
+     * 实现了指数退避的自动重连机制。
+     * @returns {Promise<void>}
+     */
     connectWebSocket: function() {
         if (this.websocket && (this.websocket.readyState === WebSocket.OPEN || this.websocket.readyState === WebSocket.CONNECTING)) {
             return Promise.resolve();
@@ -44,7 +66,7 @@ const ConnectionManager = {
                     LayoutManager.updateConnectionStatusIndicator('信令服务器已连接。');
                     Utils.log('WebSocket 连接已建立。', Utils.logLevels.INFO);
                     this.registerUser();
-                    this.startHeartbeat(); // 启动心跳
+                    this.startHeartbeat(); // 启动心跳机制
                     EventEmitter.emit('websocketStatusUpdate');
                     resolve();
                 };
@@ -52,7 +74,7 @@ const ConnectionManager = {
                 this.websocket.onmessage = (event) => {
                     try {
                         const message = JSON.parse(event.data);
-                        // 如果服务器回复 PONG，我们可以在这里处理，但通常不需要
+                        // 服务器的心跳回复 (PONG)，通常无需处理，仅用于日志记录
                         if (message.type === 'PONG') {
                             Utils.log('收到 WebSocket 心跳回复 (PONG)', Utils.logLevels.DEBUG);
                             return;
@@ -72,8 +94,8 @@ const ConnectionManager = {
                     Utils.log(`WebSocket 连接已关闭。正在进行第 ${this.wsReconnectAttempts} 次重连尝试...`, Utils.logLevels.WARN);
 
                     if (this.wsReconnectAttempts <= 10) {
-                        // 使用指数退避策略计算延迟
-                        const delay = Math.min(30000, 1000 * Math.pow(2, this.wsReconnectAttempts)); // 延迟加倍，最多30秒
+                        // 使用指数退避策略计算延迟时间，避免频繁重连
+                        const delay = Math.min(30000, 1000 * Math.pow(2, this.wsReconnectAttempts));
                         LayoutManager.updateConnectionStatusIndicator(`信令服务器已断开。${delay / 1000}秒后尝试重连...`);
                         Utils.log(`下一次重连将在 ${delay / 1000} 秒后。`, Utils.logLevels.WARN);
 
@@ -93,7 +115,7 @@ const ConnectionManager = {
                     const oldStatus = this.isWebSocketConnected;
                     this.isWebSocketConnected = false;
                     if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
-                    // onerror 事件通常也会触发 onclose，所以重连逻辑会在那里处理
+                    // onerror 事件通常也会触发 onclose，重连逻辑由 onclose 处理
                 };
             } catch (error) {
                 Utils.log('创建 WebSocket 连接失败: ' + error, Utils.logLevels.ERROR);
@@ -106,17 +128,23 @@ const ConnectionManager = {
         });
     },
 
+    /**
+     * 启动 WebSocket 心跳机制，以保持连接活跃并检测断线。
+     */
     startHeartbeat: function() {
         this.stopHeartbeat(); // 确保只有一个心跳定时器在运行
         this.heartbeatInterval = setInterval(() => {
             if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                // 发送一个轻量级的 PING 消息
+                // 发送一个轻量级的 PING 消息到服务器
                 this.websocket.send(JSON.stringify({ type: 'PING' }));
                 Utils.log('发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
             }
         }, 25000); // 每 25 秒发送一次
     },
 
+    /**
+     * 停止 WebSocket 心跳定时器。
+     */
     stopHeartbeat: function() {
         if (this.heartbeatInterval) {
             clearInterval(this.heartbeatInterval);
@@ -125,6 +153,9 @@ const ConnectionManager = {
         }
     },
 
+    /**
+     * 向信令服务器注册当前用户。
+     */
     registerUser: function() {
         if (!UserManager.userId) {
             Utils.log('用户 ID 未设置，无法注册。', Utils.logLevels.ERROR);
@@ -134,6 +165,11 @@ const ConnectionManager = {
         this.sendSignalingMessage(message, false);
     },
 
+    /**
+     * 通过 WebSocket 发送信令消息。
+     * @param {object} message - 要发送的消息对象。
+     * @param {boolean} [isInternalSilentFlag=false] - 是否为内部静默操作，用于控制错误通知的显示。
+     */
     sendSignalingMessage: function(message, isInternalSilentFlag = false) {
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
             const messageString = JSON.stringify(message);
@@ -151,6 +187,10 @@ const ConnectionManager = {
         }
     },
 
+    /**
+     * 处理从信令服务器接收到的消息。
+     * @param {object} message - 从 WebSocket 收到的消息对象。
+     */
     handleSignalingMessage: function(message) {
         Utils.log(`已收到 WS: ${message.type} 来自 ${message.fromUserId || '服务器'} ${message.sdp ? '[SDP]' : ''} ${message.candidate ? '[ICE]' : ''}`, Utils.logLevels.DEBUG);
         const fromUserId = message.fromUserId;
@@ -161,7 +201,7 @@ const ConnectionManager = {
                 this.autoConnectToAllContacts();
                 break;
             case 'ERROR':
-                // '不在线' 是一个特定的、可忽略的错误消息
+                // "不在线" 是一个常见的、可忽略的错误，不弹窗提示
                 if (!message.message.includes('不在线')) {
                     NotificationManager.showNotification(`信令错误: ${message.message}`, 'error');
                 }
@@ -195,8 +235,17 @@ const ConnectionManager = {
         }
     },
 
+    // ... 后续所有方法的注释将遵循相同的详细和专业风格 ...
+
+    /**
+     * 初始化或重新初始化与指定对等端的 RTCPeerConnection。
+     * @param {string} peerId - 对方的 ID。
+     * @param {boolean} [isVideoCall=false] - 这是否是一个视频通话连接。
+     * @returns {RTCPeerConnection|null} - 新创建的或 null（如果失败）。
+     */
     initConnection: function(peerId, isVideoCall = false) {
         Utils.log(`尝试初始化与 ${peerId} 的连接。视频通话: ${isVideoCall}`, Utils.logLevels.DEBUG);
+        // ... (其余方法保持原有注释风格的翻译)
         const existingConnDetails = this.connections[peerId];
         if (existingConnDetails && existingConnDetails.peerConnection) {
             const pc = existingConnDetails.peerConnection;
@@ -238,6 +287,16 @@ const ConnectionManager = {
         }
     },
 
+    /**
+     * 创建一个 WebRTC 提议 (offer) 并通过信令服务器发送给对方。
+     * @param {string|null} targetPeerId - 目标对方的 ID。如果为 null，会尝试使用当前聊天 ID 或提示输入。
+     * @param {object} [options={}] - 连接选项。
+     * @param {boolean} [options.isVideoCall=false] - 是否为视频通话。
+     * @param {boolean} [options.isAudioOnly=false] - 是否为纯音频通话。
+     * @param {boolean} [options.isSilent=false] - 是否为静默操作（不显示通知）。
+     * @param {boolean} [options.isManual=false] - 是否为手动连接流程。
+     * @returns {Promise<void>}
+     */
     createOffer: async function(targetPeerId = null, options = {}) {
         const { isVideoCall = false, isAudioOnly = false, isSilent = false, isManual = false } = options;
         let promptedForId = false;
@@ -299,6 +358,10 @@ const ConnectionManager = {
         }
     },
 
+    /**
+     * 自动连接到所有非 AI 联系人（如果设置中已启用）。
+     * @returns {Promise<void>}
+     */
     autoConnectToAllContacts: async function() {
         if (!UserManager.userSettings || typeof UserManager.userSettings.autoConnectEnabled === 'undefined') return;
         if (!UserManager.userSettings.autoConnectEnabled) { Utils.log("自动连接已禁用。", Utils.logLevels.INFO); return; }
@@ -315,7 +378,13 @@ const ConnectionManager = {
         }
     },
 
-    handleAnswer: async function(options = {}) { // 来自 UI 的手动流程
+    /**
+     * 手动处理粘贴的应答 (answer) 信息。
+     * @param {object} [options={}] - 选项。
+     * @param {boolean} [options.isManual=false] - 必须为 true。
+     * @returns {Promise<void>}
+     */
+    handleAnswer: async function(options = {}) {
         const { isManual = false } = options; if (!isManual) return;
         const sdpTextEl = document.getElementById('modalSdpText');
         if (!sdpTextEl || !sdpTextEl.value) { NotificationManager.showNotification("请先粘贴应答信息。", "warning"); return; }
@@ -341,6 +410,17 @@ const ConnectionManager = {
         } catch (e) { NotificationManager.showNotification("处理应答时出错: " + e.message, "error"); Utils.log("CM.handleAnswer (手动) 出错: " + e, Utils.logLevels.ERROR); }
     },
 
+    /**
+     * 处理远程应答 (answer)。
+     * @param {string} fromUserId - 发送方的 ID。
+     * @param {string} sdpString - SDP 字符串。
+     * @param {RTCIceCandidate[]} candidates - 对方的 ICE 候选者。
+     * @param {boolean} isVideoCallFlag - 是否为视频通话。
+     * @param {boolean} isAudioOnlyFlag - 是否为纯音频通话。
+     * @param {boolean} isScreenShareFlag - 是否为屏幕共享。
+     * @param {string} sdpType - SDP 类型 (应为 'answer')。
+     * @returns {Promise<void>}
+     */
     handleRemoteAnswer: async function(fromUserId, sdpString, candidates, isVideoCallFlag, isAudioOnlyFlag, isScreenShareFlag, sdpType) {
         const conn = this.connections[fromUserId];
         if (!conn?.peerConnection) { Utils.log(`handleRemoteAnswer: 没有 ${fromUserId} 的活动连接。`, Utils.logLevels.WARN); return; }
@@ -368,7 +448,13 @@ const ConnectionManager = {
         }
     },
 
-    createAnswer: async function(options = {}) { // 来自 UI 的手动流程
+    /**
+     * 手动创建应答 (answer)。
+     * @param {object} [options={}] - 选项。
+     * @param {boolean} [options.isManual=false] - 必须为 true。
+     * @returns {Promise<void>}
+     */
+    createAnswer: async function(options = {}) {
         const { isManual = false } = options; if (!isManual) return;
         const sdpTextEl = document.getElementById('modalSdpText');
         if (!sdpTextEl || !sdpTextEl.value) { NotificationManager.showNotification("请先粘贴提议信息。", "warning"); return; }
@@ -385,6 +471,18 @@ const ConnectionManager = {
         } catch (e) { NotificationManager.showNotification("创建应答时出错: " + e.message, "error"); Utils.log("CM.createAnswer (手动) 出错: " + e, Utils.logLevels.ERROR); if(sdpTextEl) sdpTextEl.value = `错误: ${e.message}`; }
     },
 
+    /**
+     * 处理远程提议 (offer)。
+     * @param {string} fromUserId - 发送方的 ID。
+     * @param {string} sdpString - SDP 字符串。
+     * @param {RTCIceCandidate[]} candidates - 对方的 ICE 候选者。
+     * @param {boolean} isVideoCall - 是否为视频通话。
+     * @param {boolean} isAudioOnly - 是否为纯音频通话。
+     * @param {boolean} isScreenShare - 是否为屏幕共享。
+     * @param {string} sdpType - SDP 类型 (应为 'offer')。
+     * @param {boolean} [isManualFlow=false] - 是否为手动流程。
+     * @returns {Promise<void>}
+     */
     handleRemoteOffer: async function(fromUserId, sdpString, candidates, isVideoCall, isAudioOnly, isScreenShare, sdpType, isManualFlow = false) {
         if (isManualFlow && fromUserId !== UserManager.userId && !UserManager.contacts[fromUserId]) await UserManager.addContact(fromUserId, `用户 ${fromUserId.substring(0,4)}`);
         let pc = this.connections[fromUserId]?.peerConnection;
@@ -408,6 +506,12 @@ const ConnectionManager = {
         } catch (error) { Utils.log(`处理来自 ${fromUserId} 的远程提议失败: ${error.message}\n堆栈: ${error.stack}`, Utils.logLevels.ERROR); NotificationManager.showNotification(`处理提议时出错: ${error.message}`, 'error'); this.close(fromUserId); }
     },
 
+    /**
+     * 处理远程 ICE 候选者。
+     * @param {string} fromUserId - 发送方的 ID。
+     * @param {RTCIceCandidate} candidate - ICE 候选者对象。
+     * @returns {Promise<void>}
+     */
     handleRemoteIceCandidate: async function(fromUserId, candidate) {
         const conn = this.connections[fromUserId];
         if (conn?.peerConnection?.remoteDescription && conn.peerConnection.signalingState !== 'closed') {
@@ -416,6 +520,11 @@ const ConnectionManager = {
         }
     },
 
+    /**
+     * RTCPeerConnection 的 onicecandidate 事件处理器。
+     * @param {RTCPeerConnectionIceEvent} event - 事件对象。
+     * @param {string} peerId - 相关的对方 ID。
+     */
     handleIceCandidate: function(event, peerId) {
         if (event.candidate) {
             if (!this.iceCandidates[peerId]) this.iceCandidates[peerId] = [];
@@ -429,6 +538,11 @@ const ConnectionManager = {
         }
     },
 
+    /**
+     * 等待 ICE 收集完成或超时。
+     * @param {string} peerId - 相关的对方 ID。
+     * @param {function} callback - 完成或超时后执行的回调。
+     */
     waitForIceGatheringComplete: function(peerId, callback) {
         const pc = this.connections[peerId]?.peerConnection; if (!pc) { if (typeof callback === 'function') callback(); return; }
         if (this.iceTimers[peerId]) { clearTimeout(this.iceTimers[peerId]); delete this.iceTimers[peerId]; }
@@ -441,6 +555,11 @@ const ConnectionManager = {
         }
     },
 
+    /**
+     * 设置数据通道的事件处理器。
+     * @param {RTCDataChannel} channel - 数据通道对象。
+     * @param {string} peerIdArg - 相关的对方 ID。
+     */
     setupDataChannel: function(channel, peerIdArg) {
         let currentContextPeerId = peerIdArg;
         if (currentContextPeerId === this.MANUAL_PLACEHOLDER_PEER_ID) channel._isManualPlaceholderChannel = true;
@@ -486,6 +605,10 @@ const ConnectionManager = {
         };
     },
 
+    /**
+     * 处理 iceConnectionState 变化。
+     * @param {string} peerId - 相关的对方 ID。
+     */
     handleIceConnectionStateChange: function(peerId) {
         const conn = this.connections[peerId]; if (!conn?.peerConnection) return; const pc = conn.peerConnection; const wasSilentContext = conn.wasInitiatedSilently || false;
         switch (pc.iceConnectionState) {
@@ -495,6 +618,11 @@ const ConnectionManager = {
             case 'closed': if (this.connections[peerId]) this.close(peerId, false); break;
         }
     },
+
+    /**
+     * 处理 connectionState 变化 (更新的 API)。
+     * @param {string} peerId - 相关的对方 ID。
+     */
     handleRtcConnectionStateChange: function(peerId) {
         const conn = this.connections[peerId]; if(!conn?.peerConnection) return; const pc = conn.peerConnection; const wasSilentContext = conn.wasInitiatedSilently || false;
         switch (pc.connectionState) {
@@ -504,6 +632,11 @@ const ConnectionManager = {
             case "closed": conn._emittedEstablished = false; break;
         }
     },
+
+    /**
+     * 尝试重新连接断开的对等端。
+     * @param {string} peerId - 要重连的对方 ID。
+     */
     attemptReconnect: function(peerId) {
         const conn = this.connections[peerId]; if (!conn || conn.isVideoCall || this.isConnectedTo(peerId) || conn.peerConnection?.connectionState === 'connecting') return;
         this.reconnectAttempts[peerId] = (this.reconnectAttempts[peerId] || 0) + 1;
@@ -520,6 +653,12 @@ const ConnectionManager = {
         } else this.close(peerId, false);
     },
 
+    /**
+     * 通过数据通道向指定对等端发送消息，并处理分片逻辑。
+     * @param {string} peerId - 接收方的 ID。
+     * @param {object} messageObject - 要发送的消息对象。
+     * @returns {boolean} - 消息是否成功（排入）发送。
+     */
     sendTo: function(peerId, messageObject) {
         const conn = this.connections[peerId];
         if (conn?.dataChannel?.readyState === 'open') {
@@ -532,6 +671,11 @@ const ConnectionManager = {
         } else { Utils.log(`无法发送到 ${peerId}: 数据通道未打开/不存在。DC: ${conn?.dataChannel?.readyState}, PC: ${conn?.peerConnection?.connectionState}`, Utils.logLevels.WARN); return false; }
     },
 
+    /**
+     * 检查是否与指定对等端建立了有效连接。
+     * @param {string} peerId - 要检查的对方 ID。
+     * @returns {boolean} - 是否已连接。
+     */
     isConnectedTo: function(peerId) {
         if (UserManager.isSpecialContact(peerId) && UserManager.contacts[peerId]?.isAI) return true;
         const conn = this.connections[peerId]; if (!conn?.peerConnection) return false;
@@ -540,6 +684,11 @@ const ConnectionManager = {
         return false;
     },
 
+    /**
+     * 关闭与指定对等端的连接。
+     * @param {string} peerId - 要关闭连接的对方 ID。
+     * @param {boolean} [notifyPeer=true] - 是否通知对方连接已关闭（当前未使用）。
+     */
     close: function(peerId, notifyPeer = true) {
         const conn = this.connections[peerId];
         if (conn) {
@@ -556,6 +705,9 @@ const ConnectionManager = {
         }
     },
 
+    /**
+     * 重置所有连接，包括 WebSocket。
+     */
     resetAllConnections: function() {
         ModalManager.showConfirmationModal( "您确定要重置所有连接吗？", () => {
             Object.keys(this.connections).forEach(peerId => this.close(peerId, false));
@@ -578,6 +730,10 @@ const ConnectionManager = {
         });
     },
 
+    /**
+     * 在模态框中更新手动连接的 SDP 文本。
+     * @param {string} peerIdToGetSdpFrom - 要获取 SDP 的对方 ID。
+     */
     updateSdpTextInModal: function(peerIdToGetSdpFrom) {
         const sdpTextEl = document.getElementById('modalSdpText'); if (!sdpTextEl) return;
         const conn = this.connections[peerIdToGetSdpFrom]; const pc = conn?.peerConnection;
@@ -586,12 +742,17 @@ const ConnectionManager = {
             const connectionInfo = { sdp: { type: sdpType, sdp: pc.localDescription.sdp }, candidates: this.iceCandidates[peerIdToGetSdpFrom] || [], userId: UserManager.userId, isVideoCall: conn?.isVideoCall||false, isAudioOnly: conn?.isAudioOnly||false, isScreenShare: conn?.isScreenShare||false };
             sdpTextEl.value = JSON.stringify(connectionInfo, null, 2);
         } else sdpTextEl.value = `正在为 ${peerIdToGetSdpFrom} 生成 ${pc?.localDescription ? pc.localDescription.type : '信息'}... (ICE状态: ${pc?.iceGatheringState})`;
-        if (typeof SettingsUIManager !== 'undefined') SettingsUIManager.copySdpTextFromModal = () => { // 模态框中复制按钮的临时修复
+        if (typeof SettingsUIManager !== 'undefined') SettingsUIManager.copySdpTextFromModal = () => {
             if (sdpTextEl.value) navigator.clipboard.writeText(sdpTextEl.value).then(()=>NotificationManager.showNotification('连接信息已复制！', 'success')).catch(()=>NotificationManager.showNotification('复制失败。', 'error'));
             else NotificationManager.showNotification('没有可复制的信息。', 'warning');
         };
     },
-    handleIceGatheringStateChange: function(peerId) { // 未变动
+
+    /**
+     * 处理 iceGatheringState 变化。
+     * @param {string} peerId - 相关的对方 ID。
+     */
+    handleIceGatheringStateChange: function(peerId) {
         const pc = this.connections[peerId]?.peerConnection; if (!pc) return;
         if (pc.iceGatheringState === 'gathering' && !this.iceGatheringStartTimes[peerId]) this.iceGatheringStartTimes[peerId] = Date.now();
         else if (pc.iceGatheringState === 'complete') { Utils.log(`为 ${peerId} 的 ICE 收集完成，耗时 ${(Date.now()-(this.iceGatheringStartTimes[peerId]||Date.now()))/1000}秒。候选者数量: ${this.iceCandidates[peerId]?.length||0}`, Utils.logLevels.DEBUG); delete this.iceGatheringStartTimes[peerId]; }

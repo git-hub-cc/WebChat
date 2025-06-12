@@ -1,4 +1,19 @@
-// MODIFIED: UserManager.js (已翻译为中文)
+/**
+ * @file UserManager.js
+ * @description 核心用户管理器，负责处理当前用户的信息、设置、所有联系人（包括特殊 AI 联系人）的数据管理。
+ *              它与数据库交互以持久化用户和联系人数据，并确保主题定义的特殊联系人被正确加载和合并。
+ * @module UserManager
+ * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
+ * @property {string|null} userId - 当前用户的唯一 ID。
+ * @property {object} contacts - 存储所有联系人数据的对象，格式为 { contactId: contactObject }。
+ * @property {function} init - 初始化模块，加载或创建用户数据，并加载联系人。
+ * @property {function} addContact - 添加一个新联系人。
+ * @property {function} removeContact - 移除一个联系人。
+ * @property {function} clearAllContacts - 清空所有用户添加的联系人。
+ * @property {function} updateUserSetting - 更新并保存用户的偏好设置。
+ * @dependencies DBManager, Utils, NotificationManager, ChatManager, ConnectionManager, ThemeLoader, ModalManager, SettingsUIManager, ChatAreaUIManager
+ * @dependents AppInitializer (进行初始化), 几乎所有其他管理器都会直接或间接与之交互以获取用户信息或联系人数据。
+ */
 const UserManager = {
     userId: null,
     userName: '我',
@@ -6,8 +21,12 @@ const UserManager = {
     userSettings: {
         autoConnectEnabled: true,
     },
-    SPECIAL_CONTACTS_DEFINITIONS: SPECIAL_CONTACTS_DEFINITIONS, // 如果需要，暴露给其他模块
+    SPECIAL_CONTACTS_DEFINITIONS: SPECIAL_CONTACTS_DEFINITIONS, // 从主题加载的特殊联系人定义
 
+    /**
+     * 初始化用户管理器。加载或创建当前用户数据，并加载所有联系人（包括特殊联系人）。
+     * @returns {Promise<void>}
+     */
     init: async function() {
         try {
             await DBManager.init();
@@ -27,19 +46,19 @@ const UserManager = {
                 };
                 await DBManager.setItem('user', userData);
             }
-            await this.loadContacts(); // 首先加载非特殊联系人
-            await this.ensureSpecialContacts(); // 然后确保特殊联系人存在，并与任何现有的数据库数据和 localStorage TTS 设置合并
+            await this.loadContacts(); // 首先加载普通联系人
+            await this.ensureSpecialContacts(); // 然后确保特殊联系人存在，并与数据库和 localStorage 数据合并
 
         } catch (error) {
             Utils.log(`用户初始化失败: ${error}`, Utils.logLevels.ERROR);
             this.userId = Utils.generateId(8);
             this.userName = `用户 ${this.userId.substring(0,4)}`;
             this.userSettings.autoConnectEnabled = false;
-            // 即使在某些初始化错误时，也尝试使用默认值确保特殊联系人存在。
-            const tempContactsCopy = {...this.contacts}; // 保留已加载的非特殊联系人。
-            this.contacts = {}; // 清空以便干净地重新初始化特殊联系人。
-            await this.ensureSpecialContacts(true); // 传递一个标志表示回退模式
-            this.contacts = {...this.contacts, ...tempContactsCopy}; // 合并回来
+            // 在回退模式下，仍尝试确保特殊联系人存在
+            const tempContactsCopy = {...this.contacts};
+            this.contacts = {};
+            await this.ensureSpecialContacts(true); // 传递回退模式标志
+            this.contacts = {...this.contacts, ...tempContactsCopy}; // 合并回普通联系人
         }
         document.getElementById('modalUserIdValue').textContent = this.userId;
         if (typeof SettingsUIManager !== 'undefined' && SettingsUIManager.updateCopyIdButtonState) {
@@ -49,13 +68,24 @@ const UserManager = {
         Utils.log(`用户设置已加载: autoConnectEnabled = ${this.userSettings.autoConnectEnabled}`, Utils.logLevels.DEBUG);
     },
 
+    /**
+     * 检查给定的 ID 是否为特殊联系人。
+     * @param {string} contactId - 要检查的联系人 ID。
+     * @returns {boolean}
+     */
     isSpecialContact: function(contactId) {
         return SPECIAL_CONTACTS_DEFINITIONS.some(sc => sc.id === contactId);
     },
 
+    /**
+     * 确保所有在 `SPECIAL_CONTACTS_DEFINITIONS` 中定义的特殊联系人都存在于 `this.contacts` 中，
+     * 并合并来自数据库和 localStorage 的持久化数据。
+     * @param {boolean} [isFallbackMode=false] - 是否处于回退模式，此模式下不访问数据库。
+     * @returns {Promise<void>}
+     */
     ensureSpecialContacts: async function(isFallbackMode = false) {
         for (const scDef of SPECIAL_CONTACTS_DEFINITIONS) {
-            // 以定义作为基础
+            // 基础数据来自主题定义文件
             let contactDataFromDef = {
                 id: scDef.id,
                 name: scDef.name,
@@ -67,59 +97,53 @@ const UserManager = {
                 avatarUrl: scDef.avatarUrl || null,
                 type: 'contact',
                 isAI: scDef.isAI || false,
-                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || {})), // 深拷贝定义的 AI 配置
+                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || {})),
                 aboutDetails: scDef.aboutDetails || null
             };
-            // 确保定义的 aiConfig 副本中存在 tts 对象
             if (contactDataFromDef.isAI && !contactDataFromDef.aiConfig.tts) {
                 contactDataFromDef.aiConfig.tts = {};
             }
 
             let finalContactData = { ...contactDataFromDef };
-
             let dbContact = null;
+
             if (!isFallbackMode) {
-                // 如果 ensureSpecialContacts 在已加载联系人上被重新运行，优先使用内存中的版本
+                // 优先使用内存中的数据，其次是数据库
                 dbContact = this.contacts[scDef.id] || await DBManager.getItem('contacts', scDef.id);
             }
 
             if (dbContact) {
-                // 从数据库合并通用字段
+                // 合并数据库中的通用字段
                 finalContactData.name = dbContact.name || finalContactData.name;
                 finalContactData.lastMessage = dbContact.lastMessage || finalContactData.lastMessage;
                 finalContactData.lastTime = dbContact.lastTime || finalContactData.lastTime;
-                finalContactData.unread = dbContact.unread || 0; // 如果未定义则保持为 0
-                finalContactData.avatarUrl = dbContact.avatarUrl || finalContactData.avatarUrl; // 如果数据库为 null 则保留定义
+                finalContactData.unread = dbContact.unread || 0;
+                finalContactData.avatarUrl = dbContact.avatarUrl || finalContactData.avatarUrl;
                 finalContactData.aboutDetails = dbContact.aboutDetails || finalContactData.aboutDetails;
 
-                // 从数据库合并 aiConfig，但单独处理 TTS
+                // 合并 AI 配置，特别处理 TTS 部分
                 if (dbContact.aiConfig) {
                     const { tts: dbTts, ...otherDbAiConfig } = dbContact.aiConfig;
                     finalContactData.aiConfig = {
-                        ...finalContactData.aiConfig, // 来自定义
-                        ...otherDbAiConfig,           // 来自数据库的其他 AI 配置
+                        ...finalContactData.aiConfig,
+                        ...otherDbAiConfig,
                         tts: {
-                            ...(finalContactData.aiConfig.tts || {}), // 来自定义的 TTS
-                            ...(dbTts || {})                          // 来自数据库的 TTS
+                            ...(finalContactData.aiConfig.tts || {}),
+                            ...(dbTts || {})
                         }
                     };
                 }
             }
 
-            // 在 localStorage 合并之前确保 tts 对象存在
-            if (finalContactData.isAI && !finalContactData.aiConfig.tts) {
-                finalContactData.aiConfig.tts = {};
-            }
-
-            // 应用 localStorage TTS 设置（TTS 的最高优先级）
+            // 应用来自 localStorage 的 TTS 设置（最高优先级）
             if (finalContactData.isAI) {
                 const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${scDef.id}`);
                 if (storedTtsSettingsJson) {
                     try {
                         const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
                         finalContactData.aiConfig.tts = {
-                            ...(finalContactData.aiConfig.tts || {}), // 当前合并的 TTS (定义 + 数据库)
-                            ...storedTtsSettings                     // 用 localStorage 覆盖
+                            ...(finalContactData.aiConfig.tts || {}),
+                            ...storedTtsSettings
                         };
                         Utils.log(`已从 localStorage 加载并应用 ${scDef.id} 的 TTS 设置。最终启用状态: ${finalContactData.aiConfig.tts.enabled}`, Utils.logLevels.DEBUG);
                     } catch (e) {
@@ -128,20 +152,18 @@ const UserManager = {
                 }
             }
 
-            // 如果联系人已在内存中，则保留现有的 lastMessage/Time/Unread
-            // （如果此函数重新确保一个已激活的联系人，这个块通常用于动态数据）。
-            // 对于 aiConfig，上面的逻辑（定义 -> 数据库 -> LocalStorage）应该是权威的。
+            // 如果联系人已在内存中（例如，在应用运行时动态加载新主题），则保留其动态数据
             if (this.contacts[scDef.id] && this.contacts[scDef.id] !== finalContactData) {
                 finalContactData.lastMessage = this.contacts[scDef.id].lastMessage || finalContactData.lastMessage;
                 finalContactData.lastTime = this.contacts[scDef.id].lastTime || finalContactData.lastTime;
                 finalContactData.unread = typeof this.contacts[scDef.id].unread === 'number' ? this.contacts[scDef.id].unread : finalContactData.unread;
             }
 
-            this.contacts[scDef.id] = finalContactData; // 更新内存存储
+            this.contacts[scDef.id] = finalContactData;
 
             if (!isFallbackMode) {
                 try {
-                    await this.saveContact(scDef.id); // 将完全合并的联系人保存回数据库
+                    await this.saveContact(scDef.id); // 将完全合并后的数据保存回数据库
                 } catch (dbError) {
                     Utils.log(`合并后确保特殊联系人 ${scDef.name} 时数据库出错: ${dbError}`, Utils.logLevels.ERROR);
                 }
@@ -149,17 +171,21 @@ const UserManager = {
         }
     },
 
+    /**
+     * 更新并保存用户的偏好设置。
+     * @param {string} settingKey - 要更新的设置键名。
+     * @param {*} value - 新的设置值。
+     * @returns {Promise<void>}
+     */
     updateUserSetting: async function(settingKey, value) {
         if (this.userSettings.hasOwnProperty(settingKey)) {
             this.userSettings[settingKey] = value;
             Utils.log(`用户设置已更新: ${settingKey} = ${value}`, Utils.logLevels.INFO);
-
             try {
                 const userData = await DBManager.getItem('user', 'currentUser') ||
                     { id: 'currentUser', userId: this.userId, userName: this.userName };
                 const updatedUserData = { ...userData, ...this.userSettings };
                 updatedUserData[settingKey] = value;
-
                 await DBManager.setItem('user', updatedUserData);
             } catch (error) {
                 Utils.log(`保存设置 ${settingKey} 失败: ${error}`, Utils.logLevels.ERROR);
@@ -170,15 +196,18 @@ const UserManager = {
         }
     },
 
+    /**
+     * 从数据库加载所有非特殊联系人。
+     * @returns {Promise<void>}
+     */
     loadContacts: async function() {
         try {
             const contactItems = await DBManager.getAllItems('contacts');
             if (contactItems && contactItems.length > 0) {
                 contactItems.forEach(contact => {
-                    // 只加载非特殊联系人。特殊联系人由 ensureSpecialContacts 处理。
                     if (!contact.id.startsWith("AI_") && !this.isSpecialContact(contact.id)) {
                         this.contacts[contact.id] = contact;
-                        // 如果非特殊联系人可能是 AI 并有 TTS，也在此处应用 localStorage 覆盖
+                        // 如果非特殊联系人也可能是 AI，应用其存储的 TTS 设置
                         if (contact.isAI && contact.aiConfig) {
                             const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${contact.id}`);
                             if (storedTtsSettingsJson) {
@@ -200,11 +229,15 @@ const UserManager = {
         }
     },
 
+    /**
+     * 将指定的联系人数据保存到数据库。
+     * @param {string} contactId - 要保存的联系人 ID。
+     * @returns {Promise<void>}
+     */
     saveContact: async function(contactId) {
         if (this.contacts[contactId]) {
             try {
                 const contactToSave = { ...this.contacts[contactId] };
-                // 确保 aiConfig 和 aiConfig.tts 在存在时结构正确
                 if (contactToSave.isAI && contactToSave.aiConfig && typeof contactToSave.aiConfig.tts === 'undefined') {
                     contactToSave.aiConfig.tts = {};
                 }
@@ -215,12 +248,21 @@ const UserManager = {
         }
     },
 
+    /**
+     * 触发侧边栏重新渲染，只显示联系人列表。
+     */
     renderContactListForSidebar: function() {
         ChatManager.currentFilter = 'contacts';
         SidebarUIManager.setActiveTab('contacts');
         ChatManager.renderChatList('contacts');
     },
 
+    /**
+     * 添加一个新联系人。
+     * @param {string} id - 新联系人的 ID。
+     * @param {string} name - 新联系人的名称。
+     * @returns {Promise<boolean>} - 操作是否成功。
+     */
     addContact: async function(id, name) {
         if (id === this.userId) {
             NotificationManager.showNotification("您不能添加自己为联系人。", "error");
@@ -247,18 +289,10 @@ const UserManager = {
         }
 
         const newContact = {
-            id: id,
-            name: name || `用户 ${id.substring(0, 4)}`,
-            lastMessage: '',
-            lastTime: new Date().toISOString(),
-            unread: 0,
-            isSpecial: false,
+            id: id, name: name || `用户 ${id.substring(0, 4)}`, lastMessage: '',
+            lastTime: new Date().toISOString(), unread: 0, isSpecial: false,
             avatarText: name ? name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase(),
-            avatarUrl: null,
-            type: 'contact',
-            isAI: false,
-            aiConfig: {},
-            aboutDetails: null
+            avatarUrl: null, type: 'contact', isAI: false, aiConfig: {}, aboutDetails: null
         };
         this.contacts[id] = newContact;
         await this.saveContact(id);
@@ -267,10 +301,14 @@ const UserManager = {
 
         ConnectionManager.createOffer(id, { isSilent: true });
         Utils.log(`尝试与新联系人建立初始连接: ${id}`, Utils.logLevels.INFO);
-
         return true;
     },
 
+    /**
+     * 移除一个联系人。
+     * @param {string} id - 要移除的联系人 ID。
+     * @returns {Promise<boolean>} - 操作是否成功。
+     */
     removeContact: async function(id) {
         if (this.isSpecialContact(id)) {
             const specialContactName = SPECIAL_CONTACTS_DEFINITIONS.find(sc => sc.id === id)?.name || "这个特殊联系人";
@@ -287,7 +325,7 @@ const UserManager = {
                 return true;
             } catch (error) {
                 Utils.log(`从数据库移除联系人 ${id} 失败: ${error}`, Utils.logLevels.ERROR);
-                this.contacts[id] = tempContact;
+                this.contacts[id] = tempContact; // 失败时恢复
                 ChatManager.renderChatList(ChatManager.currentFilter);
                 return false;
             }
@@ -295,6 +333,14 @@ const UserManager = {
         return false;
     },
 
+    /**
+     * 更新联系人的最后一条消息预览和未读计数。
+     * @param {string} id - 目标联系人的 ID。
+     * @param {string} messageText - 消息预览文本。
+     * @param {boolean} [incrementUnread=false] - 是否增加未读计数。
+     * @param {boolean} [forceNoUnread=false] - 是否强制将未读计数清零。
+     * @returns {Promise<void>}
+     */
     updateContactLastMessage: async function(id, messageText, incrementUnread = false, forceNoUnread = false) {
         const contact = this.contacts[id];
         if (contact) {
@@ -312,6 +358,11 @@ const UserManager = {
         }
     },
 
+    /**
+     * 清除指定联系人的未读消息计数。
+     * @param {string} id - 目标联系人的 ID。
+     * @returns {Promise<void>}
+     */
     clearUnread: async function(id) {
         const contact = this.contacts[id];
         if (contact && contact.unread > 0) {
@@ -321,12 +372,15 @@ const UserManager = {
         }
     },
 
+    /**
+     * 清空所有用户添加的联系人及其聊天记录。
+     * @returns {Promise<void>}
+     */
     clearAllContacts: async function() {
         ModalManager.showConfirmationModal(
             "您确定要删除所有用户添加的联系人吗？这也会清空他们的聊天记录。内置的特殊联系人将保留。",
             async () => {
                 const contactIdsToRemove = Object.keys(this.contacts).filter(id => !this.isSpecialContact(id));
-
                 const tempContacts = { ...this.contacts };
                 const specialContactsToKeep = {};
                 SPECIAL_CONTACTS_DEFINITIONS.forEach(scDef => {
@@ -355,19 +409,24 @@ const UserManager = {
                 } catch (error) {
                     Utils.log("清空联系人失败: " + error, Utils.logLevels.ERROR);
                     NotificationManager.showNotification("从数据库清空联系人失败。", 'error');
-                    this.contacts = tempContacts;
+                    this.contacts = tempContacts; // 失败时恢复
                     ChatManager.renderChatList(ChatManager.currentFilter);
                 }
             }
         );
     },
 
+    /**
+     * 格式化联系人消息的预览文本。
+     * @param {object} message - 消息对象。
+     * @returns {string} - 格式化后的预览文本。
+     */
     formatMessagePreview: function(message) {
         let preview = '';
         const isMyMessage = message.sender === UserManager.userId || message.originalSender === UserManager.userId;
         let senderContact = this.contacts[message.sender];
-
         let senderName;
+
         if (senderContact && senderContact.isSpecial) {
             senderName = senderContact.name;
         } else if (isMyMessage) {
@@ -378,7 +437,6 @@ const UserManager = {
             senderName = "对方";
         }
 
-
         switch (message.type) {
             case 'text':
                 preview = `${senderName}: ${message.content}`;
@@ -387,9 +445,9 @@ const UserManager = {
                 preview = `${senderName}: [图片]`;
                 break;
             case 'file':
-                if (message.fileType && message.fileType.startsWith('image/')) preview = `${senderName}: [图片]`;
-                else if (message.fileType && message.fileType.startsWith('video/')) preview = `${senderName}: [视频]`;
-                else if (message.fileType && message.fileType.startsWith('audio/')) preview = `${senderName}: [音频文件]`;
+                if (message.fileType?.startsWith('image/')) preview = `${senderName}: [图片]`;
+                else if (message.fileType?.startsWith('video/')) preview = `${senderName}: [视频]`;
+                else if (message.fileType?.startsWith('audio/')) preview = `${senderName}: [音频文件]`;
                 else preview = `${senderName}: [文件] ${message.fileName || ''}`;
                 break;
             case 'audio':

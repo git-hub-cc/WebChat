@@ -1,10 +1,17 @@
-// 新文件: TtsUIManager.js (已翻译)
-// 职责:
-// - 填充和处理 AI 联系人的 TTS 配置表单（在详情面板内）。
-// - 保存 TTS 设置。
-// (此模块将由 DetailsPanelUIManager 使用)
+/**
+ * @file TtsUIManager.js
+ * @description 文本转语音 (TTS) UI 管理器，负责填充和处理 AI 联系人详情面板中的 TTS 配置表单。
+ *              它将 TTS 相关的 UI 逻辑从 DetailsPanelUIManager 中分离出来。
+ * @module TtsUIManager
+ * @exports {object} TtsUIManager - 对外暴露的单例对象，包含管理 TTS 配置 UI 的方法。
+ * @property {function} populateAiTtsConfigurationForm - 根据联系人配置动态生成 TTS 设置表单。
+ * @property {function} handleSaveAiTtsSettings - 处理保存 TTS 设置的逻辑。
+ * @dependencies Utils, UserManager, NotificationManager
+ * @dependents DetailsPanelUIManager (在更新详情面板时调用)
+ */
 const TtsUIManager = {
-    TTS_CONFIG_FIELDS: [ // 从 UIManager 移来
+    // 定义 TTS 配置表单的所有字段及其属性
+    TTS_CONFIG_FIELDS: [
         { key: 'enabled', label: '启用 TTS', type: 'checkbox', default: false },
         { key: 'model_name', label: '模型名称', type: 'text', default: 'GPT-SoVITS' },
         { key: 'speaker_name', label: '说话人', type: 'text', default: 'default_speaker' },
@@ -25,8 +32,13 @@ const TtsUIManager = {
         { key: 'temperature', label: '温度', type: 'number', default: 1.0, step:0.01, min:0.01, max:1, isAdvanced: true },
         { key: 'repetition_penalty', label: '重复惩罚', type: 'number', default: 1.35, step:0.01, min:0, max:2, isAdvanced: true },
     ],
-    _boundSaveTtsListener: null, // 存储监听器以便稍后需要时移除
+    _boundSaveTtsListener: null, // 存储保存按钮的监听器，以便需要时可以移除
 
+    /**
+     * 根据联系人的配置动态生成并填充 AI TTS 配置表单。
+     * @param {object} contact - AI 联系人对象。
+     * @param {string} [formContainerId='ttsConfigFormContainer'] - 表单容器的 DOM ID。
+     */
     populateAiTtsConfigurationForm: function(contact, formContainerId = 'ttsConfigFormContainer') {
         const formContainer = document.getElementById(formContainerId);
         if (!formContainer) {
@@ -34,9 +46,10 @@ const TtsUIManager = {
             return;
         }
 
-        formContainer.innerHTML = ''; // 清除之前的表单内容
+        formContainer.innerHTML = ''; // 清空之前的表单
         const ttsSettings = (contact.aiConfig && contact.aiConfig.tts) ? contact.aiConfig.tts : {};
 
+        // 内部函数，用于创建单个表单字段元素
         const createFieldElement = (field, parentEl) => {
             const itemDiv = document.createElement('div');
             itemDiv.className = 'tts-config-item';
@@ -83,21 +96,23 @@ const TtsUIManager = {
 
         basicFields.forEach(field => createFieldElement(field, formContainer));
 
+        // 如果有高级选项，则创建一个可折叠的区域
         if (advancedFields.length > 0) {
             const advancedSectionDiv = document.createElement('div');
             advancedSectionDiv.className = 'tts-config-section advanced-tts-section';
 
             const advancedHeader = document.createElement('div');
-            advancedHeader.className = 'collapsible-header tts-advanced-header'; // 确保用于样式的类名
+            advancedHeader.className = 'collapsible-header tts-advanced-header';
             advancedHeader.innerHTML = `<h5>高级选项</h5><span class="collapsible-icon">▶</span>`;
 
             const advancedFieldsContainer = document.createElement('div');
             advancedFieldsContainer.className = 'collapsible-content tts-advanced-fields-container';
             advancedFieldsContainer.style.display = 'none'; // 默认折叠
 
+            // 确保折叠事件只绑定一次
             let advancedHeaderClickHandler = advancedHeader.getAttribute('data-click-handler-bound');
             if(advancedHeaderClickHandler !== 'true') {
-                advancedHeader.addEventListener('click', function() { // 此处的 `this` 将是 advancedHeader
+                advancedHeader.addEventListener('click', function() {
                     this.classList.toggle('active');
                     const icon = this.querySelector('.collapsible-icon');
                     if (advancedFieldsContainer.style.display === "block") {
@@ -118,6 +133,11 @@ const TtsUIManager = {
         }
     },
 
+    /**
+     * 处理保存 AI TTS 设置的逻辑。从表单中读取值，更新联系人对象，并保存到 localStorage 和数据库。
+     * @param {string} contactId - 要保存设置的联系人 ID。
+     * @returns {Promise<void>}
+     */
     handleSaveAiTtsSettings: async function(contactId) {
         const contact = UserManager.contacts[contactId];
         if (!contact || !contact.isAI || !contact.aiConfig) {
@@ -133,21 +153,26 @@ const TtsUIManager = {
             const inputElement = document.getElementById(`ttsInput_${field.key}`);
             if (inputElement) {
                 let newValue;
-                if (field.type === 'checkbox') newValue = inputElement.checked;
-                else if (field.type === 'number') {
+                if (field.type === 'checkbox') {
+                    newValue = inputElement.checked;
+                } else if (field.type === 'number') {
                     newValue = parseFloat(inputElement.value);
                     if (isNaN(newValue)) newValue = field.default;
-                } else newValue = inputElement.value;
+                } else {
+                    newValue = inputElement.value;
+                }
 
                 if (contact.aiConfig.tts[field.key] !== newValue) changesMade = true;
-                contact.aiConfig.tts[field.key] = newValue;
+                contact.aiConfig.tts[field.key] = newValue; // 更新内存中的对象
                 newTtsSettings[field.key] = newValue;
             }
         });
 
         if (changesMade) {
             try {
+                // 将新设置保存到 localStorage，这是 TTS 设置的最高优先级来源
                 localStorage.setItem(`ttsConfig_${contactId}`, JSON.stringify(newTtsSettings));
+                // 同时保存更新后的整个联系人对象到数据库
                 await UserManager.saveContact(contactId);
                 NotificationManager.showNotification("TTS 设置已成功保存。", "success");
             } catch (error) {

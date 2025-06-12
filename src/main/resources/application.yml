@@ -1,44 +1,68 @@
-# Server configuration
+# 服务器配置
 server:
-  port: 8080 # HTTP port the application will listen on.
+  port: 8080
 
-# Spring application specific configuration
+# Spring 应用配置
 spring:
   application:
-    name: Web-Chat # Name of the application, used in logging and management endpoints.
+    name: Web-Chat
 
-# Logging configuration
+# 日志配置
 logging:
   level:
-    club.ppmc: DEBUG # Default log level for the application's main package. Change to DEBUG for more verbose logging.
-    org.springframework.web.socket: DEBUG # Detailed logging for Spring WebSocket interactions, helpful for debugging WebSocket issues.
+    club.ppmc: DEBUG # 应用主包的日志级别，设为DEBUG以获取详细日志
+    org.springframework.web.socket: DEBUG # WebSocket交互的详细日志，用于调试
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
-# Custom WebSocket server settings
-# These values are used by WebSocketConfig.java
+# 自定义WebSocket服务器设置
 websocket:
   max:
-    textBufferSize: 128   # Maximum size of a text message (in KB) that the WebSocket server can handle.
-    binaryBufferSize: 128 # Maximum size of a binary message (in KB) that the WebSocket server can handle.
-    sessionTimeout: 5     # Maximum idle time (in minutes) before a WebSocket session is closed.
+    # 消息缓冲区大小（单位：KB）
+    text-buffer-size-kb: 128
+    binary-buffer-size-kb: 128
+    # 会话空闲超时时间（单位：分钟）
+    session-timeout-min: 5
 
-# Custom API configuration
+# 自定义API配置
 api:
-  v1: # Configuration specific to v1 of the API
+  v1:
     request:
-      limit: 400 # Daily request limit for v1 API endpoints (per client IP), used by RateLimitInterceptor.java
+      # v1 API的每日请求限制（每个客户端IP）
+      limit: 400
 
-# TODO: Review if 'local.url' is the best name. Consider 'app.base-url' or 'cors.allowed-origin' if more specific.
+# CORS 和 WebSocket 允许的源列表
 allowed:
-  url: "https://175.178.216.24/"
+  origins:
+    - "https://175.178.216.24"
+    - "http://localhost:8080"
+    - "http://localhost:3000" # 示例：为本地前端开发环境添加源
 
+# OpenAI兼容的API配置
 openai:
   api:
-    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1" # Base URL for the OpenAI compatible API endpoint.
-    model: "qwen-turbo-2025-04-28"
-    api_key: "Bearer sk-xxxx" # Example API Key (replace with your actual key).
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    model: "qwen-turbo"
+    # !!! 安全警告 !!!
+    # 将API密钥硬编码在配置文件中存在安全风险。
+    # 推荐使用环境变量、Spring Cloud Config或Vault等方式来管理密钥。
+    # 例如：api_key: "${OPENAI_API_KEY}"
+    api_key: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # 请替换为你的真实密钥
 
+# 应用程序提示词配置
 app:
-  summary_prompt: "请你扮演一个高效的会议纪要员，阅读下面的对话。用一段精炼的话，告诉我：这个用户是谁（身份、情绪）？他到底想干什么（核心目标）？对话中最重要的信息点有哪些（比如关键数据或概念）？以及我们最后定了什么事，下一步该做什么（共识与行动）？"
-  event_mood_prompt: "基于以下角色设定，为其生成一个今天发生的、符合其人设的随机小事件和当前的心情。请严格以JSON格式返回，必须包含 'event' 和 'mood' 两个键，不要包含任何其他说明文字。\n\n角色设定：\n%s"
+  # 用于生成对话摘要的系统提示词
+  summary_prompt: |
+    请你扮演一个高效的会议纪要员，阅读下面的对话。用一段精炼的话，告诉我：
+    这个用户是谁（身份、情绪）？他到底想干什么（核心目标）？
+    对话中最重要的信息点有哪些（比如关键数据或概念）？
+    以及我们最后定了什么事，下一步该做什么（共识与行动）？
+
+  # 用于为角色生成今日事件和心情的系统提示词
+  # %s 将被替换为具体的角色设定
+  event_mood_prompt: |
+    基于以下角色设定，为其生成一个今天发生的、符合其人设的随机小事件和当前的心情。
+    请严格以JSON格式返回，必须包含 'event' 和 'mood' 两个键，不要包含任何其他说明文字。
+    
+    角色设定：
+    %s

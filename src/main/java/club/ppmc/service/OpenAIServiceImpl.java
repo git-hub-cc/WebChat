@@ -1,10 +1,29 @@
+/**
+ * `OpenAIService`接口的实现类。
+ *
+ * 主要职责:
+ * - 通过`WebClient`与外部AI API进行实际的HTTP通信。
+ * - 在内存中使用`ConcurrentHashMap`管理对话历史和角色每日状态（事件/心情）的缓存。
+ * - 实现聊天、摘要生成、上下文准备和缓存清理等核心业务逻辑。
+ *
+ * 关联:
+ * - `OpenAIService`: 实现此接口。
+ * - `OpenAIConfig`: 从中注入`WebClient`和各种配置字符串。
+ * - `CacheManagerTask`: 调用本服务中的`clearCharacterStateCache`方法。
+ */
 package club.ppmc.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
@@ -14,44 +33,34 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
-/**
- * Service implementation for interacting with the OpenAI API.
- * This class encapsulates the business logic for storing conversation history,
- * generating summaries, and handling standard chat completions.
- */
 @Service
 public class OpenAIServiceImpl implements OpenAIService {
 
     private static final Logger logger = LoggerFactory.getLogger(OpenAIServiceImpl.class);
+    private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<>() {};
+    private static final String API_URI = "/chat/completions";
 
-    // 用于存储 "user:character_id" -> requestBody 的历史记录
+    // 使用内部记录类来增强类型安全性和代码可读性
+    private record EventMood(String event, String mood) {}
+    private record ChatPayload(String user, String character_id, List<Map<String, Object>> messages) {}
+
+    // 缓存: 存储 "user:character_id" -> requestBody 的最近一次请求
     private final Map<String, String> lastRequestStore = new ConcurrentHashMap<>();
-
-    // 用于存储 "user:character_id" -> EventMood 的今日状态
+    // 缓存: 存储 "character_id" -> EventMood 的今日状态
     private final Map<String, EventMood> characterStateStore = new ConcurrentHashMap<>();
 
     private final WebClient webClient;
+    private final ObjectMapper objectMapper;
     private final String summaryPrompt;
     private final String eventMoodPrompt;
     private final String model;
-    private final ObjectMapper objectMapper;
 
-    // 用于封装事件和心情的记录类 (Record)
-    private record EventMood(String event, String mood) {}
-
-    @Autowired
-    public OpenAIServiceImpl(@Qualifier("openaiWebClient") WebClient webClient,
-                             @Qualifier("summaryPrompt") String summaryPrompt,
-                             @Qualifier("eventMoodPrompt") String eventMoodPrompt,
-                             @Qualifier("model") String model,
-                             ObjectMapper objectMapper) {
+    public OpenAIServiceImpl(
+            @Qualifier("openaiWebClient") WebClient webClient,
+            @Qualifier("summaryPrompt") String summaryPrompt,
+            @Qualifier("eventMoodPrompt") String eventMoodPrompt,
+            @Qualifier("model") String model,
+            ObjectMapper objectMapper) {
         this.webClient = webClient;
         this.summaryPrompt = summaryPrompt;
         this.eventMoodPrompt = eventMoodPrompt;
@@ -62,207 +71,176 @@ public class OpenAIServiceImpl implements OpenAIService {
     @Override
     public Mono<String> prepareChatContext(String originalRequestBody) {
         try {
-            Map<String, Object> bodyMap = objectMapper.readValue(originalRequestBody, Map.class);
-            String user = (String) bodyMap.get("user");
-            String characterId = (String) bodyMap.get("character_id");
-
-            if (user == null || characterId == null) {
-                logger.warn("Request body missing 'user' or 'character_id'. Skipping event/mood generation.");
+            var payload = objectMapper.readValue(originalRequestBody, ChatPayload.class);
+            if (payload.character_id() == null) {
+                logger.warn("请求体中缺少 'character_id'，跳过事件/心情生成。");
                 return Mono.just(originalRequestBody);
             }
 
-            String key = user + ":" + characterId;
-
-            return getOrCreateEventMood(key, bodyMap)
+            return getOrCreateEventMood(payload)
                     .flatMap(eventMood -> {
                         try {
-                            String modifiedBody = updateSystemPrompt(bodyMap, eventMood);
-                            logger.info("Successfully updated system prompt for key '{}'", key);
+                            var bodyMap = objectMapper.readValue(originalRequestBody, MAP_TYPE_REFERENCE);
+                            var modifiedBody = updateSystemPrompt(bodyMap, eventMood);
+                            logger.info("成功为角色 '{}' 更新系统提示。", payload.character_id());
                             return Mono.just(modifiedBody);
                         } catch (JsonProcessingException e) {
-                            logger.error("Failed to re-serialize body after updating system prompt for key '{}'", key, e);
+                            logger.error("更新系统提示后重新序列化请求体失败。", e);
                             return Mono.just(originalRequestBody);
                         }
                     })
                     .defaultIfEmpty(originalRequestBody)
                     .onErrorReturn(originalRequestBody);
         } catch (JsonProcessingException e) {
-            logger.warn("Failed to parse request body for context preparation. Returning original body.", e);
+            logger.warn("解析请求体以准备上下文时失败，将返回原始请求体。", e);
             return Mono.just(originalRequestBody);
         }
     }
 
     @Override
     public boolean hasHistory(String user, String characterId) {
-        if (user == null || characterId == null) {
-            return false;
-        }
-        String key = user + ":" + characterId;
+        if (user == null || characterId == null) return false;
+        var key = createKey(user, characterId);
         boolean hasHistory = lastRequestStore.containsKey(key);
-        logger.debug("Checking history for key '{}': {}", key, hasHistory);
+        logger.debug("检查历史记录 for key '{}': {}", key, hasHistory);
         return hasHistory;
     }
 
     @Override
-    public void storeLastRequest(String requestBody) {
-        try {
-            Map<String, Object> bodyMap = objectMapper.readValue(requestBody, Map.class);
-            String user = (String) bodyMap.get("user");
-            String characterId = (String) bodyMap.get("character_id");
-
-            if (user != null && characterId != null) {
-                String key = user + ":" + characterId;
-                lastRequestStore.put(key, requestBody);
-                logger.info("Stored request history for user '{}' and character '{}'.", user, characterId);
-            } else {
-                logger.warn("Could not store history: 'user' or 'character_id' missing from request body.");
-            }
-        } catch (JsonProcessingException e) {
-            logger.warn("Failed to parse JSON for storing request history: {}", e.getMessage());
-        }
-    }
-
-    @Override
     public Flux<String> streamBaseChatCompletion(String requestBody) {
-        logger.info("Processing base chat completion request.");
+        logger.info("处理基础聊天完成请求。");
         storeLastRequest(requestBody);
-        return performOpenAIStreamRequest(requestBody, "/chat/completions");
+        return performOpenAIStreamRequest(requestBody, API_URI);
     }
 
     @Override
     public Flux<String> getSummaryStream(String user, String characterId) {
-        logger.info("Requesting summary for user '{}' and character '{}'.", user, characterId);
-        String lastRequestBody = getLastRequest(user, characterId);
+        logger.info("为用户 '{}' 和角色 '{}' 请求摘要。", user, characterId);
+        var key = createKey(user, characterId);
+        var lastRequestBody = lastRequestStore.get(key);
 
         if (lastRequestBody == null || lastRequestBody.isEmpty()) {
-            logger.warn("No history found for user '{}' and character '{}'. Cannot generate summary.", user, characterId);
+            logger.warn("未找到key '{}'的对话历史，无法生成摘要。", key);
             return Flux.empty();
         }
 
         try {
-            String summaryRequestBody = createSummaryRequestBody(lastRequestBody, this.model);
-            logger.debug("Constructed summary request body: {}", summaryRequestBody);
-            return performOpenAIStreamRequest(summaryRequestBody, "/chat/completions");
+            var summaryRequestBody = createSummaryRequestBody(lastRequestBody);
+            logger.debug("已构建摘要请求体。");
+            return performOpenAIStreamRequest(summaryRequestBody, API_URI);
         } catch (JsonProcessingException e) {
-            logger.error("Error creating summary request body due to JSON processing failure.", e);
+            logger.error("创建摘要请求体时发生JSON处理错误。", e);
             return Flux.error(e);
         }
     }
 
     @Override
     public void clearCharacterStateCache() {
-        logger.info("Executing request to clear character event and mood cache.");
-        int sizeBefore = characterStateStore.size();
-        if (sizeBefore > 0) {
+        if (!characterStateStore.isEmpty()) {
+            int sizeBefore = characterStateStore.size();
             characterStateStore.clear();
-            logger.info("Character state cache has been cleared. Removed {} entries.", sizeBefore);
+            logger.info("角色状态缓存已清空，移除了 {} 个条目。", sizeBefore);
         } else {
-            logger.info("Character state cache was already empty. No action taken.");
+            logger.info("角色状态缓存已为空，无需操作。");
         }
     }
 
-    private Mono<EventMood> getOrCreateEventMood(String key, Map<String, Object> bodyMap) {
-        EventMood existingState = characterStateStore.get(key);
+    private Mono<EventMood> getOrCreateEventMood(ChatPayload payload) {
+        var existingState = characterStateStore.get(payload.character_id());
         if (existingState != null) {
-            logger.info("Found existing event/mood for key '{}'. Reusing it.", key);
+            logger.info("为角色 '{}' 找到已缓存的事件/心情，直接使用。", payload.character_id());
             return Mono.just(existingState);
         }
 
-        logger.info("No event/mood found for key '{}'. Generating new one.", key);
-        return generateEventAndMood(bodyMap)
+        logger.info("角色 '{}' 的当日事件/心情不存在，开始生成...", payload.character_id());
+        return generateEventAndMood(payload)
                 .doOnSuccess(newState -> {
                     if (newState != null) {
-                        characterStateStore.put(key, newState);
-                        logger.info("Stored new event/mood for key '{}'.", key);
+                        characterStateStore.put(payload.character_id(), newState);
+                        logger.info("已为角色 '{}' 生成并缓存新的事件/心情。", payload.character_id());
                     }
                 });
     }
 
-    @SuppressWarnings("unchecked")
-    private Mono<EventMood> generateEventAndMood(Map<String, Object> originalBodyMap) {
+    private Mono<EventMood> generateEventAndMood(ChatPayload payload) {
         try {
-            List<Map<String, Object>> messages = (List<Map<String, Object>>) originalBodyMap.get("messages");
-            if (messages == null || messages.isEmpty() || !"system".equals(messages.get(0).get("role"))) {
-                logger.warn("Cannot generate event/mood: 'messages' array is missing, empty, or first message is not a system prompt.");
+            if (payload.messages() == null || payload.messages().isEmpty() || !"system".equals(payload.messages().get(0).get("role"))) {
+                logger.warn("无法生成事件/心情：'messages'数组缺失、为空或首条消息非system角色。");
                 return Mono.empty();
             }
-            String characterSettings = (String) messages.get(0).get("content");
+            var characterSettings = (String) payload.messages().get(0).get("content");
+            var promptContent = String.format(eventMoodPrompt, characterSettings);
 
-            Map<String, Object> requestPayload = new HashMap<>();
-            List<Map<String, String>> newMessages = new ArrayList<>();
-            Map<String, String> systemMessage = new HashMap<>();
-            systemMessage.put("role", "system");
-            systemMessage.put("content", String.format(eventMoodPrompt, characterSettings));
+            var systemMessage = Map.of("role", "system", "content", promptContent);
+            var requestPayload = Map.of(
+                    "model", this.model,
+                    "messages", List.of(systemMessage),
+                    "response_format", Map.of("type", "json_object")
+            );
 
-            newMessages.add(systemMessage);
+            var requestBody = objectMapper.writeValueAsString(requestPayload);
 
-            requestPayload.put("model", this.model);
-            requestPayload.put("messages", newMessages);
-            requestPayload.put("response_format", Map.of("type", "json_object"));
-
-            String requestBody = objectMapper.writeValueAsString(requestPayload);
-
-            return performOpenAINonStreamRequest(requestBody, "/chat/completions")
-                    .flatMap(responseBody -> {
-                        try {
-                            Map<String, Object> responseMap = objectMapper.readValue(responseBody, Map.class);
-                            List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
-                            Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-                            String content = (String) message.get("content");
-
-                            EventMood eventMood = objectMapper.readValue(content, EventMood.class);
-                            return Mono.just(eventMood);
-                        } catch (Exception e) {
-                            logger.error("Failed to parse event/mood response from OpenAI: {}", responseBody, e);
-                            return Mono.empty();
-                        }
-                    });
-
+            return performOpenAINonStreamRequest(requestBody, API_URI)
+                    .flatMap(this::parseEventMoodFromResponse);
         } catch (JsonProcessingException e) {
-            logger.error("Failed to create request body for event/mood generation.", e);
+            logger.error("创建事件/心情生成请求体时失败。", e);
+            return Mono.empty();
+        }
+    }
+
+    private Mono<EventMood> parseEventMoodFromResponse(String responseBody) {
+        try {
+            var responseMap = objectMapper.readValue(responseBody, MAP_TYPE_REFERENCE);
+            var choices = (List<Map<String, Object>>) responseMap.get("choices");
+            var message = (Map<String, Object>) choices.get(0).get("message");
+            var content = (String) message.get("content");
+            return Mono.just(objectMapper.readValue(content, EventMood.class));
+        } catch (Exception e) {
+            logger.error("从OpenAI响应中解析事件/心情失败: {}", responseBody, e);
             return Mono.empty();
         }
     }
 
     @SuppressWarnings("unchecked")
     private String updateSystemPrompt(Map<String, Object> bodyMap, EventMood eventMood) throws JsonProcessingException {
-        List<Map<String, Object>> messages = (List<Map<String, Object>>) bodyMap.get("messages");
-        if (messages == null || messages.isEmpty()) {
-            return objectMapper.writeValueAsString(bodyMap);
-        }
+        var messages = (List<Map<String, Object>>) bodyMap.get("messages");
+        if (messages == null || messages.isEmpty()) return objectMapper.writeValueAsString(bodyMap);
 
-        Map<String, Object> systemMessage = messages.get(0);
-        String originalContent = (String) systemMessage.get("content");
+        var systemMessage = messages.get(0);
+        var originalContent = (String) systemMessage.get("content");
 
-        String newContent = String.format("今天发生了一件小事：%s。这让我的心情有点%s。\n\n%s",
-                eventMood.event(), eventMood.mood(), originalContent);
+        // 使用Text Block来格式化新的系统提示，可读性更强
+        var newContent = """
+                今天发生了一件小事：%s。这让我的心情有点%s。
+                
+                %s
+                """.formatted(eventMood.event(), eventMood.mood(), originalContent);
 
         systemMessage.put("content", newContent);
         return objectMapper.writeValueAsString(bodyMap);
     }
 
-    private String getLastRequest(String user, String characterId) {
-        String key = user + ":" + characterId;
-        return lastRequestStore.get(key);
+    private void storeLastRequest(String requestBody) {
+        try {
+            var payload = objectMapper.readValue(requestBody, ChatPayload.class);
+            if (payload.user() != null && payload.character_id() != null) {
+                var key = createKey(payload.user(), payload.character_id());
+                lastRequestStore.put(key, requestBody);
+                logger.info("已为key '{}'存储对话历史。", key);
+            }
+        } catch (JsonProcessingException e) {
+            logger.warn("因JSON解析失败，未能存储对话历史: {}", e.getMessage());
+        }
     }
 
-    private String createSummaryRequestBody(String historyContent, String model) throws JsonProcessingException {
-        Map<String, Object> newBodyMap = new HashMap<>();
-        List<Map<String, Object>> newMessages = new ArrayList<>();
+    private String createSummaryRequestBody(String historyContent) throws JsonProcessingException {
+        var promptMessage = Map.of("role", "system", "content", this.summaryPrompt);
+        var historyMessage = Map.of("role", "user", "content", historyContent);
 
-        Map<String, Object> promptMessage = new HashMap<>();
-        promptMessage.put("role", "system");
-        promptMessage.put("content", this.summaryPrompt);
-        newMessages.add(promptMessage);
-
-        Map<String, Object> historyMessage = new HashMap<>();
-        historyMessage.put("role", "user");
-        historyMessage.put("content", historyContent);
-        newMessages.add(historyMessage);
-
-        newBodyMap.put("messages", newMessages);
-        newBodyMap.put("model", model);
-        newBodyMap.put("stream", true);
+        var newBodyMap = Map.of(
+                "messages", List.of(promptMessage, historyMessage),
+                "model", this.model,
+                "stream", true);
 
         return objectMapper.writeValueAsString(newBodyMap);
     }
@@ -274,17 +252,16 @@ public class OpenAIServiceImpl implements OpenAIService {
                 .body(BodyInserters.fromValue(requestBody))
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, clientResponse ->
-                        clientResponse.bodyToMono(String.class)
-                                .flatMap(errorBody -> {
-                                    logger.error("OpenAI API call failed: Status=[{}], URI=[{}], Body=[{}]",
-                                            clientResponse.statusCode(), uri, errorBody);
-                                    return Mono.error(new RuntimeException("OpenAI API Error: " + errorBody));
-                                })
+                        clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                            logger.error("OpenAI流式API调用失败: Status={}, URI={}, Body={}",
+                                    clientResponse.statusCode(), uri, errorBody);
+                            return Mono.error(new RuntimeException("OpenAI API Error: " + errorBody));
+                        })
                 )
                 .bodyToFlux(String.class)
-                .doOnSubscribe(s -> logger.info("Subscribed to OpenAI stream at URI: {}", uri))
-                .doOnError(e -> logger.error("Error during OpenAI stream processing for URI: {}", uri, e))
-                .doOnComplete(() -> logger.info("OpenAI stream completed for URI: {}", uri));
+                .doOnSubscribe(s -> logger.info("已订阅OpenAI流: {}", uri))
+                .doOnError(e -> logger.error("处理OpenAI流时出错: {}", uri, e))
+                .doOnComplete(() -> logger.info("OpenAI流处理完成: {}", uri));
     }
 
     private Mono<String> performOpenAINonStreamRequest(String requestBody, String uri) {
@@ -294,17 +271,20 @@ public class OpenAIServiceImpl implements OpenAIService {
                 .body(BodyInserters.fromValue(requestBody))
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, clientResponse ->
-                        clientResponse.bodyToMono(String.class)
-                                .flatMap(errorBody -> {
-                                    logger.error("OpenAI Non-Stream API call failed: Status=[{}], URI=[{}], Body=[{}]",
-                                            clientResponse.statusCode(), uri, errorBody);
-                                    return Mono.error(new RuntimeException("OpenAI API Error: " + errorBody));
-                                })
+                        clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                            logger.error("OpenAI非流式API调用失败: Status={}, URI={}, Body={}",
+                                    clientResponse.statusCode(), uri, errorBody);
+                            return Mono.error(new RuntimeException("OpenAI API Error: " + errorBody));
+                        })
                 )
                 .bodyToMono(String.class)
-                .timeout(Duration.ofSeconds(30))
-                .doOnSubscribe(s -> logger.info("Sending Non-Stream request to OpenAI at URI: {}", uri))
-                .doOnError(e -> logger.error("Error during OpenAI Non-Stream request for URI: {}", uri, e))
-                .doOnSuccess(response -> logger.info("OpenAI Non-Stream request completed for URI: {}", uri));
+                .timeout(Duration.ofSeconds(30)) // 设置超时以防请求挂起
+                .doOnSubscribe(s -> logger.info("发送非流式请求到OpenAI: {}", uri))
+                .doOnError(e -> logger.error("OpenAI非流式请求出错: {}", uri, e))
+                .doOnSuccess(response -> logger.info("OpenAI非流式请求成功: {}", uri));
+    }
+
+    private String createKey(String user, String characterId) {
+        return user + ":" + characterId;
     }
 }

@@ -28,6 +28,11 @@
     </scm>
     <properties>
         <java.version>17</java.version>
+        <!-- ======================================================= -->
+        <!-- 新增：设置项目构建和报告的编码为 UTF-8 -->
+        <!-- ======================================================= -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
     <dependencies>
         <dependency>
@@ -69,6 +74,52 @@
                         <goals>
                             <goal>repackage</goal>
                         </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 用于执行 Python 脚本的插件 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <!-- clean 时，删除 .min 文件 -->
+                    <execution>
+                        <id>run-delete-script-on-clean</id>
+                        <phase>pre-clean</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>python</executable>
+                            <workingDirectory>${project.basedir}</workingDirectory>
+                            <arguments>
+                                <argument>script/01delete_min_files.py</argument>
+                            </arguments>
+                            <environmentVariables>
+                                <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>
+                            </environmentVariables>
+                        </configuration>
+                    </execution>
+
+                    <!-- 打包前，压缩资源 -->
+                    <execution>
+                        <id>run-compress-script-before-package</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>python</executable>
+                            <workingDirectory>${project.basedir}</workingDirectory>
+                            <arguments>
+                                <argument>script/02compress_frontend.py</argument>
+                            </arguments>
+                            <environmentVariables>
+                                <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>
+                            </environmentVariables>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

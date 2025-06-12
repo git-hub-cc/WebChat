@@ -1,10 +1,21 @@
-// MODIFIED: DetailsPanelUIManager.js (已翻译为中文)
-// - 在 TTS 设置中为 "致谢" 可折叠子部分添加了事件监听器。
+
+/**
+ * @file DetailsPanelUIManager.js
+ * @description 管理右侧详情面板的 UI 元素和交互。
+ *              根据当前选择的聊天类型（联系人、群组、AI联系人），动态显示和更新相关信息、操作按钮和配置项。
+ * @module DetailsPanelUIManager
+ * @exports {object} DetailsPanelUIManager - 对外暴露的单例对象，包含管理详情面板 UI 的所有方法。
+ * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
+ * @property {function} toggleDetailsPanel - 显示或隐藏详情面板。
+ * @property {function} updateDetailsPanel - 根据当前聊天 ID 和类型更新面板内容。
+ * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationManager, Utils, ConnectionManager
+ * @dependents AppInitializer (进行初始化), ChatManager (打开新聊天时调用), ChatAreaUIManager (点击详情按钮时调用)
+ */
 const DetailsPanelUIManager = {
     isDetailsPanelVisible: false,
-    _boundTtsConfigCollapseListener: null, // 主 TTS 部分的可折叠监听器
+    _boundTtsConfigCollapseListener: null, // 用于主 TTS 配置区域的可折叠事件监听器
 
-    // DOM 元素
+    // 缓存的 DOM 元素引用
     detailsPanelEl: null,
     detailsNameEl: null,
     detailsIdEl: null,
@@ -24,8 +35,8 @@ const DetailsPanelUIManager = {
     aiContactAboutNameSubEl: null,
     aiContactAboutTextEl: null,
     aiTtsConfigSectionEl: null,
-    aiTtsConfigHeaderEl: null, // 主 TTS 可折叠部分的头部
-    aiTtsConfigContentEl: null, // TTS 表单的内容区域
+    aiTtsConfigHeaderEl: null,
+    aiTtsConfigContentEl: null,
     saveAiTtsSettingsBtnDetailsEl: null,
     closeDetailsBtnMainEl: null,
     groupMemberListDetailsEl: null,
@@ -36,11 +47,14 @@ const DetailsPanelUIManager = {
     addMemberBtnDetailsEl: null,
     leftMemberListDetailsEl: null,
 
-    // 新增：用于致谢可折叠部分
+    // 新增：用于 "致谢" 可折叠部分的元素
     ttsAttributionHeaderEl: null,
     ttsAttributionContentEl: null,
 
 
+    /**
+     * 初始化模块，获取所有需要的 DOM 元素引用并绑定核心事件。
+     */
     init: function() {
         this.detailsPanelEl = document.getElementById('detailsPanel');
         this.detailsNameEl = document.getElementById('detailsName');
@@ -73,13 +87,16 @@ const DetailsPanelUIManager = {
         this.addMemberBtnDetailsEl = document.getElementById('addMemberBtnDetails');
         this.leftMemberListDetailsEl = document.getElementById('leftMemberListDetails');
 
-        // 新增：初始化致谢可折叠部分的元素
+        // 初始化 "致谢" 可折叠部分的元素
         this.ttsAttributionHeaderEl = document.getElementById('ttsAttributionCollapsibleTrigger');
         this.ttsAttributionContentEl = document.getElementById('ttsAttributionCollapsibleContent');
 
         this.bindEvents();
     },
 
+    /**
+     * 绑定详情面板内的 UI 事件监听器。
+     */
     bindEvents: function() {
         if (this.closeDetailsBtnMainEl) {
             this.closeDetailsBtnMainEl.addEventListener('click', () => this.toggleDetailsPanel(false));
@@ -87,15 +104,13 @@ const DetailsPanelUIManager = {
         if (this.addMemberBtnDetailsEl) {
             this.addMemberBtnDetailsEl.addEventListener('click', () => this.handleAddMemberToGroupDetails());
         }
-        // clearCurrentChatBtnDetails, deleteContactBtnDetails, leaveGroupBtnDetails,
-        // dissolveGroupBtnDetails, saveAiTtsSettingsBtnDetails 的事件监听器在 updateDetailsPanel 中动态设置。
+        // 其他按钮的事件监听器在 updateDetailsPanel 中根据上下文动态设置。
 
-        // 新增：为 TTS 致谢可折叠部分绑定事件
+        // 为 TTS "致谢" 可折叠部分绑定点击事件
         if (this.ttsAttributionHeaderEl && this.ttsAttributionContentEl) {
             this.ttsAttributionHeaderEl.addEventListener('click', () => {
                 const header = this.ttsAttributionHeaderEl;
                 const content = this.ttsAttributionContentEl;
-
                 header.classList.toggle('active');
                 const icon = header.querySelector('.collapse-icon');
 
@@ -107,9 +122,9 @@ const DetailsPanelUIManager = {
                     if(icon) icon.textContent = '▼';
                 }
             });
-            // 确保初始图标状态正确
+            // 确保初始图标状态与内容显示状态一致
             const icon = this.ttsAttributionHeaderEl.querySelector('.collapse-icon');
-            if (this.ttsAttributionContentEl.style.display === 'none') { // HTML 默认为 display: none;
+            if (this.ttsAttributionContentEl.style.display === 'none') {
                 if(icon) icon.textContent = '▶';
                 this.ttsAttributionHeaderEl.classList.remove('active');
             } else {
@@ -119,6 +134,10 @@ const DetailsPanelUIManager = {
         }
     },
 
+    /**
+     * 显示或隐藏详情面板。
+     * @param {boolean} show - true 为显示，false 为隐藏。
+     */
     toggleDetailsPanel: function (show) {
         const appContainer = document.querySelector('.app-container');
         this.isDetailsPanelVisible = show;
@@ -133,22 +152,29 @@ const DetailsPanelUIManager = {
             this.updateDetailsPanel(ChatManager.currentChatId, ChatManager.currentChatId.startsWith('group_') ? 'group' : 'contact');
         } else {
             if (appContainer) appContainer.classList.remove('show-details');
+            // 使用 setTimeout 配合 CSS 过渡效果
             setTimeout(() => {
                 if (!this.isDetailsPanelVisible && this.detailsPanelEl) this.detailsPanelEl.style.display = 'none';
             }, 300);
         }
     },
 
+    /**
+     * 根据当前聊天 ID 和类型更新详情面板的内容。
+     * @param {string} chatId - 当前聊天的 ID。
+     * @param {string} type - 聊天类型 ('contact' 或 'group')。
+     */
     updateDetailsPanel: function (chatId, type) {
         if (!this.detailsPanelEl) return;
-        this.detailsPanelEl.className = 'details-panel'; // 重置面板类列表
+        this.detailsPanelEl.className = 'details-panel'; // 重置面板类名
 
-        // 初始隐藏所有部分
+        // 先隐藏所有可选部分，再根据类型显示
         [this.currentChatActionsDetailsEl, this.contactActionsDetailsEl, this.detailsGroupManagementEl,
             this.groupActionsDetailsEl, this.aiContactAboutSectionEl, this.aiTtsConfigSectionEl]
             .forEach(el => { if (el) el.style.display = 'none'; });
 
-        if (chatId) { // 任何选定聊天的通用操作
+        // 显示通用操作（如清空聊天记录）
+        if (chatId) {
             if (this.currentChatActionsDetailsEl && this.clearCurrentChatBtnDetailsEl) {
                 this.currentChatActionsDetailsEl.style.display = 'block';
                 this.clearCurrentChatBtnDetailsEl.onclick = () => MessageManager.clearChat();
@@ -162,6 +188,11 @@ const DetailsPanelUIManager = {
         }
     },
 
+    /**
+     * @private
+     * 专用于更新联系人详情的内部方法。
+     * @param {string} contactId - 联系人的 ID。
+     */
     _updateForContact: function(contactId) {
         const contact = UserManager.contacts[contactId];
         if (!contact || !this.detailsPanelEl) return;
@@ -191,6 +222,7 @@ const DetailsPanelUIManager = {
             else this.detailsStatusEl.textContent = ConnectionManager.isConnectedTo(contactId) ? '已连接' : '离线';
         }
 
+        // 根据联系人类型显示/隐藏特定区域
         if (contact.isSpecial) {
             if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'none';
             if (contact.isAI && contact.aboutDetails && this.aiContactAboutSectionEl) {
@@ -201,13 +233,18 @@ const DetailsPanelUIManager = {
                 this._setupAiTtsConfigSection(contact);
                 this.aiTtsConfigSectionEl.style.display = 'block';
             }
-        } else {
+        } else { // 普通联系人
             if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'block';
             if (this.deleteContactBtnDetailsEl) this.deleteContactBtnDetailsEl.onclick = () => ChatManager.deleteChat(contactId, 'contact');
             if (this.aiTtsConfigSectionEl) this.aiTtsConfigSectionEl.style.display = 'none';
         }
     },
 
+    /**
+     * @private
+     * 填充 AI 联系人的“关于”部分。
+     * @param {object} contact - AI 联系人对象。
+     */
     _populateAiAboutSection: function(contact) {
         if (this.aiContactAboutNameEl) this.aiContactAboutNameEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
         if (this.aiContactAboutNameSubEl) this.aiContactAboutNameSubEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
@@ -222,11 +259,18 @@ const DetailsPanelUIManager = {
         if (this.aiContactAboutTextEl) this.aiContactAboutTextEl.textContent = contact.aboutDetails.aboutText;
     },
 
+    /**
+     * @private
+     * 设置 AI 联系人的 TTS 配置部分，包括表单和可折叠区域。
+     * @param {object} contact - AI 联系人对象。
+     */
     _setupAiTtsConfigSection: function(contact) {
-        TtsUIManager.populateAiTtsConfigurationForm(contact, 'ttsConfigFormContainer'); // 使用 TtsUIManager
+        // 委托 TtsUIManager 填充表单
+        TtsUIManager.populateAiTtsConfigurationForm(contact, 'ttsConfigFormContainer');
 
+        // 绑定保存按钮事件
         if (this.saveAiTtsSettingsBtnDetailsEl) {
-            // 在添加新监听器之前移除旧的，以避免重复
+            // 为避免重复绑定，先移除旧的监听器
             if (TtsUIManager._boundSaveTtsListener) {
                 this.saveAiTtsSettingsBtnDetailsEl.removeEventListener('click', TtsUIManager._boundSaveTtsListener);
             }
@@ -234,13 +278,14 @@ const DetailsPanelUIManager = {
             this.saveAiTtsSettingsBtnDetailsEl.addEventListener('click', TtsUIManager._boundSaveTtsListener);
         }
 
-        if (this.aiTtsConfigHeaderEl) { // 主 TTS 部分的可折叠区域
+        // 绑定主 TTS 配置区域的可折叠事件
+        if (this.aiTtsConfigHeaderEl) {
             if (this._boundTtsConfigCollapseListener) {
                 this.aiTtsConfigHeaderEl.removeEventListener('click', this._boundTtsConfigCollapseListener);
             }
-            this._boundTtsConfigCollapseListener = function() { // 此处的 `this` 是 header 元素
+            this._boundTtsConfigCollapseListener = function() {
                 this.classList.toggle('active');
-                const content = this.nextElementSibling; // aiTtsConfigContentEl
+                const content = this.nextElementSibling;
                 const icon = this.querySelector('.collapse-icon');
                 if (content) {
                     if (content.style.display === "block" || content.style.display === "") {
@@ -254,10 +299,10 @@ const DetailsPanelUIManager = {
             };
             this.aiTtsConfigHeaderEl.addEventListener('click', this._boundTtsConfigCollapseListener);
 
-            // 确保主 TTS 可折叠部分的初始状态匹配
+            // 确保初始图标状态正确
             const icon = this.aiTtsConfigHeaderEl.querySelector('.collapse-icon');
             if (this.aiTtsConfigContentEl) {
-                if (this.aiTtsConfigContentEl.style.display === 'none') { // 检查是否初始折叠
+                if (this.aiTtsConfigContentEl.style.display === 'none') {
                     if(icon) icon.textContent = '▶';
                     this.aiTtsConfigHeaderEl.classList.remove('active');
                 } else {
@@ -268,6 +313,11 @@ const DetailsPanelUIManager = {
         }
     },
 
+    /**
+     * @private
+     * 专用于更新群组详情的内部方法。
+     * @param {string} groupId - 群组的 ID。
+     */
     _updateForGroup: function(groupId) {
         const group = GroupManager.groups[groupId];
         if (!group || !this.detailsPanelEl) return;
@@ -283,6 +333,7 @@ const DetailsPanelUIManager = {
         if (this.detailsGroupManagementEl) this.detailsGroupManagementEl.style.display = 'block';
         if (this.groupActionsDetailsEl) this.groupActionsDetailsEl.style.display = 'block';
 
+        // 根据用户是否为群主，显示不同的操作
         const isOwner = group.owner === UserManager.userId;
         if (this.addGroupMemberAreaEl) this.addGroupMemberAreaEl.style.display = isOwner ? 'block' : 'none';
         if (this.leftMembersAreaEl) this.leftMembersAreaEl.style.display = isOwner && group.leftMembers && group.leftMembers.length > 0 ? 'block' : 'none';
@@ -296,10 +347,15 @@ const DetailsPanelUIManager = {
             if(isOwner) this.dissolveGroupBtnDetailsEl.onclick = () => ChatManager.deleteChat(groupId, 'group');
         }
         this.updateDetailsPanelMembers(groupId);
+        // 群组聊天不显示 AI 相关部分
         if (this.aiContactAboutSectionEl) this.aiContactAboutSectionEl.style.display = 'none';
         if (this.aiTtsConfigSectionEl) this.aiTtsConfigSectionEl.style.display = 'none';
     },
 
+    /**
+     * 更新详情面板中的群组成员列表。
+     * @param {string} groupId - 群组的 ID。
+     */
     updateDetailsPanelMembers: function (groupId) {
         const group = GroupManager.groups[groupId];
         if (!group || !this.groupMemberListDetailsEl || !this.groupMemberCountEl || !this.contactsDropdownDetailsEl || !this.leftMemberListDetailsEl) return;
@@ -307,6 +363,7 @@ const DetailsPanelUIManager = {
         this.groupMemberListDetailsEl.innerHTML = '';
         this.groupMemberCountEl.textContent = group.members.length;
 
+        // 渲染当前成员列表
         group.members.forEach(memberId => {
             const member = UserManager.contacts[memberId] || {id: memberId, name: `用户 ${memberId.substring(0, 4)}`};
             const item = document.createElement('div');
@@ -323,6 +380,7 @@ const DetailsPanelUIManager = {
             btn.onclick = () => GroupManager.removeMemberFromGroup(groupId, btn.dataset.memberId);
         });
 
+        // 填充可添加的联系人下拉列表
         this.contactsDropdownDetailsEl.innerHTML = '<option value="">选择要添加的联系人...</option>';
         Object.values(UserManager.contacts).forEach(contact => {
             if (!group.members.includes(contact.id) && !(group.leftMembers?.find(lm => lm.id === contact.id)) && !(contact.isSpecial && contact.isAI)) {
@@ -333,13 +391,14 @@ const DetailsPanelUIManager = {
             }
         });
 
+        // 渲染已离开的成员列表（仅群主可见）
         this.leftMemberListDetailsEl.innerHTML = '';
         if (group.owner === UserManager.userId && group.leftMembers && group.leftMembers.length > 0 && this.leftMembersAreaEl) {
             group.leftMembers.forEach(leftMember => {
                 const item = document.createElement('div');
                 item.className = 'left-member-item-detail';
                 item.innerHTML = `<span>${Utils.escapeHtml(leftMember.name)} (离开于: ${Utils.formatDate(new Date(leftMember.leftTime))})</span>
-                                  <button class="re-add-member-btn-detail" data-member-id="${leftMember.id}" data-member-name="${Utils.escapeHtml(leftMember.name)}" title="重新添加成员">+</button>`;
+<button class="re-add-member-btn-detail" data-member-id="${leftMember.id}" data-member-name="${Utils.escapeHtml(leftMember.name)}" title="重新添加成员">+</button>`;
                 this.leftMemberListDetailsEl.appendChild(item);
             });
             this.leftMemberListDetailsEl.querySelectorAll('.re-add-member-btn-detail').forEach(btn => {
@@ -351,6 +410,9 @@ const DetailsPanelUIManager = {
         }
     },
 
+    /**
+     * 处理从详情面板添加成员到群组的操作。
+     */
     handleAddMemberToGroupDetails: function () {
         const groupId = ChatManager.currentChatId;
         if (!this.contactsDropdownDetailsEl) return;

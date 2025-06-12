@@ -1,11 +1,29 @@
-// DBManager.js 无需更改 (已定义良好且少于 500 行) -- 已翻译
+/**
+ * @file DBManager.js
+ * @description 数据库管理器，封装了对 IndexedDB 的所有操作，提供了一个简单的 Promise-based API 来进行数据持久化。
+ * @module DBManager
+ * @exports {object} DBManager - 对外暴露的单例对象，包含数据库操作方法。
+ * @property {function} init - 初始化并打开数据库连接。
+ * @property {function} setItem - 在指定的对象存储中设置（添加或更新）一个项目。
+ * @property {function} getItem - 从指定的对象存储中获取一个项目。
+ * @property {function} getAllItems - 获取指定对象存储中的所有项目。
+ * @property {function} removeItem - 从指定的对象存储中移除一个项目。
+ * @property {function} clearStore - 清空指定的对象存储。
+ * @dependencies Utils
+ * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写)
+ */
 const DBManager = {
     db: null,
     dbName: 'p2pModernChatDB',
-    dbVersion: 2,
+    dbVersion: 2, // 数据库版本号
 
+    /**
+     * 初始化并打开 IndexedDB 数据库。如果数据库不存在或版本较低，会触发 onupgradeneeded 来创建或升级表结构。
+     * @returns {Promise<IDBDatabase>} 解析为数据库实例的 Promise。
+     */
     init: function() {
         return new Promise((resolve, reject) => {
+            // 如果数据库已初始化，直接返回实例
             if (this.db) {
                 resolve(this.db);
                 return;
@@ -20,9 +38,11 @@ const DBManager = {
                 Utils.log('数据库已成功打开。', Utils.logLevels.INFO);
                 resolve(this.db);
             };
+            // 首次创建或版本升级时调用
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
                 Utils.log('需要升级数据库。旧版本: ' + event.oldVersion + ', 新版本: ' + event.newVersion, Utils.logLevels.INFO);
+                // 检查并创建需要的对象存储（表）
                 if (!db.objectStoreNames.contains('user')) {
                     db.createObjectStore('user', { keyPath: 'id' });
                 }
@@ -40,11 +60,25 @@ const DBManager = {
         });
     },
 
+    /**
+     * @private
+     * 获取一个事务中的对象存储实例。
+     * @param {string} storeName - 对象存储的名称。
+     * @param {IDBTransactionMode} [mode='readonly'] - 事务模式 ('readonly' 或 'readwrite')。
+     * @returns {IDBObjectStore}
+     * @throws {Error} 如果数据库未初始化。
+     */
     _getStore: function(storeName, mode = 'readonly') {
         if (!this.db) throw new Error('数据库未初始化。');
         return this.db.transaction(storeName, mode).objectStore(storeName);
     },
 
+    /**
+     * 在指定的对象存储中添加或更新一个项目。
+     * @param {string} storeName - 对象存储的名称。
+     * @param {object} item - 要存储的项目。
+     * @returns {Promise<IDBValidKey>} 解析为存储项目的键的 Promise。
+     */
     setItem: function(storeName, item) {
         return new Promise((resolve, reject) => {
             try {
@@ -58,6 +92,12 @@ const DBManager = {
         });
     },
 
+    /**
+     * 根据键从指定的对象存储中获取一个项目。
+     * @param {string} storeName - 对象存储的名称。
+     * @param {IDBValidKey} key - 要获取的项目的键。
+     * @returns {Promise<object|undefined>} 解析为找到的项目或 undefined 的 Promise。
+     */
     getItem: function(storeName, key) {
         return new Promise((resolve, reject) => {
             try {
@@ -71,6 +111,11 @@ const DBManager = {
         });
     },
 
+    /**
+     * 获取指定对象存储中的所有项目。
+     * @param {string} storeName - 对象存储的名称。
+     * @returns {Promise<Array<object>>} 解析为包含所有项目的数组的 Promise。
+     */
     getAllItems: function(storeName) {
         return new Promise((resolve, reject) => {
             try {
@@ -84,6 +129,12 @@ const DBManager = {
         });
     },
 
+    /**
+     * 根据键从指定的对象存储中移除一个项目。
+     * @param {string} storeName - 对象存储的名称。
+     * @param {IDBValidKey} key - 要移除的项目的键。
+     * @returns {Promise<void>} 操作完成时解析的 Promise。
+     */
     removeItem: function(storeName, key) {
         return new Promise((resolve, reject) => {
             try {
@@ -97,6 +148,11 @@ const DBManager = {
         });
     },
 
+    /**
+     * 清空指定的对象存储中的所有项目。
+     * @param {string} storeName - 要清空的对象存储的名称。
+     * @returns {Promise<void>} 操作完成时解析的 Promise。
+     */
     clearStore: function(storeName) {
         return new Promise((resolve, reject) => {
             try {

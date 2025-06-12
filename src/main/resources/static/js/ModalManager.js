@@ -1,9 +1,18 @@
-// 新文件: ModalManager.js (已翻译)
-// 职责:
-// - 管理所有模态框的显示状态。
-// - 处理通用的确认对话框。
-// - 管理与通话相关的模态框 UI（请求、呼叫中）。
-// - 管理开源信息模态框。
+/**
+ * @file ModalManager.js
+ * @description 模态框管理器，负责集中处理应用中所有模态框的显示、隐藏和相关逻辑。
+ *              包括设置、新建联系人/群组、通话、确认对话框以及开源信息提示等。
+ * @module ModalManager
+ * @exports {object} ModalManager - 对外暴露的单例对象，包含所有模态框管理方法。
+ * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
+ * @property {function} toggleModal - 通用的显示/隐藏模态框的方法。
+ * @property {function} showConfirmationModal - 显示一个通用的确认对话框。
+ * @property {function} showCallingModal - 显示“呼叫中”的模态框。
+ * @property {function} showCallRequest - 显示来电请求的模态框。
+ * @property {function} showOpenSourceInfoModal - 显示开源信息提示模态框。
+ * @dependencies Utils, NotificationManager, UserManager, GroupManager, AppInitializer, VideoCallManager
+ * @dependents AppInitializer (进行初始化), 各个模块在需要显示模态框时调用。
+ */
 const ModalManager = {
     // 开源信息模态框元素
     openSourceInfoModal: null,
@@ -23,42 +32,41 @@ const ModalManager = {
     callingModalCancelBtn: null,
     videoCallRequestModal: null,
 
+    /**
+     * 初始化模态框管理器，获取所有模态框的 DOM 引用并绑定其内部的通用事件。
+     */
     init: function() {
-        // 开源信息模态框
+        // --- 开源信息模态框 ---
         this.openSourceInfoModal = document.getElementById('openSourceInfoModal');
         this.closeOpenSourceInfoModalBtn = document.getElementById('closeOpenSourceInfoModalBtn');
         this.permanentlyCloseOpenSourceInfoModalBtn = document.getElementById('permanentlyCloseOpenSourceInfoModalBtn');
         this.openSourceModalTimerSpan = document.getElementById('openSourceModalTimer');
         this._bindOpenSourceInfoModalEvents();
 
-        // 主菜单模态框
+        // --- 主菜单/设置模态框 ---
         this.mainMenuModal = document.getElementById('mainMenuModal');
         const closeMainMenuBtn = document.querySelector('.close-modal-btn[data-modal-id="mainMenuModal"]');
         if (closeMainMenuBtn) closeMainMenuBtn.addEventListener('click', () => this.toggleModal('mainMenuModal', false));
         document.getElementById('mainMenuBtn').addEventListener('click', () => {
             this.toggleModal('mainMenuModal', true);
-            // 打开主菜单时刷新网络状态
-            if (typeof AppInitializer !== 'undefined' && AppInitializer.refreshNetworkStatusUI) { // 检查 AppInitializer 是否已定义
+            // 打开主菜单时刷新相关 UI 状态
+            if (typeof AppInitializer !== 'undefined' && AppInitializer.refreshNetworkStatusUI) {
                 AppInitializer.refreshNetworkStatusUI();
             }
-            // 如果 SettingsUIManager 可用，则更新设置 UI 元素
             if (typeof SettingsUIManager !== 'undefined') {
                 SettingsUIManager.updateMainMenuControlsState();
             }
         });
 
-
-        // 新建聊天/群组模态框
+        // --- 新建联系人/群组模态框 ---
         this.newContactGroupModal = document.getElementById('newContactGroupModal');
         const closeNewContactGroupModalBtn = document.querySelector('.close-modal-btn[data-modal-id="newContactGroupModal"]');
         if (closeNewContactGroupModalBtn) closeNewContactGroupModalBtn.addEventListener('click', () => this.toggleModal('newContactGroupModal', false));
-
         const newChatFab = document.getElementById('newChatFab');
         if (newChatFab) newChatFab.addEventListener('click', () => this.toggleModal('newContactGroupModal', true));
-
+        // 添加新联系人
         const confirmNewContactBtn = document.getElementById('confirmNewContactBtn');
         if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', () => {
-            // 此逻辑原在 UIManager.handleAddNewContact
             const peerId = document.getElementById('newPeerIdInput').value.trim();
             const peerName = document.getElementById('newPeerNameInput').value.trim();
             if (!peerId) {
@@ -70,10 +78,9 @@ const ModalManager = {
             document.getElementById('newPeerNameInput').value = '';
             this.toggleModal('newContactGroupModal', false);
         });
-
+        // 创建新群组
         const confirmNewGroupBtnModal = document.getElementById('confirmNewGroupBtnModal');
         if (confirmNewGroupBtnModal) confirmNewGroupBtnModal.addEventListener('click', () => {
-            // 此逻辑原在 UIManager.handleCreateNewGroup
             const groupName = document.getElementById('newGroupNameInput').value.trim();
             if (!groupName) {
                 NotificationManager.showNotification('群组名称是必填项。', 'warning');
@@ -84,18 +91,19 @@ const ModalManager = {
             this.toggleModal('newContactGroupModal', false);
         });
 
-
-        // 呼叫中模态框元素
+        // --- 通话相关模态框 ---
         this.callingModal = document.getElementById('callingModal');
         this.callingModalTitle = document.getElementById('callingModalTitle');
         this.callingModalText = document.getElementById('callingModalText');
         this.callingModalAvatar = document.getElementById('callingModalAvatar');
         this.callingModalCancelBtn = document.getElementById('callingModalCancelBtn');
-
-        // 通话请求模态框元素
         this.videoCallRequestModal = document.getElementById('videoCallRequest');
     },
 
+    /**
+     * @private
+     * 绑定开源信息模态框的内部事件。
+     */
     _bindOpenSourceInfoModalEvents: function () {
         if (this.closeOpenSourceInfoModalBtn) {
             this.closeOpenSourceInfoModalBtn.addEventListener('click', () => this.hideOpenSourceInfoModal());
@@ -108,6 +116,10 @@ const ModalManager = {
         }
     },
 
+    /**
+     * 显示开源信息提示模态框，并启动自动关闭倒计时。
+     * 如果用户已选择“不再显示”，则不执行任何操作。
+     */
     showOpenSourceInfoModal: function () {
         if (localStorage.getItem('hideOpenSourceModalPermanently') === 'true') {
             return;
@@ -136,6 +148,9 @@ const ModalManager = {
         }
     },
 
+    /**
+     * 隐藏开源信息模态框，并清除相关的定时器。
+     */
     hideOpenSourceInfoModal: function () {
         if (this.openSourceInfoModal) {
             this.openSourceInfoModal.style.display = 'none';
@@ -146,8 +161,13 @@ const ModalManager = {
         this.openSourceModalCountdownInterval = null;
     },
 
+    /**
+     * 通用的显示或隐藏模态框的方法。
+     * @param {string} modalId - 目标模态框的 DOM ID。
+     * @param {boolean} show - true 为显示，false 为隐藏。
+     */
     toggleModal: function (modalId, show) {
-        const modal = document.getElementById(modalId); // 动态获取，因为它们可能不都是属性
+        const modal = document.getElementById(modalId);
         if (modal) {
             modal.style.display = show ? 'flex' : 'none';
         } else {
@@ -155,6 +175,18 @@ const ModalManager = {
         }
     },
 
+    /**
+     * 动态创建一个通用的确认对话框。
+     * @param {string} message - 对话框中显示的消息文本。
+     * @param {function} onConfirm - 用户点击确认按钮时执行的回调函数。
+     * @param {function|null} [onCancel=null] - 用户点击取消按钮时执行的回调函数。
+     * @param {object} [options={}] - 对话框的自定义选项。
+     * @param {string} [options.title='确认操作'] - 对话框标题。
+     * @param {string} [options.confirmText='确认'] - 确认按钮的文本。
+     * @param {string} [options.cancelText='取消'] - 取消按钮的文本。
+     * @param {string} [options.confirmClass='btn-danger'] - 确认按钮的 CSS 类。
+     * @param {string} [options.cancelClass='btn-secondary'] - 取消按钮的 CSS 类。
+     */
     showConfirmationModal: function (message, onConfirm, onCancel = null, options = {}) {
         const existingModal = document.getElementById('genericConfirmationModal');
         if (existingModal) {
@@ -210,6 +242,13 @@ const ModalManager = {
         document.body.appendChild(modal);
     },
 
+    /**
+     * 显示“呼叫中”的模态框。
+     * @param {string} peerName - 对方的名称。
+     * @param {function} onCancelCall - 用户点击取消呼叫按钮时执行的回调。
+     * @param {function} onStopMusicOnly - （已废弃，但保留以兼容旧调用）用于停止音乐的回调。
+     * @param {string} callType - 通话类型（如 "视频通话", "屏幕共享"）。
+     */
     showCallingModal: function (peerName, onCancelCall, onStopMusicOnly, callType) {
         if (!this.callingModal || !this.callingModalTitle || !this.callingModalText || !this.callingModalAvatar || !this.callingModalCancelBtn) {
             Utils.log("呼叫中模态框元素未找到！", Utils.logLevels.ERROR);
@@ -220,8 +259,7 @@ const ModalManager = {
         this.callingModalText.textContent = `正在联系 ${Utils.escapeHtml(peerName)}...`;
 
         let avatarContentHtml;
-        const peerContact = UserManager.contacts[VideoCallManager.currentPeerId]; // 假设 VideoCallManager.currentPeerId 已设置
-
+        const peerContact = UserManager.contacts[VideoCallManager.currentPeerId];
         let fallbackText = (peerContact && peerContact.avatarText) ? Utils.escapeHtml(peerContact.avatarText) :
             (peerName && peerName.length > 0) ? Utils.escapeHtml(peerName.charAt(0).toUpperCase()) : '?';
 
@@ -240,6 +278,9 @@ const ModalManager = {
         this.callingModal.style.display = 'flex';
     },
 
+    /**
+     * 隐藏“呼叫中”的模态框。
+     */
     hideCallingModal: function () {
         if (this.callingModal && this.callingModal.style.display !== 'none') {
             this.callingModal.style.display = 'none';
@@ -247,6 +288,12 @@ const ModalManager = {
         }
     },
 
+    /**
+     * 显示来电请求的模态框。
+     * @param {string} peerId - 来电方的 ID。
+     * @param {boolean} [audioOnly=false] - 是否为纯音频通话。
+     * @param {boolean} [isScreenShare=false] - 是否为屏幕共享请求。
+     */
     showCallRequest: function (peerId, audioOnly = false, isScreenShare = false) {
         if (!this.videoCallRequestModal) return;
 
@@ -255,7 +302,6 @@ const ModalManager = {
         const avatarEl = this.videoCallRequestModal.querySelector('.video-call-avatar');
         const acceptBtn = this.videoCallRequestModal.querySelector('.accept-call');
         const rejectBtn = this.videoCallRequestModal.querySelector('.reject-call');
-
 
         const peerName = UserManager.contacts[peerId]?.name || `用户 ${peerId.substring(0, 4)}`;
         let avatarContentHtml = (UserManager.contacts[peerId]?.name?.charAt(0).toUpperCase() || 'P');
@@ -281,6 +327,9 @@ const ModalManager = {
         this.videoCallRequestModal.style.display = 'flex';
     },
 
+    /**
+     * 隐藏来电请求的模态框。
+     */
     hideCallRequest: function () {
         if (this.videoCallRequestModal) this.videoCallRequestModal.style.display = 'none';
     }
