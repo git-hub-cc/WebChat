@@ -69,10 +69,10 @@ const Config = {
      * 这些是默认值，UI 管理器将从 localStorage 加载用户配置的值来覆盖它们。
      */
     server: {
-        // 信令服务器的 WebSocket 地址
         signalingServerUrl: 'ws://localhost:8080/signaling',
-        // 默认的 AI 对话 API 端点
+        // These are defaults; UIManager will load user-configured values from localStorage.
         apiEndpoint: 'http://localhost:8080/v1/chat/completions',
+        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids',
         // 默认的 API 密钥
         api_key: "Bearer sk-xxxx",
         // 默认的 AI 模型名称

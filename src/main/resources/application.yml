@@ -35,6 +35,8 @@ api:
 allowed:
   origins:
     - "https://175.178.216.24"
+    - "https://ppmc.club"
+    - "https://www.ppmc.club"
     - "http://localhost:8080"
     - "http://localhost:3000" # 示例：为本地前端开发环境添加源
 

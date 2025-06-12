@@ -10,8 +10,8 @@ from typing import List, Dict, Set
 # 1. 配置 (Configuration)
 # ==============================================================================
 
-# 目标目录：Spring Boot 项目的静态 JS 资源路径 (相对于项目根目录)
-TARGET_DIR: str = "../src/main/resources/static/js"
+# 目标目录：Spring Boot 项目的文件
+TARGET_DIR: str = "../src/main/java/club/ppmc"
 
 # 输出文件名
 OUTPUT_FILE: str = "data.md"
@@ -21,7 +21,7 @@ REQUIRED_LIBS: List[str] = ["rich"] # Pillow 和 rjsmin 作为示例保留，可
 # REQUIRED_LIBS: List[str] = ["rich", "Pillow", "rjsmin"]
 
 # 扫描时要忽略的文件扩展名和特定文件名
-EXCLUDED_EXTENSIONS: Set[str] = {".md", ".py", ".log", ".DS_Store"}
+EXCLUDED_EXTENSIONS: Set[str] = { ".log", ".DS_Store"}
 EXCLUDED_FILES: Set[str] = {OUTPUT_FILE, os.path.basename(__file__)}
 
 

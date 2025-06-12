@@ -10,6 +10,7 @@
  * @property {function} showCallingModal - 显示“呼叫中”的模态框。
  * @property {function} showCallRequest - 显示来电请求的模态框。
  * @property {function} showOpenSourceInfoModal - 显示开源信息提示模态框。
+ * @property {function} showAddContactModalWithId - 显示添加联系人模态框并预填用户ID。
  * @dependencies Utils, NotificationManager, UserManager, GroupManager, AppInitializer, VideoCallManager
  * @dependents AppInitializer (进行初始化), 各个模块在需要显示模态框时调用。
  */
@@ -67,27 +68,30 @@ const ModalManager = {
         // 添加新联系人
         const confirmNewContactBtn = document.getElementById('confirmNewContactBtn');
         if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', () => {
-            const peerId = document.getElementById('newPeerIdInput').value.trim();
-            const peerName = document.getElementById('newPeerNameInput').value.trim();
+            const peerIdInput = document.getElementById('newPeerIdInput'); // 保存引用以便清空
+            const peerNameInput = document.getElementById('newPeerNameInput'); // 保存引用以便清空
+            const peerId = peerIdInput.value.trim();
+            const peerName = peerNameInput.value.trim();
             if (!peerId) {
                 NotificationManager.showNotification('对方 ID 是必填项。', 'warning');
                 return;
             }
             UserManager.addContact(peerId, peerName || `用户 ${peerId.substring(0, 4)}`);
-            document.getElementById('newPeerIdInput').value = '';
-            document.getElementById('newPeerNameInput').value = '';
+            peerIdInput.value = ''; // 清空输入框
+            peerNameInput.value = ''; // 清空输入框
             this.toggleModal('newContactGroupModal', false);
         });
         // 创建新群组
         const confirmNewGroupBtnModal = document.getElementById('confirmNewGroupBtnModal');
         if (confirmNewGroupBtnModal) confirmNewGroupBtnModal.addEventListener('click', () => {
-            const groupName = document.getElementById('newGroupNameInput').value.trim();
+            const groupNameInput = document.getElementById('newGroupNameInput'); // 保存引用以便清空
+            const groupName = groupNameInput.value.trim();
             if (!groupName) {
                 NotificationManager.showNotification('群组名称是必填项。', 'warning');
                 return;
             }
             GroupManager.createGroup(groupName);
-            document.getElementById('newGroupNameInput').value = '';
+            groupNameInput.value = ''; // 清空输入框
             this.toggleModal('newContactGroupModal', false);
         });
 
@@ -332,5 +336,22 @@ const ModalManager = {
      */
     hideCallRequest: function () {
         if (this.videoCallRequestModal) this.videoCallRequestModal.style.display = 'none';
+    },
+
+    /**
+     * @description 显示添加新联系人模态框，并预填用户ID。
+     * @param {string} userId - 要预填的用户ID。
+     */
+    showAddContactModalWithId: function(userId) {
+        this.toggleModal('newContactGroupModal', true);
+        const peerIdInput = document.getElementById('newPeerIdInput');
+        const peerNameInput = document.getElementById('newPeerNameInput');
+        if (peerIdInput) {
+            peerIdInput.value = userId;
+        }
+        if (peerNameInput) {
+            peerNameInput.value = ''; // 清空昵称，让用户填写
+            peerNameInput.focus();
+        }
     }
 };

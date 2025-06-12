@@ -5,13 +5,16 @@
  * - 线程安全地处理用户注册、注销和查询操作。
  * - 维护用户ID到`WebSocketSession`的正向映射和会话ID到用户ID的反向映射，以实现高效查找。
  * - 处理会话的清理逻辑，包括因断开或被新会话取代而产生的陈旧会话。
+ * - 提供获取当前在线用户ID列表的功能。
  *
  * 关联:
  * - `SignalingWebSocketHandler`: 依赖此服务来管理用户注册和消息转发。
- * - `MonitorController`: 依赖此服务来获取在线用户总数。
+ * - `MonitorController`: 依赖此服务来获取在线用户总数和用户ID列表。
  */
 package club.ppmc.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
@@ -121,6 +124,32 @@ public class UserSessionService {
      * @return 在线用户数。
      */
     public int getOnlineUserCount() {
+        // 清理已关闭但未被移除的会话，确保计数准确
+        userSessions.values().removeIf(s -> !s.isOpen());
         return userSessions.size();
+    }
+
+    /**
+     * 获取当前所有在线用户的ID列表。
+     * 此方法会先清理掉所有已关闭的会话，然后返回当前活跃用户的ID集合。
+     *
+     * @return 当前在线用户的ID列表。返回的是一个新创建的列表副本。
+     */
+    public List<String> getOnlineUserIds() {
+        // 清理已关闭但未被移除的会话，确保列表准确性
+        // 遍历entrySet并使用Iterator的remove方法，避免ConcurrentModificationException
+        // 并且确保在移除userSessions条目时，也同步移除sessionToUserMap中的对应条目
+        var iterator = userSessions.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, WebSocketSession> entry = iterator.next();
+            if (!entry.getValue().isOpen()) {
+                sessionToUserMap.remove(entry.getValue().getId()); // 从反向映射中移除
+                iterator.remove(); // 从主映射中移除
+                logger.debug("清理不活跃会话: 用户ID '{}', 会话ID '{}'", entry.getKey(), entry.getValue().getId());
+            }
+        }
+        var onlineIds = new ArrayList<>(userSessions.keySet());
+        logger.debug("获取在线用户ID列表，数量: {}", onlineIds.size());
+        return onlineIds;
     }
 }

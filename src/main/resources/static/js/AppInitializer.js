@@ -6,7 +6,7 @@
  * @property {function} init - 应用程序的主初始化函数，是整个应用的启动点。
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
  *               LayoutManager, ModalManager, SettingsUIManager, ChatAreaUIManager, SidebarUIManager,
- *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationManager, Utils, EventEmitter
+ *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationManager, Utils, EventEmitter, PeopleLobbyManager
  * @dependents window.onload (在 index.html 中通过 <script> 标签的 `window.addEventListener` 调用)
  */
 const AppInitializer = {
@@ -47,6 +47,7 @@ const AppInitializer = {
             DetailsPanelUIManager.init();
             VideoCallUIManager.init();
             MediaUIManager.init();
+            PeopleLobbyManager.init(); // 新增
 
             await this.refreshNetworkStatusUI();
             this.startNetworkMonitoring();
@@ -73,7 +74,7 @@ const AppInitializer = {
             // 即使在回退模式下，也尝试初始化 UI 管理器以保证界面可用
             ModalManager.init(); SettingsUIManager.init(); LayoutManager.init();
             ChatAreaUIManager.init(); SidebarUIManager.init(); DetailsPanelUIManager.init();
-            VideoCallUIManager.init(); MediaUIManager.init();
+            VideoCallUIManager.init(); MediaUIManager.init(); PeopleLobbyManager.init(); // 新增
 
             await this.refreshNetworkStatusUI(); this.startNetworkMonitoring();
             MediaManager.initVoiceRecording(); VideoCallManager.init();

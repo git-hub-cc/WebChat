@@ -1698,6 +1698,29 @@ input:checked + .slider::before {
     }
 }
 
+/* 刷新按钮加载动画 */
+#peopleLobbyRefreshBtn.loading {
+    animation: spin 1s linear infinite; /* 复用已有的 spin 动画 */
+    pointer-events: none; /* 加载时禁止点击 */
+    opacity: 0.7;
+}
+
+/* 如果需要，可以为人员大厅的列表项添加一些特定样式 */
+#peopleLobbyList .chat-list-item {
+    /* 可以在这里覆盖或添加特定于大厅列表项的样式 */
+}
+
+/* 人员大厅列表容器的flex属性确保ul填满剩余空间并可滚动 */
+.lobby-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* 确保 lobby-content 填满其父容器（如果父容器有确定高度） */
+}
+#peopleLobbyList {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
 
 /* ========================================================================== */
 /* 响应式设计 (Responsive Design) */

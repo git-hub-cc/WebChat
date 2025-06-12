@@ -1,22 +1,28 @@
-
 /**
  * @file DetailsPanelUIManager.js
- * @description 管理右侧详情面板的 UI 元素和交互。
- *              根据当前选择的聊天类型（联系人、群组、AI联系人），动态显示和更新相关信息、操作按钮和配置项。
+ * @description 管理右侧面板的 UI 元素和交互，包括聊天详情和人员大厅。
  * @module DetailsPanelUIManager
- * @exports {object} DetailsPanelUIManager - 对外暴露的单例对象，包含管理详情面板 UI 的所有方法。
- * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
- * @property {function} toggleDetailsPanel - 显示或隐藏详情面板。
- * @property {function} updateDetailsPanel - 根据当前聊天 ID 和类型更新面板内容。
- * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationManager, Utils, ConnectionManager
- * @dependents AppInitializer (进行初始化), ChatManager (打开新聊天时调用), ChatAreaUIManager (点击详情按钮时调用)
+ * @exports {object} DetailsPanelUIManager - 对外暴露的单例对象。
+ * @property {function} init - 初始化模块。
+ * @property {function} showMainDetailsContent - 显示聊天详情内容。
+ * @property {function} showPeopleLobbyContent - 显示人员大厅内容。
+ * @property {function} hideSidePanel - 隐藏整个右侧面板区域。
+ * @property {function} updateDetailsPanel - 更新主聊天详情面板内容。
+ * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationManager, Utils, ConnectionManager, PeopleLobbyManager
+ * @dependents AppInitializer (进行初始化), ChatAreaUIManager (点击按钮时调用)
  */
 const DetailsPanelUIManager = {
-    isDetailsPanelVisible: false,
-    _boundTtsConfigCollapseListener: null, // 用于主 TTS 配置区域的可折叠事件监听器
+    isPanelAreaVisible: false, // 指示整个右侧面板区域是否可见
+    currentView: null, // 'details' 或 'lobby' 或 null
+    _boundTtsConfigCollapseListener: null,
 
-    // 缓存的 DOM 元素引用
     detailsPanelEl: null,
+    detailsPanelTitleEl: null,
+    detailsPanelContentEl: null, // 主详情内容容器
+    peopleLobbyContentEl: null, // 人员大厅内容容器
+    closeDetailsBtnMainEl: null, // 通用的关闭按钮
+
+    // 主详情面板内的元素
     detailsNameEl: null,
     detailsIdEl: null,
     detailsAvatarEl: null,
@@ -38,7 +44,6 @@ const DetailsPanelUIManager = {
     aiTtsConfigHeaderEl: null,
     aiTtsConfigContentEl: null,
     saveAiTtsSettingsBtnDetailsEl: null,
-    closeDetailsBtnMainEl: null,
     groupMemberListDetailsEl: null,
     groupMemberCountEl: null,
     addGroupMemberAreaEl: null,
@@ -46,17 +51,21 @@ const DetailsPanelUIManager = {
     contactsDropdownDetailsEl: null,
     addMemberBtnDetailsEl: null,
     leftMemberListDetailsEl: null,
-
-    // 新增：用于 "致谢" 可折叠部分的元素
     ttsAttributionHeaderEl: null,
     ttsAttributionContentEl: null,
 
 
     /**
-     * 初始化模块，获取所有需要的 DOM 元素引用并绑定核心事件。
+     * 初始化模块。
      */
     init: function() {
         this.detailsPanelEl = document.getElementById('detailsPanel');
+        this.detailsPanelTitleEl = document.getElementById('detailsPanelTitle');
+        this.detailsPanelContentEl = document.getElementById('detailsPanelContent');
+        this.peopleLobbyContentEl = document.getElementById('peopleLobbyContent');
+        this.closeDetailsBtnMainEl = document.getElementById('closeDetailsBtnMain');
+
+        // 初始化主详情面板的元素引用
         this.detailsNameEl = document.getElementById('detailsName');
         this.detailsIdEl = document.getElementById('detailsId');
         this.detailsAvatarEl = document.getElementById('detailsAvatar');
@@ -78,7 +87,6 @@ const DetailsPanelUIManager = {
         this.aiTtsConfigHeaderEl = document.getElementById('aiTtsConfigHeader');
         this.aiTtsConfigContentEl = document.getElementById('aiTtsConfigContent');
         this.saveAiTtsSettingsBtnDetailsEl = document.getElementById('saveAiTtsSettingsBtnDetails');
-        this.closeDetailsBtnMainEl = document.getElementById('closeDetailsBtnMain');
         this.groupMemberListDetailsEl = document.getElementById('groupMemberListDetails');
         this.groupMemberCountEl = document.getElementById('groupMemberCount');
         this.addGroupMemberAreaEl = document.getElementById('addGroupMemberArea');
@@ -86,8 +94,6 @@ const DetailsPanelUIManager = {
         this.contactsDropdownDetailsEl = document.getElementById('contactsDropdownDetails');
         this.addMemberBtnDetailsEl = document.getElementById('addMemberBtnDetails');
         this.leftMemberListDetailsEl = document.getElementById('leftMemberListDetails');
-
-        // 初始化 "致谢" 可折叠部分的元素
         this.ttsAttributionHeaderEl = document.getElementById('ttsAttributionCollapsibleTrigger');
         this.ttsAttributionContentEl = document.getElementById('ttsAttributionCollapsibleContent');
 
@@ -95,11 +101,11 @@ const DetailsPanelUIManager = {
     },
 
     /**
-     * 绑定详情面板内的 UI 事件监听器。
+     * 绑定事件。
      */
     bindEvents: function() {
         if (this.closeDetailsBtnMainEl) {
-            this.closeDetailsBtnMainEl.addEventListener('click', () => this.toggleDetailsPanel(false));
+            this.closeDetailsBtnMainEl.addEventListener('click', () => this.hideSidePanel());
         }
         if (this.addMemberBtnDetailsEl) {
             this.addMemberBtnDetailsEl.addEventListener('click', () => this.handleAddMemberToGroupDetails());
@@ -132,48 +138,123 @@ const DetailsPanelUIManager = {
                 this.ttsAttributionHeaderEl.classList.add('active');
             }
         }
+        // 事件监听器在 ChatAreaUIManager 中处理，这里不再重复绑定
     },
 
     /**
-     * 显示或隐藏详情面板。
-     * @param {boolean} show - true 为显示，false 为隐藏。
+     * @description 统一控制右侧面板的显示。
+     * @param {boolean} show - 是否显示面板。
+     * @param {string} [viewType=null] - 要显示的视图类型 ('details' 或 'lobby')。
      */
-    toggleDetailsPanel: function (show) {
+    _setPanelVisibility: function(show, viewType = null) {
         const appContainer = document.querySelector('.app-container');
-        this.isDetailsPanelVisible = show;
+        this.isPanelAreaVisible = show;
 
         if (show) {
-            if (!ChatManager.currentChatId) {
-                this.isDetailsPanelVisible = false;
-                return;
-            }
             if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'flex';
             if (appContainer) appContainer.classList.add('show-details');
-            this.updateDetailsPanel(ChatManager.currentChatId, ChatManager.currentChatId.startsWith('group_') ? 'group' : 'contact');
+
+            if (viewType === 'details') {
+                if (this.peopleLobbyContentEl) this.peopleLobbyContentEl.style.display = 'none';
+                if (PeopleLobbyManager) PeopleLobbyManager.hide(); // 确保 PeopleLobbyManager 内部状态也更新
+                if (this.detailsPanelContentEl) this.detailsPanelContentEl.style.display = 'block'; // 或者 'flex'
+                this.currentView = 'details';
+            } else if (viewType === 'lobby') {
+                if (this.detailsPanelContentEl) this.detailsPanelContentEl.style.display = 'none';
+                if (this.peopleLobbyContentEl) this.peopleLobbyContentEl.style.display = 'flex'; // lobby-content 使用 flex
+                this.currentView = 'lobby';
+            }
         } else {
+            if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'none';
             if (appContainer) appContainer.classList.remove('show-details');
-            // 使用 setTimeout 配合 CSS 过渡效果
-            setTimeout(() => {
-                if (!this.isDetailsPanelVisible && this.detailsPanelEl) this.detailsPanelEl.style.display = 'none';
-            }, 300);
+            this.currentView = null;
         }
     },
 
     /**
-     * 根据当前聊天 ID 和类型更新详情面板的内容。
+     * @description 显示聊天详情内容。
+     */
+    showMainDetailsContent: function() {
+        if (!ChatManager.currentChatId) {
+            Utils.log("DetailsPanelUIManager: 无法显示详情，没有选中的聊天。", Utils.logLevels.INFO);
+            this.hideSidePanel(); // 如果没有当前聊天，则隐藏整个面板
+            return;
+        }
+        this.updateDetailsPanel(ChatManager.currentChatId, ChatManager.currentChatId.startsWith('group_') ? 'group' : 'contact');
+        this._setPanelVisibility(true, 'details');
+        Utils.log("DetailsPanelUIManager: 显示聊天详情视图。", Utils.logLevels.DEBUG);
+    },
+
+    /**
+     * @description 显示人员大厅内容。
+     * @returns {Promise<void>}
+     */
+    showPeopleLobbyContent: async function() {
+        if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = '人员大厅';
+        if (PeopleLobbyManager) {
+            await PeopleLobbyManager.show(); // PeopleLobbyManager.show() 会处理其内容的显示
+        }
+        this._setPanelVisibility(true, 'lobby');
+        Utils.log("DetailsPanelUIManager: 显示人员大厅视图。", Utils.logLevels.DEBUG);
+    },
+
+    /**
+     * @description 切换聊天详情面板的可见性（如果当前显示的是大厅，则切换到详情）。
+     */
+    toggleChatDetailsView: function() {
+        if (this.isPanelAreaVisible && this.currentView === 'details') {
+            this.hideSidePanel();
+        } else {
+            this.showMainDetailsContent();
+        }
+    },
+
+    /**
+     * @description 切换人员大厅的可见性（如果当前显示的是详情，则切换到大厅）。
+     */
+    togglePeopleLobbyView: function() {
+        if (this.isPanelAreaVisible && this.currentView === 'lobby') {
+            this.hideSidePanel();
+        } else {
+            this.showPeopleLobbyContent();
+        }
+    },
+
+
+    /**
+     * @description 隐藏整个右侧面板区域。
+     */
+    hideSidePanel: function () {
+        this._setPanelVisibility(false);
+        // 恢复默认标题，或根据需要清除
+        if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = '聊天信息';
+        Utils.log("DetailsPanelUIManager: 右侧面板已隐藏。", Utils.logLevels.DEBUG);
+    },
+
+    /**
+     * @description （旧方法，重命名为 toggleChatDetailsView 以明确其功能）
+     * @param {boolean} show - true 为显示，false 为隐藏。
+     * @deprecated Prefer toggleChatDetailsView or hideSidePanel.
+     */
+    toggleDetailsPanel: function (show) {
+        this.toggleChatDetailsView();
+    },
+
+
+    /**
+     * 更新主聊天详情面板的内容。
      * @param {string} chatId - 当前聊天的 ID。
      * @param {string} type - 聊天类型 ('contact' 或 'group')。
      */
     updateDetailsPanel: function (chatId, type) {
-        if (!this.detailsPanelEl) return;
+        if (!this.detailsPanelEl || !this.detailsPanelContentEl) return;
+
         this.detailsPanelEl.className = 'details-panel'; // 重置面板类名
 
-        // 先隐藏所有可选部分，再根据类型显示
         [this.currentChatActionsDetailsEl, this.contactActionsDetailsEl, this.detailsGroupManagementEl,
             this.groupActionsDetailsEl, this.aiContactAboutSectionEl, this.aiTtsConfigSectionEl]
             .forEach(el => { if (el) el.style.display = 'none'; });
 
-        // 显示通用操作（如清空聊天记录）
         if (chatId) {
             if (this.currentChatActionsDetailsEl && this.clearCurrentChatBtnDetailsEl) {
                 this.currentChatActionsDetailsEl.style.display = 'block';
@@ -188,14 +269,11 @@ const DetailsPanelUIManager = {
         }
     },
 
-    /**
-     * @private
-     * 专用于更新联系人详情的内部方法。
-     * @param {string} contactId - 联系人的 ID。
-     */
     _updateForContact: function(contactId) {
         const contact = UserManager.contacts[contactId];
         if (!contact || !this.detailsPanelEl) return;
+
+        if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = `${contact.name} 信息`;
 
         this.detailsPanelEl.classList.add('contact-details-active');
         if (contact.isSpecial) this.detailsPanelEl.classList.add(contact.id);
@@ -204,7 +282,7 @@ const DetailsPanelUIManager = {
         if (this.detailsNameEl) this.detailsNameEl.textContent = contact.name;
         if (this.detailsIdEl) this.detailsIdEl.textContent = `ID: ${contact.id}`;
         if (this.detailsAvatarEl) {
-            this.detailsAvatarEl.className = 'details-avatar'; // 重置
+            this.detailsAvatarEl.className = 'details-avatar';
             let fallbackText = (contact.avatarText) ? Utils.escapeHtml(contact.avatarText) :
                 (contact.name && contact.name.length > 0) ? Utils.escapeHtml(contact.name.charAt(0).toUpperCase()) : '?';
             let avatarContentHtml;
@@ -237,6 +315,7 @@ const DetailsPanelUIManager = {
             if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'block';
             if (this.deleteContactBtnDetailsEl) this.deleteContactBtnDetailsEl.onclick = () => ChatManager.deleteChat(contactId, 'contact');
             if (this.aiTtsConfigSectionEl) this.aiTtsConfigSectionEl.style.display = 'none';
+            if (this.aiContactAboutSectionEl) this.aiContactAboutSectionEl.style.display = 'none';
         }
     },
 
@@ -321,6 +400,8 @@ const DetailsPanelUIManager = {
     _updateForGroup: function(groupId) {
         const group = GroupManager.groups[groupId];
         if (!group || !this.detailsPanelEl) return;
+
+        if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = `${group.name} 信息`;
 
         this.detailsPanelEl.classList.add('group-chat-active');
         if (this.detailsNameEl) this.detailsNameEl.textContent = group.name;

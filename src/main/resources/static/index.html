@@ -6,8 +6,7 @@
     <title>P2P 聊天</title>
     <link rel="stylesheet" href="css/base.css">
     <!-- 主题特定 CSS 占位符 -->
-    <link rel="stylesheet" href="css/原神-浅色.css">
-    <link id="theme-stylesheet" rel="stylesheet" href="css/原神-浅色.css">
+    <link id="theme-stylesheet" rel="stylesheet" href="css/原神-浅色.css"> <!-- 此行会被 ThemeLoader.js 动态修改 -->
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -48,6 +47,7 @@
                     <button class="header-action-btn" id="audioCallButtonMain" title="语音通话" disabled>🎤</button>
                     <button class="header-action-btn" id="screenShareButtonMain" title="屏幕共享" disabled>🖥️</button>
                     <button class="header-action-btn" id="chatDetailsBtnMain" title="聊天信息" disabled>ℹ️</button>
+                    <button class="header-action-btn" id="peopleLobbyButtonMain" title="人员大厅">👥</button>
                 </div>
             </header>
 
@@ -68,7 +68,6 @@
                     <button class="icon-btn attach-btn" id="attachBtnMain" title="附加文件" disabled>📎</button>
                     <input type="file" id="fileInput" onchange="MediaManager.handleFileSelect(event)">
                     <textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
-                    <!-- <button class="icon-btn emoji-btn" id="emojiBtnMain" title="表情" disabled>😊</button> -->
                     <button class="icon-btn send-btn" id="sendButtonMain" title="发送" disabled>➤</button>
                     <button class="icon-btn record-btn" id="voiceButtonMain" title="录制语音" disabled>🎙️</button>
                 </div>
@@ -83,7 +82,7 @@
     <!-- 右侧详情面板 -->
     <aside class="details-panel" id="detailsPanel">
         <header class="details-header">
-            <h3 id="detailsPanelTitle">聊天信息</h3>
+            <h3 id="detailsPanelTitle">聊天信息</h3> <!-- 此标题会被 JS 动态更改 -->
             <button class="icon-btn close-details-btn" id="closeDetailsBtnMain" title="关闭详情">✕</button>
         </header>
         <div class="details-content" id="detailsPanelContent">
@@ -167,6 +166,16 @@
                 <button id="leaveGroupBtnDetails" class="btn btn-danger">退出群组</button>
                 <button id="dissolveGroupBtnDetails" class="btn btn-danger">解散群组</button>
             </div>
+        </div>
+        <!-- 人员大厅内容容器 -->
+        <div class="lobby-content" id="peopleLobbyContent" style="display: none; flex-direction: column; flex-grow: 1; overflow: hidden;">
+            <div class="lobby-header" style="display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-2) var(--spacing-3); border-bottom: 1px solid var(--border-color); flex-shrink: 0;">
+                <h4 style="margin: 0; font-size: 1em;">在线用户</h4>
+                <button id="peopleLobbyRefreshBtn" class="icon-btn" title="刷新列表" style="font-size: 1.1em;">🔄</button>
+            </div>
+            <ul id="peopleLobbyList" class="chat-list-container" style="padding: var(--spacing-2); flex-grow: 1; overflow-y: auto;">
+                <!-- 在线用户将在此处填充 -->
+            </ul>
         </div>
     </aside>
 </div>
@@ -379,10 +388,14 @@
     </div>
 </div>
 <script>
+    // 全局占位符，确保 ThemeLoader.js 加载数据 JS 文件时不会出错
     window.SPECIAL_CONTACTS_DEFINITIONS = [];
 </script>
-<!-- 主应用程序脚本 -->
-<script src="js/Config.js"></script> <!-- 配置应首先加载 -->
+<!-- 主题加载器 (加载主题CSS和包含SPECIAL_CONTACTS_DEFINITIONS的数据JS) -->
+<script src="js/ThemeLoader.js"></script> <!-- !!! ThemeLoader.js 必须首先加载，因为它可能 document.write() -->
+
+<!-- 配置应在其他脚本使用 Config 对象前加载 -->
+<script src="js/Config.js"></script>
 
 <!-- 工具类 -->
 <script src="js/Utils.js"></script>
@@ -390,7 +403,7 @@
 <script src="js/DBManager.js"></script>
 
 <!-- 核心逻辑管理器 -->
-<script src="js/UserManager.js"></script>
+<script src="js/UserManager.js"></script> <!-- UserManager 依赖 ThemeLoader 加载的 SPECIAL_CONTACTS_DEFINITIONS -->
 <script src="js/ConnectionManager.js"></script>
 <script src="js/MediaManager.js"></script> <!-- 核心媒体逻辑 -->
 <script src="js/VideoCallManager.js"></script> <!-- 核心视频通话逻辑 -->
@@ -404,7 +417,7 @@
 <script src="js/TtsUIManager.js"></script> <!-- 用于详情面板的TTS配置表单 -->
 
 <!-- UI组件管理器 -->
-<script src="js/UIManager.js"></script> <!-- 精简的 UIManager -->
+<script src="js/UIManager.js"></script>
 <script src="js/ModalManager.js"></script>
 <script src="js/NotificationManager.js"></script>
 <script src="js/SettingsUIManager.js"></script>
@@ -412,11 +425,9 @@
 <script src="js/ChatAreaUIManager.js"></script>
 <script src="js/SidebarUIManager.js"></script>
 <script src="js/DetailsPanelUIManager.js"></script>
-<script src="js/VideoCallUIManager.js"></script> <!-- 视频通话特定UI -->
-<script src="js/MediaUIManager.js"></script> <!-- 媒体预览UI -->
-
-<!-- 主题加载器 (加载主题CSS和包含SPECIAL_CONTACTS_DEFINITIONS的数据JS) -->
-<script src="js/ThemeLoader.js"></script>
+<script src="js/VideoCallUIManager.js"></script>
+<script src="js/MediaUIManager.js"></script>
+<script src="js/PeopleLobbyManager.js"></script> <!-- 新增的人员大厅管理器 -->
 
 <!-- 应用初始化程序 (应放在最后或接近最后) -->
 <script src="js/AppInitializer.js"></script>

@@ -9,7 +9,7 @@
  * @property {function} enableChatInterface - 启用或禁用聊天输入框和相关按钮。
  * @property {function} setCallButtonsState - 根据连接状态设置通话按钮的可用性。
  * @property {function} showReconnectPrompt - 当与对方断开连接时，在聊天框中显示重连提示。
- * @dependencies LayoutManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationManager, Utils, MediaManager
+ * @dependencies LayoutManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationManager, Utils, MediaManager, PeopleLobbyManager
  * @dependents AppInitializer (进行初始化)
  */
 const ChatAreaUIManager = {
@@ -29,6 +29,7 @@ const ChatAreaUIManager = {
     audioCallButtonEl: null,
     screenShareButtonEl: null,
     chatDetailsButtonEl: null,
+    peopleLobbyButtonEl: null,
 
     /**
      * 初始化模块，获取所有需要的 DOM 元素引用并绑定核心事件。
@@ -49,6 +50,7 @@ const ChatAreaUIManager = {
         this.audioCallButtonEl = document.getElementById('audioCallButtonMain');
         this.screenShareButtonEl = document.getElementById('screenShareButtonMain');
         this.chatDetailsButtonEl = document.getElementById('chatDetailsBtnMain');
+        this.peopleLobbyButtonEl = document.getElementById('peopleLobbyButtonMain');
 
         this.bindEvents();
     },
@@ -113,10 +115,24 @@ const ChatAreaUIManager = {
             if(!this.screenShareButtonEl.disabled) VideoCallManager.initiateScreenShare(ChatManager.currentChatId);
         };
 
-        // 绑定聊天详情按钮的点击事件，用于打开右侧详情面板
-        if (this.chatDetailsButtonEl) this.chatDetailsButtonEl.addEventListener('click', () => {
-            if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.toggleDetailsPanel(true);
-        });
+        // 绑定聊天详情按钮的点击事件
+        if (this.chatDetailsButtonEl) {
+            this.chatDetailsButtonEl.addEventListener('click', () => {
+                if (typeof DetailsPanelUIManager !== 'undefined') {
+                    DetailsPanelUIManager.toggleChatDetailsView();
+                }
+            });
+        }
+
+        // 绑定人员大厅按钮的点击事件
+        if (this.peopleLobbyButtonEl) {
+            this.peopleLobbyButtonEl.addEventListener('click', () => {
+                if (typeof DetailsPanelUIManager !== 'undefined') {
+                    DetailsPanelUIManager.togglePeopleLobbyView();
+                }
+            });
+        }
+
 
         // 绑定拖放事件监听器，用于文件发送
         if (this.chatAreaEl) {
@@ -201,9 +217,20 @@ const ChatAreaUIManager = {
         }
         if (this.noChatSelectedScreenEl) this.noChatSelectedScreenEl.style.display = 'flex';
 
-        this.enableChatInterface(false); // 禁用输入
-        if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.toggleDetailsPanel(false); // 关闭详情面板
-        if (typeof LayoutManager !== 'undefined') LayoutManager.showChatListArea(); // 在移动端返回列表
+        this.enableChatInterface(false);
+        if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.hideSidePanel();
+        if (typeof LayoutManager !== 'undefined') LayoutManager.showChatListArea();
+
+        // 确保人员大厅按钮始终可见且启用
+        if (this.peopleLobbyButtonEl) {
+            this.peopleLobbyButtonEl.style.display = 'block';
+            this.peopleLobbyButtonEl.disabled = false;
+        }
+        // 当没有聊天选中时，聊天详情按钮应该隐藏
+        if (this.chatDetailsButtonEl) {
+            this.chatDetailsButtonEl.style.display = 'none';
+            this.chatDetailsButtonEl.disabled = true;
+        }
     },
 
     /**
@@ -240,7 +267,18 @@ const ChatAreaUIManager = {
             if (currentContact && currentContact.isSpecial && this.chatHeaderMainEl) this.chatHeaderMainEl.classList.add(`current-chat-${currentContact.id}`);
         }
         if (this.chatHeaderAvatarEl) this.chatHeaderAvatarEl.innerHTML = avatarContentHtml;
-        if (this.chatDetailsButtonEl) this.chatDetailsButtonEl.style.display = ChatManager.currentChatId ? 'block' : 'none';
+
+        const chatSelected = !!ChatManager.currentChatId;
+        if (this.chatDetailsButtonEl) {
+            this.chatDetailsButtonEl.style.display = chatSelected ? 'block' : 'none';
+            this.chatDetailsButtonEl.disabled = !chatSelected;
+        }
+
+        // 人员大厅按钮始终可见且启用
+        if (this.peopleLobbyButtonEl) {
+            this.peopleLobbyButtonEl.style.display = 'block'; // 始终显示
+            this.peopleLobbyButtonEl.disabled = false;     // 始终启用
+        }
     },
 
     /**
@@ -253,16 +291,22 @@ const ChatAreaUIManager = {
 
     /**
      * 启用或禁用聊天输入接口（输入框、发送按钮等）。
+     * 人员大厅按钮的状态将独立管理（始终启用）。
      * @param {boolean} enabled - 是否启用。
      */
     enableChatInterface: function (enabled) {
         const elementsToToggle = [
             this.messageInputEl, this.sendButtonEl, this.attachButtonEl,
             this.voiceButtonEl, this.chatDetailsButtonEl
+            // this.peopleLobbyButtonEl 已从此列表中移除
         ];
         elementsToToggle.forEach(el => { if (el) el.disabled = !enabled; });
 
-        // 根据连接状态更新通话按钮的可用性
+        // 人员大厅按钮始终启用
+        if (this.peopleLobbyButtonEl) {
+            this.peopleLobbyButtonEl.disabled = false;
+        }
+
         this.setCallButtonsState(enabled && ChatManager.currentChatId ? ConnectionManager.isConnectedTo(ChatManager.currentChatId) : false, ChatManager.currentChatId);
 
         // 启用时自动聚焦到输入框

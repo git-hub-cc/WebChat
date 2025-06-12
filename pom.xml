@@ -28,9 +28,6 @@
     </scm>
     <properties>
         <java.version>17</java.version>
-        <!-- ======================================================= -->
-        <!-- 新增：设置项目构建和报告的编码为 UTF-8 -->
-        <!-- ======================================================= -->
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
@@ -52,7 +49,6 @@
             <artifactId>spring-boot-starter-logging</artifactId>
         </dependency>
     </dependencies>
-
 
     <build>
         <resources>
@@ -103,10 +99,12 @@
                         </configuration>
                     </execution>
 
-                    <!-- 打包前，压缩资源 -->
+                    <!-- ======================================================= -->
+                    <!--          核心修改：将打包时机提前到 generate-resources         -->
+                    <!-- ======================================================= -->
                     <execution>
                         <id>run-compress-script-before-package</id>
-                        <phase>prepare-package</phase>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>exec</goal>
                         </goals>
