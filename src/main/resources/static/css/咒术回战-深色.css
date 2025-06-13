@@ -2,78 +2,87 @@
     /* 咒术回战 - 黯夜咒纹 主题色板 (Jujutsu Kaisen - Dark Night Cursed Markings Palette) */
 
     /* Base Palette - Inspired by modern dark UIs and JJK's atmosphere */
-    --jjk-bg-void-rgb: 22, 24, 29;              /* 深邃虚域 (主背景) e.g., #16181D */
+    --jjk-bg-void-rgb: 18, 20, 25;              /* 深邃虚域 (主背景) - Darker */
     --jjk-bg-void: rgb(var(--jjk-bg-void-rgb));
-    --jjk-bg-panel-rgb: 31, 34, 41;             /* 暗影咒板 (面板背景) e.g., #1F2229 */
+    --jjk-bg-panel-rgb: 28, 31, 38;             /* 暗影咒板 (面板背景) - Slightly darker */
     --jjk-bg-panel: rgb(var(--jjk-bg-panel-rgb));
-    --jjk-bg-panel-translucent: rgba(var(--jjk-bg-panel-rgb), 0.85); /* For overlays */
+    --jjk-bg-panel-translucent: rgba(var(--jjk-bg-panel-rgb), 0.9); /* More opaque for better readability */
 
-    --jjk-accent-primary-rgb: 130, 90, 235;     /* 咒力紫晶 (主交互/按钮) e.g., #825AEB */
+    --jjk-accent-primary-rgb: 110, 70, 225;     /* 咒力紫晶 (主交互/按钮) - Slightly adjusted */
     --jjk-accent-primary: rgb(var(--jjk-accent-primary-rgb));
-    --jjk-accent-primary-darker-rgb: 105, 70, 205;/* 更深咒力紫 (悬停) e.g., #6946CD */
+    --jjk-accent-primary-darker-rgb: 90, 50, 195;/* 更深咒力紫 (悬停) */
     --jjk-accent-primary-darker: rgb(var(--jjk-accent-primary-darker-rgb));
+    --jjk-accent-primary-glow: rgba(var(--jjk-accent-primary-rgb), 0.35);
 
-    --jjk-accent-secondary-rgb: 0, 180, 220;    /* 无限冰蓝 (次级交互/信息高光) e.g., #00B4DC */
+    --jjk-accent-secondary-rgb: 0, 190, 230;    /* 无限冰蓝 (次级交互/信息高光) - Brighter */
     --jjk-accent-secondary: rgb(var(--jjk-accent-secondary-rgb));
+    --jjk-accent-secondary-glow: rgba(var(--jjk-accent-secondary-rgb), 0.3);
 
-    --jjk-accent-danger-rgb: 210, 45, 60;       /* 血瘴警戒 (危险/宿傩核心) e.g., #D22D3C */
+    --jjk-accent-danger-rgb: 220, 40, 55;       /* 血瘴警戒 (危险/宿傩核心) - More vibrant */
     --jjk-accent-danger: rgb(var(--jjk-accent-danger-rgb));
-    --jjk-accent-warning-rgb: 230, 145, 40;     /* 残火警示 (警告/虎杖关联) e.g., #E69128 */
+    --jjk-accent-danger-glow: rgba(var(--jjk-accent-danger-rgb), 0.3);
+    --jjk-accent-warning-rgb: 235, 155, 30;     /* 残火警示 (警告/虎杖关联) - More vibrant */
     --jjk-accent-warning: rgb(var(--jjk-accent-warning-rgb));
+    --jjk-accent-warning-glow: rgba(var(--jjk-accent-warning-rgb), 0.3);
 
-    --jjk-text-primary-rgb: 220, 223, 228;      /* 灵视明晰 (主文字) e.g., #DC членовDE4 */
+    --jjk-text-primary-rgb: 225, 228, 233;      /* 灵视明晰 (主文字) */
     --jjk-text-primary: rgb(var(--jjk-text-primary-rgb));
-    --jjk-text-secondary-rgb: 160, 165, 175;    /* 咒痕淡灰 (次要文字) e.g., #A0A5AF */
+    --jjk-text-secondary-rgb: 165, 170, 180;    /* 咒痕淡灰 (次要文字) */
     --jjk-text-secondary: rgb(var(--jjk-text-secondary-rgb));
-    --jjk-text-tertiary-rgb: 120, 125, 135;     /* 影绘墨灰 (更次要/占位符) e.g., #787D87 */
+    --jjk-text-tertiary-rgb: 125, 130, 140;     /* 影绘墨灰 (更次要/占位符) */
     --jjk-text-tertiary: rgb(var(--jjk-text-tertiary-rgb));
     --jjk-text-inverted-rgb: 25, 25, 30;       /* 反转黑 (用于亮色按钮文字) */
     --jjk-text-inverted: rgb(var(--jjk-text-inverted-rgb));
 
-    --jjk-border-rgb: 45, 50, 58;               /* 结界墨线 (边框) e.g., #2D323A */
+    --jjk-border-rgb: 40, 45, 53;               /* 结界墨线 (边框) */
     --jjk-border: rgb(var(--jjk-border-rgb));
-    --jjk-border-stronger-rgb: 60, 66, 75;      /* 强化墨线 (强调边框) e.g., #3C424B */
+    --jjk-border-stronger-rgb: 55, 61, 70;      /* 强化墨线 (强调边框) */
     --jjk-border-stronger: rgb(var(--jjk-border-stronger-rgb));
+    --jjk-border-cursed: rgba(var(--jjk-accent-primary-rgb), 0.25); /* For subtle cursed energy lines */
 
     /* UI State Colors */
-    --jjk-hover-bg-rgb: 38, 42, 49;             /* 浮影背景 (列表项等悬停) e.g., #262A31 */
+    --jjk-hover-bg-rgb: 35, 39, 46;             /* 浮影背景 (列表项等悬停) */
     --jjk-hover-bg: rgb(var(--jjk-hover-bg-rgb));
     --jjk-active-bg-base-rgb: var(--jjk-accent-primary-rgb); /* 激活背景 (用主交互色，透明处理) */
-    --jjk-active-bg-opacity: 0.18;
+    --jjk-active-bg-opacity: 0.22; /* Slightly more visible active state */
 
-
-    /* Character Specific Colors */
-    --jjk-gojo-primary-rgb: 0, 200, 255; /* 无下限天蓝 */
+    /* Character Specific Colors (using provided, with glow vars) */
+    --jjk-gojo-primary-rgb: 0, 200, 255;
     --jjk-gojo-primary-dark: rgb(var(--jjk-gojo-primary-rgb));
     --jjk-gojo-secondary-dark: rgba(var(--jjk-gojo-primary-rgb), var(--jjk-active-bg-opacity));
+    --jjk-gojo-glow: rgba(var(--jjk-gojo-primary-rgb), 0.4);
     --jjk-gojo-avatar-text: var(--jjk-text-inverted);
 
-    --jjk-itadori-primary-rgb: var(--jjk-accent-warning-rgb); /* 虎杖咒焰橙 */
+    --jjk-itadori-primary-rgb: var(--jjk-accent-warning-rgb);
     --jjk-itadori-primary-dark: rgb(var(--jjk-itadori-primary-rgb));
     --jjk-itadori-secondary-dark: rgba(var(--jjk-itadori-primary-rgb), var(--jjk-active-bg-opacity));
+    --jjk-itadori-glow: rgba(var(--jjk-itadori-primary-rgb), 0.35);
     --jjk-itadori-avatar-text: var(--jjk-text-inverted);
 
-    --jjk-fushiguro-primary-rgb: 30, 115, 110;  /* 伏黑深影翠 */
+    --jjk-fushiguro-primary-rgb: 30, 115, 110;
     --jjk-fushiguro-primary-dark: rgb(var(--jjk-fushiguro-primary-rgb));
     --jjk-fushiguro-secondary-dark: rgba(var(--jjk-fushiguro-primary-rgb), var(--jjk-active-bg-opacity));
+    --jjk-fushiguro-glow: rgba(var(--jjk-fushiguro-primary-rgb), 0.3);
     --jjk-fushiguro-avatar-text: var(--jjk-text-primary);
 
-    --jjk-kugisaki-primary-rgb: 200, 70, 90;   /* 钉崎烈玫红 */
+    --jjk-kugisaki-primary-rgb: 200, 70, 90;
     --jjk-kugisaki-primary-dark: rgb(var(--jjk-kugisaki-primary-rgb));
     --jjk-kugisaki-secondary-dark: rgba(var(--jjk-kugisaki-primary-rgb), var(--jjk-active-bg-opacity));
+    --jjk-kugisaki-glow: rgba(var(--jjk-kugisaki-primary-rgb), 0.3);
     --jjk-kugisaki-avatar-text: var(--jjk-text-primary);
 
-    --jjk-sukuna-primary-rgb: var(--jjk-accent-danger-rgb); /* 宿傩厄灾红 */
+    --jjk-sukuna-primary-rgb: var(--jjk-accent-danger-rgb);
     --jjk-sukuna-primary-dark: rgb(var(--jjk-sukuna-primary-rgb));
-    --jjk-sukuna-secondary-dark: rgba(var(--jjk-sukuna-primary-rgb), 0.22);
+    --jjk-sukuna-secondary-dark: rgba(var(--jjk-sukuna-primary-rgb), 0.25); /* More pronounced */
+    --jjk-sukuna-glow: rgba(var(--jjk-sukuna-primary-rgb), 0.45);
     --jjk-sukuna-avatar-text-rgb: 20, 20, 20;
     --jjk-sukuna-avatar-text: rgb(var(--jjk-sukuna-avatar-text-rgb));
 
-    --jjk-nanami-primary-rgb: 85, 105, 125; /* 七海青格灰 */
+    --jjk-nanami-primary-rgb: 85, 105, 125;
     --jjk-nanami-primary-dark: rgb(var(--jjk-nanami-primary-rgb));
     --jjk-nanami-secondary-dark: rgba(var(--jjk-nanami-primary-rgb), var(--jjk-active-bg-opacity));
+    --jjk-nanami-glow: rgba(var(--jjk-nanami-primary-rgb), 0.25);
     --jjk-nanami-avatar-text: var(--jjk-text-primary);
-
 
     /* --- Overrides for P2P Chat base variables --- */
     --primary-color: var(--jjk-accent-primary);
@@ -86,7 +95,7 @@
     --danger-color: var(--jjk-accent-danger);
     --warning-color: var(--jjk-accent-warning);
 
-    --sent-bg-color: rgba(var(--jjk-bg-panel-rgb), 0.45);
+    --sent-bg-color: rgba(var(--jjk-accent-primary-rgb), 0.12); /* Subtle user accent in sent bubble */
     --received-bg-color: var(--jjk-bg-panel);
 
     --border-color: var(--jjk-border);
@@ -95,9 +104,13 @@
 
     --sidebar-width: 320px;
     --header-height: 60px;
-    --border-radius: 6px;
+    --border-radius: 4px; /* Sharper edges for JJK style */
     --font-family: "Inter", "Source Han Sans CN", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-    --box-shadow: 0 3px 8px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(var(--jjk-border-stronger-rgb), 0.7); /* Subtle inset border too */
+    /* Thematic Shadow: "Cursed Aura" - sharper, slightly energetic */
+    --box-shadow:
+            0 2px 5px rgba(0,0,0,0.45), /* Deeper base shadow */
+            inset 0 0 0 1px var(--jjk-border), /* Inner border for definition */
+            0 0 7px var(--jjk-border-cursed); /* Subtle energy glow */
     --special-contact-color: var(--jjk-gojo-primary-dark);
 }
 
@@ -113,89 +126,139 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
-    /* Subtle cursed energy background pattern or gradient */
+    /* Thematic background: "Veil" or "Incomplete Domain" */
     background-image:
-        /* radial-gradient(ellipse at 70% 80%, rgba(var(--jjk-accent-primary-rgb), 0.08) 0%, transparent 50%), */
-            radial-gradient(ellipse at 30% 20%, rgba(var(--jjk-accent-danger-rgb), 0.05) 0%, transparent 40%),
-            linear-gradient(170deg, var(--jjk-bg-void) 60%, rgba(var(--jjk-bg-panel-rgb), 0.3) 100%);
+        /* Subtle noise texture */
+            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'%3E%3Cpath fill='%239C92AC' fill-opacity='0.03' d='M1 3h1v1H1V3zm2-2h1v1H3V1z'%3E%3C/path%3E%3C/svg%3E"),
+            radial-gradient(ellipse at 70% 80%, rgba(var(--jjk-accent-primary-rgb), 0.06) 0%, transparent 60%),
+            radial-gradient(ellipse at 30% 20%, rgba(var(--jjk-accent-danger-rgb), 0.04) 0%, transparent 50%),
+            linear-gradient(170deg, var(--jjk-bg-void) 50%, rgba(var(--jjk-bg-panel-rgb), 0.4) 100%);
 }
 
 .app-container {
     display: flex;
     width: 100%;
-    max-width: 1400px; /* Adjust as needed */
-    background-color: var(--jjk-bg-panel); /* Panel is the container base */
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 0 1px var(--jjk-border);
+    max-width: 1400px;
+    background-color: var(--jjk-bg-panel);
+    /* Thematic border: "Barrier" or "Seal" */
+    border: 1px solid var(--jjk-border-stronger);
+    box-shadow:
+            0 8px 25px rgba(0,0,0,0.6), /* Stronger outer shadow */
+            inset 0 0 0 1.5px var(--jjk-border-stronger), /* Thicker inset border */
+            inset 0 0 15px rgba(var(--jjk-accent-primary-rgb), 0.08); /* Inner glow */
     border-radius: var(--border-radius);
-    border: 1px solid var(--jjk-border-stronger); /* Stronger border for the main app */
     overflow: hidden;
+    position: relative; /* For pseudo-elements if needed */
 }
+/* Optional: Add "talisman paper" like corners to the app container */
+/*
+.app-container::before, .app-container::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background-color: var(--jjk-border-stronger);
+    z-index: 1;
+}
+.app-container::before { top: -1px; left: -1px; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.app-container::after { bottom: -1px; right: -1px; clip-path: polygon(100% 100%, 0 100%, 100% 0); }
+*/
 
 /* --- Scrollbar --- */
-::-webkit-scrollbar { width: 7px; height: 7px; }
-::-webkit-scrollbar-track { background: rgba(var(--jjk-bg-void-rgb),0.5); border-radius: var(--border-radius); }
-::-webkit-scrollbar-thumb { background: var(--jjk-border-stronger); border-radius: var(--border-radius); }
-::-webkit-scrollbar-thumb:hover { background: var(--jjk-accent-primary); }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(var(--jjk-bg-void-rgb),0.6); border-radius: var(--border-radius); }
+::-webkit-scrollbar-thumb { background: var(--jjk-border-stronger); border-radius: var(--border-radius); border: 1px solid var(--jjk-border); }
+::-webkit-scrollbar-thumb:hover { background: var(--jjk-accent-primary); box-shadow: 0 0 5px var(--jjk-accent-primary-glow); }
 
 /* --- Sidebar Navigation --- */
 .sidebar-nav {
-    background-color: var(--jjk-bg-void); /* Sidebar is darker than main panel container */
-    border-right: 1px solid var(--border-color);
+    background-color: var(--jjk-bg-void);
+    border-right: 1px solid var(--jjk-border-stronger); /* Stronger separator */
+    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
 }
 .sidebar-header {
-    background-color: transparent; /* Inherits from sidebar-nav or slightly darker */
-    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(var(--jjk-bg-panel-rgb), 0.5); /* Slightly distinct */
+    border-bottom: 1px solid var(--jjk-border-stronger);
+    padding: 12px 15px; /* Consistent padding */
 }
-.menu-btn { color: var(--text-color-light); }
-.menu-btn:hover { color: var(--jjk-accent-primary); }
+.menu-btn:hover { color: var(--jjk-accent-primary); transform: scale(1.1); }
 .search-bar {
-    background-color: rgba(var(--jjk-bg-void-rgb), 0.7); /* Darker than panel for input */
+    background-color: rgba(var(--jjk-bg-void-rgb), 0.8);
     border: 1px solid var(--jjk-border);
     color: var(--text-color);
-    border-radius: var(--border-radius); /* Consistent radius */
-    padding: 9px 14px; /* More padding for a modern feel */
+    border-radius: var(--border-radius);
+    padding: 10px 15px;
+    transition: all 0.2s ease-in-out;
 }
-.search-bar::placeholder { color: var(--text-color-tertiary); }
+.search-bar::placeholder { color: var(--jjk-text-tertiary); }
 .search-bar:focus {
     border-color: var(--jjk-accent-primary);
-    box-shadow: 0 0 0 2px rgba(var(--jjk-accent-primary-rgb),0.3);
+    box-shadow: 0 0 0 2.5px var(--jjk-accent-primary-glow), inset 0 0 3px rgba(var(--jjk-accent-primary-rgb),0.1);
 }
-.nav-tabs { border-bottom: 1px solid var(--border-color); }
-.nav-tab { color: var(--text-color-light); }
+.nav-tabs { border-bottom: 1px solid var(--jjk-border-stronger); }
+.nav-tab { color: var(--jjk-text-secondary); padding: 10px 0; }
 .nav-tab:hover { color: var(--jjk-accent-primary); }
-.nav-tab.active { color: var(--jjk-accent-primary); border-bottom: 2px solid var(--jjk-accent-primary); }
-
-.chat-list-item {
-    border-bottom: 1px solid var(--border-color);
-    padding: 12px 15px; /* Slightly more padding */
-}
-.chat-list-item:hover { background-color: var(--hover-bg-color); }
-.chat-list-item.active {
-    background-color: var(--active-bg-color);
-    box-shadow: inset 3px 0 0 var(--jjk-accent-primary); /* Left accent bar */
-}
-.chat-list-item.active .chat-list-name { color: var(--jjk-accent-primary); font-weight: 500; }
-.chat-list-avatar {
-    background-color: var(--jjk-border-stronger);
-    font-family: var(--font-family);
-    border: 1px solid transparent; /* Remove default border, rely on BG and char specific */
-    color: var(--text-color);
+.nav-tab.active {
+    color: var(--jjk-accent-primary);
+    border-bottom: 2.5px solid var(--jjk-accent-primary);
+    text-shadow: 0 0 5px var(--jjk-accent-primary-glow);
     font-weight: 500;
 }
 
+.chat-list-item {
+    border-bottom: 1px solid var(--jjk-border);
+    padding: 12px 15px;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.chat-list-item:hover {
+    background-color: var(--jjk-hover-bg);
+    box-shadow: inset 3px 0 0 var(--jjk-accent-secondary); /* Hover indicator */
+}
+.chat-list-item.active {
+    background-color: var(--active-bg-color);
+    box-shadow: inset 4px 0 0 var(--jjk-accent-primary), 0 0 8px rgba(var(--jjk-accent-primary-rgb), 0.1) inset;
+}
+.chat-list-item.active .chat-list-name {
+    color: var(--jjk-accent-primary);
+    font-weight: 600; /* Bolder for active */
+    text-shadow: 0 0 3px var(--jjk-accent-primary-glow);
+}
+.chat-list-avatar {
+    background-color: var(--jjk-border-stronger);
+    font-family: var(--font-family);
+    border: 1px solid var(--jjk-border); /* Defined border */
+    color: var(--text-color);
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+}
+.chat-list-item:hover .chat-list-avatar {
+    border-color: var(--jjk-accent-secondary);
+    transform: scale(1.05);
+}
+.chat-list-item.active .chat-list-avatar {
+    border-color: var(--jjk-accent-primary);
+    box-shadow: 0 0 5px var(--jjk-accent-primary-glow);
+}
+
+
 /* --- Character Specific Styles --- */
+/* Base for character items */
+.chat-list-item.special-contact .chat-list-avatar,
+.chat-avatar-main, .details-avatar, #callingModalAvatar {
+    transition: all 0.2s ease-in-out;
+}
 
 /* Gojo Satoru */
 .chat-list-item.special-contact.AI_五条悟 .chat-list-avatar,
 .chat-avatar-main.AI_五条悟, .details-avatar.AI_五条悟, #callingModalAvatar.AI_五条悟 {
-    background-color: var(--jjk-gojo-primary-dark);
-    color: var(--jjk-gojo-avatar-text);
-    border: 1px solid rgba(var(--jjk-gojo-primary-rgb), 0.5);
-    box-shadow: 0 0 8px rgba(var(--jjk-gojo-primary-rgb), 0.3);
+    background-color: var(--jjk-gojo-primary-dark); color: var(--jjk-gojo-avatar-text);
+    border: 1.5px solid var(--jjk-gojo-primary-dark);
+    box-shadow: 0 0 10px var(--jjk-gojo-glow), 0 0 3px var(--jjk-gojo-primary-dark) inset;
 }
 .chat-list-item.active.AI_五条悟 {
     background-color: var(--jjk-gojo-secondary-dark);
-    box-shadow: inset 3px 0 0 var(--jjk-gojo-primary-dark);
+    box-shadow: inset 4px 0 0 var(--jjk-gojo-primary-dark), 0 0 10px var(--jjk-gojo-glow) inset;
 }
 .chat-list-item.active.AI_五条悟 .chat-list-name,
 .chat-header-main.current-chat-AI_五条悟 .chat-title-main,
@@ -203,340 +266,451 @@ body {
 .details-panel.AI_五条悟 #aiContactAboutSection h4 span,
 .details-panel.AI_五条悟 #detailsName {
     color: var(--jjk-gojo-primary-dark);
+    font-weight: 600;
+    text-shadow: 0 0 6px var(--jjk-gojo-glow);
 }
 .message.received[data-sender-id="AI_五条悟"] {
     border-left: 3px solid var(--jjk-gojo-primary-dark);
-    background-color: rgba(var(--jjk-gojo-primary-rgb), 0.08);
+    background-color: rgba(var(--jjk-gojo-primary-rgb), 0.1); /* Brighter bg for Gojo */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 5px var(--jjk-gojo-glow) inset;
 }
-.chat-header-main.current-chat-AI_五条悟 .chat-title-main {
-    text-shadow: 0 0 5px rgba(var(--jjk-gojo-primary-rgb),0.4);
-}
-
 
 /* Itadori Yuji */
 .chat-list-item.special-contact.AI_虎杖悠仁 .chat-list-avatar,
 .chat-avatar-main.AI_虎杖悠仁, .details-avatar.AI_虎杖悠仁, #callingModalAvatar.AI_虎杖悠仁 {
-    background-color: var(--jjk-itadori-primary-dark);
-    color: var(--jjk-itadori-avatar-text);
-    border: 1px solid rgba(var(--jjk-itadori-primary-rgb), 0.5);
+    background-color: var(--jjk-itadori-primary-dark); color: var(--jjk-itadori-avatar-text);
+    border: 1.5px solid var(--jjk-itadori-primary-dark);
+    box-shadow: 0 0 8px var(--jjk-itadori-glow), 0 0 3px var(--jjk-itadori-primary-dark) inset;
 }
 .chat-list-item.active.AI_虎杖悠仁 {
     background-color: var(--jjk-itadori-secondary-dark);
-    box-shadow: inset 3px 0 0 var(--jjk-itadori-primary-dark);
+    box-shadow: inset 4px 0 0 var(--jjk-itadori-primary-dark), 0 0 8px var(--jjk-itadori-glow) inset;
 }
 .chat-list-item.active.AI_虎杖悠仁 .chat-list-name,
 .chat-header-main.current-chat-AI_虎杖悠仁 .chat-title-main,
 .message.received[data-sender-id="AI_虎杖悠仁"] .message-sender,
 .details-panel.AI_虎杖悠仁 #aiContactAboutSection h4 span,
 .details-panel.AI_虎杖悠仁 #detailsName {
-    color: var(--jjk-itadori-primary-dark);
+    color: var(--jjk-itadori-primary-dark); font-weight: 600;
+    text-shadow: 0 0 5px var(--jjk-itadori-glow);
 }
 .message.received[data-sender-id="AI_虎杖悠仁"] {
     border-left: 3px solid var(--jjk-itadori-primary-dark);
-    background-color: rgba(var(--jjk-itadori-primary-rgb), 0.08);
+    background-color: rgba(var(--jjk-itadori-primary-rgb), 0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 5px var(--jjk-itadori-glow) inset;
 }
 
 /* Fushiguro Megumi */
 .chat-list-item.special-contact.AI_伏黑惠 .chat-list-avatar,
 .chat-avatar-main.AI_伏黑惠, .details-avatar.AI_伏黑惠, #callingModalAvatar.AI_伏黑惠 {
-    background-color: var(--jjk-fushiguro-primary-dark);
-    color: var(--jjk-fushiguro-avatar-text);
-    border: 1px solid rgba(var(--jjk-fushiguro-primary-rgb), 0.4);
+    background-color: var(--jjk-fushiguro-primary-dark); color: var(--jjk-fushiguro-avatar-text);
+    border: 1.5px solid var(--jjk-fushiguro-primary-dark);
+    box-shadow: 0 0 8px var(--jjk-fushiguro-glow), 0 0 3px var(--jjk-fushiguro-primary-dark) inset;
 }
 .chat-list-item.active.AI_伏黑惠 {
     background-color: var(--jjk-fushiguro-secondary-dark);
-    box-shadow: inset 3px 0 0 var(--jjk-fushiguro-primary-dark);
+    box-shadow: inset 4px 0 0 var(--jjk-fushiguro-primary-dark), 0 0 8px var(--jjk-fushiguro-glow) inset;
 }
 .chat-list-item.active.AI_伏黑惠 .chat-list-name,
 .chat-header-main.current-chat-AI_伏黑惠 .chat-title-main,
 .message.received[data-sender-id="AI_伏黑惠"] .message-sender,
 .details-panel.AI_伏黑惠 #aiContactAboutSection h4 span,
 .details-panel.AI_伏黑惠 #detailsName {
-    color: var(--jjk-fushiguro-primary-dark);
+    color: var(--jjk-fushiguro-primary-dark); font-weight: 600;
+    text-shadow: 0 0 5px var(--jjk-fushiguro-glow);
 }
 .message.received[data-sender-id="AI_伏黑惠"] {
     border-left: 3px solid var(--jjk-fushiguro-primary-dark);
-    background-color: rgba(var(--jjk-fushiguro-primary-rgb), 0.08);
+    background-color: rgba(var(--jjk-fushiguro-primary-rgb), 0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 5px var(--jjk-fushiguro-glow) inset;
 }
 
 /* Kugisaki Nobara */
 .chat-list-item.special-contact.AI_钉崎野蔷薇 .chat-list-avatar,
 .chat-avatar-main.AI_钉崎野蔷薇, .details-avatar.AI_钉崎野蔷薇, #callingModalAvatar.AI_钉崎野蔷薇 {
-    background-color: var(--jjk-kugisaki-primary-dark);
-    color: var(--jjk-kugisaki-avatar-text);
-    border: 1px solid rgba(var(--jjk-kugisaki-primary-rgb), 0.4);
+    background-color: var(--jjk-kugisaki-primary-dark); color: var(--jjk-kugisaki-avatar-text);
+    border: 1.5px solid var(--jjk-kugisaki-primary-dark);
+    box-shadow: 0 0 8px var(--jjk-kugisaki-glow), 0 0 3px var(--jjk-kugisaki-primary-dark) inset;
 }
 .chat-list-item.active.AI_钉崎野蔷薇 {
     background-color: var(--jjk-kugisaki-secondary-dark);
-    box-shadow: inset 3px 0 0 var(--jjk-kugisaki-primary-dark);
+    box-shadow: inset 4px 0 0 var(--jjk-kugisaki-primary-dark), 0 0 8px var(--jjk-kugisaki-glow) inset;
 }
 .chat-list-item.active.AI_钉崎野蔷薇 .chat-list-name,
 .chat-header-main.current-chat-AI_钉崎野蔷薇 .chat-title-main,
 .message.received[data-sender-id="AI_钉崎野蔷薇"] .message-sender,
 .details-panel.AI_钉崎野蔷薇 #aiContactAboutSection h4 span,
 .details-panel.AI_钉崎野蔷薇 #detailsName {
-    color: var(--jjk-kugisaki-primary-dark);
+    color: var(--jjk-kugisaki-primary-dark); font-weight: 600;
+    text-shadow: 0 0 5px var(--jjk-kugisaki-glow);
 }
 .message.received[data-sender-id="AI_钉崎野蔷薇"] {
     border-left: 3px solid var(--jjk-kugisaki-primary-dark);
-    background-color: rgba(var(--jjk-kugisaki-primary-rgb), 0.08);
+    background-color: rgba(var(--jjk-kugisaki-primary-rgb), 0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 5px var(--jjk-kugisaki-glow) inset;
 }
 
 /* Ryomen Sukuna */
 .chat-list-item.special-contact.AI_两面宿傩 .chat-list-avatar,
 .chat-avatar-main.AI_两面宿傩, .details-avatar.AI_两面宿傩, #callingModalAvatar.AI_两面宿傩 {
-    background-color: var(--jjk-sukuna-primary-dark);
-    color: var(--jjk-sukuna-avatar-text); /* Dark text for high contrast on red */
-    border: 1px solid var(--jjk-sukuna-avatar-text);
-    box-shadow: 0 0 10px rgba(var(--jjk-sukuna-primary-rgb), 0.5);
+    background-color: var(--jjk-sukuna-primary-dark); color: var(--jjk-sukuna-avatar-text);
+    border: 1.5px solid var(--jjk-sukuna-avatar-text); /* Sukuna's markings are often black on red skin */
+    box-shadow: 0 0 12px var(--jjk-sukuna-glow), 0 0 5px var(--jjk-sukuna-primary-dark) inset, 0 0 1px 1px var(--jjk-sukuna-avatar-text); /* Stronger presence */
+    /* Add Sukuna's markings with pseudo-elements if desired, e.g. a simple line */
 }
+/* Example for Sukuna's simple marking */
+/*
+.chat-avatar-main.AI_两面宿傩::before {
+    content: '';
+    position: absolute;
+    width: 60%;
+    height: 3px;
+    background: var(--jjk-sukuna-avatar-text);
+    top: 35%;
+    left: 20%;
+    transform: rotate(-15deg);
+}
+*/
 .chat-list-item.active.AI_两面宿傩 {
     background-color: var(--jjk-sukuna-secondary-dark);
-    box-shadow: inset 3px 0 0 var(--jjk-sukuna-primary-dark), inset 0 0 10px rgba(var(--jjk-sukuna-avatar-text-rgb), 0.2);
+    box-shadow: inset 4px 0 0 var(--jjk-sukuna-primary-dark), 0 0 12px var(--jjk-sukuna-glow) inset, inset 0 0 5px rgba(var(--jjk-sukuna-avatar-text-rgb), 0.3);
 }
 .chat-list-item.active.AI_两面宿傩 .chat-list-name,
 .chat-header-main.current-chat-AI_两面宿傩 .chat-title-main,
 .details-panel.AI_两面宿傩 #aiContactAboutSection h4 span,
 .details-panel.AI_两面宿傩 #detailsName {
     color: var(--jjk-sukuna-primary-dark);
-    font-weight: bold;
-    text-shadow: 0 0 3px rgba(var(--jjk-sukuna-avatar-text-rgb),0.3);
+    font-weight: 700; /* Sukuna is imposing */
+    text-shadow: 0 0 7px var(--jjk-sukuna-glow), 0 0 2px rgba(var(--jjk-sukuna-avatar-text-rgb),0.5);
 }
 .message.received[data-sender-id="AI_两面宿傩"] .message-sender {
-    color: var(--jjk-sukuna-primary-dark);
-    font-weight: bold;
+    color: var(--jjk-sukuna-primary-dark); font-weight: bold;
+    text-shadow: 0 0 3px var(--jjk-sukuna-glow);
 }
 .message.received[data-sender-id="AI_两面宿傩"] {
-    border-left: 3px solid var(--jjk-sukuna-primary-dark);
-    background-color: rgba(var(--jjk-sukuna-primary-rgb), 0.1);
+    border-left: 3.5px solid var(--jjk-sukuna-primary-dark);
+    border-right: 1.5px solid var(--jjk-sukuna-avatar-text); /* Hint of his markings */
+    background-color: rgba(var(--jjk-sukuna-primary-rgb), 0.12); /* Slightly more intense BG */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.4), 0 0 8px var(--jjk-sukuna-glow) inset, 0 0 3px rgba(var(--jjk-sukuna-avatar-text-rgb),0.2);
 }
 
 /* Nanami Kento */
 .chat-list-item.special-contact.AI_七海建人 .chat-list-avatar,
 .chat-avatar-main.AI_七海建人, .details-avatar.AI_七海建人, #callingModalAvatar.AI_七海建人 {
-    background-color: var(--jjk-nanami-primary-dark);
-    color: var(--jjk-nanami-avatar-text);
-    border: 1px solid rgba(var(--jjk-nanami-primary-rgb), 0.4);
+    background-color: var(--jjk-nanami-primary-dark); color: var(--jjk-nanami-avatar-text);
+    border: 1.5px solid var(--jjk-nanami-primary-dark);
+    box-shadow: 0 0 6px var(--jjk-nanami-glow), 0 0 2px var(--jjk-nanami-primary-dark) inset;
+    /* Nanami's glasses could be represented by a pseudo element line if simple */
 }
 .chat-list-item.active.AI_七海建人 {
     background-color: var(--jjk-nanami-secondary-dark);
-    box-shadow: inset 3px 0 0 var(--jjk-nanami-primary-dark);
+    box-shadow: inset 4px 0 0 var(--jjk-nanami-primary-dark), 0 0 6px var(--jjk-nanami-glow) inset;
 }
 .chat-list-item.active.AI_七海建人 .chat-list-name,
 .chat-header-main.current-chat-AI_七海建人 .chat-title-main,
 .message.received[data-sender-id="AI_七海建人"] .message-sender,
 .details-panel.AI_七海建人 #aiContactAboutSection h4 span,
 .details-panel.AI_七海建人 #detailsName {
-    color: var(--jjk-nanami-primary-dark);
+    color: var(--jjk-nanami-primary-dark); font-weight: 600;
+    text-shadow: 0 0 4px var(--jjk-nanami-glow);
 }
 .message.received[data-sender-id="AI_七海建人"] {
     border-left: 3px solid var(--jjk-nanami-primary-dark);
-    background-color: rgba(var(--jjk-nanami-primary-rgb), 0.08);
+    background-color: rgba(var(--jjk-nanami-primary-rgb), 0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 0 4px var(--jjk-nanami-glow) inset;
 }
 
 
 .chat-list-badge {
     background-color: var(--jjk-accent-danger);
     color: var(--jjk-text-primary);
-    box-shadow: 0 0 6px rgba(var(--jjk-accent-danger-rgb),0.7);
-    padding: 3px 7px;
-    font-size: 11px;
-    font-weight: 500;
+    box-shadow: 0 0 8px var(--jjk-accent-danger-glow), 0 0 0 1px rgba(0,0,0,0.3); /* More prominent */
+    padding: 3px 8px; /* Slightly more padding */
+    font-size: 11.5px;
+    font-weight: 600;
+    border-radius: 10px; /* Pill shape */
 }
 .new-chat-fab {
     background-color: var(--jjk-accent-primary);
-    color: var(--jjk-text-inverted); /* Darker text for purple FAB */
-    box-shadow: 0 2px 8px rgba(var(--jjk-accent-primary-rgb),0.4);
+    color: var(--jjk-text-inverted);
+    box-shadow: 0 3px 10px rgba(var(--jjk-accent-primary-rgb),0.5), 0 0 0 2px rgba(var(--jjk-bg-void-rgb),0.5); /* Lifted effect */
+    transition: all 0.2s ease-out;
 }
 .new-chat-fab:hover {
     background-color: var(--jjk-accent-primary-darker);
-    box-shadow: 0 4px 12px rgba(var(--jjk-accent-primary-rgb),0.5);
+    box-shadow: 0 5px 15px rgba(var(--jjk-accent-primary-rgb),0.6), 0 0 0 2px rgba(var(--jjk-bg-void-rgb),0.3);
+    transform: translateY(-2px) scale(1.05);
 }
 
 /* --- Main Chat Area --- */
 .chat-area { background-color: var(--jjk-bg-panel); }
 .chat-header-main {
-    background-color: var(--jjk-bg-panel); /* Consistent with chat-area or slightly darker variant */
-    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(var(--jjk-bg-panel-rgb), 0.7); /* Slightly translucent to hint at bg */
+    border-bottom: 1px solid var(--jjk-border-stronger);
+    padding: 0 20px; /* Consistent padding */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
-.chat-avatar-main { border: 1px solid var(--border-color); }
-.chat-title-main { font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.2); }
-.header-action-btn { color: var(--text-color-light); }
-.header-action-btn:hover { color: var(--jjk-accent-primary); }
+.chat-avatar-main {
+    border: 1.5px solid var(--jjk-border);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+.chat-title-main { font-weight: 600; text-shadow: 0 1px 3px rgba(0,0,0,0.3); font-size: 1.1em; }
+.header-action-btn { color: var(--jjk-text-secondary); transition: all 0.2s ease; }
+.header-action-btn:hover { color: var(--jjk-accent-primary); transform: scale(1.15); text-shadow: 0 0 5px var(--jjk-accent-primary-glow); }
 
 .chat-messages-container { padding: 20px; }
-.no-chat-selected .logo-placeholder {
-    font-family: "Noto Serif SC", serif; /* More thematic font */
-    content: "咒";
-    font-size: 80px;
-    color: rgba(var(--jjk-text-primary-rgb), 0.1);
-    text-shadow: 0 0 30px rgba(var(--jjk-accent-primary-rgb), 0.2), 0 0 10px rgba(var(--jjk-accent-danger-rgb),0.1);
+.no-chat-selected {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    user-select: none;
 }
+.no-chat-selected .logo-placeholder {
+    font-family: "Noto Serif SC", serif;
+    font-size: 100px; /* Larger */
+    font-weight: bold;
+    color: rgba(var(--jjk-text-primary-rgb), 0.08); /* More subtle base color */
+    /* "Cursed Mark" effect for the placeholder */
+    text-shadow:
+            0 0 5px rgba(var(--jjk-accent-danger-rgb), 0.1),
+            0 0 15px rgba(var(--jjk-accent-danger-rgb), 0.1),
+            0 0 30px rgba(var(--jjk-accent-primary-rgb), 0.15),
+            1px 1px 0px var(--jjk-border-stronger), /* Sharp edge */
+            -1px -1px 0px var(--jjk-border-stronger);
+    position: relative;
+    animation: jjk-placeholder-pulse 3s infinite ease-in-out;
+}
+@keyframes jjk-placeholder-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.03); opacity: 1; }
+}
+.no-chat-selected .placeholder-text {
+    margin-top: 15px;
+    font-size: 1.1em;
+    color: var(--jjk-text-tertiary);
+    font-style: italic;
+}
+
 .status-indicator.global {
     background-color: var(--jjk-bg-panel);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--jjk-border);
     color: var(--jjk-accent-secondary);
-    padding: 6px 12px;
+    padding: 8px 14px;
+    box-shadow: var(--box-shadow);
 }
 
 /* Message Bubbles */
 .message {
-    border: 1px solid var(--jjk-border); /* Slightly more prominent border */
+    border: 1px solid var(--jjk-border);
     box-shadow: var(--box-shadow);
     border-radius: var(--border-radius); /* Use consistent radius */
-    padding: 10px 14px; /* More padding */
+    padding: 10px 15px; /* More padding */
+    margin-bottom: 12px; /* Increased spacing */
+    position: relative; /* For potential pseudo-elements like tails */
 }
+/* Basic tail for message bubbles - can be refined */
+/*
+.message.sent::after, .message.received::after {
+    content: '';
+    position: absolute;
+    bottom: 0px;
+    width: 0;
+    height: 0;
+    border: 8px solid transparent;
+}
+.message.sent::after { right: -10px; border-left-color: var(--sent-bg-color); border-right: 0; border-bottom:0; }
+.message.received::after { left: -10px; border-right-color: var(--received-bg-color); border-left:0; border-bottom:0; }
+*/
+
 .message.sent {
-    background-color: var(--sent-bg-color); /* Darker than received for depth */
-    border-left: 3px solid var(--jjk-accent-primary); /* Use main accent */
+    background-color: var(--sent-bg-color);
+    border-left: 3.5px solid var(--jjk-accent-primary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25), 0 0 5px var(--jjk-accent-primary-glow) inset;
 }
 .message.received {
-    background-color: var(--received-bg-color); /* Main panel color */
-    /* border-right: 3px solid var(--jjk-border-stronger); */
+    background-color: var(--received-bg-color);
+    border-right: 3.5px solid var(--jjk-border-stronger); /* Default received accent */
 }
+/* Character-specific received messages already have border-left rules */
+
 .message.system {
-    background-color: rgba(var(--jjk-bg-void-rgb), 0.5); /* Very dark, distinct */
+    background-color: rgba(var(--jjk-bg-void-rgb), 0.6);
     color: var(--jjk-accent-secondary);
     border: 1px dashed var(--jjk-accent-secondary);
-    box-shadow: none;
+    box-shadow: 0 0 5px var(--jjk-accent-secondary-glow) inset;
+    text-align: center;
+    font-style: italic;
+    padding: 8px 12px;
 }
-.message-sender { color: var(--text-color-light); font-weight: 500; margin-bottom: 3px; }
-.message .timestamp { color: var(--text-color-tertiary); opacity: 0.8; font-size: 11px;}
+.message-sender { color: var(--jjk-text-secondary); font-weight: 500; margin-bottom: 4px; display: block; }
+.message .timestamp { color: var(--jjk-text-tertiary); opacity: 0.75; font-size: 10.5px; }
 
 .chat-input-container {
-    background-color: var(--jjk-bg-void); /* Darkest for input area background */
-    border-top: 1px solid var(--border-color);
-    padding: 12px 15px; /* More padding */
+    background-color: var(--jjk-bg-void);
+    border-top: 1px solid var(--jjk-border-stronger);
+    padding: 12px 18px;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
 }
 #messageInput {
-    background-color: var(--jjk-bg-panel); /* Panel color for input field itself */
+    background-color: var(--jjk-bg-panel);
     border: 1px solid var(--jjk-border);
     color: var(--text-color);
     border-radius: var(--border-radius);
-    padding: 10px 14px;
+    padding: 12px 16px; /* Larger input */
+    transition: all 0.2s ease-in-out;
 }
-#messageInput::placeholder { color: var(--text-color-tertiary); }
+#messageInput::placeholder { color: var(--jjk-text-tertiary); }
 #messageInput:focus {
     border-color: var(--jjk-accent-primary);
-    box-shadow: 0 0 0 2px rgba(var(--jjk-accent-primary-rgb),0.3), inset 0 0 5px rgba(var(--jjk-accent-primary-rgb),0.05);
+    box-shadow: 0 0 0 3px var(--jjk-accent-primary-glow), inset 0 0 8px rgba(var(--jjk-accent-primary-rgb),0.1);
 }
-.icon-btn { color: var(--text-color-light); }
-.icon-btn:hover { color: var(--jjk-accent-primary); background-color: var(--jjk-hover-bg); }
-#sendButtonMain { color: var(--jjk-accent-primary); font-weight: 500; }
-#sendButtonMain:hover { text-shadow: 0 0 6px rgba(var(--jjk-accent-primary-rgb),0.5); }
+.icon-btn { color: var(--jjk-text-secondary); padding: 8px; border-radius: 50%; transition: all 0.2s ease;}
+.icon-btn:hover { color: var(--jjk-accent-primary); background-color: var(--jjk-hover-bg); transform: scale(1.1); }
+#sendButtonMain { color: var(--jjk-accent-primary); font-weight: 600; font-size: 1.5em; /* Larger send icon */ }
+#sendButtonMain:hover { text-shadow: 0 0 8px var(--jjk-accent-primary-glow); transform: translateX(2px); }
 #voiceButtonMain.recording {
     color: var(--jjk-accent-danger);
-    animation: jjk-pulse-v2 1.2s infinite ease-in-out;
+    animation: jjk-pulse-v2 1s infinite ease-in-out;
+    background-color: rgba(var(--jjk-accent-danger-rgb), 0.1);
 }
 @keyframes jjk-pulse-v2 {
-    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--jjk-accent-danger-rgb), 0.5); }
-    50% { transform: scale(1.1); box-shadow: 0 0 5px 3px rgba(var(--jjk-accent-danger-rgb), 0.2); }
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--jjk-accent-danger-rgb), 0.4); }
+    50% { transform: scale(1.15); box-shadow: 0 0 8px 5px rgba(var(--jjk-accent-danger-rgb), 0.2); }
 }
 
 /* --- Details Panel --- */
 .details-panel {
-    background-color: var(--jjk-bg-void); /* Same as sidebar for consistency */
-    border-left: 1px solid var(--border-color);
+    background-color: var(--jjk-bg-void);
+    border-left: 1px solid var(--jjk-border-stronger);
+    box-shadow: -2px 0 5px rgba(0,0,0,0.2);
 }
 .details-header {
-    background-color: transparent; /* Inherits from details-panel */
-    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(var(--jjk-bg-panel-rgb), 0.5);
+    border-bottom: 1px solid var(--jjk-border-stronger);
+    padding: 15px; /* More padding */
 }
 .details-avatar {
     border: 2px solid var(--jjk-border);
-    box-shadow: 0 0 12px rgba(0,0,0, 0.3);
+    box-shadow: 0 0 15px rgba(0,0,0, 0.4), 0 0 0 2px var(--jjk-bg-void); /* Stronger definition */
+    width: 80px; height: 80px; /* Larger avatar */
 }
-#detailsName { text-shadow: 0 1px 2px rgba(0,0,0,0.3); font-size: 1.1em;}
+#detailsName { text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.2em; font-weight: 600; margin-top: 8px;}
 #aiContactDetailsContent {
-    background-color: var(--jjk-bg-panel-translucent); /* Translucent panel */
-    backdrop-filter: blur(5px);
+    background-color: var(--jjk-bg-panel-translucent);
+    backdrop-filter: blur(6px);
     border: 1px solid var(--jjk-border);
-    padding: 15px;
+    padding: 18px;
+    margin: 15px; border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
 }
 #aiContactDetailsContent p strong {
-    color: var(--jjk-accent-secondary); /* Use secondary accent for these labels */
-    border-bottom: 1px solid rgba(var(--jjk-accent-secondary-rgb), 0.3);
+    color: var(--jjk-accent-secondary);
+    border-bottom: 1.5px solid rgba(var(--jjk-accent-secondary-rgb), 0.4);
     padding-bottom: 2px;
+    font-weight: 500;
 }
 #aiContactBasicInfoList li {
-    border-bottom: 1px solid rgba(var(--jjk-border-rgb), 0.5);
-    padding: 5px 0;
+    border-bottom: 1px solid rgba(var(--jjk-border-rgb), 0.6);
+    padding: 8px 0; /* More spacing */
 }
-#aiContactAboutText { color: var(--text-color-light); font-size: 0.95em;}
+#aiContactAboutText { color: var(--jjk-text-secondary); font-size: 0.9em; line-height: 1.7; }
 
 /* Buttons (Refined) */
 .btn {
     border-radius: var(--border-radius);
-    text-transform: none; /* No uppercase */
-    letter-spacing: 0.2px;
-    font-weight: 500; /* Medium weight */
-    transition: all 0.15s ease-out;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.15), inset 0 -1px 0 rgba(0,0,0,0.1); /* Subtle 3D effect */
-    padding: 9px 18px; /* Standardized padding */
+    text-transform: uppercase; /* More impactful like manga SFX */
+    letter-spacing: 0.8px; /* Wider spacing */
+    font-weight: 600; /* Bold */
+    transition: all 0.18s ease-out;
+    box-shadow: 0 2px 3px rgba(0,0,0,0.25), inset 0 -1.5px 0 rgba(0,0,0,0.2); /* Stronger 3D effect */
+    padding: 10px 20px;
+    border: 1px solid transparent; /* Base border */
 }
-.btn:active { transform: translateY(1px); box-shadow: 0 0 1px rgba(0,0,0,0.1);}
+.btn:active { transform: translateY(1.5px) scale(0.98); box-shadow: 0 0 1px rgba(0,0,0,0.2);}
 
-.btn-primary { background-color: var(--jjk-accent-primary); color: var(--jjk-text-inverted); border: 1px solid var(--jjk-accent-primary-darker); }
-.btn-primary:hover { background-color: var(--jjk-accent-primary-darker); border-color: var(--jjk-accent-primary); }
-.btn-secondary { background-color: var(--jjk-border-stronger); color: var(--jjk-text-primary); border: 1px solid var(--jjk-border); }
-.btn-secondary:hover { background-color: var(--jjk-border); border-color: var(--jjk-border-stronger); }
-.btn-danger { background-color: var(--jjk-accent-danger); color: var(--jjk-text-primary); border: 1px solid rgba(var(--jjk-accent-danger-rgb),0.7); }
-.btn-danger:hover { background-color: rgb(180,35,50); border-color: var(--jjk-accent-danger); }
-.btn-success { background-color: var(--jjk-accent-secondary); color: var(--jjk-text-inverted); border: 1px solid rgba(var(--jjk-accent-secondary-rgb),0.7); }
-.btn-success:hover { background-color: rgb(0, 150, 190); border-color: var(--jjk-accent-secondary); }
+.btn-primary { background-color: var(--jjk-accent-primary); color: var(--jjk-text-inverted); border-color: var(--jjk-accent-primary-darker); text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
+.btn-primary:hover { background-color: var(--jjk-accent-primary-darker); border-color: var(--jjk-accent-primary); box-shadow: 0 2px 5px rgba(var(--jjk-accent-primary-rgb),0.3), inset 0 -1.5px 0 rgba(0,0,0,0.2), 0 0 8px var(--jjk-accent-primary-glow); }
+.btn-secondary { background-color: var(--jjk-border-stronger); color: var(--jjk-text-primary); border-color: var(--jjk-border); text-shadow: 0 1px 1px rgba(0,0,0,0.2); }
+.btn-secondary:hover { background-color: var(--jjk-border); border-color: var(--jjk-border-stronger); box-shadow: 0 2px 5px rgba(var(--jjk-border-stronger-rgb),0.2), inset 0 -1.5px 0 rgba(0,0,0,0.2); }
+.btn-danger { background-color: var(--jjk-accent-danger); color: var(--jjk-text-primary); border-color: rgba(var(--jjk-accent-danger-rgb),0.8); text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
+.btn-danger:hover { background-color: rgb(190,30,45); border-color: var(--jjk-accent-danger); box-shadow: 0 2px 5px rgba(var(--jjk-accent-danger-rgb),0.3), inset 0 -1.5px 0 rgba(0,0,0,0.2), 0 0 8px var(--jjk-accent-danger-glow); }
+.btn-success { background-color: var(--jjk-accent-secondary); color: var(--jjk-text-inverted); border-color: rgba(var(--jjk-accent-secondary-rgb),0.8); text-shadow: 0 1px 1px rgba(0,0,0,0.3); }
+.btn-success:hover { background-color: rgb(0, 160, 200); border-color: var(--jjk-accent-secondary); box-shadow: 0 2px 5px rgba(var(--jjk-accent-secondary-rgb),0.3), inset 0 -1.5px 0 rgba(0,0,0,0.2), 0 0 8px var(--jjk-accent-secondary-glow); }
 
 
 /* --- Modals (Refined) --- */
-.loading-overlay { background-color: rgba(var(--jjk-bg-void-rgb), 0.9); backdrop-filter: blur(4px); }
+.loading-overlay { background-color: rgba(var(--jjk-bg-void-rgb), 0.92); backdrop-filter: blur(5px); }
 .loading-spinner {
-    width: 40px; height: 40px; border-width: 4px;
+    width: 45px; height: 45px; border-width: 5px;
     border-top-color: var(--jjk-accent-primary);
     border-left-color: var(--jjk-accent-primary);
-    border-bottom-color: rgba(var(--jjk-accent-primary-rgb),0.3);
-    border-right-color: rgba(var(--jjk-accent-primary-rgb),0.3);
+    border-bottom-color: var(--jjk-accent-primary-glow);
+    border-right-color: var(--jjk-accent-primary-glow);
+    animation: spin 0.8s linear infinite, jjk-spinner-glow 1.6s ease-in-out infinite alternate;
+}
+@keyframes jjk-spinner-glow {
+    from { box-shadow: 0 0 5px var(--jjk-accent-primary-glow); }
+    to { box-shadow: 0 0 15px 3px var(--jjk-accent-primary-glow); }
 }
 .modal-content {
     background-color: var(--jjk-bg-panel-translucent);
-    backdrop-filter: blur(10px); /* Frosted glass */
-    border: 1px solid var(--jjk-border-stronger);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5), inset 0 0 0 1px var(--jjk-border);
-    padding: 25px; /* More padding */
+    backdrop-filter: blur(12px); /* Stronger blur for "domain" feel */
+    border: 1.5px solid var(--jjk-border-stronger);
+    box-shadow: 0 10px 35px rgba(0,0,0,0.65), inset 0 0 0 1px var(--jjk-border), 0 0 20px var(--jjk-border-cursed);
+    padding: 30px; /* More padding */
+    border-radius: var(--border-radius);
 }
 .modal-header h2 {
     color: var(--jjk-text-primary);
-    font-size: 1.25em;
-    text-shadow: 0 1px 1px rgba(0,0,0,0.2);
+    font-size: 1.35em;
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 0 5px var(--jjk-accent-primary-glow);
+    border-bottom: 1px solid var(--jjk-border-cursed);
+    padding-bottom: 10px; margin-bottom: 15px;
 }
-.close-modal-btn:hover { color: var(--jjk-accent-primary); }
+.close-modal-btn { font-size: 1.5em; top: 15px; right: 15px; }
+.close-modal-btn:hover { color: var(--jjk-accent-danger); transform: rotate(90deg) scale(1.1); }
 .modal-body input[type="text"], .modal-body textarea, .modal-body input[type="password"], .modal-body input[type="number"] {
-    background-color: rgba(var(--jjk-bg-void-rgb), 0.7); /* Darker input fields */
+    background-color: rgba(var(--jjk-bg-void-rgb), 0.75);
     color: var(--text-color);
     border: 1px solid var(--jjk-border);
     border-radius: var(--border-radius);
-    padding: 10px 12px;
+    padding: 12px 14px; /* Consistent padding */
+    transition: all 0.2s ease-in-out;
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus, .modal-body input[type="password"]:focus, .modal-body input[type="number"]:focus {
     border-color: var(--jjk-accent-primary);
-    box-shadow: 0 0 0 2px rgba(var(--jjk-accent-primary-rgb),0.3);
+    box-shadow: 0 0 0 3px var(--jjk-accent-primary-glow), inset 0 0 8px rgba(var(--jjk-accent-primary-rgb),0.1);
 }
 .user-id-display #modalUserIdValue {
-    background: rgba(var(--jjk-bg-void-rgb),0.8);
+    background: rgba(var(--jjk-bg-void-rgb),0.85);
     color: var(--jjk-accent-primary);
-    border: 1px dashed var(--jjk-accent-primary);
-    padding: 8px 12px;
-    font-size: 0.95em;
+    border: 1.5px dashed var(--jjk-accent-primary);
+    padding: 10px 14px;
+    font-size: 1em;
+    font-weight: 500;
+    box-shadow: 0 0 5px var(--jjk-accent-primary-glow) inset;
+    word-break: break-all;
 }
 
 /* Video Call */
-.video-call-avatar { background-color: var(--jjk-accent-primary); border: 1px solid var(--border-color); }
+.video-call-avatar { background-color: var(--jjk-accent-primary); border: 1px solid var(--border-color); box-shadow: 0 0 10px var(--jjk-accent-primary-glow); }
+.video-call-button { transition: all 0.2s ease; }
 .video-call-button.end-call { background: var(--danger-color); }
+.video-call-button.end-call:hover { background: rgb(190,30,45); box-shadow: 0 0 10px var(--jjk-accent-danger-glow); transform: scale(1.05); }
 .video-call-button.active { background: var(--jjk-accent-primary); color: var(--jjk-text-inverted); }
+.video-call-button.active:hover { background: var(--jjk-accent-primary-darker); box-shadow: 0 0 10px var(--jjk-accent-primary-glow); transform: scale(1.05); }
+
 
 /* Toggle Switch */
-input:checked + .slider { background-color: var(--jjk-accent-primary); }
-.slider { background-color: var(--jjk-border-stronger); }
-.slider:before { background-color: var(--jjk-text-primary); } /* Light slider nob */
-input:focus + .slider { box-shadow: 0 0 0 2px rgba(var(--jjk-accent-primary-rgb),0.3); }
+input:checked + .slider { background-color: var(--jjk-accent-primary); box-shadow: 0 0 5px var(--jjk-accent-primary-glow); }
+.slider { background-color: var(--jjk-border-stronger); transition: all 0.2s ease-in-out; }
+.slider:before { background-color: var(--jjk-text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.3); transition: all 0.2s ease-in-out; }
+input:focus + .slider { box-shadow: 0 0 0 3px var(--jjk-accent-primary-glow); }
+input:checked + .slider:before { transform: translateX(20px) rotate(360deg); background-color: var(--jjk-text-inverted); } /* Slider nob animation */
+
 
 /* Ensure specific hidden parts are hidden (consistency with base.css) */
 #detailsPanelContent #aiContactAboutSection,
@@ -564,11 +738,13 @@ input:focus + .slider { box-shadow: 0 0 0 2px rgba(var(--jjk-accent-primary-rgb)
 
 .notification {
     background: var(--jjk-bg-panel-translucent);
-    backdrop-filter: blur(8px);
-    border-left: 4px solid var(--jjk-accent-primary);
+    backdrop-filter: blur(10px); /* Enhanced blur */
+    border-left: 5px solid var(--jjk-accent-primary); /* Thicker accent border */
     color: var(--text-color);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 18px rgba(0,0,0,0.4), 0 0 8px var(--jjk-border-cursed); /* More prominent shadow */
+    border-radius: var(--border-radius);
+    padding: 12px 18px; /* More padding */
 }
-.notification.notification-error { border-left-color: var(--jjk-accent-danger); }
-.notification.notification-warning { border-left-color: var(--jjk-accent-warning); }
-.notification.notification-success { border-left-color: var(--jjk-accent-secondary); } /* Use secondary for success */
+.notification.notification-error { border-left-color: var(--jjk-accent-danger); box-shadow: 0 5px 18px rgba(0,0,0,0.4), 0 0 8px var(--jjk-accent-danger-glow); }
+.notification.notification-warning { border-left-color: var(--jjk-accent-warning); box-shadow: 0 5px 18px rgba(0,0,0,0.4), 0 0 8px var(--jjk-accent-warning-glow); }
+.notification.notification-success { border-left-color: var(--jjk-accent-secondary); box-shadow: 0 5px 18px rgba(0,0,0,0.4), 0 0 8px var(--jjk-accent-secondary-glow); }

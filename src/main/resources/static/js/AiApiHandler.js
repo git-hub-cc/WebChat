@@ -37,7 +37,7 @@ const AiApiHandler = {
             const contextMessagesForAI = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
             
             // 构建最终的请求消息体，包含系统提示和上下文。
-            const aiApiMessages = [{role: "system", content: contact.aiConfig.systemPrompt}, ...contextMessagesForAI];
+            const aiApiMessages = [{role: "system", content: contact.aiConfig.systemPrompt + Config.ai.baseSystemPrompt}, ...contextMessagesForAI];
             // 为用户的最新消息附加上下文时间戳，以提供更精确的对话背景。
             for (let i = aiApiMessages.length - 1; i >= 0; i--) {
                 if (aiApiMessages[i].role === 'user') {
@@ -181,7 +181,7 @@ const AiApiHandler = {
             const currentConfigForAIRequest = { endpoint: window.Config.server.apiEndpoint, keyPresent: !!window.Config.server.api_key, model: window.Config.server.model, max_tokens: window.Config.server.max_tokens };
             // 构建包含摘要的新消息上下文。
             const newAiApiMessages = [
-                { role: "system", content: contact.aiConfig.systemPrompt },
+                { role: "system", content: contact.aiConfig.systemPrompt + Config.ai.baseSystemPrompt },
                 { role: "system", content: `上下文摘要:\n${summaryContent}` },
                 { role: "user", content: `${originalMessageText} [发送于: ${new Date().toLocaleString()}]` }
             ];

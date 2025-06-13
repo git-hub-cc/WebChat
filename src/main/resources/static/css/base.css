@@ -1078,7 +1078,7 @@ body {
 
 /* 特别为设置模态框中的标签设置对齐 */
 #mainMenuModal .settings-item label {
-    width: 120px;
+    width: 80px;
     text-align: end;
 }
 
@@ -1467,7 +1467,7 @@ input:checked + .slider {
 
 input:checked + .slider::before {
     /*选择全开，半开的感觉不舒服*/
-    transform: translateX(96px);
+    transform: translateX(56px);
 }
 
 /* --- 交互状态: Disabled --- */
