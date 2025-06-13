@@ -374,26 +374,35 @@ const UserManager = {
 
     /**
      * 清空所有用户添加的联系人及其聊天记录。
+     * AI 助手也将被删除。
      * @returns {Promise<void>}
      */
     clearAllContacts: async function() {
         ModalManager.showConfirmationModal(
-            "您确定要删除所有用户添加的联系人吗？这也会清空他们的聊天记录。内置的特殊联系人将保留。",
+            "您确定要删除所有用户添加的联系人以及所有AI助手吗？这也会清空他们的聊天记录。其他内置的特殊联系人将保留。",
             async () => {
-                const contactIdsToRemove = Object.keys(this.contacts).filter(id => !this.isSpecialContact(id));
-                const tempContacts = { ...this.contacts };
+                const tempContacts = { ...this.contacts }; // Preserve current state for rollback and iteration
+
+                // Determine which contacts to remove: user-added OR special AI contacts
+                const contactIdsToRemove = Object.keys(tempContacts).filter(id => {
+                    const contact = tempContacts[id];
+                    return !this.isSpecialContact(id) || (contact && contact.isAI);
+                });
+
+                // Determine which special contacts to keep (non-AI special contacts)
                 const specialContactsToKeep = {};
                 SPECIAL_CONTACTS_DEFINITIONS.forEach(scDef => {
-                    if (tempContacts[scDef.id]) {
+                    if (tempContacts[scDef.id] && !tempContacts[scDef.id].isAI) {
                         specialContactsToKeep[scDef.id] = tempContacts[scDef.id];
                     }
                 });
-                this.contacts = specialContactsToKeep;
+
+                this.contacts = specialContactsToKeep; // Update in-memory contacts
 
                 try {
                     for (const contactId of contactIdsToRemove) {
                         await DBManager.removeItem('contacts', contactId);
-                        localStorage.removeItem(`ttsConfig_${contactId}`);
+                        localStorage.removeItem(`ttsConfig_${contactId}`); // Remove TTS config for AI contacts
                         await ChatManager.clearChat(contactId);
                         if (ConnectionManager.connections[contactId]) {
                             ConnectionManager.close(contactId);
@@ -405,12 +414,12 @@ const UserManager = {
                         ChatAreaUIManager.showNoChatSelected();
                     }
                     ChatManager.renderChatList(ChatManager.currentFilter);
-                    NotificationManager.showNotification("所有用户添加的联系人及其聊天记录已清空。", 'success');
+                    NotificationManager.showNotification("所有用户添加的联系人、AI助手及其聊天记录已清空。", 'success');
                 } catch (error) {
                     Utils.log("清空联系人失败: " + error, Utils.logLevels.ERROR);
                     NotificationManager.showNotification("从数据库清空联系人失败。", 'error');
-                    this.contacts = tempContacts; // 失败时恢复
-                    ChatManager.renderChatList(ChatManager.currentFilter);
+                    this.contacts = tempContacts; // Rollback in-memory contacts
+                    ChatManager.renderChatList(ChatManager.currentFilter); // Re-render with rolled-back state
                 }
             }
         );

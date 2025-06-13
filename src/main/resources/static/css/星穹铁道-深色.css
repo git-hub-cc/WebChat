@@ -546,7 +546,7 @@ input:checked + .slider { background-color: var(--hsr-trailblaze-cyan); box-shad
     box-shadow: 0 1px 3px rgba(0,0,0,0.6);
     transition: .3s;
 }
-input:checked + .slider:before { transform: translateX(22px); background-color: var(--hsr-deep-cosmos-bg); box-shadow: 0 1px 3px rgba(0,0,0,0.6), 0 0 3px var(--hsr-trailblaze-cyan); }
+input:checked + .slider:before { transform: translateX(56px); background-color: var(--hsr-deep-cosmos-bg); box-shadow: 0 1px 3px rgba(0,0,0,0.6), 0 0 3px var(--hsr-trailblaze-cyan); }
 
 
 /* Visibility for AI sections (matches other themes) */

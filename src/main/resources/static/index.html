@@ -66,6 +66,7 @@
                 <div id="audioPreviewContainer" class="audio-preview-input"></div>
                 <div class="input-row">
                     <button class="icon-btn attach-btn" id="attachBtnMain" title="附加文件" disabled>📎</button>
+                    <button class="icon-btn screenshot-main-btn" id="screenshotMainBtn" title="截图" disabled>📸</button>
                     <input type="file" id="fileInput" onchange="MediaManager.handleFileSelect(event)">
                     <textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
                     <button class="icon-btn send-btn" id="sendButtonMain" title="发送" disabled>➤</button>
@@ -289,13 +290,13 @@
                     <div class="collapsible-content" style="display: none;">
                         <p>用于信令服务器故障或需要直接点对点连接时。</p>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.createOffer(null, { isManual: true })" id="modalCreateOfferBtn" class="btn">1. 创建连接提议</button>
+                            <button onclick="ConnectionManager.createOffer(null, { isManual: true })" id="modalCreateOfferBtn" class="btn btn-secondary">1. 创建连接提议</button>
                         </div>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.createAnswer({ isManual: true })" id="modalCreateAnswerBtn" class="btn">2. 创建应答 (粘贴提议后)</button>
+                            <button onclick="ConnectionManager.createAnswer({ isManual: true })" id="modalCreateAnswerBtn" class="btn btn-secondary">2. 创建应答 (粘贴提议后)</button>
                         </div>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.handleAnswer({ isManual: true })" id="modalHandleAnswerBtn" class="btn">3. 接受应答 (粘贴应答后)</button>
+                            <button onclick="ConnectionManager.handleAnswer({ isManual: true })" id="modalHandleAnswerBtn" class="btn btn-secondary">3. 接受应答 (粘贴应答后)</button>
                         </div>
                         <div class="manual-connect-step">
                             <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="在此粘贴对方的连接信息..."></textarea>
@@ -427,7 +428,7 @@
 <script src="js/DetailsPanelUIManager.js"></script>
 <script src="js/VideoCallUIManager.js"></script>
 <script src="js/MediaUIManager.js"></script>
-<script src="js/PeopleLobbyManager.js"></script> <!-- 新增的人员大厅管理器 -->
+<script src="js/PeopleLobbyManager.js"></script>
 
 <!-- 应用初始化程序 (应放在最后或接近最后) -->
 <script src="js/AppInitializer.js"></script>

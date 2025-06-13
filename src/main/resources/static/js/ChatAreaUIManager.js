@@ -1,6 +1,7 @@
 /**
  * @file ChatAreaUIManager.js
- * @description 管理主聊天区域的 UI 元素和交互，包括聊天头部、消息框、输入区以及通话按钮。
+ * @description 管理主聊天区域的 UI 元素和交互，包括聊天头部、消息框、输入区以及通话和截图按钮。
+ *              支持消息的右键/双击上下文菜单，用于删除或撤回消息，菜单在无操作3秒后自动消失。
  * @module ChatAreaUIManager
  * @exports {object} ChatAreaUIManager - 对外暴露的单例对象，包含管理聊天区域 UI 的所有方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
@@ -9,7 +10,7 @@
  * @property {function} enableChatInterface - 启用或禁用聊天输入框和相关按钮。
  * @property {function} setCallButtonsState - 根据连接状态设置通话按钮的可用性。
  * @property {function} showReconnectPrompt - 当与对方断开连接时，在聊天框中显示重连提示。
- * @dependencies LayoutManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationManager, Utils, MediaManager, PeopleLobbyManager
+ * @dependencies LayoutManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationManager, Utils, MediaManager, PeopleLobbyManager, EventEmitter, UIManager
  * @dependents AppInitializer (进行初始化)
  */
 const ChatAreaUIManager = {
@@ -30,6 +31,16 @@ const ChatAreaUIManager = {
     screenShareButtonEl: null,
     chatDetailsButtonEl: null,
     peopleLobbyButtonEl: null,
+    screenshotMainBtnEl: null,
+
+    // 自定义上下文菜单相关属性
+    contextMenuEl: null,
+    activeContextMenuMessageElement: null,
+    contextMenuAutoHideTimer: null, // 用于菜单自动隐藏
+
+    // 常量
+    MESSAGE_RETRACTION_WINDOW: 5 * 60 * 1000, // 5 minutes in ms
+    CONTEXT_MENU_AUTOHIDE_DURATION: 3000, // 3 seconds in ms for auto-hiding menu
 
     /**
      * 初始化模块，获取所有需要的 DOM 元素引用并绑定核心事件。
@@ -51,8 +62,35 @@ const ChatAreaUIManager = {
         this.screenShareButtonEl = document.getElementById('screenShareButtonMain');
         this.chatDetailsButtonEl = document.getElementById('chatDetailsBtnMain');
         this.peopleLobbyButtonEl = document.getElementById('peopleLobbyButtonMain');
+        this.screenshotMainBtnEl = document.getElementById('screenshotMainBtn');
 
+        this._initContextMenu();
         this.bindEvents();
+    },
+
+    /**
+     * @private
+     * 初始化自定义上下文菜单的 DOM 结构。
+     */
+    _initContextMenu: function() {
+        this.contextMenuEl = document.createElement('div');
+        this.contextMenuEl.id = 'customMessageContextMenu';
+        this.contextMenuEl.className = 'custom-context-menu';
+        this.contextMenuEl.style.display = 'none';
+        document.body.appendChild(this.contextMenuEl);
+
+        document.addEventListener('click', function(event) {
+            if (this.contextMenuEl && this.contextMenuEl.style.display === 'block') {
+                if (!this.contextMenuEl.contains(event.target)) {
+                    this._hideContextMenu();
+                }
+            }
+        }.bind(this));
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && this.contextMenuEl && this.contextMenuEl.style.display === 'block') {
+                this._hideContextMenu();
+            }
+        }.bind(this));
     },
 
     /**
@@ -76,19 +114,17 @@ const ChatAreaUIManager = {
             const fileInput = document.getElementById('fileInput');
             if (fileInput) fileInput.click();
         });
-
-        // 绑定语音按钮事件，用于录音（支持触摸和鼠标）
         if (this.voiceButtonEl) {
-            if ('ontouchstart' in window) { // 检查是否为触摸设备
+            if ('ontouchstart' in window) {
                 this.voiceButtonEl.addEventListener('touchstart', (e) => {
-                    e.preventDefault(); // 阻止滚动等默认触摸行为
+                    e.preventDefault();
                     if (!this.voiceButtonEl.disabled) MediaManager.startRecording();
                 });
                 this.voiceButtonEl.addEventListener('touchend', (e) => {
                     e.preventDefault();
                     if (!this.voiceButtonEl.disabled) MediaManager.stopRecording();
                 });
-            } else { // 桌面鼠标事件
+            } else {
                 this.voiceButtonEl.addEventListener('mousedown', () => {
                     if (!this.voiceButtonEl.disabled) MediaManager.startRecording();
                 });
@@ -102,6 +138,13 @@ const ChatAreaUIManager = {
                     }
                 });
             }
+        }
+
+        // 绑定截图按钮事件
+        if (this.screenshotMainBtnEl) {
+            this.screenshotMainBtnEl.addEventListener('click', () => {
+                MediaManager.captureScreen();
+            });
         }
 
         // 绑定通话相关按钮的点击事件
@@ -136,56 +179,170 @@ const ChatAreaUIManager = {
 
         // 绑定拖放事件监听器，用于文件发送
         if (this.chatAreaEl) {
-            let dragCounter = 0; // 用于处理 dragenter/dragleave 的嵌套问题
-
+            let dragCounter = 0;
             this.chatAreaEl.addEventListener('dragenter', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // 仅当拖入的是文件且有活动聊天时才响应
+                e.preventDefault(); e.stopPropagation();
                 if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) {
                     dragCounter++;
-                    if (dragCounter === 1) { // 第一次进入时显示覆盖层
-                        this.chatAreaEl.classList.add('drag-over');
-                    }
+                    if (dragCounter === 1) this.chatAreaEl.classList.add('drag-over');
                 }
             });
-
             this.chatAreaEl.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // 设置拖放效果为“复制”
-                if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) {
-                    e.dataTransfer.dropEffect = 'copy';
-                } else {
-                    e.dataTransfer.dropEffect = 'none';
-                }
+                e.preventDefault(); e.stopPropagation();
+                if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) e.dataTransfer.dropEffect = 'copy';
+                else e.dataTransfer.dropEffect = 'none';
             });
-
             this.chatAreaEl.addEventListener('dragleave', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+                e.preventDefault(); e.stopPropagation();
                 dragCounter--;
-                if (dragCounter === 0) { // 最后一次离开时隐藏覆盖层
-                    this.chatAreaEl.classList.remove('drag-over');
-                }
+                if (dragCounter === 0) this.chatAreaEl.classList.remove('drag-over');
             });
-
             this.chatAreaEl.addEventListener('drop', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                dragCounter = 0;
+                e.preventDefault(); e.stopPropagation(); dragCounter = 0;
                 this.chatAreaEl.classList.remove('drag-over');
-
-                if (!ChatManager.currentChatId) {
-                    NotificationManager.showNotification('发送文件前请先选择一个聊天。', 'warning');
-                    return;
-                }
-
+                if (!ChatManager.currentChatId) { NotificationManager.showNotification('发送文件前请先选择一个聊天。', 'warning'); return; }
                 if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-                    const file = e.dataTransfer.files[0]; // 一次只处理一个文件
-                    MediaManager.processFile(file);
+                    const file = e.dataTransfer.files[0]; MediaManager.processFile(file);
                 }
             });
+        }
+
+        if (this.chatBoxEl) {
+            // Right-click for context menu
+            this.chatBoxEl.addEventListener('contextmenu', function(event) {
+                this._handleMessageInteraction(event);
+            }.bind(this));
+
+            // Double-click for context menu
+            this.chatBoxEl.addEventListener('dblclick', function(event) {
+                const messageElement = event.target.closest('.message:not(.system):not(.retracted)');
+                if (messageElement) {
+                    if (event.target.closest('a, button, input, textarea, select, .file-preview-img, .play-voice-btn, .download-btn, video[controls], audio[controls]')) {
+                        return;
+                    }
+                    this._showContextMenu(event, messageElement);
+                }
+            }.bind(this));
+        }
+    },
+
+    /**
+     * @private
+     * 处理消息元素的右键点击交互事件。
+     * @param {MouseEvent} event - 交互事件对象.
+     */
+    _handleMessageInteraction: function(event) {
+        const messageElement = event.target.closest('.message:not(.system):not(.retracted)');
+        if (!messageElement) return;
+
+        if (event.type === 'contextmenu') {
+            event.preventDefault();
+            this._showContextMenu(event, messageElement);
+        }
+    },
+
+    /**
+     * @private
+     * 显示自定义上下文菜单。
+     * @param {Event} event - 触发菜单的原始事件。
+     * @param {HTMLElement} messageElement - 被交互的消息 DOM 元素。
+     */
+    _showContextMenu: function(event, messageElement) {
+        if (!this.contextMenuEl || !messageElement) return;
+
+        this._clearContextMenuAutoHideTimer(); // 清除上一个自动隐藏定时器
+
+        const imageViewerModal = document.querySelector('.modal-like.image-viewer');
+        if (imageViewerModal) {
+            imageViewerModal.remove();
+        }
+
+        this.contextMenuEl.innerHTML = '';
+        this.activeContextMenuMessageElement = messageElement;
+
+        const messageId = messageElement.dataset.messageId;
+        const messageTimestamp = parseInt(messageElement.dataset.timestamp, 10);
+        const isMyMessage = messageElement.classList.contains('sent');
+
+        if (!messageId) {
+            Utils.log("无法显示上下文菜单：消息元素缺少 data-message-id", Utils.logLevels.WARN);
+            this._hideContextMenu();
+            return;
+        }
+
+        // 修改点: 允许删除所有消息 (自己的和对方的)
+        // 原来的 if (isMyMessage) 条件被移除
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '删除';
+        deleteBtn.className = 'context-menu-button';
+        deleteBtn.onclick = function() {
+            this._clearContextMenuAutoHideTimer();
+            MessageManager.deleteMessageLocally(messageId); // This function deletes the message locally
+            this._hideContextMenu();
+        }.bind(this);
+        this.contextMenuEl.appendChild(deleteBtn);
+
+        // “撤回”功能仍然只对自己的消息在特定时间窗口内有效
+        if (isMyMessage && !isNaN(messageTimestamp) && (Date.now() - messageTimestamp < this.MESSAGE_RETRACTION_WINDOW)) {
+            const retractBtn = document.createElement('button');
+            retractBtn.textContent = '撤回';
+            retractBtn.className = 'context-menu-button';
+            retractBtn.onclick = function() {
+                this._clearContextMenuAutoHideTimer();
+                MessageManager.requestRetractMessage(messageId);
+                this._hideContextMenu();
+            }.bind(this);
+            this.contextMenuEl.appendChild(retractBtn);
+        }
+
+        if (this.contextMenuEl.children.length === 0) {
+            this._hideContextMenu();
+            return;
+        }
+
+        this.contextMenuEl.style.display = 'block';
+        const menuRect = this.contextMenuEl.getBoundingClientRect();
+        const menuWidth = menuRect.width;
+        const menuHeight = menuRect.height;
+        this.contextMenuEl.style.display = 'none';
+
+        let x = event.clientX;
+        let y = event.clientY;
+
+        if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 5;
+        if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 5;
+        if (x < 0) x = 5;
+        if (y < 0) y = 5;
+
+        this.contextMenuEl.style.top = y + 'px';
+        this.contextMenuEl.style.left = x + 'px';
+        this.contextMenuEl.style.display = 'block';
+
+        this.contextMenuAutoHideTimer = setTimeout(function() {
+            this._hideContextMenu();
+        }.bind(this), this.CONTEXT_MENU_AUTOHIDE_DURATION);
+    },
+
+    /**
+     * @private
+     * 隐藏自定义上下文菜单。
+     */
+    _hideContextMenu: function() {
+        this._clearContextMenuAutoHideTimer();
+        if (this.contextMenuEl) {
+            this.contextMenuEl.style.display = 'none';
+        }
+        this.activeContextMenuMessageElement = null;
+    },
+
+    /**
+     * @private
+     * 清除上下文菜单的自动隐藏定时器。
+     */
+    _clearContextMenuAutoHideTimer: function() {
+        if (this.contextMenuAutoHideTimer) {
+            clearTimeout(this.contextMenuAutoHideTimer);
+            this.contextMenuAutoHideTimer = null;
         }
     },
 
@@ -194,9 +351,9 @@ const ChatAreaUIManager = {
      */
     showChatArea: function () {
         if (typeof LayoutManager !== 'undefined') LayoutManager.showChatAreaLayout();
-
         if (this.noChatSelectedScreenEl) this.noChatSelectedScreenEl.style.display = 'none';
         if (this.chatBoxEl) this.chatBoxEl.style.display = 'flex';
+        this._hideContextMenu();
     },
 
     /**
@@ -231,6 +388,7 @@ const ChatAreaUIManager = {
             this.chatDetailsButtonEl.style.display = 'none';
             this.chatDetailsButtonEl.disabled = true;
         }
+        this._hideContextMenu();
     },
 
     /**
@@ -291,14 +449,12 @@ const ChatAreaUIManager = {
 
     /**
      * 启用或禁用聊天输入接口（输入框、发送按钮等）。
-     * 人员大厅按钮的状态将独立管理（始终启用）。
      * @param {boolean} enabled - 是否启用。
      */
     enableChatInterface: function (enabled) {
         const elementsToToggle = [
             this.messageInputEl, this.sendButtonEl, this.attachButtonEl,
-            this.voiceButtonEl, this.chatDetailsButtonEl
-            // this.peopleLobbyButtonEl 已从此列表中移除
+            this.voiceButtonEl, this.chatDetailsButtonEl, this.screenshotMainBtnEl
         ];
         elementsToToggle.forEach(el => { if (el) el.disabled = !enabled; });
 
@@ -327,7 +483,6 @@ const ChatAreaUIManager = {
         const isGroupChat = targetPeerForCall?.startsWith('group_');
         const currentContact = UserManager.contacts[targetPeerForCall];
         const isSpecialChat = currentContact && currentContact.isSpecial;
-
         const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
         // 最终的启用状态：对方已连接，且不是群聊或特殊联系人。
         const finalEnabledState = enabled && targetPeerForCall && !isGroupChat && !isSpecialChat;
@@ -374,26 +529,26 @@ const ChatAreaUIManager = {
         // 如果提示已存在，则只更新文本和按钮状态
         if (promptDiv) {
             const textElement = promptDiv.querySelector('.reconnect-prompt-text');
-            if (textElement) textElement.textContent = `与 ${peerName} 的连接已断开。`;
-            const recBtn = promptDiv.querySelector('.btn-reconnect-inline');
+            if (textElement) textElement.textContent = `与 ${Utils.escapeHtml(peerName)} 的连接已断开。`;
+            const recBtn = promptDiv.querySelector('.message-inline-action-button:not(.secondary-action)');
             if (recBtn) recBtn.disabled = false;
             return;
         }
 
         // 创建新的提示元素
         promptDiv = document.createElement('div');
-        promptDiv.className = 'system-message reconnect-prompt';
+        promptDiv.className = 'system-message reconnect-prompt'; // 'system-message' 是必要的，'reconnect-prompt' 用于特定选择
         promptDiv.setAttribute('data-peer-id', peerId);
         promptDiv.innerHTML = `
-<span class="reconnect-prompt-text">与 ${peerName} 的连接已断开。</span>
-<button class="btn-reconnect-inline">重新连接</button>
-<button class="btn-cancel-reconnect-inline">忽略</button>
+<span class="reconnect-prompt-text">与 ${Utils.escapeHtml(peerName)} 的连接已断开。</span>
+<button class="message-inline-action-button">重新连接</button>
+<button class="message-inline-action-button secondary-action">忽略</button>
     `;
         this.chatBoxEl.appendChild(promptDiv);
         this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight;
 
-        const reconnectButton = promptDiv.querySelector('.btn-reconnect-inline');
-        const cancelButton = promptDiv.querySelector('.btn-cancel-reconnect-inline');
+        const reconnectButton = promptDiv.querySelector('.message-inline-action-button:not(.secondary-action)');
+        const cancelButton = promptDiv.querySelector('.message-inline-action-button.secondary-action');
         const textElement = promptDiv.querySelector('.reconnect-prompt-text');
         let successHandler, failHandler;
 
@@ -410,7 +565,7 @@ const ChatAreaUIManager = {
         // 定义成功和失败的处理器
         successHandler = (connectedPeerId) => {
             if (connectedPeerId === peerId) {
-                textElement.textContent = `已重新连接到 ${peerName}。`;
+                if (textElement) textElement.textContent = `已重新连接到 ${Utils.escapeHtml(peerName)}。`;
                 if (reconnectButton) reconnectButton.style.display = 'none';
                 if (cancelButton) { cancelButton.textContent = '好的'; cancelButton.onclick = () => cleanupPrompt(true); }
                 if (typeof onReconnectSuccess === 'function') onReconnectSuccess();
@@ -419,7 +574,7 @@ const ChatAreaUIManager = {
         };
         failHandler = (failedPeerId) => {
             if (failedPeerId === peerId) {
-                textElement.textContent = `无法重新连接到 ${peerName}。请尝试手动连接或刷新页面。`;
+                if (textElement) textElement.textContent = `无法重新连接到 ${Utils.escapeHtml(peerName)}。请尝试手动连接或刷新页面。`;
                 if (reconnectButton) { reconnectButton.style.display = 'initial'; reconnectButton.disabled = false; }
                 if (cancelButton) cancelButton.textContent = '忽略';
             }
@@ -428,11 +583,16 @@ const ChatAreaUIManager = {
         // 绑定事件
         EventEmitter.on('connectionEstablished', successHandler);
         EventEmitter.on('connectionFailed', failHandler);
-        reconnectButton.onclick = () => {
-            textElement.textContent = `正在尝试重新连接到 ${peerName}...`;
-            reconnectButton.disabled = true;
-            ConnectionManager.createOffer(peerId, {isSilent: false});
-        };
-        cancelButton.onclick = () => cleanupPrompt(true);
+
+        if (reconnectButton) {
+            reconnectButton.onclick = () => {
+                if (textElement) textElement.textContent = `正在尝试重新连接到 ${Utils.escapeHtml(peerName)}...`;
+                reconnectButton.disabled = true;
+                ConnectionManager.createOffer(peerId, {isSilent: false});
+            };
+        }
+        if (cancelButton) {
+            cancelButton.onclick = () => cleanupPrompt(true);
+        }
     }
 };

@@ -544,7 +544,7 @@ body {
 }
 input:checked + .slider { background-color: var(--hi3-tech-blue); box-shadow: 0 0 5px var(--hi3-tech-blue); border-color: var(--hi3-tech-blue); }
 input:checked + .slider:before {
-    transform: translateX(26px);
+    transform: translateX(56px);
     background-color: var(--hi3-hyperion-hull-bg);
     border-color: var(--hi3-interface-dark-text);
 }

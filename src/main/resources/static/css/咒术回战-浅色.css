@@ -521,7 +521,7 @@ input:checked + .slider { background-color: var(--jjk-cursed-energy-blue); box-s
 .slider { background-color: var(--jjk-steel-frame); transition: all 0.2s ease-in-out; }
 .slider:before { background-color: var(--jjk-cursed-seal-white); box-shadow: 0 1px 2px rgba(var(--jjk-ink-black-rgb),0.2); transition: all 0.2s ease-in-out; }
 input:focus + .slider { box-shadow: 0 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.25); }
-input:checked + .slider:before { transform: translateX(20px); }
+input:checked + .slider:before { transform: translateX(56px); }
 
 
 /* Ensure specific hidden parts are hidden (consistency with base.css) */

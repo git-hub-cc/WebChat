@@ -1,4 +1,3 @@
-
 /**
  * @file MediaUIManager.js
  * @description 媒体 UI 管理器，负责处理与媒体相关的用户界面元素，如录音和文件选择的预览。
@@ -10,7 +9,7 @@
  * @property {function} displayFilePreview - 显示用户选择的文件的预览。
  * @property {function} setRecordingButtonActive - 设置录音按钮的激活（录制中）状态和 UI。
  * @dependencies Utils, MessageManager, MediaManager, NotificationManager
- * @dependents AppInitializer (进行初始化), MediaManager (调用以更新 UI)
+ * @dependents AppInitializer (进行初始化), MediaManager (调用以更新 UI), EventEmitter (监听截图事件)
  */
 const MediaUIManager = {
     audioPreviewContainerEl: null,
@@ -23,6 +22,11 @@ const MediaUIManager = {
         this.audioPreviewContainerEl = document.getElementById('audioPreviewContainer');
         this.filePreviewContainerEl = document.getElementById('filePreviewContainer');
         // 预览中的播放/取消事件监听器在创建预览时动态添加。
+
+        // 监听截图完成事件以更新预览
+        EventEmitter.on('screenshotTakenForPreview', (fileObject) => {
+            this.displayFilePreview(fileObject);
+        });
     },
 
     /**
@@ -35,6 +39,10 @@ const MediaUIManager = {
             Utils.log("未找到音频预览容器。", Utils.logLevels.ERROR);
             return;
         }
+        // 清除文件预览（如果存在）
+        if (this.filePreviewContainerEl) this.filePreviewContainerEl.innerHTML = '';
+        MessageManager.selectedFile = null; // 确保文件也被清空
+
         const formattedDuration = Utils.formatTime(duration);
         this.audioPreviewContainerEl.innerHTML = `
 <div class="voice-message-preview">
@@ -74,18 +82,25 @@ const MediaUIManager = {
 
     /**
      * 在输入区域显示用户选择的文件的预览。
-     * @param {object} fileObj - 包含文件信息（data, type, name, size）的对象。
+     * @param {object} fileObj - 包含文件信息（data (URL for preview), type, name, size, blob?）的对象。
      */
     displayFilePreview: function(fileObj) {
         if (!this.filePreviewContainerEl) {
             Utils.log("未找到文件预览容器。", Utils.logLevels.ERROR);
             return;
         }
+        // 清除音频预览（如果存在）
+        if (this.audioPreviewContainerEl) this.audioPreviewContainerEl.innerHTML = '';
+        MessageManager.audioData = null; // 确保音频数据也被清空
+        MessageManager.audioDuration = 0;
+
+
         this.filePreviewContainerEl.innerHTML = ''; // 清除之前的预览
         const previewDiv = document.createElement('div');
         previewDiv.className = 'file-preview-item';
         let contentHtml = '';
 
+        // fileObj.data 此时应该是 Object URL (来自截图) 或 Data URL (来自文件选择)
         if (fileObj.type.startsWith('image/')) {
             contentHtml = `<img src="${fileObj.data}" alt="预览" style="max-height: 50px; border-radius: 4px; margin-right: 8px;"> ${Utils.escapeHtml(fileObj.name)}`;
         } else if (fileObj.type.startsWith('video/')) {

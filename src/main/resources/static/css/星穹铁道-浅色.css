@@ -541,7 +541,7 @@ input:checked + .slider { background-color: var(--hsr-nav-compass-blue); box-sha
     box-shadow: 0 1px 3px rgba(var(--hsr-console-dark-text-rgb),0.25);
     transition: .3s;
 }
-input:checked + .slider:before { transform: translateX(22px); background-color: var(--hsr-clear-sky-bg); box-shadow: 0 1px 3px rgba(var(--hsr-console-dark-text-rgb),0.25), 0 0 3px var(--hsr-nav-compass-blue); }
+input:checked + .slider:before { transform: translateX(56px); background-color: var(--hsr-clear-sky-bg); box-shadow: 0 1px 3px rgba(var(--hsr-console-dark-text-rgb),0.25), 0 0 3px var(--hsr-nav-compass-blue); }
 
 
 /* Visibility for AI sections (matches other themes) */

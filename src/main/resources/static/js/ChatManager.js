@@ -58,6 +58,8 @@ const ChatManager = {
                 const messagesForDb = this.chats[this.currentChatId].map(msg => {
                     const msgCopy = { ...msg };
                     delete msgCopy.isNewlyCompletedAIResponse;
+                    // 新增：确保 isRetracted 和 retractedBy 字段被保存
+                    // 如果消息对象中已经有这些字段，它们会被自动包含
                     return msgCopy;
                 });
                 await DBManager.setItem('chats', {
@@ -75,6 +77,7 @@ const ChatManager = {
      * @param {string} [filter='all'] - 筛选条件 ('all', 'contacts', 'groups')。
      */
     renderChatList: function(filter = 'all') {
+        // ... (原有 renderChatList 内容基本保持不变，确保预览文本能处理撤回消息) ...
         this.currentFilter = filter;
         const chatListEl = document.getElementById('chatListNav');
         if(!chatListEl) {
@@ -82,19 +85,16 @@ const ChatManager = {
             return;
         }
         chatListEl.innerHTML = '';
-
-        // 更新侧边栏 UI 管理器中的活动标签页
         if (typeof SidebarUIManager !== 'undefined') SidebarUIManager.setActiveTab(filter);
-
         let itemsToRender = [];
-        // 根据筛选条件从 UserManager 和 GroupManager 收集要渲染的项目
         if (filter === 'all' || filter === 'contacts') {
             Object.values(UserManager.contacts).forEach(contact => {
                 itemsToRender.push({
                     id: contact.id, name: contact.name,
                     avatarText: contact.avatarText || (contact.isSpecial ? 'S' : contact.name.charAt(0).toUpperCase()),
                     avatarUrl: contact.avatarUrl || null,
-                    lastMessage: contact.lastMessage || (contact.isSpecial ? '准备好聊天！' : '暂无消息'),
+                    // 确保 lastMessage 处理已撤回的情况
+                    lastMessage: this._formatLastMessagePreview(contact.id, contact.lastMessage, contact.isSpecial ? '准备好聊天！' : '暂无消息'),
                     lastTime: contact.lastTime, unread: contact.unread || 0, type: 'contact',
                     online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id),
                     isSpecial: contact.isSpecial || false
@@ -105,7 +105,7 @@ const ChatManager = {
             Object.values(GroupManager.groups).forEach(group => {
                 itemsToRender.push({
                     id: group.id, name: group.name, avatarText: '👥', avatarUrl: null,
-                    lastMessage: group.lastMessage || `成员: ${group.members.length}`,
+                    lastMessage: this._formatLastMessagePreview(group.id, group.lastMessage, `成员: ${group.members.length}`),
                     lastTime: group.lastTime, unread: group.unread || 0, type: 'group'
                 });
             });
@@ -166,12 +166,31 @@ const ChatManager = {
     },
 
     /**
+     * @private
+     * 辅助函数，格式化最后一条消息预览，特别是处理撤回状态。
+     * @param {string} chatId - 聊天ID。
+     * @param {string} currentLastMessageText - 当前存储的最后一条消息文本。
+     * @param {string} defaultText - 如果没有消息时的默认文本。
+     * @returns {string} - 格式化后的预览文本。
+     */
+    _formatLastMessagePreview: function(chatId, currentLastMessageText, defaultText) {
+        const chatHistory = this.chats[chatId];
+        if (chatHistory && chatHistory.length > 0) {
+            const lastMsg = chatHistory[chatHistory.length - 1];
+            if (lastMsg.isRetracted) {
+                return lastMsg.content; // "你撤回了一条消息" 或 "对方撤回了一条消息"
+            }
+        }
+        return currentLastMessageText || defaultText;
+    },
+
+
+    /**
      * 打开指定的聊天会话。
      * @param {string} chatId - 要打开的聊天的 ID。
      * @param {string} type - 聊天类型 ('contact' 或 'group')。
      */
     openChat: function(chatId, type) {
-        // 保存上一个聊天的状态
         if (this.currentChatId) {
             this.saveCurrentChat();
             const prevActive = document.querySelector(`#chatListNav .chat-list-item.active`);
@@ -212,7 +231,7 @@ const ChatManager = {
         }
         // 打开新聊天时，关闭详情面板并为其准备新内容
         if (typeof DetailsPanelUIManager !== 'undefined') {
-            DetailsPanelUIManager.toggleDetailsPanel(false);
+            DetailsPanelUIManager.toggleDetailsPanel(false); // 改为 toggleChatDetailsView() 或 hideSidePanel()
             DetailsPanelUIManager.updateDetailsPanel(chatId, type);
         }
     },
@@ -252,22 +271,33 @@ const ChatManager = {
 
     /**
      * 向指定聊天添加一条消息，并更新 UI 和数据库。
+     * 如果消息已存在 (通过 message.id 判断)，则会更新该消息。
      * @param {string} chatId - 目标聊天的 ID。
-     * @param {object} message - 要添加的消息对象。
+     * @param {object} message - 要添加或更新的消息对象。
      * @returns {Promise<void>}
      */
     addMessage: async function(chatId, message) {
         if (!this.chats[chatId]) this.chats[chatId] = [];
         let messageExists = false;
-        // 如果消息有 ID，检查是否为更新操作
+
+        // 检查消息是否已存在，如果存在则更新
         if (message.id) {
             const existingMsgIndex = this.chats[chatId].findIndex(m => m.id === message.id);
             if (existingMsgIndex !== -1) {
+                // 合并新旧消息，新消息的属性优先
                 this.chats[chatId][existingMsgIndex] = { ...this.chats[chatId][existingMsgIndex], ...message };
                 messageExists = true;
+                Utils.log(`已更新聊天 ${chatId} 中的消息 ${message.id}`, Utils.logLevels.DEBUG);
             }
         }
+
+        // 如果消息不存在，则添加到末尾
         if (!messageExists) {
+            // 为新消息确保有ID (如果MessageManager.sendMessage没提供)
+            if (!message.id) {
+                message.id = `msg_${Date.now()}_${Utils.generateId(4)}`;
+                Utils.log(`为聊天 ${chatId} 中的新消息生成ID: ${message.id}`, Utils.logLevels.DEBUG);
+            }
             this.chats[chatId].push(message);
         }
 
@@ -275,13 +305,12 @@ const ChatManager = {
         if (chatId === this.currentChatId) {
             const chatBoxEl = document.getElementById('chatBox');
             if (chatBoxEl) {
-                const noMsgPlaceholder = chatBoxEl.querySelector('.system-message:not(.thinking):not(.reconnect-prompt)');
-                if(noMsgPlaceholder && (noMsgPlaceholder.textContent.includes("暂无消息") || noMsgPlaceholder.textContent.includes("您创建了此群组") || noMsgPlaceholder.textContent.includes("开始对话"))) {
-                    noMsgPlaceholder.remove();
+                const noMsgPlaceholder = chatBoxEl.querySelector('.system-message:not(.thinking):not(.reconnect-prompt):not(.retracted)');
+                if (noMsgPlaceholder && (noMsgPlaceholder.textContent.includes("暂无消息") || noMsgPlaceholder.textContent.includes("您创建了此群组") || noMsgPlaceholder.textContent.includes("开始对话"))) {
+                    if (!message.isThinking && !message.isStreaming && !message.isRetracted) noMsgPlaceholder.remove();
                 }
             }
-            // 不显示临时的“正在思考”消息，它们由 displayMessage 直接处理
-            if (!message.isThinking) {
+            if (!message.isThinking) { // 不显示临时的“正在思考”消息，它们由 displayMessage 直接处理
                 MessageManager.displayMessage(message, message.sender === UserManager.userId || message.originalSender === UserManager.userId);
             }
             if (chatBoxEl) chatBoxEl.scrollTop = chatBoxEl.scrollHeight;
@@ -290,19 +319,25 @@ const ChatManager = {
         const isGroup = chatId.startsWith('group_');
         const isUnread = chatId !== this.currentChatId || !document.hasFocus();
 
-        // 对于非流式消息，更新侧边栏的最后一条消息预览
-        if (!message.isStreaming) {
+        if (!message.isStreaming && !message.isRetracted) { // 已撤回消息不应作为最新消息预览
             if (isGroup) {
                 if (GroupManager.groups[chatId]) await GroupManager.updateGroupLastMessage(chatId, GroupManager.formatMessagePreview(message), isUnread);
             } else {
                 if (UserManager.contacts[chatId]) await UserManager.updateContactLastMessage(chatId, UserManager.formatMessagePreview(message), isUnread);
             }
+        } else if (message.isRetracted) { // 如果是撤回消息，预览应显示撤回状态
+            const retractedPreview = message.content; // "你撤回了一条消息" 或 "对方撤回了一条消息"
+            if (isGroup) {
+                if (GroupManager.groups[chatId]) await GroupManager.updateGroupLastMessage(chatId, retractedPreview, false, true);
+            } else {
+                if (UserManager.contacts[chatId]) await UserManager.updateContactLastMessage(chatId, retractedPreview, false, true);
+            }
         }
-        // 将更新后的消息列表保存到数据库
         try {
             const messagesForDb = this.chats[chatId].map(msg => {
                 const msgCopy = { ...msg };
                 delete msgCopy.isNewlyCompletedAIResponse;
+                // 确保 isRetracted 和 retractedBy 字段被保存
                 return msgCopy;
             });
             await DBManager.setItem('chats', { id: chatId, messages: messagesForDb });
@@ -372,15 +407,12 @@ const ChatManager = {
 
     /**
      * 删除一个聊天（联系人或群组）。
-     * 对于联系人，是“删除联系人”。
-     * 对于群组，是“退出”或“解散”。
      * @param {string} chatId - 要删除的聊天 ID。
      * @param {string} type - 聊天类型 ('contact' 或 'group')。
      */
     deleteChat: function(chatId, type) {
         const entity = type === 'group' ? GroupManager.groups[chatId] : UserManager.contacts[chatId];
         if (!entity) { NotificationManager.showNotification(`${type === 'group' ? '群组' : '联系人'}未找到。`, 'error'); return; }
-        // 特殊联系人不能被删除
         if (type === 'contact' && entity.isSpecial) {
             NotificationManager.showNotification(`${entity.name} 是内置联系人，无法删除。如果需要，您可以清空聊天记录。`, 'warning');
             return;

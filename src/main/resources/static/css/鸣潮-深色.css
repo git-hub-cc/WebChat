@@ -665,7 +665,7 @@ body {
 }
 input:checked + .slider { background-color: var(--ww-tacet-glow-cyan); box-shadow: 0 0 5px var(--ww-tacet-glow-cyan); }
 input:focus + .slider { box-shadow: 0 0 1px var(--ww-tacet-glow-cyan), 0 0 0 2px rgba(var(--ww-tacet-glow-cyan-rgb),0.3); }
-input:checked + .slider:before { transform: translateX(20px); }
+input:checked + .slider:before { transform: translateX(56px); }
 
 
 /* Visibility for AI sections */

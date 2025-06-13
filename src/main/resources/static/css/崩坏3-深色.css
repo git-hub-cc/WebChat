@@ -590,7 +590,7 @@ body {
 }
 input:checked + .slider { background-color: var(--hi3-energy-stream-cyan); box-shadow: 0 0 5px var(--hi3-energy-stream-cyan); }
 input:checked + .slider:before {
-    transform: translateX(26px); /* Adjust for new size */
+    transform: translateX(56px); /* Adjust for new size */
     background-color: var(--hi3-data-glow-white);
     border-color: var(--hi3-deep-space-bg);
 }

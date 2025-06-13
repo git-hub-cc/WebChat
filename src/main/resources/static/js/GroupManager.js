@@ -1,6 +1,7 @@
 /**
  * @file GroupManager.js
  * @description 核心群组管理器，负责处理所有与群组相关的逻辑，包括创建、加载、成员管理和消息广播。
+ *              新增：处理群组消息撤回请求。
  * @module GroupManager
  * @exports {object} GroupManager - 对外暴露的单例对象，包含所有群组管理功能。
  * @property {object} groups - 存储所有群组数据的对象，格式为 { groupId: groupObject }。
@@ -12,11 +13,11 @@
  * @property {function} dissolveGroup - 群主解散一个群组。
  * @property {function} broadcastToGroup - 向群组成员广播消息。
  * @property {function} handleGroupMessage - 处理接收到的群组相关消息。
- * @dependencies DBManager, UserManager, ChatManager, ConnectionManager, NotificationManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager
+ * @dependencies DBManager, UserManager, ChatManager, ConnectionManager, NotificationManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager
  * @dependents AppInitializer (进行初始化), ChatManager (管理群组聊天), ModalManager (创建群组时调用)
  */
 const GroupManager = {
-    groups: {}, // 存储所有群组信息: { groupId: { id, name, owner, members, ... } }
+    groups: {},
     currentGroupId: null,
 
     /**
@@ -41,9 +42,7 @@ const GroupManager = {
                     this.groups[group.id] = { ...group, members: group.members || [], leftMembers: group.leftMembers || [] };
                 });
             }
-        } catch (error) {
-            Utils.log(`加载群组失败: ${error}`, Utils.logLevels.ERROR);
-        }
+        } catch (error) { Utils.log(`加载群组失败: ${error}`, Utils.logLevels.ERROR); }
     },
 
     /**
@@ -160,33 +159,17 @@ const GroupManager = {
         if (memberIdToRemove === UserManager.userId) { NotificationManager.showNotification("群主无法移除自己。请选择解散群组。", "warning"); return false; }
         const memberIndex = group.members.indexOf(memberIdToRemove);
         if (memberIndex === -1) { NotificationManager.showNotification("用户不在群组中。", "warning"); return false; }
-
         group.members.splice(memberIndex, 1);
         await this.saveGroup(groupId);
-        // 更新 UI
-        if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.isDetailsPanelVisible && ChatManager.currentChatId === groupId) {
-            DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
-        }
+        if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.isPanelAreaVisible && ChatManager.currentChatId === groupId) DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
         if (ChatManager.currentChatId === groupId) this.openGroup(groupId);
-
-        // 发送系统消息通知
         const removerName = UserManager.contacts[UserManager.userId]?.name || UserManager.userId.substring(0,4);
         const removedName = UserManager.contacts[memberIdToRemove]?.name || `用户 ${memberIdToRemove.substring(0,4)}`;
-        const systemMessage = { type: 'system', content: `${removerName} 已将 ${removedName} 移出群聊。`, timestamp: new Date().toISOString(), groupId: groupId };
+        const systemMessage = { id: `sys_${Date.now()}`, type: 'system', content: `${removerName} 已将 ${removedName} 移出群聊。`, timestamp: new Date().toISOString(), groupId: groupId };
         ChatManager.addMessage(groupId, systemMessage);
         this.broadcastToGroup(groupId, systemMessage, [memberIdToRemove]);
-
-        // 向被移除的成员发送一个专门的移除通知
-        const removalNotification = {
-            type: 'group-removed',
-            groupId: groupId,
-            groupName: group.name,
-            reason: 'removed_by_owner',
-            sender: UserManager.userId,
-            removedMemberId: memberIdToRemove
-        };
+        const removalNotification = { type: 'group-removed', groupId: groupId, groupName: group.name, reason: 'removed_by_owner', sender: UserManager.userId, removedMemberId: memberIdToRemove };
         ConnectionManager.sendTo(memberIdToRemove, removalNotification);
-
         NotificationManager.showNotification(`${removedName} 已被移出群组。`, 'success');
         ChatManager.renderChatList(ChatManager.currentFilter);
         return true;
@@ -203,13 +186,9 @@ const GroupManager = {
         if (group.owner === UserManager.userId) { NotificationManager.showNotification("群主不能离开。请选择解散群组。", "warning"); return; }
         const myId = UserManager.userId;
         if (!group.members.includes(myId)) return;
-
-        // 广播离开消息
         const myName = UserManager.contacts[myId]?.name || `用户 ${myId.substring(0,4)}`;
         const leaveMessage = { type: 'group-member-left', groupId: groupId, leftMemberId: myId, leftMemberName: myName, sender: myId };
-        this.broadcastToGroup(groupId, leaveMessage, [myId], true); // forceDirect 确保消息能发出
-
-        // 本地清理
+        this.broadcastToGroup(groupId, leaveMessage, [myId], true);
         delete this.groups[groupId];
         await DBManager.removeItem('groups', groupId);
         await ChatManager.clearChat(groupId);
@@ -230,12 +209,8 @@ const GroupManager = {
         const group = this.groups[groupId];
         if (!group) return;
         if (group.owner !== UserManager.userId) { NotificationManager.showNotification("只有群主可以解散群组。", "error"); return; }
-
-        // 广播解散通知
         const dissolveNotification = { type: 'group-dissolved', groupId: groupId, groupName: group.name, sender: UserManager.userId };
         this.broadcastToGroup(groupId, dissolveNotification, [UserManager.userId]);
-
-        // 群主本地清理
         delete this.groups[groupId];
         await DBManager.removeItem('groups', groupId);
         await ChatManager.clearChat(groupId);
@@ -264,8 +239,7 @@ const GroupManager = {
         message.sender = message.sender || UserManager.userId;
         message.originalSender = message.originalSender || message.sender;
         const originalSenderContact = UserManager.contacts[message.originalSender];
-        message.originalSenderName = message.originalSenderName || (originalSenderContact ? originalSenderContact.name : `用户 ${message.originalSender.substring(0,4)}`);
-
+        message.originalSenderName = message.originalSenderName || (originalSenderContact ? originalSenderContact.name : `用户 ${String(message.originalSender).substring(0,4)}`);
         if (group.owner === UserManager.userId || forceDirect) {
             // 群主直接广播
             group.members.forEach(memberId => {
@@ -325,8 +299,17 @@ const GroupManager = {
         // 如果是群主，处理需要中继的消息
         if (message.needsRelay && group && group.owner === UserManager.userId) {
             delete message.needsRelay;
-            this.broadcastToGroup(groupId, message, [originalSender || sender]);
-            if(originalSender !== UserManager.userId) ChatManager.addMessage(groupId, message);
+            // 如果是群消息撤回请求，则广播给除原始发送者外的其他人
+            if (type === 'group-retract-message-request') {
+                this.broadcastToGroup(groupId, message, [message.originalSender]);
+            } else { // 其他需要中继的消息
+                this.broadcastToGroup(groupId, message, [originalSender || sender]);
+            }
+
+            // 群主也应该看到这条消息（除非是自己发的撤回）
+            if (type !== 'group-retract-message-request' || message.originalSender !== UserManager.userId) {
+                if(originalSender !== UserManager.userId) ChatManager.addMessage(groupId, message);
+            }
             return;
         }
 
@@ -339,7 +322,7 @@ const GroupManager = {
             case 'group-member-left':
                 if (group && group.members.includes(message.leftMemberId)) {
                     group.members = group.members.filter(id => id !== message.leftMemberId);
-                    const leftMemberName = message.leftMemberName || `用户 ${message.leftMemberId.substring(0,4)}`;
+                    const leftMemberName = message.leftMemberName || `用户 ${String(message.leftMemberId).substring(0,4)}`;
                     if (group.owner === UserManager.userId) {
                         if(!group.leftMembers) group.leftMembers = [];
                         if(!group.leftMembers.find(lm => lm.id === message.leftMemberId)) {
@@ -348,7 +331,7 @@ const GroupManager = {
                     }
                     await this.saveGroup(groupId);
                     if(group.members.includes(UserManager.userId)) {
-                        ChatManager.addMessage(groupId, { type: 'system', content: `${leftMemberName} 离开了群聊。`, groupId: groupId, timestamp: new Date().toISOString()});
+                        ChatManager.addMessage(groupId, { id: `sys_${Date.now()}`, type: 'system', content: `${leftMemberName} 离开了群聊。`, groupId: groupId, timestamp: new Date().toISOString()});
                     }
                     if (ChatManager.currentChatId === groupId) {
                         this.openGroup(groupId);
@@ -400,6 +383,30 @@ const GroupManager = {
                     ChatManager.renderChatList(ChatManager.currentFilter);
                 }
                 break;
+            case 'group-retract-message-request': // 被群主中继后，成员会收到这个
+                if (group && group.members.includes(UserManager.userId)) {
+                    // originalSender 是最初发送被撤回消息的人
+                    // message.sender 是这条撤回请求的发送者（即群主）
+                    // 我们需要判断原始消息是否是自己发的
+                    const originalMessageObject = ChatManager.chats[groupId]?.find(m => m.id === message.originalMessageId);
+                    let isOwnMessageBeingRetracted = false;
+                    if (originalMessageObject) {
+                        isOwnMessageBeingRetracted = originalMessageObject.sender === UserManager.userId;
+                    }
+
+                    // retractedByName 应该是发起撤回的人的名字（即 message.originalSenderName）
+                    const retractedByName = message.originalSenderName || // 优先使用撤回请求中携带的原始发送者名字
+                        UserManager.contacts[message.originalSender]?.name || // 否则尝试从联系人中获取
+                        `用户 ${String(message.originalSender).substring(0,4)}`;
+
+                    MessageManager._updateMessageToRetractedState(
+                        message.originalMessageId,
+                        groupId,
+                        isOwnMessageBeingRetracted,
+                        isOwnMessageBeingRetracted ? null : retractedByName // 如果是别人撤回我的消息，显示撤回者名字
+                    );
+                }
+                break;
         }
     },
 
@@ -443,6 +450,10 @@ const GroupManager = {
      * @returns {string} - 格式化后的预览文本。
      */
     formatMessagePreview: function(message) {
+        // ... (原有方法保持不变，确保能处理 isRetracted 消息) ...
+        if (message.isRetracted) {
+            return message.content; // "你撤回了一条消息" 或 "X 撤回了一条消息"
+        }
         let preview = '';
         const senderName = message.originalSenderName || (UserManager.contacts[message.originalSender || message.sender]?.name || '用户');
         switch (message.type) {

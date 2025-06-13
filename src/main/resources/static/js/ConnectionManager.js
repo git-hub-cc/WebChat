@@ -2,6 +2,7 @@
  * @file ConnectionManager.js
  * @description 核心连接管理器，负责处理 WebRTC 对等连接和与信令服务器的 WebSocket 通信。
  *              实现了心跳机制以保持 WebSocket 活跃，以及指数退避的自动重连策略。
+ *              新增：处理消息撤回的P2P信令。
  * @module ConnectionManager
  * @exports {object} ConnectionManager - 对外暴露的单例对象，包含所有连接管理功能。
  * @property {function} initialize - 初始化并连接到 WebSocket 信令服务器。
@@ -12,93 +13,64 @@
  * @property {function} close - 关闭与指定对等端的连接。
  * @property {function} resetAllConnections - 重置所有连接和 WebSocket。
  * @property {boolean} isWebSocketConnected - 指示当前是否已连接到 WebSocket 服务器。
- * @dependencies UserManager, ChatManager, Config, Utils, NotificationManager, EventEmitter, LayoutManager, VideoCallManager, ModalManager
+ * @dependencies UserManager, ChatManager, Config, Utils, NotificationManager, EventEmitter, LayoutManager, VideoCallManager, ModalManager, MessageManager
  * @dependents AppInitializer (初始化), UserManager (自动连接), GroupManager (广播), VideoCallManager (建立媒体流)
  */
 const ConnectionManager = {
-    connections: {},            // 存储 RTCPeerConnection 实例 { peerId: { peerConnection, dataChannel, ... } }
-    iceCandidates: {},          // 存储为手动交换准备的 ICE 候选者 { peerId: [candidates] }
-    connectionTimeouts: {},     // 存储重连定时器
-    reconnectAttempts: {},      // 存储重连尝试次数 { peerId: count }
-    iceTimers: {},              // 存储 ICE 收集超时定时器
-    iceGatheringStartTimes: {}, // 记录 ICE 收集开始时间
+    connections: {},
+    iceCandidates: {},
+    connectionTimeouts: {},
+    reconnectAttempts: {},
+    iceTimers: {},
+    iceGatheringStartTimes: {},
     websocket: null,
     isWebSocketConnected: false,
     signalingServerUrl: Config.server.signalingServerUrl,
-    pendingSentChunks: {},      // 存储待发送的分片数据
-    pendingReceivedChunks: {},  // 存储待接收的分片数据
+    pendingSentChunks: {},
+    pendingReceivedChunks: {},
+    heartbeatInterval: null,
+    wsReconnectAttempts: 0,
+    MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_',
 
-    // 新增：用于心跳和 WebSocket 重连策略的状态
-    heartbeatInterval: null,    // WebSocket 心跳定时器
-    wsReconnectAttempts: 0,     // WebSocket 重连尝试次数
-
-    MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_', // 手动连接流程中的占位符 ID
-
-    /**
-     * 初始化 WebSocket 连接。如果未连接，则尝试连接。
-     */
     initialize: function() {
+        // ... (原有方法保持不变) ...
         if (!this.isWebSocketConnected && (!this.websocket || this.websocket.readyState === WebSocket.CLOSED)) {
             this.connectWebSocket();
         }
     },
 
-    /**
-     * 建立与信令服务器的 WebSocket 连接，并设置事件处理器。
-     * 实现了指数退避的自动重连机制。
-     * @returns {Promise<void>}
-     */
     connectWebSocket: function() {
+        // ... (原有方法保持不变) ...
         if (this.websocket && (this.websocket.readyState === WebSocket.OPEN || this.websocket.readyState === WebSocket.CONNECTING)) {
             return Promise.resolve();
         }
-
         LayoutManager.updateConnectionStatusIndicator('正在连接信令服务器...');
         Utils.log('尝试连接到 WebSocket: ' + this.signalingServerUrl, Utils.logLevels.INFO);
-
         return new Promise((resolve, reject) => {
             try {
                 this.websocket = new WebSocket(this.signalingServerUrl);
 
                 this.websocket.onopen = () => {
-                    this.isWebSocketConnected = true;
-                    this.wsReconnectAttempts = 0; // 连接成功，重置重连计数器
+                    this.isWebSocketConnected = true; this.wsReconnectAttempts = 0;
                     LayoutManager.updateConnectionStatusIndicator('信令服务器已连接。');
                     Utils.log('WebSocket 连接已建立。', Utils.logLevels.INFO);
-                    this.registerUser();
-                    this.startHeartbeat(); // 启动心跳机制
-                    EventEmitter.emit('websocketStatusUpdate');
-                    resolve();
+                    this.registerUser(); this.startHeartbeat();
+                    EventEmitter.emit('websocketStatusUpdate'); resolve();
                 };
-
                 this.websocket.onmessage = (event) => {
                     try {
                         const message = JSON.parse(event.data);
-                        // 服务器的心跳回复 (PONG)，通常无需处理，仅用于日志记录
-                        if (message.type === 'PONG') {
-                            Utils.log('收到 WebSocket 心跳回复 (PONG)', Utils.logLevels.DEBUG);
-                            return;
-                        }
+                        if (message.type === 'PONG') { Utils.log('收到 WebSocket 心跳回复 (PONG)', Utils.logLevels.DEBUG); return; }
                         this.handleSignalingMessage(message);
-                    } catch (e) {
-                        Utils.log('解析信令消息时出错: ' + e, Utils.logLevels.ERROR);
-                    }
+                    } catch (e) { Utils.log('解析信令消息时出错: ' + e, Utils.logLevels.ERROR); }
                 };
-
                 this.websocket.onclose = () => {
-                    const oldStatus = this.isWebSocketConnected;
-                    this.isWebSocketConnected = false;
-                    this.stopHeartbeat(); // 连接关闭，停止心跳
-
-                    this.wsReconnectAttempts++;
-                    Utils.log(`WebSocket 连接已关闭。正在进行第 ${this.wsReconnectAttempts} 次重连尝试...`, Utils.logLevels.WARN);
-
+                    const oldStatus = this.isWebSocketConnected; this.isWebSocketConnected = false; this.stopHeartbeat();
+                    this.wsReconnectAttempts++; Utils.log(`WebSocket 连接已关闭。正在进行第 ${this.wsReconnectAttempts} 次重连尝试...`, Utils.logLevels.WARN);
                     if (this.wsReconnectAttempts <= 10) {
-                        // 使用指数退避策略计算延迟时间，避免频繁重连
                         const delay = Math.min(30000, 1000 * Math.pow(2, this.wsReconnectAttempts));
                         LayoutManager.updateConnectionStatusIndicator(`信令服务器已断开。${delay / 1000}秒后尝试重连...`);
                         Utils.log(`下一次重连将在 ${delay / 1000} 秒后。`, Utils.logLevels.WARN);
-
                         if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
                         setTimeout(() => this.connectWebSocket(), delay);
                     } else {
@@ -108,22 +80,17 @@ const ConnectionManager = {
                         if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
                     }
                 };
-
                 this.websocket.onerror = (error) => {
                     Utils.log('WebSocket 错误: ' + JSON.stringify(error), Utils.logLevels.ERROR);
                     LayoutManager.updateConnectionStatusIndicator('信令服务器连接错误。');
-                    const oldStatus = this.isWebSocketConnected;
-                    this.isWebSocketConnected = false;
+                    const oldStatus = this.isWebSocketConnected; this.isWebSocketConnected = false;
                     if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
-                    // onerror 事件通常也会触发 onclose，重连逻辑由 onclose 处理
                 };
             } catch (error) {
                 Utils.log('创建 WebSocket 连接失败: ' + error, Utils.logLevels.ERROR);
                 LayoutManager.updateConnectionStatusIndicator('连接信令服务器失败。');
-                const oldStatus = this.isWebSocketConnected;
-                this.isWebSocketConnected = false;
-                if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
-                reject(error);
+                const oldStatus = this.isWebSocketConnected; this.isWebSocketConnected = false;
+                if (oldStatus) EventEmitter.emit('websocketStatusUpdate'); reject(error);
             }
         });
     },
@@ -135,11 +102,10 @@ const ConnectionManager = {
         this.stopHeartbeat(); // 确保只有一个心跳定时器在运行
         this.heartbeatInterval = setInterval(() => {
             if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                // 发送一个轻量级的 PING 消息到服务器
                 this.websocket.send(JSON.stringify({ type: 'PING' }));
                 Utils.log('发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
             }
-        }, 25000); // 每 25 秒发送一次
+        }, 25000);
     },
 
     /**
@@ -157,10 +123,7 @@ const ConnectionManager = {
      * 向信令服务器注册当前用户。
      */
     registerUser: function() {
-        if (!UserManager.userId) {
-            Utils.log('用户 ID 未设置，无法注册。', Utils.logLevels.ERROR);
-            return;
-        }
+        if (!UserManager.userId) { Utils.log('用户 ID 未设置，无法注册。', Utils.logLevels.ERROR); return; }
         const message = { type: 'REGISTER', userId: UserManager.userId };
         this.sendSignalingMessage(message, false);
     },
@@ -178,11 +141,8 @@ const ConnectionManager = {
         } else {
             Utils.log('WebSocket 未连接，无法发送信令消息。', Utils.logLevels.ERROR);
             if (!isInternalSilentFlag) {
-                if (window.location.protocol === 'file:') {
-                    NotificationManager.showNotification('正从本地文件系统运行。信令服务器可能不可用。消息未发送。', 'warning');
-                } else {
-                    NotificationManager.showNotification('未连接到信令服务器。消息未发送。', 'error');
-                }
+                if (window.location.protocol === 'file:') NotificationManager.showNotification('正从本地文件系统运行。信令服务器可能不可用。消息未发送。', 'warning');
+                else NotificationManager.showNotification('未连接到信令服务器。消息未发送。', 'error');
             }
         }
     },
@@ -194,44 +154,23 @@ const ConnectionManager = {
     handleSignalingMessage: function(message) {
         Utils.log(`已收到 WS: ${message.type} 来自 ${message.fromUserId || '服务器'} ${message.sdp ? '[SDP]' : ''} ${message.candidate ? '[ICE]' : ''}`, Utils.logLevels.DEBUG);
         const fromUserId = message.fromUserId;
-
         switch (message.type) {
             case 'SUCCESS':
                 LayoutManager.updateConnectionStatusIndicator(`用户注册成功: ${UserManager.userId.substring(0,8)}...`);
-                this.autoConnectToAllContacts();
-                break;
+                this.autoConnectToAllContacts(); break;
             case 'ERROR':
-                // "不在线" 是一个常见的、可忽略的错误，不弹窗提示
-                if (!message.message.includes('不在线')) {
-                    NotificationManager.showNotification(`信令错误: ${message.message}`, 'error');
-                }
-                Utils.log(`信令服务器错误: ${message.message}`, Utils.logLevels.ERROR);
-                break;
-            case 'OFFER':
-                this.handleRemoteOffer(fromUserId, message.sdp, message.candidates, message.isVideoCall, message.isAudioOnly, message.isScreenShare, message.sdpType);
-                break;
-            case 'ANSWER':
-                this.handleRemoteAnswer(fromUserId, message.sdp, message.candidates, message.isVideoCall, message.isAudioOnly, message.isScreenShare, message.sdpType);
-                break;
-            case 'ICE_CANDIDATE':
-                this.handleRemoteIceCandidate(fromUserId, message.candidate);
-                break;
+                if (!message.message.includes('不在线')) NotificationManager.showNotification(`信令错误: ${message.message}`, 'error');
+                Utils.log(`信令服务器错误: ${message.message}`, Utils.logLevels.ERROR); break;
+            case 'OFFER': this.handleRemoteOffer(fromUserId, message.sdp, message.candidates, message.isVideoCall, message.isAudioOnly, message.isScreenShare, message.sdpType); break;
+            case 'ANSWER': this.handleRemoteAnswer(fromUserId, message.sdp, message.candidates, message.isVideoCall, message.isAudioOnly, message.isScreenShare, message.sdpType); break;
+            case 'ICE_CANDIDATE': this.handleRemoteIceCandidate(fromUserId, message.candidate); break;
             case 'USER_NOT_FOUND':
-                const connDetails = this.connections[message.targetUserId];
-                const wasSilentAttempt = connDetails?.wasInitiatedSilently || false;
-                if (!wasSilentAttempt) {
-                    NotificationManager.showNotification(`用户 ${UserManager.contacts[message.targetUserId]?.name || message.targetUserId.substring(0,8) + '...'} 未找到或离线。`, 'warning');
-                }
+                const connDetails = this.connections[message.targetUserId]; const wasSilentAttempt = connDetails?.wasInitiatedSilently || false;
+                if (!wasSilentAttempt) NotificationManager.showNotification(`用户 ${UserManager.contacts[message.targetUserId]?.name || message.targetUserId.substring(0,8) + '...'} 未找到或离线。`, 'warning');
                 Utils.log(`用户 ${message.targetUserId} 未找到。(静默尝试: ${wasSilentAttempt})`, Utils.logLevels.WARN);
-                if(ChatManager.currentChatId === message.targetUserId && !wasSilentAttempt && typeof ChatAreaUIManager !== 'undefined') {
-                    ChatAreaUIManager.updateChatHeaderStatus(`用户未找到或离线`);
-                }
-                if (this.connections[message.targetUserId]) {
-                    this.close(message.targetUserId, false);
-                }
-                break;
-            default:
-                Utils.log('未知的信令消息类型: ' + message.type, Utils.logLevels.WARN);
+                if(ChatManager.currentChatId === message.targetUserId && !wasSilentAttempt && typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.updateChatHeaderStatus(`用户未找到或离线`);
+                if (this.connections[message.targetUserId]) this.close(message.targetUserId, false); break;
+            default: Utils.log('未知的信令消息类型: ' + message.type, Utils.logLevels.WARN);
         }
     },
 
@@ -245,17 +184,12 @@ const ConnectionManager = {
      */
     initConnection: function(peerId, isVideoCall = false) {
         Utils.log(`尝试初始化与 ${peerId} 的连接。视频通话: ${isVideoCall}`, Utils.logLevels.DEBUG);
-        // ... (其余方法保持原有注释风格的翻译)
         const existingConnDetails = this.connections[peerId];
         if (existingConnDetails && existingConnDetails.peerConnection) {
-            const pc = existingConnDetails.peerConnection;
-            const pcSignalingState = pc.signalingState;
+            const pc = existingConnDetails.peerConnection; const pcSignalingState = pc.signalingState;
             if (pcSignalingState === 'have-local-offer' || pcSignalingState === 'have-remote-offer') {
                 Utils.log(`initConnection: 与 ${peerId} 的连接正在协商中 (信令状态: ${pcSignalingState})。正在复用。`, Utils.logLevels.WARN);
-                existingConnDetails.isVideoCall = isVideoCall;
-                if (!isVideoCall && !pc.ondatachannel) {
-                    pc.ondatachannel = (e) => this.setupDataChannel(e.channel, peerId);
-                }
+                existingConnDetails.isVideoCall = isVideoCall; if (!isVideoCall && !pc.ondatachannel) pc.ondatachannel = (e) => this.setupDataChannel(e.channel, peerId);
                 return pc;
             }
             Utils.log(`initConnection: 存在 ${peerId} 的 PC (信令状态: ${pcSignalingState}, 连接状态: ${pc.connectionState})。正在关闭并重新初始化。`, Utils.logLevels.INFO);
@@ -298,8 +232,7 @@ const ConnectionManager = {
      * @returns {Promise<void>}
      */
     createOffer: async function(targetPeerId = null, options = {}) {
-        const { isVideoCall = false, isAudioOnly = false, isSilent = false, isManual = false } = options;
-        let promptedForId = false;
+        const { isVideoCall = false, isAudioOnly = false, isSilent = false, isManual = false } = options; let promptedForId = false;
         if (isManual) { Utils.log("手动创建提议。", Utils.logLevels.INFO); targetPeerId = this.MANUAL_PLACEHOLDER_PEER_ID; }
         else {
             if (UserManager.isSpecialContact(targetPeerId) && UserManager.contacts[targetPeerId]?.isAI) {
@@ -322,14 +255,10 @@ const ConnectionManager = {
         Utils.log(`正在为 ${targetPeerId} 创建提议，来自: ${UserManager.userId}, 视频: ${isVideoCall}, 纯音频: ${isAudioOnly}, 静默: ${isSilent}, 手动: ${isManual}`, Utils.logLevels.DEBUG);
         const pc = this.initConnection(targetPeerId, isVideoCall);
         if (!pc) { if (!isSilent || isManual) NotificationManager.showNotification("初始化连接以创建提议失败。", "error"); Utils.log(`createOffer: initConnection 为 ${targetPeerId} 返回 null。正在中止。`, Utils.logLevels.ERROR); return; }
-        if (pc.signalingState === 'have-local-offer') {
-            if (!isSilent) NotificationManager.showNotification(`已向 ${UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0,6)} 发送过提议。`, "info"); return;
-        }
+        if (pc.signalingState === 'have-local-offer') { if (!isSilent) NotificationManager.showNotification(`已向 ${UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0,6)} 发送过提议。`, "info"); return; }
         if (pc.signalingState === 'have-remote-offer') { if (!isSilent) NotificationManager.showNotification(`已收到对方的提议。无法创建新提议。`, "info"); return; }
-
         if (this.connections[targetPeerId]) { this.connections[targetPeerId].isVideoCall = isVideoCall; this.connections[targetPeerId].isAudioOnly = isAudioOnly; this.connections[targetPeerId].isScreenShare = options.isScreenShare || false; this.connections[targetPeerId].wasInitiatedSilently = isSilent && !isManual; }
         else if (targetPeerId !== this.MANUAL_PLACEHOLDER_PEER_ID) { this.connections[targetPeerId] = { peerConnection: pc, dataChannel: null, isVideoCall, isAudioOnly, isScreenShare: options.isScreenShare||false, wasInitiatedSilently: isSilent&&!isManual }; }
-
         if (pc.signalingState === 'stable' || pc.signalingState === 'new') {
             if (!isVideoCall) {
                 const connEntry = this.connections[targetPeerId];
@@ -568,6 +497,7 @@ const ConnectionManager = {
         if (this.connections[currentContextPeerId].dataChannel === channel && channel._listenersAttached) return;
         this.connections[currentContextPeerId].dataChannel = channel; channel._listenersAttached = true;
         const wasSilentContext = this.connections[currentContextPeerId]?.wasInitiatedSilently || false;
+
         channel.onopen = async () => {
             let finalPeerId = currentContextPeerId;
             if (channel._isManualPlaceholderChannel) { for (const actualIdInMap in this.connections) if (this.connections[actualIdInMap]?.dataChannel === channel) { finalPeerId = actualIdInMap; break; } }
@@ -588,20 +518,85 @@ const ConnectionManager = {
             if (this.connections[finalPeerId]?.dataChannel === channel) this.connections[finalPeerId].dataChannel = null; channel._listenersAttached = false;
         };
         channel.onerror = (error) => { let finalPeerId=currentContextPeerId; if(channel._isManualPlaceholderChannel)for(const id in this.connections)if(this.connections[id]?.dataChannel===channel){finalPeerId=id;break;} Utils.log(`与 ${finalPeerId} 的数据通道 ("${channel.label}") 发生错误: ${JSON.stringify(error)}`, Utils.logLevels.ERROR);};
+
         channel.onmessage = (event) => {
-            let finalPeerId = currentContextPeerId; if (channel._isManualPlaceholderChannel) { let resolved=false; for(const actualId in this.connections)if(this.connections[actualId]?.dataChannel===channel){finalPeerId=actualId;resolved=true;break;} if(!resolved)return; }
+            let finalPeerId = currentContextPeerId;
+            if (channel._isManualPlaceholderChannel) {
+                let resolved = false;
+                for (const actualId in this.connections) {
+                    if (this.connections[actualId]?.dataChannel === channel) {
+                        finalPeerId = actualId; resolved = true; break;
+                    }
+                }
+                if (!resolved) {
+                    Utils.log(`DataChannel onmessage: 无法解析手动占位符通道的 finalPeerId。`, Utils.logLevels.WARN);
+                    return;
+                }
+            }
+
             try {
-                const rawMessage = event.data; let messageObjectToProcess;
+                const rawMessage = event.data;
+                let messageObjectToProcess;
+                let parsedJson;
+
                 if (typeof rawMessage === 'string') {
-                    let parsedJson; try { parsedJson = JSON.parse(rawMessage); } catch (e) { messageObjectToProcess = { type: 'text', content: rawMessage, sender: finalPeerId, timestamp: new Date().toISOString() }; }
-                    if (parsedJson) { if (parsedJson.type === 'chunk-meta' || parsedJson.type === 'chunk-data') { const reassembledData = Utils.reassembleChunk(parsedJson, finalPeerId); if (reassembledData) messageObjectToProcess = reassembledData; else return; } else messageObjectToProcess = parsedJson; }
-                } else return;
-                if (!messageObjectToProcess) return;
+                    try { parsedJson = JSON.parse(rawMessage); } catch (e) {
+                        messageObjectToProcess = { type: 'text', content: rawMessage, sender: finalPeerId, timestamp: new Date().toISOString(), id: `text_${Date.now()}_${Utils.generateId(3)}` };
+                    }
+                } else {
+                    Utils.log(`收到来自 ${finalPeerId} 的非字符串数据类型，当前不支持。`, Utils.logLevels.WARN);
+                    return;
+                }
+
+                if (parsedJson) {
+                    if (parsedJson.type === 'chunk-meta' || parsedJson.type === 'chunk-data') {
+                        const reassembledData = Utils.reassembleChunk(parsedJson, finalPeerId);
+                        if (reassembledData) {
+                            messageObjectToProcess = reassembledData;
+                            // 再次检查重组后的数据类型
+                            if (messageObjectToProcess.type === 'retract-message-request') {
+                                Utils.log(`(重组后) 收到来自 ${finalPeerId} 的消息撤回请求: ${JSON.stringify(messageObjectToProcess)}`, Utils.logLevels.INFO);
+                                const senderName = messageObjectToProcess.senderName || UserManager.contacts[messageObjectToProcess.sender]?.name || `用户 ${String(messageObjectToProcess.sender).substring(0,4)}`;
+                                MessageManager._updateMessageToRetractedState(messageObjectToProcess.originalMessageId, messageObjectToProcess.sender, false, senderName);
+                                ConnectionManager.sendTo(messageObjectToProcess.sender, { type: 'retract-message-confirm', originalMessageId: messageObjectToProcess.originalMessageId, sender: UserManager.userId });
+                                return;
+                            }
+                        } else {
+                            return; // 分片未完成
+                        }
+                    } else if (parsedJson.type === 'retract-message-request') {
+                        Utils.log(`收到来自 ${finalPeerId} 的消息撤回请求: ${JSON.stringify(parsedJson)}`, Utils.logLevels.INFO);
+                        const senderName = parsedJson.senderName || UserManager.contacts[parsedJson.sender]?.name || `用户 ${String(parsedJson.sender).substring(0,4)}`;
+                        MessageManager._updateMessageToRetractedState(parsedJson.originalMessageId, parsedJson.sender, false, senderName);
+                        ConnectionManager.sendTo(parsedJson.sender, { type: 'retract-message-confirm', originalMessageId: parsedJson.originalMessageId, sender: UserManager.userId });
+                        return;
+                    } else if (parsedJson.type === 'retract-message-confirm') {
+                        Utils.log(`收到来自 ${finalPeerId} 的消息撤回确认 (ID: ${parsedJson.originalMessageId})。本地UI已乐观更新。`, Utils.logLevels.INFO);
+                        // EventEmitter.emit(`retractConfirmed_${parsedJson.originalMessageId}`); // 如果实现了超时确认，则在此处触发
+                        return;
+                    } else {
+                        messageObjectToProcess = parsedJson;
+                    }
+                }
+
+                if (!messageObjectToProcess) {
+                    Utils.log(`来自 ${finalPeerId} 的数据通道 onmessage：无法确定消息对象。原始数据: ${String(rawMessage).substring(0,100)}`, Utils.logLevels.WARN);
+                    return;
+                }
+
                 messageObjectToProcess.sender = messageObjectToProcess.sender || finalPeerId;
-                if (messageObjectToProcess.type?.startsWith('video-call-')) VideoCallManager.handleMessage(messageObjectToProcess, finalPeerId);
-                else if (messageObjectToProcess.groupId || messageObjectToProcess.type?.startsWith('group-')) GroupManager.handleGroupMessage(messageObjectToProcess);
-                else ChatManager.addMessage(messageObjectToProcess.groupId || finalPeerId, messageObjectToProcess);
-            } catch (e) { Utils.log(`来自 ${finalPeerId} 的数据通道 onmessage 严重错误: ${e.message}. 数据: ${String(event.data).substring(0,100)} 堆栈: ${e.stack}`, Utils.logLevels.ERROR); }
+                if (!messageObjectToProcess.id) messageObjectToProcess.id = `msg_${Date.now()}_${Utils.generateId(4)}`;
+
+                if (messageObjectToProcess.type?.startsWith('video-call-')) {
+                    VideoCallManager.handleMessage(messageObjectToProcess, finalPeerId);
+                } else if (messageObjectToProcess.groupId || messageObjectToProcess.type?.startsWith('group-')) {
+                    GroupManager.handleGroupMessage(messageObjectToProcess);
+                } else {
+                    ChatManager.addMessage(finalPeerId, messageObjectToProcess); // 注意: P2P chatId 是 finalPeerId
+                }
+            } catch (e) {
+                Utils.log(`来自 ${finalPeerId} 的数据通道 onmessage 严重错误: ${e.message}. 数据: ${String(event.data).substring(0,100)} 堆栈: ${e.stack}`, Utils.logLevels.ERROR);
+            }
         };
     },
 
@@ -715,13 +710,10 @@ const ConnectionManager = {
             Object.keys(this.connectionTimeouts).forEach(id=>clearTimeout(this.connectionTimeouts[id]));this.connectionTimeouts={};
             Object.keys(this.iceTimers).forEach(id=>clearTimeout(this.iceTimers[id]));this.iceTimers={};
             if (this.websocket?.readyState === WebSocket.OPEN || this.websocket?.readyState === WebSocket.CONNECTING) {
-                this.websocket.onclose = null; // 阻止自动重连
-                this.websocket.close();
+                this.websocket.onclose = null; this.websocket.close();
             }
-            this.stopHeartbeat();
-            this.websocket = null; this.isWebSocketConnected = false; this.wsReconnectAttempts = 0;
-            EventEmitter.emit('websocketStatusUpdate');
-            setTimeout(() => this.initialize(), 1000);
+            this.stopHeartbeat(); this.websocket = null; this.isWebSocketConnected = false; this.wsReconnectAttempts = 0;
+            EventEmitter.emit('websocketStatusUpdate'); setTimeout(() => this.initialize(), 1000);
             NotificationManager.showNotification("所有连接已重置。", "info");
             if (ChatManager.currentChatId && !ChatManager.currentChatId.startsWith("group_") && !UserManager.isSpecialContact(ChatManager.currentChatId) && typeof ChatAreaUIManager !== 'undefined') {
                 ChatAreaUIManager.updateChatHeaderStatus("已断开 - 连接已重置"); ChatAreaUIManager.setCallButtonsState(false);

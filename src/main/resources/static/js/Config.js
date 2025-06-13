@@ -46,7 +46,8 @@ const Config = {
      */
     ui: {
         messageRenderBatchSize: 30, // 批量渲染消息的大小，优化性能（当前未使用）
-        typingIndicatorTimeout: 3000 // “正在输入”指示器的超时时间（当前未使用）
+        typingIndicatorTimeout: 3000, // “正在输入”指示器的超时时间（当前未使用）
+        messageRetractionWindow: 5 * 60 * 1000 // 消息可撤回的时间窗口（毫秒），例如 5 分钟
     },
     /**
      * 日志级别配置
@@ -109,4 +110,4 @@ const Config = {
         // SDP 语义，'unified-plan' 是现代标准
         sdpSemantics: 'unified-plan',
     },
-}
+};

@@ -599,7 +599,7 @@ body {
 }
 input:checked + .slider { background-color: var(--ww-skywake-blue); box-shadow: 0 0 4px var(--ww-skywake-blue); }
 input:focus + .slider { box-shadow: 0 0 1px var(--ww-skywake-blue), 0 0 0 2px rgba(var(--ww-skywake-blue-rgb),0.25); }
-input:checked + .slider:before { transform: translateX(20px); }
+input:checked + .slider:before { transform: translateX(56px); }
 
 /* Visibility for AI sections */
 #detailsPanelContent #aiContactAboutSection,

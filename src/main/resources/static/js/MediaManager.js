@@ -1,8 +1,7 @@
-
 /**
  * @file MediaManager.js
- * @description 核心媒体管理器，负责处理媒体相关的核心逻辑，如麦克风权限、语音录制状态管理以及文件处理。
- *              它不直接操作 UI，而是将 UI 更新委托给 MediaUIManager。
+ * @description 核心媒体管理器，负责处理媒体相关的核心逻辑，如麦克风权限、语音录制、文件处理和屏幕截图。
+ *              它不直接操作 UI，而是将 UI 更新委托给 MediaUIManager 或通过 EventEmitter 通知。
  * @module MediaManager
  * @exports {object} MediaManager - 对外暴露的单例对象，包含媒体处理的核心方法。
  * @property {function} initVoiceRecording - 初始化语音录制功能，检查浏览器支持。
@@ -10,8 +9,9 @@
  * @property {function} stopRecording - 停止录制语音。
  * @property {function} processFile - 处理用户选择或拖放的文件，进行大小检查并读取数据。
  * @property {function} handleFileSelect - 处理文件输入框的 change 事件。
- * @dependencies Config, Utils, NotificationManager, MessageManager, MediaUIManager
- * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定录音按钮事件), MessageManager (播放语音消息)
+ * @property {function} captureScreen - 捕获屏幕或窗口内容作为截图。
+ * @dependencies Config, Utils, NotificationManager, MessageManager, MediaUIManager, EventEmitter
+ * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定录音和截图按钮事件), MessageManager (播放语音消息)
  */
 const MediaManager = {
     mediaRecorder: null,
@@ -29,6 +29,13 @@ const MediaManager = {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             Utils.log('浏览器不支持媒体设备。', Utils.logLevels.WARN);
             if(voiceButton) voiceButton.disabled = true;
+        }
+        // 检查截图 API 支持
+        const screenshotMainBtn = document.getElementById('screenshotMainBtn');
+        if (screenshotMainBtn && typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+            Utils.log('浏览器不支持 getDisplayMedia API。截图功能将不可用。', Utils.logLevels.WARN);
+            screenshotMainBtn.disabled = true;
+            screenshotMainBtn.title = '截图功能不可用';
         }
     },
 
@@ -217,7 +224,7 @@ const MediaManager = {
             const reader = new FileReader();
             reader.onload = (e) => {
                 // 将文件数据存入 MessageManager，并通知 MediaUIManager 显示预览
-                MessageManager.selectedFile = { data: e.target.result, type: file.type, name: file.name, size: file.size };
+                MessageManager.selectedFile = { data: e.target.result, type: file.type, name: file.name, size: file.size, blob: file };
                 if (typeof MediaUIManager !== 'undefined') MediaUIManager.displayFilePreview(MessageManager.selectedFile);
             };
             reader.readAsDataURL(file);
@@ -242,4 +249,98 @@ const MediaManager = {
             event.target.value = '';
         }
     },
+
+    /**
+     * @description 捕获屏幕或窗口内容作为截图。用户同意分享后，等待1秒再进行实际截图。
+     * @returns {Promise<void>}
+     */
+    captureScreen: async function() {
+        if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+            NotificationManager.showNotification('您的浏览器不支持屏幕捕获功能。', 'error');
+            return;
+        }
+        if (MessageManager.audioData) {
+            NotificationManager.showNotification('已有待发送的语音消息。请先取消。', 'warning');
+            return;
+        }
+        if (MessageManager.selectedFile) {
+            NotificationManager.showNotification('已有待发送的文件。请先取消。', 'warning');
+            return;
+        }
+
+        try {
+            const stream = await navigator.mediaDevices.getDisplayMedia({
+                video: { cursor: 'always' },
+                audio: false
+            });
+
+            const videoTrack = stream.getVideoTracks()[0];
+            if (!videoTrack) {
+                NotificationManager.showNotification('无法获取视频流用于截图。', 'error');
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+
+            // 用户同意分享后，延迟1秒进行截图
+            NotificationManager.showNotification('3秒后截取屏幕...', 'info', 3000);
+            setTimeout(() => {
+                const videoEl = document.createElement('video');
+                videoEl.srcObject = stream;
+
+                videoEl.onloadedmetadata = () => {
+                    videoEl.play().then(() => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = videoEl.videoWidth;
+                        canvas.height = videoEl.videoHeight;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+
+                        stream.getTracks().forEach(track => track.stop());
+
+                        canvas.toBlob(function(blob) {
+                            if (!blob) {
+                                NotificationManager.showNotification('截图失败：无法生成图片 Blob。', 'error');
+                                return;
+                            }
+                            const reader = new FileReader();
+                            reader.onloadend = function() {
+                                const dataUrl = reader.result;
+                                const fileName = "截图-" + Utils.generateId(6) + ".png";
+
+                                MessageManager.selectedFile = {
+                                    data: dataUrl,
+                                    blob: blob,
+                                    type: 'image/png',
+                                    name: fileName,
+                                    size: blob.size
+                                };
+                                EventEmitter.emit('screenshotTakenForPreview', MessageManager.selectedFile);
+                            };
+                            reader.onerror = function() {
+                                NotificationManager.showNotification('截图失败：无法读取图片数据。', 'error');
+                            };
+                            reader.readAsDataURL(blob);
+                        }, 'image/png');
+                    }).catch(playError => {
+                        Utils.log('播放截图视频流失败: ' + playError.message, Utils.logLevels.ERROR);
+                        NotificationManager.showNotification('截图处理失败。', 'error');
+                        stream.getTracks().forEach(track => track.stop());
+                    });
+                };
+                videoEl.onerror = (err) => {
+                    Utils.log('截图视频元素错误: ' + JSON.stringify(err), Utils.logLevels.ERROR);
+                    NotificationManager.showNotification('截图视频处理出错。', 'error');
+                    stream.getTracks().forEach(track => track.stop());
+                };
+            }, 3000); // 延迟1000毫秒 (1秒)
+
+        } catch (err) {
+            Utils.log('屏幕捕获失败: ' + err.message, Utils.logLevels.ERROR);
+            if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
+                NotificationManager.showNotification('截图失败: ' + err.message, 'error');
+            } else {
+                NotificationManager.showNotification('截图已取消。', 'info');
+            }
+        }
+    }
 };
