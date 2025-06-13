@@ -91,7 +91,6 @@ body {
     width: 100%;
     max-width: 1450px;
     height: 95vh;
-    max-height: 900px;
     background-color: var(--secondary-color);
     box-shadow: 0 0 0 1px rgba(var(--hsr-nav-compass-blue-rgb), 0.15), /* Outer subtle line */
     0 8px 30px rgba(var(--hsr-polished-rail-border-rgb),0.5), /* Main shadow */

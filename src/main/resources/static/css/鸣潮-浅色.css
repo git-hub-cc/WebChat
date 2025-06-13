@@ -103,7 +103,6 @@ body {
     width: 100%;
     max-width: 1440px;
     height: calc(100vh - 40px);
-    max-height: 900px;
     background-color: rgba(var(--ww-clear-data-panel-rgb), 0.88); /* 半透明面板 */
     backdrop-filter: blur(12px) saturate(110%); /* 毛玻璃效果 */
     box-shadow: 0 8px 35px rgba(var(--ww-carbon-ink-text-rgb),0.12), var(--ww-light-data-stream-shadow), 0 0 0 1px rgba(var(--ww-skywake-blue-rgb),0.15); /* 强调科技感边框 */

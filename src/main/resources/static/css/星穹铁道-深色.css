@@ -92,7 +92,6 @@ body {
     width: 100%;
     max-width: 1450px;
     height: 95vh; /* Max height to prevent overflow on smaller screens */
-    max-height: 900px;
     background-color: var(--secondary-color);
     box-shadow: 0 0 0 1px rgba(var(--hsr-trailblaze-cyan-rgb), 0.2), /* Outer glow line */
     0 8px 35px rgba(0,0,0,0.75), /* Main shadow */

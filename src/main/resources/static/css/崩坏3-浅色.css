@@ -100,7 +100,6 @@ body {
     width: 100%;
     max-width: 1400px;
     height: 90vh;
-    max-height: 800px;
     background-color: var(--secondary-color);
     box-shadow: 0 8px 25px rgba(var(--hi3-interface-dark-text-rgb),0.1), 0 0 20px rgba(var(--hi3-tech-blue-rgb),0.05) inset;
     border-radius: var(--border-radius-large);
