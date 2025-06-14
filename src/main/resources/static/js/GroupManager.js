@@ -450,7 +450,6 @@ const GroupManager = {
      * @returns {string} - 格式化后的预览文本。
      */
     formatMessagePreview: function(message) {
-        // ... (原有方法保持不变，确保能处理 isRetracted 消息) ...
         if (message.isRetracted) {
             return message.content; // "你撤回了一条消息" 或 "X 撤回了一条消息"
         }

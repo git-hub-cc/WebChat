@@ -49,6 +49,7 @@ openai:
     # 将API密钥硬编码在配置文件中存在安全风险。
     # 推荐使用环境变量、Spring Cloud Config或Vault等方式来管理密钥。
     # 例如：api_key: "${OPENAI_API_KEY}"
+    # TODO
     api_key: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # 请替换为你的真实密钥
 
 # 应用程序提示词配置

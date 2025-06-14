@@ -1,13 +1,14 @@
 /**
  * @file AppInitializer.js
  * @description 应用的入口点和初始化器。负责按正确顺序加载和初始化所有管理器和 UI 组件，并设置核心事件监听器。
+ *              现在确保 ThemeLoader.init() 在 UserManager.init() 之前被 await 调用。
  * @module AppInitializer
- * @exports {object} AppInitializer - 包含 init 方法，在窗口加载时被调用。
+ * @exports {object} AppInitializer - 包含 init 方法，现在应由 DOMContentLoaded 事件触发。
  * @property {function} init - 应用程序的主初始化函数，是整个应用的启动点。
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
  *               LayoutManager, ModalManager, SettingsUIManager, ChatAreaUIManager, SidebarUIManager,
- *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationManager, Utils, EventEmitter, PeopleLobbyManager
- * @dependents window.onload (在 index.html 中通过 <script> 标签的 `window.addEventListener` 调用)
+ *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationManager, Utils, EventEmitter, PeopleLobbyManager, AiApiHandler, ThemeLoader
+ * @dependents DOMContentLoaded (在 index.html 中通过新的方式调用)
  */
 const AppInitializer = {
 
@@ -17,11 +18,13 @@ const AppInitializer = {
      * 1.  设置日志级别和全局错误处理。
      * 2.  检查 WebRTC 支持。
      * 3.  初始化数据库 (DBManager)。
-     * 4.  初始化核心数据管理器 (UserManager, ChatManager, GroupManager)。
-     * 5.  初始化所有 UI 管理器。
-     * 6.  初始化媒体和通话的核心逻辑。
-     * 7.  设置全局事件监听器和网络监控。
-     * 8.  初始化 WebSocket 连接。
+     * 4.  初始化 ThemeLoader (必须在 UserManager 之前)。
+     * 5.  初始化核心数据管理器 (UserManager, ChatManager, GroupManager)。
+     * 6.  初始化所有 UI 管理器。
+     * 7.  初始化媒体和通话的核心逻辑。
+     * 8.  设置全局事件监听器和网络监控。
+     * 9.  执行 AI 服务健康检查。
+     * 10. 初始化 WebSocket 连接。
      * @returns {Promise<void>}
      */
     init: async function () {
@@ -33,32 +36,51 @@ const AppInitializer = {
             await DBManager.init();
             Utils.log('数据库初始化成功', Utils.logLevels.INFO);
 
-            // 初始化核心数据管理器
+            // 1. 初始化 ThemeLoader，确保主题和初始数据已加载
+            if (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.init === 'function') {
+                await ThemeLoader.init();
+                Utils.log('ThemeLoader 初始化完成。', Utils.logLevels.INFO);
+            } else {
+                Utils.log('ThemeLoader 或其 init 方法未定义。主题系统可能无法正常工作。', Utils.logLevels.ERROR);
+            }
+
+            // 2. 初始化核心数据管理器 (UserManager 现在依赖 ThemeLoader 提供的数据)
             await UserManager.init();
             await ChatManager.init();
             await GroupManager.init();
 
-            // 初始化所有 UI 管理器
+            // 3. 初始化所有 UI 管理器 (SettingsUIManager 可能也需要 ThemeLoader 的状态)
             ModalManager.init();
             SettingsUIManager.init();
             LayoutManager.init();
-            ChatAreaUIManager.init(); // 它会绑定自己的语音按钮监听器
+            ChatAreaUIManager.init();
             SidebarUIManager.init();
             DetailsPanelUIManager.init();
             VideoCallUIManager.init();
             MediaUIManager.init();
-            PeopleLobbyManager.init(); // 新增
+            PeopleLobbyManager.init();
 
             await this.refreshNetworkStatusUI();
             this.startNetworkMonitoring();
 
-            // 初始化核心功能逻辑
-            MediaManager.initVoiceRecording(); // 核心语音录制逻辑 (权限检查等)
-            VideoCallManager.init();         // 核心视频通话逻辑
+            MediaManager.initVoiceRecording();
+            VideoCallManager.init();
 
-            this.setupCoreEventListeners(); // 设置全局事件监听
-            this.smartBackToChatList();     // 处理移动端返回按钮行为
-            ConnectionManager.initialize(); // 启动 WebSocket 连接
+            this.setupCoreEventListeners();
+            this.smartBackToChatList();
+
+            // 执行 AI 服务健康检查
+            try {
+                const isAiHealthy = await AiApiHandler.checkAiServiceHealth();
+                UserManager.updateAiServiceStatus(isAiHealthy);
+                EventEmitter.emit('aiServiceStatusUpdated', UserManager.isAiServiceHealthy);
+            } catch (e) {
+                Utils.log("初始化期间 AI 健康检查出错: " + e.message, Utils.logLevels.ERROR);
+                UserManager.updateAiServiceStatus(false);
+                EventEmitter.emit('aiServiceStatusUpdated', false);
+            }
+
+            ConnectionManager.initialize();
             Utils.log('应用已初始化', Utils.logLevels.INFO);
         } catch (error) {
             Utils.log(`应用初始化失败: ${error.stack || error}`, Utils.logLevels.ERROR);
@@ -74,7 +96,7 @@ const AppInitializer = {
             // 即使在回退模式下，也尝试初始化 UI 管理器以保证界面可用
             ModalManager.init(); SettingsUIManager.init(); LayoutManager.init();
             ChatAreaUIManager.init(); SidebarUIManager.init(); DetailsPanelUIManager.init();
-            VideoCallUIManager.init(); MediaUIManager.init(); PeopleLobbyManager.init(); // 新增
+            VideoCallUIManager.init(); MediaUIManager.init(); PeopleLobbyManager.init();
 
             await this.refreshNetworkStatusUI(); this.startNetworkMonitoring();
             MediaManager.initVoiceRecording(); VideoCallManager.init();
@@ -114,8 +136,8 @@ const AppInitializer = {
                         avatarContainer.classList.contains('details-avatar') ||
                         avatarContainer.classList.contains('video-call-avatar')
                     )) {
-                        avatarContainer.innerHTML = ''; // 清空失败的img
-                        avatarContainer.textContent = fallbackText; // 显示备用文本
+                        avatarContainer.innerHTML = '';
+                        avatarContainer.textContent = fallbackText;
                         avatarContainer.classList.add('avatar-fallback-active');
                     } else { imgElement.style.display = 'none'; }
                 }
@@ -180,12 +202,12 @@ const AppInitializer = {
      * 实现从聊天界面返回到聊天列表，而不是退出页面。
      */
     smartBackToChatList: function (){
-        history.pushState(null, null, location.href); // 初始推入一个状态
+        history.pushState(null, null, location.href);
         window.addEventListener('popstate', function(event) {
             const btn = document.querySelector('.back-to-list-btn');
             // 仅当返回按钮可见时（即在聊天视图中）才执行操作
             if (btn && window.getComputedStyle(btn).getPropertyValue('display') === "block"){
-                history.pushState(null, null, location.href); // 再次推入状态以阻止默认返回行为
+                history.pushState(null, null, location.href);
                 if (typeof LayoutManager !== 'undefined') LayoutManager.showChatListArea();
             }
         });
@@ -225,6 +247,25 @@ const AppInitializer = {
                 SettingsUIManager.updateCheckNetworkButtonState();
             }
         });
+
+        // --- AI 服务状态更新事件 ---
+        EventEmitter.on('aiServiceStatusUpdated', function(isHealthy) {
+            Utils.log(`AppInitializer: 收到 aiServiceStatusUpdated 事件, healthy: ${isHealthy}`, Utils.logLevels.DEBUG);
+            if (typeof ChatAreaUIManager !== 'undefined' && ChatManager.currentChatId) {
+                const currentContact = UserManager.contacts[ChatManager.currentChatId];
+                if (currentContact && currentContact.isAI) {
+                    ChatAreaUIManager.updateChatHeaderStatus(UserManager.getAiServiceStatusMessage());
+                }
+            }
+        });
+
+        // --- AI 配置变更事件 ---
+        if (typeof AiApiHandler !== 'undefined' && typeof AiApiHandler.handleAiConfigChange === 'function') {
+            EventEmitter.on('aiConfigChanged', AiApiHandler.handleAiConfigChange.bind(AiApiHandler));
+        } else {
+            Utils.log("AppInitializer: AiApiHandler 或其 handleAiConfigChange 方法未定义，无法监听 aiConfigChanged 事件。", Utils.logLevels.WARN);
+        }
+
 
         // --- 全局事件处理器 ---
         const fileInput = document.getElementById('fileInput');
@@ -276,5 +317,3 @@ const AppInitializer = {
         }
     }
 };
-
-window.addEventListener('load', AppInitializer.init.bind(AppInitializer));

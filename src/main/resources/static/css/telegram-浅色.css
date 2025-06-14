@@ -80,14 +80,11 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background-image: linear-gradient(to bottom, #eff3f6, #dde2e7);
 }
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--secondary-color); /* 侧边栏背景色 */
     box-shadow: 0 1px 5px rgba(0,0,0,0.1);
     border-radius: var(--border-radius);
@@ -105,10 +102,10 @@ body {
 .sidebar-nav {
     background-color: var(--secondary-color); /* --tg-background-sidebar */
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     padding: 8px 12px; /* 略微紧凑 */
-    height: var(--header-height);
     background-color: var(--secondary-color);
 }
 .menu-btn { color: var(--tg-icon-gray); margin-right: 15px; }
@@ -208,7 +205,6 @@ body {
 }
 .chat-header-main {
     background-color: var(--secondary-color); /* 与侧边栏一致 */
-    height: var(--header-height);
     border-bottom: 1px solid var(--border-color);
 }
 .chat-avatar-main { border: none; }
@@ -301,7 +297,7 @@ body {
 
 /* --- Details Panel --- */
 .details-panel { background-color: var(--secondary-color); border-left: 1px solid var(--border-color); }
-.details-header { background-color: var(--secondary-color); height: var(--header-height); }
+.details-header { background-color: var(--secondary-color); }
 .details-avatar { border: none; }
 #detailsName { font-weight: 500; }
 #aiContactDetailsContent {
@@ -319,7 +315,6 @@ body {
     text-transform: none;
     letter-spacing: 0;
     font-weight: 500;
-    transition: background-color 0.15s ease, box-shadow 0.15s ease;
     box-shadow: none;
     padding: 8px 16px;
 }

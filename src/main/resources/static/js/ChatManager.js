@@ -58,7 +58,6 @@ const ChatManager = {
                 const messagesForDb = this.chats[this.currentChatId].map(msg => {
                     const msgCopy = { ...msg };
                     delete msgCopy.isNewlyCompletedAIResponse;
-                    // 新增：确保 isRetracted 和 retractedBy 字段被保存
                     // 如果消息对象中已经有这些字段，它们会被自动包含
                     return msgCopy;
                 });
@@ -96,7 +95,7 @@ const ChatManager = {
                     // 确保 lastMessage 处理已撤回的情况
                     lastMessage: this._formatLastMessagePreview(contact.id, contact.lastMessage, contact.isSpecial ? '准备好聊天！' : '暂无消息'),
                     lastTime: contact.lastTime, unread: contact.unread || 0, type: 'contact',
-                    online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id),
+                    online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id), // AI contacts will always show as "connected" visually here, their service status is in header
                     isSpecial: contact.isSpecial || false
                 });
             });
@@ -137,7 +136,8 @@ const ChatManager = {
             const formattedTime = item.lastTime ? Utils.formatDate(new Date(item.lastTime)) : '';
             // 在线状态指示器
             let statusIndicator = '';
-            if (item.type === 'contact' && (item.online || UserManager.isSpecialContact(item.id))) {
+            // For non-AI special contacts and regular contacts, show connection dot
+            if (item.type === 'contact' && ((item.online && !UserManager.contacts[item.id]?.isAI) || (UserManager.isSpecialContact(item.id) && !UserManager.contacts[item.id]?.isAI))) {
                 statusIndicator = '<span class="online-dot" title="已连接"></span>';
             }
             // 头像内容
@@ -209,10 +209,14 @@ const ChatManager = {
         } else {
             const contact = UserManager.contacts[chatId];
             if (contact && typeof ChatAreaUIManager !== 'undefined') {
-                if (contact.isSpecial) {
-                    ChatAreaUIManager.updateChatHeader(contact.name, (contact.isAI ? 'AI 助手' : '特殊联系人'), contact.avatarText || 'S');
+                if (contact.isSpecial && contact.isAI) {
+                    ChatAreaUIManager.updateChatHeader(contact.name, UserManager.getAiServiceStatusMessage(), contact.avatarText || 'S');
+                    ChatAreaUIManager.setCallButtonsState(false); // AI 联系人禁用通话按钮
+                } else if (contact.isSpecial) { // 其他特殊联系人
+                    ChatAreaUIManager.updateChatHeader(contact.name, '特殊联系人', contact.avatarText || 'S');
                     ChatAreaUIManager.setCallButtonsState(false);
-                } else {
+                }
+                else { // 普通联系人
                     ChatAreaUIManager.updateChatHeader(contact.name, ConnectionManager.isConnectedTo(chatId) ? '已连接' : `ID: ${contact.id.substring(0,8)}... (离线)`, contact.name.charAt(0).toUpperCase());
                     ChatAreaUIManager.setCallButtonsState(ConnectionManager.isConnectedTo(chatId), chatId);
                 }

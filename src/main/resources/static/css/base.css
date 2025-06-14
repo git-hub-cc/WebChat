@@ -62,6 +62,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    transition: all 0.3s;
 }
 
 html {
@@ -112,7 +113,6 @@ body {
     background-color: #f8f9fa;
     /* 使用逻辑属性 border-inline-end，自动适应从左到右 (LTR) 和从右到左 (RTL) 的布局 */
     border-inline-end: 1px solid var(--border-color);
-    transition: margin-inline-start 0.3s ease-in-out;
 }
 
 .chat-area {
@@ -139,7 +139,6 @@ body {
     min-width: var(--details-panel-width);
     background-color: #f8f9fa;
     border-inline-start: 1px solid var(--border-color);
-    transition: margin-inline-end 0.3s ease-in-out;
 }
 
 /* ========================================================================== */
@@ -186,7 +185,6 @@ body {
     text-align: center;
     font-size: 14px;
     font-weight: 500;
-    transition: background-color 0.2s, box-shadow 0.2s;
 }
 
 .btn-primary,
@@ -329,7 +327,6 @@ body {
     color: var(--text-color);
     font-family: var(--font-family), serif;
     user-select: none; /* 防止用户选择文本 */
-    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .custom-select:focus-within {
@@ -353,7 +350,6 @@ body {
     color: var(--text-color-light);
     content: '▼';
     font-size: 0.8em;
-    transition: transform 0.2s;
 }
 
 .custom-select.open .selected::after {
@@ -384,7 +380,6 @@ body {
 .custom-select .option {
     padding: var(--spacing-2) var(--spacing-3);
     cursor: pointer;
-    transition: background-color 0.15s, color 0.15s;
 }
 
 .custom-select .option:hover {
@@ -414,7 +409,6 @@ body {
     color: var(--text-color-light);
     font-size: 14px;
     font-weight: 500;
-    transition: color 0.2s, border-bottom-color 0.2s;
 }
 
 /* --- 聊天列表 --- */
@@ -433,7 +427,6 @@ body {
     padding: var(--spacing-3) var(--spacing-4);
     border-bottom: 1px solid var(--border-color);
     cursor: pointer;
-    transition: background-color 0.2s;
 }
 
 .chat-list-info {
@@ -667,7 +660,6 @@ body {
     font-weight: 500;
     font-size: 1em; /* 相对于父元素（系统消息）的字体大小 */
     line-height: 1.3; /* 略微调整行高 */
-    transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
 }
 
 .message-inline-action-button:hover {
@@ -939,7 +931,6 @@ body {
     font-size: 14px;
     cursor: pointer;
     white-space: nowrap; /* 防止文本换行 */
-    transition: background-color 0.15s;
 }
 
 .screenshot-option-btn:hover {
@@ -1030,7 +1021,6 @@ body {
     background-color: var(--received-bg-color);
     font-family: var(--font-family), serif;
     font-size: 0.9em;
-    transition: border-color 0.2s, box-shadow 0.2s;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
@@ -1351,7 +1341,6 @@ body {
     background: var(--received-bg-color);
     box-shadow: var(--box-shadow);
     animation: notification-in 0.3s ease-out;
-    transition: transform 0.3s ease, opacity 0.3s ease;
 }
 
 .notification-icon {
@@ -1394,7 +1383,6 @@ body {
     border-radius: 24px;
     background-color: #ccc;
     cursor: pointer;
-    transition: 0.4s;
 }
 
 .slider::before {
@@ -1406,7 +1394,6 @@ body {
     border-radius: 50%;
     background-color: white;
     content: "";
-    transition: 0.4s;
 }
 
 /* --- 可折叠区域 --- */
@@ -1419,13 +1406,11 @@ body {
     border-bottom: 1px solid var(--border-color);
     cursor: pointer;
     font-weight: 600;
-    transition: color 0.2s, border-bottom-color 0.2s;
 }
 
 .collapsible-header .collapse-icon {
     margin-inline-start: 5px;
     font-size: 0.9em;
-    transition: transform 0.2s ease-in-out;
 }
 
 .collapsible-content {
@@ -1919,7 +1904,6 @@ input:checked + .slider::before {
         width: 100%;
         max-width: 300px;
         height: 100%;
-        transition: inset-inline-end 0.3s ease-in-out;
     }
 
     .app-container.show-details .details-panel {

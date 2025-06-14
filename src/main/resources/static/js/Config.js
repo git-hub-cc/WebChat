@@ -6,7 +6,7 @@
  * @module Config
  * @exports {object} Config - 包含所有配置项的全局对象。
  */
-const Config = {
+const ConfigObj = {
     /**
      * WebRTC 连接断开后的自动重连配置
      */
@@ -71,10 +71,16 @@ const Config = {
      * 这些是默认值，UI 管理器将从 localStorage 加载用户配置的值来覆盖它们。
      */
     server: {
-        signalingServerUrl: 'ws://localhost:8080/signaling',
+        // TODO
+        // signalingServerUrl: 'ws://localhost:8080/signaling',
+        // // These are defaults; UIManager will load user-configured values from localStorage.
+        // apiEndpoint: 'http://localhost:8080/v1/chat/completions',
+        // lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids',
+
+        signalingServerUrl: 'wss://175.178.216.24/signaling',
         // These are defaults; UIManager will load user-configured values from localStorage.
-        apiEndpoint: 'http://localhost:8080/v1/chat/completions',
-        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids',
+        apiEndpoint: 'https://175.178.216.24/v1/chat/completions',
+        lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids',
         // 默认的 API 密钥
         api_key: "Bearer sk-xxxx",
         // 默认的 AI 模型名称
@@ -111,3 +117,5 @@ const Config = {
         sdpSemantics: 'unified-plan',
     },
 };
+
+window.Config = ConfigObj;

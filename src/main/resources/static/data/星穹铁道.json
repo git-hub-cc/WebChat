@@ -1,4 +1,4 @@
-SPECIAL_CONTACTS_DEFINITIONS =
+
     [
         {
             "id": "AI_Sushang_HSR",
@@ -12,7 +12,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "tts": {
                     "enabled": true,
                     "model_name": "星穹铁道",
-                    "speaker_name": "素裳", // Assuming specific speaker exists
+                    "speaker_name": "素裳",
                     "text_split_method": "按标点符号切",
                     "prompt_text_lang": "中文",
                     "emotion": "开心_happy",
@@ -44,7 +44,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "tts": {
                     "enabled": true,
                     "model_name": "星穹铁道",
-                    "speaker_name": "米沙", // Assuming specific speaker exists
+                    "speaker_name": "米沙",
                     "text_split_method": "按标点符号切",
                     "prompt_text_lang": "中文",
                     "emotion": "难过_sad",
@@ -76,7 +76,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "tts": {
                     "enabled": true,
                     "model_name": "星穹铁道",
-                    "speaker_name": "丹恒", // Assuming specific speaker exists
+                    "speaker_name": "丹恒",
                     "text_split_method": "按标点符号切",
                     "prompt_text_lang": "中文",
                     "emotion": "生气_angry",
@@ -108,7 +108,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "tts": {
                     "enabled": true,
                     "model_name": "星穹铁道",
-                    "speaker_name": "桑博", // Assuming specific speaker exists
+                    "speaker_name": "桑博",
                     "text_split_method": "按标点符号切",
                     "prompt_text_lang": "中文",
                     "emotion": "开心_happy",
@@ -128,7 +128,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "aboutText": "一位巧舌如簧的蓝发男子，在贝洛伯格这个冰封的世界里，只要价码合适，就没有他桑博·科斯基搞不到的情报。\n他的话你最好只信一半，另一半要看他能从中捞到多少好处。"
             }
         },
-        { // Assuming "白厄" is a typo for "白露" (Bailu)
+        {
             "id": "AI_Bailu_HSR",
             "name": "白露",
             "avatarText": "白",
@@ -140,7 +140,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "tts": {
                     "enabled": true,
                     "model_name": "星穹铁道",
-                    "speaker_name": "白露", // Assuming specific speaker exists
+                    "speaker_name": "白露",
                     "text_split_method": "按标点符号切",
                     "prompt_text_lang": "中文",
                     "emotion": "开心_happy",
@@ -160,11 +160,11 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "aboutText": "活泼的持明族「衔药龙女」，丹鼎司的医师大人。\n她用独特的方式开出「无法拒绝」的药方，比如「多喝开水」。虽然看起来娇小柔弱，但在治病救人方面绝不含糊。"
             }
         },
-        { // Placeholder for "阿格莱雅 (Aglaia?)" - making her a "Beauty" path follower or artist from Penacony
+        {
             "id": "AI_Aglaia_HSR",
             "name": "阿格莱雅",
             "avatarText": "雅",
-            "avatarUrl": "/img/head/星穹铁道/阿格莱雅.png", // Placeholder image path
+            "avatarUrl": "/img/head/星穹铁道/阿格莱雅.png",
             "initialMessage": "星辰之美，瞬息万变，却又在每个刹那臻于完美。旅者，你是否也为这宇宙的华彩而驻足？[轻拢秀发，眼中闪烁着对美的沉醉]",
             "isAI": true,
             "aiConfig": {
@@ -172,7 +172,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "tts": {
                     "enabled": true,
                     "model_name": "星穹铁道",
-                    "speaker_name": "阿格莱雅", // Assuming specific speaker exists
+                    "speaker_name": "阿格莱雅",
                     "text_split_method": "按标点符号切",
                     "prompt_text_lang": "中文",
                     "emotion": "开心_happy",
@@ -204,7 +204,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "tts": {
                     "enabled": true,
                     "model_name": "星穹铁道",
-                    "speaker_name": "彦卿", // Assuming specific speaker exists
+                    "speaker_name": "彦卿",
                     "text_split_method": "按标点符号切",
                     "prompt_text_lang": "中文",
                     "emotion": "中立_neutral",
@@ -224,11 +224,11 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "aboutText": "仙舟「罗浮」的最年少剑首，景元将军的忠实侍卫。\n彦卿天赋绝伦，剑术超群，梦想着有朝一日能成为罗浮第一剑士。尽管有时显得过于自信，但他对剑道的追求和对将军的忠诚毋庸置疑。"
             }
         },
-        { // Placeholder for "遐蝶 (XiaDie)" - The "Distant Butterfly", perhaps a Masked Fool or from Garden of Recollection
+        {
             "id": "AI_XiaDie_HSR",
             "name": "遐蝶",
             "avatarText": "蝶",
-            "avatarUrl": "/img/head/星穹铁道/遐蝶.png", // Placeholder image path
+            "avatarUrl": "/img/head/星穹铁道/遐蝶.png",
             "initialMessage": "嘘…星辰的记忆如蝶翼般脆弱，却也承载着最深沉的秘密。你想知道什么？或许…我恰好听闻了一些有趣的低语。[身影若隐若现，声音如同梦呓]",
             "isAI": true,
             "aiConfig": {
@@ -236,7 +236,7 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "tts": {
                     "enabled": true,
                     "model_name": "星穹铁道",
-                    "speaker_name": "遐蝶", // Assuming specific speaker exists
+                    "speaker_name": "遐蝶",
                     "text_split_method": "按标点符号切",
                     "prompt_text_lang": "中文",
                     "emotion": "中立_neutral",
@@ -256,4 +256,4 @@ SPECIAL_CONTACTS_DEFINITIONS =
                 "aboutText": "遐蝶是一位行踪诡秘的观察者，她的出现如同蝴蝶效应般，在不经意间拨动命运的丝线。\n有人说她是记忆的守护者，编织着逝去时光的幻影；也有人说她是欢愉的使者，以宇宙为舞台上演着无尽的闹剧。"
             }
         }
-    ];
+    ]

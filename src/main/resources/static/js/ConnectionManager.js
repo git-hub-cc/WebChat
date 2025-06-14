@@ -33,14 +33,12 @@ const ConnectionManager = {
     MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_',
 
     initialize: function() {
-        // ... (原有方法保持不变) ...
         if (!this.isWebSocketConnected && (!this.websocket || this.websocket.readyState === WebSocket.CLOSED)) {
             this.connectWebSocket();
         }
     },
 
     connectWebSocket: function() {
-        // ... (原有方法保持不变) ...
         if (this.websocket && (this.websocket.readyState === WebSocket.OPEN || this.websocket.readyState === WebSocket.CONNECTING)) {
             return Promise.resolve();
         }

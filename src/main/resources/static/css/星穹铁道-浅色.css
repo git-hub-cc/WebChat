@@ -78,7 +78,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background-image:
             radial-gradient(ellipse at 5% 95%, rgba(var(--hsr-energy-core-cyan-rgb), 0.1) 0%, transparent 50%),
             radial-gradient(ellipse at 95% 5%, rgba(var(--hsr-sunlit-gold-rgb), 0.09) 0%, transparent 60%),
@@ -88,9 +87,6 @@ body {
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1450px;
-    height: 95vh;
     background-color: var(--secondary-color);
     box-shadow: 0 0 0 1px rgba(var(--hsr-nav-compass-blue-rgb), 0.15), /* Outer subtle line */
     0 8px 30px rgba(var(--hsr-polished-rail-border-rgb),0.5), /* Main shadow */
@@ -111,13 +107,14 @@ body {
     background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.75); /* Slightly more transparent */
     border-right: 1px solid var(--border-color);
     backdrop-filter: blur(3px);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.9); /* Slightly more opaque */
     border-bottom: 1px solid rgba(var(--hsr-nav-compass-blue-rgb), 0.15); /* Subtle separator */
     box-shadow: 0 2px 5px rgba(var(--hsr-nav-compass-blue-rgb), 0.05);
 }
-.menu-btn { color: var(--text-color-light); transition: color 0.2s ease, text-shadow 0.2s ease; font-size: 1.1rem; }
+.menu-btn { color: var(--text-color-light);  font-size: 1.1rem; }
 .menu-btn:hover { color: var(--hsr-nav-compass-blue); text-shadow: 0 0 5px rgba(var(--hsr-nav-compass-blue-rgb), 0.5); }
 .search-bar {
     background-color: var(--hsr-clear-sky-bg);
@@ -126,7 +123,7 @@ body {
     border-radius: 20px;
     padding-left: 18px; padding-right: 18px;
     font-size: 0.9em;
-    transition: all 0.2s ease;
+
 }
 .search-bar::placeholder { color: var(--text-color-light); opacity: 0.7; }
 .search-bar:focus {
@@ -152,7 +149,7 @@ body {
 }
 
 
-.chat-list-item { border-bottom: 1px solid var(--border-color); padding: 14px 12px; transition: background-color 0.15s ease, padding-left 0.15s ease; }
+.chat-list-item { border-bottom: 1px solid var(--border-color); padding: 14px 12px;  }
 .chat-list-item:hover { background-color: var(--hover-bg-color); }
 .chat-list-item.active {
     background-color: var(--active-bg-color);
@@ -316,7 +313,6 @@ body {
     color: var(--hsr-clear-sky-bg);
     box-shadow: 0 4px 10px rgba(var(--hsr-console-dark-text-rgb),0.25), 0 0 12px var(--hsr-sunlit-gold), 0 0 5px var(--hsr-nav-compass-blue) inset;
     font-size: 1.6rem; width: 52px; height: 52px;
-    transition: all 0.2s ease-out;
 }
 .new-chat-fab:hover {
     box-shadow: 0 5px 15px rgba(var(--hsr-nav-compass-blue-rgb),0.35), 0 0 18px var(--hsr-sunlit-gold), 0 0 8px var(--hsr-nav-compass-blue) inset;
@@ -334,7 +330,7 @@ body {
 }
 .chat-avatar-main { border: 2px solid var(--hsr-polished-rail-border); border-radius: 3px; box-shadow: 0 0 5px rgba(var(--hsr-console-dark-text-rgb), 0.08); }
 .chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(var(--hsr-console-dark-text-rgb), 0.1); } /* Subtle shadow for light theme */
-.header-action-btn { color: var(--text-color-light); font-size: 1.2rem; transition: all 0.2s ease;}
+.header-action-btn { color: var(--text-color-light); font-size: 1.2rem; }
 .header-action-btn:hover { color: var(--hsr-nav-compass-blue); text-shadow: 0 0 6px rgba(var(--hsr-nav-compass-blue-rgb),0.4); transform: scale(1.1); }
 
 .no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; user-select: none;}
@@ -417,7 +413,6 @@ body {
     border-radius: 22px;
     padding: 12px 18px;
     font-size: 0.98em;
-    transition: all 0.2s ease;
 }
 #messageInput::placeholder { color: var(--text-color-light); opacity: 0.7;}
 #messageInput:focus {
@@ -425,7 +420,7 @@ body {
     box-shadow: 0 0 0 2px rgba(var(--hsr-nav-compass-blue-rgb),0.2), 0 0 10px rgba(var(--hsr-nav-compass-blue-rgb),0.06) inset;
     background-color: var(--hsr-express-cabin-panel);
 }
-.icon-btn { color: var(--text-color-light); font-size: 1.2rem; transition: all 0.15s ease; padding: 8px; border-radius: 50%; }
+.icon-btn { color: var(--text-color-light); font-size: 1.2rem;  padding: 8px; border-radius: 50%; }
 .icon-btn:hover { color: var(--hsr-nav-compass-blue); background-color: rgba(var(--hsr-nav-compass-blue-rgb),0.07); transform: scale(1.1); }
 #sendButtonMain { color: var(--hsr-nav-compass-blue); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 #sendButtonMain:hover { text-shadow: 0 0 6px rgba(var(--hsr-nav-compass-blue-rgb),0.5); filter: brightness(0.95); }
@@ -468,7 +463,6 @@ body {
     text-transform: uppercase;
     letter-spacing: 1.2px;
     font-weight: 700;
-    transition: all 0.2s ease-out;
     box-shadow: 0 2px 4px rgba(var(--hsr-console-dark-text-rgb),0.15), 0 1px 1px rgba(var(--hsr-console-dark-text-rgb),0.03) inset, 0 0 0 1px rgba(var(--hsr-polished-rail-border-rgb),0.8);
     padding: 12px 24px;
     border: 1px solid transparent;
@@ -501,7 +495,7 @@ body {
     border-radius: var(--border-radius);
 }
 .modal-header h2 { color: var(--hsr-nav-compass-blue); text-shadow: 0 0 8px rgba(var(--hsr-nav-compass-blue-rgb),0.4), 0 0 2px rgba(var(--hsr-nav-compass-blue-rgb),0.2); letter-spacing: 0.5px;}
-.close-modal-btn { font-size: 1.5rem; transition: all 0.2s ease; }
+.close-modal-btn { font-size: 1.5rem;  }
 .close-modal-btn:hover { color: var(--hsr-nav-compass-blue); transform: scale(1.15) rotate(90deg); }
 .modal-body input[type="text"], .modal-body textarea {
     background-color: var(--hsr-clear-sky-bg);
@@ -533,13 +527,13 @@ body {
 /* Toggle Switch */
 .toggle-switch { width: 48px; height: 26px; }
 input:checked + .slider { background-color: var(--hsr-nav-compass-blue); box-shadow: 0 0 5px var(--hsr-nav-compass-blue) inset; }
-.slider { background-color: var(--hsr-polished-rail-border); border-radius: 13px; transition: .3s; border: 1px solid rgba(var(--hsr-clear-sky-bg-rgb),0.5);}
+.slider { background-color: var(--hsr-polished-rail-border); border-radius: 13px;  border: 1px solid rgba(var(--hsr-clear-sky-bg-rgb),0.5);}
 .slider:before {
     height: 20px; width: 20px; left: 2px; bottom: 2px;
     background-color: var(--hsr-express-cabin-panel);
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(var(--hsr-console-dark-text-rgb),0.25);
-    transition: .3s;
+
 }
 input:checked + .slider:before { transform: translateX(56px); background-color: var(--hsr-clear-sky-bg); box-shadow: 0 1px 3px rgba(var(--hsr-console-dark-text-rgb),0.25), 0 0 3px var(--hsr-nav-compass-blue); }
 

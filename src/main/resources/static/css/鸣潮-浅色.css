@@ -86,7 +86,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     /* 更有层次和动态感的背景，模拟晨曦光辉和数据流 */
     background-image:
             radial-gradient(ellipse at 20% 80%, rgba(var(--ww-verdant-flash-rgb), 0.12) 0%, transparent 50%),
@@ -100,9 +99,6 @@ body {
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1440px;
-    height: calc(100vh - 40px);
     background-color: rgba(var(--ww-clear-data-panel-rgb), 0.88); /* 半透明面板 */
     backdrop-filter: blur(12px) saturate(110%); /* 毛玻璃效果 */
     box-shadow: 0 8px 35px rgba(var(--ww-carbon-ink-text-rgb),0.12), var(--ww-light-data-stream-shadow), 0 0 0 1px rgba(var(--ww-skywake-blue-rgb),0.15); /* 强调科技感边框 */
@@ -141,13 +137,14 @@ body {
     border-right: var(--ww-light-panel-border);
     width: var(--sidebar-width);
     flex-shrink: 0;
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--ww-dawn-sky-bg-rgb), 0.6);
     border-bottom: var(--ww-light-panel-border);
-    padding: 0 12px; height: var(--header-height);
+    padding: 0 12px;
 }
-.menu-btn { color: var(--ww-cloud-shadow-text); transition: color 0.2s, text-shadow 0.2s; }
+.menu-btn { color: var(--ww-cloud-shadow-text);}
 .menu-btn:hover { color: var(--ww-skywake-blue); text-shadow: var(--ww-light-data-stream-shadow); }
 .search-bar {
     background-color: var(--ww-dawn-sky-bg);
@@ -155,7 +152,6 @@ body {
     color: var(--text-color);
     border-radius: 20px;
     padding: 8px 15px;
-    transition: all 0.2s;
 }
 .search-bar::placeholder { color: var(--ww-cloud-shadow-text); }
 .search-bar:focus {
@@ -180,7 +176,6 @@ body {
 
 .chat-list-item {
     border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s, box-shadow 0.2s;
     padding: 10px 12px;
 }
 .chat-list-item:hover {
@@ -330,7 +325,6 @@ body {
     background: linear-gradient(145deg, var(--ww-skywake-blue), var(--primary-color-dark));
     color: var(--ww-clear-data-panel);
     box-shadow: 0 3px 7px rgba(var(--ww-carbon-ink-text-rgb),0.25), 0 0 10px var(--ww-skywake-blue);
-    transition: all 0.25s ease-out;
     border: 1px solid rgba(var(--ww-carbon-ink-text-rgb),0.05);
 }
 .new-chat-fab:hover {
@@ -344,7 +338,6 @@ body {
 .chat-header-main {
     background-color: rgba(var(--ww-dawn-sky-bg-rgb), 0.7);
     border-bottom: var(--ww-light-panel-border);
-    height: var(--header-height);
     padding: 0 15px;
 }
 .chat-avatar-main {
@@ -352,7 +345,7 @@ body {
     box-shadow: 0 0 5px rgba(var(--ww-carbon-ink-text-rgb),0.08);
 }
 .chat-title-main { font-weight: 500; letter-spacing: 0.5px; text-shadow: 0 0 6px rgba(var(--ww-carbon-ink-text-rgb), 0.05); }
-.header-action-btn { color: var(--ww-cloud-shadow-text); transition: color 0.2s, text-shadow 0.2s, transform 0.2s; }
+.header-action-btn { color: var(--ww-cloud-shadow-text); }
 .header-action-btn:hover { color: var(--ww-skywake-blue); text-shadow: var(--ww-light-data-stream-shadow); transform: scale(1.1); }
 
 .chat-messages-container { padding: 20px; flex-grow: 1; overflow-y: auto; }
@@ -429,7 +422,6 @@ body {
     border: 1px solid var(--border-color);
     color: var(--text-color);
     border-radius: 20px; padding: 12px 18px;
-    transition: all 0.2s;
 }
 #messageInput::placeholder { color: var(--ww-cloud-shadow-text); opacity: 0.8; }
 #messageInput:focus {
@@ -437,7 +429,7 @@ body {
     background-color: var(--ww-clear-data-panel);
     box-shadow: 0 0 0 2px rgba(var(--ww-skywake-blue-rgb),0.2), var(--ww-light-data-stream-shadow) inset;
 }
-.icon-btn { color: var(--ww-cloud-shadow-text); transition: all 0.2s; padding: 8px; border-radius: 50%; }
+.icon-btn { color: var(--ww-cloud-shadow-text); padding: 8px; border-radius: 50%; }
 .icon-btn:hover {
     color: var(--ww-skywake-blue);
     background-color: rgba(var(--ww-skywake-blue-rgb),0.08);
@@ -461,7 +453,6 @@ body {
 .details-header {
     background-color: rgba(var(--ww-dawn-sky-bg-rgb), 0.7);
     border-bottom: var(--ww-light-panel-border);
-    height: var(--header-height); padding: 0 15px;
 }
 .details-avatar {
     border: 3px solid var(--border-color);
@@ -489,14 +480,12 @@ body {
 /* 通用按钮样式 */
 .btn {
     border-radius: var(--border-radius); text-transform: uppercase; letter-spacing: 1px; font-weight: 600;
-    transition: all 0.25s ease-out;
     box-shadow: 0 1px 3px rgba(var(--ww-carbon-ink-text-rgb),0.15), 0 0 0 1px transparent inset;
     padding: 10px 20px; border: 1px solid transparent; position: relative; overflow: hidden;
 }
 .btn::before {
     content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
     background: linear-gradient(90deg, transparent, rgba(var(--ww-carbon-ink-text-rgb),0.06), transparent);
-    transition: left 0.4s ease-out;
 }
 .btn:hover::before { left: 100%; }
 
@@ -589,12 +578,10 @@ body {
 .slider {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
     background-color: var(--ww-polished-alloy-border);
-    transition: .3s; border-radius: 24px;
 }
 .slider:before {
     position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
     background-color: var(--ww-clear-data-panel);
-    transition: .3s; border-radius: 50%;
     box-shadow: 0 1px 2px rgba(var(--ww-carbon-ink-text-rgb),0.15);
 }
 input:checked + .slider { background-color: var(--ww-skywake-blue); box-shadow: 0 0 4px var(--ww-skywake-blue); }

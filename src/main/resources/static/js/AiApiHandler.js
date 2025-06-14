@@ -1,12 +1,15 @@
 /**
  * @file AiApiHandler.js
  * @description 负责处理与后端 AI API 的所有通信，包括构建上下文、发送请求以及处理流式响应和对话摘要。
+ *              现在会优先使用用户在设置中配置的 API 参数。
  * @module AiApiHandler
  * @exports {object} AiApiHandler - 对外暴露的单例对象，包含与 AI 交互的方法。
  * @property {object} activeSummaries - 内部缓存，用于存储每个 AI 联系人的当前活动对话摘要。键为联系人 ID，值为摘要字符串。
  * @property {function} sendAiMessage - 向 AI 联系人发送消息并处理流式响应。
- * @dependencies UserManager, ChatManager, MessageManager, Config, Utils, NotificationManager
- * @dependents MessageManager (当检测到消息目标是 AI 时调用)
+ * @property {function} checkAiServiceHealth - 执行 AI 服务健康检查。
+ * @property {function} handleAiConfigChange - 处理 AI 配置变更，由 AppInitializer 调用。
+ * @dependencies UserManager, ChatManager, MessageManager, Config, Utils, NotificationManager, EventEmitter, SettingsUIManager
+ * @dependents MessageManager (当检测到消息目标是 AI 时调用), AppInitializer (初始化时及配置变更时调用)
  */
 const AiApiHandler = {
 
@@ -16,6 +19,43 @@ const AiApiHandler = {
      * @type {Object<string, string>}
      */
     activeSummaries: {},
+
+    /**
+     * @private
+     * @description 获取当前有效的 AI 配置，优先从 localStorage 读取，然后回退到全局 Config，最后到 SettingsUIManager 中的备用默认值。
+     * @returns {object} 包含 apiEndpoint, apiKey, model, maxTokens, ttsApiEndpoint 的配置对象。
+     */
+    _getEffectiveAiConfig: function() {
+        const config = {};
+        const serverConfig = (typeof window.Config !== 'undefined' && window.Config && typeof window.Config.server === 'object' && window.Config.server !== null)
+            ? window.Config.server
+            : {};
+
+        const fallbackDefaults = (typeof SettingsUIManager !== 'undefined' && SettingsUIManager && typeof SettingsUIManager.FALLBACK_AI_DEFAULTS === 'object' && SettingsUIManager.FALLBACK_AI_DEFAULTS !== null)
+            ? SettingsUIManager.FALLBACK_AI_DEFAULTS
+            : { apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: '' };
+
+
+        config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint') || serverConfig.apiEndpoint || fallbackDefaults.apiEndpoint;
+        config.apiKey = localStorage.getItem('aiSetting_api_key') || serverConfig.api_key || fallbackDefaults.api_key;
+        config.model = localStorage.getItem('aiSetting_model') || serverConfig.model || fallbackDefaults.model;
+
+        const maxTokensStored = localStorage.getItem('aiSetting_max_tokens');
+        let parsedMaxTokens = parseInt(maxTokensStored, 10);
+
+        if (maxTokensStored !== null && !isNaN(parsedMaxTokens)) {
+            config.maxTokens = parsedMaxTokens;
+        } else if (serverConfig.max_tokens !== undefined) {
+            config.maxTokens = serverConfig.max_tokens;
+        } else {
+            config.maxTokens = fallbackDefaults.max_tokens;
+        }
+
+        config.ttsApiEndpoint = localStorage.getItem('aiSetting_ttsApiEndpoint') || serverConfig.ttsApiEndpoint || fallbackDefaults.ttsApiEndpoint;
+
+        Utils.log(`_getEffectiveAiConfig: Effective AI config used. Endpoint: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, Key Present: ${!!config.apiKey}, Model: ${config.model}`, Utils.logLevels.DEBUG);
+        return config;
+    },
 
     /**
      * 向 AI 联系人发送消息并处理流式响应。
@@ -36,6 +76,11 @@ const AiApiHandler = {
         let thinkingElement = chatBox.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
 
         try {
+            const effectiveConfig = this._getEffectiveAiConfig();
+            if (!effectiveConfig.apiEndpoint) {
+                throw new Error("AI API 端点未配置。请在设置中配置。");
+            }
+
             const fiveMinutesAgo = new Date().getTime() - (Config.ai.sessionTime);
             const chatHistory = ChatManager.chats[targetId] || [];
             const recentMessages = chatHistory.filter(msg => new Date(msg.timestamp).getTime() > fiveMinutesAgo && msg.type === 'text');
@@ -61,22 +106,21 @@ const AiApiHandler = {
                 }
             }
 
-            const currentConfigForAIRequest = { endpoint: window.Config.server.apiEndpoint, keyPresent: !!window.Config.server.api_key, model: window.Config.server.model, max_tokens: window.Config.server.max_tokens };
-            Utils.log(`AiApiHandler: 向 ${contact.name} 发送 AI 请求。配置: 端点='${currentConfigForAIRequest.endpoint}', 密钥存在=${currentConfigForAIRequest.keyPresent}, 模型='${currentConfigForAIRequest.model}'`, Utils.logLevels.DEBUG);
+            Utils.log(`AiApiHandler: 向 ${contact.name} 发送 AI 请求。配置: 端点='${effectiveConfig.apiEndpoint}', 密钥存在=${!!effectiveConfig.apiKey}, 模型='${effectiveConfig.model}'`, Utils.logLevels.DEBUG);
 
             const requestBody = {
-                model: currentConfigForAIRequest.model,
-                messages: messagesForRequestBody, // 使用构建好的消息数组
+                model: effectiveConfig.model,
+                messages: messagesForRequestBody,
                 stream: true,
                 temperature: 0.1,
-                max_tokens: currentConfigForAIRequest.max_tokens || 2048,
+                max_tokens: effectiveConfig.maxTokens || 2048,
                 user: UserManager.userId,
                 character_id: targetId
             };
             Utils.log(`正在发送到 AI (${contact.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
-            const response = await fetch(currentConfigForAIRequest.endpoint, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': window.Config.server.api_key }, body: JSON.stringify(requestBody)
+            const response = await fetch(effectiveConfig.apiEndpoint, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" }, body: JSON.stringify(requestBody)
             });
             if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
 
@@ -155,7 +199,7 @@ const AiApiHandler = {
         } catch (error) {
             if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
             Utils.log(`与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。`, 'error');
+            NotificationManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
         }
     },
@@ -176,28 +220,31 @@ const AiApiHandler = {
      */
     _handleSummaryResponse: async function(targetId, contact, originalMessageText, summaryContent, summaryMsgId, chatBox) {
         Utils.log(`--- 收到关于 [${contact.name}] 的摘要 ---\n${summaryContent}`, Utils.logLevels.INFO);
-        // 存储收到的摘要
         this.activeSummaries[targetId] = summaryContent;
         Utils.log(`AiApiHandler: Stored summary for contact ${targetId}. It will be used in subsequent requests.`, Utils.logLevels.DEBUG);
 
         if (summaryMsgId) chatBox.querySelector(`.message[data-message-id="${summaryMsgId}"]`)?.remove();
 
         try {
-            const currentConfigForAIRequest = { endpoint: window.Config.server.apiEndpoint, keyPresent: !!window.Config.server.api_key, model: window.Config.server.model, max_tokens: window.Config.server.max_tokens };
+            const effectiveConfig = this._getEffectiveAiConfig();
+            if (!effectiveConfig.apiEndpoint) {
+                throw new Error("AI API 端点未配置。请在设置中配置。");
+            }
+
             const newAiApiMessages = [
                 { role: "system", content: contact.aiConfig.systemPrompt + Config.ai.baseSystemPrompt },
-                { role: "system", content: `上下文摘要:\n${summaryContent}` }, // 使用刚收到的摘要
+                { role: "system", content: `上下文摘要:\n${summaryContent}` },
                 { role: "user", content: `${originalMessageText} [发送于: ${new Date().toLocaleString()}]` }
             ];
             const newRequestBody = {
-                model: currentConfigForAIRequest.model, messages: newAiApiMessages, stream: true,
-                temperature: 0.1, max_tokens: currentConfigForAIRequest.max_tokens || 2048,
+                model: effectiveConfig.model, messages: newAiApiMessages, stream: true,
+                temperature: 0.1, max_tokens: effectiveConfig.maxTokens || 2048,
                 user: UserManager.userId, character_id: targetId
             };
             Utils.log(`正在使用摘要上下文重新发送到 AI (${contact.name}) (流式): ${JSON.stringify(newRequestBody.messages)}`, Utils.logLevels.DEBUG);
 
-            const summaryResponse = await fetch(currentConfigForAIRequest.endpoint, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': window.Config.server.api_key }, body: JSON.stringify(newRequestBody)
+            const summaryResponse = await fetch(effectiveConfig.apiEndpoint, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" }, body: JSON.stringify(newRequestBody)
             });
             if (!summaryResponse.ok) {
                 throw new Error(`在摘要后，API 请求失败，状态码 ${summaryResponse.status}。`);
@@ -250,8 +297,75 @@ const AiApiHandler = {
 
         } catch (error) {
             Utils.log(`在摘要后与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification(`错误: 在摘要后无法从 ${contact.name} 获取回复。`, 'error');
+            NotificationManager.showNotification(`错误: 在摘要后无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，在摘要后发生错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
+        }
+    },
+
+    /**
+     * @description 执行针对配置的 AI 服务的健康检查。
+     * @returns {Promise<boolean>} 如果服务健康则返回 true，否则返回 false。
+     */
+    checkAiServiceHealth: async function() {
+        const effectiveConfig = this._getEffectiveAiConfig();
+
+        if (!effectiveConfig.apiEndpoint) {
+            Utils.log("AiApiHandler: AI API 端点未配置，无法进行健康检查。", Utils.logLevels.ERROR);
+            return false;
+        }
+
+        const healthCheckPayload = {
+            model: effectiveConfig.model,
+            messages: [
+                { role: "user", content: "Health check." }
+            ],
+            stream: false,
+            max_tokens: 10
+        };
+
+        try {
+            Utils.log(`AiApiHandler: 正在向 ${effectiveConfig.apiEndpoint} (模型: ${effectiveConfig.model}) 执行健康检查`, Utils.logLevels.DEBUG);
+            const response = await fetch(effectiveConfig.apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': effectiveConfig.apiKey || ""
+                },
+                body: JSON.stringify(healthCheckPayload)
+            });
+
+            if (response.status === 200) {
+                Utils.log("AiApiHandler: AI 服务健康检查成功。", Utils.logLevels.INFO);
+                return true;
+            } else {
+                Utils.log(`AiApiHandler: AI 服务健康检查失败。状态: ${response.status}`, Utils.logLevels.WARN);
+                return false;
+            }
+        } catch (error) {
+            Utils.log(`AiApiHandler: AI 服务健康检查期间出错: ${error.message}`, Utils.logLevels.ERROR);
+            return false;
+        }
+    },
+
+    /**
+     * @description 处理 AI 配置变更事件，重新检查 AI 服务健康状况。
+     *              此方法由 AppInitializer 通过 EventEmitter 调用。
+     * @returns {Promise<void>}
+     */
+    handleAiConfigChange: async function() {
+        Utils.log("AiApiHandler: AI 配置已更改，正在重新检查服务健康状况...", Utils.logLevels.INFO);
+        try {
+            const isHealthy = await this.checkAiServiceHealth();
+            UserManager.updateAiServiceStatus(isHealthy);
+            if (typeof EventEmitter !== 'undefined') {
+                EventEmitter.emit('aiServiceStatusUpdated', UserManager.isAiServiceHealthy);
+            }
+        } catch (e) {
+            Utils.log("处理 AI 配置变更时，健康检查出错: " + e.message, Utils.logLevels.ERROR);
+            UserManager.updateAiServiceStatus(false);
+            if (typeof EventEmitter !== 'undefined') {
+                EventEmitter.emit('aiServiceStatusUpdated', false);
+            }
         }
     }
 };

@@ -73,7 +73,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background: linear-gradient(135deg, rgba(var(--gs-dawn-beige-bg-rgb),0.95), rgba(var(--gs-moonlight-porcelain-panel-rgb),0.85)),
     radial-gradient(ellipse at top left, rgba(var(--gs-teyvat-gold-rgb),0.12) 0%, transparent 55%),
     radial-gradient(ellipse at bottom right, rgba(var(--gs-starlight-blue-rgb),0.1) 0%, transparent 65%),
@@ -83,8 +82,6 @@ body {
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--secondary-color);
     box-shadow: 0 7px 30px rgba(var(--gs-scroll-ink-gray-rgb),0.1), 0 0 18px rgba(var(--gs-starlight-blue-rgb),0.07) inset;
     border-radius: var(--border-radius);
@@ -102,6 +99,7 @@ body {
 .sidebar-nav {
     background-color: rgba(var(--gs-moonlight-porcelain-panel-rgb), 0.85);
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--gs-dawn-beige-bg-rgb), 0.7);
@@ -374,7 +372,7 @@ body {
     text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 500;
-    transition: all 0.2s ease;
+
     box-shadow: 0 1px 3px rgba(var(--gs-scroll-ink-gray-rgb),0.22);
     padding: 9px 16px;
 }

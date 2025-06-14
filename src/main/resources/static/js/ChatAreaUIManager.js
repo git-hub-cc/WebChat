@@ -394,7 +394,7 @@ const ChatAreaUIManager = {
     /**
      * 更新聊天头部的标题、状态和头像。
      * @param {string} title - 聊天标题。
-     * @param {string} status - 聊天状态文本（如在线、离线）。
+     * @param {string} status - 聊天状态文本（如在线、离线、AI服务状态）。
      * @param {string} avatarTextParam - 用于生成头像的文本（通常是名称首字母）。
      * @param {boolean} [isGroup=false] - 是否为群组聊天。
      */

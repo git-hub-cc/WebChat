@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>P2P 聊天</title>
     <link rel="stylesheet" href="css/base.css">
-    <!-- 主题特定 CSS 占位符 -->
-    <link id="theme-stylesheet" rel="stylesheet" href="css/原神-浅色.css"> <!-- 此行会被 ThemeLoader.js 动态修改 -->
+    <!-- 主题特定 CSS 占位符, href 会被 ThemeLoader.init 动态填充 -->
+    <link id="theme-stylesheet" rel="stylesheet" href="">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -388,34 +388,33 @@
         </div>
     </div>
 </div>
-<script>
-    // 全局占位符，确保 ThemeLoader.js 加载数据 JS 文件时不会出错
-    window.SPECIAL_CONTACTS_DEFINITIONS = [];
-</script>
-<!-- 主题加载器 (加载主题CSS和包含SPECIAL_CONTACTS_DEFINITIONS的数据JS) -->
-<script src="js/ThemeLoader.js"></script> <!-- !!! ThemeLoader.js 必须首先加载，因为它可能 document.write() -->
-
-<!-- 配置应在其他脚本使用 Config 对象前加载 -->
+<!-- 脚本加载顺序调整 -->
+<!-- ThemeLoader.js 仍然较早加载，但其 init() 由 AppInitializer 调用 -->
+<script src="js/ThemeLoader.js"></script>
 <script src="js/Config.js"></script>
-
-<!-- 工具类 -->
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>
 <script src="js/DBManager.js"></script>
-
-<!-- 核心逻辑管理器 -->
-<script src="js/UserManager.js"></script> <!-- UserManager 依赖 ThemeLoader 加载的 SPECIAL_CONTACTS_DEFINITIONS -->
+<!-- UserManager 依赖 ThemeLoader, Config, Utils, EventEmitter, DBManager -->
+<script src="js/UserManager.js"></script>
+<!-- ConnectionManager 依赖 Config, Utils, EventEmitter, UserManager -->
 <script src="js/ConnectionManager.js"></script>
-<script src="js/MediaManager.js"></script> <!-- 核心媒体逻辑 -->
-<script src="js/VideoCallManager.js"></script> <!-- 核心视频通话逻辑 -->
+<!-- MediaManager 依赖 Config, Utils, NotificationManager, MessageManager, MediaUIManager, EventEmitter -->
+<script src="js/MediaManager.js"></script>
+<!-- VideoCallManager 依赖 Config, Utils, NotificationManager, ConnectionManager, UserManager, VideoCallUIManager, ModalManager -->
+<script src="js/VideoCallManager.js"></script>
+<!-- AiApiHandler 依赖 UserManager, ChatManager, MessageManager, Config, Utils, NotificationManager, EventEmitter, SettingsUIManager -->
 <script src="js/AiApiHandler.js"></script>
-<script src="js/MessageManager.js"></script> <!-- 核心消息逻辑 -->
+<!-- MessageManager 依赖 ChatManager, UserManager, ConnectionManager, GroupManager, NotificationManager, AiApiHandler, MediaManager, MessageTtsHandler, Utils, ModalManager, ChatAreaUIManager, Config -->
+<script src="js/MessageManager.js"></script>
+<!-- ChatManager 依赖 DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationManager, Utils, ModalManager -->
 <script src="js/ChatManager.js"></script>
+<!-- GroupManager 依赖 DBManager, UserManager, ChatManager, ConnectionManager, NotificationManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager -->
 <script src="js/GroupManager.js"></script>
 
-<!-- 专业处理器/管理器 (通常由核心逻辑或特定UI部分使用) -->
+<!-- 专业处理器/管理器 -->
 <script src="js/MessageTtsHandler.js"></script>
-<script src="js/TtsUIManager.js"></script> <!-- 用于详情面板的TTS配置表单 -->
+<script src="js/TtsUIManager.js"></script>
 
 <!-- UI组件管理器 -->
 <script src="js/UIManager.js"></script>
@@ -430,7 +429,38 @@
 <script src="js/MediaUIManager.js"></script>
 <script src="js/PeopleLobbyManager.js"></script>
 
-<!-- 应用初始化程序 (应放在最后或接近最后) -->
+<!-- 应用初始化程序 (最后加载) -->
 <script src="js/AppInitializer.js"></script>
+<script>
+    // 新的应用程序启动方式
+    // 等待DOM完全加载后，异步初始化应用
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof AppInitializer !== 'undefined' && typeof AppInitializer.init === 'function') {
+            AppInitializer.init().catch(error => {
+                console.error("应用程序初始化失败:", error);
+                // 可选: 在UI中显示一个全局错误消息
+                const body = document.querySelector('body');
+                if (body) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.textContent = '应用程序初始化失败，请刷新页面或联系支持。详细信息请查看控制台。';
+                    errorDiv.style.color = 'red';
+                    errorDiv.style.padding = '20px';
+                    errorDiv.style.textAlign = 'center';
+                    // 确保在加载覆盖层之下（如果覆盖层还存在）
+                    const loadingOverlay = document.getElementById('loadingOverlay');
+                    if (loadingOverlay) {
+                        body.insertBefore(errorDiv, loadingOverlay);
+                        loadingOverlay.style.display = 'none'; // 确保隐藏加载动画
+                    } else {
+                        body.prepend(errorDiv);
+                    }
+                }
+            });
+        } else {
+            console.error("AppInitializer 未定义或 AppInitializer.init 不是一个函数。应用无法启动。");
+            // 也可以在这里显示一个全局错误
+        }
+    });
+</script>
 </body>
 </html>

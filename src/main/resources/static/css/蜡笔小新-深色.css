@@ -71,7 +71,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     /* 更有童趣的背景，但不要太花哨 */
     background: var(--cs-night-teal-bg) linear-gradient(135deg, rgba(var(--cs-funky-purple-rgb), 0.1) 25%, transparent 25%) -40px 0,
     var(--cs-night-teal-bg) linear-gradient(225deg, rgba(var(--cs-funky-purple-rgb), 0.1) 25%, transparent 25%) -40px 0,
@@ -83,8 +82,6 @@ body {
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--secondary-color); /* 应用容器主背景 */
     box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(var(--cs-sunny-orange-rgb),0.07) inset;
     border-radius: var(--border-radius);
@@ -102,6 +99,7 @@ body {
 .sidebar-nav {
     background-color: rgba(var(--cs-night-teal-bg-rgb), 0.7);
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--cs-night-teal-bg-rgb), 0.8);
@@ -301,7 +299,6 @@ body {
     text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 500;
-    transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 .btn-primary { background-color: var(--cs-sunny-orange); color: var(--cs-night-teal-bg); border: 1px solid rgba(var(--cs-night-teal-bg-rgb),0.3); }

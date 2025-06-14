@@ -66,15 +66,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     /* 背景可以尝试用蜡笔画的云朵或太阳 */
     background-image: linear-gradient(to bottom, var(--cs-kazama-sky-blue), var(--cs-background-light-yellow));
 }
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--cs-shiro-white); /* 应用容器用白色，像画纸 */
     box-shadow: 0 8px 20px rgba(var(--cs-border-brown-rgb), 0.3);
     border-radius: 20px; /* 更大的圆角 */
@@ -92,6 +89,7 @@ body {
 .sidebar-nav {
     background-color: var(--cs-background-light-yellow);
     border-right: 2px solid var(--cs-border-brown);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     border-bottom: 2px solid var(--cs-border-brown);
@@ -271,7 +269,6 @@ body {
     box-shadow: 2px 2px 0px var(--cs-text-dark); /* Simple shadow for cartoon effect */
     text-transform: uppercase;
     font-weight: bold;
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 .btn:active {
     transform: translate(2px, 2px);

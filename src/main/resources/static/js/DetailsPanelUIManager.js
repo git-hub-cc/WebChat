@@ -296,7 +296,7 @@ const DetailsPanelUIManager = {
         }
 
         if (this.detailsStatusEl) {
-            if (contact.isSpecial) this.detailsStatusEl.textContent = (contact.isAI ? 'AI 助手' : '特殊联系人') + ' - 始终可用';
+            if (contact.isSpecial) this.detailsStatusEl.textContent = (contact.isAI ? 'AI 助手' : '特殊联系人') ;
             else this.detailsStatusEl.textContent = ConnectionManager.isConnectedTo(contactId) ? '已连接' : '离线';
         }
 

@@ -50,8 +50,6 @@
     --border-color: var(--wm-border-dark);
     --hover-bg-color: rgba(var(--wm-text-bright-rgb), 0.05);
     --active-bg-color: rgba(var(--wm-brilliant-gold-rgb), 0.15);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 5px; /* 更锐利的边角 */
     --font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
     --box-shadow: 0 1px 3px rgba(0,0,0,0.6), 0 0 20px rgba(var(--wm-brilliant-gold-rgb),0.08) inset;
@@ -69,14 +67,11 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background: radial-gradient(ellipse at center, rgba(var(--wm-panel-dark-bg-rgb),0.3) 0%, var(--wm-dark-bg) 70%);
 }
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--secondary-color);
     box-shadow: 0 10px 40px rgba(0,0,0,0.7), 0 0 25px rgba(var(--wm-brilliant-gold-rgb),0.05) inset;
     border-radius: var(--border-radius);
@@ -94,6 +89,7 @@ body {
 .sidebar-nav {
     background-color: rgba(var(--wm-dark-bg-rgb), 0.5);
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--wm-dark-bg-rgb), 0.7);
@@ -359,7 +355,7 @@ body {
     text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 500;
-    transition: all 0.2s ease;
+
     box-shadow: 0 1px 2px rgba(0,0,0,0.4);
 }
 .btn-primary { background-color: var(--wm-brilliant-gold); color: var(--text-color-inverted); border: 1px solid rgba(var(--wm-dark-bg-rgb),0.3); }

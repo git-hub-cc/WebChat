@@ -84,15 +84,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background: var(--gs-night-indigo-bg) radial-gradient(ellipse at center, rgba(var(--gs-abyss-violet-panel-rgb), 0.25) 0%, var(--gs-night-indigo-bg) 70%);
     background-blend-mode: overlay, normal;
 }
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--secondary-color); /* 应用容器主背景 */
     box-shadow: 0 8px 35px rgba(0,0,0,0.8), 0 0 20px rgba(var(--gs-electro-luminous-purple-rgb),0.07) inset;
     border-radius: var(--border-radius);
@@ -110,6 +107,7 @@ body {
 .sidebar-nav {
     background-color: rgba(var(--gs-night-indigo-bg-rgb), 0.65);
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--gs-night-indigo-bg-rgb), 0.8);
@@ -347,7 +345,7 @@ body {
     text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 500;
-    transition: all 0.2s ease;
+
     box-shadow: 0 1px 2px rgba(0,0,0,0.65);
 }
 .btn-primary { background-color: var(--gs-electro-luminous-purple); color: var(--gs-night-indigo-bg); border: 1px solid rgba(var(--gs-night-indigo-bg-rgb),0.35); }
@@ -422,4 +420,3 @@ input:checked + .slider { background-color: var(--gs-electro-luminous-purple); }
 .details-panel.group-chat-active #groupActionsDetails { display: block; }
 
 .notification { background: var(--gs-abyss-violet-panel); border-left-color: var(--gs-electro-luminous-purple); color: var(--text-color);}
-/* --- END OF FILE 原神-深色.css --- */

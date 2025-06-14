@@ -85,7 +85,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     /* Subtle animated tech background pattern */
     background-image:
             linear-gradient(rgba(var(--hi3-tech-border-rgb), 0.03) 1px, transparent 1px),
@@ -102,9 +101,6 @@ body {
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px; /* Consistent */
-    height: 90vh; /* Control overall height */
     background-color: var(--secondary-color);
     box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(var(--hi3-herrscher-purple-rgb),0.15) inset, 0 0 50px rgba(var(--hi3-energy-stream-cyan-rgb),0.1) inset;
     border-radius: var(--border-radius-large);
@@ -148,13 +144,14 @@ body {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.5); /* More transparent */
     border-right: 1px solid var(--border-color);
     padding-top: 5px; /* Space for top accent */
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: transparent; /* Cleaner */
     padding: 10px 15px;
-    height: var(--header-height);
+    /* height: var(--header-height); */ /* Uses removed variable */
 }
-.menu-btn { color: var(--hi3-interface-gray); transition: color 0.2s, text-shadow 0.2s; }
+.menu-btn { color: var(--hi3-interface-gray); }
 .menu-btn:hover { color: var(--hi3-energy-stream-cyan); text-shadow: 0 0 5px var(--hi3-energy-stream-cyan); }
 
 .search-bar {
@@ -181,7 +178,6 @@ body {
 
 .chat-list-item {
     border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s, box-shadow 0.2s;
     position: relative;
 }
 .chat-list-item:hover {
@@ -199,7 +195,6 @@ body {
     color: var(--hi3-data-glow-white);
     border-radius: 25%; /* Squircle, more techy */
     box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    transition: transform 0.2s, box-shadow 0.2s;
 }
 .chat-list-item:hover .chat-list-avatar { transform: scale(1.05); }
 
@@ -293,7 +288,6 @@ body {
     color: var(--hi3-data-glow-white);
     box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px var(--hi3-energy-stream-cyan), 0 0 15px var(--hi3-herrscher-purple);
     border-radius: 50%; width: 50px; height: 50px;
-    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 .new-chat-fab:hover {
     transform: scale(1.1) rotate(45deg);
@@ -306,7 +300,7 @@ body {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.4); /* More transparent */
     backdrop-filter: blur(5px); /* Frosted glass effect if supported */
     border-bottom: 1px solid var(--border-color);
-    height: var(--header-height);
+    /* height: var(--header-height); */ /* Uses removed variable */
 }
 .chat-avatar-main { border: 1px solid var(--hi3-tech-border); border-radius: 25%;}
 .chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 0 8px rgba(var(--hi3-data-glow-white-rgb), 0.2); }
@@ -440,7 +434,7 @@ body {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 1px var(--primary-color), var(--box-shadow-strong-glow);
 }
-.icon-btn { color: var(--hi3-interface-gray); transition: all 0.2s; }
+.icon-btn { color: var(--hi3-interface-gray);  }
 .icon-btn:hover { color: var(--hi3-energy-stream-cyan); text-shadow: 0 0 5px var(--hi3-energy-stream-cyan); transform: scale(1.15); background-color: transparent; }
 #sendButtonMain { color: var(--hi3-energy-stream-cyan); font-weight: 600; letter-spacing: 1px; }
 #sendButtonMain:hover { text-shadow: 0 0 8px var(--hi3-energy-stream-cyan); }
@@ -460,7 +454,7 @@ body {
 .details-header {
     background-color: transparent;
     border-bottom: 1px solid var(--border-color);
-    height: var(--header-height);
+    /* height: var(--header-height); */ /* Uses removed variable */
 }
 .details-avatar {
     border: 2px solid var(--hi3-tech-border);
@@ -485,7 +479,6 @@ body {
     text-transform: uppercase;
     letter-spacing: 1px; /* More spacing */
     font-weight: 600;
-    transition: all 0.2s ease-in-out;
     box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 0 3px rgba(255,255,255,0.03);
     border: 1px solid var(--hi3-tech-border); /* Default border */
     padding: 8px 15px; /* Standard padding */
@@ -498,7 +491,6 @@ body {
     top: 0; left: -100%;
     width: 100%; height: 100%;
     background: linear-gradient(90deg, transparent, rgba(var(--hi3-data-glow-white-rgb),0.2), transparent);
-    transition: left 0.4s ease-in-out;
 }
 .btn:hover::before { left: 100%; }
 
@@ -578,14 +570,12 @@ body {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
     background-color: var(--hi3-tech-border);
     border: 1px solid rgba(var(--hi3-tech-border-rgb),0.5);
-    transition: .3s;
     border-radius: var(--border-radius); /* Sharp rectangle */
 }
 .slider:before { /* The knob */
     position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
     background-color: var(--hi3-deep-space-bg);
     border: 1px solid var(--hi3-energy-stream-cyan);
-    transition: .3s;
     border-radius: 2px; /* Sharp square knob */
 }
 input:checked + .slider { background-color: var(--hi3-energy-stream-cyan); box-shadow: 0 0 5px var(--hi3-energy-stream-cyan); }
@@ -623,8 +613,3 @@ input:checked + .slider:before {
     padding: 10px 15px;
 }
 .notification strong { color: var(--hi3-energy-stream-cyan); }
-
-/* Class to add via JS for character-specific elements */
-/* .is-character, .is-character-message, .is-character-chat */
-
-/* --- END OF FILE 崩坏3-深色-Enhanced.css --- */

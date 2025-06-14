@@ -69,17 +69,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     /* For dark mode, often a solid color or very subtle gradient is used */
     background: var(--tg-bg-dark);
 }
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
-    height: 90vh;
-    max-height: 90vh;
     background-color: var(--secondary-color); /* App container uses the main dark bg */
     box-shadow: 0 5px 20px rgba(0,0,0,0.4);
     border-radius: var(--border-radius);
@@ -97,6 +92,7 @@ body {
 .sidebar-nav {
     background-color: var(--tg-panel-dark); /* Slightly lighter panel for sidebar */
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: var(--tg-panel-dark);

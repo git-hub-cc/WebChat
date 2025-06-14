@@ -70,15 +70,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background: var(--xn-misty-white-bg) linear-gradient(135deg, rgba(var(--xn-misty-white-bg-rgb), 0.9), rgba(var(--xn-ancient-stone-panel-rgb), 0.8)) radial-gradient(ellipse at top left, rgba(var(--xn-sky-blue-accent-rgb), 0.1) 0%, transparent 50%) radial-gradient(ellipse at bottom right, rgba(var(--xn-cinnabar-red-rgb), 0.08) 0%, transparent 60%);
     background-blend-mode: normal, overlay, overlay;
 }
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--secondary-color); /* 应用容器主背景 */
     box-shadow: 0 6px 25px rgba(var(--xn-ink-wash-text-rgb),0.15), 0 0 15px rgba(var(--xn-cinnabar-red-rgb),0.05) inset;
     border-radius: var(--border-radius);
@@ -96,6 +93,7 @@ body {
 .sidebar-nav {
     background-color: rgba(var(--xn-ancient-stone-panel-rgb), 0.75);
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--xn-misty-white-bg-rgb), 0.6);
@@ -334,7 +332,7 @@ body {
     text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 500;
-    transition: all 0.2s ease;
+
     box-shadow: 0 1px 2px rgba(var(--xn-ink-wash-text-rgb),0.25);
 }
 .btn-primary { background-color: var(--xn-cinnabar-red); color: var(--xn-misty-white-bg); border: 1px solid rgba(var(--xn-ink-wash-text-rgb),0.2); }

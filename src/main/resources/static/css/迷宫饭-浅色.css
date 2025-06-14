@@ -72,7 +72,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     background: linear-gradient(135deg, rgba(var(--mgf-parchment-bg-rgb),0.9), rgba(var(--mgf-light-stone-panel-rgb),0.8)),
     radial-gradient(ellipse at top left, rgba(var(--mgf-fresh-herb-green-rgb),0.1) 0%, transparent 50%),
     radial-gradient(ellipse at bottom right, rgba(var(--mgf-cooked-food-brown-rgb),0.08) 0%, transparent 60%);
@@ -81,8 +80,6 @@ body {
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--secondary-color); /* 应用容器主背景 */
     box-shadow: 0 6px 25px rgba(var(--mgf-text-ink-brown-rgb),0.12), 0 0 15px rgba(var(--mgf-cooked-food-brown-rgb),0.08) inset;
     border-radius: var(--border-radius);
@@ -100,6 +97,7 @@ body {
 .sidebar-nav {
     background-color: rgba(var(--mgf-light-stone-panel-rgb), 0.8);
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--mgf-parchment-bg-rgb), 0.6);
@@ -339,7 +337,6 @@ body {
     text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 500;
-    transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(var(--mgf-text-ink-brown-rgb),0.28);
 }
 .btn-primary { background-color: var(--mgf-cooked-food-brown); color: var(--mgf-parchment-bg); border: 1px solid rgba(var(--mgf-text-ink-brown-rgb),0.25); }

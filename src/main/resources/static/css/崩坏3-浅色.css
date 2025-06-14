@@ -65,8 +65,6 @@
     --border-color: rgba(var(--hi3-light-divider-line-rgb), 0.6);
     --hover-bg-color: rgba(var(--hi3-tech-blue-rgb), 0.06);
     --active-bg-color: rgba(var(--hi3-tech-blue-rgb), 0.12);
-    --sidebar-width: 300px;
-    --header-height: 56px;
     --border-radius: 4px;
     --border-radius-large: 6px;
     --font-family: "Exo 2", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
@@ -87,7 +85,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     /* Subtle geometric pattern for light theme */
     background-image:
             radial-gradient(circle at 1px 1px, rgba(var(--hi3-light-divider-line-rgb), 0.3) 1px, transparent 0),
@@ -97,9 +94,6 @@ body {
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
-    height: 90vh;
     background-color: var(--secondary-color);
     box-shadow: 0 8px 25px rgba(var(--hi3-interface-dark-text-rgb),0.1), 0 0 20px rgba(var(--hi3-tech-blue-rgb),0.05) inset;
     border-radius: var(--border-radius-large);
@@ -130,13 +124,13 @@ body {
     background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.7);
     border-right: 1px solid var(--border-color);
     padding-top: 5px;
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: transparent;
     padding: 10px 15px;
-    height: var(--header-height);
 }
-.menu-btn { color: var(--hi3-secondary-data-text); transition: color 0.2s, text-shadow 0.2s; }
+.menu-btn { color: var(--hi3-secondary-data-text); }
 .menu-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); }
 
 .search-bar {
@@ -163,7 +157,6 @@ body {
 
 .chat-list-item {
     border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s, box-shadow 0.2s;
     position: relative;
 }
 .chat-list-item:hover {
@@ -181,7 +174,6 @@ body {
     color: var(--hi3-interface-dark-text);
     border-radius: 25%;
     box-shadow: var(--box-shadow-soft);
-    transition: transform 0.2s, box-shadow 0.2s;
 }
 .chat-list-item:hover .chat-list-avatar { transform: scale(1.05); }
 
@@ -265,7 +257,6 @@ body {
     color: var(--hi3-hyperion-hull-bg);
     box-shadow: 0 2px 8px rgba(var(--hi3-interface-dark-text-rgb),0.3), 0 0 8px var(--hi3-tech-blue), 0 0 12px var(--hi3-valkyrie-orange);
     border-radius: 50%; width: 50px; height: 50px;
-    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 .new-chat-fab:hover {
     transform: scale(1.1) rotate(45deg);
@@ -278,7 +269,6 @@ body {
     background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.6);
     backdrop-filter: blur(5px);
     border-bottom: 1px solid var(--border-color);
-    height: var(--header-height);
 }
 .chat-avatar-main { border: 1px solid var(--hi3-light-divider-line); border-radius: 25%;}
 .chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 0 5px rgba(var(--hi3-tech-blue-rgb), 0.1); }
@@ -396,7 +386,7 @@ body {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 1px var(--primary-color), var(--box-shadow-strong-glow-light);
 }
-.icon-btn { color: var(--text-color-light); transition: all 0.2s; }
+.icon-btn { color: var(--text-color-light); }
 .icon-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); transform: scale(1.15); background-color: transparent;}
 #sendButtonMain { color: var(--hi3-tech-blue); font-weight: 600; letter-spacing: 1px; }
 #sendButtonMain:hover { text-shadow: 0 0 6px var(--hi3-tech-blue); }
@@ -416,7 +406,6 @@ body {
 .details-header {
     background-color: transparent;
     border-bottom: 1px solid var(--border-color);
-    height: var(--header-height);
 }
 .details-avatar {
     border: 2px solid var(--hi3-light-divider-line);
@@ -441,7 +430,6 @@ body {
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-    transition: all 0.2s ease-in-out;
     box-shadow: 0 1px 2px rgba(var(--hi3-interface-dark-text-rgb),0.2), inset 0 0 2px rgba(0,0,0,0.02);
     border: 1px solid var(--hi3-light-divider-line);
     padding: 8px 15px;
@@ -454,7 +442,6 @@ body {
     top: 0; left: -100%;
     width: 100%; height: 100%;
     background: linear-gradient(90deg, transparent, rgba(var(--hi3-hyperion-hull-bg-rgb),0.6), transparent);
-    transition: left 0.4s ease-in-out;
 }
 .btn:hover::before { left: 100%; }
 
@@ -532,14 +519,14 @@ body {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
     background-color: var(--hi3-light-divider-line);
     border: 1px solid rgba(var(--hi3-light-divider-line-rgb),0.8);
-    transition: .3s;
+
     border-radius: var(--border-radius);
 }
 .slider:before {
     position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
     background-color: var(--hi3-hyperion-hull-bg);
     border: 1px solid var(--hi3-tech-blue);
-    transition: .3s;
+
     border-radius: 2px;
 }
 input:checked + .slider { background-color: var(--hi3-tech-blue); box-shadow: 0 0 5px var(--hi3-tech-blue); border-color: var(--hi3-tech-blue); }

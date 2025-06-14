@@ -84,7 +84,6 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
     /* Subtle geometric/urban texture for JJK High feel */
     background-image:
             linear-gradient(45deg, rgba(var(--jjk-steel-frame-rgb),0.07) 25%, transparent 25%, transparent 75%, rgba(var(--jjk-steel-frame-rgb),0.07) 75%, rgba(var(--jjk-steel-frame-rgb),0.07)),
@@ -96,8 +95,6 @@ body {
 
 .app-container {
     display: flex;
-    width: 100%;
-    max-width: 1400px;
     background-color: var(--secondary-color); /* App container is cleaner white */
     box-shadow: 0 6px 25px rgba(var(--jjk-ink-black-rgb),0.1), 0 0 0 1px rgba(var(--jjk-steel-frame-rgb), 0.3); /* Defined border */
     border-radius: var(--border-radius);
@@ -115,6 +112,7 @@ body {
 .sidebar-nav {
     background-color: var(--jjk-tokyo-sky-panel); /* Sidebar is slightly off-white */
     border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: rgba(var(--jjk-cursed-seal-white-rgb), 0.8);
@@ -128,7 +126,6 @@ body {
     color: var(--text-color);
     border-radius: 18px; /* Softer radius for light theme */
     padding: 10px 15px;
-    transition: all 0.2s ease-in-out;
 }
 .search-bar::placeholder { color: var(--jjk-text-color-light); }
 .search-bar:focus {
@@ -147,7 +144,6 @@ body {
 .chat-list-item {
     border-bottom: 1px solid var(--border-color);
     padding: 12px 15px;
-    transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 .chat-list-item:hover {
     background-color: var(--hover-bg-color);
@@ -167,7 +163,7 @@ body {
     border: 1px solid rgba(var(--jjk-ink-black-rgb), 0.15);
     color: var(--jjk-ink-black);
     box-shadow: 0 1px 1px rgba(var(--jjk-ink-black-rgb),0.1);
-    transition: all 0.2s ease;
+
 }
 .chat-list-item:hover .chat-list-avatar {
     border-color: var(--jjk-domain-purple);
@@ -182,7 +178,6 @@ body {
 /* Base for character items */
 .chat-list-item.special-contact .chat-list-avatar,
 .chat-avatar-main, .details-avatar, #callingModalAvatar {
-    transition: all 0.2s ease-in-out;
     border-width: 1.5px; /* Thicker border for character avatars */
 }
 
@@ -277,7 +272,6 @@ body {
     background-color: var(--jjk-cursed-energy-blue);
     color: var(--jjk-cursed-seal-white);
     box-shadow: 0 2px 6px rgba(var(--jjk-ink-black-rgb),0.25), 0 0 8px rgba(var(--jjk-cursed-energy-blue-rgb),0.3);
-    transition: all 0.2s ease-out;
 }
 .new-chat-fab:hover {
     background-color: var(--primary-color-dark);
@@ -298,7 +292,7 @@ body {
     box-shadow: 0 1px 3px rgba(var(--jjk-ink-black-rgb),0.1);
 }
 .chat-title-main { font-weight: 600; text-shadow: 0 0 2px rgba(var(--jjk-ink-black-rgb), 0.05); font-size: 1.1em; }
-.header-action-btn { color: var(--jjk-shadow-gray); transition: all 0.2s ease; }
+.header-action-btn { color: var(--jjk-shadow-gray);  }
 .header-action-btn:hover { color: var(--jjk-cursed-energy-blue); transform: scale(1.15); }
 
 .chat-messages-container { padding: 20px; }
@@ -383,14 +377,13 @@ body {
     color: var(--text-color);
     border-radius: 18px;
     padding: 12px 16px;
-    transition: all 0.2s ease-in-out;
 }
 #messageInput::placeholder { color: var(--jjk-text-color-light); }
 #messageInput:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.25), 0 0 8px rgba(var(--jjk-cursed-energy-blue-rgb),0.05) inset;
 }
-.icon-btn { color: var(--jjk-text-color-light); padding: 8px; border-radius: 50%; transition: all 0.2s ease;}
+.icon-btn { color: var(--jjk-text-color-light); padding: 8px; border-radius: 50%; }
 .icon-btn:hover { color: var(--jjk-cursed-energy-blue); background-color: rgba(var(--jjk-cursed-energy-blue-rgb),0.08); transform: scale(1.1); }
 #sendButtonMain { color: var(--jjk-cursed-energy-blue); font-weight: 600; font-size: 1.5em; }
 #sendButtonMain:hover { transform: translateX(2px) scale(1.05); filter: brightness(0.9); }
@@ -414,7 +407,7 @@ body {
 .details-avatar {
     border: 2px solid var(--jjk-steel-frame);
     box-shadow: 0 0 8px rgba(var(--jjk-ink-black-rgb), 0.1), 0 0 0 2px var(--secondary-color);
-    width: 80px; height: 80px;
+    /* width: 80px; height: 80px; */ /* Removed fixed dimensions */
 }
 #detailsName { text-shadow: 0 0 2px rgba(var(--jjk-ink-black-rgb), 0.05); font-size: 1.2em; font-weight: 600; margin-top: 8px;}
 #aiContactDetailsContent {
@@ -442,7 +435,6 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.7px;
     font-weight: 600;
-    transition: all 0.18s ease-out;
     box-shadow: 0 1.5px 2.5px rgba(var(--jjk-ink-black-rgb),0.15), inset 0 -1px 0 rgba(var(--jjk-ink-black-rgb),0.1);
     padding: 10px 20px;
     border: 1px solid transparent;
@@ -491,7 +483,6 @@ body {
     border: 1px solid var(--jjk-steel-frame-light);
     border-radius: var(--border-radius);
     padding: 12px 14px;
-    transition: all 0.2s ease-in-out;
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus, .modal-body input[type="password"]:focus, .modal-body input[type="number"]:focus {
     border-color: var(--jjk-cursed-energy-blue);
@@ -509,7 +500,7 @@ body {
 
 /* Video Call */
 .video-call-avatar { background-color: var(--jjk-steel-frame); border: 1px solid var(--border-color); box-shadow: 0 0 8px rgba(var(--jjk-ink-black-rgb),0.1); }
-.video-call-button { transition: all 0.2s ease; }
+.video-call-button {  }
 .video-call-button.end-call { background: var(--danger-color); }
 .video-call-button.end-call:hover { background: rgb(170,40,50); transform: scale(1.05); }
 .video-call-button.active { background: var(--jjk-cursed-energy-blue); color: var(--jjk-cursed-seal-white); }
@@ -518,8 +509,8 @@ body {
 
 /* Toggle Switch */
 input:checked + .slider { background-color: var(--jjk-cursed-energy-blue); box-shadow: 0 0 4px rgba(var(--jjk-cursed-energy-blue-rgb),0.3); }
-.slider { background-color: var(--jjk-steel-frame); transition: all 0.2s ease-in-out; }
-.slider:before { background-color: var(--jjk-cursed-seal-white); box-shadow: 0 1px 2px rgba(var(--jjk-ink-black-rgb),0.2); transition: all 0.2s ease-in-out; }
+.slider { background-color: var(--jjk-steel-frame); }
+.slider:before { background-color: var(--jjk-cursed-seal-white); box-shadow: 0 1px 2px rgba(var(--jjk-ink-black-rgb),0.2);  }
 input:focus + .slider { box-shadow: 0 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.25); }
 input:checked + .slider:before { transform: translateX(56px); }
 
