@@ -1837,6 +1837,28 @@ input:checked + .slider::before {
     color: var(--text-color-light, #757575);
 }
 
+/* base.css (或相关主题文件) */
+#ttsConfigFormContainer .tts-config-item select {
+    /* 已有样式 */
+    flex-grow: 1; /* 确保select填满空间 */
+    /* ...其他现有样式... */
+}
+
+/* 如果需要，为动态select添加特定微调 */
+#ttsConfigFormContainer .tts-config-item select[data-tts-param="model_name"],
+#ttsConfigFormContainer .tts-config-item select[data-tts-param="speaker_name"],
+#ttsConfigFormContainer .tts-config-item select[data-tts-param="emotion"] {
+    /* 例如，如果它们需要不同的最小宽度 */
+    /* min-width: 120px; */
+}
+
+/* 如果需要为禁用的select添加特定样式 */
+#ttsConfigFormContainer .tts-config-item select:disabled {
+    background-color: var(--hover-bg-color, #f0f0f0); /* 示例：使其看起来像禁用的输入框 */
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
 
 /* ========================================================================== */
 /* 响应式设计 (Responsive Design) */

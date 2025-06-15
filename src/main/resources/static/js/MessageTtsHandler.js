@@ -7,7 +7,7 @@
  * @property {function} requestTtsForMessage - 为指定消息文本请求 TTS 音频。
  * @property {function} playTtsAudioFromControl - 处理播放/暂停 TTS 音频的点击事件。
  * @property {function} addTtsPlaceholder - 在消息中添加一个加载中的占位符。
- * @dependencies Config, Utils, UserManager, NotificationManager
+ * @dependencies Config, Utils, UserManager, NotificationManager, AiApiHandler
  * @dependents MessageManager (当 AI 消息完成时调用)
  */
 const MessageTtsHandler = {
@@ -63,12 +63,18 @@ const MessageTtsHandler = {
      * @returns {Promise<void>}
      */
     requestTtsForMessage: async function (text, ttsConfig, parentContainer, ttsId) {
-        const currentTtsApiEndpoint = window.Config?.server?.ttsApiEndpoint;
-        if (!currentTtsApiEndpoint) {
-            Utils.log("TTS 未触发: 全局 TTS API 端点未配置。", Utils.logLevels.WARN);
+        // 从 AiApiHandler 获取有效的配置，包括用户设置的 ttsApiEndpoint
+        const effectiveConfig = AiApiHandler._getEffectiveAiConfig();
+        const baseTtsApiEndpoint = effectiveConfig.ttsApiEndpoint;
+
+        if (!baseTtsApiEndpoint) {
+            Utils.log("TTS 未触发: TTS API 端点未配置。", Utils.logLevels.WARN);
             this.updateTtsControlToError(parentContainer, ttsId, "TTS 端点未配置");
             return;
         }
+        // 确保端点以 / 结尾，如果它不是空的且没有以 / 结尾
+        const currentTtsApiEndpoint = baseTtsApiEndpoint.endsWith('/') ? baseTtsApiEndpoint + 'infer_single' : baseTtsApiEndpoint + '/infer_single';
+
 
         const payload = {
             access_token: "guest", model_name: ttsConfig.model_name, speaker_name: ttsConfig.speaker_name,

@@ -4,6 +4,7 @@
  *              它与数据库交互以持久化用户和联系人数据，并确保主题定义的特殊联系人被正确加载和合并。
  *              现在依赖 ThemeLoader 动态提供特殊联系人定义。
  *              修复了切换主题或初始化时，可能加载非当前主题 AI 角色的问题。
+ *              确保 TTS 配置中的 tts_mode 得到正确处理。
  * @module UserManager
  * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
  * @property {string|null} userId - 当前用户的唯一 ID。
@@ -53,17 +54,12 @@ const UserManager = {
 
             this.contacts = {}; // 初始化联系人为空对象
 
-            // 从 ThemeLoader 获取当前主题的特殊联系人定义
-            // AppInitializer.init() 应该在 UserManager.init() 之前 await ThemeLoader.init()
             const currentThemeSpecialDefs = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions()
                 : [];
 
-            // 处理并加载当前主题的特殊联系人 (如果存在，则与 DB 数据合并)
-            // ensureSpecialContacts 将使用这些特殊联系人填充 this.contacts
             await this.ensureSpecialContacts(currentThemeSpecialDefs, false);
 
-            // 从数据库加载所有存储的联系人
             let dbStoredContacts = [];
             try {
                 dbStoredContacts = await DBManager.getAllItems('contacts');
@@ -71,65 +67,44 @@ const UserManager = {
                 Utils.log(`UserManager.init: 从 DB 加载联系人失败: ${error}`, Utils.logLevels.ERROR);
             }
 
-            // 处理数据库中存储的联系人：添加常规联系人，忽略其他主题的 AI/特殊联系人
             if (dbStoredContacts && dbStoredContacts.length > 0) {
                 for (const dbContact of dbStoredContacts) {
                     const isSpecialInCurrentTheme = currentThemeSpecialDefs.some(def => def.id === dbContact.id);
 
                     if (isSpecialInCurrentTheme) {
-                        // 此联系人对于当前主题是特殊的。
-                        // 它应该已经被 ensureSpecialContacts 处理过了，
-                        // ensureSpecialContacts 会处理将 DB 数据与主题定义合并，并将其添加到 this.contacts。
                         continue;
                     }
 
-                    // 如果联系人在当前主题中不是特殊的：
-                    // 检查它是否是 AI 或在 *先前* 的主题中是特殊的。
-                    // 如果 dbContact.isAI 为 true，表示它在某个主题中是 AI 联系人。
-                    // 如果 dbContact.isSpecial 为 true，表示它在某个主题中是特殊联系人。
-                    // 如果它在 *当前* 主题中不是特殊的，并且在 DB 中被标记为 AI 或特殊，我们不应加载它。
                     if (dbContact.isAI || dbContact.isSpecial) {
                         Utils.log(`UserManager.init: 跳过 DB 联系人 ${dbContact.id} ('${dbContact.name}')，因为它似乎是来自非当前主题的 AI/特殊联系人。`, Utils.logLevels.DEBUG);
                         continue;
                     }
-
-                    // 如果执行到这里，它是一个常规的、用户添加的联系人。
-                    // 将其添加到内存中的联系人列表。
-                    // 确保其标志对于常规联系人是正确设置的。
                     dbContact.isSpecial = false;
                     dbContact.isAI = false;
-                    dbContact.aiConfig = {}; // 清除任何残留的 AI 配置
-                    dbContact.aboutDetails = null; // 清除任何残留的 about 详情
+                    dbContact.aiConfig = { tts: { tts_mode: 'Preset' } }; // 重置 AI 配置，确保 tts_mode
+                    dbContact.aboutDetails = null;
                     this.contacts[dbContact.id] = dbContact;
-                    // 可选：如果其标志已更改，则将“规范化”的联系人保存回 DB
-                    // if (flagsWereChanged) { // 需要一个变量来跟踪标志是否真的改变了
-                    //    await this.saveContact(dbContact.id);
-                    // }
                 }
             }
 
-            // 监听主题变更事件以动态更新特殊联系人
             if (typeof EventEmitter !== 'undefined') {
                 EventEmitter.on('themeChanged', this.handleThemeChange.bind(this));
             } else {
                 console.warn("UserManager.init: EventEmitter 未定义。无法监听 themeChanged 事件。");
             }
 
-        } catch (error) { // 主 init() try 块的 Catch 块
+        } catch (error) {
             Utils.log(`用户初始化失败: ${error.stack || error}`, Utils.logLevels.ERROR);
             this.userId = Utils.generateId(8);
             this.userName = `用户 ${this.userId.substring(0,4)}`;
             this.userSettings.autoConnectEnabled = false;
-
-            this.contacts = {}; // 在回退时重置联系人
+            this.contacts = {};
             const fallbackDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions()
                 : [];
-            // 在回退模式下，ensureSpecialContacts 不会访问 DB，仅使用定义。
             await this.ensureSpecialContacts(fallbackDefinitions, true);
         }
 
-        // 使用用户 ID 更新 UI 元素
         const modalUserIdValueEl = document.getElementById('modalUserIdValue');
         if (modalUserIdValueEl) modalUserIdValueEl.textContent = this.userId;
         if (typeof SettingsUIManager !== 'undefined' && SettingsUIManager.updateCopyIdButtonState) {
@@ -146,31 +121,19 @@ const UserManager = {
     async handleThemeChange(eventData) {
         Utils.log(`UserManager: 正在处理 themeChanged 事件。新主题密钥: ${eventData.newThemeKey}`, Utils.logLevels.INFO);
         const newDefinitions = eventData.newDefinitions || [];
-
         const trulyRegularContacts = {};
-        // 迭代键的副本，因为 ensureSpecialContacts 可能会修改 this.contacts
         const currentContactIds = Object.keys(this.contacts);
 
         for (const contactId of currentContactIds) {
             const contact = this.contacts[contactId];
-            if (!contact) continue; // 如果 this.contacts 正在被修改，这不应发生
-
+            if (!contact) continue;
             const isSpecialInNewTheme = newDefinitions.some(def => def.id === contact.id);
-
-            // 一个联系人被保留为“真正常规联系人”，如果：
-            // 1. 它在 *新* 主题中未被定义为特殊。
-            // 2. 它在 *旧* 主题中不是 AI 联系人 (contact.isAI 应反映旧主题的状态)。
-            // 3. 它在 *旧* 主题中不是特殊（非 AI）联系人 (contact.isSpecial 应反映旧主题的状态)。
             if (!isSpecialInNewTheme && !contact.isAI && !contact.isSpecial) {
                 trulyRegularContacts[contact.id] = contact;
             }
         }
-
-        this.contacts = trulyRegularContacts; // 从仅包含真正常规联系人的干净状态开始
-
-        // 为 *新* 主题添加/更新特殊联系人，并与 DB 数据合并。
-        // ensureSpecialContacts 根据 newDefinitions 设置 isSpecial=true 和 isAI 标志。
-        await this.ensureSpecialContacts(newDefinitions, false); // isFallbackMode 为 false
+        this.contacts = trulyRegularContacts;
+        await this.ensureSpecialContacts(newDefinitions, false);
 
         if (typeof ChatManager !== 'undefined') {
             ChatManager.renderChatList(ChatManager.currentFilter);
@@ -192,7 +155,6 @@ const UserManager = {
      * @returns {boolean}
      */
     isSpecialContact: function(contactId) {
-        // 此函数必须始终引用 *当前* 主题的定义。
         const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
             ? ThemeLoader.getCurrentSpecialContactsDefinitions()
             : [];
@@ -219,17 +181,21 @@ const UserManager = {
                 lastMessage: scDef.initialMessage || '你好！',
                 lastTime: new Date().toISOString(),
                 unread: 0,
-                isSpecial: true, // 关键：根据定义标记为特殊
+                isSpecial: true,
                 avatarText: scDef.avatarText,
                 avatarUrl: scDef.avatarUrl || null,
                 type: 'contact',
-                isAI: scDef.isAI || false, // 关键：根据定义标记为 AI
-                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || {})),
+                isAI: scDef.isAI || false,
+                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || { tts: { tts_mode: 'Preset' } })), // 确保aiConfig和tts存在
                 aboutDetails: scDef.aboutDetails ? JSON.parse(JSON.stringify(scDef.aboutDetails)) : null
             };
-            if (contactDataFromDef.isAI && !contactDataFromDef.aiConfig.tts) {
-                contactDataFromDef.aiConfig.tts = {};
+            // 确保 aiConfig.tts 和 aiConfig.tts.tts_mode 存在
+            if (!contactDataFromDef.aiConfig.tts) {
+                contactDataFromDef.aiConfig.tts = { tts_mode: 'Preset' };
+            } else if (contactDataFromDef.aiConfig.tts.tts_mode === undefined) {
+                contactDataFromDef.aiConfig.tts.tts_mode = 'Preset';
             }
+
 
             let finalContactData = { ...contactDataFromDef };
             let dbContact = null;
@@ -251,32 +217,38 @@ const UserManager = {
                 finalContactData.unread = dbContact.unread !== undefined ? dbContact.unread : 0;
                 finalContactData.avatarUrl = dbContact.avatarUrl !== undefined ? dbContact.avatarUrl : finalContactData.avatarUrl;
 
-                // 合并 aiConfig，确保定义标志 (isAI) 和主题/DB/localStorage TTS 设置得到遵守
-                if (dbContact.aiConfig && finalContactData.isAI) { // 仅当当前定义表明它是 AI 时才合并 aiConfig
+                if (dbContact.aiConfig && finalContactData.isAI) {
                     const { tts: dbTtsConfig, ...otherDbAiConfig } = dbContact.aiConfig;
+                    // 合并时，确保主题定义的 tts_mode (如果存在) 优先于 DB 的，DB 的 tts_mode 优先于最终默认值
+                    const themeDefTtsMode = contactDataFromDef.aiConfig.tts?.tts_mode;
+                    const dbTtsMode = dbTtsConfig?.tts_mode;
+
                     finalContactData.aiConfig = {
-                        ...contactDataFromDef.aiConfig, // 来自当前主题定义的基础 (包括默认 TTS)
-                        ...otherDbAiConfig,             // 来自 DB 的覆盖 (非 TTS 部分)
+                        ...contactDataFromDef.aiConfig,
+                        ...otherDbAiConfig,
                         tts: {
-                            ...(contactDataFromDef.aiConfig.tts || {}), // 来自当前主题的基础 TTS
-                            ...(dbTtsConfig || {})                      // 来自 DB 的覆盖 TTS
+                            ...(contactDataFromDef.aiConfig.tts || {}),
+                            ...(dbTtsConfig || {}),
+                            tts_mode: themeDefTtsMode || dbTtsMode || 'Preset' // 明确优先级
                         }
                     };
                 } else if (!finalContactData.isAI) {
-                    finalContactData.aiConfig = {}; // 在当前主题中不是 AI，清除 AI 配置
+                    finalContactData.aiConfig = { tts: { tts_mode: 'Preset' } };
                 }
                 finalContactData.aboutDetails = dbContact.aboutDetails || finalContactData.aboutDetails;
             }
 
-
-            if (finalContactData.isAI) { // 如果是 AI，则应用 localStorage TTS 设置
+            if (finalContactData.isAI) {
                 const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${scDef.id}`);
                 if (storedTtsSettingsJson) {
                     try {
                         const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
+                        // localStorage 的 tts_mode (如果存在) 具有最高优先级
+                        const localStorageTtsMode = storedTtsSettings.tts_mode;
                         finalContactData.aiConfig.tts = {
                             ...(finalContactData.aiConfig.tts || {}),
-                            ...storedTtsSettings
+                            ...storedTtsSettings,
+                            tts_mode: localStorageTtsMode || finalContactData.aiConfig.tts.tts_mode || 'Preset'
                         };
                     } catch (e) {
                         Utils.log(`从 localStorage 解析 ${scDef.id} 的 TTS 设置时出错: ${e}`, Utils.logLevels.WARN);
@@ -321,10 +293,7 @@ const UserManager = {
      */
     async loadContacts() {
         Utils.log("UserManager.loadContacts: 此方法不推荐在 init 中直接使用。联系人加载逻辑现已集成到 UserManager.init() 中。", Utils.logLevels.WARN);
-        // 此方法的原始功能已被 init() 中更细致的加载逻辑取代。
-        // 直接调用此方法可能会导致不正确的联系人状态，尤其是在特殊/AI 联系人方面。
     },
-
 
     /**
      * 将指定的联系人数据保存到数据库。
@@ -335,8 +304,11 @@ const UserManager = {
         if (this.contacts[contactId]) {
             try {
                 const contactToSave = { ...this.contacts[contactId] };
-                if (contactToSave.isAI && contactToSave.aiConfig && typeof contactToSave.aiConfig.tts === 'undefined') {
-                    contactToSave.aiConfig.tts = {};
+                // 确保 aiConfig.tts 和 tts_mode 存在并正确
+                if (!contactToSave.aiConfig) contactToSave.aiConfig = {};
+                if (!contactToSave.aiConfig.tts) contactToSave.aiConfig.tts = {};
+                if (contactToSave.aiConfig.tts.tts_mode === undefined) {
+                    contactToSave.aiConfig.tts.tts_mode = 'Preset';
                 }
                 await DBManager.setItem('contacts', contactToSave);
             } catch (error) {
@@ -393,7 +365,9 @@ const UserManager = {
             id: id, name: name || `用户 ${id.substring(0, 4)}`, lastMessage: '',
             lastTime: new Date().toISOString(), unread: 0, isSpecial: false,
             avatarText: name ? name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase(),
-            avatarUrl: null, type: 'contact', isAI: false, aiConfig: {}, aboutDetails: null
+            avatarUrl: null, type: 'contact', isAI: false,
+            aiConfig: { tts: { tts_mode: 'Preset' } }, // 新联系人默认 TTS 模式为 Preset
+            aboutDetails: null
         };
         this.contacts[id] = newContact;
         await this.saveContact(id);
@@ -491,22 +465,19 @@ const UserManager = {
                 const currentSpecialDefs = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                     ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
 
-                // 确定哪些是当前主题定义的、应保留的特殊联系人。
                 currentSpecialDefs.forEach(def => {
                     if (tempContacts[def.id]) {
                         contactsToKeepExplicitlyBasedOnCurrentTheme[def.id] = tempContacts[def.id];
                     }
                 });
 
-                // 确定要移除的联系人ID
                 Object.keys(tempContacts).forEach(id => {
-                    // 如果一个联系人不是当前主题的特殊联系人，它就是被移除的候选者。
                     if (!contactsToKeepExplicitlyBasedOnCurrentTheme[id]) {
                         contactIdsToRemove.push(id);
                     }
                 });
 
-                this.contacts = contactsToKeepExplicitlyBasedOnCurrentTheme; // 只保留当前主题的特殊联系人
+                this.contacts = contactsToKeepExplicitlyBasedOnCurrentTheme;
 
                 try {
                     for (const contactId of contactIdsToRemove) {
@@ -527,8 +498,7 @@ const UserManager = {
                 } catch (error) {
                     Utils.log("清空联系人失败: " + error, Utils.logLevels.ERROR);
                     NotificationManager.showNotification("从数据库清空联系人失败。", 'error');
-                    // 如果出错，尝试恢复合理的状态
-                    this.contacts = tempContacts; // 回滚内存状态
+                    this.contacts = tempContacts;
                     if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
                 }
             }

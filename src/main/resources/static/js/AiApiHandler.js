@@ -317,14 +317,14 @@ const AiApiHandler = {
         const healthCheckPayload = {
             model: effectiveConfig.model,
             messages: [
-                { role: "user", content: "Health check." }
+                { role: "user", content: "回复ok." }
             ],
-            stream: false,
-            max_tokens: 10
+            stream: true, // MODIFIED: Changed to stream: true
+            max_tokens: 5
         };
 
         try {
-            Utils.log(`AiApiHandler: 正在向 ${effectiveConfig.apiEndpoint} (模型: ${effectiveConfig.model}) 执行健康检查`, Utils.logLevels.DEBUG);
+            Utils.log(`AiApiHandler: 正在向 ${effectiveConfig.apiEndpoint} (模型: ${effectiveConfig.model}) 执行健康检查 (流式)`, Utils.logLevels.DEBUG);
             const response = await fetch(effectiveConfig.apiEndpoint, {
                 method: 'POST',
                 headers: {
@@ -334,13 +334,82 @@ const AiApiHandler = {
                 body: JSON.stringify(healthCheckPayload)
             });
 
-            if (response.status === 200) {
-                Utils.log("AiApiHandler: AI 服务健康检查成功。", Utils.logLevels.INFO);
-                return true;
-            } else {
+            if (!response.ok) { // Check HTTP status first
                 Utils.log(`AiApiHandler: AI 服务健康检查失败。状态: ${response.status}`, Utils.logLevels.WARN);
                 return false;
             }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let fullStreamedContent = "";
+
+            while (true) {
+                const {value, done: readerDone} = await reader.read();
+                if (readerDone) {
+                    buffer += decoder.decode(); // Process any remaining buffer content
+                    break;
+                }
+                buffer += decoder.decode(value, {stream: true});
+
+                // Check for [DONE] signal
+                let stopStreaming = (buffer.trim() === "[DONE]" || buffer.includes("[DONE]"));
+                if (stopStreaming) {
+                    buffer = buffer.substring(0, buffer.indexOf("[DONE]"));
+                }
+
+                let boundary = 0;
+                while (boundary < buffer.length) {
+                    const startIdx = buffer.indexOf('{', boundary);
+                    if (startIdx === -1) {
+                        buffer = buffer.substring(boundary); // Keep unprocessed part of buffer
+                        break;
+                    }
+                    let openBraces = 0, endIdx = -1;
+                    for (let i = startIdx; i < buffer.length; i++) {
+                        if (buffer[i] === '{') openBraces++;
+                        else if (buffer[i] === '}') {
+                            openBraces--;
+                            if (openBraces === 0) {
+                                endIdx = i;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (endIdx !== -1) {
+                        const jsonString = buffer.substring(startIdx, endIdx + 1);
+                        try {
+                            const jsonChunk = JSON.parse(jsonString);
+                            if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
+                                fullStreamedContent += jsonChunk.choices[0].delta.content;
+                            }
+                        } catch (e) {
+                            Utils.log(`AI 健康检查流: 解析 JSON 出错: ${e}. 缓冲区: ${buffer.substring(0, 100)}`, Utils.logLevels.WARN);
+                        }
+                        boundary = endIdx + 1;
+                        if (boundary >= buffer.length) buffer = ""; // Reset buffer if fully processed
+                    } else {
+                        // Incomplete JSON object, keep it in buffer for next read
+                        buffer = buffer.substring(startIdx);
+                        break;
+                    }
+                }
+                if (stopStreaming) break;
+            }
+
+            // After processing the stream, check content
+            const trimmedContent = fullStreamedContent.trim();
+            Utils.log(`AI 健康检查流式响应内容: "${trimmedContent}" (长度: ${trimmedContent.length})`, Utils.logLevels.DEBUG);
+
+            if (trimmedContent.toLowerCase().includes("ok") && trimmedContent.length < 10) {
+                Utils.log("AiApiHandler: AI 服务健康检查成功 (流式)。", Utils.logLevels.INFO);
+                return true;
+            } else {
+                Utils.log(`AiApiHandler: AI 服务健康检查失败 (流式)。内容: "${trimmedContent}", 长度: ${trimmedContent.length}`, Utils.logLevels.WARN);
+                return false;
+            }
+
         } catch (error) {
             Utils.log(`AiApiHandler: AI 服务健康检查期间出错: ${error.message}`, Utils.logLevels.ERROR);
             return false;

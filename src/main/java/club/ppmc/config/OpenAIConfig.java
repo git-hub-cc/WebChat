@@ -3,57 +3,57 @@
  *
  * 主要职责:
  * - 创建一个配置好的、单例的`WebClient` Bean (`openaiWebClient`)，用于所有对OpenAI API的调用。
- * - 将配置文件中的提示词 (Prompt) 和模型名称作为`String`类型的Bean提供，便于集中管理和注入。
+ *   此`WebClient`不包含默认的Authorization头，授权将由`OpenAIServiceImpl`在每次请求时动态添加。
+ * - 将配置文件中的模型名称作为`String`类型的Bean提供。
+ * - 依赖 `OpenaiApiProperties` 来获取API基础URL、密钥列表和模型名称。
  *
  * 关联:
- * - `OpenAIServiceImpl`: 注入并使用此类中定义的`WebClient`和`String` Beans。
- * - `application.yml`: 从此文件读取API URL、密钥、模型和提示词等配置。
+ * - `OpenAIServiceImpl`: 注入并使用此类中定义的`WebClient`和`model` Bean。它也直接注入`OpenaiApiProperties`来管理API密钥池。
+ * - `OpenaiApiProperties`: 为此类提供类型安全的配置数据。
+ * - `application.yml`: 从此文件读取API URL、密钥列表和模型等配置，通过`OpenaiApiProperties`进行映射。
  */
 package club.ppmc.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpHeaders;
-import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
+@EnableConfigurationProperties(OpenaiApiProperties.class) // 启用OpenaiApiProperties
 public class OpenAIConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(OpenAIConfig.class);
-    private static final String BEARER_PREFIX = "Bearer ";
 
     /**
      * 创建并配置用于与OpenAI API交互的`WebClient` Bean。
      * 此Bean为单例，并被注入到需要调用OpenAI服务的组件中。
      * 使用 @Qualifier("openaiWebClient") 来唯一标识此Bean。
+     * 授权头将由服务层在每次请求时动态添加。
      *
      * @param webClientBuilder Spring Boot自动配置的`WebClient.Builder`。
-     * @param openaiApiBaseUrl OpenAI API的基础URL，从配置文件读取。
-     * @param apiKey           OpenAI API的密钥，从配置文件读取。
+     * @param properties       包含OpenAI API配置的属性对象。
      * @return 配置好的`WebClient`实例。
      */
     @Bean("openaiWebClient")
     public WebClient openaiWebClient(
             WebClient.Builder webClientBuilder,
-            @Value("${openai.api.base_url}") String openaiApiBaseUrl,
-            @Value("${openai.api.api_key}") String apiKey) {
+            OpenaiApiProperties properties) {
 
         logger.info("正在配置OpenAI WebClient Bean...");
-        logger.info("OpenAI 基础 URL: {}", openaiApiBaseUrl);
+        logger.info("OpenAI 基础 URL: {}", properties.baseUrl());
 
-        if (StringUtils.hasText(apiKey)) {
-            logger.info("OpenAI API密钥已配置。");
+        if (properties.api_keys() == null || properties.api_keys().isEmpty()) {
+            logger.warn("OpenAI API密钥列表未配置或为空，API调用将会失败！");
         } else {
-            logger.warn("OpenAI API密钥未配置或为空，API调用可能会失败！");
+            logger.info("OpenAI API密钥池已配置，共 {} 个密钥。", properties.api_keys().size());
         }
 
         return webClientBuilder
-                .baseUrl(openaiApiBaseUrl)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, BEARER_PREFIX + apiKey)
+                .baseUrl(properties.baseUrl())
+                // 注意：Authorization头不再在此处设置默认值，将由OpenAIServiceImpl在每次请求时提供
                 .filter((request, next) -> { // 添加日志过滤器以监控出站请求
                     logger.debug("WebClient请求: {} {}", request.method(), request.url());
                     return next.exchange(request)
@@ -79,7 +79,7 @@ public class OpenAIConfig {
      * @return 摘要提示词字符串。
      */
     @Bean("summaryPrompt")
-    public String summaryPrompt(@Value("${app.summary_prompt}") String prompt) {
+    public String summaryPrompt(@org.springframework.beans.factory.annotation.Value("${app.summary_prompt}") String prompt) {
         logger.info("摘要提示词已加载。");
         return prompt;
     }
@@ -91,20 +91,22 @@ public class OpenAIConfig {
      * @return 事件/心情提示词字符串。
      */
     @Bean("eventMoodPrompt")
-    public String eventMoodPrompt(@Value("${app.event_mood_prompt}") String prompt) {
+    public String eventMoodPrompt(@org.springframework.beans.factory.annotation.Value("${app.event_mood_prompt}") String prompt) {
         logger.info("事件/心情生成提示词已加载。");
         return prompt;
     }
 
     /**
      * 将要使用的AI模型名称作为一个Bean提供。
+     * 模型名称从 `OpenaiApiProperties` 中获取。
      *
-     * @param model 从`application.yml`读取的`openai.api.model`值。
+     * @param properties 包含OpenAI API配置的属性对象。
      * @return 模型名称字符串。
      */
     @Bean("model")
-    public String model(@Value("${openai.api.model}") String model) {
-        logger.info("AI模型已加载: {}", model);
-        return model;
+    public String model(OpenaiApiProperties properties) {
+        String modelName = properties.model();
+        logger.info("AI模型已加载: {}", modelName);
+        return modelName;
     }
 }
