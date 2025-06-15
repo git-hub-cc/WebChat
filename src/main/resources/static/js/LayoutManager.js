@@ -64,8 +64,8 @@ const LayoutManager = {
             if (this.chatAreaEl) this.chatAreaEl.style.display = 'none';
         }
         // 当返回到聊天列表时，如果详情面板是打开的，则应将其关闭
-        if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.isDetailsPanelVisible) {
-            DetailsPanelUIManager.toggleDetailsPanel(false);
+        if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.isPanelAreaVisible) {
+            DetailsPanelUIManager.hideSidePanel(); // Changed from toggleDetailsPanel(false) to hideSidePanel() for clarity
         }
     },
 

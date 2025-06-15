@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>P2P 聊天</title>
+    <title>PPMC</title>
     <link rel="stylesheet" href="css/base.css">
     <!-- 主题特定 CSS 占位符, href 会被 ThemeLoader.init 动态填充 -->
     <link id="theme-stylesheet" rel="stylesheet" href="">
@@ -53,7 +53,7 @@
 
             <div class="no-chat-selected" id="noChatSelectedScreen">
                 <div class="logo-placeholder">💬</div>
-                <h2>P2P 现代聊天</h2>
+                <h2>PPMC</h2>
                 <p>从列表中选择聊天开始，或创建一个新聊天。</p>
                 <p id="connectionStatusGlobal" class="status-indicator">状态: <span id="connectionStatusText">初始化中...</span></p>
             </div>
@@ -67,7 +67,7 @@
                 <div class="input-row">
                     <button class="icon-btn attach-btn" id="attachBtnMain" title="附加文件" disabled>📎</button>
                     <button class="icon-btn screenshot-main-btn" id="screenshotMainBtn" title="截图" disabled>📸</button>
-                    <input type="file" id="fileInput" onchange="MediaManager.handleFileSelect(event)">
+                    <input type="file" id="fileInput"> <!-- Removed onchange -->
                     <textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
                     <button class="icon-btn send-btn" id="sendButtonMain" title="发送" disabled>➤</button>
                     <button class="icon-btn record-btn" id="voiceButtonMain" title="录制语音" disabled>🎙️</button>
@@ -211,8 +211,8 @@
         <h3>视频通话请求</h3>
         <p>来电...</p>
         <div class="video-call-request-buttons">
-            <button class="btn btn-danger reject-call" onclick="VideoCallManager.rejectCall()">拒绝</button>
-            <button class="btn btn-success accept-call" onclick="VideoCallManager.acceptCall()">接听</button>
+            <button class="btn btn-danger reject-call">拒绝</button> 
+            <button class="btn btn-success accept-call">接听</button> 
         </div>
     </div>
 </div>
@@ -236,11 +236,11 @@
         <video id="localVideo" autoplay playsinline muted></video>
     </div>
     <div class="video-call-controls">
-        <button class="video-call-button toggle-camera" id="toggleCameraBtn" onclick="VideoCallManager.toggleCamera()">📹</button>
-        <button class="video-call-button mute-audio" id="toggleAudioBtn" onclick="VideoCallManager.toggleAudio()">🎤</button>
+        <button class="video-call-button toggle-camera" id="toggleCameraBtn">📹</button>
+        <button class="video-call-button mute-audio" id="toggleAudioBtn">🎤</button>
         <button class="video-call-button toggle-pip" id="togglePipBtn" title="画中画">↙️</button>
         <button class="video-call-button end-call" >📞</button>
-        <button class="video-call-button audio-only" id="audioOnlyBtn" onclick="VideoCallManager.toggleAudioOnly()">🔊</button>
+        <button class="video-call-button audio-only" id="audioOnlyBtn">🔊</button>
     </div>
 </div>
 <!-- 主菜单 / 设置模态框 -->
@@ -297,7 +297,7 @@
                     </div>
                     <div class="settings-item">
                         <label for="apiMaxTokensInput">最大令牌数:</label>
-                        <input type="number" id="apiMaxTokensInput" placeholder="例如: 1000" min="1">
+                        <input type="number" id="apiMaxTokensInput" placeholder="例如: 2048" min="1">
                     </div>
                     <div class="settings-item">
                         <label for="ttsApiEndpointInput">TTS API 端点:</label>
@@ -310,13 +310,13 @@
                     <div class="collapsible-content" style="display: none;">
                         <p>用于信令服务器故障或需要直接点对点连接时。</p>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.createOffer(null, { isManual: true })" id="modalCreateOfferBtn" class="btn btn-secondary">1. 创建连接提议</button>
+                            <button id="modalCreateOfferBtn" class="btn btn-secondary">1. 创建连接提议</button> 
                         </div>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.createAnswer({ isManual: true })" id="modalCreateAnswerBtn" class="btn btn-secondary">2. 创建应答 (粘贴提议后)</button>
+                            <button id="modalCreateAnswerBtn" class="btn btn-secondary">2. 创建应答 (粘贴提议后)</button> 
                         </div>
                         <div class="manual-connect-step">
-                            <button onclick="ConnectionManager.handleAnswer({ isManual: true })" id="modalHandleAnswerBtn" class="btn btn-secondary">3. 接受应答 (粘贴应答后)</button>
+                            <button id="modalHandleAnswerBtn" class="btn btn-secondary">3. 接受应答 (粘贴应答后)</button> 
                         </div>
                         <div class="manual-connect-step">
                             <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="在此粘贴对方的连接信息..."></textarea>
@@ -325,16 +325,6 @@
                     </div>
                 </div>
             </div>
-            <!--            <div class="settings-section">-->
-            <!--                <h3>偏好设置</h3>-->
-            <!--                <div class="settings-item">-->
-            <!--                    <label for="autoConnectToggle">自动连接:</label>-->
-            <!--                    <label class="switch">-->
-            <!--                        <input type="checkbox" id="autoConnectToggle">-->
-            <!--                        <span class="slider round"></span>-->
-            <!--                    </label>-->
-            <!--                </div>-->
-            <!--            </div>-->
             <div class="settings-section">
                 <h3>网络状态</h3>
                 <div id="modalNetworkInfo">检测中...</div>
@@ -345,9 +335,9 @@
             </div>
             <div class="settings-section">
                 <h3>操作</h3>
-                <button id="modalResetAllConnectionsBtn" class="btn btn-danger">重置所有连接</button>
                 <button id="modalClearContactsBtn" class="btn btn-danger">清空所有联系人</button>
                 <button id="modalClearAllChatsBtn" class="btn btn-danger">清空所有聊天记录</button>
+                <button id="modalClearCacheBtn" class="btn btn-danger">清除缓存</button> <!-- 新增按钮 -->
             </div>
         </div>
     </div>
@@ -451,36 +441,5 @@
 
 <!-- 应用初始化程序 (最后加载) -->
 <script src="js/AppInitializer.js"></script>
-<script>
-    // 新的应用程序启动方式
-    // 等待DOM完全加载后，异步初始化应用
-    document.addEventListener('DOMContentLoaded', () => {
-        if (typeof AppInitializer !== 'undefined' && typeof AppInitializer.init === 'function') {
-            AppInitializer.init().catch(error => {
-                console.error("应用程序初始化失败:", error);
-                // 可选: 在UI中显示一个全局错误消息
-                const body = document.querySelector('body');
-                if (body) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.textContent = '应用程序初始化失败，请刷新页面或联系支持。详细信息请查看控制台。';
-                    errorDiv.style.color = 'red';
-                    errorDiv.style.padding = '20px';
-                    errorDiv.style.textAlign = 'center';
-                    // 确保在加载覆盖层之下（如果覆盖层还存在）
-                    const loadingOverlay = document.getElementById('loadingOverlay');
-                    if (loadingOverlay) {
-                        body.insertBefore(errorDiv, loadingOverlay);
-                        loadingOverlay.style.display = 'none'; // 确保隐藏加载动画
-                    } else {
-                        body.prepend(errorDiv);
-                    }
-                }
-            });
-        } else {
-            console.error("AppInitializer 未定义或 AppInitializer.init 不是一个函数。应用无法启动。");
-            // 也可以在这里显示一个全局错误
-        }
-    });
-</script>
 </body>
 </html>

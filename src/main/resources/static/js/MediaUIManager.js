@@ -58,7 +58,7 @@ const MediaUIManager = {
 
         // 绑定预览播放按钮的事件
         if (playBtn && audioEl) {
-            playBtn.onclick = () => {
+            playBtn.addEventListener('click', () => { // 使用 addEventListener
                 if (audioEl.paused) {
                     audioEl.play().catch(e => Utils.log("播放预览音频时出错: " + e, Utils.logLevels.ERROR));
                     playBtn.textContent = "暂停";
@@ -66,11 +66,11 @@ const MediaUIManager = {
                     audioEl.pause();
                     playBtn.textContent = "播放";
                 }
-            };
+            });
             audioEl.onended = () => { playBtn.textContent = "播放"; };
         }
         // 绑定取消按钮的事件
-        if (cancelBtn) cancelBtn.onclick = () => MessageManager.cancelAudioData();
+        if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelAudioData()); // 使用 addEventListener
     },
 
     /**
@@ -111,7 +111,7 @@ const MediaUIManager = {
         previewDiv.innerHTML = `<span>${contentHtml}</span><button class="cancel-file-preview" title="移除附件">✕</button>`;
         this.filePreviewContainerEl.appendChild(previewDiv);
         const cancelBtn = this.filePreviewContainerEl.querySelector('.cancel-file-preview');
-        if (cancelBtn) cancelBtn.onclick = () => MessageManager.cancelFileData();
+        if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelFileData()); // 使用 addEventListener
     },
 
     /**

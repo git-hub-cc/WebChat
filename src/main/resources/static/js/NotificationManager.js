@@ -1,4 +1,3 @@
-
 /**
  * @file NotificationManager.js
  * @description 通知管理器，负责在 UI 中显示和管理短暂的弹窗通知。
@@ -42,7 +41,9 @@ const NotificationManager = {
         };
 
         // 绑定关闭按钮的点击事件
-        notification.querySelector('.notification-close').onclick = removeNotification;
+        const closeButton = notification.querySelector('.notification-close');
+        if (closeButton) closeButton.addEventListener('click', removeNotification);
+
         // 设置定时器，在一段时间后自动移除通知（错误通知显示时间更长）
         setTimeout(removeNotification, type === 'error' ? 8000 : 5000);
     },

@@ -149,103 +149,10 @@ const MessageTtsHandler = {
                 const errorText = await audioResponse.text().catch(() => "无法读取错误响应体");
                 throw new Error(`获取 TTS 音频失败。状态: ${audioResponse.status}。URL: ${audioUrl}。响应: ${errorText.substring(0,100)}`);
             }
-            const audioBlobOriginal = await audioResponse.blob();
-            if (audioBlobOriginal.size === 0) throw new Error(`获取 TTS 失败: 收到空的 blob。URL: ${audioUrl}`);
-
-            Utils.log(`MessageTtsHandler: ttsId ${ttsId} 音频原始大小: ${audioBlobOriginal.size} bytes`, Utils.logLevels.DEBUG);
-
-            let processedAudioBlob = audioBlobOriginal; // Default to original blob
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-            try {
-                const arrayBuffer = await audioBlobOriginal.arrayBuffer();
-                const decodedAudioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-                const sampleRate = decodedAudioBuffer.sampleRate;
-                const numberOfChannels = decodedAudioBuffer.numberOfChannels;
-                const totalDurationSec = decodedAudioBuffer.duration;
-
-                Utils.log(`MessageTtsHandler: ttsId ${ttsId} 音频原始总时长: ${totalDurationSec.toFixed(2)}s.`, Utils.logLevels.DEBUG);
-
-                // --- 条件：仅当音频时长大于1分钟 (60秒) 时才进行处理 ---
-                if (totalDurationSec > 60) {
-                    Utils.log(`MessageTtsHandler: ttsId ${ttsId} 音频时长超过60秒，将尝试删除指定片段。`, Utils.logLevels.DEBUG);
-                    const startTimeToDeleteSec = 10;
-                    const durationToDeleteSec = 60; // 1 minute
-                    const endTimeToDeleteSec = startTimeToDeleteSec + durationToDeleteSec;
-
-                    // 确保删除的开始时间在音频总时长内，否则没有意义去创建新buffer
-                    if (totalDurationSec <= startTimeToDeleteSec) {
-                        Utils.log(`MessageTtsHandler: ttsId ${ttsId} 音频时长 (${totalDurationSec.toFixed(2)}s) 小于删除开始时间 (${startTimeToDeleteSec}s)，不进行删除操作。`, Utils.logLevels.DEBUG);
-                        // processedAudioBlob 已经是 audioBlobOriginal，所以这里无需额外操作
-                    } else {
-                        const startSampleToDelete = Math.floor(startTimeToDeleteSec * sampleRate);
-                        let endSampleToDelete = Math.floor(endTimeToDeleteSec * sampleRate);
-
-                        // 确保删除范围不超出音频总长度
-                        if (endSampleToDelete > decodedAudioBuffer.length) {
-                            endSampleToDelete = decodedAudioBuffer.length;
-                        }
-
-                        let samplesToDeleteCount = 0;
-                        if (startSampleToDelete < endSampleToDelete) {
-                            samplesToDeleteCount = endSampleToDelete - startSampleToDelete;
-                        }
-
-                        if (samplesToDeleteCount > 0) {
-                            const newLength = decodedAudioBuffer.length - samplesToDeleteCount;
-
-                            if (newLength <= 0) {
-                                Utils.log(`MessageTtsHandler: ttsId ${ttsId} 删除后音频长度为0或负数，将使用空音频。`, Utils.logLevels.WARN);
-                                const emptyBuffer = audioContext.createBuffer(numberOfChannels, 1, sampleRate); // 1 sample of silence
-                                processedAudioBlob = this._audioBufferToWav(emptyBuffer);
-                            } else {
-                                const modifiedAudioBuffer = audioContext.createBuffer(
-                                    numberOfChannels,
-                                    newLength,
-                                    sampleRate
-                                );
-
-                                for (let channel = 0; channel < numberOfChannels; channel++) {
-                                    const originalChannelData = decodedAudioBuffer.getChannelData(channel);
-                                    const newChannelData = modifiedAudioBuffer.getChannelData(channel);
-
-                                    // 复制第一部分 (删除点之前)
-                                    for (let i = 0; i < startSampleToDelete; i++) {
-                                        newChannelData[i] = originalChannelData[i];
-                                    }
-
-                                    // 复制第二部分 (删除点之后)
-                                    for (let i = 0; i < originalChannelData.length - endSampleToDelete; i++) {
-                                        newChannelData[startSampleToDelete + i] = originalChannelData[endSampleToDelete + i];
-                                    }
-                                }
-                                Utils.log(`MessageTtsHandler: ttsId ${ttsId} 音频已处理，新长度: ${modifiedAudioBuffer.duration.toFixed(2)}s`, Utils.logLevels.DEBUG);
-                                processedAudioBlob = this._audioBufferToWav(modifiedAudioBuffer);
-                            }
-                        } else {
-                            Utils.log(`MessageTtsHandler: ttsId ${ttsId} 无有效样本可删除 (可能删除范围在音频之外或无效)。将使用原始音频。`, Utils.logLevels.DEBUG);
-                            // processedAudioBlob 已经是 audioBlobOriginal
-                        }
-                    }
-                } else {
-                    Utils.log(`MessageTtsHandler: ttsId ${ttsId} 音频时长 (${totalDurationSec.toFixed(2)}s) 不足60秒，将使用原始音频。`, Utils.logLevels.DEBUG);
-                    // processedAudioBlob 已经是 audioBlobOriginal，所以这里无需额外操作
-                }
-            } catch (processingError) {
-                Utils.log(`MessageTtsHandler: ttsId ${ttsId} 处理音频时出错: ${processingError.message}. 将使用原始音频。`, Utils.logLevels.ERROR);
-                if (Utils.logLevel <= Utils.logLevels.DEBUG && processingError.stack) Utils.log(processingError.stack, Utils.logLevels.DEBUG);
-                // 发生处理错误时，回退到使用原始音频
-                processedAudioBlob = audioBlobOriginal; // 确保回退
-            } finally {
-                if (audioContext && audioContext.state !== 'closed') {
-                    audioContext.close().catch(e => Utils.log(`Error closing AudioContext: ${e}`, Utils.logLevels.WARN));
-                }
-            }
-
-            Utils.log(`MessageTtsHandler: ttsId ${ttsId} 处理后音频大小: ${processedAudioBlob.size} bytes`, Utils.logLevels.DEBUG);
-            const preloadedAudioObjectURL = URL.createObjectURL(processedAudioBlob);
-            Utils.log(`MessageTtsHandler: ttsId ${ttsId} 的 TTS 音频已预加载 (可能已处理)。Object URL: ${preloadedAudioObjectURL}`, Utils.logLevels.DEBUG);
+            const audioBlob = await audioResponse.blob();
+            if (audioBlob.size === 0) throw new Error(`获取 TTS 失败: 收到空的 blob。URL: ${audioUrl}`);
+            const preloadedAudioObjectURL = URL.createObjectURL(audioBlob);
+            Utils.log(`MessageTtsHandler: ttsId ${ttsId} 的 TTS 音频已预加载。Object URL: ${preloadedAudioObjectURL}`, Utils.logLevels.DEBUG);
             this.updateTtsControlToPlay(parentContainer, ttsId, preloadedAudioObjectURL);
 
         } catch (preloadError) {
@@ -253,56 +160,6 @@ const MessageTtsHandler = {
             if (Utils.logLevel <= Utils.logLevels.DEBUG && preloadError.stack) Utils.log(preloadError.stack, Utils.logLevels.DEBUG);
             this.updateTtsControlToError(parentContainer, ttsId, "音频加载失败");
         }
-    },
-
-// Helper function _audioBufferToWav remains the same
-    _audioBufferToWav: function(buffer) {
-        const numOfChan = buffer.numberOfChannels;
-        const C = numOfChan;
-        const R = buffer.sampleRate;
-        const L = buffer.length;
-        const bitDepth = 16;
-
-        const headerSize = 44;
-        const dataSize = L * C * (bitDepth / 8);
-        const fileSize = headerSize + dataSize;
-
-        const wavBuffer = new ArrayBuffer(fileSize);
-        const view = new DataView(wavBuffer);
-
-        function writeString(view, offset, string) {
-            for (let i = 0; i < string.length; i++) {
-                view.setUint8(offset + i, string.charCodeAt(i));
-            }
-        }
-
-        writeString(view, 0, 'RIFF');
-        view.setUint32(4, fileSize - 8, true);
-        writeString(view, 8, 'WAVE');
-        writeString(view, 12, 'fmt ');
-        view.setUint32(16, 16, true);
-        view.setUint16(20, 1, true);
-        view.setUint16(22, C, true);
-        view.setUint32(24, R, true);
-        view.setUint32(28, R * C * (bitDepth / 8), true);
-        view.setUint16(32, C * (bitDepth / 8), true);
-        view.setUint16(34, bitDepth, true);
-        writeString(view, 36, 'data');
-        view.setUint32(40, dataSize, true);
-
-        let offset = 44;
-        for (let i = 0; i < L; i++) {
-            for (let ch = 0; ch < C; ch++) {
-                const channelData = buffer.getChannelData(ch);
-                let sample = channelData[i];
-                if (sample > 1) sample = 1;
-                if (sample < -1) sample = -1;
-                sample = Math.floor(sample * 32767);
-                view.setInt16(offset, sample, true);
-                offset += 2;
-            }
-        }
-        return new Blob([view], { type: 'audio/wav' });
     },
 
     /**
@@ -319,7 +176,10 @@ const MessageTtsHandler = {
             playButton.className = 'tts-play-button';
             playButton.dataset.audioUrl = audioUrl;
             playButton.title = "播放/暂停语音";
-            playButton.onclick = (e) => { e.stopPropagation(); this.playTtsAudioFromControl(playButton); };
+            playButton.addEventListener('click', (e) => { // 使用 addEventListener
+                e.stopPropagation();
+                this.playTtsAudioFromControl(playButton);
+            });
             ttsControlContainer.appendChild(playButton);
         }
     },
@@ -401,7 +261,7 @@ const MessageTtsHandler = {
             errorButton.className = 'tts-retry-button';
             errorButton.textContent = '⚠️';
             errorButton.title = `TTS 错误: ${errorMessage.substring(0,100)}。点击重试。`;
-            errorButton.onclick = (e) => {
+            errorButton.addEventListener('click', (e) => { // 使用 addEventListener
                 e.stopPropagation();
                 const messageElement = parentContainer.closest('.message');
                 if (!messageElement) {
@@ -432,7 +292,7 @@ const MessageTtsHandler = {
                     Utils.log(`无法为 ttsId ${ttsId} 重试 TTS: 清理后的文本或 TTS 配置为空。`, Utils.logLevels.WARN);
                     NotificationManager.showNotification("无法重试 TTS: 缺少必要数据。", "error");
                 }
-            };
+            });
             ttsControlContainer.appendChild(errorButton);
         }
     }

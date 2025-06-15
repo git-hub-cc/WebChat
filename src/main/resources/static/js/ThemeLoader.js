@@ -18,14 +18,14 @@
 const ThemeLoader = {
     // 定义所有可用的主题
     themes: {
-        "原神-浅色": { name: "原神（内置tts）", css: "css/原神-浅色.css", dataJs: "data/原神.json", defaultSpecialContacts: true  },
-        "原神-深色": { name: "原神（内置tts）", css: "css/原神-深色.css", dataJs: "data/原神.json" },
-        "崩坏3-浅色": { name: "崩坏3（内置tts）", css: "css/崩坏3-浅色.css", dataJs: "data/崩坏3.json" },
-        "崩坏3-深色": { name: "崩坏3（内置tts）", css: "css/崩坏3-深色.css", dataJs: "data/崩坏3.json" },
-        "鸣潮-浅色": { name: "鸣潮（内置tts）", css: "css/鸣潮-浅色.css", dataJs: "data/鸣潮.json" },
-        "鸣潮-深色": { name: "鸣潮（内置tts）", css: "css/鸣潮-深色.css", dataJs: "data/鸣潮.json" },
-        "星穹铁道-浅色": { name: "星穹铁道（内置tts）", css: "css/星穹铁道-浅色.css", dataJs: "data/星穹铁道.json" },
-        "星穹铁道-深色": { name: "星穹铁道（内置tts）", css: "css/星穹铁道-深色.css", dataJs: "data/星穹铁道.json" },
+        "原神-浅色": { name: "原神", css: "css/原神-浅色.css", dataJs: "data/原神.json", defaultSpecialContacts: true  },
+        "原神-深色": { name: "原神", css: "css/原神-深色.css", dataJs: "data/原神.json" },
+        "崩坏3-浅色": { name: "崩坏3", css: "css/崩坏3-浅色.css", dataJs: "data/崩坏3.json" },
+        "崩坏3-深色": { name: "崩坏3", css: "css/崩坏3-深色.css", dataJs: "data/崩坏3.json" },
+        "鸣潮-浅色": { name: "鸣潮", css: "css/鸣潮-浅色.css", dataJs: "data/鸣潮.json" },
+        "鸣潮-深色": { name: "鸣潮", css: "css/鸣潮-深色.css", dataJs: "data/鸣潮.json" },
+        "星穹铁道-浅色": { name: "星穹铁道", css: "css/星穹铁道-浅色.css", dataJs: "data/星穹铁道.json" },
+        "星穹铁道-深色": { name: "星穹铁道", css: "css/星穹铁道-深色.css", dataJs: "data/星穹铁道.json" },
         "蜡笔小新-浅色": { name: "蜡笔小新", css: "css/蜡笔小新-浅色.css", dataJs: "data/蜡笔小新.json"},
         "蜡笔小新-深色": { name: "蜡笔小新", css: "css/蜡笔小新-深色.css", dataJs: "data/蜡笔小新.json" },
         "仙逆-浅色": { name: "仙逆", css: "css/仙逆-浅色.css", dataJs: "data/仙逆.json" },

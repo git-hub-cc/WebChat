@@ -3,6 +3,8 @@
  * @description 管理主聊天区域的 UI 元素和交互，包括聊天头部、消息框、输入区以及通话和截图按钮。
  *              支持消息的右键/双击上下文菜单，用于删除或撤回消息。
  *              支持消息列表的虚拟滚动，以及从资源预览跳转到特定消息。
+ *              加载更晚的消息现在使用与加载更早消息相同的阈值 (Config.ui.virtualScrollThreshold)，并实现滚动回弹。
+ *              新增逻辑以防止用户在还有更多未加载消息时将滚动条停留在绝对底部。
  * @module ChatAreaUIManager
  * @exports {object} ChatAreaUIManager - 对外暴露的单例对象，包含管理聊天区域 UI 的所有方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
@@ -60,6 +62,7 @@ const ChatAreaUIManager = {
     _scrollListenerAttached: false,
     _debounceScrollTimer: null,
     _boundHandleChatScroll: null, // 用于保存 bind 后的滚动处理函数
+    _lastScrollTop: 0, // 用于判断滚动方向
 
     // --- “回到最新”按钮 ---
     _scrollToLatestBtnEl: null,
@@ -130,9 +133,23 @@ const ChatAreaUIManager = {
             }
         }
         if (this.screenshotMainBtnEl) this.screenshotMainBtnEl.addEventListener('click', () => MediaManager.captureScreen());
-        if (this.videoCallButtonEl) this.videoCallButtonEl.onclick = () => { if(!this.videoCallButtonEl.disabled) VideoCallManager.initiateCall(ChatManager.currentChatId); };
-        if (this.audioCallButtonEl) this.audioCallButtonEl.onclick = () => { if(!this.audioCallButtonEl.disabled) VideoCallManager.initiateAudioCall(ChatManager.currentChatId); };
-        if (this.screenShareButtonEl) this.screenShareButtonEl.onclick = () => { if(!this.screenShareButtonEl.disabled) VideoCallManager.initiateScreenShare(ChatManager.currentChatId); };
+
+        if (this.videoCallButtonEl) {
+            this.videoCallButtonEl.addEventListener('click', () => {
+                if(!this.videoCallButtonEl.disabled) VideoCallManager.initiateCall(ChatManager.currentChatId);
+            });
+        }
+        if (this.audioCallButtonEl) {
+            this.audioCallButtonEl.addEventListener('click', () => {
+                if(!this.audioCallButtonEl.disabled) VideoCallManager.initiateAudioCall(ChatManager.currentChatId);
+            });
+        }
+        if (this.screenShareButtonEl) {
+            this.screenShareButtonEl.addEventListener('click', () => {
+                if(!this.screenShareButtonEl.disabled) VideoCallManager.initiateScreenShare(ChatManager.currentChatId);
+            });
+        }
+
         if (this.chatDetailsButtonEl) this.chatDetailsButtonEl.addEventListener('click', () => { if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.toggleChatDetailsView(); });
         if (this.peopleLobbyButtonEl) this.peopleLobbyButtonEl.addEventListener('click', () => { if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.togglePeopleLobbyView(); });
 
@@ -349,15 +366,10 @@ const ChatAreaUIManager = {
         if (this.videoCallButtonEl) this.videoCallButtonEl.disabled = !finalEnabledState;
         if (this.audioCallButtonEl) this.audioCallButtonEl.disabled = !finalEnabledState;
         if (this.screenShareButtonEl) this.screenShareButtonEl.disabled = !finalEnabledState || !canShareScreen;
-        if (finalEnabledState) {
-            if (this.videoCallButtonEl) this.videoCallButtonEl.onclick = () => VideoCallManager.initiateCall(targetPeerForCall);
-            if (this.audioCallButtonEl) this.audioCallButtonEl.onclick = () => VideoCallManager.initiateAudioCall(targetPeerForCall);
-            if (this.screenShareButtonEl && canShareScreen) this.screenShareButtonEl.onclick = () => VideoCallManager.initiateScreenShare(targetPeerForCall);
-        } else {
-            if (this.videoCallButtonEl) this.videoCallButtonEl.onclick = null;
-            if (this.audioCallButtonEl) this.audioCallButtonEl.onclick = null;
-            if (this.screenShareButtonEl) this.screenShareButtonEl.onclick = null;
-        }
+
+        // Note: click listeners are now set in bindEvents and rely on the disabled state.
+        // If dynamic assignment of onclick was desired based on targetPeerForCall, it would need to be updated here.
+        // However, current bindEvents sets them generally.
     },
 
     /**
@@ -435,6 +447,7 @@ const ChatAreaUIManager = {
         this._isLoadingNewerMessages = false;
         this._renderedOldestMessageArrayIndex = -1;
         this._renderedNewestMessageArrayIndex = -1;
+        this._lastScrollTop = 0; // 重置滚动位置记录
         this._renderInitialMessageBatch();
         this._attachScrollListener();
         this._hideScrollToLatestButton();
@@ -480,26 +493,61 @@ const ChatAreaUIManager = {
      * 当滚动到顶部附近时加载更早的消息。
      * 当滚动到底部附近时加载更新的消息（如果适用）。
      * 根据滚动位置显示或隐藏“滚动到最新”按钮。
+     * 增加逻辑以防止在有更多未加载消息时滚动条停留在绝对底部。
      * @private
      */
     _handleChatScroll: function() {
         if (!this.chatBoxEl) return;
         const { scrollTop, scrollHeight, clientHeight } = this.chatBoxEl;
+        const isScrollingDown = scrollTop > this._lastScrollTop;
+        this._lastScrollTop = scrollTop; // 更新上次滚动位置
 
+        // --- 加载更早的消息 ---
         if (scrollTop < Config.ui.virtualScrollThreshold && !this._isLoadingOlderMessages && this._renderedOldestMessageArrayIndex > 0) {
             this._loadOlderMessages();
+            // 如果加载了更早的消息，且当前渲染的最新消息不是全部消息的最后一条，显示“滚动到最新”按钮
             if (this._allMessagesForCurrentChat.length > 0 && this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length -1) {
                 this._showScrollToLatestButton();
             }
         }
-        const SCROLL_TO_BOTTOM_THRESHOLD = 100;
-        if ((scrollHeight - scrollTop - clientHeight) < SCROLL_TO_BOTTOM_THRESHOLD && !this._isLoadingNewerMessages && this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1) {
-            this._loadNewerMessages();
+
+        // --- 处理加载更晚消息的逻辑 ---
+        const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+        const hasMoreNewerMessages = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
+
+        if (hasMoreNewerMessages && !this._isLoadingNewerMessages && distanceToBottom < Config.ui.virtualScrollThreshold) {
+            this._loadNewerMessages(); // 异步加载
         }
-        const isAtBottom = scrollHeight - scrollTop - clientHeight < 1;
-        if (isAtBottom && this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 1) {
-            this._hideScrollToLatestButton();
-        }
+
+        // --- 最终检查和调整，防止停留在底部 ---
+        // 此检查在所有可能的加载和滚动调整之后运行
+        requestAnimationFrame(() => { // 使用 rAF 确保在浏览器完成绘制和滚动计算后执行
+            if (!this.chatBoxEl) return; // 再次检查 chatBoxEl 是否存在
+            const finalScrollTop = this.chatBoxEl.scrollTop;
+            const finalScrollHeight = this.chatBoxEl.scrollHeight;
+            const finalClientHeight = this.chatBoxEl.clientHeight;
+            const finalDistanceToBottom = finalScrollHeight - finalScrollTop - finalClientHeight;
+            const stillHasMoreNewerMessages = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
+
+            if (stillHasMoreNewerMessages && !this._isLoadingNewerMessages && finalDistanceToBottom < 1) {
+                // 如果到达绝对底部，但仍有更多消息未加载，并且当前没有正在加载
+                // 则轻微向上调整scrollTop，以确保用户不会“卡”在底部并持续触发加载（理论上回弹逻辑会处理，但这是额外保护）
+                // 调整的目标是让底部至少有比如 20px 的空间
+                const targetScrollTop = finalScrollHeight - finalClientHeight - 20;
+                if (this.chatBoxEl.scrollTop < targetScrollTop) { // 只有当当前位置比目标位置更高时才调整（避免不必要的向上跳动）
+                    this.chatBoxEl.scrollTop = targetScrollTop;
+                    Utils.log("ChatAreaUIManager: _handleChatScroll 防止停留在底部，强制向上微调。", Utils.logLevels.DEBUG);
+                }
+            }
+
+            // 更新“滚动到最新”按钮的可见性
+            const isEffectivelyAtBottom = finalScrollHeight - finalScrollTop - finalClientHeight < 1;
+            if (isEffectivelyAtBottom && !stillHasMoreNewerMessages) {
+                this._hideScrollToLatestButton();
+            } else if (stillHasMoreNewerMessages && !isEffectivelyAtBottom) {
+                this._showScrollToLatestButton();
+            }
+        });
     },
 
     /**
@@ -564,39 +612,71 @@ const ChatAreaUIManager = {
 
     /**
      * 加载并显示更新的消息批次到聊天框底部。
-     * 这是一个异步操作。
+     * 这是一个异步操作，并实现了滚动回弹效果以避免连续触发加载。
      * @private
      */
     _loadNewerMessages: async function() {
         if (this._isLoadingNewerMessages || this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 1 || !this.chatBoxEl) return;
         this._isLoadingNewerMessages = true;
-        // 如果需要，可以考虑在底部显示加载指示器
+
+        const oldScrollHeight = this.chatBoxEl.scrollHeight;
+        const oldScrollTop = this.chatBoxEl.scrollTop;
+        const clientHeight = this.chatBoxEl.clientHeight;
+        // 判断加载前是否非常接近底部（例如，在5px容差内）
+        const wasAtBottomBeforeLoad = (oldScrollHeight - oldScrollTop - clientHeight) < 5;
+
         const currentNewestLoadedIndex = this._renderedNewestMessageArrayIndex;
         const newBatchStartIndexInArray = currentNewestLoadedIndex + 1;
         const newBatchEndIndexInArray = Math.min(this._allMessagesForCurrentChat.length - 1, newBatchStartIndexInArray + this.MESSAGES_TO_LOAD_ON_SCROLL - 1);
-        if (newBatchStartIndexInArray >= this._allMessagesForCurrentChat.length) {
-            this._isLoadingNewerMessages = false; return;
-        }
-        const oldScrollHeight = this.chatBoxEl.scrollHeight;
-        const oldScrollTop = this.chatBoxEl.scrollTop;
-        const distanceToBottomBeforeLoad = oldScrollHeight - oldScrollTop - this.chatBoxEl.clientHeight;
 
+        if (newBatchStartIndexInArray >= this._allMessagesForCurrentChat.length) {
+            this._isLoadingNewerMessages = false; // 没有更多消息可加载
+            return;
+        }
+
+        // 渲染新消息
         for (let i = newBatchStartIndexInArray; i <= newBatchEndIndexInArray; i++) {
-            MessageManager.displayMessage(this._allMessagesForCurrentChat[i], false);
+            MessageManager.displayMessage(this._allMessagesForCurrentChat[i], false); // false表示追加
         }
         this._renderedNewestMessageArrayIndex = newBatchEndIndexInArray;
-
-        // 如果用户不在最底部，尝试保持滚动位置
         const newScrollHeight = this.chatBoxEl.scrollHeight;
-        if(distanceToBottomBeforeLoad > 5) { // 如果用户不在底部
-            this.chatBoxEl.scrollTop = newScrollHeight - this.chatBoxEl.clientHeight - distanceToBottomBeforeLoad;
-        } else { // 如果用户接近底部，则滚动到新的底部
+
+        // 初步滚动调整：根据用户加载前的状态决定滚动行为
+        if (wasAtBottomBeforeLoad) {
+            // 如果用户加载前就在底部，加载新消息后，目标是让他看到新消息，所以滚动到新的底部
             this.chatBoxEl.scrollTop = newScrollHeight;
+        } else {
+            // 如果用户之前不在底部（比如正在向上查看历史），尽量保持他当前的视图焦点。
+            // 由于新消息是追加到底部的，旧内容的相对位置不变，所以保持旧的scrollTop值。
+            this.chatBoxEl.scrollTop = oldScrollTop;
         }
 
-        this._isLoadingNewerMessages = false;
+        // --- 关键的回弹逻辑 ---
+        // 获取在初步滚动调整后的当前滚动位置和底部距离
+        const currentScrollTopAfterInitialAdjust = this.chatBoxEl.scrollTop;
+        const currentDistanceToBottom = newScrollHeight - currentScrollTopAfterInitialAdjust - clientHeight;
+        const stillHasMoreNewerMessagesAfterLoad = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
+
+        // 如果加载完新消息后，视图的底部仍然太靠近“再次触发加载的边缘”，并且确实还有更多消息，则执行回弹
+        if (stillHasMoreNewerMessagesAfterLoad && currentDistanceToBottom < Config.ui.virtualScrollThreshold) {
+            // 计算一个目标scrollTop，使得底部距离视口的距离略大于阈值（例如，阈值 + 10px）
+            let targetReboundScrollTop = newScrollHeight - clientHeight - (Config.ui.virtualScrollThreshold + 10);
+            // 确保回弹不会导致scrollTop变为负数
+            targetReboundScrollTop = Math.max(0, targetReboundScrollTop);
+            // 只有当目标回弹位置比当前位置更靠上时，才执行回弹，避免不必要的抖动
+            // （或者，如果用户本来就在底部，即使回弹目标比当前高，也应该回弹以避免连续加载）
+            if (wasAtBottomBeforeLoad || targetReboundScrollTop > currentScrollTopAfterInitialAdjust) {
+                this.chatBoxEl.scrollTop = targetReboundScrollTop;
+                Utils.log(`ChatAreaUIManager: _loadNewerMessages 执行了滚动回弹。目标 scrollTop: ${targetReboundScrollTop.toFixed(0)}`, Utils.logLevels.DEBUG);
+            }
+        }
+
+        this._isLoadingNewerMessages = false; // 清除加载中标志
+        // 根据是否还有更多消息来更新“滚动到最新”按钮的可见性
         if (this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 1) {
             this._hideScrollToLatestButton();
+        } else {
+            this._showScrollToLatestButton();
         }
     },
 
@@ -744,9 +824,12 @@ const ChatAreaUIManager = {
         if (targetElement) {
             setTimeout(() => {
                 targetElement.scrollIntoView({ behavior: 'auto', block: 'center' });
+                // 跳转后，重置 lastScrollTop，因为滚动位置是被强制设置的
+                this._lastScrollTop = this.chatBoxEl.scrollTop;
             }, 50);
         } else {
             this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight / 2;
+            this._lastScrollTop = this.chatBoxEl.scrollTop;
         }
         this._attachScrollListener();
         if (this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1) {
@@ -795,7 +878,8 @@ const ChatAreaUIManager = {
         this._detachScrollListener();
         this._isLoadingOlderMessages = false;
         this._isLoadingNewerMessages = false;
-        this._renderInitialMessageBatch();
+        this._renderInitialMessageBatch(); // 这会将 scrollTop 设置为 scrollHeight
+        this._lastScrollTop = this.chatBoxEl.scrollTop; // 更新 lastScrollTop
         this._attachScrollListener();
         this._hideScrollToLatestButton();
     }

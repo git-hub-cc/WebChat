@@ -335,3 +335,4 @@ const AppInitializer = {
         }
     }
 };
+window.addEventListener('load', AppInitializer.init.bind(AppInitializer));

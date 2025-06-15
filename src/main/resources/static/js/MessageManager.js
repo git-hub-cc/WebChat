@@ -200,7 +200,7 @@ const MessageManager = {
                         if (message.fileType?.startsWith('image/')) { // 图片文件预览
                             messageBodyHtml = `<div class="message-content-wrapper"><img src="${message.data}" alt="${safeFileName}" class="file-preview-img" onclick="UIManager.showFullImage('${message.data}', '${safeFileName}')"></div>`;
                         } else if (message.fileType?.startsWith('video/')) { // 视频文件预览
-                            messageBodyHtml = `<div class="message-content-wrapper"><video controls class="file-preview-video" style="max-width:100%;"><source src="${message.data}" type="${message.fileType}"></video><div>${safeFileName}</div></div>`;
+                            messageBodyHtml = `<div class="message-content-wrapper"><video controls class="file-preview-video" style="max-width:100%;"><source src="${message.data}" type="${message.fileType}"></video></div>`;
                         } else if (message.fileType?.startsWith('audio/')) { // 音频文件预览 (非录制语音)
                             messageBodyHtml = `<div class="message-content-wrapper"><div class="file-info"><span class="file-icon">🎵</span><div class="file-details"><div class="file-name">${safeFileName}</div><audio controls src="${message.data}" style="width:100%"></audio></div></div></div>`;
                         } else { // 其他类型文件

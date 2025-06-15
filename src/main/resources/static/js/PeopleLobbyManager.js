@@ -110,13 +110,13 @@ const PeopleLobbyManager = {
             }
 
             li.innerHTML = `
-                <div class="chat-list-avatar">${avatarContentHtml}</div>
-                <div class="chat-list-info">
-                    <div class="chat-list-name">${Utils.escapeHtml(name)}</div>
-                    <div class="chat-list-preview">${isAlreadyContact ? '已是联系人' : '点击添加'}</div>
-                </div>
-                ${isAlreadyContact ? `<div class="chat-list-meta"><span class="chat-list-badge" style="background-color: var(--accent-color); color: white;">✓</span></div>` : ''}
-            `;
+    <div class="chat-list-avatar">${avatarContentHtml}</div>
+<div class="chat-list-info">
+    <div class="chat-list-name">${Utils.escapeHtml(name)}</div>
+    <div class="chat-list-preview">${isAlreadyContact ? '已是联系人' : '点击添加'}</div>
+</div>
+${isAlreadyContact ? `<div class="chat-list-meta"><span class="chat-list-badge" style="background-color: var(--accent-color); color: white;">✓</span></div>` : ''}
+`;
 
             li.addEventListener('click', () => this.handleLobbyUserClick(userId));
             this.peopleLobbyListEl.appendChild(li);

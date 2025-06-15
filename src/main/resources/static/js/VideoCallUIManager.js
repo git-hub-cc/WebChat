@@ -1,4 +1,3 @@
-
 /**
  * @file VideoCallUIManager.js
  * @description 视频通话 UI 管理器，负责管理所有与视频通话相关的用户界面元素。
@@ -65,10 +64,10 @@ const VideoCallUIManager = {
      */
     bindEvents: function() {
         if (this.pipButton) this.pipButton.addEventListener('click', () => this.togglePipMode());
-        if (this.cameraBtn) this.cameraBtn.onclick = () => VideoCallManager.toggleCamera();
-        if (this.audioBtn) this.audioBtn.onclick = () => VideoCallManager.toggleAudio();
-        if (this.audioOnlyBtn) this.audioOnlyBtn.onclick = () => VideoCallManager.toggleAudioOnly();
-        if (this.endCallBtn) this.endCallBtn.onclick = () => VideoCallManager.hangUpMedia();
+        if (this.cameraBtn) this.cameraBtn.addEventListener('click', () => VideoCallManager.toggleCamera());
+        if (this.audioBtn) this.audioBtn.addEventListener('click', () => VideoCallManager.toggleAudio());
+        if (this.audioOnlyBtn) this.audioOnlyBtn.addEventListener('click', () => VideoCallManager.toggleAudioOnly());
+        if (this.endCallBtn) this.endCallBtn.addEventListener('click', () => VideoCallManager.hangUpMedia());
     },
 
     /**

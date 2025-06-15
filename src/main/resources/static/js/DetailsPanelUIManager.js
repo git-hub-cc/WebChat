@@ -296,7 +296,13 @@ const DetailsPanelUIManager = {
         // “清空当前聊天”按钮的显隐及事件绑定
         if (this.currentChatActionsDetailsEl && this.clearCurrentChatBtnDetailsEl) {
             this.currentChatActionsDetailsEl.style.display = chatId ? 'block' : 'none'; // 如果有chatId则显示
-            if (chatId) this.clearCurrentChatBtnDetailsEl.onclick = () => MessageManager.clearChat(); // 绑定清空事件
+            if (chatId) {
+                 // 移除旧监听器以防重复绑定
+                const newBtn = this.clearCurrentChatBtnDetailsEl.cloneNode(true);
+                this.clearCurrentChatBtnDetailsEl.parentNode.replaceChild(newBtn, this.clearCurrentChatBtnDetailsEl);
+                this.clearCurrentChatBtnDetailsEl = newBtn;
+                this.clearCurrentChatBtnDetailsEl.addEventListener('click', () => MessageManager.clearChat());
+            }
         }
 
         // 根据聊天类型调用相应的更新方法
@@ -368,7 +374,12 @@ const DetailsPanelUIManager = {
             }
         } else { // 如果是普通联系人
             if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'block'; // 显示通用联系人操作
-            if (this.deleteContactBtnDetailsEl) this.deleteContactBtnDetailsEl.onclick = () => ChatManager.deleteChat(contactId, 'contact'); // 绑定删除按钮事件
+            if (this.deleteContactBtnDetailsEl) {
+                const newBtn = this.deleteContactBtnDetailsEl.cloneNode(true);
+                this.deleteContactBtnDetailsEl.parentNode.replaceChild(newBtn, this.deleteContactBtnDetailsEl);
+                this.deleteContactBtnDetailsEl = newBtn;
+                this.deleteContactBtnDetailsEl.addEventListener('click', () => ChatManager.deleteChat(contactId, 'contact'));
+            }
             if (this.aiTtsConfigSectionEl) this.aiTtsConfigSectionEl.style.display = 'none'; // 隐藏AI TTS配置区域
             if (this.aiContactAboutSectionEl) this.aiContactAboutSectionEl.style.display = 'none'; // 隐藏AI“关于”区域
         }
@@ -476,12 +487,22 @@ const DetailsPanelUIManager = {
         // “离开群组”按钮仅非群主成员可见
         if (this.leaveGroupBtnDetailsEl) {
             this.leaveGroupBtnDetailsEl.style.display = isOwner ? 'none' : 'block';
-            if(!isOwner) this.leaveGroupBtnDetailsEl.onclick = () => ChatManager.deleteChat(groupId, 'group'); // 绑定离开事件
+            if(!isOwner) {
+                const newBtn = this.leaveGroupBtnDetailsEl.cloneNode(true);
+                this.leaveGroupBtnDetailsEl.parentNode.replaceChild(newBtn, this.leaveGroupBtnDetailsEl);
+                this.leaveGroupBtnDetailsEl = newBtn;
+                this.leaveGroupBtnDetailsEl.addEventListener('click', () => ChatManager.deleteChat(groupId, 'group'));
+            }
         }
         // “解散群组”按钮仅群主可见
         if (this.dissolveGroupBtnDetailsEl) {
             this.dissolveGroupBtnDetailsEl.style.display = isOwner ? 'block' : 'none';
-            if(isOwner) this.dissolveGroupBtnDetailsEl.onclick = () => ChatManager.deleteChat(groupId, 'group'); // 绑定解散事件
+            if(isOwner) {
+                const newBtn = this.dissolveGroupBtnDetailsEl.cloneNode(true);
+                this.dissolveGroupBtnDetailsEl.parentNode.replaceChild(newBtn, this.dissolveGroupBtnDetailsEl);
+                this.dissolveGroupBtnDetailsEl = newBtn;
+                this.dissolveGroupBtnDetailsEl.addEventListener('click', () => ChatManager.deleteChat(groupId, 'group'));
+            }
         }
 
         this.updateDetailsPanelMembers(groupId); // 更新群成员列表
@@ -525,7 +546,10 @@ const DetailsPanelUIManager = {
         });
         // 为所有移除成员按钮绑定点击事件
         this.groupMemberListDetailsEl.querySelectorAll('.remove-member-btn-detail').forEach(btn => {
-            btn.onclick = () => GroupManager.removeMemberFromGroup(groupId, btn.dataset.memberId);
+             // 移除旧监听器
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', () => GroupManager.removeMemberFromGroup(groupId, newBtn.dataset.memberId));
         });
 
         // 填充“添加新成员”的下拉列表
@@ -547,12 +571,15 @@ const DetailsPanelUIManager = {
                 const item = document.createElement('div');
                 item.className = 'left-member-item-detail';
                 item.innerHTML = `<span>${Utils.escapeHtml(leftMember.name)} (离开于: ${Utils.formatDate(new Date(leftMember.leftTime))})</span>
-                                <button class="re-add-member-btn-detail" data-member-id="${leftMember.id}" data-member-name="${Utils.escapeHtml(leftMember.name)}" title="重新添加成员">+</button>`; // 显示离开成员信息和重新添加按钮
+<button class="re-add-member-btn-detail" data-member-id="${leftMember.id}" data-member-name="${Utils.escapeHtml(leftMember.name)}" title="重新添加成员">+</button>`; // 显示离开成员信息和重新添加按钮
                 leftMemberListDetailsEl.appendChild(item);
             });
             // 为所有重新添加成员按钮绑定点击事件
             leftMemberListDetailsEl.querySelectorAll('.re-add-member-btn-detail').forEach(btn => {
-                btn.onclick = () => GroupManager.addMemberToGroup(groupId, btn.dataset.memberId, btn.dataset.memberName);
+                // 移除旧监听器
+                const newBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(newBtn, btn);
+                newBtn.addEventListener('click', () => GroupManager.addMemberToGroup(groupId, newBtn.dataset.memberId, newBtn.dataset.memberName));
             });
             this.leftMembersAreaEl.style.display = 'block'; // 显示此区域
         } else if (this.leftMembersAreaEl) {
@@ -660,8 +687,8 @@ const DetailsPanelUIManager = {
         const itemEl = document.createElement('div'); // 创建预览项容器
         itemEl.className = 'resource-preview-item'; // 设置CSS类
         itemEl.dataset.messageId = message.id; // 存储消息ID，用于点击跳转
-        // 点击预览项时，滚动到聊天区域的对应消息
-        itemEl.onclick = () => {
+        
+        itemEl.addEventListener('click', () => { // 使用 addEventListener
             if (typeof ChatAreaUIManager !== 'undefined' && ChatAreaUIManager.scrollToMessage) {
                 const appContainer = document.querySelector('.app-container');
                 const isMobileView = window.innerWidth <= 768; // 判断是否为移动视图
@@ -674,7 +701,7 @@ const DetailsPanelUIManager = {
             } else {
                 Utils.log(`ChatAreaUIManager 或 scrollToMessage 方法未定义。无法跳转。`, Utils.logLevels.WARN);
             }
-        };
+        });
 
         // 创建并添加时间戳元素
         const timestampEl = document.createElement('div');

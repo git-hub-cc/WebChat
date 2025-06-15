@@ -410,10 +410,12 @@ const VideoCallManager = {
         pc.getSenders().forEach(sender => { if (sender.track) try {pc.removeTrack(sender);} catch(e){Utils.log("移除旧轨道时出错: "+e,Utils.logLevels.WARN);}});
 
         pc.addEventListener('connectionstatechange', () => {
-            // 连接状态变化就当作挂断
-            Utils.log(`通话 ${this.currentPeerId} 连接已关闭。正在挂断通话。`, Utils.logLevels.INFO);
-            this.hangUpMedia(false);
+            if (pc.connectionState === 'closed' || pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                Utils.log(`通话 ${this.currentPeerId} 连接已 ${pc.connectionState}。正在挂断通话。`, Utils.logLevels.INFO);
+                this.hangUpMedia(false); // Don't notify peer if connection is already bad/closed
+            }
         });
+
 
         this.localStream.getTracks().forEach(track => {
             if (track.kind === 'audio' || (track.kind === 'video' && this.isVideoEnabled && ((!this.isScreenSharing) || (this.isScreenSharing && this.isCaller)))) {
@@ -469,7 +471,7 @@ const VideoCallManager = {
     setupConnectionMonitoring: function (pc) {
         pc.oniceconnectionstatechange = () => {
             Utils.log(`通话 ICE 状态: ${pc.iceConnectionState} (for ${this.currentPeerId})`, Utils.logLevels.DEBUG);
-            if (this.isCallActive && (pc.iceconnectionState === 'failed' || pc.iceconnectionState === 'disconnected' || pc.iceconnectionState === 'closed')) {
+            if (this.isCallActive && (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'closed')) {
                 if (this.isCallActive) {
                     NotificationManager.showNotification('通话连接问题 (ICE)。媒体可能受影响。', 'warning');
                 }

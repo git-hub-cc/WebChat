@@ -144,15 +144,15 @@ const ChatManager = {
             }
 
             li.innerHTML = `
-                <div class="${avatarClass}">${avatarContentHtml}</div>
-                <div class="chat-list-info">
-                    <div class="chat-list-name">${Utils.escapeHtml(item.name)} ${statusIndicator}</div>
-                    <div class="chat-list-preview">${Utils.escapeHtml(item.lastMessage)}</div>
-                </div>
-                <div class="chat-list-meta">
-                    <div class="chat-list-time">${formattedTime}</div>
-                    ${item.unread > 0 ? `<div class="chat-list-badge">${item.unread > 99 ? '99+' : item.unread}</div>` : ''}
-                </div>`;
+    <div class="${avatarClass}">${avatarContentHtml}</div>
+<div class="chat-list-info">
+    <div class="chat-list-name">${Utils.escapeHtml(item.name)} ${statusIndicator}</div>
+    <div class="chat-list-preview">${Utils.escapeHtml(item.lastMessage)}</div>
+</div>
+<div class="chat-list-meta">
+    <div class="chat-list-time">${formattedTime}</div>
+    ${item.unread > 0 ? `<div class="chat-list-badge">${item.unread > 99 ? '99+' : item.unread}</div>` : ''}
+</div>`;
             li.addEventListener('click', () => this.openChat(item.id, item.type));
             chatListEl.appendChild(li);
         });

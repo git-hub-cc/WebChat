@@ -3,6 +3,7 @@
  * @description 设置 UI 管理器，负责处理主菜单/设置模态框内的所有 UI 元素和交互逻辑。
  *              AI 配置现在优先从 localStorage 加载。主题切换现在无刷新。
  *              修复了切换配色方案后，主题选择器点击事件处理不当的问题。
+ *              新增“清除缓存”按钮，用于清除 localStorage 和 IndexedDB 数据。
  * @module SettingsUIManager
  * @exports {object} SettingsUIManager - 对外暴露的单例对象，包含所有设置 UI 管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素、加载设置并绑定事件。
@@ -10,7 +11,7 @@
  * @property {function} saveAISetting - 保存单个 AI 设置到 localStorage 并触发事件。
  * @property {function} initThemeSelectors - 初始化主题和配色方案的自定义下拉选择器。
  * @property {function} updateNetworkInfoDisplay - 更新模态框中的网络状态信息。
- * @dependencies UserManager, ConnectionManager, ChatManager, ThemeLoader, NotificationManager, Utils, AppInitializer, ModalManager, EventEmitter, Config
+ * @dependencies UserManager, ConnectionManager, ChatManager, ThemeLoader, NotificationManager, Utils, AppInitializer, ModalManager, EventEmitter, Config, DBManager
  * @dependents AppInitializer (进行初始化)
  */
 const SettingsUIManager = {
@@ -31,6 +32,7 @@ const SettingsUIManager = {
     modalCopyIdBtn: null,
     checkNetworkBtnModal: null,
     modalUserIdValue: null,
+    modalClearCacheBtn: null, // 新增清除缓存按钮的引用
 
     // 存储绑定的事件处理函数，以便正确移除
     _boundHandleThemeSelectorClick: null,
@@ -52,6 +54,7 @@ const SettingsUIManager = {
         this.modalCopyIdBtn = document.getElementById('modalCopyIdBtn');
         this.checkNetworkBtnModal = document.getElementById('checkNetworkBtnModal');
         this.modalUserIdValue = document.getElementById('modalUserIdValue');
+        this.modalClearCacheBtn = document.getElementById('modalClearCacheBtn'); // 获取清除缓存按钮的引用
 
         // 主题和配色方案选择器元素
         this.colorSchemeSelectedValueEl = document.getElementById('colorSchemeSelectedValue');
@@ -79,23 +82,6 @@ const SettingsUIManager = {
         });
         if (this.ttsApiEndpointInput) this.ttsApiEndpointInput.addEventListener('blur', () => this.saveAISetting('ttsApiEndpoint', this.ttsApiEndpointInput.value));
 
-        // --- 偏好设置 ---
-        // if (this.autoConnectToggle) {
-        //     this.autoConnectToggle.addEventListener('change', (event) => {
-        //         if (UserManager.userSettings) {
-        //             UserManager.updateUserSetting('autoConnectEnabled', event.target.checked);
-        //             if (event.target.checked) {
-        //                 NotificationManager.showNotification('自动连接已启用。将在下次应用启动或成功连接信令服务器时尝试连接。', 'info');
-        //                 if (ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN) {
-        //                     ConnectionManager.autoConnectToAllContacts();
-        //                 }
-        //             } else {
-        //                 NotificationManager.showNotification('自动连接已禁用。', 'info');
-        //             }
-        //         }
-        //     });
-        // }
-
         // --- 网络状态 ---
         if (this.checkNetworkBtnModal) this.checkNetworkBtnModal.addEventListener('click', async () => {
             if (this.checkNetworkBtnModal.disabled) {
@@ -117,18 +103,51 @@ const SettingsUIManager = {
             if (this.modalCopyIdBtn.disabled) return;
             this.copyUserIdFromModal();
         });
+
         const modalCopySdpBtn = document.getElementById('modalCopySdpBtn');
         if(modalCopySdpBtn) modalCopySdpBtn.addEventListener('click', () => this.copySdpTextFromModal());
 
-        // --- 操作区域 ---
-        const modalResetAllConnectionsBtn = document.getElementById('modalResetAllConnectionsBtn');
-        if (modalResetAllConnectionsBtn) modalResetAllConnectionsBtn.addEventListener('click', () => ConnectionManager.resetAllConnections());
+        const modalCreateOfferBtn = document.getElementById('modalCreateOfferBtn');
+        if(modalCreateOfferBtn) modalCreateOfferBtn.addEventListener('click', () => ConnectionManager.createOffer(null, {isManual: true}));
 
+        const modalCreateAnswerBtn = document.getElementById('modalCreateAnswerBtn');
+        if(modalCreateAnswerBtn) modalCreateAnswerBtn.addEventListener('click', () => ConnectionManager.createAnswer({isManual: true}));
+
+        const modalHandleAnswerBtn = document.getElementById('modalHandleAnswerBtn');
+        if(modalHandleAnswerBtn) modalHandleAnswerBtn.addEventListener('click', () => ConnectionManager.handleAnswer({isManual: true}));
+
+
+        // --- 操作区域 ---
         const modalClearContactsBtn = document.getElementById('modalClearContactsBtn');
         if (modalClearContactsBtn) modalClearContactsBtn.addEventListener('click', () => UserManager.clearAllContacts());
 
         const modalClearAllChatsBtn = document.getElementById('modalClearAllChatsBtn');
         if (modalClearAllChatsBtn) modalClearAllChatsBtn.addEventListener('click', () => ChatManager.clearAllChats());
+
+        // 新增：清除缓存按钮事件
+        if (this.modalClearCacheBtn) {
+            this.modalClearCacheBtn.addEventListener('click', () => {
+                ModalManager.showConfirmationModal(
+                    '您确定要清除所有本地缓存吗？这将删除所有 localStorage 数据和 IndexedDB 数据库中的所有内容。操作完成后，页面将自动刷新。',
+                    async () => {
+                        try {
+                            localStorage.clear();
+                            Utils.log('LocalStorage 已清除。', Utils.logLevels.INFO);
+                            await DBManager.clearAllData(); // 调用 DBManager 清空所有数据库数据
+                            NotificationManager.showNotification('所有缓存已成功清除。页面即将刷新...', 'success');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000); // 延迟2秒后刷新页面，给用户时间看通知
+                        } catch (error) {
+                            Utils.log(`清除缓存失败: ${error}`, Utils.logLevels.ERROR);
+                            NotificationManager.showNotification('清除缓存时发生错误。请查看控制台。', 'error');
+                        }
+                    },
+                    null, // onCancel 回调，此处不需要
+                    { title: '警告：清除缓存', confirmText: '确定清除', cancelText: '取消' }
+                );
+            });
+        }
 
         // --- 可折叠部分 ---
         const collapsibleHeaders = document.querySelectorAll('#mainMenuModal .settings-section .collapsible-header');

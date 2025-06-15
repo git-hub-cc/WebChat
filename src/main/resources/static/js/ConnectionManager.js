@@ -11,7 +11,6 @@
  * @property {function} handleRemoteAnswer - 处理远端发送的应答。
  * @property {function} sendTo - 通过已建立的数据通道向指定对等端发送消息。
  * @property {function} close - 关闭与指定对等端的连接。
- * @property {function} resetAllConnections - 重置所有连接和 WebSocket。
  * @property {boolean} isWebSocketConnected - 指示当前是否已连接到 WebSocket 服务器。
  * @dependencies UserManager, ChatManager, Config, Utils, NotificationManager, EventEmitter, LayoutManager, VideoCallManager, ModalManager, MessageManager, PeopleLobbyManager
  * @dependents AppInitializer (初始化), UserManager (自动连接), GroupManager (广播), VideoCallManager (建立媒体流)
@@ -757,28 +756,6 @@ const ConnectionManager = {
     },
 
     /**
-     * 重置所有连接，包括 WebSocket。
-     */
-    resetAllConnections: function() {
-        ModalManager.showConfirmationModal( "您确定要重置所有连接吗？", () => {
-            Object.keys(this.connections).forEach(peerId => this.close(peerId, false));
-            this.connections = {}; this.iceCandidates = {}; this.reconnectAttempts = {}; this.iceGatheringStartTimes = {};
-            Object.keys(this.connectionTimeouts).forEach(id=>clearTimeout(this.connectionTimeouts[id]));this.connectionTimeouts={};
-            Object.keys(this.iceTimers).forEach(id=>clearTimeout(this.iceTimers[id]));this.iceTimers={};
-            if (this.websocket?.readyState === WebSocket.OPEN || this.websocket?.readyState === WebSocket.CONNECTING) {
-                this.websocket.onclose = null; this.websocket.close();
-            }
-            this.stopHeartbeat(); this.websocket = null; this.isWebSocketConnected = false; this.wsReconnectAttempts = 0;
-            EventEmitter.emit('websocketStatusUpdate'); setTimeout(() => this.initialize(), 1000);
-            NotificationManager.showNotification("所有连接已重置。", "info");
-            if (ChatManager.currentChatId && !ChatManager.currentChatId.startsWith("group_") && !UserManager.isSpecialContact(ChatManager.currentChatId) && typeof ChatAreaUIManager !== 'undefined') {
-                ChatAreaUIManager.updateChatHeaderStatus("已断开 - 连接已重置"); ChatAreaUIManager.setCallButtonsState(false);
-            }
-            ChatManager.renderChatList();
-        });
-    },
-
-    /**
      * 在模态框中更新手动连接的 SDP 文本。
      * @param {string} peerIdToGetSdpFrom - 要获取 SDP 的对方 ID。
      */
@@ -790,10 +767,7 @@ const ConnectionManager = {
             const connectionInfo = { sdp: { type: sdpType, sdp: pc.localDescription.sdp }, candidates: this.iceCandidates[peerIdToGetSdpFrom] || [], userId: UserManager.userId, isVideoCall: conn?.isVideoCall||false, isAudioOnly: conn?.isAudioOnly||false, isScreenShare: conn?.isScreenShare||false };
             sdpTextEl.value = JSON.stringify(connectionInfo, null, 2);
         } else sdpTextEl.value = `正在为 ${peerIdToGetSdpFrom} 生成 ${pc?.localDescription ? pc.localDescription.type : '信息'}... (ICE状态: ${pc?.iceGatheringState})`;
-        if (typeof SettingsUIManager !== 'undefined') SettingsUIManager.copySdpTextFromModal = () => {
-            if (sdpTextEl.value) navigator.clipboard.writeText(sdpTextEl.value).then(()=>NotificationManager.showNotification('连接信息已复制！', 'success')).catch(()=>NotificationManager.showNotification('复制失败。', 'error'));
-            else NotificationManager.showNotification('没有可复制的信息。', 'warning');
-        };
+        // copySdpTextFromModal is now handled by SettingsUIManager's own event listener for modalCopySdpBtn
     },
 
     /**

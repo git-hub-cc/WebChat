@@ -5,6 +5,7 @@
  *              现在依赖 ThemeLoader 动态提供特殊联系人定义。
  *              修复了切换主题或初始化时，可能加载非当前主题 AI 角色的问题。
  *              确保 TTS 配置中的 tts_mode 和 version 得到正确处理。
+ *              主题切换时，会删除缓存和数据库中仅属于旧主题的 AI 联系人及其聊天记录。
  * @module UserManager
  * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
  * @property {string|null} userId - 当前用户的唯一 ID。
@@ -58,8 +59,10 @@ const UserManager = {
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions()
                 : [];
 
+            // 1.确保当前主题的特殊联系人被加载（这会从DB合并数据，或使用定义创建）
             await this.ensureSpecialContacts(currentThemeSpecialDefs, false);
 
+            // 2.加载数据库中存储的所有联系人
             let dbStoredContacts = [];
             try {
                 dbStoredContacts = await DBManager.getAllItems('contacts');
@@ -69,27 +72,31 @@ const UserManager = {
 
             if (dbStoredContacts && dbStoredContacts.length > 0) {
                 for (const dbContact of dbStoredContacts) {
+                    // 如果此DB联系人ID已作为当前主题的特殊联系人加载，则跳过（已被ensureSpecialContacts处理）
+                    if (this.contacts[dbContact.id] && this.contacts[dbContact.id].isSpecial) {
+                        continue;
+                    }
+
+                    // 如果此DB联系人未在当前主题定义中，但它在DB中被标记为特殊/AI
+                    // (意味着它可能来自旧主题)，则不加载它。
                     const isSpecialInCurrentTheme = currentThemeSpecialDefs.some(def => def.id === dbContact.id);
-
-                    if (isSpecialInCurrentTheme) {
+                    if (!isSpecialInCurrentTheme && (dbContact.isSpecial || dbContact.isAI)) {
+                        Utils.log(`UserManager.init: 跳过DB联系人 ${dbContact.id} ('${dbContact.name}'), 它似乎是旧主题的特殊/AI联系人，且不在当前主题中。`, Utils.logLevels.DEBUG);
                         continue;
                     }
 
-                    if (dbContact.isAI || dbContact.isSpecial) {
-                        Utils.log(`UserManager.init: 跳过 DB 联系人 ${dbContact.id} ('${dbContact.name}')，因为它似乎是来自非当前主题的 AI/特殊联系人。`, Utils.logLevels.DEBUG);
-                        continue;
-                    }
-
-                    dbContact.isSpecial = false;
+                    // 对于非特殊联系人或在当前主题中未定义的联系人（即用户添加的常规联系人）
+                    dbContact.isSpecial = false; // 确保常规联系人标志正确
                     dbContact.isAI = false;
                     if (!dbContact.aiConfig) dbContact.aiConfig = {};
                     if (!dbContact.aiConfig.tts) dbContact.aiConfig.tts = {};
                     if (dbContact.aiConfig.tts.tts_mode === undefined) dbContact.aiConfig.tts.tts_mode = 'Preset';
                     if (dbContact.aiConfig.tts.version === undefined) dbContact.aiConfig.tts.version = 'v4';
-                    dbContact.aboutDetails = null;
+                    dbContact.aboutDetails = null; // 常规联系人无aboutDetails
                     this.contacts[dbContact.id] = dbContact;
                 }
             }
+
 
             if (typeof EventEmitter !== 'undefined') {
                 EventEmitter.on('themeChanged', this.handleThemeChange.bind(this));
@@ -102,11 +109,11 @@ const UserManager = {
             this.userId = Utils.generateId(8);
             this.userName = `用户 ${this.userId.substring(0,4)}`;
             this.userSettings.autoConnectEnabled = false;
-            this.contacts = {};
+            this.contacts = {}; // 清空联系人，以防部分加载
             const fallbackDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions()
                 : [];
-            await this.ensureSpecialContacts(fallbackDefinitions, true);
+            await this.ensureSpecialContacts(fallbackDefinitions, true); // 尝试用回退定义加载特殊联系人
         }
 
         const modalUserIdValueEl = document.getElementById('modalUserIdValue');
@@ -119,34 +126,84 @@ const UserManager = {
 
     /**
      * 处理主题变更事件，更新特殊联系人。
+     * 如果旧主题中的AI联系人不在新主题中，则将其从缓存、DB和localStorage中删除。
      * @param {object} eventData - 包含 { newThemeKey, newDefinitions } 的事件数据。
      * @returns {Promise<void>}
      */
     async handleThemeChange(eventData) {
         Utils.log(`UserManager: 正在处理 themeChanged 事件。新主题密钥: ${eventData.newThemeKey}`, Utils.logLevels.INFO);
         const newDefinitions = eventData.newDefinitions || [];
-        const trulyRegularContacts = {};
+
+        const oldThemeAiContactsToRemove = [];
+        const contactsToKeepOrBecomeRegular = {};
+
         const currentContactIds = Object.keys(this.contacts);
 
         for (const contactId of currentContactIds) {
             const contact = this.contacts[contactId];
             if (!contact) continue;
+
             const isSpecialInNewTheme = newDefinitions.some(def => def.id === contact.id);
-            if (!isSpecialInNewTheme) {
-                if (contact.isSpecial || contact.isAI) {
-                    contact.isSpecial = false;
-                    contact.isAI = false;
-                    contact.aiConfig = { tts: { tts_mode: 'Preset', version: 'v4' } };
-                    contact.aboutDetails = null;
+
+            if (contact.isSpecial && contact.isAI) { // 如果是旧主题的特殊AI联系人
+                if (!isSpecialInNewTheme) {
+                    // 属于旧主题，且不在新主题中定义 -> 标记为移除
+                    oldThemeAiContactsToRemove.push(contactId);
+                    Utils.log(`UserManager: 主题切换 - 标记移除旧主题AI联系人: ${contactId} ('${contact.name}')`, Utils.logLevels.DEBUG);
+                } else {
+                    // 也存在于新主题中，ensureSpecialContacts会处理更新，此处不放入 contactsToKeepOrBecomeRegular
+                    // 因为 ensureSpecialContacts 会从定义开始重新构建/合并它
                 }
-                trulyRegularContacts[contact.id] = contact;
+            } else if (contact.isSpecial && !contact.isAI) { // 旧主题的特殊非AI联系人
+                if (!isSpecialInNewTheme) {
+                    // 属于旧主题，不在新主题中 -> 变为常规联系人
+                    contact.isSpecial = false;
+                    contact.isAI = false; // 确保
+                    contact.aiConfig = { tts: { tts_mode: 'Preset', version: 'v4' } }; // 重置AI配置
+                    contact.aboutDetails = null; // 重置about详情
+                    contactsToKeepOrBecomeRegular[contactId] = contact;
+                } else {
+                    // 也存在于新主题中，ensureSpecialContacts会处理更新
+                }
+            } else { // 原本是常规联系人
+                if (!isSpecialInNewTheme) {
+                    // 仍然是常规联系人
+                    contactsToKeepOrBecomeRegular[contactId] = contact;
+                } else {
+                    // 原本是常规联系人，但在新主题中被定义为特殊联系人，ensureSpecialContacts会处理
+                }
             }
         }
-        this.contacts = trulyRegularContacts;
+
+        // 更新 this.contacts 为那些确定要保留为常规或变为常规的联系人
+        this.contacts = contactsToKeepOrBecomeRegular;
+
+        // 从DB和localStorage中移除旧主题特有的AI联系人
+        for (const contactId of oldThemeAiContactsToRemove) {
+            try {
+                await DBManager.removeItem('contacts', contactId);
+                localStorage.removeItem(`ttsConfig_${contactId}`);
+                // 如果被移除的AI联系人是当前聊天，则关闭聊天
+                if (ChatManager.currentChatId === contactId) {
+                    ChatManager.currentChatId = null;
+                    if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showNoChatSelected();
+                }
+                // 清空其聊天记录
+                if (typeof ChatManager !== 'undefined') await ChatManager.clearChat(contactId);
+                Utils.log(`UserManager: 主题切换 - 已移除旧主题AI联系人 ${contactId} 的数据。`, Utils.logLevels.DEBUG);
+            } catch (error) {
+                Utils.log(`UserManager: 主题切换 - 移除旧联系人 ${contactId} 数据时出错: ${error}`, Utils.logLevels.ERROR);
+            }
+        }
+
+        // 加载/更新新主题的特殊联系人。
+        // ensureSpecialContacts会根据newDefinitions添加或更新this.contacts中的条目。
         await this.ensureSpecialContacts(newDefinitions, false);
 
+        // 更新UI
         if (typeof ChatManager !== 'undefined') {
             ChatManager.renderChatList(ChatManager.currentFilter);
+            // 如果当前聊天是新主题中的特殊联系人，确保其头部信息等正确更新
             if (ChatManager.currentChatId && this.contacts[ChatManager.currentChatId] && this.contacts[ChatManager.currentChatId].isSpecial) {
                 ChatManager.openChat(ChatManager.currentChatId, 'contact');
             }

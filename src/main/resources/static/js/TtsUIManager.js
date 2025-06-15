@@ -87,7 +87,7 @@ const TtsUIManager = {
             advancedHeader.className = 'collapsible-header tts-advanced-header';
             advancedHeader.innerHTML = `<h5>高级选项</h5><span class="collapse-icon">▶</span>`;
             advancedHeader.style.cursor = 'pointer';
-            advancedHeader.onclick = function() {
+            advancedHeader.addEventListener('click', function() { // Use addEventListener
                 this.classList.toggle('active');
                 const icon = this.querySelector('.collapse-icon');
                 if (advancedFieldsContainer.style.display === "block" || advancedFieldsContainer.style.display === "") {
@@ -97,7 +97,7 @@ const TtsUIManager = {
                     advancedFieldsContainer.style.display = "block";
                     if(icon) icon.textContent = '▼';
                 }
-            };
+            });
             advancedSectionDiv.appendChild(advancedHeader);
             advancedSectionDiv.appendChild(advancedFieldsContainer);
             formContainer.appendChild(advancedSectionDiv);
@@ -133,17 +133,17 @@ const TtsUIManager = {
         if (fieldDef.key === 'tts_mode') {
             input = document.createElement('select');
             this._populateSelectWithOptions(input, fieldDef.options, currentTtsMode, '');
-            input.onchange = (e) => {
+            input.addEventListener('change', (e) => { // Use addEventListener
                 const contactToUpdate = UserManager.contacts[contactId];
                 if (contactToUpdate && contactToUpdate.aiConfig && contactToUpdate.aiConfig.tts) {
                     contactToUpdate.aiConfig.tts.tts_mode = e.target.value;
                 }
                 this.populateAiTtsConfigurationForm(UserManager.contacts[contactId], formContainer.id); // 重新渲染整个表单以切换字段类型
-            };
+            });
         } else if (fieldDef.key === 'version') {
             input = document.createElement('select');
             this._populateSelectWithOptions(input, fieldDef.options, currentVersion, '');
-            input.onchange = (e) => {
+            input.addEventListener('change', (e) => { // Use addEventListener
                 const newVersion = e.target.value;
                 const contactToUpdate = UserManager.contacts[contactId];
                 if (contactToUpdate && contactToUpdate.aiConfig && contactToUpdate.aiConfig.tts) {
@@ -156,20 +156,18 @@ const TtsUIManager = {
                 if (currentTtsMode === 'Dynamic') {
                     this._handleVersionChange(newVersion, contactId, formContainer, undefined, undefined, undefined);
                 }
-            };
+            });
         } else if (fieldDef.isPotentiallyDynamic && currentTtsMode === 'Dynamic') {
             input = document.createElement('select');
             input.disabled = true;
             this._populateSelectWithOptions(input, [], savedValue, `加载${fieldDef.label}...`);
 
             if (fieldDef.key === 'model_name') {
-                // 模型加载由 _handleVersionChange 触发
-                input.onchange = (e) => this._handleModelChange(e.target.value, currentVersion, contactId, formContainer, currentTtsSettings.prompt_text_lang, currentTtsSettings.emotion);
+                input.addEventListener('change', (e) => this._handleModelChange(e.target.value, currentVersion, contactId, formContainer, currentTtsSettings.prompt_text_lang, currentTtsSettings.emotion));
             } else if (fieldDef.key === 'prompt_text_lang') {
-                // 语言加载由 _handleModelChange 触发
-                input.onchange = (e) => this._handleLanguageChange(e.target.value, currentTtsSettings.model_name, currentVersion, contactId, formContainer, currentTtsSettings.emotion);
+                input.addEventListener('change', (e) => this._handleLanguageChange(e.target.value, currentTtsSettings.model_name, currentVersion, contactId, formContainer, currentTtsSettings.emotion));
             } else if (fieldDef.key === 'emotion') {
-                // 情感加载由 _handleLanguageChange 触发
+                // 情感加载由 _handleLanguageChange 触发, 无需额外 onchange
             }
         } else if (fieldDef.type === 'checkbox') {
             input = document.createElement('input');
@@ -331,115 +329,115 @@ const TtsUIManager = {
             }
         } else if (selectedModel && selectedLanguage && emotionSelect) {
             Utils.log(`在 _handleLanguageChange 中未找到模型 ${selectedModel} / 语言 ${selectedLanguage} (版本 ${version}) 的缓存数据。`, Utils.logLevels.WARN);
-        }
-    },
+}
+},
 
-    /**
-     * @private
-     * 向指定的 API 端点发送 POST 请求以获取 TTS 模型列表。
-     * @param {string} version - 要获取模型的 TTS API 版本。
-     * @returns {Promise<Array<string>>} 模型名称数组。
-     * @throws {Error} 如果 API 请求失败或响应无效。
-     */
-    _fetchTtsModels: async function(version) {
-        const effectiveConfig = AiApiHandler._getEffectiveAiConfig();
-        if (!effectiveConfig.ttsApiEndpoint) {
-            throw new Error('TTS API 端点未配置。');
-        }
-        const modelsUrl = effectiveConfig.ttsApiEndpoint.endsWith('/') ?
-            effectiveConfig.ttsApiEndpoint + 'models' :
-            effectiveConfig.ttsApiEndpoint + '/models';
-        Utils.log(`正在从 ${modelsUrl} (版本: ${version}) 获取 TTS 模型...`, Utils.logLevels.DEBUG);
-
-        const response = await fetch(modelsUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer guest' },
-            body: JSON.stringify({ version: version })
-        });
-        if (!response.ok) {
-            const errorText = await response.text().catch(() => "无法读取错误响应");
-            throw new Error(`获取 TTS 模型失败 (版本: ${version}): ${response.status} ${errorText.substring(0,100)}`);
-        }
-        const data = await response.json();
-        if (!data || typeof data.models !== 'object') {
-            throw new Error(`TTS 模型 API (版本: ${version}) 响应格式无效，期望 'models' 字段为对象。`);
-        }
-
-        if (!this._dynamicDataCache) this._dynamicDataCache = {};
-        this._dynamicDataCache[version] = data.models; // 缓存整个 models 对象
-        Utils.log(`成功获取并缓存了版本 ${version} 的 ${Object.keys(data.models).length} 个 TTS 模型。`, Utils.logLevels.DEBUG);
-        return Object.keys(data.models); // 返回模型名称数组，例如 ["星穹铁道-中文-藿藿_ZH", ...]
-    },
-
-    /**
-     * @private
-     * 此方法不再直接使用，因为说话人信息已整合到模型名称中。保留框架以防未来API变动。
-     * @param {string} version - TTS API 版本。
-     * @param {string} modelName - 要获取说话人的模型名称。
-     * @returns {Promise<any>} API 响应的 JSON 数据。
-     * @throws {Error} 如果 API 请求失败或响应无效。
-     */
-    _fetchTtsSpeakers: async function(version, modelName) {
-        // 注意：根据用户提供的新API，说话人信息是models API响应的一部分，所以此函数可能不再需要独立调用
-        // 如果将来API分离，此函数逻辑可以恢复。
-        // 目前，相关数据已在 _fetchTtsModels 中被缓存到 this._dynamicDataCache[version][modelName]
-        if (this._dynamicDataCache[version] && this._dynamicDataCache[version][modelName]) {
-            Utils.log(`直接从缓存返回模型 ${modelName} (版本 ${version}) 的数据。`, Utils.logLevels.DEBUG);
-            return this._dynamicDataCache[version][modelName]; // 返回已缓存的模型特定数据
-        }
-        Utils.log(`警告: _fetchTtsSpeakers 被调用，但模型 ${modelName} (版本 ${version}) 的数据应已在 _fetchTtsModels 中缓存。`, Utils.logLevels.WARN);
-        return {}; // 返回空对象或抛出错误
-    },
-
-    /**
-     * 处理保存 AI TTS 设置的逻辑。从表单中读取值，更新联系人对象，并保存到 localStorage 和数据库。
-     * @param {string} contactId - 要保存设置的联系人 ID。
-     * @returns {Promise<void>}
-     */
-    handleSaveAiTtsSettings: async function(contactId) {
-        const contact = UserManager.contacts[contactId];
-        if (!contact || !contact.isAI || !contact.aiConfig) {
-            NotificationManager.showNotification("错误: 未找到联系人或非 AI 联系人。", "error");
-            return;
-        }
-
-        if (!contact.aiConfig.tts) contact.aiConfig.tts = {};
-        let changesMade = false;
-        const newTtsSettings = { ...contact.aiConfig.tts }; // 先复制一份现有设置
-
-        // 遍历所有定义的字段来获取它们的值
-        this.TTS_CONFIG_FIELDS.forEach(field => {
-            const inputElement = document.getElementById(`ttsInput_${contactId}_${field.key}`);
-            if (inputElement) {
-                let newValue;
-                if (inputElement.type === 'checkbox') {
-                    newValue = inputElement.checked;
-                } else if (inputElement.type === 'number') {
-                    newValue = parseFloat(inputElement.value);
-                    if (isNaN(newValue)) newValue = field.default; // 回退到字段定义中的默认值
-                } else { // select 或 text
-                    newValue = inputElement.value;
-                }
-
-                if (newTtsSettings[field.key] !== newValue) {
-                    changesMade = true;
-                }
-                newTtsSettings[field.key] = newValue;
-            }
-        });
-
-        if (changesMade) {
-            contact.aiConfig.tts = newTtsSettings; // 将新设置赋给联系人对象
-            try {
-                localStorage.setItem(`ttsConfig_${contactId}`, JSON.stringify(newTtsSettings));
-                await UserManager.saveContact(contactId); // UserManager.saveContact 会保存整个联系人对象
-                NotificationManager.showNotification("TTS 设置已成功保存。", "success");
-            } catch (error) {
-                Utils.log(`为 ${contactId} 保存 TTS 设置失败: ${error}`, Utils.logLevels.ERROR);
-                NotificationManager.showNotification("保存 TTS 设置失败。", "error");
-            }
-        } else {
-            NotificationManager.showNotification("未对 TTS 设置进行任何更改。", "info");
-        }
+/**
+ * @private
+ * 向指定的 API 端点发送 POST 请求以获取 TTS 模型列表。
+ * @param {string} version - 要获取模型的 TTS API 版本。
+ * @returns {Promise<Array<string>>} 模型名称数组。
+ * @throws {Error} 如果 API 请求失败或响应无效。
+ */
+_fetchTtsModels: async function(version) {
+    const effectiveConfig = AiApiHandler._getEffectiveAiConfig();
+    if (!effectiveConfig.ttsApiEndpoint) {
+        throw new Error('TTS API 端点未配置。');
     }
+    const modelsUrl = effectiveConfig.ttsApiEndpoint.endsWith('/') ?
+        effectiveConfig.ttsApiEndpoint + 'models' :
+        effectiveConfig.ttsApiEndpoint + '/models';
+    Utils.log(`正在从 ${modelsUrl} (版本: ${version}) 获取 TTS 模型...`, Utils.logLevels.DEBUG);
+
+    const response = await fetch(modelsUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer guest' },
+        body: JSON.stringify({ version: version })
+    });
+    if (!response.ok) {
+        const errorText = await response.text().catch(() => "无法读取错误响应");
+        throw new Error(`获取 TTS 模型失败 (版本: ${version}): ${response.status} ${errorText.substring(0,100)}`);
+    }
+    const data = await response.json();
+    if (!data || typeof data.models !== 'object') {
+        throw new Error(`TTS 模型 API (版本: ${version}) 响应格式无效，期望 'models' 字段为对象。`);
+    }
+
+    if (!this._dynamicDataCache) this._dynamicDataCache = {};
+    this._dynamicDataCache[version] = data.models; // 缓存整个 models 对象
+    Utils.log(`成功获取并缓存了版本 ${version} 的 ${Object.keys(data.models).length} 个 TTS 模型。`, Utils.logLevels.DEBUG);
+    return Object.keys(data.models); // 返回模型名称数组，例如 ["星穹铁道-中文-藿藿_ZH", ...]
+},
+
+/**
+ * @private
+ * 此方法不再直接使用，因为说话人信息已整合到模型名称中。保留框架以防未来API变动。
+ * @param {string} version - TTS API 版本。
+ * @param {string} modelName - 要获取说话人的模型名称。
+ * @returns {Promise<any>} API 响应的 JSON 数据。
+ * @throws {Error} 如果 API 请求失败或响应无效。
+ */
+_fetchTtsSpeakers: async function(version, modelName) {
+    // 注意：根据用户提供的新API，说话人信息是models API响应的一部分，所以此函数可能不再需要独立调用
+    // 如果将来API分离，此函数逻辑可以恢复。
+    // 目前，相关数据已在 _fetchTtsModels 中被缓存到 this._dynamicDataCache[version][modelName]
+    if (this._dynamicDataCache[version] && this._dynamicDataCache[version][modelName]) {
+        Utils.log(`直接从缓存返回模型 ${modelName} (版本 ${version}) 的数据。`, Utils.logLevels.DEBUG);
+        return this._dynamicDataCache[version][modelName]; // 返回已缓存的模型特定数据
+    }
+    Utils.log(`警告: _fetchTtsSpeakers 被调用，但模型 ${modelName} (版本 ${version}) 的数据应已在 _fetchTtsModels 中缓存。`, Utils.logLevels.WARN);
+    return {}; // 返回空对象或抛出错误
+},
+
+/**
+ * 处理保存 AI TTS 设置的逻辑。从表单中读取值，更新联系人对象，并保存到 localStorage 和数据库。
+ * @param {string} contactId - 要保存设置的联系人 ID。
+ * @returns {Promise<void>}
+ */
+handleSaveAiTtsSettings: async function(contactId) {
+    const contact = UserManager.contacts[contactId];
+    if (!contact || !contact.isAI || !contact.aiConfig) {
+        NotificationManager.showNotification("错误: 未找到联系人或非 AI 联系人。", "error");
+        return;
+    }
+
+    if (!contact.aiConfig.tts) contact.aiConfig.tts = {};
+    let changesMade = false;
+    const newTtsSettings = { ...contact.aiConfig.tts }; // 先复制一份现有设置
+
+    // 遍历所有定义的字段来获取它们的值
+    this.TTS_CONFIG_FIELDS.forEach(field => {
+        const inputElement = document.getElementById(`ttsInput_${contactId}_${field.key}`);
+        if (inputElement) {
+            let newValue;
+            if (inputElement.type === 'checkbox') {
+                newValue = inputElement.checked;
+            } else if (inputElement.type === 'number') {
+                newValue = parseFloat(inputElement.value);
+                if (isNaN(newValue)) newValue = field.default; // 回退到字段定义中的默认值
+            } else { // select 或 text
+                newValue = inputElement.value;
+            }
+
+            if (newTtsSettings[field.key] !== newValue) {
+                changesMade = true;
+            }
+            newTtsSettings[field.key] = newValue;
+        }
+    });
+
+    if (changesMade) {
+        contact.aiConfig.tts = newTtsSettings; // 将新设置赋给联系人对象
+        try {
+            localStorage.setItem(`ttsConfig_${contactId}`, JSON.stringify(newTtsSettings));
+            await UserManager.saveContact(contactId); // UserManager.saveContact 会保存整个联系人对象
+            NotificationManager.showNotification("TTS 设置已成功保存。", "success");
+        } catch (error) {
+            Utils.log(`为 ${contactId} 保存 TTS 设置失败: ${error}`, Utils.logLevels.ERROR);
+            NotificationManager.showNotification("保存 TTS 设置失败。", "error");
+        }
+    } else {
+        NotificationManager.showNotification("未对 TTS 设置进行任何更改。", "info");
+    }
+}
 };

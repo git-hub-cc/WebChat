@@ -260,18 +260,18 @@ const ModalManager = {
         const confirmButton = document.createElement('button');
         confirmButton.textContent = options.confirmText || '确认';
         confirmButton.className = `btn ${options.confirmClass || 'btn-danger'}`;
-        confirmButton.onclick = () => {
+        confirmButton.addEventListener('click', () => { // Use addEventListener
             if (onConfirm) onConfirm();
             modal.remove();
-        };
+        });
 
         const cancelButton = document.createElement('button');
         cancelButton.textContent = options.cancelText || '取消';
         cancelButton.className = `btn ${options.cancelClass || 'btn-secondary'}`;
-        cancelButton.onclick = () => {
+        cancelButton.addEventListener('click', () => { // Use addEventListener
             if (onCancel) onCancel();
             modal.remove();
-        };
+        });
 
         modalFooter.appendChild(cancelButton);
         modalFooter.appendChild(confirmButton);
@@ -323,7 +323,13 @@ const ModalManager = {
             avatarContentHtml = fallbackText;
         }
         this.callingModalAvatar.innerHTML = avatarContentHtml;
-        this.callingModalCancelBtn.onclick = onCancelCall;
+
+        // Ensure previous listener is removed if any, then add new one
+        const newCancelBtn = this.callingModalCancelBtn.cloneNode(true);
+        this.callingModalCancelBtn.parentNode.replaceChild(newCancelBtn, this.callingModalCancelBtn);
+        this.callingModalCancelBtn = newCancelBtn;
+        this.callingModalCancelBtn.addEventListener('click', onCancelCall);
+
         this.callingModal.style.display = 'flex';
     },
 
@@ -333,7 +339,7 @@ const ModalManager = {
     hideCallingModal: function () {
         if (this.callingModal && this.callingModal.style.display !== 'none') {
             this.callingModal.style.display = 'none';
-            if (this.callingModalCancelBtn) this.callingModalCancelBtn.onclick = null;
+            // No need to remove listener here if we cloneNode on show
         }
     },
 
@@ -349,8 +355,8 @@ const ModalManager = {
         const requestTitle = this.videoCallRequestModal.querySelector('h3');
         const requestDesc = this.videoCallRequestModal.querySelector('p');
         const avatarEl = this.videoCallRequestModal.querySelector('.video-call-avatar');
-        const acceptBtn = this.videoCallRequestModal.querySelector('.accept-call');
-        const rejectBtn = this.videoCallRequestModal.querySelector('.reject-call');
+        let acceptBtn = this.videoCallRequestModal.querySelector('.accept-call');
+        let rejectBtn = this.videoCallRequestModal.querySelector('.reject-call');
 
         const peerName = UserManager.contacts[peerId]?.name || `用户 ${peerId.substring(0, 4)}`;
         let avatarContentHtml = (UserManager.contacts[peerId]?.name?.charAt(0).toUpperCase() || 'P');
@@ -370,8 +376,18 @@ const ModalManager = {
         if (requestTitle) requestTitle.textContent = `${callTypeString}请求`;
         if (requestDesc) requestDesc.textContent = `${peerName} ${isScreenShare ? '想要共享屏幕' : '正在呼叫'}...`;
 
-        if(acceptBtn) acceptBtn.onclick = () => VideoCallManager.acceptCall();
-        if(rejectBtn) rejectBtn.onclick = () => VideoCallManager.rejectCall();
+        if(acceptBtn) {
+            const newAcceptBtn = acceptBtn.cloneNode(true);
+            acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+            acceptBtn = newAcceptBtn;
+            acceptBtn.addEventListener('click', () => VideoCallManager.acceptCall());
+        }
+        if(rejectBtn) {
+            const newRejectBtn = rejectBtn.cloneNode(true);
+            rejectBtn.parentNode.replaceChild(newRejectBtn, rejectBtn);
+            rejectBtn = newRejectBtn;
+            rejectBtn.addEventListener('click', () => VideoCallManager.rejectCall());
+        }
 
         this.videoCallRequestModal.style.display = 'flex';
     },

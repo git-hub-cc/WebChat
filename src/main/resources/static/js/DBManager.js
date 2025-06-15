@@ -9,6 +9,7 @@
  * @property {function} getAllItems - 获取指定对象存储中的所有项目。
  * @property {function} removeItem - 从指定的对象存储中移除一个项目。
  * @property {function} clearStore - 清空指定的对象存储。
+ * @property {function} clearAllData - 清空数据库中所有对象存储的数据。
  * @dependencies Utils
  * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写)
  */
@@ -163,6 +164,31 @@ const DBManager = {
                     reject(event.target.error);
                 };
             } catch (e) { reject(e); }
+        });
+    },
+
+    /**
+     * 清空数据库中的所有对象存储的数据。
+     * @returns {Promise<void>} 当所有存储区都被清空后解析。
+     */
+    clearAllData: function() {
+        return new Promise(async (resolve, reject) => {
+            if (!this.db) {
+                Utils.log("数据库未初始化，无法清空数据。", Utils.logLevels.ERROR);
+                reject(new Error("数据库未初始化。"));
+                return;
+            }
+            try {
+                const storeNames = Array.from(this.db.objectStoreNames);
+                Utils.log(`准备清空以下存储区: ${storeNames.join(', ')}`, Utils.logLevels.INFO);
+                const clearPromises = storeNames.map(storeName => this.clearStore(storeName));
+                await Promise.all(clearPromises);
+                Utils.log("所有数据库存储区已清空。", Utils.logLevels.INFO);
+                resolve();
+            } catch (error) {
+                Utils.log(`清空所有数据库数据时出错: ${error}`, Utils.logLevels.ERROR);
+                reject(error);
+            }
         });
     }
 };

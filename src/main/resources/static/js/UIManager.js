@@ -55,7 +55,7 @@ const UIManager = {
 
         modal.appendChild(img);
         // 点击模态框任意位置关闭
-        modal.onclick = () => modal.remove();
+        modal.addEventListener('click', () => modal.remove()); // Use addEventListener
         document.body.appendChild(modal);
     },
 };
