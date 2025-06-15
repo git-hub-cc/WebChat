@@ -27,13 +27,16 @@ const AiApiHandler = {
      */
     _getEffectiveAiConfig: function() {
         const config = {};
+        // 确保 window.Config 和 window.Config.server 存在，否则使用空对象
         const serverConfig = (typeof window.Config !== 'undefined' && window.Config && typeof window.Config.server === 'object' && window.Config.server !== null)
             ? window.Config.server
             : {};
 
+        // 回退到 SettingsUIManager 中的备用默认值（如果需要）
+        // 此处假设 SettingsUIManager.FALLBACK_AI_DEFAULTS 包含 ttsApiEndpoint 的默认值
         const fallbackDefaults = (typeof SettingsUIManager !== 'undefined' && SettingsUIManager && typeof SettingsUIManager.FALLBACK_AI_DEFAULTS === 'object' && SettingsUIManager.FALLBACK_AI_DEFAULTS !== null)
             ? SettingsUIManager.FALLBACK_AI_DEFAULTS
-            : { apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: '' };
+            : { apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: '' }; // 确保有 ttsApiEndpoint
 
 
         config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint') || serverConfig.apiEndpoint || fallbackDefaults.apiEndpoint;
@@ -51,9 +54,10 @@ const AiApiHandler = {
             config.maxTokens = fallbackDefaults.max_tokens;
         }
 
+        // 读取 TTS API 端点，与其它 AI 设置逻辑一致
         config.ttsApiEndpoint = localStorage.getItem('aiSetting_ttsApiEndpoint') || serverConfig.ttsApiEndpoint || fallbackDefaults.ttsApiEndpoint;
 
-        Utils.log(`_getEffectiveAiConfig: Effective AI config used. Endpoint: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, Key Present: ${!!config.apiKey}, Model: ${config.model}`, Utils.logLevels.DEBUG);
+        Utils.log(`_getEffectiveAiConfig: Effective AI config used. Endpoint: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, Key Present: ${!!config.apiKey}, Model: ${config.model}, TTS Endpoint: ${config.ttsApiEndpoint ? String(config.ttsApiEndpoint).substring(0,30) + '...' : 'N/A'}`, Utils.logLevels.DEBUG);
         return config;
     },
 
@@ -76,7 +80,7 @@ const AiApiHandler = {
         let thinkingElement = chatBox.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
 
         try {
-            const effectiveConfig = this._getEffectiveAiConfig();
+            const effectiveConfig = this._getEffectiveAiConfig(); // 此函数已包含 ttsApiEndpoint 的读取逻辑
             if (!effectiveConfig.apiEndpoint) {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
@@ -86,11 +90,9 @@ const AiApiHandler = {
             const recentMessages = chatHistory.filter(msg => new Date(msg.timestamp).getTime() > fiveMinutesAgo && msg.type === 'text');
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
 
-            // 构建最终的请求消息体
             const messagesForRequestBody = [];
             messagesForRequestBody.push({role: "system", content: contact.aiConfig.systemPrompt + Config.ai.baseSystemPrompt});
 
-            // 检查并包含已存储的摘要
             if (this.activeSummaries[targetId]) {
                 Utils.log(`AiApiHandler: Including stored summary for ${targetId} in the request.`, Utils.logLevels.DEBUG);
                 messagesForRequestBody.push({ role: "system", content: `上下文摘要:\n${this.activeSummaries[targetId]}` });
@@ -98,7 +100,6 @@ const AiApiHandler = {
 
             messagesForRequestBody.push(...contextMessagesForAIHistory);
 
-            // 遵循原始逻辑：为上下文中的最新用户消息附加上下文时间戳
             for (let i = messagesForRequestBody.length - 1; i >= 0; i--) {
                 if (messagesForRequestBody[i].role === 'user') {
                     messagesForRequestBody[i].content = (messagesForRequestBody[i].content || '') + ` [发送于: ${new Date().toLocaleString()}]`;
@@ -226,7 +227,7 @@ const AiApiHandler = {
         if (summaryMsgId) chatBox.querySelector(`.message[data-message-id="${summaryMsgId}"]`)?.remove();
 
         try {
-            const effectiveConfig = this._getEffectiveAiConfig();
+            const effectiveConfig = this._getEffectiveAiConfig(); // 此函数已包含 ttsApiEndpoint 的读取逻辑
             if (!effectiveConfig.apiEndpoint) {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
@@ -307,7 +308,7 @@ const AiApiHandler = {
      * @returns {Promise<boolean>} 如果服务健康则返回 true，否则返回 false。
      */
     checkAiServiceHealth: async function() {
-        const effectiveConfig = this._getEffectiveAiConfig();
+        const effectiveConfig = this._getEffectiveAiConfig(); // 此函数已包含 ttsApiEndpoint 的读取逻辑
 
         if (!effectiveConfig.apiEndpoint) {
             Utils.log("AiApiHandler: AI API 端点未配置，无法进行健康检查。", Utils.logLevels.ERROR);
@@ -319,7 +320,7 @@ const AiApiHandler = {
             messages: [
                 { role: "user", content: "回复ok." }
             ],
-            stream: true, // MODIFIED: Changed to stream: true
+            stream: true,
             max_tokens: 5
         };
 
@@ -334,7 +335,7 @@ const AiApiHandler = {
                 body: JSON.stringify(healthCheckPayload)
             });
 
-            if (!response.ok) { // Check HTTP status first
+            if (!response.ok) {
                 Utils.log(`AiApiHandler: AI 服务健康检查失败。状态: ${response.status}`, Utils.logLevels.WARN);
                 return false;
             }
@@ -347,12 +348,11 @@ const AiApiHandler = {
             while (true) {
                 const {value, done: readerDone} = await reader.read();
                 if (readerDone) {
-                    buffer += decoder.decode(); // Process any remaining buffer content
+                    buffer += decoder.decode();
                     break;
                 }
                 buffer += decoder.decode(value, {stream: true});
 
-                // Check for [DONE] signal
                 let stopStreaming = (buffer.trim() === "[DONE]" || buffer.includes("[DONE]"));
                 if (stopStreaming) {
                     buffer = buffer.substring(0, buffer.indexOf("[DONE]"));
@@ -362,7 +362,7 @@ const AiApiHandler = {
                 while (boundary < buffer.length) {
                     const startIdx = buffer.indexOf('{', boundary);
                     if (startIdx === -1) {
-                        buffer = buffer.substring(boundary); // Keep unprocessed part of buffer
+                        buffer = buffer.substring(boundary);
                         break;
                     }
                     let openBraces = 0, endIdx = -1;
@@ -388,9 +388,8 @@ const AiApiHandler = {
                             Utils.log(`AI 健康检查流: 解析 JSON 出错: ${e}. 缓冲区: ${buffer.substring(0, 100)}`, Utils.logLevels.WARN);
                         }
                         boundary = endIdx + 1;
-                        if (boundary >= buffer.length) buffer = ""; // Reset buffer if fully processed
+                        if (boundary >= buffer.length) buffer = "";
                     } else {
-                        // Incomplete JSON object, keep it in buffer for next read
                         buffer = buffer.substring(startIdx);
                         break;
                     }
@@ -398,7 +397,6 @@ const AiApiHandler = {
                 if (stopStreaming) break;
             }
 
-            // After processing the stream, check content
             const trimmedContent = fullStreamedContent.trim();
             Utils.log(`AI 健康检查流式响应内容: "${trimmedContent}" (长度: ${trimmedContent.length})`, Utils.logLevels.DEBUG);
 

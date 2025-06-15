@@ -113,6 +113,7 @@ body {
     background-color: #f8f9fa;
     /* 使用逻辑属性 border-inline-end，自动适应从左到右 (LTR) 和从右到左 (RTL) 的布局 */
     border-inline-end: 1px solid var(--border-color);
+    position: relative;
 }
 
 .chat-area {
@@ -1029,7 +1030,7 @@ body {
 
 #ttsConfigFormContainer .tts-config-item label {
     flex-shrink: 0;
-    width: 85px;
+    width: 85px; /* This width applies to all labels in this section */
     margin-inline-end: 10px;
     color: var(--text-color);
     font-size: 0.88em;
@@ -1039,7 +1040,8 @@ body {
 
 #ttsConfigFormContainer .tts-config-item input[type="text"],
 #ttsConfigFormContainer .tts-config-item input[type="number"],
-#ttsConfigFormContainer .tts-config-item select {
+#ttsConfigFormContainer .tts-config-item input[type="select"],
+#ttsConfigFormContainer .tts-config-item select { /* This style will apply to the new 'version' select */
     flex-grow: 1;
     min-width: 50px;
     padding: 7px 10px;
@@ -1053,7 +1055,7 @@ body {
     appearance: none;
 }
 
-#ttsConfigFormContainer .tts-config-item select {
+#ttsConfigFormContainer .tts-config-item select { /* This style adds the dropdown arrow */
     padding-inline-end: 30px;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
     background-position: right 8px center;

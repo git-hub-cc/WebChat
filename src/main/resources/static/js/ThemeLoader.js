@@ -18,30 +18,30 @@
 const ThemeLoader = {
     // 定义所有可用的主题
     themes: {
-        "原神-浅色": { name: "原神（内置tts）", css: "css/原神-浅色.css", dataJs: "data/原神.json", defaultSpecialContacts: true  }, // MODIFIED: dataJs points to .json
-        "原神-深色": { name: "原神（内置tts）", css: "css/原神-深色.css", dataJs: "data/原神.json" }, // MODIFIED: dataJs points to .json
-        "崩坏3-浅色": { name: "崩坏3（内置tts）", css: "css/崩坏3-浅色.css", dataJs: "data/崩坏3.json" }, // Placeholder, ensure 崩坏3.json exists
-        "崩坏3-深色": { name: "崩坏3（内置tts）", css: "css/崩坏3-深色.css", dataJs: "data/崩坏3.json" }, // Placeholder
-        "鸣潮-浅色": { name: "鸣潮（内置tts）", css: "css/鸣潮-浅色.css", dataJs: "data/鸣潮.json" }, // Placeholder
-        "鸣潮-深色": { name: "鸣潮（内置tts）", css: "css/鸣潮-深色.css", dataJs: "data/鸣潮.json" }, // Placeholder
-        "星穹铁道-浅色": { name: "星穹铁道（内置tts）", css: "css/星穹铁道-浅色.css", dataJs: "data/星穹铁道.json" }, // Placeholder
-        "星穹铁道-深色": { name: "星穹铁道（内置tts）", css: "css/星穹铁道-深色.css", dataJs: "data/星穹铁道.json" }, // Placeholder
-        "蜡笔小新-浅色": { name: "蜡笔小新", css: "css/蜡笔小新-浅色.css", dataJs: "data/蜡笔小新.json"}, // Placeholder
-        "蜡笔小新-深色": { name: "蜡笔小新", css: "css/蜡笔小新-深色.css", dataJs: "data/蜡笔小新.json" }, // Placeholder
-        "仙逆-浅色": { name: "仙逆", css: "css/仙逆-浅色.css", dataJs: "data/仙逆.json" }, // Placeholder
-        "仙逆-深色": { name: "仙逆", css: "css/仙逆-深色.css", dataJs: "data/仙逆.json" }, // Placeholder
-        "咒术回战-深色": { name: "咒术回战", css: "css/咒术回战-深色.css", dataJs: "data/咒术回战.json" }, // Placeholder
-        "咒术回战-浅色": { name: "咒术回战", css: "css/咒术回战-浅色.css", dataJs: "data/咒术回战.json" }, // Placeholder
-        "遮天-浅色": { name: "遮天", css: "css/遮天-浅色.css", dataJs: "data/遮天.json" }, // Placeholder
-        "遮天-深色": { name: "遮天", css: "css/遮天-深色.css", dataJs: "data/遮天.json" }, // Placeholder
-        "完美世界-浅色": { name: "完美世界", css: "css/完美世界-浅色.css", dataJs: "data/完美世界.json" }, // Placeholder
-        "完美世界-深色": { name: "完美世界", css: "css/完美世界-深色.css", dataJs: "data/完美世界.json" }, // Placeholder
-        "吞噬星空-浅色": { name: "吞噬星空", css: "css/吞噬星空-浅色.css", dataJs: "data/吞噬星空.json" }, // Placeholder
-        "吞噬星空-深色": { name: "吞噬星空", css: "css/吞噬星空-深色.css", dataJs: "data/吞噬星空.json" }, // Placeholder
-        "斗破苍穹-浅色": { name: "斗破苍穹", css: "css/斗破苍穹-浅色.css", dataJs: "data/斗破苍穹.json" }, // Placeholder
-        "斗破苍穹-深色": { name: "斗破苍穹", css: "css/斗破苍穹-深色.css", dataJs: "data/斗破苍穹.json" }, // Placeholder
-        "迷宫饭-浅色": { name: "迷宫饭", css: "css/迷宫饭-浅色.css", dataJs: "data/迷宫饭.json" }, // Placeholder
-        "迷宫饭-深色": { name: "迷宫饭", css: "css/迷宫饭-深色.css", dataJs: "data/迷宫饭.json" }, // Placeholder
+        "原神-浅色": { name: "原神（内置tts）", css: "css/原神-浅色.css", dataJs: "data/原神.json", defaultSpecialContacts: true  },
+        "原神-深色": { name: "原神（内置tts）", css: "css/原神-深色.css", dataJs: "data/原神.json" },
+        "崩坏3-浅色": { name: "崩坏3（内置tts）", css: "css/崩坏3-浅色.css", dataJs: "data/崩坏3.json" },
+        "崩坏3-深色": { name: "崩坏3（内置tts）", css: "css/崩坏3-深色.css", dataJs: "data/崩坏3.json" },
+        "鸣潮-浅色": { name: "鸣潮（内置tts）", css: "css/鸣潮-浅色.css", dataJs: "data/鸣潮.json" },
+        "鸣潮-深色": { name: "鸣潮（内置tts）", css: "css/鸣潮-深色.css", dataJs: "data/鸣潮.json" },
+        "星穹铁道-浅色": { name: "星穹铁道（内置tts）", css: "css/星穹铁道-浅色.css", dataJs: "data/星穹铁道.json" },
+        "星穹铁道-深色": { name: "星穹铁道（内置tts）", css: "css/星穹铁道-深色.css", dataJs: "data/星穹铁道.json" },
+        "蜡笔小新-浅色": { name: "蜡笔小新", css: "css/蜡笔小新-浅色.css", dataJs: "data/蜡笔小新.json"},
+        "蜡笔小新-深色": { name: "蜡笔小新", css: "css/蜡笔小新-深色.css", dataJs: "data/蜡笔小新.json" },
+        "仙逆-浅色": { name: "仙逆", css: "css/仙逆-浅色.css", dataJs: "data/仙逆.json" },
+        "仙逆-深色": { name: "仙逆", css: "css/仙逆-深色.css", dataJs: "data/仙逆.json" },
+        "咒术回战-深色": { name: "咒术回战", css: "css/咒术回战-深色.css", dataJs: "data/咒术回战.json" },
+        "咒术回战-浅色": { name: "咒术回战", css: "css/咒术回战-浅色.css", dataJs: "data/咒术回战.json" },
+        "遮天-浅色": { name: "遮天", css: "css/遮天-浅色.css", dataJs: "data/遮天.json" },
+        "遮天-深色": { name: "遮天", css: "css/遮天-深色.css", dataJs: "data/遮天.json" },
+        "完美世界-浅色": { name: "完美世界", css: "css/完美世界-浅色.css", dataJs: "data/完美世界.json" },
+        "完美世界-深色": { name: "完美世界", css: "css/完美世界-深色.css", dataJs: "data/完美世界.json" },
+        "吞噬星空-浅色": { name: "吞噬星空", css: "css/吞噬星空-浅色.css", dataJs: "data/吞噬星空.json" },
+        "吞噬星空-深色": { name: "吞噬星空", css: "css/吞噬星空-深色.css", dataJs: "data/吞噬星空.json" },
+        "斗破苍穹-浅色": { name: "斗破苍穹", css: "css/斗破苍穹-浅色.css", dataJs: "data/斗破苍穹.json" },
+        "斗破苍穹-深色": { name: "斗破苍穹", css: "css/斗破苍穹-深色.css", dataJs: "data/斗破苍穹.json" },
+        "迷宫饭-浅色": { name: "迷宫饭", css: "css/迷宫饭-浅色.css", dataJs: "data/迷宫饭.json" },
+        "迷宫饭-深色": { name: "迷宫饭", css: "css/迷宫饭-深色.css", dataJs: "data/迷宫饭.json" },
         "telegram-浅色": { name: "telegram", css: "css/telegram-浅色.css", dataJs: null },
         "telegram-深色": { name: "telegram", css: "css/telegram-深色.css", dataJs: null },
     },
@@ -57,7 +57,7 @@ const ThemeLoader = {
      * @param {string|null} dataJsonUrl - data JSON 文件的 URL。
      * @returns {Promise<Array<object>>} - 解析后的特殊联系人定义数组。
      */
-    async _parseDataJson(dataJsonUrl) { // MODIFIED: Renamed from _parseDataJs and changed logic
+    async _parseDataJson(dataJsonUrl) {
         if (!dataJsonUrl) return [];
         try {
             const response = await fetch(dataJsonUrl);
@@ -65,7 +65,6 @@ const ThemeLoader = {
                 (Utils?.log || console.log)(`ThemeLoader: 获取 data JSON 失败 ${dataJsonUrl}: ${response.statusText}`, Utils?.logLevels?.WARN || 2);
                 return [];
             }
-            // Directly parse the response as JSON
             const definitions = await response.json();
             if (Array.isArray(definitions)) {
                 return definitions;
@@ -101,7 +100,7 @@ const ThemeLoader = {
             themeStylesheet.setAttribute('href', '');
         }
 
-        this._currentSpecialContactsDefinitions = await this._parseDataJson(themeConfig.dataJs); // MODIFIED: Calls _parseDataJson
+        this._currentSpecialContactsDefinitions = await this._parseDataJson(themeConfig.dataJs);
         this._currentThemeKey = themeKey;
         localStorage.setItem('selectedTheme', themeKey);
     },
@@ -173,7 +172,6 @@ const ThemeLoader = {
         const newEffectiveColorScheme = this._getEffectiveColorScheme(newSchemeKeyFromUser);
         const currentStoredScheme = localStorage.getItem(this.COLOR_SCHEME_KEY);
 
-        // 只有当有效配色方案改变，或者用户选择的方案 ('auto', 'light', 'dark') 与存储的不同时，才执行操作
         if (newEffectiveColorScheme !== this._currentEffectiveColorScheme || newSchemeKeyFromUser !== currentStoredScheme) {
             this._currentEffectiveColorScheme = newEffectiveColorScheme;
             localStorage.setItem(this.COLOR_SCHEME_KEY, newSchemeKeyFromUser);
@@ -190,8 +188,8 @@ const ThemeLoader = {
                 themeToApplyKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
             }
 
-            await this.applyTheme(themeToApplyKey); // applyTheme 会处理加载CSS/数据和发射事件
-            this._setupSystemColorSchemeListener(newSchemeKeyFromUser); // 根据新的偏好（如 'auto'）重新设置系统监听器
+            await this.applyTheme(themeToApplyKey);
+            this._setupSystemColorSchemeListener(newSchemeKeyFromUser);
         }
     },
 
@@ -223,7 +221,7 @@ const ThemeLoader = {
         if (!this.themes[themeKey]) return false;
         if (colorScheme === 'light') return themeKey.endsWith('-浅色');
         if (colorScheme === 'dark') return themeKey.endsWith('-深色');
-        return false; // Should not happen if colorScheme is always 'light' or 'dark'
+        return false;
     },
 
     /**
@@ -234,11 +232,10 @@ const ThemeLoader = {
     _getEffectiveColorScheme: function(preferredScheme) {
         if (preferredScheme === 'light') return 'light';
         if (preferredScheme === 'dark') return 'dark';
-        // 对于 'auto'，检查系统的偏好
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             return 'dark';
         }
-        return 'light'; // 'auto' 的默认回退值，或无效 preferredScheme 的回退
+        return 'light';
     },
 
     /**
@@ -257,7 +254,7 @@ const ThemeLoader = {
             return firstKey;
         }
         console.error("ThemeLoader: 严重错误 - ThemeLoader.themes 中未定义任何主题。");
-        return '原神-浅色'; // 绝对最终回退
+        return '原神-浅色';
     },
 
     /**
@@ -266,19 +263,17 @@ const ThemeLoader = {
      */
     _setupSystemColorSchemeListener: function(preferredScheme) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-        // 移除旧的监听器以防重复
         if (this._systemColorSchemeListener) {
             mediaQuery.removeEventListener('change', this._systemColorSchemeListener);
             this._systemColorSchemeListener = null;
         }
 
         if (preferredScheme === 'auto') {
-            this._systemColorSchemeListener = async (e) => { // listener is async
+            this._systemColorSchemeListener = async (e) => {
                 const newSystemEffectiveColorScheme = e.matches ? 'dark' : 'light';
-                // 只有当内部有效配色方案确实改变时才行动
                 if (newSystemEffectiveColorScheme !== this._currentEffectiveColorScheme) {
                     (Utils?.log || console.log)(`ThemeLoader: 系统配色方案变更为: ${newSystemEffectiveColorScheme}。更新应用主题。`, Utils?.logLevels?.INFO || 1);
-                    this._currentEffectiveColorScheme = newSystemEffectiveColorScheme; // 更新内部状态
+                    this._currentEffectiveColorScheme = newSystemEffectiveColorScheme;
 
                     const currentBaseName = this._getBaseThemeName(this._currentThemeKey);
                     const newSuffix = newSystemEffectiveColorScheme === 'light' ? '浅色' : '深色';
@@ -287,7 +282,7 @@ const ThemeLoader = {
                     if (!this.themes[newThemeToApplyKey] || !this._isThemeCompatible(newThemeToApplyKey, newSystemEffectiveColorScheme)) {
                         newThemeToApplyKey = this._findFallbackThemeKeyForScheme(newSystemEffectiveColorScheme);
                     }
-                    await this.applyTheme(newThemeToApplyKey); // applyTheme 会处理CSS/数据和事件
+                    await this.applyTheme(newThemeToApplyKey);
                 }
             };
             mediaQuery.addEventListener('change', this._systemColorSchemeListener);

@@ -90,7 +90,7 @@ const ConfigObj = {
         // 默认的 AI 模型最大令牌数
         max_tokens: 2048,
         // 默认的文本转语音 (TTS) API 端点
-        ttsApiEndpoint: 'https://gsv.ai-lab.top',
+        ttsApiEndpoint: 'https://gsv2p.acgnai.top',
     },
     /**
      * WebRTC RTCPeerConnection 的详细配置

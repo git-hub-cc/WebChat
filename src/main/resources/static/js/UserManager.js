@@ -4,7 +4,7 @@
  *              它与数据库交互以持久化用户和联系人数据，并确保主题定义的特殊联系人被正确加载和合并。
  *              现在依赖 ThemeLoader 动态提供特殊联系人定义。
  *              修复了切换主题或初始化时，可能加载非当前主题 AI 角色的问题。
- *              确保 TTS 配置中的 tts_mode 得到正确处理。
+ *              确保 TTS 配置中的 tts_mode 和 version 得到正确处理。
  * @module UserManager
  * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
  * @property {string|null} userId - 当前用户的唯一 ID。
@@ -52,7 +52,7 @@ const UserManager = {
                 await DBManager.setItem('user', userData);
             }
 
-            this.contacts = {}; // 初始化联系人为空对象
+            this.contacts = {};
 
             const currentThemeSpecialDefs = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions()
@@ -79,9 +79,13 @@ const UserManager = {
                         Utils.log(`UserManager.init: 跳过 DB 联系人 ${dbContact.id} ('${dbContact.name}')，因为它似乎是来自非当前主题的 AI/特殊联系人。`, Utils.logLevels.DEBUG);
                         continue;
                     }
+
                     dbContact.isSpecial = false;
                     dbContact.isAI = false;
-                    dbContact.aiConfig = { tts: { tts_mode: 'Preset' } }; // 重置 AI 配置，确保 tts_mode
+                    if (!dbContact.aiConfig) dbContact.aiConfig = {};
+                    if (!dbContact.aiConfig.tts) dbContact.aiConfig.tts = {};
+                    if (dbContact.aiConfig.tts.tts_mode === undefined) dbContact.aiConfig.tts.tts_mode = 'Preset';
+                    if (dbContact.aiConfig.tts.version === undefined) dbContact.aiConfig.tts.version = 'v4';
                     dbContact.aboutDetails = null;
                     this.contacts[dbContact.id] = dbContact;
                 }
@@ -128,7 +132,13 @@ const UserManager = {
             const contact = this.contacts[contactId];
             if (!contact) continue;
             const isSpecialInNewTheme = newDefinitions.some(def => def.id === contact.id);
-            if (!isSpecialInNewTheme && !contact.isAI && !contact.isSpecial) {
+            if (!isSpecialInNewTheme) {
+                if (contact.isSpecial || contact.isAI) {
+                    contact.isSpecial = false;
+                    contact.isAI = false;
+                    contact.aiConfig = { tts: { tts_mode: 'Preset', version: 'v4' } };
+                    contact.aboutDetails = null;
+                }
                 trulyRegularContacts[contact.id] = contact;
             }
         }
@@ -186,15 +196,12 @@ const UserManager = {
                 avatarUrl: scDef.avatarUrl || null,
                 type: 'contact',
                 isAI: scDef.isAI || false,
-                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || { tts: { tts_mode: 'Preset' } })), // 确保aiConfig和tts存在
+                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || { tts: {} })), // 深拷贝
                 aboutDetails: scDef.aboutDetails ? JSON.parse(JSON.stringify(scDef.aboutDetails)) : null
             };
-            // 确保 aiConfig.tts 和 aiConfig.tts.tts_mode 存在
-            if (!contactDataFromDef.aiConfig.tts) {
-                contactDataFromDef.aiConfig.tts = { tts_mode: 'Preset' };
-            } else if (contactDataFromDef.aiConfig.tts.tts_mode === undefined) {
-                contactDataFromDef.aiConfig.tts.tts_mode = 'Preset';
-            }
+            if (!contactDataFromDef.aiConfig.tts) contactDataFromDef.aiConfig.tts = {};
+            if (contactDataFromDef.aiConfig.tts.tts_mode === undefined) contactDataFromDef.aiConfig.tts.tts_mode = 'Preset';
+            if (contactDataFromDef.aiConfig.tts.version === undefined) contactDataFromDef.aiConfig.tts.version = 'v4';
 
 
             let finalContactData = { ...contactDataFromDef };
@@ -219,9 +226,10 @@ const UserManager = {
 
                 if (dbContact.aiConfig && finalContactData.isAI) {
                     const { tts: dbTtsConfig, ...otherDbAiConfig } = dbContact.aiConfig;
-                    // 合并时，确保主题定义的 tts_mode (如果存在) 优先于 DB 的，DB 的 tts_mode 优先于最终默认值
                     const themeDefTtsMode = contactDataFromDef.aiConfig.tts?.tts_mode;
                     const dbTtsMode = dbTtsConfig?.tts_mode;
+                    const themeDefVersion = contactDataFromDef.aiConfig.tts?.version;
+                    const dbVersion = dbTtsConfig?.version;
 
                     finalContactData.aiConfig = {
                         ...contactDataFromDef.aiConfig,
@@ -229,31 +237,42 @@ const UserManager = {
                         tts: {
                             ...(contactDataFromDef.aiConfig.tts || {}),
                             ...(dbTtsConfig || {}),
-                            tts_mode: themeDefTtsMode || dbTtsMode || 'Preset' // 明确优先级
+                            tts_mode: themeDefTtsMode || dbTtsMode || 'Preset',
+                            version: themeDefVersion || dbVersion || 'v4'
                         }
                     };
                 } else if (!finalContactData.isAI) {
-                    finalContactData.aiConfig = { tts: { tts_mode: 'Preset' } };
+                    finalContactData.aiConfig = { tts: { tts_mode: 'Preset', version: 'v4' } };
                 }
                 finalContactData.aboutDetails = dbContact.aboutDetails || finalContactData.aboutDetails;
             }
+
+            if (!finalContactData.aiConfig) finalContactData.aiConfig = {};
+            if (!finalContactData.aiConfig.tts) finalContactData.aiConfig.tts = {};
+            if (finalContactData.aiConfig.tts.tts_mode === undefined) finalContactData.aiConfig.tts.tts_mode = 'Preset';
+            if (finalContactData.aiConfig.tts.version === undefined) finalContactData.aiConfig.tts.version = 'v4';
+
 
             if (finalContactData.isAI) {
                 const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${scDef.id}`);
                 if (storedTtsSettingsJson) {
                     try {
                         const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
-                        // localStorage 的 tts_mode (如果存在) 具有最高优先级
                         const localStorageTtsMode = storedTtsSettings.tts_mode;
+                        const localStorageVersion = storedTtsSettings.version;
                         finalContactData.aiConfig.tts = {
                             ...(finalContactData.aiConfig.tts || {}),
                             ...storedTtsSettings,
-                            tts_mode: localStorageTtsMode || finalContactData.aiConfig.tts.tts_mode || 'Preset'
+                            tts_mode: localStorageTtsMode || finalContactData.aiConfig.tts.tts_mode || 'Preset',
+                            version: localStorageVersion || finalContactData.aiConfig.tts.version || 'v4'
                         };
                     } catch (e) {
                         Utils.log(`从 localStorage 解析 ${scDef.id} 的 TTS 设置时出错: ${e}`, Utils.logLevels.WARN);
                     }
                 }
+            }
+            if (finalContactData.aiConfig && finalContactData.aiConfig.tts && finalContactData.aiConfig.tts.version === undefined) {
+                finalContactData.aiConfig.tts.version = 'v4';
             }
 
             this.contacts[scDef.id] = finalContactData;
@@ -304,12 +323,10 @@ const UserManager = {
         if (this.contacts[contactId]) {
             try {
                 const contactToSave = { ...this.contacts[contactId] };
-                // 确保 aiConfig.tts 和 tts_mode 存在并正确
                 if (!contactToSave.aiConfig) contactToSave.aiConfig = {};
                 if (!contactToSave.aiConfig.tts) contactToSave.aiConfig.tts = {};
-                if (contactToSave.aiConfig.tts.tts_mode === undefined) {
-                    contactToSave.aiConfig.tts.tts_mode = 'Preset';
-                }
+                if (contactToSave.aiConfig.tts.tts_mode === undefined) contactToSave.aiConfig.tts.tts_mode = 'Preset';
+                if (contactToSave.aiConfig.tts.version === undefined) contactToSave.aiConfig.tts.version = 'v4';
                 await DBManager.setItem('contacts', contactToSave);
             } catch (error) {
                 Utils.log(`保存联系人 ${contactId} 失败: ${error}`, Utils.logLevels.ERROR);
@@ -344,6 +361,9 @@ const UserManager = {
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
             const specialContactName = currentDefinitions.find(sc => sc.id === id)?.name || "这个特殊联系人";
             NotificationManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
+            if (this.contacts[id] && !ConnectionManager.isConnectedTo(id)) {
+                ConnectionManager.createOffer(id, { isSilent: true });
+            }
             return true;
         }
         if (this.contacts[id]) {
@@ -366,7 +386,7 @@ const UserManager = {
             lastTime: new Date().toISOString(), unread: 0, isSpecial: false,
             avatarText: name ? name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase(),
             avatarUrl: null, type: 'contact', isAI: false,
-            aiConfig: { tts: { tts_mode: 'Preset' } }, // 新联系人默认 TTS 模式为 Preset
+            aiConfig: { tts: { tts_mode: 'Preset', version: 'v4' } },
             aboutDetails: null
         };
         this.contacts[id] = newContact;
@@ -515,6 +535,10 @@ const UserManager = {
         const isMyMessage = message.sender === UserManager.userId || message.originalSender === UserManager.userId;
         let senderContact = this.contacts[message.sender];
         let senderName;
+
+        if (message.isRetracted) {
+            return message.content;
+        }
 
         if (senderContact && senderContact.isSpecial) {
             senderName = senderContact.name;
