@@ -45,7 +45,9 @@ const ConfigObj = {
      * UI 行为相关配置
      */
     ui: {
-        messageRenderBatchSize: 30, // 批量渲染消息的大小，优化性能（当前未使用）
+        messageRenderBatchSize: 30, // 批量渲染消息的大小，优化性能（当前未使用，为虚拟滚动保留或调整）
+        virtualScrollBatchSize: 20, // 虚拟滚动时一次加载/渲染的消息数量
+        virtualScrollThreshold: 150, // 距离顶部多少像素时触发加载更早的消息
         typingIndicatorTimeout: 3000, // “正在输入”指示器的超时时间（当前未使用）
         messageRetractionWindow: 5 * 60 * 1000 // 消息可撤回的时间窗口（毫秒），例如 5 分钟
     },

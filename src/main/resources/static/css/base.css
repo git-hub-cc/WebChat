@@ -330,7 +330,7 @@ body {
 }
 
 .custom-select:focus-within {
-    /* 当选择框或其内部任何元素获得焦点时，显示高亮轮廓 */
+/* 当选择框或其内部任何元素获得焦点时，显示高亮轮廓 */
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
@@ -550,13 +550,33 @@ body {
 
 .chat-messages-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* 确保消息是列式排列 */
     flex-grow: 1;
     /* 确保 flex 子项可以正确地滚动 */
     min-height: 0;
     padding: var(--spacing-4);
     overflow-y: auto;
 }
+
+/* 虚拟滚动时加载旧消息的指示器样式 */
+.chat-messages-container .loading-indicator-older-messages {
+    display: none; /* 默认隐藏 */
+    padding: var(--spacing-3);
+    text-align: center;
+    width: 100%; /* 确保在 flex 容器中占满宽度 */
+    box-sizing: border-box;
+}
+
+.chat-messages-container .loading-indicator-older-messages .spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--hover-bg-color); /* 使用变量 */
+    border-top-color: var(--primary-color); /* 使用变量 */
+    border-radius: 50%;
+    animation: spin 1s linear infinite; /* 复用 spin 动画 */
+}
+
 
 .no-chat-selected {
     display: flex;
@@ -599,6 +619,13 @@ body {
     align-self: flex-start; /* 使消息靠左对齐 */
     border-bottom-left-radius: 2px;
     background-color: var(--received-bg-color);
+}
+
+/* 为特殊联系人消息添加特定主题样式 */
+.message.received.character-message {
+    border-color: var(--character-message-border-color);
+    background-color: var(--character-message-bg-color);
+    /* 可以根据需要添加更多角色主题相关的样式 */
 }
 
 .message.system {
@@ -1548,7 +1575,7 @@ input:checked + .slider {
 
 input:checked + .slider::before {
     /*选择全开，半开的感觉不舒服*/
-    transform: translateX(56px); /* 原为56px，对于较小的开关应调整 */
+    transform: translateX(22px); /* 调整为适合当前开关尺寸 (46px 宽，滑块18px，边距3px) => 46 - 18 - 3 - 3 = 22px */
 }
 
 /* --- 交互状态: Disabled --- */
@@ -1859,6 +1886,153 @@ input:checked + .slider::before {
     cursor: not-allowed;
 }
 
+/* --- Styles for Resource Preview Panel (add to base.css) --- */
+.resource-preview-panel-content {
+    /* Basic flex setup, will be display: flex; flex-direction: column; by JS if needed */
+}
+
+.resource-category-tabs {
+    display: flex;
+    justify-content: space-around;
+    padding: var(--spacing-2) var(--spacing-1);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0; /* Prevent tabs from shrinking */
+    background-color: #f8f9fa; /* Same as details panel background */
+}
+
+.resource-category-tab {
+    padding: var(--spacing-2) var(--spacing-3);
+    border: none;
+    background-color: transparent;
+    color: var(--text-color-light);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.resource-category-tab:hover {
+    color: var(--primary-color);
+}
+
+.resource-category-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.resource-grid-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columns */
+    gap: 5px; /* Gap between items */
+    padding: var(--spacing-2);
+    overflow-y: auto;
+    flex-grow: 1; /* Take remaining space */
+    position: relative; /* For loading indicator positioning */
+}
+
+.resource-preview-item {
+    position: relative;
+    aspect-ratio: 1 / 1; /* Make items square */
+    background-color: var(--hover-bg-color);
+    border-radius: var(--border-radius-small, 4px);
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+
+.resource-preview-item:hover {
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+
+.resource-preview-item img.thumbnail,
+.resource-preview-item video.thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Cover the area, might crop */
+}
+
+.resource-preview-item .file-icon,
+.resource-preview-item .audio-icon {
+    font-size: 2em; /* Larger icon */
+    color: var(--text-color-light);
+    margin-bottom: var(--spacing-1);
+}
+
+.resource-preview-item .resource-name {
+    font-size: 0.8em;
+    color: var(--text-color);
+    padding: 0 var(--spacing-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 90%;
+}
+.resource-preview-item .resource-timestamp {
+    font-size: 0.7em;
+    color: var(--text-color-light);
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    background-color: rgba(0,0,0,0.3);
+    color: white;
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+
+.loading-indicator-grid {
+    display: flex; /* Used to be none, now managed by JS */
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-3);
+    width: 100%;
+    flex-shrink: 0; /* Prevent shrinking if grid is full */
+    box-sizing: border-box;
+}
+
+.loading-indicator-grid .spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--hover-bg-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite; /* Reusing existing spin animation */
+}
+
+.resource-grid-empty-message {
+    grid-column: 1 / -1; /* Span all columns */
+    text-align: center;
+    padding: var(--spacing-4);
+    color: var(--text-color-light);
+}
+.scroll-to-latest-btn {
+    position: absolute;
+    bottom: 70px; /* Adjust based on input area height */
+    right: 20px;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    cursor: pointer;
+    font-size: 20px;
+    display: none; /* Initially hidden, JS controls display */
+    align-items: center;
+    justify-content: center;
+}
+.scroll-to-latest-btn:hover {
+    background-color: var(--primary-color-dark);
+}
 
 /* ========================================================================== */
 /* 响应式设计 (Responsive Design) */

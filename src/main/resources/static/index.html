@@ -140,7 +140,7 @@
             <!-- AI TTS 配置部分结束 -->
             <!-- 聊天操作部分 -->
             <div class="details-section" id="currentChatActionsDetails" style="display: none;">
-                <h4>聊天操作</h4>
+                <h4>操作</h4>
                 <button id="clearCurrentChatBtnDetails" class="btn btn-warning">清空聊天记录</button>
             </div>
             <!-- 联系人设置部分 -->
@@ -148,6 +148,26 @@
                 <h4>联系人设置</h4>
                 <button id="deleteContactBtnDetails" class="btn btn-danger">删除联系人</button>
             </div>
+            <!-- 聊天资源预览部分 - 新位置 -->
+            <div class="details-section" id="resourcePreviewSection" style="display: none;">
+                <h4 id="resourcePreviewHeaderTitle">资源</h4> <!-- 移除了 collapsible-header 类和图标 -->
+                <!-- 内容区域现在总是可见（由JS控制整体section的显隐），且有内边距 -->
+                <div id="resourcePreviewPanelContent" style="display: flex; flex-direction: column; height: auto; overflow: hidden; padding-top: 10px; margin-top: 10px;">
+                    <div class="resource-category-tabs" id="resourceCategoryTabsContainer">
+                        <button class="resource-category-tab active" data-resource-type="image">图片</button>
+                        <button class="resource-category-tab" data-resource-type="video">视频</button>
+                        <button class="resource-category-tab" data-resource-type="audio">音频</button>
+                        <button class="resource-category-tab" data-resource-type="file">文件</button>
+                    </div>
+                    <div id="resourceGridContainer" class="resource-grid-container">
+                        <!-- Resource items will be populated here by JS -->
+                    </div>
+                    <div id="resourceGridLoadingIndicator" class="loading-indicator-grid" style="display: none;">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 聊天资源预览部分结束 -->
             <!-- 群组管理部分 -->
             <div class="details-section" id="detailsGroupManagement" style="display: none;">
                 <h4>成员 (<span id="groupMemberCount">0</span>)</h4>
@@ -305,16 +325,16 @@
                     </div>
                 </div>
             </div>
-<!--            <div class="settings-section">-->
-<!--                <h3>偏好设置</h3>-->
-<!--                <div class="settings-item">-->
-<!--                    <label for="autoConnectToggle">自动连接:</label>-->
-<!--                    <label class="switch">-->
-<!--                        <input type="checkbox" id="autoConnectToggle">-->
-<!--                        <span class="slider round"></span>-->
-<!--                    </label>-->
-<!--                </div>-->
-<!--            </div>-->
+            <!--            <div class="settings-section">-->
+            <!--                <h3>偏好设置</h3>-->
+            <!--                <div class="settings-item">-->
+            <!--                    <label for="autoConnectToggle">自动连接:</label>-->
+            <!--                    <label class="switch">-->
+            <!--                        <input type="checkbox" id="autoConnectToggle">-->
+            <!--                        <span class="slider round"></span>-->
+            <!--                    </label>-->
+            <!--                </div>-->
+            <!--            </div>-->
             <div class="settings-section">
                 <h3>网络状态</h3>
                 <div id="modalNetworkInfo">检测中...</div>

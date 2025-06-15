@@ -42,7 +42,7 @@ https://175.178.216.24/
     *   **Theming:**
         *   Supports multiple themes (e.g., Genshin Impact, Battle Through the Heavens, Xian Ni, Zhe Tian, Crayon Shin-chan, Delicious in Dungeon, Jujutsu Kaisen, Telegram).
         *   Most themes offer light and dark modes.
-        *   Theme CSS files are located in the `css/` directory, while JavaScript data files defining special AI contacts (`SPECIAL_CONTACTS_DEFINITIONS`) are in the `data/` directory.
+        *   Theme CSS files are located in the `css/` directory, while JSON data files defining special AI contacts  are in the `data/` directory.
         *   Theme selection persists across sessions.
         *   Automatic detection of system color scheme ("Auto" mode).
     *   **Rich Media Previews:** Preview images, audio, and basic files before sending.
