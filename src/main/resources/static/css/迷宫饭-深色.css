@@ -36,7 +36,7 @@
     --mgf-wingedlion-secondary-dark: rgba(251, 192, 45, 0.15);
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--mgf-torch-flame-orange);
     --primary-color-dark: rgb(190, 100, 30);
     --secondary-color: var(--mgf-dark-earth-panel); /* 应用主背景 */
@@ -53,11 +53,8 @@
     --border-color: rgba(var(--mgf-ancient-stone-border-rgb), 0.55);
     --hover-bg-color: rgba(var(--mgf-bone-white-rgb), 0.06);
     --active-bg-color: rgba(var(--mgf-torch-flame-orange-rgb), 0.18);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 4px; /* 更粗犷的边角 */
     --font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
-    --box-shadow: 0 1px 2px rgba(0,0,0,0.75), 0 0 12px rgba(var(--mgf-torch-flame-orange-rgb),0.12) inset;
     --special-contact-color: var(--mgf-laios-primary-dark);
 }
 
@@ -80,7 +77,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* 应用容器主背景 */
-    box-shadow: 0 8px 35px rgba(0,0,0,0.85), 0 0 20px rgba(var(--mgf-torch-flame-orange-rgb),0.09) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--mgf-ancient-stone-border-rgb), 0.45);
     overflow: hidden;
@@ -107,7 +103,6 @@ body {
     background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.9);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -254,13 +249,10 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--mgf-torch-flame-orange); text-shadow: 0 0 4px var(--mgf-torch-flame-orange); }
 
-.chat-messages-container { padding: 15px; }
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     content: "肉"; /* 用一个“肉”字作为占位符 */
-    font-size: 60px;
     color: rgba(var(--mgf-bone-white-rgb), 0.25);
-    text-shadow: 0 0 15px rgba(var(--mgf-torch-flame-orange-rgb), 0.35);
 }
 .status-indicator.global {
     background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.55);
@@ -299,7 +291,6 @@ body {
     background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.92);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -358,7 +349,6 @@ body {
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 7px 22px rgba(0,0,0,0.75), 0 0 12px rgba(var(--mgf-torch-flame-orange-rgb),0.12) inset;
 }
 .modal-header h2 { color: var(--mgf-torch-flame-orange); text-shadow: 0 0 4px rgba(var(--mgf-torch-flame-orange-rgb),0.35); }
 .close-modal-btn:hover { color: var(--mgf-torch-flame-orange); }

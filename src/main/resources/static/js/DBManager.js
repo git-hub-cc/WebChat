@@ -11,12 +11,12 @@
  * @property {function} clearStore - 清空指定的对象存储。
  * @property {function} clearAllData - 清空数据库中所有对象存储的数据。
  * @dependencies Utils
- * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写)
+ * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写), MessageTtsHandler (TTS 缓存)
  */
 const DBManager = {
     db: null,
-    dbName: 'p2pModernChatDB',
-    dbVersion: 2, // 数据库版本号
+    dbName: 'ModernChatDB',
+    dbVersion: 3, // 数据库版本号 (incremented for schema change)
 
     /**
      * 初始化并打开 IndexedDB 数据库。如果数据库不存在或版本较低，会触发 onupgradeneeded 来创建或升级表结构。
@@ -56,6 +56,11 @@ const DBManager = {
                 if (!db.objectStoreNames.contains('groups')) {
                     db.createObjectStore('groups', { keyPath: 'id' });
                 }
+                // Add TTS cache store
+                if (!db.objectStoreNames.contains('ttsCache')) {
+                    db.createObjectStore('ttsCache', { keyPath: 'id' }); // 'id' will store the hash
+                    Utils.log('对象存储 ttsCache 已创建。', Utils.logLevels.INFO);
+                }
                 Utils.log('数据库架构已升级/创建。', Utils.logLevels.INFO);
             };
         });
@@ -77,7 +82,7 @@ const DBManager = {
     /**
      * 在指定的对象存储中添加或更新一个项目。
      * @param {string} storeName - 对象存储的名称。
-     * @param {object} item - 要存储的项目。
+     * @param {object} item - 要存储的项目。Item 必须包含与其 keyPath 对应的属性。
      * @returns {Promise<IDBValidKey>} 解析为存储项目的键的 Promise。
      */
     setItem: function(storeName, item) {

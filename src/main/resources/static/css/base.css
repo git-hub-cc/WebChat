@@ -1111,6 +1111,52 @@ body {
     text-decoration: none;
 }
 
+/* --- 详情面板: 群组管理特定样式 --- */
+#detailsGroupManagement #addGroupMemberArea {
+    margin-top: var(--spacing-4); /* Add some space above the "Add Member" area */
+    padding-top: var(--spacing-3);
+    border-top: 1px solid var(--border-color); /* Separator line */
+}
+
+#detailsGroupManagement #addGroupMemberArea h5 {
+    margin-bottom: var(--spacing-2);
+    font-size: 1.1em; /* Increased from 1em for better hierarchy */
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+#detailsGroupManagement #addGroupMemberArea select#contactsDropdownDetails {
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    margin-bottom: var(--spacing-3); /* Space before the button */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    color: var(--text-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    /* Custom arrow */
+    padding-inline-end: 30px; /* Make space for the arrow */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right var(--spacing-2) center; /* Position arrow */
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+#detailsGroupManagement #addGroupMemberArea select#contactsDropdownDetails:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+#detailsGroupManagement #addGroupMemberArea button#addMemberBtnDetails {
+    width: 100%; /* Make button full width */
+}
+
+
 /* --- 模态框 (Modals) --- */
 .modal-like {
     position: fixed;
@@ -1220,6 +1266,41 @@ body {
 .modal-body textarea {
     min-height: 80px;
 }
+
+/* Styling for "Advanced Options" within AI & API Config in Main Menu Modal */
+/* Targets the p and .manual-connect-step within the *nested* collapsible-content */
+#mainMenuModal .settings-section .collapsible-content .collapsible-content > p {
+    margin-bottom: var(--spacing-3);
+    font-size: 0.9em;
+    color: var(--text-color-light);
+    line-height: 1.5;
+}
+
+#mainMenuModal .settings-section .collapsible-content .collapsible-content > .manual-connect-step {
+    margin-bottom: var(--spacing-3);
+}
+
+#mainMenuModal .settings-section .collapsible-content .collapsible-content > .manual-connect-step .btn {
+    width: 100%; /* Make buttons full width */
+    margin-bottom: var(--spacing-2); /* Space below each button if they stack or before next element */
+}
+
+#mainMenuModal .settings-section .collapsible-content .collapsible-content > .manual-connect-step .btn:last-child {
+    margin-bottom: 0; /* Remove margin from the last button in a step */
+}
+
+/* Ensure textarea within a step also has appropriate margin if followed by a button or is last element */
+#mainMenuModal .settings-section .collapsible-content .collapsible-content > .manual-connect-step textarea#modalSdpText {
+    /* General .modal-body textarea styles apply for width, padding, border etc. */
+    /* Ensure bottom margin if it's not the last element in its step */
+    margin-bottom: var(--spacing-2);
+}
+/* If the copy button is directly after the textarea in the same .manual-connect-step */
+#mainMenuModal .settings-section .collapsible-content .collapsible-content > .manual-connect-step textarea#modalSdpText + button#modalCopySdpBtn {
+    /* width: 100%; is already applied by the general .btn rule above */
+    /* No specific top margin needed as textarea has bottom margin. */
+}
+
 
 /* --- 模态框: 加载与通话特定样式 --- */
 .loading-overlay {
@@ -2132,6 +2213,13 @@ input:checked + .slider::before {
 .scroll-to-latest-btn:hover {
     background-color: var(--primary-color-dark);
 }
+.wechat-pay{
+    max-width: 180px;
+    margin: 5px auto 10px auto;
+    display: block;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
 
 /* ========================================================================== */
 /* 响应式设计 (Responsive Design) */
@@ -2248,5 +2336,8 @@ input:checked + .slider::before {
     }
     .screenshot-canvas-container {
         padding: var(--spacing-1);
+    }
+    .chat-details-main-header{
+        display: none;
     }
 }

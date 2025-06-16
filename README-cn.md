@@ -1,28 +1,28 @@
-# P2P AI 角色扮演聊天平台
+# AI 角色扮演聊天平台
 
-[![GitHub stars](https://img.shields.io/github/stars/git-hub-cc/P2P-Web-Chat.svg?style=social)](https://github.com/git-hub-cc/P2P-Web-Chat/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/git-hub-cc/P2P-Web-Chat.svg?style=social)](https://github.com/git-hub-cc/P2P-Web-Chat/network/members)
+[![GitHub stars](https://img.shields.io/github/stars/git-hub-cc/PPMC.svg?style=social)](https://github.com/git-hub-cc/PPMC/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/git-hub-cc/PPMC.svg?style=social)](https://github.com/git-hub-cc/PPMC/network/members)
 
 [English Version](./README.md)
 
-一款功能丰富、现代化的点对点（P2P）Web聊天应用，前端使用原生 JavaScript、HTML 和 CSS 构建，后端采用 Java Spring Boot。它利用 WebRTC 进行直接的 P2P 通信，支持文本、文件共享、语音消息以及实时音频/视频/屏幕共享通话。通过基于 WebSocket 的信令服务器（由Java Spring Boot实现）完成初始对等发现。P2P 通讯最大限度地减少了对中央服务器的依赖（除信令与可选的 TURN 中继服务外），而AI聊天和TTS功能则通过后端代理与外部服务交互。该应用深度集成了具有文本转语音（TTS）功能的主题化AI助手联系人，AI角色拥有动态上下文（如每日随机事件和心情）并支持长对话智能摘要，带来更生动的交互体验。
+一款功能丰富、现代化的 Web 聊天应用，前端使用原生 JavaScript、HTML 和 CSS 构建，后端采用 Java Spring Boot。它利用 WebRTC 进行用户间的直接媒体通信，支持文本、文件共享、语音消息以及实时音频/视频/屏幕共享通话。通过基于 WebSocket 的信令服务器（由Java Spring Boot实现）完成初始用户发现和连接协商。WebRTC 通讯减少了对中央服务器传输大量媒体数据的依赖（除信令与可选的 TURN 中继服务外），而AI聊天和TTS功能则通过后端代理与外部服务交互。该应用深度集成了具有文本转语音（TTS）功能的主题化AI助手联系人，AI角色拥有动态上下文（如每日随机事件和心情）并支持长对话智能摘要，带来更生动的交互体验。
 
 **在线演示：**
 https://175.178.216.24/
 
 ## ✨ 功能特性
 
-*   **核心 P2P 通信 (WebRTC):**
+*   **核心通信 (WebRTC):**
     *   **一对一和群组聊天：**进行私人对话或创建群组。
         *   文本消息
         *   文件共享（图片、视频、文档）
         *   语音消息
-    *   **实时音频/视频通话：**发起和接收 P2P 音频/视频通话（一对一）。
+    *   **实时音频/视频通话：**发起和接收音频/视频通话（一对一）。
         *   视频通话支持画中画（PiP）模式，让您可以同时处理多项任务。
-    *   **屏幕共享：**与对等方共享您的屏幕。
-*   **信令与 P2P 架构：**
-    *   使用 WebSocket 服务器进行初始对等发现、offer/answer 交换和 ICE 候选者协商。
-    *   使用 WebRTC 建立直接的点对点连接。
+    *   **屏幕共享：**与聊天对象共享您的屏幕。
+*   **信令与通信架构：**
+    *   使用 WebSocket 服务器进行初始用户发现、offer/answer 交换和 ICE 候选者协商。
+    *   使用 WebRTC 建立直接的用户间媒体连接。
     *   包含用于 NAT 穿透的 STUN/TURN 服务器配置。**TURN 服务器** 用于在复杂的 NAT 环境下中继媒体流，确保连接成功率。
     *   自动尝试重新连接到信令服务器。
 *   **联系人与群组管理：**
@@ -61,7 +61,7 @@ https://175.178.216.24/
 *   **网络与连接管理：**
     *   带有 UI 指示器和质量指示器的网络状态监控。
     *   通过 SDP offer/answer 交换进行手动连接的选项。
-    *   对等方之间自动 P2P 重新连接尝试。
+    *   用户间自动 WebRTC 连接尝试。
     *   大消息/文件通过 DataChannel 分块进行可靠传输。
 *   **配置：**
     *   前端 `Config.js` 文件，方便设置信令服务器URL、TURN服务器、超时等。
@@ -80,9 +80,9 @@ https://175.178.216.24/
     ![聊天界面 - 桌面](screenshots/Chat%20Interface/Desktop/img.png)
 *   移动视图：
 *
-  <img src="./screenshots/Chat%20Interface/Mobile/01.png" alt="聊天界面 - 移动版 1" style="width:30%;">
-  <img src="./screenshots/Chat%20Interface/Mobile/02.png" alt="聊天界面 - 移动版 2" style="width:30%;">
-  <img src="./screenshots/Chat%20Interface/Mobile/03.png" alt="聊天界面 - 移动版 3" style="width:30%;">
+<img src="./screenshots/Chat%20Interface/Mobile/01.png" alt="聊天界面 - 移动版 1" style="width:30%;">
+<img src="./screenshots/Chat%20Interface/Mobile/02.png" alt="聊天界面 - 移动版 2" style="width:30%;">
+<img src="./screenshots/Chat%20Interface/Mobile/03.png" alt="聊天界面 - 移动版 3" style="width:30%;">
 
 **视频通话：**
 *   启用画中画（PiP）模式的视频通话：
@@ -100,7 +100,7 @@ https://175.178.216.24/
 
 *   **前端：** HTML5, CSS3, 原生 JavaScript (ES6+ 模块)
 *   **后端：** Java 17, Spring Boot, Spring WebFlux (用于 AI 接口), Spring WebSocket, Maven
-*   **核心 P2P 技术：** WebRTC (RTCPeerConnection, RTCDataChannel, MediaStream API)
+*   **核心通信技术：** WebRTC (RTCPeerConnection, RTCDataChannel, MediaStream API)
 *   **信令：** WebSockets
 *   **NAT 穿透：** STUN/TURN (推荐使用 Coturn)
 *   **本地存储：** IndexedDB (前端)
@@ -111,8 +111,8 @@ https://175.178.216.24/
 ## ⚙️ 工作原理
 
 1.  **初始化：**当用户打开应用时，会生成一个唯一的用户 ID 或从本地存储加载。
-2.  **信令：**客户端连接到基于 WebSocket 的信令服务器 (由 Spring Boot 应用提供)。此服务器帮助对等方发现彼此并交换建立直接连接所需的消息（如 SDP offer/answer 和 ICE 候选者）。ICE 候选者可能包含通过 STUN 服务器获取的公网地址，或在需要时通过 TURN 服务器获取的中继地址。
-3.  **P2P 连接：**信令完成后，用户之间将建立直接的 WebRTC `RTCPeerConnection` 连接。如果直接连接失败（例如由于对称 NAT），则会尝试使用配置的 TURN 服务器中继媒体流。
+2.  **信令：**客户端连接到基于 WebSocket 的信令服务器 (由 Spring Boot 应用提供)。此服务器帮助用户发现彼此并交换建立直接媒体连接所需的消息（如 SDP offer/answer 和 ICE 候选者）。ICE 候选者可能包含通过 STUN 服务器获取的公网地址，或在需要时通过 TURN 服务器获取的中继地址。
+3.  **WebRTC 连接：**信令完成后，用户之间将建立 WebRTC `RTCPeerConnection` 连接用于媒体传输。如果直接连接失败（例如由于对称 NAT），则会尝试使用配置的 TURN 服务器中继媒体流。
     *   `RTCDataChannel` 用于文本消息、文件信息、语音消息数据和群聊消息（由群主中继）。
     *   `MediaStreams` 用于音频/视频通话数据。
 4.  **AI 聊天与 TTS：**
@@ -152,7 +152,7 @@ https://175.178.216.24/
 
 ### 2. 部署 TURN 服务器 (推荐)
 
-为了在复杂的网络环境中（如对称 NAT）实现可靠的 P2P 连接，强烈建议部署 TURN 服务器。本项目提供了一个使用 Coturn 的 `docker-compose.yml` 和示例 `turnserver.conf` 文件。
+为了在复杂的网络环境中（如对称 NAT）实现可靠的 WebRTC 连接，强烈建议部署 TURN 服务器。本项目提供了一个使用 Coturn 的 `docker-compose.yml` 和示例 `turnserver.conf` 文件。
 
 1.  编辑 `turnserver.conf`，设置 `realm` (通常是您的服务器公网 IP 或域名) 和 `user` (用户名和密码)。
 2.  在包含 `docker-compose.yml` 和 `turnserver.conf` 的目录中运行：
@@ -165,10 +165,10 @@ https://175.178.216.24/
 
 1.  克隆仓库：
     ```bash
-    git clone https://github.com/git-hub-cc/P2P-Web-Chat.git 
-    cd P2P-Web-Chat
+    git clone https://github.com/git-hub-cc/PPMC.git 
+    cd PPMC
     ```
-2.  导航到 Spring Boot 项目目录 (例如, `P2P-Web-Chat-Boot`，如果后端代码在该目录下)。
+2.  导航到 Spring Boot 项目目录 (例如, `PPMC-Boot`，如果后端代码在该目录下)。
 3.  确保您的 `application.properties` (或 `.yml`) 文件已根据上述说明正确配置了 API 密钥和 URL。
 4.  使用 Maven 构建并运行服务器：
     ```bash
@@ -181,18 +181,18 @@ https://175.178.216.24/
 *   将前端静态文件 (HTML, CSS, JS, images, data, music) 部署到任何 HTTP 服务器 (例如 Nginx, Apache, 或使用 Node.js 的 `http-server`)。
 *   或者，如果 Spring Boot 配置为服务静态内容，您可以直接通过 `http://localhost:8080` 访问。
 *   **重要：**确保前端 `js/Config.js` 中的 `signalingServerUrl` 和 `apiEndpoint` (以及可能的 `ttsApiEndpoint`) 指向您正在运行的 Spring Boot 后端服务器的正确地址和端口。
-*   在两个不同的浏览器窗口或两个不同的设备上打开应用程序以测试 P2P 功能。
+*   在两个不同的浏览器窗口或两个不同的设备上打开应用程序以测试通信功能。
 
 ## 🚀 使用方法
 
-*   **用户 ID：**首次启动时会生成并存储一个唯一的用户 ID。此 ID 用于 P2P 连接。您可以从主菜单 (☰) 中找到并复制您的 ID。
+*   **用户 ID：**首次启动时会生成并存储一个唯一的用户 ID。此 ID 用于用户识别和连接。您可以从主菜单 (☰) 中找到并复制您的 ID。
 *   **主菜单 (☰)：**
     *   **用户 ID：**查看并复制您的用户 ID。
     *   **网络状态：**检查 WebRTC 能力和信令服务器连接状态。
     *   **偏好设置：**切换是否自动连接到联系人。
     *   **AI 服务器配置 (主要由后端控制)：**前端此处可能仅显示或用于特定前端覆盖，主要AI和TTS配置在后端。
     *   **主题与颜色方案：**选择您偏好的应用主题和颜色模式（浅色/深色/自动）。
-    *   **手动连接：**通过交换 SDP (会话描述协议) 信息来发起或响应手动 P2P 连接。
+    *   **手动连接：**通过交换 SDP (会话描述协议) 信息来发起或响应手动 WebRTC 连接。
     *   **危险区域：**重置连接、清除联系人或清除所有聊天记录。
 *   **添加联系人：**
     *   点击浮动操作按钮 (+) 打开“新建聊天/群组”模态框。
@@ -238,7 +238,7 @@ https://175.178.216.24/
 
 *   **核心逻辑与管理器：**
     *   `AppInitializer.js`: (应用初始化器) 初始化应用程序，设置事件监听器。
-    *   `ConnectionManager.js`: (连接管理器) 管理 WebSocket 信令和 WebRTC 对等连接。
+    *   `ConnectionManager.js`: (连接管理器) 管理 WebSocket 信令和 WebRTC 用户间媒体连接。
     *   `DBManager.js`: (数据库管理器) 处理 IndexedDB 操作以进行本地数据存储。
     *   `UserManager.js`: (用户管理器) 管理用户身份、设置和联系人。
     *   `ChatManager.js`: (聊天管理器) 管理聊天会话、加载/保存消息。
@@ -300,9 +300,9 @@ https://175.178.216.24/
 ## 💡 未来增强
 
 *   **端到端加密 (E2EE)：** 在固有的 DTLS 安全性之上，为 DataChannel 消息实现对称加密（例如 AES），以实现聊天内容的真正 E2EE。
-*   **去中心化群聊：**
-    *   探索用于较小群组的全网状 P2P 连接。
-    *   研究类似 GossipSub 的协议（例如，受 libp2p-gossipsub 启发），以实现更具可扩展性和弹性的群组消息传递。
+*   **更优化的群聊：**
+    *   探索用于较小群组的直接媒体连接。
+    *   研究类似 GossipSub 的协议（例如，受 lib-gossipsub 启发），以实现更具可扩展性和弹性的群组消息传递。
 *   **群组音视频通话：** 集成 SFU (选择性转发单元) 或 MCU (多点会议单元) 以支持多方音视频通话，因为 WebRTC 网状结构对于许多参与者而言效率低下。
 *   **离线消息：** 如果信令服务器可以为离线用户排队消息。
 *   **用户状态：** 更详细的在线/离线/输入中指示器。
@@ -323,7 +323,7 @@ https://175.178.216.24/
 
 本项目利用并受到多个概念和资源的启发。我们向其创建者和社区表示感谢。
 
-*   **WebRTC 和 WebSockets：** 使此应用程序成为可能的核心 P2P 和信令技术。感谢浏览器供应商提供这些功能。
+*   **WebRTC 和 WebSockets：** 使此应用程序成为可能的核心通信和信令技术。感谢浏览器供应商提供这些功能。
 *   **Java Spring Boot & Coturn:** 用于构建健壮和可扩展的后端服务及 TURN 中继。
 *   **AI 聊天补全 (可选功能)：**
     *   该应用程序旨在与 **OpenAI 兼容的 API 端点**集成 (通过后端 Spring Boot 应用配置)。用户需要提供自己的端点和 API 密钥。
@@ -338,17 +338,16 @@ https://175.178.216.24/
     *   角色主题 (CSS 和 JavaScript 数据文件) 是定制创建的，**灵感来源于上述 IP 的视觉风格和角色**。它们旨在用于说明目的并展示应用程序的**主题化**能力。
     *   本项目的仓库**不直接包含**这些 IP 的任何受版权保护的资产 (例如，游戏/动漫本身的原始图像、音频文件)。头像图像是说明性的表示。
 *   **信令与 TURN 服务器：**
-    *   前端 `Config.js` 文件和后端配置包含信令和 TURN 服务器的占位符配置。用户必须部署或配置自己可靠的信令 和 TURN 服务器以进行 P2P 通信，尤其是在不同网络和 NAT 之后。
+    *   前端 `Config.js` 文件和后端配置包含信令和 TURN 服务器的占位符配置。用户必须部署或配置自己可靠的信令 和 TURN 服务器以进行 WebRTC 通信，尤其是在不同网络和 NAT 之后。
 *   **音乐：**
     *   呼叫等待音乐 `/music/call.mp3` 来自哆啦A梦。
 *   **通用 Web 技术、灵感与其他感谢：**
     *   本项目使用标准的 Web 技术 (HTML, CSS, JavaScript) 和 Java Spring Boot 构建，并依赖于现代 Web 浏览器提供的功能。
-    *   灵感来源于各种 P2P 聊天应用程序以及以下资源和社区成员：
+    *   灵感来源于各种 Web 聊天应用程序以及以下资源和社区成员：
         *   **对话式 AI 服务 (示例)：** [阿里云百炼大模型平台](https://bailian.console.aliyun.com/)及类似服务。
         *   **页面布局与 UI 灵感：** [Telegram Web](https://web.telegram.org/)。
         *   **主题概念与灵感：** [@卤v (LuV)](https://space.bilibili.com/1290496974)。
         *   **素材资源：** 感谢互联网上许多无名贡献者提供的开放素材资源 (用户在使用素材时应确保合规)。
-        *   **本项目也在以下地址开源：** [https://github.com/git-hub-cc/P2P-Web-Chat](https://github.com/git-hub-cc/P2P-Web-Chat) (欢迎 Star 和 Fork！)
+        *   **本项目也在以下地址开源：** [https://github.com/git-hub-cc/PPMC](https://github.com/git-hub-cc/PPMC) (欢迎 Star 和 Fork！)
 
 **免责声明：** 本项目仅用于教育和演示目的。在使用或改编此代码时，请尊重任何外部 API、服务或知识产权的所有相关版权和服条款。
-

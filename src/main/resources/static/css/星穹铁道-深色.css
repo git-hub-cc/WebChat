@@ -41,7 +41,7 @@
     --hsr-trailblazer-primary-dark: var(--hsr-astral-express-gold);
     --hsr-trailblazer-secondary-dark: rgba(var(--hsr-astral-express-gold-rgb), 0.12); /* Slightly increased opacity */
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--hsr-astral-express-gold);
     --primary-color-dark: rgb(200, 150, 60);
     --secondary-color: var(--hsr-nebula-cluster-panel);
@@ -58,8 +58,6 @@
     --border-color: rgba(var(--hsr-meteorite-iron-border-rgb), 0.6);
     --hover-bg-color: rgba(var(--hsr-star-gleam-white-rgb), 0.05); /* Slightly more visible hover */
     --active-bg-color: rgba(var(--hsr-astral-express-gold-rgb), 0.12); /* Slightly more visible active */
-    --sidebar-width: 330px;
-    --header-height: 60px;
     --border-radius: 4px; /* Sharper, more geometric */
     --font-family: "Orbitron", "Exo 2", "Noto Sans SC", sans-serif;
     --box-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 18px rgba(var(--hsr-trailblaze-cyan-rgb),0.08) inset;
@@ -88,11 +86,7 @@ body {
 
 .app-container {
     display: flex;
-    height: 95vh; /* Max height to prevent overflow on smaller screens */
     background-color: var(--secondary-color);
-    box-shadow: 0 0 0 1px rgba(var(--hsr-trailblaze-cyan-rgb), 0.2), /* Outer glow line */
-    0 8px 35px rgba(0,0,0,0.75), /* Main shadow */
-    0 0 25px rgba(var(--hsr-astral-express-gold-rgb),0.1) inset; /* Inner gold glow */
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--hsr-meteorite-iron-border-rgb), 0.5); /* Slightly stronger border */
     overflow: hidden;
@@ -122,8 +116,6 @@ body {
     background-color: rgba(var(--hsr-deep-cosmos-bg-rgb), 0.9);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 20px;
-    padding-left: 18px; padding-right: 18px;
     font-size: 0.9em;
 
 }
@@ -150,7 +142,8 @@ body {
     border-radius: 1px;
 }
 
-.chat-list-item { border-bottom: 1px solid var(--border-color); padding: 14px 12px;  } /* Smoother transition, more padding */
+
+.chat-list-item { border-bottom: 1px solid var(--border-color);  } /* Smoother transition, more padding */
 .chat-list-item:hover { background-color: var(--hover-bg-color); }
 .chat-list-item.active {
     background-color: var(--active-bg-color);
@@ -313,10 +306,8 @@ body {
     color: var(--hsr-deep-cosmos-bg);
     box-shadow: 0 4px 10px rgba(0,0,0,0.6), 0 0 12px var(--hsr-astral-express-gold), 0 0 5px var(--hsr-trailblaze-cyan) inset; /* Enhanced shadow and inner glow */
     font-size: 1.6rem;
-    width: 52px; height: 52px;
 }
 .new-chat-fab:hover {
-    box-shadow: 0 5px 15px rgba(var(--hsr-trailblaze-cyan-rgb),0.45), 0 0 18px var(--hsr-astral-express-gold), 0 0 8px var(--hsr-trailblaze-cyan) inset;
     transform: translateY(-3px) scale(1.08); /* More pronounced hover effect */
 }
 
@@ -338,7 +329,6 @@ body {
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family);
     content: "폼폼!";
-    font-size: 64px;
     font-weight: 700;
     color: rgba(var(--hsr-astral-express-gold-rgb), 0.35);
     text-shadow: 0 0 30px rgba(var(--hsr-trailblaze-cyan-rgb), 0.3), 0 0 5px rgba(var(--hsr-astral-express-gold-rgb), 0.2);
@@ -353,7 +343,7 @@ body {
     border: 1px solid var(--border-color);
     color: var(--hsr-trailblaze-cyan);
     border-radius: var(--border-radius);
-    padding: 6px 12px;
+    padding: 6px;
     font-size: 0.88em;
     box-shadow: 0 0 5px rgba(var(--hsr-trailblaze-cyan-rgb), 0.2);
 }
@@ -363,8 +353,7 @@ body {
     border: 1px solid rgba(var(--hsr-meteorite-iron-border-rgb), 0.7); /* Slightly stronger border */
     box-shadow: 0 2px 4px rgba(0,0,0,0.6), 0 0 12px rgba(var(--hsr-trailblaze-cyan-rgb),0.05) inset; /* Refined shadow */
     border-radius: var(--border-radius);
-    padding: 12px 16px; /* More padding */
-    max-width: 75%; /* Ensure bubbles don't get too wide */
+    padding: 8px;
 }
 .message.sent {
     background-color: var(--sent-bg-color);
@@ -412,8 +401,6 @@ body {
     background-color: rgba(var(--hsr-deep-cosmos-bg-rgb), 0.95);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 22px; /* Slightly more rounded */
-    padding: 12px 18px; /* More padding */
     font-size: 0.98em;
 
 }
@@ -453,7 +440,7 @@ body {
 #aiContactDetailsContent {
     background-color: rgba(var(--hsr-nebula-cluster-panel-rgb), 0.65);
     border: 1px solid rgba(var(--hsr-meteorite-iron-border-rgb), 0.8); /* Stronger border */
-    padding: 20px; border-radius: var(--border-radius);
+    border-radius: var(--border-radius);
     box-shadow: 0 0 10px rgba(var(--hsr-deep-cosmos-bg-rgb), 0.3) inset;
 }
 #aiContactDetailsContent p strong { color: var(--hsr-trailblaze-cyan); border-bottom: 1px solid rgba(var(--hsr-trailblaze-cyan-rgb), 0.35); padding-bottom: 2px;}
@@ -467,7 +454,6 @@ body {
     letter-spacing: 1.2px; /* More spacing */
     font-weight: 700; /* Bolder */
     box-shadow: 0 2px 4px rgba(0,0,0,0.5), 0 1px 2px rgba(var(--hsr-star-gleam-white-rgb),0.05) inset, 0 0 0 1px rgba(var(--hsr-meteorite-iron-border-rgb),0.7); /* Added outline */
-    padding: 12px 24px; /* More padding */
     border: 1px solid transparent;
 }
 .btn:active { transform: translateY(1px) scale(0.98); box-shadow: 0 1px 2px rgba(0,0,0,0.6), 0 0 1px rgba(var(--hsr-star-gleam-white-rgb),0.1) inset; }
@@ -488,7 +474,6 @@ body {
     border-left-color: var(--hsr-trailblaze-cyan);
     border-bottom-color: rgba(var(--hsr-astral-express-gold-rgb),0.35);
     border-right-color: rgba(var(--hsr-trailblaze-cyan-rgb),0.35);
-    width: 50px; height: 50px;
     animation: hsr-spinner-rotate 1s linear infinite; /* Faster spin */
     border-width: 4px; /* Thicker spinner lines */
 }
@@ -518,7 +503,7 @@ body {
     background: rgba(var(--hsr-deep-cosmos-bg-rgb),0.9);
     color: var(--hsr-trailblaze-cyan);
     border: 1px dashed rgba(var(--hsr-trailblaze-cyan-rgb), 0.7); /* More prominent dashed border */
-    padding: 10px 14px;
+    padding: 10px;
     border-radius: 3px;
     font-family: var(--monospace-font); /* Monospace font */
     letter-spacing: 1px;
@@ -531,16 +516,14 @@ body {
 .video-call-button.active { background: var(--hsr-trailblaze-cyan); color: var(--hsr-deep-cosmos-bg); }
 
 /* Toggle Switch - Styled like HSR UI toggles */
-.toggle-switch { width: 48px; height: 26px; } /* Slightly larger */
 input:checked + .slider { background-color: var(--hsr-trailblaze-cyan); box-shadow: 0 0 5px var(--hsr-trailblaze-cyan) inset; }
 .slider { background-color: var(--hsr-meteorite-iron-border); border-radius: 13px;  border: 1px solid rgba(var(--hsr-deep-cosmos-bg-rgb),0.5); }
 .slider:before {
-    height: 20px; width: 20px; left: 2px; bottom: 2px; /* Adjusted size and position */
     background-color: var(--hsr-nebula-cluster-panel);
     border-radius: 50%;
     box-shadow: 0 1px 3px rgba(0,0,0,0.6);
 }
-input:checked + .slider:before { transform: translateX(56px); background-color: var(--hsr-deep-cosmos-bg); box-shadow: 0 1px 3px rgba(0,0,0,0.6), 0 0 3px var(--hsr-trailblaze-cyan); }
+input:checked + .slider:before { background-color: var(--hsr-deep-cosmos-bg); box-shadow: 0 1px 3px rgba(0,0,0,0.6), 0 0 3px var(--hsr-trailblaze-cyan); }
 
 
 /* Visibility for AI sections (matches other themes) */
@@ -576,6 +559,5 @@ input:checked + .slider:before { transform: translateX(56px); background-color: 
     color: var(--text-color);
     box-shadow: 0 5px 15px rgba(0,0,0,0.65), 0 0 8px rgba(var(--hsr-trailblaze-cyan-rgb),0.1) inset; /* Enhanced shadow */
     border-radius: var(--border-radius);
-    padding: 14px 20px; /* More padding */
 }
 .notification strong { color: var(--hsr-astral-express-gold); text-shadow: 0 0 3px rgba(var(--hsr-astral-express-gold-rgb),0.5); }

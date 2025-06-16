@@ -27,7 +27,7 @@
     --cs-border-brown-rgb: 180, 150, 120;      /* 边框棕 (蜡笔质感) */
     --cs-border-brown: rgb(var(--cs-border-brown-rgb));
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--cs-shinchan-red);
     --primary-color-dark: rgb(200, 20, 28);
     --secondary-color: var(--cs-background-light-yellow); /* 应用主背景 */
@@ -42,8 +42,6 @@
     --border-color: rgba(var(--cs-border-brown-rgb), 0.5);
     --hover-bg-color: rgba(var(--cs-shinchan-yellow-rgb), 0.3);
     --active-bg-color: rgba(var(--cs-shinchan-yellow-rgb), 0.5);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --input-area-height: auto;
     --border-radius: 6px; /* 稍显硬朗的圆角 */
     --font-family: "Comic Sans MS", "Chalkduster", "Arial Rounded MT Bold", sans-serif; /* 俏皮字体 */
@@ -73,8 +71,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--cs-shiro-white); /* 应用容器用白色，像画纸 */
-    box-shadow: 0 8px 20px rgba(var(--cs-border-brown-rgb), 0.3);
-    border-radius: 20px; /* 更大的圆角 */
     border: 3px solid var(--cs-border-brown); /* 蜡笔边框感 */
     overflow: hidden;
 }
@@ -98,7 +94,6 @@ body {
 .search-bar {
     background-color: var(--cs-shiro-white);
     border: 2px solid var(--cs-border-brown);
-    border-radius: 20px;
 }
 .search-bar:focus {
     border-color: var(--cs-shinchan-red);
@@ -141,7 +136,6 @@ body {
 .no-chat-selected .logo-placeholder {
     font-family: "Comic Sans MS", cursive, sans-serif;
     content: "🖍️"; /* 蜡笔图标 */
-    font-size: 70px;
     color: var(--cs-shinchan-red);
     text-shadow: 2px 2px rgba(var(--cs-border-brown-rgb), 0.3);
 }
@@ -149,8 +143,6 @@ body {
 
 /* 消息气泡 */
 .message {
-    padding: 10px 15px;
-    border-radius: 18px; /* 更圆的气泡 */
     box-shadow: 2px 2px 4px rgba(var(--cs-border-brown-rgb), 0.2);
     border: 1px solid transparent;
 }
@@ -165,7 +157,7 @@ body {
     border: 1px solid rgba(var(--cs-hiroshi-blue-rgb),0.3);
     border-bottom-left-radius: 5px;
 }
-.message.system { background-color: rgba(var(--cs-border-brown-rgb), 0.2); color: var(--cs-text-dark); font-style: italic; border-radius: 20px; }
+.message.system { background-color: rgba(var(--cs-border-brown-rgb), 0.2); color: var(--cs-text-dark); font-style: italic; }
 .message-sender { font-weight: bold; }
 
 /* 角色特定样式 */
@@ -242,7 +234,6 @@ body {
 #messageInput {
     background-color: var(--cs-shiro-white);
     border: 2px solid var(--cs-border-brown);
-    border-radius: 20px;
     font-family: var(--font-family), serif; /* Ensure input uses the theme font */
 }
 #messageInput:focus { border-color: var(--cs-shinchan-red); box-shadow: 0 0 0 2px rgba(var(--cs-shinchan-red-rgb),0.2); }
@@ -286,7 +277,7 @@ body {
 /* --- Modals --- */
 .loading-overlay { background-color: rgba(var(--cs-shinchan-yellow-rgb), 0.7); }
 .loading-spinner { border-top-color: var(--cs-shinchan-red); border-left-color: var(--cs-shinchan-red); }
-.modal-content { border: 3px solid var(--cs-border-brown); border-radius: 18px; }
+.modal-content { border: 3px solid var(--cs-border-brown); }
 .modal-header h2 { color: var(--cs-shinchan-red); }
 .user-id-display #modalUserIdValue { background: var(--cs-bubble-blue); color: var(--cs-text-dark); border: 1px dashed var(--cs-hiroshi-blue); }
 

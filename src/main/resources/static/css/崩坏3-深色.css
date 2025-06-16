@@ -47,7 +47,7 @@
     --hi3-rozaliya-secondary-dark: rgba(255, 105, 180, 0.2);
     --hi3-rozaliya-glow: rgba(255, 105, 180, 0.6);
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--hi3-energy-stream-cyan);
     --primary-color-dark: rgb(0, 190, 225);
     --secondary-color: var(--hi3-void-panel-bg); /* 应用主背景 */
@@ -64,8 +64,6 @@
     --border-color: rgba(var(--hi3-tech-border-rgb), 0.45); /* Slightly darker border */
     --hover-bg-color: rgba(var(--hi3-data-glow-white-rgb), 0.05); /* Less pronounced hover */
     --active-bg-color: rgba(var(--hi3-energy-stream-cyan-rgb), 0.15); /* Slightly less pronounced active */
-    --sidebar-width: 300px; /* Slightly narrower */
-    --header-height: 56px; /* Slightly shorter */
     --border-radius: 4px; /* Sharper edges */
     --border-radius-large: 6px; /* For main container */
     --font-family: "Exo 2", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif; /* Added Noto Sans for broader CJK */
@@ -89,7 +87,6 @@ body {
     background-image:
             linear-gradient(rgba(var(--hi3-tech-border-rgb), 0.03) 1px, transparent 1px),
             linear-gradient(90deg, rgba(var(--hi3-tech-border-rgb), 0.03) 1px, transparent 1px);
-    background-size: 20px 20px; /* Fine grid */
     animation: hi3-scanlines 60s linear infinite;
 }
 
@@ -102,7 +99,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(var(--hi3-herrscher-purple-rgb),0.15) inset, 0 0 50px rgba(var(--hi3-energy-stream-cyan-rgb),0.1) inset;
     border-radius: var(--border-radius-large);
     border: 1px solid var(--hi3-tech-border);
     overflow: hidden;
@@ -113,8 +109,6 @@ body {
 .app-container::before, .app-container::after {
     content: '';
     position: absolute;
-    width: 15px;
-    height: 15px;
     border-color: var(--hi3-energy-stream-cyan);
     opacity: 0.6;
     pointer-events: none;
@@ -148,7 +142,6 @@ body {
 }
 .sidebar-header {
     background-color: transparent; /* Cleaner */
-    padding: 10px 15px;
     /* height: var(--header-height); */ /* Uses removed variable */
 }
 .menu-btn { color: var(--hi3-interface-gray); }
@@ -178,7 +171,6 @@ body {
 
 .chat-list-item {
     border-bottom: 1px solid var(--border-color);
-    position: relative;
 }
 .chat-list-item:hover {
     background-color: var(--hover-bg-color);
@@ -274,7 +266,6 @@ body {
     box-shadow: 0 0 5px var(--hi3-warning-red), 0 0 8px var(--hi3-warning-red);
     border-radius: var(--border-radius);
     padding: 2px 5px;
-    font-size: 0.75rem;
     font-weight: bold;
     animation: hi3-badge-pulse 1.5s infinite alternate;
 }
@@ -287,11 +278,10 @@ body {
     background: linear-gradient(135deg, var(--hi3-energy-stream-cyan), var(--hi3-herrscher-purple));
     color: var(--hi3-data-glow-white);
     box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px var(--hi3-energy-stream-cyan), 0 0 15px var(--hi3-herrscher-purple);
-    border-radius: 50%; width: 50px; height: 50px;
+    border-radius: 50%;
 }
 .new-chat-fab:hover {
     transform: scale(1.1) rotate(45deg);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 15px var(--hi3-energy-stream-cyan), 0 0 20px var(--hi3-herrscher-purple);
 }
 
 /* --- Main Chat Area --- */
@@ -307,7 +297,7 @@ body {
 .header-action-btn { color: var(--hi3-interface-gray); }
 .header-action-btn:hover { color: var(--hi3-energy-stream-cyan); text-shadow: 0 0 5px var(--hi3-energy-stream-cyan); transform: scale(1.1); }
 
-.chat-messages-container { padding: 15px; }
+.chat-messages-container { }
 .no-chat-selected {
     display: flex;
     flex-direction: column;
@@ -350,9 +340,8 @@ body {
     100% { transform: translateY(-5px); }
 }
 .no-chat-selected .placeholder-text {
-    margin-top: 15px;
-    color: var(--hi3-interface-gray);
     font-size: 1.1em;
+    color: var(--hi3-interface-gray);
 }
 
 
@@ -369,10 +358,9 @@ body {
 .message {
     border: 1px solid var(--border-color);
     box-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 0 5px rgba(var(--hi3-tech-border-rgb),0.1) inset;
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius); /* Use consistent radius */
     position: relative;
-    padding: 8px 12px;
-    margin-bottom: 12px; /* Increased spacing */
+    padding: 8px;
 }
 /* Message bubble tail - sharper, more techy */
 .message:before {
@@ -419,14 +407,12 @@ body {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.6);
     backdrop-filter: blur(5px);
     border-top: 1px solid var(--border-color);
-    padding: 10px 15px; /* More padding */
 }
 #messageInput {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.9);
     border: 1px solid var(--hi3-tech-border);
     color: var(--text-color);
     border-radius: var(--border-radius); /* Sharper */
-    padding: 10px 15px; /* More padding */
     box-shadow: var(--box-shadow-glow);
 }
 #messageInput::placeholder { color: var(--hi3-interface-gray); }
@@ -466,7 +452,6 @@ body {
     background-color: rgba(var(--hi3-void-panel-bg-rgb), 0.3);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 15px; margin: 15px;
     box-shadow: var(--box-shadow-glow);
 }
 #aiContactDetailsContent p strong { color: var(--hi3-energy-stream-cyan); border-bottom: 1px solid rgba(var(--hi3-energy-stream-cyan-rgb), 0.3); padding-bottom: 1px; }
@@ -478,10 +463,10 @@ body {
     border-radius: var(--border-radius);
     text-transform: uppercase;
     letter-spacing: 1px; /* More spacing */
-    font-weight: 600;
+    font-weight: 600; /* Bold */
     box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 0 3px rgba(255,255,255,0.03);
     border: 1px solid var(--hi3-tech-border); /* Default border */
-    padding: 8px 15px; /* Standard padding */
+    padding: 8px;
     position: relative;
     overflow: hidden; /* For pseudo-element effects */
 }
@@ -511,13 +496,11 @@ body {
     border-left-color: var(--hi3-energy-stream-cyan);
     border-bottom-color: var(--hi3-herrscher-purple); /* Bi-color spinner */
     border-right-color: var(--hi3-herrscher-purple);
-    width: 60px; height: 60px;
     box-shadow: 0 0 10px var(--hi3-energy-stream-cyan), 0 0 10px var(--hi3-herrscher-purple);
 }
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--hi3-tech-border);
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 15px rgba(var(--hi3-energy-stream-cyan-rgb),0.2) inset, 0 0 30px rgba(var(--hi3-herrscher-purple-rgb),0.1) inset;
     border-radius: var(--border-radius-large);
     position: relative; /* For accents */
 }
@@ -525,8 +508,6 @@ body {
 .modal-content::before, .modal-content::after {
     content: '';
     position: absolute;
-    width: 20px;
-    height: 20px;
     border-color: var(--hi3-energy-stream-cyan);
     opacity: 0.7;
 }
@@ -551,7 +532,6 @@ body {
     background: rgba(var(--hi3-deep-space-bg-rgb),0.85);
     color: var(--hi3-energy-stream-cyan);
     border: 1px dashed var(--hi3-energy-stream-cyan);
-    padding: 8px 12px;
     border-radius: var(--border-radius);
     box-shadow: 0 0 5px rgba(var(--hi3-energy-stream-cyan-rgb),0.2) inset;
     letter-spacing: 1px;
@@ -564,7 +544,7 @@ body {
 .video-call-button.active { background: var(--hi3-energy-stream-cyan); color: var(--hi3-deep-space-bg); box-shadow: 0 0 10px var(--hi3-energy-stream-cyan);}
 
 /* Toggle Switch - Honkai Style */
-.switch { position: relative; display: inline-block; width: 50px; height: 24px; } /* Smaller */
+.switch { position: relative; display: inline-block; } /* Smaller */
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
@@ -573,14 +553,13 @@ body {
     border-radius: var(--border-radius); /* Sharp rectangle */
 }
 .slider:before { /* The knob */
-    position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+    position: absolute; content: ""; left: 3px; bottom: 3px;
     background-color: var(--hi3-deep-space-bg);
     border: 1px solid var(--hi3-energy-stream-cyan);
     border-radius: 2px; /* Sharp square knob */
 }
 input:checked + .slider { background-color: var(--hi3-energy-stream-cyan); box-shadow: 0 0 5px var(--hi3-energy-stream-cyan); }
 input:checked + .slider:before {
-    transform: translateX(56px); /* Adjust for new size */
     background-color: var(--hi3-data-glow-white);
     border-color: var(--hi3-deep-space-bg);
 }
@@ -610,6 +589,5 @@ input:checked + .slider:before {
     color: var(--text-color);
     border-radius: var(--border-radius);
     box-shadow: 0 2px 10px rgba(0,0,0,0.5), 0 0 5px var(--hi3-energy-stream-cyan) inset;
-    padding: 10px 15px;
 }
 .notification strong { color: var(--hi3-energy-stream-cyan); }

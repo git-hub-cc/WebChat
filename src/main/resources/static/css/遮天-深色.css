@@ -38,7 +38,7 @@
     --zt-jiangtaixu-secondary-dark: rgba(100, 180, 200, 0.15);
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--zt-divine-gold);
     --primary-color-dark: rgb(170, 120, 30);
     --secondary-color: var(--zt-star-dust-panel); /* 应用主背景 */
@@ -55,11 +55,8 @@
     --border-color: rgba(var(--zt-border-obsidian-rgb), 0.5);
     --hover-bg-color: rgba(var(--zt-text-starlight-rgb), 0.05);
     --active-bg-color: rgba(var(--zt-divine-gold-rgb), 0.15);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 5px;
     --font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
-    --box-shadow: 0 1px 2px rgba(0,0,0,0.7), 0 0 15px rgba(var(--zt-divine-gold-rgb),0.1) inset;
     --special-contact-color: var(--zt-yefan-primary-dark);
 }
 
@@ -82,7 +79,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* 应用容器主背景 */
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 25px rgba(var(--zt-divine-gold-rgb),0.08) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--zt-border-obsidian-rgb), 0.4);
     overflow: hidden;
@@ -109,7 +105,6 @@ body {
     background-color: rgba(var(--zt-deep-void-bg-rgb), 0.85);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -256,13 +251,10 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--zt-divine-gold); text-shadow: 0 0 5px var(--zt-divine-gold); }
 
-.chat-messages-container { padding: 20px; }
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     content: "道"; /* 用一个“道”字作为占位符 */
-    font-size: 70px;
     color: rgba(var(--zt-text-starlight-rgb), 0.2);
-    text-shadow: 0 0 20px rgba(var(--zt-divine-gold-rgb), 0.3);
 }
 .status-indicator.global {
     background-color: rgba(var(--zt-deep-void-bg-rgb), 0.5);
@@ -301,7 +293,6 @@ body {
     background-color: rgba(var(--zt-deep-void-bg-rgb), 0.9);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -360,7 +351,6 @@ body {
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.7), 0 0 15px rgba(var(--zt-divine-gold-rgb),0.1) inset;
 }
 .modal-header h2 { color: var(--zt-divine-gold); text-shadow: 0 0 5px rgba(var(--zt-divine-gold-rgb),0.3); }
 .close-modal-btn:hover { color: var(--zt-divine-gold); }

@@ -35,7 +35,7 @@
     --cs-shiro-secondary-dark: rgba(220, 220, 220, 0.1);
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--cs-sunny-orange);
     --primary-color-dark: rgb(230, 110, 20);
     --secondary-color: var(--cs-night-teal-bg); /* 应用主背景 */
@@ -52,8 +52,6 @@
     --border-color: rgba(var(--cs-border-storybook-rgb), 0.6);
     --hover-bg-color: rgba(var(--cs-text-chalk-white-rgb), 0.07);
     --active-bg-color: rgba(var(--cs-sunny-orange-rgb), 0.18);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 8px; /* 稍微圆润一点 */
     --font-family: "LXGW WenKai TC", "Source Han Sans CN", "Arial Rounded MT Bold", sans-serif;
     --box-shadow: 0 1px 3px rgba(0,0,0,0.5), 0 0 12px rgba(var(--cs-sunny-orange-rgb),0.12) inset;
@@ -72,18 +70,12 @@ body {
     justify-content: center;
     align-items: center;
     /* 更有童趣的背景，但不要太花哨 */
-    background: var(--cs-night-teal-bg) linear-gradient(135deg, rgba(var(--cs-funky-purple-rgb), 0.1) 25%, transparent 25%) -40px 0,
-    var(--cs-night-teal-bg) linear-gradient(225deg, rgba(var(--cs-funky-purple-rgb), 0.1) 25%, transparent 25%) -40px 0,
-    var(--cs-night-teal-bg) linear-gradient(315deg, rgba(var(--cs-funky-purple-rgb), 0.1) 25%, transparent 25%),
-    var(--cs-night-teal-bg) linear-gradient(45deg, rgba(var(--cs-funky-purple-rgb), 0.1) 25%, transparent 25%);
-    background-size: 80px 80px;
     background-color: var(--cs-night-teal-bg); /* Fallback */
 }
 
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* 应用容器主背景 */
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6), 0 0 20px rgba(var(--cs-sunny-orange-rgb),0.07) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--cs-border-storybook-rgb), 0.5);
     overflow: hidden;
@@ -110,7 +102,6 @@ body {
     background-color: rgba(var(--cs-night-teal-bg-rgb), 0.9);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 18px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -217,13 +208,11 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--cs-sunny-orange); text-shadow: 0 0 5px var(--cs-sunny-orange); }
 
-.chat-messages-container { padding: 15px; }
+.chat-messages-container { }
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family), serif;
     content: "蜡"; /* 蜡笔的蜡 */
-    font-size: 70px;
     color: rgba(var(--cs-text-chalk-white-rgb), 0.3);
-    text-shadow: 0 0 15px rgba(var(--cs-sunny-orange-rgb), 0.3);
 }
 .status-indicator.global {
     background-color: rgba(var(--cs-night-teal-bg-rgb), 0.6);
@@ -262,7 +251,6 @@ body {
     background-color: rgba(var(--cs-night-teal-bg-rgb), 0.95);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 18px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -321,7 +309,6 @@ body {
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 7px 20px rgba(0,0,0,0.6), 0 0 15px rgba(var(--cs-sunny-orange-rgb),0.1) inset;
 }
 .modal-header h2 { color: var(--cs-sunny-orange); text-shadow: 0 0 5px rgba(var(--cs-sunny-orange-rgb),0.3); }
 .close-modal-btn:hover { color: var(--cs-sunny-orange); }

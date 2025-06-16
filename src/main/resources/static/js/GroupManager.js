@@ -97,7 +97,7 @@ const GroupManager = {
                 group.name, `${group.members.length} 名成员`, '👥', true
             );
             this.clearUnread(groupId);
-            ChatAreaUIManager.setCallButtonsState(false); // 对群组禁用 P2P 通话
+            ChatAreaUIManager.setCallButtonsState(false); // 对群组禁用  通话
         } else if (!group) {
             Utils.log(`未找到要打开的群组 ${groupId}。`, Utils.logLevels.WARN);
         }
@@ -258,7 +258,7 @@ const GroupManager = {
     },
 
     /**
-     * 处理接收到的与群组相关的 P2P 消息。
+     * 处理接收到的与群组相关的  消息。
      * @param {object} message - 从数据通道接收到的消息对象。
      * @returns {Promise<void>}
      */

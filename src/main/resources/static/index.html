@@ -4,6 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PPMC</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
+    <meta name="keywords" content="PPMC, WebRTC, AI Chat, Character Chat, Role-playing, JavaScript, Spring Boot, WebSocket, Real-time Communication, Video Call, Audio Call, Screen Sharing, TTS, Text-to-Speech, Theming, Genshin Impact, Xian Ni, Battle Through the Heavens, Crayon Shin-chan, Delicious in Dungeon, Jujutsu Kaisen, AI聊天, 角色扮演, 实时通讯, 文本转语音, 原神, 仙逆, 斗破苍穹, 蜡笔小新, 迷宫饭, 咒术回战, 即时通讯, AI助手">
+    <meta name="author" content="git-hub-cc">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://175.178.216.24/">
+    <meta property="og:title" content="PPMC - AI Character Chat Platform">
+    <meta property="og:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
+    <meta property="og:image" content="https://175.178.216.24/screenshots/Chat%20Interface/Desktop/img.png"> <!-- Assuming this image is accessible at this URL -->
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://175.178.216.24/">
+    <meta property="twitter:title" content="PPMC - AI Character Chat Platform">
+    <meta property="twitter:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
+    <meta property="twitter:image" content="https://175.178.216.24/screenshots/Chat%20Interface/Desktop/img.png"> <!-- Assuming this image is accessible at this URL -->
+    <!-- End of SEO Meta Tags -->
+
     <link rel="stylesheet" href="css/base.css">
     <!-- 主题特定 CSS 占位符, href 会被 ThemeLoader.init 动态填充 -->
     <link id="theme-stylesheet" rel="stylesheet" href="css/原神-浅色.css">
@@ -132,8 +153,19 @@
                             <strong>页面布局：</strong><a href="https://web.telegram.org/" target="_blank" rel="noopener noreferrer" >telegram</a><br>
                             <strong>素材资源：</strong><a href="#" target="_blank" rel="noopener noreferrer" >网络</a><br>
                             <strong>主题概念：</strong><a href="https://space.bilibili.com/1290496974" target="_blank" rel="noopener noreferrer" >@卤v</a><br>
-                            <strong>项目开源地址：</strong><a href="https://github.com/git-hub-cc/P2P-Web-Chat" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/P2P-Web-Chat</a>
+                            <strong>项目开源地址：</strong><br>
+                            GitHub: <a href="https://github.com/git-hub-cc/PPMC" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/PPMC</a><br>
+                            Gitee: <a href="https://gitee.com/wyswydx/PPMC" target="_blank" rel="noopener noreferrer">https://gitee.com/wyswydx/PPMC</a>
                         </p>
+                        <div style="margin-top: 20px; padding-top:15px; border-top: 1px solid var(--border-color-light); text-align: center;">
+                            <p style="margin-bottom: 10px; font-size: 0.95em;">
+                                项目能走到今天，离不开各位大佬的默默付出（和咖啡续命）。<br>
+                                如果 PPMC 给你带来了哪怕一丝丝的快乐或便利，或者你只是单纯觉得本项目的猫猫开发者很可爱，不妨考虑请我们喝杯咖啡？<br>
+                                您的每一份支持，都是我们继续爆肝更新、添加更多神奇（蛇皮）功能的动力！(づ｡◕‿‿◕｡)づ
+                            </p>
+                            <img src="/img/wechat/pay.png" alt="请作者喝杯咖啡" class="wechat-pay">
+                            <p style="font-size: 0.9em; color: var(--text-color-light);">感谢您的慷慨！(〃'▽'〃)</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -308,7 +340,7 @@
                         高级选项 <span class="collapse-icon">▶</span>
                     </h4>
                     <div class="collapsible-content" style="display: none;">
-                        <p>用于信令服务器故障或需要直接点对点连接时。</p>
+                        <p>用于信令服务器故障或需要直接建立连接时。</p>
                         <div class="manual-connect-step">
                             <button id="modalCreateOfferBtn" class="btn btn-secondary">1. 创建连接提议</button>
                         </div>
@@ -373,13 +405,13 @@
         </div>
         <div class="modal-body" style="text-align: center;">
             <p>
-                P2P-Web-Chat 现已开源！我们很高兴能与社区分享。
+                PPMC 现已开源！我们很高兴能与社区分享。
             </p>
             <p>
                 您可以在 GitHub 上找到源代码并参与贡献：
                 <br>
-                <a href="https://github.com/git-hub-cc/P2P-Web-Chat" target="_blank" rel="noopener noreferrer">
-                    https://github.com/git-hub-cc/P2P-Web-Chat
+                <a href="https://github.com/git-hub-cc/PPMC" target="_blank" rel="noopener noreferrer">
+                    https://github.com/git-hub-cc/PPMC
                 </a>
             </p>
             <p>
@@ -388,7 +420,7 @@
             <p>
                 如有紧急事宜，您可以通过微信联系我们：
             </p>
-            <img src="/img/wechat.png" alt="微信二维码" style="max-width: 150px; margin: 10px auto; display: block; border: 1px solid var(--border-color);">
+            <img src="/img/wechat/wechat.png" alt="微信二维码" style="max-width: 150px; margin: 10px auto; display: block; border: 1px solid var(--border-color);">
             <p style="font-size: 0.9em; color: var(--text-color-light);">
                 此消息将在 <span id="openSourceModalTimer">8</span> 秒后自动关闭。
             </p>

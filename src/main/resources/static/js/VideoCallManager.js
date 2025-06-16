@@ -12,7 +12,7 @@
  * @property {function} acceptCall - 接听来电。
  * @property {function} rejectCall - 拒绝来电。
  * @property {function} hangUpMedia - 挂断当前通话的媒体流（不关闭连接）。
- * @property {function} handleMessage - 处理与通话相关的 P2P 消息。
+ * @property {function} handleMessage - 处理与通话相关的  消息。
  * @dependencies Config, Utils, NotificationManager, ConnectionManager, UserManager, VideoCallUIManager, ModalManager
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定通话按钮事件)
  */
@@ -778,7 +778,7 @@ const VideoCallManager = {
     },
 
     /**
-     * 处理与通话相关的 P2P 消息。
+     * 处理与通话相关的  消息。
      * @param {object} message - 从数据通道接收到的消息对象。
      * @param {string} peerId - 发送方的 ID。
      */

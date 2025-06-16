@@ -44,7 +44,7 @@
     --tg-ai-text-on-light-selection-bg: var(--tg-text-primary); /* 用于AI角色列表项选中时（如果背景是浅色）的文字颜色 */
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--tg-primary-blue);
     --primary-color-dark: rgb(0, 119, 179);
     --secondary-color: var(--tg-background-sidebar); /* 应用面板主背景 */
@@ -61,8 +61,6 @@
     --border-color: var(--tg-border-light);
     --hover-bg-color: rgba(var(--tg-primary-blue-rgb), 0.08); /* 蓝色系的悬停 */
     --active-bg-color: var(--primary-color); /* 普通激活背景用主蓝色 */
-    --sidebar-width: 320px;
-    --header-height: 56px; /* Telegram 头部通常较窄 */
     --border-radius: 8px;
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     --box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Telegram 阴影较轻 */
@@ -105,17 +103,14 @@ body {
     position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
-    padding: 8px 12px; /* 略微紧凑 */
     background-color: var(--secondary-color);
 }
-.menu-btn { color: var(--tg-icon-gray); margin-right: 15px; }
+.menu-btn { color: var(--tg-icon-gray); }
 .menu-btn:hover { color: var(--primary-color); }
 .search-bar {
     background-color: var(--tg-background-main); /* 搜索框用更浅的灰色 */
     border: 1px solid transparent; /* 无边框，焦点时显示 */
     color: var(--text-color);
-    border-radius: 18px;
-    padding: 7px 12px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -128,7 +123,7 @@ body {
 .nav-tab:hover { color: var(--primary-color); }
 .nav-tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
 
-.chat-list-item { padding: 8px 12px; border-bottom: 1px solid var(--border-color); }
+.chat-list-item { border-bottom: 1px solid var(--border-color); }
 .chat-list-item:hover { background-color: var(--hover-bg-color); }
 
 /* 普通选中 (非AI角色) */
@@ -143,10 +138,8 @@ body {
 }
 
 .chat-list-avatar {
-    width: 42px; height: 42px; /* Telegram 头像略大 */
     background-color: var(--tg-light-blue-secondary); /* 默认头像背景 */
     color: var(--text-color-inverted);
-    font-size: 18px;
 }
 
 /* --- AI 角色特定样式 (AI_CONTACT_CLASS 是一个占位符, JS会替换成具体角色类名) --- */
@@ -181,17 +174,13 @@ body {
 .chat-list-badge {
     background-color: var(--primary-color); /* 徽标用主蓝色 */
     color: var(--text-color-inverted);
-    border-radius: 12px; /* 更圆的徽章 */
     padding: 1px 7px;
-    font-size: 11px;
-    min-width: 20px;
     line-height: 1.5;
 }
 .new-chat-fab {
     background-color: var(--primary-color);
     color: var(--text-color-inverted);
     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-    width: 56px; height: 56px;
 }
 .new-chat-fab:hover { background-color: var(--primary-color-dark); }
 
@@ -200,7 +189,6 @@ body {
     background-color: var(--tg-background-chat);
     background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAAAoAQMAAAAChZ4TAAAABlBMVEUKCoP///8vjBuaAAAAAXRSTlMAQObYZgAAABZJREFUOI1jYMAHGAwYFBgMGADdGgAnEQJ1YQAAAABJRU5ErkJggg==");
     background-repeat: repeat;
-    background-size: 320px 32px;
     background-blend-mode: overlay;
 }
 .chat-header-main {
@@ -212,12 +200,11 @@ body {
 .header-action-btn { color: var(--tg-icon-gray); }
 .header-action-btn:hover { color: var(--primary-color); }
 
-.chat-messages-container { padding: 10px 16px; }
+.chat-messages-container { }
 .no-chat-selected { color: var(--text-color-light); }
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family), serif;
     content: "💬";
-    font-size: 50px;
     color: var(--tg-icon-gray);
     opacity: 0.6;
 }
@@ -226,14 +213,12 @@ body {
     border: none;
     color: var(--primary-color);
     padding: 5px 10px;
-    border-radius: 15px;
 }
 
 /* 消息气泡 */
 .message {
     border: none;
     box-shadow: 0 1px 1px rgba(0,0,0,0.08);
-    padding: 7px 12px;
     border-radius: var(--border-radius);
     max-width: 75%;
 }
@@ -250,18 +235,14 @@ body {
     background-color: rgba(var(--tg-primary-blue-rgb), 0.12);
     color: var(--primary-color);
     font-style: normal;
-    font-size: 13px;
     box-shadow: none;
-    border-radius: 15px;
 }
 .message-sender {
     color: var(--primary-color);
     font-weight: 500;
-    font-size: 13px;
     margin-bottom: 2px;
 }
 .message .timestamp {
-    font-size: 11px;
     color: var(--text-color-light);
     opacity: 0.9;
     margin-top: 3px;
@@ -269,14 +250,11 @@ body {
 .message.sent .timestamp { color: #65a052; }
 
 
-.chat-input-container { background-color: var(--secondary-color); padding: 8px 12px; }
+.chat-input-container { background-color: var(--secondary-color); }
 #messageInput {
     background-color: var(--tg-received-bubble);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 18px;
-    padding: 9px 15px;
-    min-height: 20px;
     line-height: 1.4;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
@@ -316,7 +294,6 @@ body {
     letter-spacing: 0;
     font-weight: 500;
     box-shadow: none;
-    padding: 8px 16px;
 }
 .btn-primary { background-color: var(--primary-color); color: var(--text-color-inverted); border: none; }
 .btn-primary:hover { background-color: var(--primary-color-dark); }
@@ -345,7 +322,7 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.15);
     border-radius: var(--border-radius);
 }
-.modal-header h2 { color: var(--text-color); font-size: 18px; font-weight: 500; }
+.modal-header h2 { color: var(--text-color); font-weight: 500; }
 .close-modal-btn:hover { color: var(--primary-color); }
 .modal-body input[type="text"], .modal-body textarea {
     background-color: var(--tg-received-bubble);

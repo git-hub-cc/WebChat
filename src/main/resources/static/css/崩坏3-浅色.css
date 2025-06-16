@@ -1,5 +1,3 @@
-/* --- START OF FILE 崩坏3-浅色-Enhanced.css --- */
-
 :root {
     /* 崩坏3 - 星光协议 主题色板 (Honkai Impact 3rd - Starlight Protocol Palette) */
     --hi3-hyperion-hull-bg-rgb: 242, 245, 250;       /* 休伯利安壳白 (更纯净的白) */
@@ -48,7 +46,7 @@
     --hi3-rozaliya-glow-light: rgba(233, 30, 99, 0.5);
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--hi3-tech-blue);
     --primary-color-dark: rgb(0, 120, 225);
     --secondary-color: var(--hi3-hyperion-hull-bg);
@@ -89,13 +87,11 @@ body {
     background-image:
             radial-gradient(circle at 1px 1px, rgba(var(--hi3-light-divider-line-rgb), 0.3) 1px, transparent 0),
             radial-gradient(circle at 15px 15px, rgba(var(--hi3-light-divider-line-rgb), 0.3) 1px, transparent 0);
-    background-size: 30px 30px;
 }
 
 .app-container {
     display: flex;
     background-color: var(--secondary-color);
-    box-shadow: 0 8px 25px rgba(var(--hi3-interface-dark-text-rgb),0.1), 0 0 20px rgba(var(--hi3-tech-blue-rgb),0.05) inset;
     border-radius: var(--border-radius-large);
     border: 1px solid var(--hi3-light-divider-line);
     overflow: hidden;
@@ -104,8 +100,6 @@ body {
 .app-container::before, .app-container::after {
     content: '';
     position: absolute;
-    width: 15px;
-    height: 15px;
     border-color: var(--hi3-tech-blue);
     opacity: 0.5;
 }
@@ -128,7 +122,6 @@ body {
 }
 .sidebar-header {
     background-color: transparent;
-    padding: 10px 15px;
 }
 .menu-btn { color: var(--hi3-secondary-data-text); }
 .menu-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); }
@@ -244,7 +237,6 @@ body {
     box-shadow: 0 0 4px var(--hi3-status-critical-red), 0 0 6px var(--hi3-status-critical-red);
     border-radius: var(--border-radius);
     padding: 2px 5px;
-    font-size: 0.75rem;
     font-weight: bold;
     animation: hi3-badge-pulse-light 1.5s infinite alternate;
 }
@@ -256,11 +248,10 @@ body {
     background: linear-gradient(135deg, var(--hi3-tech-blue), var(--hi3-valkyrie-orange));
     color: var(--hi3-hyperion-hull-bg);
     box-shadow: 0 2px 8px rgba(var(--hi3-interface-dark-text-rgb),0.3), 0 0 8px var(--hi3-tech-blue), 0 0 12px var(--hi3-valkyrie-orange);
-    border-radius: 50%; width: 50px; height: 50px;
+    border-radius: 50%;
 }
 .new-chat-fab:hover {
     transform: scale(1.1) rotate(45deg);
-    box-shadow: 0 4px 12px rgba(var(--hi3-interface-dark-text-rgb),0.4), 0 0 12px var(--hi3-tech-blue), 0 0 18px var(--hi3-valkyrie-orange);
 }
 
 /* --- Main Chat Area --- */
@@ -275,7 +266,7 @@ body {
 .header-action-btn { color: var(--hi3-secondary-data-text); }
 .header-action-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); transform: scale(1.1); }
 
-.chat-messages-container { padding: 15px; }
+.chat-messages-container { }
 .no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%;}
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family);
@@ -305,7 +296,7 @@ body {
     0%, 100% { transform: scale(0.8); opacity: 0.3; }
     50% { transform: scale(1.2); opacity: 0.7; }
 }
-.no-chat-selected .placeholder-text { margin-top: 15px; color: var(--hi3-secondary-data-text); font-size: 1.1em; }
+.no-chat-selected .placeholder-text { font-size: 1.1em; }
 
 
 .status-indicator.global {
@@ -323,8 +314,7 @@ body {
     box-shadow: var(--box-shadow-soft);
     border-radius: var(--border-radius);
     position: relative;
-    padding: 8px 12px;
-    margin-bottom: 12px;
+    padding: 8px;
 }
 .message:before {
     content: "";
@@ -371,14 +361,12 @@ body {
     background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.7);
     backdrop-filter: blur(5px);
     border-top: 1px solid var(--border-color);
-    padding: 10px 15px;
 }
 #messageInput {
     background-color: var(--hi3-hyperion-hull-bg);
     border: 1px solid var(--hi3-light-divider-line);
     color: var(--text-color);
     border-radius: var(--border-radius);
-    padding: 10px 15px;
     box-shadow: var(--box-shadow-soft);
 }
 #messageInput::placeholder { color: var(--text-color-light); }
@@ -417,7 +405,6 @@ body {
     background-color: rgba(var(--hi3-control-deck-panel-rgb), 0.5);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 15px; margin: 15px;
     box-shadow: var(--box-shadow-soft);
 }
 #aiContactDetailsContent p strong { color: var(--hi3-tech-blue); border-bottom: 1px solid rgba(var(--hi3-tech-blue-rgb), 0.25); padding-bottom: 1px; }
@@ -432,7 +419,7 @@ body {
     font-weight: 600;
     box-shadow: 0 1px 2px rgba(var(--hi3-interface-dark-text-rgb),0.2), inset 0 0 2px rgba(0,0,0,0.02);
     border: 1px solid var(--hi3-light-divider-line);
-    padding: 8px 15px;
+    padding: 8px;
     position: relative;
     overflow: hidden;
 }
@@ -461,21 +448,17 @@ body {
     border-left-color: var(--hi3-tech-blue);
     border-bottom-color: var(--hi3-valkyrie-orange);
     border-right-color: var(--hi3-valkyrie-orange);
-    width: 60px; height: 60px;
     box-shadow: 0 0 8px var(--hi3-tech-blue), 0 0 8px var(--hi3-valkyrie-orange);
 }
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--hi3-light-divider-line);
-    box-shadow: 0 10px 30px rgba(var(--hi3-interface-dark-text-rgb),0.2), 0 0 10px rgba(var(--hi3-tech-blue-rgb),0.1) inset;
     border-radius: var(--border-radius-large);
     position: relative;
 }
 .modal-content::before, .modal-content::after {
     content: '';
     position: absolute;
-    width: 20px;
-    height: 20px;
     border-color: var(--hi3-tech-blue);
     opacity: 0.6;
 }
@@ -500,7 +483,7 @@ body {
     background: rgba(var(--hi3-hyperion-hull-bg-rgb),0.95);
     color: var(--hi3-tech-blue);
     border: 1px dashed var(--hi3-tech-blue);
-    padding: 8px 12px;
+    padding: 8px;
     border-radius: var(--border-radius);
     box-shadow: 0 0 4px rgba(var(--hi3-tech-blue-rgb),0.15) inset;
     letter-spacing: 1px;
@@ -513,7 +496,7 @@ body {
 .video-call-button.active { background: var(--hi3-tech-blue); color: var(--hi3-hyperion-hull-bg); box-shadow: 0 0 8px var(--hi3-tech-blue);}
 
 /* Toggle Switch - Honkai Style Light */
-.switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+.switch { position: relative; display: inline-block; }
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
@@ -523,7 +506,7 @@ body {
     border-radius: var(--border-radius);
 }
 .slider:before {
-    position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+    position: absolute; content: ""; left: 3px; bottom: 3px;
     background-color: var(--hi3-hyperion-hull-bg);
     border: 1px solid var(--hi3-tech-blue);
 
@@ -531,7 +514,6 @@ body {
 }
 input:checked + .slider { background-color: var(--hi3-tech-blue); box-shadow: 0 0 5px var(--hi3-tech-blue); border-color: var(--hi3-tech-blue); }
 input:checked + .slider:before {
-    transform: translateX(56px);
     background-color: var(--hi3-hyperion-hull-bg);
     border-color: var(--hi3-interface-dark-text);
 }
@@ -560,8 +542,5 @@ input:checked + .slider:before {
     color: var(--text-color);
     border-radius: var(--border-radius);
     box-shadow: 0 2px 8px rgba(var(--hi3-interface-dark-text-rgb),0.15), 0 0 4px var(--hi3-tech-blue) inset;
-    padding: 10px 15px;
 }
 .notification strong { color: var(--hi3-tech-blue); }
-
-/* --- END OF FILE 崩坏3-浅色-Enhanced.css --- */

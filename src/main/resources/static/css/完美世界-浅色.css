@@ -33,7 +33,7 @@
     --wm-xt-ancient-light-gray: rgba(192, 192, 192, 0.8); /* 小塔-古灰 */
     --wm-cys-earthy-yellow: rgba(240, 230, 140, 0.8); /* 曹雨生-土黄 */
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--wm-brilliant-gold);
     --primary-color-dark: rgb(180, 130, 20);
     --secondary-color: var(--wm-light-bg);       /* 应用主背景 */
@@ -73,7 +73,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--wm-panel-bg); /* 应用容器用更亮的白色 */
-    box-shadow: 0 5px 20px rgba(var(--wm-text-dark-rgb),0.1), 0 0 15px rgba(var(--wm-brilliant-gold-rgb),0.03) inset;
     border-radius: var(--border-radius);
     border: 1px solid var(--wm-border-color);
     overflow: hidden;
@@ -100,7 +99,6 @@ body {
     background-color: var(--wm-panel-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 20px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -271,13 +269,11 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--wm-brilliant-gold); text-shadow: 0 0 5px var(--wm-brilliant-gold); }
 
-.chat-messages-container { padding: 20px; }
+.chat-messages-container { }
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     content: "荒"; /* 荒字 */
-    font-size: 70px;
     color: rgba(var(--wm-brilliant-gold-rgb), 0.3);
-    text-shadow: 0 0 20px rgba(var(--wm-brilliant-gold-rgb), 0.5);
 }
 .status-indicator.global {
     background-color: rgba(var(--wm-panel-bg-rgb), 0.5);
@@ -314,7 +310,6 @@ body {
     background-color: var(--wm-panel-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -374,7 +369,6 @@ body {
 .modal-content {
     background-color: var(--wm-panel-bg);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 25px rgba(var(--wm-text-dark-rgb),0.2), 0 0 15px rgba(var(--wm-brilliant-gold-rgb),0.05) inset;
 }
 .modal-header h2 { color: var(--wm-brilliant-gold); text-shadow: 0 0 5px rgba(var(--wm-brilliant-gold-rgb),0.1); }
 .close-modal-btn:hover { color: var(--wm-brilliant-gold); }

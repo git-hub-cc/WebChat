@@ -36,7 +36,7 @@
     --mgf-wingedlion-secondary-light: rgba(245, 127, 23, 0.15);
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--mgf-cooked-food-brown);
     --primary-color-dark: rgb(150, 100, 60);
     --secondary-color: var(--mgf-light-stone-panel); /* 应用主背景 */
@@ -53,8 +53,6 @@
     --border-color: rgba(var(--mgf-border-old-wood-rgb), 0.7);
     --hover-bg-color: rgba(var(--mgf-cooked-food-brown-rgb), 0.07);
     --active-bg-color: rgba(var(--mgf-cooked-food-brown-rgb), 0.15);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 6px; /* 略圆润的边角 */
     --font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
     --box-shadow: 0 1px 3px rgba(var(--mgf-text-ink-brown-rgb),0.12), 0 0 8px rgba(var(--mgf-cooked-food-brown-rgb),0.06) inset;
@@ -81,7 +79,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* 应用容器主背景 */
-    box-shadow: 0 6px 25px rgba(var(--mgf-text-ink-brown-rgb),0.12), 0 0 15px rgba(var(--mgf-cooked-food-brown-rgb),0.08) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--mgf-border-old-wood-rgb), 0.5);
     overflow: hidden;
@@ -108,7 +105,6 @@ body {
     background-color: rgba(var(--mgf-parchment-bg-rgb), 0.9);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -253,13 +249,10 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--mgf-cooked-food-brown); text-shadow: 0 0 2px var(--mgf-cooked-food-brown); }
 
-.chat-messages-container { padding: 15px; }
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     content: "锅"; /* 用一个“锅”字作为占位符 */
-    font-size: 60px;
     color: rgba(var(--mgf-cooked-food-brown-rgb), 0.45);
-    text-shadow: 0 0 12px rgba(var(--mgf-border-old-wood-rgb), 0.6);
 }
 .status-indicator.global {
     background-color: rgba(var(--mgf-parchment-bg-rgb), 0.6);
@@ -300,7 +293,6 @@ body {
     background-color: var(--mgf-parchment-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -359,7 +351,6 @@ body {
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 6px 20px rgba(var(--mgf-text-ink-brown-rgb),0.25), 0 0 12px rgba(var(--mgf-cooked-food-brown-rgb),0.06) inset;
 }
 .modal-header h2 { color: var(--mgf-cooked-food-brown); text-shadow: 0 0 2px rgba(var(--mgf-cooked-food-brown-rgb),0.25); }
 .close-modal-btn:hover { color: var(--mgf-cooked-food-brown); }

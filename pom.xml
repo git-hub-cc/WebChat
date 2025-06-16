@@ -1,130 +1,130 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.5.0</version>
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
-    <groupId>club.ppmc</groupId>
-    <artifactId>Web-Chat</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>Web-Chat</name>
-    <description>A feature-rich, modern Peer-to-Peer (P2P) web chat application built with vanilla JavaScript, HTML, and CSS for the frontend, and Java Spring Boot for the backend. It utilizes WebRTC for direct P2P communication, supporting text, file sharing, voice messages, and real-time audio/video/screen-sharing calls. Initial peer discovery is handled by a WebSocket-based signaling server (implemented in Java Spring Boot). P2P communication minimizes reliance on a central server (except for signaling and optional TURN relay services), while AI chat and TTS functionalities are proxied through the backend to external services. The application is deeply integrated with themable AI assistant contacts featuring Text-to-Speech (TTS), dynamic context (like daily random events and moods), and smart summarization for long conversations, offering a more vivid interactive experience.</description>
+<modelVersion>4.0.0</modelVersion>
+<parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.5.0</version>
+    <relativePath/> <!-- lookup parent from repository -->
+</parent>
+<groupId>club.ppmc</groupId>
+<artifactId>Web-Chat</artifactId>
+<version>0.0.1-SNAPSHOT</version>
+<name>Web-Chat</name>
+<description>A feature-rich, modern web chat application built with vanilla JavaScript, HTML, and CSS for the frontend, and Java Spring Boot for the backend. It utilizes WebRTC for direct user-to-user media communication, supporting text, file sharing, voice messages, and real-time audio/video/screen-sharing calls. Initial user discovery is handled by a WebSocket-based signaling server (implemented in Java Spring Boot). Direct media communication minimizes reliance on a central server for heavy data transfer (except for signaling and optional TURN relay services), while AI chat and TTS functionalities are proxied through the backend to external services. The application is deeply integrated with themable AI assistant contacts featuring Text-to-Speech (TTS), dynamic context (like daily random events and moods), and smart summarization for long conversations, offering a more vivid interactive experience.</description>
+<url/>
+<licenses>
+    <license/>
+</licenses>
+<developers>
+    <developer/>
+</developers>
+<scm>
+    <connection/>
+    <developerConnection/>
+    <tag/>
     <url/>
-    <licenses>
-        <license/>
-    </licenses>
-    <developers>
-        <developer/>
-    </developers>
-    <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
-    </scm>
-    <properties>
-        <java.version>17</java.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    </properties>
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-json</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-logging</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
-    </dependencies>
+</scm>
+<properties>
+    <java.version>17</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+</properties>
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-websocket</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-json</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-logging</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+</dependencies>
 
-    <build>
-        <resources>
-            <resource>
-                <directory>src/main/resources</directory>
-                <includes>
-                    <include>**/*</include>
-                </includes>
-            </resource>
-        </resources>
+<build>
+    <resources>
+        <resource>
+            <directory>src/main/resources</directory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+        </resource>
+    </resources>
 
-        <plugins>
-            <!-- Spring Boot Maven Plugin -->
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+    <plugins>
+        <!-- Spring Boot Maven Plugin -->
+        <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>repackage</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
 
-            <!-- 用于执行 Python 脚本的插件 -->
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.2.0</version>
-                <executions>
-                    <!-- clean 时，删除 .min 文件 -->
-                    <execution>
-                        <id>run-delete-script-on-clean</id>
-                        <phase>pre-clean</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>python</executable>
-                            <workingDirectory>${project.basedir}</workingDirectory>
-                            <arguments>
-                                <argument>script/01delete_min_files.py</argument>
-                            </arguments>
-                            <environmentVariables>
-                                <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>
-                            </environmentVariables>
-                        </configuration>
-                    </execution>
+        <!-- 用于执行 Python 脚本的插件 -->
+        <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.2.0</version>
+            <executions>
+                <!-- clean 时，删除 .min 文件 -->
+                <execution>
+                    <id>run-delete-script-on-clean</id>
+                    <phase>pre-clean</phase>
+                    <goals>
+                        <goal>exec</goal>
+                    </goals>
+                    <configuration>
+                        <executable>python</executable>
+                        <workingDirectory>${project.basedir}</workingDirectory>
+                        <arguments>
+                            <argument>script/01delete_min_files.py</argument>
+                        </arguments>
+                        <environmentVariables>
+                            <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>
+                        </environmentVariables>
+                    </configuration>
+                </execution>
 
-                    <!-- ======================================================= -->
-                    <!--          核心修改：将打包时机提前到 generate-resources         -->
-                    <!-- ======================================================= -->
-                    <execution>
-                        <id>run-compress-script-before-package</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                        <configuration>
-                            <executable>python</executable>
-                            <workingDirectory>${project.basedir}</workingDirectory>
-                            <arguments>
-                                <argument>script/02compress_frontend.py</argument>
-                            </arguments>
-                            <environmentVariables>
-                                <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>
-                            </environmentVariables>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+                <!-- ======================================================= -->
+                <!--          核心修改：将打包时机提前到 generate-resources         -->
+                <!-- ======================================================= -->
+                <execution>
+                    <id>run-compress-script-before-package</id>
+                    <phase>generate-resources</phase>
+                    <goals>
+                        <goal>exec</goal>
+                    </goals>
+                    <configuration>
+                        <executable>python</executable>
+                        <workingDirectory>${project.basedir}</workingDirectory>
+                        <arguments>
+                            <argument>script/02compress_frontend.py</argument>
+                        </arguments>
+                        <environmentVariables>
+                            <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>
+                        </environmentVariables>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+    </plugins>
+</build>
 </project>

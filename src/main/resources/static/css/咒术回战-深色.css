@@ -84,7 +84,7 @@
     --jjk-nanami-glow: rgba(var(--jjk-nanami-primary-rgb), 0.25);
     --jjk-nanami-avatar-text: var(--jjk-text-primary);
 
-    /* --- Overrides for P2P Chat base variables --- */
+    /* --- Overrides for  Chat base variables --- */
     --primary-color: var(--jjk-accent-primary);
     --primary-color-dark: var(--jjk-accent-primary-darker);
     --secondary-color: var(--jjk-bg-void);
@@ -102,8 +102,6 @@
     --hover-bg-color: var(--jjk-hover-bg);
     --active-bg-color: rgba(var(--jjk-active-bg-base-rgb), var(--jjk-active-bg-opacity));
 
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 4px; /* Sharper edges for JJK style */
     --font-family: "Inter", "Source Han Sans CN", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
     /* Thematic Shadow: "Cursed Aura" - sharper, slightly energetic */
@@ -139,10 +137,6 @@ body {
     background-color: var(--jjk-bg-panel);
     /* Thematic border: "Barrier" or "Seal" */
     border: 1px solid var(--jjk-border-stronger);
-    box-shadow:
-            0 8px 25px rgba(0,0,0,0.6), /* Stronger outer shadow */
-            inset 0 0 0 1.5px var(--jjk-border-stronger), /* Thicker inset border */
-            inset 0 0 15px rgba(var(--jjk-accent-primary-rgb), 0.08); /* Inner glow */
     border-radius: var(--border-radius);
     overflow: hidden;
     position: relative; /* For pseudo-elements if needed */
@@ -177,7 +171,6 @@ body {
 .sidebar-header {
     background-color: rgba(var(--jjk-bg-panel-rgb), 0.5); /* Slightly distinct */
     border-bottom: 1px solid var(--jjk-border-stronger);
-    padding: 12px 15px; /* Consistent padding */
 }
 .menu-btn:hover { color: var(--jjk-accent-primary); transform: scale(1.1); }
 .search-bar {
@@ -185,7 +178,6 @@ body {
     border: 1px solid var(--jjk-border);
     color: var(--text-color);
     border-radius: var(--border-radius);
-    padding: 10px 15px;
 }
 .search-bar::placeholder { color: var(--jjk-text-tertiary); }
 .search-bar:focus {
@@ -204,7 +196,6 @@ body {
 
 .chat-list-item {
     border-bottom: 1px solid var(--jjk-border);
-    padding: 12px 15px;
 }
 .chat-list-item:hover {
     background-color: var(--jjk-hover-bg);
@@ -350,7 +341,6 @@ body {
 .chat-avatar-main.AI_两面宿傩, .details-avatar.AI_两面宿傩, #callingModalAvatar.AI_两面宿傩 {
     background-color: var(--jjk-sukuna-primary-dark); color: var(--jjk-sukuna-avatar-text);
     border: 1.5px solid var(--jjk-sukuna-avatar-text); /* Sukuna's markings are often black on red skin */
-    box-shadow: 0 0 12px var(--jjk-sukuna-glow), 0 0 5px var(--jjk-sukuna-primary-dark) inset, 0 0 1px 1px var(--jjk-sukuna-avatar-text); /* Stronger presence */
     /* Add Sukuna's markings with pseudo-elements if desired, e.g. a simple line */
 }
 /* Example for Sukuna's simple marking */
@@ -368,7 +358,6 @@ body {
 */
 .chat-list-item.active.AI_两面宿傩 {
     background-color: var(--jjk-sukuna-secondary-dark);
-    box-shadow: inset 4px 0 0 var(--jjk-sukuna-primary-dark), 0 0 12px var(--jjk-sukuna-glow) inset, inset 0 0 5px rgba(var(--jjk-sukuna-avatar-text-rgb), 0.3);
 }
 .chat-list-item.active.AI_两面宿傩 .chat-list-name,
 .chat-header-main.current-chat-AI_两面宿傩 .chat-title-main,
@@ -421,7 +410,6 @@ body {
     color: var(--jjk-text-primary);
     box-shadow: 0 0 8px var(--jjk-accent-danger-glow), 0 0 0 1px rgba(0,0,0,0.3); /* More prominent */
     padding: 3px 8px; /* Slightly more padding */
-    font-size: 11.5px;
     font-weight: 600;
     border-radius: 10px; /* Pill shape */
 }
@@ -432,7 +420,6 @@ body {
 }
 .new-chat-fab:hover {
     background-color: var(--jjk-accent-primary-darker);
-    box-shadow: 0 5px 15px rgba(var(--jjk-accent-primary-rgb),0.6), 0 0 0 2px rgba(var(--jjk-bg-void-rgb),0.3);
     transform: translateY(-2px) scale(1.05);
 }
 
@@ -441,7 +428,6 @@ body {
 .chat-header-main {
     background-color: rgba(var(--jjk-bg-panel-rgb), 0.7); /* Slightly translucent to hint at bg */
     border-bottom: 1px solid var(--jjk-border-stronger);
-    padding: 0 20px; /* Consistent padding */
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 .chat-avatar-main {
@@ -452,7 +438,7 @@ body {
 .header-action-btn { color: var(--jjk-text-secondary);  }
 .header-action-btn:hover { color: var(--jjk-accent-primary); transform: scale(1.15); text-shadow: 0 0 5px var(--jjk-accent-primary-glow); }
 
-.chat-messages-container { padding: 20px; }
+.chat-messages-container { }
 .no-chat-selected {
     display: flex;
     flex-direction: column;
@@ -463,16 +449,9 @@ body {
 }
 .no-chat-selected .logo-placeholder {
     font-family: "Noto Serif SC", serif;
-    font-size: 100px; /* Larger */
     font-weight: bold;
     color: rgba(var(--jjk-text-primary-rgb), 0.08); /* More subtle base color */
     /* "Cursed Mark" effect for the placeholder */
-    text-shadow:
-            0 0 5px rgba(var(--jjk-accent-danger-rgb), 0.1),
-            0 0 15px rgba(var(--jjk-accent-danger-rgb), 0.1),
-            0 0 30px rgba(var(--jjk-accent-primary-rgb), 0.15),
-            1px 1px 0px var(--jjk-border-stronger), /* Sharp edge */
-            -1px -1px 0px var(--jjk-border-stronger);
     position: relative;
     animation: jjk-placeholder-pulse 3s infinite ease-in-out;
 }
@@ -481,7 +460,6 @@ body {
     50% { transform: scale(1.03); opacity: 1; }
 }
 .no-chat-selected .placeholder-text {
-    margin-top: 15px;
     font-size: 1.1em;
     color: var(--jjk-text-tertiary);
     font-style: italic;
@@ -491,7 +469,6 @@ body {
     background-color: var(--jjk-bg-panel);
     border: 1px solid var(--jjk-border);
     color: var(--jjk-accent-secondary);
-    padding: 8px 14px;
     box-shadow: var(--box-shadow);
 }
 
@@ -500,8 +477,6 @@ body {
     border: 1px solid var(--jjk-border);
     box-shadow: var(--box-shadow);
     border-radius: var(--border-radius); /* Use consistent radius */
-    padding: 10px 15px; /* More padding */
-    margin-bottom: 12px; /* Increased spacing */
     position: relative; /* For potential pseudo-elements like tails */
 }
 /* Basic tail for message bubbles - can be refined */
@@ -536,15 +511,13 @@ body {
     box-shadow: 0 0 5px var(--jjk-accent-secondary-glow) inset;
     text-align: center;
     font-style: italic;
-    padding: 8px 12px;
 }
 .message-sender { color: var(--jjk-text-secondary); font-weight: 500; margin-bottom: 4px; display: block; }
-.message .timestamp { color: var(--jjk-text-tertiary); opacity: 0.75; font-size: 10.5px; }
+.message .timestamp { color: var(--jjk-text-tertiary); opacity: 0.75; }
 
 .chat-input-container {
     background-color: var(--jjk-bg-void);
     border-top: 1px solid var(--jjk-border-stronger);
-    padding: 12px 18px;
     box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
 }
 #messageInput {
@@ -552,7 +525,6 @@ body {
     border: 1px solid var(--jjk-border);
     color: var(--text-color);
     border-radius: var(--border-radius);
-    padding: 12px 16px; /* Larger input */
 }
 #messageInput::placeholder { color: var(--jjk-text-tertiary); }
 #messageInput:focus {
@@ -582,20 +554,16 @@ body {
 .details-header {
     background-color: rgba(var(--jjk-bg-panel-rgb), 0.5);
     border-bottom: 1px solid var(--jjk-border-stronger);
-    padding: 15px; /* More padding */
 }
 .details-avatar {
     border: 2px solid var(--jjk-border);
-    box-shadow: 0 0 15px rgba(0,0,0, 0.4), 0 0 0 2px var(--jjk-bg-void); /* Stronger definition */
-    /* width: 80px; height: 80px; */ /* Removed fixed dimensions */
 }
 #detailsName { text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.2em; font-weight: 600; margin-top: 8px;}
 #aiContactDetailsContent {
     background-color: var(--jjk-bg-panel-translucent);
     backdrop-filter: blur(6px);
     border: 1px solid var(--jjk-border);
-    padding: 18px;
-    margin: 15px; border-radius: var(--border-radius);
+    border-radius: var(--border-radius);
     box-shadow: var(--box-shadow);
 }
 #aiContactDetailsContent p strong {
@@ -617,7 +585,6 @@ body {
     letter-spacing: 0.8px; /* Wider spacing */
     font-weight: 600; /* Bold */
     box-shadow: 0 2px 3px rgba(0,0,0,0.25), inset 0 -1.5px 0 rgba(0,0,0,0.2); /* Stronger 3D effect */
-    padding: 10px 20px;
     border: 1px solid transparent; /* Base border */
 }
 .btn:active { transform: translateY(1.5px) scale(0.98); box-shadow: 0 0 1px rgba(0,0,0,0.2);}
@@ -635,23 +602,17 @@ body {
 /* --- Modals (Refined) --- */
 .loading-overlay { background-color: rgba(var(--jjk-bg-void-rgb), 0.92); backdrop-filter: blur(5px); }
 .loading-spinner {
-    width: 45px; height: 45px; border-width: 5px;
     border-top-color: var(--jjk-accent-primary);
     border-left-color: var(--jjk-accent-primary);
     border-bottom-color: var(--jjk-accent-primary-glow);
     border-right-color: var(--jjk-accent-primary-glow);
     animation: spin 0.8s linear infinite, jjk-spinner-glow 1.6s ease-in-out infinite alternate;
 }
-@keyframes jjk-spinner-glow {
-    from { box-shadow: 0 0 5px var(--jjk-accent-primary-glow); }
-    to { box-shadow: 0 0 15px 3px var(--jjk-accent-primary-glow); }
-}
+
 .modal-content {
     background-color: var(--jjk-bg-panel-translucent);
     backdrop-filter: blur(12px); /* Stronger blur for "domain" feel */
     border: 1.5px solid var(--jjk-border-stronger);
-    box-shadow: 0 10px 35px rgba(0,0,0,0.65), inset 0 0 0 1px var(--jjk-border), 0 0 20px var(--jjk-border-cursed);
-    padding: 30px; /* More padding */
     border-radius: var(--border-radius);
 }
 .modal-header h2 {
@@ -660,16 +621,15 @@ body {
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 0 5px var(--jjk-accent-primary-glow);
     border-bottom: 1px solid var(--jjk-border-cursed);
-    padding-bottom: 10px; margin-bottom: 15px;
+    padding-bottom: 10px;
 }
-.close-modal-btn { font-size: 1.5em; top: 15px; right: 15px; }
+.close-modal-btn { font-size: 1.5em; }
 .close-modal-btn:hover { color: var(--jjk-accent-danger); transform: rotate(90deg) scale(1.1); }
 .modal-body input[type="text"], .modal-body textarea, .modal-body input[type="password"], .modal-body input[type="number"] {
     background-color: rgba(var(--jjk-bg-void-rgb), 0.75);
     color: var(--text-color);
     border: 1px solid var(--jjk-border);
     border-radius: var(--border-radius);
-    padding: 12px 14px; /* Consistent padding */
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus, .modal-body input[type="password"]:focus, .modal-body input[type="number"]:focus {
     border-color: var(--jjk-accent-primary);
@@ -679,7 +639,7 @@ body {
     background: rgba(var(--jjk-bg-void-rgb),0.85);
     color: var(--jjk-accent-primary);
     border: 1.5px dashed var(--jjk-accent-primary);
-    padding: 10px 14px;
+    padding: 10px;
     font-size: 1em;
     font-weight: 500;
     box-shadow: 0 0 5px var(--jjk-accent-primary-glow) inset;
@@ -700,7 +660,6 @@ input:checked + .slider { background-color: var(--jjk-accent-primary); box-shado
 .slider { background-color: var(--jjk-border-stronger);  }
 .slider:before { background-color: var(--jjk-text-primary); box-shadow: 0 1px 2px rgba(0,0,0,0.3);  }
 input:focus + .slider { box-shadow: 0 0 0 3px var(--jjk-accent-primary-glow); }
-input:checked + .slider:before { transform: translateX(56px) rotate(360deg); background-color: var(--jjk-text-inverted); } /* Slider nob animation */
 
 
 /* Ensure specific hidden parts are hidden (consistency with base.css) */
@@ -732,10 +691,8 @@ input:checked + .slider:before { transform: translateX(56px) rotate(360deg); bac
     backdrop-filter: blur(10px); /* Enhanced blur */
     border-left: 5px solid var(--jjk-accent-primary); /* Thicker accent border */
     color: var(--text-color);
-    box-shadow: 0 5px 18px rgba(0,0,0,0.4), 0 0 8px var(--jjk-border-cursed); /* More prominent shadow */
     border-radius: var(--border-radius);
-    padding: 12px 18px; /* More padding */
 }
-.notification.notification-error { border-left-color: var(--jjk-accent-danger); box-shadow: 0 5px 18px rgba(0,0,0,0.4), 0 0 8px var(--jjk-accent-danger-glow); }
-.notification.notification-warning { border-left-color: var(--jjk-accent-warning); box-shadow: 0 5px 18px rgba(0,0,0,0.4), 0 0 8px var(--jjk-accent-warning-glow); }
-.notification.notification-success { border-left-color: var(--jjk-accent-secondary); box-shadow: 0 5px 18px rgba(0,0,0,0.4), 0 0 8px var(--jjk-accent-secondary-glow); }
+.notification.notification-error { border-left-color: var(--jjk-accent-danger); }
+.notification.notification-warning { border-left-color: var(--jjk-accent-warning); }
+.notification.notification-success { border-left-color: var(--jjk-accent-secondary); }

@@ -2,7 +2,8 @@
  * @file ConnectionManager.js
  * @description 核心连接管理器，负责处理 WebRTC 对等连接和与信令服务器的 WebSocket 通信。
  *              实现了心跳机制以保持 WebSocket 活跃，以及指数退避的自动重连策略。
- *              新增：处理消息撤回的P2P信令。自动连接逻辑现在会优先尝试连接在线的好友。
+ *              新增：处理消息撤回的信令。自动连接逻辑现在会优先尝试连接在线的好友。
+ *              sendTo 方法现在在调用 Utils.sendInChunks 时传递 dataChannel 对象。
  * @module ConnectionManager
  * @exports {object} ConnectionManager - 对外暴露的单例对象，包含所有连接管理功能。
  * @property {function} initialize - 初始化并连接到 WebSocket 信令服务器。
@@ -231,8 +232,8 @@ const ConnectionManager = {
         if (isManual) { Utils.log("ConnectionManager: 手动创建提议。", Utils.logLevels.INFO); targetPeerId = this.MANUAL_PLACEHOLDER_PEER_ID; }
         else {
             if (UserManager.isSpecialContact(targetPeerId) && UserManager.contacts[targetPeerId]?.isAI) {
-                if (!isSilent) NotificationManager.showNotification(`无法与 ${UserManager.contacts[targetPeerId]?.name || "AI"} 进行 P2P 连接。`, "info");
-                else Utils.log(`ConnectionManager: 已跳过向 AI ${UserManager.contacts[targetPeerId]?.name} 发送 P2P 提议。`, Utils.logLevels.DEBUG); return;
+                if (!isSilent) NotificationManager.showNotification(`无法与 ${UserManager.contacts[targetPeerId]?.name || "AI"} 进行  连接。`, "info");
+                else Utils.log(`ConnectionManager: 已跳过向 AI ${UserManager.contacts[targetPeerId]?.name} 发送  提议。`, Utils.logLevels.DEBUG); return;
             }
             if (!targetPeerId && ChatManager.currentChatId && ChatManager.currentChatId !== UserManager.userId && !ChatManager.currentChatId.startsWith('group_')) targetPeerId = ChatManager.currentChatId;
             if (!targetPeerId && !isSilent) { targetPeerId = prompt('请输入对方 ID:'); promptedForId = true; if (!targetPeerId) { NotificationManager.showNotification("已取消: 未提供对方 ID。", "info"); return; } }
@@ -647,7 +648,7 @@ const ConnectionManager = {
                 } else if (messageObjectToProcess.groupId || messageObjectToProcess.type?.startsWith('group-')) {
                     GroupManager.handleGroupMessage(messageObjectToProcess);
                 } else {
-                    ChatManager.addMessage(finalPeerId, messageObjectToProcess); // 注意: P2P chatId 是 finalPeerId
+                    ChatManager.addMessage(finalPeerId, messageObjectToProcess); // 注意:  chatId 是 finalPeerId
                 }
             } catch (e) {
                 Utils.log(`ConnectionManager: 来自 ${finalPeerId} 的数据通道 onmessage 严重错误: ${e.message}. 数据: ${String(event.data).substring(0,100)} 堆栈: ${e.stack}`, Utils.logLevels.ERROR);
@@ -713,12 +714,34 @@ const ConnectionManager = {
         const conn = this.connections[peerId];
         if (conn?.dataChannel?.readyState === 'open') {
             try {
-                messageObject.sender = messageObject.sender || UserManager.userId; messageObject.timestamp = messageObject.timestamp || new Date().toISOString();
+                messageObject.sender = messageObject.sender || UserManager.userId;
+                messageObject.timestamp = messageObject.timestamp || new Date().toISOString();
                 const messageString = JSON.stringify(messageObject);
-                if (messageString.length > Config.chunkSize) Utils.sendInChunks(messageString, (chunk) => conn.dataChannel.send(chunk), peerId, (messageObject.type === 'file' || messageObject.type === 'audio') ? (messageObject.fileId || messageObject.fileName || `blob-${Date.now()}`) : undefined );
-                else conn.dataChannel.send(messageString); return true;
-            } catch (error) { Utils.log(`ConnectionManager: 通过数据通道向 ${peerId} 发送时出错: ${error}`, Utils.logLevels.ERROR); return false; }
-        } else { Utils.log(`ConnectionManager: 无法发送到 ${peerId}: 数据通道未打开/不存在。DC: ${conn?.dataChannel?.readyState}, PC: ${conn?.peerConnection?.connectionState}`, Utils.logLevels.WARN); return false; }
+
+                if (messageString.length > Config.chunkSize) {
+                    // Utils.sendInChunks 现在期望 dataChannel 对象作为第二个参数
+                    Utils.sendInChunks(
+                        messageString,
+                        conn.dataChannel, // 传递 dataChannel 对象
+                        peerId,
+                        (messageObject.type === 'file' || messageObject.type === 'audio') ? (messageObject.fileId || messageObject.fileName || `blob-${Date.now()}`) : undefined
+                    );
+                } else {
+                    conn.dataChannel.send(messageString);
+                }
+                return true;
+            } catch (error) {
+                Utils.log(`ConnectionManager: 通过数据通道向 ${peerId} 发送时出错: ${error.message}`, Utils.logLevels.ERROR);
+                // 对于 'RTCDataChannel send queue is full' 这种特定错误，可以添加更具体的日志或处理
+                if (error.name === 'OperationError' && error.message.includes('send queue is full')) {
+                    Utils.log(`ConnectionManager: RTCDataChannel send queue is full for ${peerId}. Message size: ${messageString.length}. Buffered: ${conn.dataChannel.bufferedAmount}`, Utils.logLevels.WARN);
+                }
+                return false;
+            }
+        } else {
+            Utils.log(`ConnectionManager: 无法发送到 ${peerId}: 数据通道未打开/不存在。DC: ${conn?.dataChannel?.readyState}, PC: ${conn?.peerConnection?.connectionState}`, Utils.logLevels.WARN);
+            return false;
+        }
     },
 
     /**

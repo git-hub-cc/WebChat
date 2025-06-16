@@ -33,7 +33,7 @@
     --xn-shisan-primary-dark: #8D6E63; /* 岩土棕 (十三) */
     --xn-shisan-secondary-dark: rgba(141, 110, 99, 0.2);
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--xn-blood-essence-red); /* 用血煞红作为主交互色，体现仙逆的"逆"与杀伐 */
     --primary-color-dark: rgb(130, 20, 25);
     --secondary-color: var(--xn-ink-panel); /* 应用主背景 */
@@ -50,8 +50,6 @@
     --border-color: rgba(var(--xn-border-dark-rgb), 0.6);
     --hover-bg-color: rgba(var(--xn-soul-silver-rgb), 0.04);
     --active-bg-color: rgba(var(--xn-blood-essence-red-rgb), 0.1);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 4px; /* 更锐利的边角，体现修仙界的冷硬 */
     --font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
     --box-shadow: 0 1px 2px rgba(0,0,0,0.8), 0 0 10px rgba(var(--xn-ancient-cyan-rgb),0.05) inset;
@@ -77,7 +75,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* 应用容器主背景 */
-    box-shadow: 0 10px 35px rgba(0,0,0,0.9), 0 0 20px rgba(var(--xn-blood-essence-red-rgb),0.07) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--xn-border-dark-rgb), 0.5);
     overflow: hidden;
@@ -104,7 +101,6 @@ body {
     background-color: rgba(var(--xn-deep-black-bg-rgb), 0.9);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -249,13 +245,11 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--xn-blood-essence-red); text-shadow: 0 0 5px var(--xn-blood-essence-red); }
 
-.chat-messages-container { padding: 20px; }
+.chat-messages-container { }
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     content: "逆"; /* 用一个“逆”字作为占位符 */
-    font-size: 70px;
     color: rgba(var(--xn-soul-silver-rgb), 0.15);
-    text-shadow: 0 0 20px rgba(var(--xn-blood-essence-red-rgb), 0.2);
 }
 .status-indicator.global {
     background-color: rgba(var(--xn-deep-black-bg-rgb), 0.5);
@@ -294,7 +288,6 @@ body {
     background-color: rgba(var(--xn-deep-black-bg-rgb), 0.9);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -354,7 +347,6 @@ body {
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.7), 0 0 15px rgba(var(--xn-blood-essence-red-rgb),0.1) inset;
 }
 .modal-header h2 { color: var(--xn-blood-essence-red); text-shadow: 0 0 5px rgba(var(--xn-blood-essence-red-rgb),0.3); }
 .close-modal-btn:hover { color: var(--xn-blood-essence-red); }

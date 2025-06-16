@@ -2,12 +2,13 @@
  * @file Utils.js
  * @description 提供一系列通用工具函数，供整个应用程序使用。
  *              包括日志记录、HTML 转义、网络检查、数据分片处理、ID 生成和日期格式化等。
+ *              sendInChunks 现在实现了基于 RTCDataChannel.bufferedAmount 的背压控制。
  * @module Utils
  * @exports {object} Utils - 对外暴露的单例对象，包含所有工具函数。
  * @property {function} log - 根据设置的日志级别在控制台打印日志。
  * @property {function} escapeHtml - 转义 HTML 特殊字符以防止 XSS。
  * @property {function} checkNetworkType - 使用 WebRTC 检测网络能力（IPv4/IPv6, UDP/TCP）。
- * @property {function} sendInChunks - 将大数据字符串分片发送。
+ * @property {function} sendInChunks - 将大数据字符串分片发送，并处理背压。
  * @property {function} reassembleChunk - 将接收到的数据分片重组为完整数据。
  * @property {function} generateId - 生成一个指定长度的随机 ID。
  * @property {function} formatDate - 将 Date 对象格式化为用户友好的字符串。
@@ -19,6 +20,10 @@ const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, ALL: 4 };
 const Utils = {
     logLevels: _Utils_logLevels,
     currentLogLevel: _Utils_logLevels.DEBUG,
+
+    // 定义用于 sendInChunks 的常量
+    BUFFERED_AMOUNT_HIGH_THRESHOLD: 1 * 1024 * 1024, // 1MB
+    BUFFER_CHECK_INTERVAL: 50, // 50ms
 
     /**
      * 从全局配置 `Config.logLevel` 中设置当前的日志级别。
@@ -112,63 +117,87 @@ const Utils = {
     },
 
     /**
-     * 将大数据字符串分片发送。
+     * 将大数据字符串分片发送，并实现了基于 RTCDataChannel.bufferedAmount 的背压控制。
      * @param {string} dataString - 要发送的完整数据字符串。
-     * @param {function} sendFunc - 用于发送单个分片的函数。
+     * @param {RTCDataChannel} dataChannel - 用于发送数据的 RTCDataChannel 实例。
      * @param {string} peerId - 接收方的 ID。
      * @param {string|null} [fileId=null] - 文件的唯一 ID，用于标识分片所属。
      * @param {number} [chunkSize=Config.chunkSize] - 每个分片的大小。
      */
-    sendInChunks: function (dataString, sendFunc, peerId, fileId = null, chunkSize = Config.chunkSize || 64 * 1024) {
+    sendInChunks: async function (dataString, dataChannel, peerId, fileId = null, chunkSize = Config.chunkSize || 64 * 1024) {
         if (dataString.length <= chunkSize) {
-            return sendFunc(dataString);
+            try {
+                dataChannel.send(dataString);
+            } catch (e) {
+                Utils.log(`Utils.sendInChunks: 直接发送小数据时出错 (to ${peerId}): ${e.message}`, Utils.logLevels.ERROR);
+            }
+            return;
         }
 
         const totalChunks = Math.ceil(dataString.length / chunkSize);
         const currentFileId = fileId || `${Date.now()}-${Utils.generateId(6)}`;
 
-        Utils.log(`正在向 ${peerId} (ID: ${currentFileId}) 发送大数据，共 ${totalChunks} 个分片。`, Utils.logLevels.INFO);
+        Utils.log(`正在向 ${peerId} (ID: ${currentFileId}) 发送大数据，共 ${totalChunks} 个分片。缓冲阈值: ${this.BUFFERED_AMOUNT_HIGH_THRESHOLD} bytes.`, Utils.logLevels.INFO);
 
-        // 首先发送元数据
-        sendFunc(JSON.stringify({
-            type: 'chunk-meta',
-            chunkId: currentFileId,
-            totalChunks: totalChunks,
-            originalType: JSON.parse(dataString).type
-        }));
+        try {
+            // 首先发送元数据
+            dataChannel.send(JSON.stringify({
+                type: 'chunk-meta',
+                chunkId: currentFileId,
+                totalChunks: totalChunks,
+                originalType: JSON.parse(dataString).type // 假设 dataString 是一个有效的JSON字符串，包含type属性
+            }));
 
-        if (!ConnectionManager.pendingSentChunks) ConnectionManager.pendingSentChunks = {};
-        ConnectionManager.pendingSentChunks[currentFileId] = {
-            total: totalChunks,
-            sent: 0,
-            data: dataString
-        };
+            if (!ConnectionManager.pendingSentChunks) ConnectionManager.pendingSentChunks = {};
+            ConnectionManager.pendingSentChunks[currentFileId] = {
+                total: totalChunks,
+                sent: 0,
+                dataLength: dataString.length // 只存储长度以减少内存占用，如果需要原始数据则另行处理
+            };
 
-        // 依次发送每个数据分片
-        for (let i = 0; i < totalChunks; i++) {
-            ((currentIndex) => {
-                setTimeout(() => {
-                    const start = currentIndex * chunkSize;
-                    const end = Math.min(dataString.length, start + chunkSize);
-                    const chunkData = dataString.substring(start, end);
-
-                    sendFunc(JSON.stringify({
-                        type: 'chunk-data',
-                        chunkId: currentFileId,
-                        index: currentIndex,
-                        payload: chunkData
-                    }));
-
-                    const pending = ConnectionManager.pendingSentChunks[currentFileId];
-                    if (pending) {
-                        pending.sent++;
-                        if (pending.sent === pending.total) {
+            for (let i = 0; i < totalChunks; i++) {
+                // 检查缓冲量，如果过高则等待
+                while (dataChannel.bufferedAmount > this.BUFFERED_AMOUNT_HIGH_THRESHOLD) {
+                    Utils.log(`Utils.sendInChunks: 缓冲到 ${peerId} 已满 (${dataChannel.bufferedAmount} > ${this.BUFFERED_AMOUNT_HIGH_THRESHOLD}). Chunk ${i+1}/${totalChunks} (ID: ${currentFileId}). 等待 ${this.BUFFER_CHECK_INTERVAL}ms.`, Utils.logLevels.DEBUG);
+                    await new Promise(resolve => setTimeout(resolve, this.BUFFER_CHECK_INTERVAL));
+                    // 在等待后检查 dataChannel 是否仍然可用
+                    if (dataChannel.readyState !== 'open') {
+                        Utils.log(`Utils.sendInChunks: DataChannel 到 ${peerId} 在发送分片 ${i+1} (ID: ${currentFileId}) 期间关闭。中止发送。`, Utils.logLevels.WARN);
+                        if (ConnectionManager.pendingSentChunks[currentFileId]) {
                             delete ConnectionManager.pendingSentChunks[currentFileId];
-                            Utils.log(`已向 ${peerId} 发送完 ${currentFileId} 的所有分片。`, Utils.logLevels.INFO);
                         }
+                        return; // 中止发送
                     }
-                }, currentIndex * 20);
-            })(i);
+                }
+
+                const start = i * chunkSize;
+                const end = Math.min(dataString.length, start + chunkSize);
+                const chunkData = dataString.substring(start, end);
+
+                dataChannel.send(JSON.stringify({
+                    type: 'chunk-data',
+                    chunkId: currentFileId,
+                    index: i,
+                    payload: chunkData
+                }));
+
+                const pending = ConnectionManager.pendingSentChunks[currentFileId];
+                if (pending) {
+                    pending.sent++;
+                    if (pending.sent === pending.total) {
+                        delete ConnectionManager.pendingSentChunks[currentFileId];
+                        Utils.log(`已向 ${peerId} 发送完 ${currentFileId} 的所有分片。`, Utils.logLevels.INFO);
+                    }
+                }
+                // 在每个分片发送后稍微yield一下，给事件循环处理其他任务的机会
+                await new Promise(resolve => setTimeout(resolve, 1));
+            }
+        } catch (error) {
+            Utils.log(`Utils.sendInChunks: 发送分片到 ${peerId} (ID: ${currentFileId}) 时发生错误: ${error.message}`, Utils.logLevels.ERROR);
+            // 发生错误时，也应该清理 pendingSentChunks
+            if (ConnectionManager.pendingSentChunks && ConnectionManager.pendingSentChunks[currentFileId]) {
+                delete ConnectionManager.pendingSentChunks[currentFileId];
+            }
         }
     },
 

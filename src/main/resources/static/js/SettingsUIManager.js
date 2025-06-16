@@ -520,7 +520,7 @@ const SettingsUIManager = {
             if (networkType.udp) { overallQuality = '良好'; qualityClass = 'quality-good'; }
             else if (networkType.tcp) { overallQuality = '受限 (TCP 回退)'; qualityClass = 'quality-medium'; }
             else if (networkType.relay) { overallQuality = '仅中继'; qualityClass = 'quality-medium'; }
-            else { overallQuality = '差 (WebRTC P2P 失败)'; qualityClass = 'quality-poor'; }
+            else { overallQuality = '差 (WebRTC  失败)'; qualityClass = 'quality-poor'; }
         } else { overallQuality = 'WebRTC 检查失败'; qualityClass = 'quality-poor'; }
         qualityIndicator.className = `quality-indicator ${qualityClass}`;
         qualityText.textContent = overallQuality;

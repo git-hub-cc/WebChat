@@ -40,7 +40,7 @@
     --ts-hundunchengzhu-secondary-light: rgba(240, 248, 255, 0.3);
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--ts-sky-explorer-blue);
     --primary-color-dark: rgb(20, 124, 235);
     --secondary-color: var(--ts-cloud-panel); /* 应用主背景 */
@@ -57,8 +57,6 @@
     --border-color: rgba(var(--ts-horizon-border-rgb), 0.6);
     --hover-bg-color: rgba(var(--ts-sky-explorer-blue-rgb), 0.08);
     --active-bg-color: rgba(var(--ts-sky-explorer-blue-rgb), 0.15);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 5px;
     --font-family: "LXGW WenKai TC", "Source Han Sans SC", sans-serif; /* 现代字体 */
     --box-shadow: 0 2px 4px rgba(var(--ts-deep-space-text-rgb),0.1), 0 0 10px rgba(var(--ts-sky-explorer-blue-rgb),0.05) inset;
@@ -85,7 +83,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* 应用容器主背景 */
-    box-shadow: 0 8px 30px rgba(var(--ts-deep-space-text-rgb),0.1), 0 0 20px rgba(var(--ts-sky-explorer-blue-rgb),0.08) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--ts-horizon-border-rgb), 0.4);
     overflow: hidden;
@@ -112,7 +109,6 @@ body {
     background-color: rgba(var(--ts-dawn-sky-bg-rgb), 0.8);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -257,13 +253,11 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--ts-sky-explorer-blue); text-shadow: 0 0 3px var(--ts-sky-explorer-blue); }
 
-.chat-messages-container { padding: 20px; }
+.chat-messages-container { }
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family);
     content: "星"; /* 用一个“星”字作为占位符 */
-    font-size: 70px;
     color: rgba(var(--ts-sky-explorer-blue-rgb), 0.4);
-    text-shadow: 0 0 15px rgba(var(--ts-horizon-border-rgb), 0.5);
 }
 .status-indicator.global {
     background-color: rgba(var(--ts-dawn-sky-bg-rgb), 0.5);
@@ -304,7 +298,6 @@ body {
     background-color: var(--ts-dawn-sky-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -364,7 +357,6 @@ body {
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 25px rgba(var(--ts-deep-space-text-rgb),0.2), 0 0 15px rgba(var(--ts-sky-explorer-blue-rgb),0.05) inset;
 }
 .modal-header h2 { color: var(--ts-sky-explorer-blue); text-shadow: 0 0 3px rgba(var(--ts-sky-explorer-blue-rgb),0.2); }
 .close-modal-btn:hover { color: var(--ts-sky-explorer-blue); }

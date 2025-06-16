@@ -37,7 +37,7 @@
     --gs-kazuha-primary-light: #FF7F50; /* 枫原万叶-枫叶橙 */
     --gs-kazuha-secondary-light: rgba(255, 127, 80, 0.2);
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--gs-starlight-blue);
     --primary-color-dark: rgb(30, 130, 200);
     --secondary-color: var(--gs-moonlight-porcelain-panel);
@@ -54,8 +54,6 @@
     --border-color: rgba(var(--gs-relic-border-gray-rgb), 0.65);
     --hover-bg-color: rgba(var(--gs-starlight-blue-rgb), 0.06);
     --active-bg-color: rgba(var(--gs-starlight-blue-rgb), 0.12); /* 通用激活背景，会被角色色覆盖 */
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 7px; /* 略微调整圆角 */
     --font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
     --box-shadow: 0 1px 4px rgba(var(--gs-scroll-ink-gray-rgb),0.08), 0 0 10px rgba(var(--gs-starlight-blue-rgb),0.04) inset;
@@ -83,7 +81,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color);
-    box-shadow: 0 7px 30px rgba(var(--gs-scroll-ink-gray-rgb),0.1), 0 0 18px rgba(var(--gs-starlight-blue-rgb),0.07) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--gs-relic-border-gray-rgb), 0.45);
     overflow: hidden;
@@ -110,7 +107,6 @@ body {
     background-color: rgba(var(--gs-dawn-beige-bg-rgb), 0.95);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 18px; /* More Genshin-like UI */
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -282,19 +278,16 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--gs-starlight-blue); text-shadow: 0 0 3px rgba(var(--gs-starlight-blue-rgb),0.5); }
 
-.chat-messages-container { padding: 15px; /* Very subtle beige in chat */ }
+.chat-messages-container {  }
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     content: "✨"; /* 用闪烁的星星代替“空” */
-    font-size: 70px;
     color: rgba(var(--gs-teyvat-gold-rgb), 0.6);
-    text-shadow: 0 0 15px rgba(var(--gs-starlight-blue-rgb), 0.3);
 }
 .status-indicator.global {
     background-color: rgba(var(--gs-dawn-beige-bg-rgb), 0.7);
     border: 1px solid var(--border-color);
     color: var(--gs-starlight-blue);
-    padding: 6px 12px;
     border-radius: var(--border-radius);
 }
 
@@ -302,7 +295,6 @@ body {
 .message {
     border: 1px solid var(--border-color);
     box-shadow: var(--box-shadow);
-    padding: 10px 14px;
 }
 .message.sent {
     background-color: var(--sent-bg-color); /* Light Starlight Blue */
@@ -333,8 +325,6 @@ body {
     background-color: var(--gs-moonlight-porcelain-panel);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 18px;
-    padding: 10px 15px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -348,7 +338,7 @@ body {
 #voiceButtonMain.recording { color: var(--danger-color); animation: gs-light-pulse 1.5s infinite; }
 @keyframes gs-light-pulse {
     0% { box-shadow: 0 0 0 0 rgba(var(--gs-pyro-red-rgb), 0.7); }
-    70% { box-shadow: 0 0 0 12px rgba(var(--gs-pyro-red-rgb), 0); }
+    /* 70% { box-shadow: 0 0 0 12px rgba(var(--gs-pyro-red-rgb), 0); } */ /* Removed due to 12px > 10px */
     100% { box-shadow: 0 0 0 0 rgba(var(--gs-pyro-red-rgb), 0); }
 }
 
@@ -360,7 +350,7 @@ body {
 #aiContactDetailsContent {
     background-color: rgba(var(--gs-moonlight-porcelain-panel-rgb), 0.5);
     border: 1px solid var(--border-color);
-    padding: 15px; border-radius: var(--border-radius);
+    border-radius: var(--border-radius);
 }
 #aiContactDetailsContent p strong { color: var(--gs-starlight-blue); border-bottom: 1px solid rgba(var(--gs-starlight-blue-rgb), 0.2); padding-bottom: 2px; }
 #aiContactBasicInfoList li { border-bottom: 1px dotted rgba(var(--gs-scroll-ink-gray-rgb), 0.15); padding: 5px 0; }
@@ -372,9 +362,7 @@ body {
     text-transform: none;
     letter-spacing: 0.5px;
     font-weight: 500;
-
     box-shadow: 0 1px 3px rgba(var(--gs-scroll-ink-gray-rgb),0.22);
-    padding: 9px 16px;
 }
 .btn-primary { background-color: var(--gs-starlight-blue); color: var(--gs-moonlight-porcelain-panel); border: 1px solid rgba(var(--gs-scroll-ink-gray-rgb),0.2); }
 .btn-primary:hover { background-color: var(--primary-color-dark); box-shadow: 0 2px 5px rgba(var(--gs-starlight-blue-rgb),0.2); transform: translateY(-1px); }
@@ -392,12 +380,10 @@ body {
     border-left-color: var(--gs-starlight-blue);
     border-bottom-color: rgba(var(--gs-starlight-blue-rgb),0.2);
     border-right-color: rgba(var(--gs-starlight-blue-rgb),0.2);
-    width: 45px; height: 45px;
 }
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 7px 25px rgba(var(--gs-scroll-ink-gray-rgb),0.2), 0 0 15px rgba(var(--gs-starlight-blue-rgb),0.05) inset;
 }
 .modal-header h2 { color: var(--gs-starlight-blue); text-shadow: 0 0 3px rgba(var(--gs-starlight-blue-rgb),0.2); }
 .close-modal-btn:hover { color: var(--gs-starlight-blue); }

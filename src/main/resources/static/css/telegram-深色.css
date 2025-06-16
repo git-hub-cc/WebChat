@@ -35,7 +35,7 @@
     --tg-warning-orange-dark-rgb: 230, 130, 40; /* 橙色警告 (Orange Warning - slightly desaturated for dark) */
     --tg-warning-orange-dark: rgb(var(--tg-warning-orange-dark-rgb));
 
-    /* Override P2P Chat variables */
+    /* Override  Chat variables */
     --primary-color: var(--tg-blue-dark-accent);
     --primary-color-dark: var(--tg-blue-dark-accent-darker);
     --secondary-color: var(--tg-bg-dark); /* Main app panels like sidebar, header */
@@ -76,7 +76,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* App container uses the main dark bg */
-    box-shadow: 0 5px 20px rgba(0,0,0,0.4);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color); /* Add a subtle border */
     overflow: hidden;
@@ -150,9 +149,8 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--primary-color); text-shadow: 0 0 3px var(--primary-color); }
 
-.chat-messages-container { padding: 15px; }
+.chat-messages-container { }
 .no-chat-selected .logo-placeholder {
-    font-size: 60px;
     color: rgba(var(--tg-text-light-rgb), 0.2);
 }
 .status-indicator.global {
@@ -262,7 +260,6 @@ body {
 .modal-content {
     background-color: var(--tg-panel-dark); /* Dark modal background */
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.5);
 }
 .modal-header h2 { color: var(--primary-color); text-shadow: 0 0 3px rgba(var(--tg-primary-color-rgb),0.2); }
 .close-modal-btn:hover { color: var(--primary-color); }

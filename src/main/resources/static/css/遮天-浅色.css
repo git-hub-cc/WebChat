@@ -38,7 +38,7 @@
     --zt-jiangtaixu-secondary: rgba(176, 190, 197, 0.2);
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--zt-sun-gold);
     --primary-color-dark: rgb(180, 130, 20);
     --secondary-color: var(--zt-ancient-jade-panel); /* 应用主背景 */
@@ -55,8 +55,6 @@
     --border-color: rgba(var(--zt-border-gold-gray-rgb), 0.6);
     --hover-bg-color: rgba(var(--zt-sun-gold-rgb), 0.08);
     --active-bg-color: rgba(var(--zt-sun-gold-rgb), 0.15);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 5px; /* 更具古典感的锐利边角 */
     --font-family: "LXGW WenKai TC", "Source Han Serif SC", serif; /* 霞鹜文楷，古风 */
     --box-shadow: 0 2px 4px rgba(var(--zt-text-deep-brown-rgb),0.1), 0 0 10px rgba(var(--zt-sun-gold-rgb),0.05) inset;
@@ -83,7 +81,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* 应用容器主背景 */
-    box-shadow: 0 8px 30px rgba(var(--zt-text-deep-brown-rgb),0.15), 0 0 20px rgba(var(--zt-sun-gold-rgb),0.1) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--zt-border-gold-gray-rgb), 0.4);
     overflow: hidden;
@@ -110,7 +107,6 @@ body {
     background-color: rgba(var(--zt-holy-light-bg-rgb), 0.8);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -257,13 +253,10 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--zt-sun-gold); text-shadow: 0 0 3px var(--zt-sun-gold); }
 
-.chat-messages-container { padding: 20px; }
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     content: "鼎"; /* 用一个“鼎”字作为占位符 */
-    font-size: 70px;
     color: rgba(var(--zt-sun-gold-rgb), 0.4);
-    text-shadow: 0 0 15px rgba(var(--zt-border-gold-gray-rgb), 0.5);
 }
 .status-indicator.global {
     background-color: rgba(var(--zt-holy-light-bg-rgb), 0.5);
@@ -304,7 +297,6 @@ body {
     background-color: var(--zt-holy-light-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 15px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -363,7 +355,6 @@ body {
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 25px rgba(var(--zt-text-deep-brown-rgb),0.2), 0 0 15px rgba(var(--zt-sun-gold-rgb),0.05) inset;
 }
 .modal-header h2 { color: var(--zt-sun-gold); text-shadow: 0 0 3px rgba(var(--zt-sun-gold-rgb),0.2); }
 .close-modal-btn:hover { color: var(--zt-sun-gold); }

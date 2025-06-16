@@ -60,7 +60,7 @@ const MessageManager = {
             return;
         }
 
-        // 检查P2P聊天连接状态
+        // 检查聊天连接状态
         if (!isGroup && !ConnectionManager.isConnectedTo(targetId)) {
             if (messageText || currentSelectedFile || currentAudioData) {
                 // 如果有未发送的内容，提示用户重新连接
@@ -75,7 +75,7 @@ const MessageManager = {
         // 处理音频消息
         if (currentAudioData) {
             const audioMessage = { id: `${messageIdBase}_audio`, type: 'audio', data: currentAudioData, duration: currentAudioDuration, timestamp: nowTimestamp, sender: UserManager.userId };
-            if (isGroup) GroupManager.broadcastToGroup(targetId, audioMessage); else ConnectionManager.sendTo(targetId, audioMessage); // 发送群聊或P2P消息
+            if (isGroup) GroupManager.broadcastToGroup(targetId, audioMessage); else ConnectionManager.sendTo(targetId, audioMessage); // 发送群聊或消息
             ChatManager.addMessage(targetId, audioMessage); // 添加到聊天记录
             messageSent = true; MessageManager.cancelAudioData(); // 取消已发送的音频
         }
@@ -92,14 +92,14 @@ const MessageManager = {
                 timestamp: nowTimestamp,
                 sender: UserManager.userId
             };
-            if (isGroup) GroupManager.broadcastToGroup(targetId, messagePayload); else ConnectionManager.sendTo(targetId, messagePayload); // 发送群聊或P2P消息
+            if (isGroup) GroupManager.broadcastToGroup(targetId, messagePayload); else ConnectionManager.sendTo(targetId, messagePayload); // 发送群聊或消息
             ChatManager.addMessage(targetId, messagePayload); // 添加到聊天记录
             messageSent = true; MessageManager.cancelFileData(); // 取消已发送的文件
         }
         // 处理文本消息
         if (messageText) {
             const textMessage = { id: `${messageIdBase}_text`, type: 'text', content: messageText, timestamp: nowTimestamp, sender: UserManager.userId };
-            if (isGroup) GroupManager.broadcastToGroup(targetId, textMessage); else ConnectionManager.sendTo(targetId, textMessage); // 发送群聊或P2P消息
+            if (isGroup) GroupManager.broadcastToGroup(targetId, textMessage); else ConnectionManager.sendTo(targetId, textMessage); // 发送群聊或消息
             ChatManager.addMessage(targetId, textMessage); // 添加到聊天记录
             messageSent = true; input.value = ''; input.style.height = 'auto'; // 清空输入框并重置样式
         }
@@ -440,12 +440,12 @@ const MessageManager = {
             } else {
                 NotificationManager.showNotification("发送群消息撤回请求失败。", "error");
             }
-        } else { // 如果是P2P聊天消息
+        } else { // 如果是聊天消息
             if (!ConnectionManager.isConnectedTo(chatId)) { // 检查与对方的连接状态
                 NotificationManager.showNotification("对方不在线，暂时无法撤回消息。", "warning");
                 return;
             }
-            const retractRequest = { // 构建P2P消息撤回请求体
+            const retractRequest = { // 构建消息撤回请求体
                 type: 'retract-message-request',
                 originalMessageId: messageId,
                 sender: UserManager.userId, // 请求发起者

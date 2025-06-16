@@ -48,7 +48,7 @@
     --gs-kazuha-secondary-dark: rgba(239, 83, 80, 0.15);
 
 
-    /* 覆盖 P2P Chat 原有变量 */
+    /* 覆盖  Chat 原有变量 */
     --primary-color: var(--gs-electro-luminous-purple);
     --primary-color-dark: rgb(150, 100, 225);
     --secondary-color: var(--gs-night-indigo-bg); /* 应用主背景 */
@@ -65,11 +65,8 @@
     --border-color: rgba(var(--gs-border-obsidian-violet-rgb), 0.6);
     --hover-bg-color: rgba(var(--gs-text-starlight-silver-rgb), 0.06);
     --active-bg-color: rgba(var(--gs-electro-luminous-purple-rgb), 0.18);
-    --sidebar-width: 320px;
-    --header-height: 60px;
     --border-radius: 6px;
     --font-family: "LXGW WenKai TC", "Source Han Serif SC", "Segoe UI", Roboto, sans-serif;
-    --box-shadow: 0 1px 2px rgba(0,0,0,0.75), 0 0 18px rgba(var(--gs-electro-luminous-purple-rgb),0.1) inset;
     --special-contact-color: var(--gs-traveler-primary-dark);
 }
 
@@ -91,7 +88,6 @@ body {
 .app-container {
     display: flex;
     background-color: var(--secondary-color); /* 应用容器主背景 */
-    box-shadow: 0 8px 35px rgba(0,0,0,0.8), 0 0 20px rgba(var(--gs-electro-luminous-purple-rgb),0.07) inset;
     border-radius: var(--border-radius);
     border: 1px solid rgba(var(--gs-border-obsidian-violet-rgb), 0.45);
     overflow: hidden;
@@ -118,7 +114,6 @@ body {
     background-color: rgba(var(--gs-night-indigo-bg-rgb), 0.9);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 18px;
 }
 .search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
@@ -263,13 +258,11 @@ body {
 .header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover { color: var(--gs-electro-luminous-purple); text-shadow: 0 0 4px var(--gs-electro-luminous-purple); }
 
-.chat-messages-container { padding: 15px; }
+.chat-messages-container { }
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family), serif;
     content: "🌀"; /* Elemental Swirl / Abyss Portal like */
-    font-size: 60px;
     color: rgba(var(--gs-electro-luminous-purple-rgb), 0.35);
-    text-shadow: 0 0 15px rgba(var(--gs-geo-star-gold-rgb), 0.3);
 }
 .status-indicator.global {
     background-color: rgba(var(--gs-night-indigo-bg-rgb), 0.6);
@@ -308,7 +301,6 @@ body {
     background-color: rgba(var(--gs-night-indigo-bg-rgb), 0.95);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    border-radius: 18px;
 }
 #messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
@@ -368,7 +360,6 @@ body {
 .modal-content {
     background-color: var(--secondary-color);
     border: 1px solid var(--border-color);
-    box-shadow: 0 7px 22px rgba(0,0,0,0.75), 0 0 16px rgba(var(--gs-electro-luminous-purple-rgb),0.12) inset;
 }
 .modal-header h2 { color: var(--gs-electro-luminous-purple); text-shadow: 0 0 4px rgba(var(--gs-electro-luminous-purple-rgb),0.35); }
 .close-modal-btn:hover { color: var(--gs-electro-luminous-purple); }
