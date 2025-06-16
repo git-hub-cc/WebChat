@@ -6,7 +6,7 @@
     <title>PPMC</title>
     <link rel="stylesheet" href="css/base.css">
     <!-- 主题特定 CSS 占位符, href 会被 ThemeLoader.init 动态填充 -->
-    <link id="theme-stylesheet" rel="stylesheet" href="">
+    <link id="theme-stylesheet" rel="stylesheet" href="css/原神-浅色.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -211,8 +211,8 @@
         <h3>视频通话请求</h3>
         <p>来电...</p>
         <div class="video-call-request-buttons">
-            <button class="btn btn-danger reject-call">拒绝</button> 
-            <button class="btn btn-success accept-call">接听</button> 
+            <button class="btn btn-danger reject-call">拒绝</button>
+            <button class="btn btn-success accept-call">接听</button>
         </div>
     </div>
 </div>
@@ -310,13 +310,13 @@
                     <div class="collapsible-content" style="display: none;">
                         <p>用于信令服务器故障或需要直接点对点连接时。</p>
                         <div class="manual-connect-step">
-                            <button id="modalCreateOfferBtn" class="btn btn-secondary">1. 创建连接提议</button> 
+                            <button id="modalCreateOfferBtn" class="btn btn-secondary">1. 创建连接提议</button>
                         </div>
                         <div class="manual-connect-step">
-                            <button id="modalCreateAnswerBtn" class="btn btn-secondary">2. 创建应答 (粘贴提议后)</button> 
+                            <button id="modalCreateAnswerBtn" class="btn btn-secondary">2. 创建应答 (粘贴提议后)</button>
                         </div>
                         <div class="manual-connect-step">
-                            <button id="modalHandleAnswerBtn" class="btn btn-secondary">3. 接受应答 (粘贴应答后)</button> 
+                            <button id="modalHandleAnswerBtn" class="btn btn-secondary">3. 接受应答 (粘贴应答后)</button>
                         </div>
                         <div class="manual-connect-step">
                             <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="在此粘贴对方的连接信息..."></textarea>
@@ -398,6 +398,25 @@
         </div>
     </div>
 </div>
+
+<!-- 新增截图编辑器模态框 -->
+<div id="screenshotEditorModal" class="modal-like screenshot-editor-modal" style="display: none;">
+    <div class="screenshot-editor-toolbar" id="screenshotEditorToolbar">
+        <button id="cropToolBtn" class="screenshot-tool-btn" title="裁剪">✂️</button>
+        <button id="drawRectToolBtn" class="screenshot-tool-btn" title="矩形标记">⬜</button>
+        <input type="color" id="markColorPicker" class="screenshot-tool-color-picker" title="选择标记颜色" value="#FF0000" style="display: none;">
+        <!-- 更多工具可以后续添加 -->
+        <div class="toolbar-spacer"></div>
+        <button id="confirmScreenshotEditBtn" class="btn btn-success">完成</button>
+        <button id="cancelScreenshotEditBtn" class="btn btn-secondary">取消</button>
+    </div>
+    <div class="screenshot-canvas-container">
+        <canvas id="screenshotEditorCanvas"></canvas>
+    </div>
+</div>
+<!-- 截图编辑器模态框结束 -->
+
+
 <!-- 脚本加载顺序调整 -->
 <!-- ThemeLoader.js 仍然较早加载，但其 init() 由 AppInitializer 调用 -->
 <script src="js/ThemeLoader.js"></script>
@@ -425,6 +444,8 @@
 <!-- 专业处理器/管理器 -->
 <script src="js/MessageTtsHandler.js"></script>
 <script src="js/TtsUIManager.js"></script>
+<script src="js/ScreenshotEditorUIManager.js"></script> <!-- 新增 -->
+
 
 <!-- UI组件管理器 -->
 <script src="js/UIManager.js"></script>

@@ -8,7 +8,8 @@
  * @property {function} init - 应用程序的主初始化函数，是整个应用的启动点。
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
  *               LayoutManager, ModalManager, SettingsUIManager, ChatAreaUIManager, SidebarUIManager,
- *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationManager, Utils, EventEmitter, PeopleLobbyManager, AiApiHandler, ThemeLoader
+ *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationManager, Utils, EventEmitter,
+ *               PeopleLobbyManager, AiApiHandler, ThemeLoader, ScreenshotEditorUIManager
  * @dependents DOMContentLoaded (在 index.html 中通过新的方式调用)
  */
 const AppInitializer = {
@@ -60,10 +61,17 @@ const AppInitializer = {
             VideoCallUIManager.init();
             MediaUIManager.init();
             PeopleLobbyManager.init();
+            if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
+                ScreenshotEditorUIManager.init(); // 初始化截图编辑器UI管理器
+                Utils.log('ScreenshotEditorUIManager 初始化完成。', Utils.logLevels.INFO);
+            } else {
+                Utils.log('ScreenshotEditorUIManager 或其 init 方法未定义。截图编辑功能可能无法使用。', Utils.logLevels.WARN);
+            }
+
 
             // --- 阶段 4: 其他同步设置 ---
             this.startNetworkMonitoring();      // 同步监听器设置
-            MediaManager.initVoiceRecording();
+            MediaManager.initVoiceRecording(); // MediaManager 的 initVoiceRecording 也应在此阶段，因为它可能依赖DOM
             VideoCallManager.init();
             this.setupCoreEventListeners();     // 依赖管理器对象存在
             this.smartBackToChatList();
@@ -121,6 +129,10 @@ const AppInitializer = {
             ModalManager.init(); SettingsUIManager.init(); LayoutManager.init();
             ChatAreaUIManager.init(); SidebarUIManager.init(); DetailsPanelUIManager.init();
             VideoCallUIManager.init(); MediaUIManager.init(); PeopleLobbyManager.init();
+            if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
+                ScreenshotEditorUIManager.init(); // 也在回退模式下尝试初始化
+            }
+
 
             // 在回退模式下仍尝试设置网络监控和基础功能
             if (typeof this.refreshNetworkStatusUI === 'function') await this.refreshNetworkStatusUI();

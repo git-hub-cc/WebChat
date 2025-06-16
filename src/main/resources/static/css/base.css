@@ -331,7 +331,7 @@ body {
 }
 
 .custom-select:focus-within {
-/* 当选择框或其内部任何元素获得焦点时，显示高亮轮廓 */
+    /* 当选择框或其内部任何元素获得焦点时，显示高亮轮廓 */
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
@@ -1584,7 +1584,8 @@ input:checked + .slider::before {
 .btn:disabled,
 .header-action-btn:disabled,
 .icon-btn:disabled,
-.screenshot-option-btn:disabled { /* 新增截图选项按钮的禁用样式 */
+.screenshot-option-btn:disabled, /* 新增截图选项按钮的禁用样式 */
+.screenshot-tool-btn:disabled { /* 工具按钮禁用 */
     background-color: #ccc !important;
     box-shadow: none !important;
     color: #666 !important;
@@ -1593,9 +1594,11 @@ input:checked + .slider::before {
 }
 
 /* 确保图标按钮的背景在禁用时保持透明 */
-.icon-btn:disabled {
+.icon-btn:disabled,
+.screenshot-tool-btn:disabled { /* 截图工具按钮的背景也保持透明 */
     background-color: transparent !important;
 }
+
 
 /* --- 角色主题修饰符 (.special-contact, .character-active 等) --- */
 .chat-list-item.group .chat-list-avatar {
@@ -1760,6 +1763,100 @@ input:checked + .slider::before {
     height: 36px;
     margin-inline: 2px;
     font-size: 16px;
+}
+
+/* --- 截图编辑器模态框样式 --- */
+.screenshot-editor-modal {
+    background-color: rgba(30, 30, 30, 0.9); /* 深色半透明背景 */
+    flex-direction: column; /* 工具栏在顶部，画布在下方 */
+    padding: 0; /* 移除模态框的内边距，以便内容占满 */
+    overflow: hidden; /* 防止内部滚动条，画布容器自己处理滚动（如果需要） */
+    z-index: 1002; /* 比视频通话UI高一点，但低于纯通知 */
+}
+
+.screenshot-editor-toolbar {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-2) var(--spacing-3);
+    background-color: #333; /* 深色工具栏背景 */
+    color: var(--text-color-inverted);
+    flex-shrink: 0; /* 防止工具栏被压缩 */
+    border-bottom: 1px solid #444;
+}
+
+.screenshot-tool-btn {
+    background: none;
+    border: 1px solid transparent; /* 默认无边框，选中时可添加 */
+    color: var(--text-color-inverted);
+    font-size: 20px; /* 图标大小 */
+    padding: var(--spacing-2);
+    margin-right: var(--spacing-2);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.screenshot-tool-btn:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.screenshot-tool-btn.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color-dark);
+}
+
+.screenshot-tool-color-picker {
+    width: 30px; /* 调整大小以适应工具栏 */
+    height: 30px;
+    padding: 0; /* 移除默认内边距 */
+    border: 1px solid #555; /* 边框使其更明显 */
+    border-radius: 4px;
+    background-color: transparent; /* 背景透明，让颜色块显示 */
+    cursor: pointer;
+    margin-left: var(--spacing-1);
+    margin-right: var(--spacing-3); /* 与其他工具按钮保持一些间距 */
+    vertical-align: middle; /* 垂直对齐 */
+}
+/* 针对 Webkit 核心浏览器（Chrome, Safari, Edge等）自定义颜色选择器的外观 */
+.screenshot-tool-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+.screenshot-tool-color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px; /* 轻微圆角 */
+}
+/* 针对 Firefox 浏览器自定义颜色选择器的外观 */
+.screenshot-tool-color-picker::-moz-color-swatch {
+    border: none;
+    border-radius: 3px;
+}
+
+
+.toolbar-spacer {
+    flex-grow: 1; /* 将右侧按钮推到最右边 */
+}
+
+#confirmScreenshotEditBtn,
+#cancelScreenshotEditBtn {
+    padding: var(--spacing-2) var(--spacing-3); /* 调整按钮大小 */
+    margin-left: var(--spacing-2);
+}
+
+.screenshot-canvas-container {
+    flex-grow: 1; /* 占据剩余空间 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto; /* 如果图片太大，允许滚动查看 */
+    padding: var(--spacing-3); /* 给画布一些边距 */
+}
+
+#screenshotEditorCanvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* 确保整个图像可见 */
+    cursor: crosshair; /* 默认光标为十字线，可由工具更改 */
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
 }
 
 /* ========================================================================== */
@@ -2128,5 +2225,28 @@ input:checked + .slider::before {
         width: 45px !important;
         height: 45px !important;
         font-size: 18px !important;
+    }
+
+    /* 截图编辑器在小屏幕上的调整 */
+    .screenshot-editor-toolbar {
+        padding: var(--spacing-1) var(--spacing-2);
+        overflow-x: auto; /* 工具栏太长时允许水平滚动 */
+    }
+    .screenshot-tool-btn {
+        font-size: 18px;
+        padding: var(--spacing-1);
+    }
+    .screenshot-tool-color-picker {
+        width: 28px; /* 略微减小 */
+        height: 28px;
+        margin-right: var(--spacing-2);
+    }
+    #confirmScreenshotEditBtn,
+    #cancelScreenshotEditBtn {
+        padding: var(--spacing-1) var(--spacing-2);
+        font-size: 13px;
+    }
+    .screenshot-canvas-container {
+        padding: var(--spacing-1);
     }
 }
