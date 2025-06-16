@@ -80,9 +80,7 @@ https://175.178.216.24/
     ![聊天界面 - 桌面](screenshots/Chat%20Interface/Desktop/img.png)
 *   移动视图：
 *
-<img src="./screenshots/Chat%20Interface/Mobile/01.png" alt="聊天界面 - 移动版 1" style="width:30%;">
-<img src="./screenshots/Chat%20Interface/Mobile/02.png" alt="聊天界面 - 移动版 2" style="width:30%;">
-<img src="./screenshots/Chat%20Interface/Mobile/03.png" alt="聊天界面 - 移动版 3" style="width:30%;">
+<img src="./screenshots/Chat%20Interface/Mobile/merge.png" alt="Chat Interface - Mobile">
 
 **视频通话：**
 *   启用画中画（PiP）模式的视频通话：

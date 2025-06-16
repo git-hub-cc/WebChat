@@ -2,13 +2,14 @@
  * @file VideoCallUIManager.js
  * @description 视频通话 UI 管理器，负责管理所有与视频通话相关的用户界面元素。
  *              包括本地/远程视频的显示、通话控制按钮的更新，以及画中画 (PiP) 模式的 UI 和拖动功能。
+ *              现在能显示五级音频质量状态。
  * @module VideoCallUIManager
  * @exports {object} VideoCallUIManager - 对外暴露的单例对象，包含管理视频通话 UI 的方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
  * @property {function} showCallContainer - 显示或隐藏整个通话 UI 容器。
  * @property {function} updateUIForCallState - 根据通话状态更新所有相关的 UI 元素。
  * @property {function} togglePipMode - 切换画中画模式。
- * @dependencies Utils, VideoCallManager
+ * @dependencies Utils, VideoCallManager, EventEmitter
  * @dependents AppInitializer (进行初始化), VideoCallManager (调用以更新 UI)
  */
 const VideoCallUIManager = {
@@ -20,6 +21,7 @@ const VideoCallUIManager = {
     cameraBtn: null,
     audioBtn: null,
     endCallBtn: null,
+    audioQualityIndicatorEl: null,
 
     isPipMode: false,
     dragInfo: {
@@ -27,7 +29,6 @@ const VideoCallUIManager = {
         initialX: 0, initialY: 0, xOffset: 0, yOffset: 0,
         draggedElement: null
     },
-    // 缓存绑定的事件处理函数，以便能够正确地移除它们
     _boundDragStart: null,
     _boundDragStartTouch: null,
     _boundDrag: null,
@@ -47,8 +48,8 @@ const VideoCallUIManager = {
         this.cameraBtn = document.getElementById('toggleCameraBtn');
         this.audioBtn = document.getElementById('toggleAudioBtn');
         this.endCallBtn = this.callContainer ? this.callContainer.querySelector('.end-call') : null;
+        this.audioQualityIndicatorEl = document.getElementById('audioQualityIndicator');
 
-        // 绑定拖动事件处理函数到当前实例
         this._boundDragStart = this.dragStart.bind(this);
         this._boundDragStartTouch = this.dragStart.bind(this);
         this._boundDrag = this.drag.bind(this);
@@ -57,6 +58,10 @@ const VideoCallUIManager = {
         this._boundDragEndTouch = this.dragEnd.bind(this);
 
         this.bindEvents();
+
+        if (typeof EventEmitter !== 'undefined') {
+            EventEmitter.on('audioProfileChanged', this._updateAudioQualityDisplay.bind(this));
+        }
     },
 
     /**
@@ -78,11 +83,44 @@ const VideoCallUIManager = {
         if (this.callContainer) {
             this.callContainer.style.display = display ? 'flex' : 'none';
             if (!display) {
-                // 如果隐藏容器，确保重置 PiP 模式的视觉效果
                 this.resetPipVisuals();
+                if (this.audioQualityIndicatorEl) {
+                    this.audioQualityIndicatorEl.style.display = 'none';
+                }
             }
         }
     },
+
+    /**
+     * @private
+     * @description 更新音频质量指示器的显示。
+     * @param {object} data - 事件数据，包含 { peerId, profileName, profileIndex, description }。
+     */
+    _updateAudioQualityDisplay: function(data) {
+        if (!this.audioQualityIndicatorEl || !VideoCallManager.isCallActive || VideoCallManager.currentPeerId !== data.peerId) {
+            return;
+        }
+        const qualityText = data.profileName || `等级 ${data.profileIndex}`;
+        this.audioQualityIndicatorEl.className = 'call-status-indicator'; // Reset classes
+
+        // Add a general class for the level and potentially specific classes for ranges
+        if (data.profileIndex !== undefined) {
+            this.audioQualityIndicatorEl.classList.add(`quality-level-${data.profileIndex}`);
+            // Example of range-based classes (optional, requires CSS definitions)
+            if (data.profileIndex >= 3) { // "较高" or "极高"
+                this.audioQualityIndicatorEl.classList.add('quality-high-range');
+            } else if (data.profileIndex <= 1) { // "极低" or "较低"
+                this.audioQualityIndicatorEl.classList.add('quality-low-range');
+            } else { // "标准"
+                this.audioQualityIndicatorEl.classList.add('quality-medium-range');
+            }
+        }
+        this.audioQualityIndicatorEl.title = data.description || qualityText; // Use description for tooltip
+        this.audioQualityIndicatorEl.textContent = qualityText;
+        this.audioQualityIndicatorEl.style.display = 'inline-block';
+        Utils.log(`UI: 音频质量指示器更新为: ${qualityText} (Lvl ${data.profileIndex})`, Utils.logLevels.DEBUG);
+    },
+
 
     /**
      * 根据 VideoCallManager 提供的状态对象，更新所有相关的 UI 元素。
@@ -96,12 +134,26 @@ const VideoCallUIManager = {
 
         if (callState.isCallActive) {
             this.showCallContainer(true);
+            if (this.audioQualityIndicatorEl && VideoCallManager.currentPeerId) { // Ensure peerId is available
+                const currentProfileIndex = VideoCallManager._currentAudioProfileIndex[VideoCallManager.currentPeerId] !== undefined
+                    ? VideoCallManager._currentAudioProfileIndex[VideoCallManager.currentPeerId]
+                    : Config.adaptiveAudioQuality.initialProfileIndex;
+                const profile = Config.adaptiveAudioQuality.audioQualityProfiles[currentProfileIndex];
+                this._updateAudioQualityDisplay({
+                    peerId: VideoCallManager.currentPeerId,
+                    profileName: profile ? profile.levelName : "未知",
+                    profileIndex: currentProfileIndex,
+                    description: profile ? profile.description : "未知状态"
+                });
+            }
         } else {
             this.showCallContainer(false);
+            if (this.audioQualityIndicatorEl) {
+                this.audioQualityIndicatorEl.style.display = 'none';
+            }
             return;
         }
 
-        // 根据通话类型（屏幕共享、纯音频）应用样式
         if (callState.isScreenSharing) {
             this.callContainer.classList.add('screen-sharing-mode');
             this.callContainer.classList.remove('audio-only-mode');
@@ -111,24 +163,22 @@ const VideoCallUIManager = {
         }
         this.callContainer.classList.toggle('pip-mode', this.isPipMode && callState.isCallActive);
 
-        // --- 本地视频显示逻辑 ---
         const showLocalVideo = VideoCallManager.localStream && !callState.isAudioOnly && callState.isVideoEnabled;
         if (callState.isScreenSharing) {
-            if (VideoCallManager.isCaller) { // 如果是发起方，则不显示本地摄像头
+            if (VideoCallManager.isCaller) {
                 this.localVideo.style.display = 'none';
                 this.localVideo.srcObject = null;
-            } else { // 如果是接收方，则正常显示本地摄像头
+            } else {
                 this.localVideo.style.display = showLocalVideo ? 'block' : 'none';
                 if(showLocalVideo) this.localVideo.srcObject = VideoCallManager.localStream;
                 else this.localVideo.srcObject = null;
             }
-        } else { // 正常通话
+        } else {
             this.localVideo.style.display = showLocalVideo ? 'block' : 'none';
             if(showLocalVideo) this.localVideo.srcObject = VideoCallManager.localStream;
             else this.localVideo.srcObject = null;
         }
 
-        // --- 远程视频显示逻辑 ---
         const currentRemoteStream = this.remoteVideo.srcObject;
         const hasRemoteVideoTrack = currentRemoteStream instanceof MediaStream &&
             currentRemoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
@@ -142,7 +192,6 @@ const VideoCallUIManager = {
             this.remoteVideo.style.display = 'none';
         }
 
-        // --- 更新控制按钮的状态和外观 ---
         this.audioOnlyBtn.style.display = callState.isCallActive ? 'none' : 'inline-block';
         if (!callState.isCallActive) {
             this.audioOnlyBtn.style.background = callState.isAudioOnly ? 'var(--primary-color)' : '#fff';
@@ -231,7 +280,14 @@ const VideoCallUIManager = {
             this.callContainer.style.left = ''; this.callContainer.style.top = '';
             this.callContainer.style.right = ''; this.callContainer.style.bottom = '';
         }
-        VideoCallManager.updateCurrentCallUIState();
+        // updateUIForCallState will handle updating the audio quality display as well
+        this.updateUIForCallState({
+            isCallActive: VideoCallManager.isCallActive,
+            isAudioOnly: VideoCallManager.isAudioOnly,
+            isScreenSharing: VideoCallManager.isScreenSharing,
+            isVideoEnabled: VideoCallManager.isVideoEnabled,
+            isAudioMuted: VideoCallManager.isAudioMuted,
+        });
     },
 
     /**
@@ -263,7 +319,7 @@ const VideoCallUIManager = {
      * @param {MouseEvent|TouchEvent} e - 事件对象。
      */
     dragStart: function (e) {
-        if (e.target.classList.contains('video-call-button') || e.target.closest('.video-call-button')) return;
+        if (e.target.classList.contains('video-call-button') || e.target.closest('.video-call-button') || e.target.id === 'audioQualityIndicator') return; // Don't drag if clicking on controls
         if (!this.isPipMode || !VideoCallManager.isCallActive || !this.callContainer) return;
 
         this.dragInfo.draggedElement = this.callContainer;

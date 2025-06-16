@@ -80,9 +80,7 @@ Here are some screenshots of the application in action, showcasing different fea
     ![Chat Interface - Desktop](screenshots/Chat%20Interface/Desktop/img.png)
 *   Mobile View:
 *
-<img src="./screenshots/Chat%20Interface/Mobile/01.png" alt="Chat Interface - Mobile 1" style="width:30%;">
-<img src="./screenshots/Chat%20Interface/Mobile/02.png" alt="Chat Interface - Mobile 2" style="width:30%;">
-<img src="./screenshots/Chat%20Interface/Mobile/03.png" alt="Chat Interface - Mobile 3" style="width:30%;">
+<img src="./screenshots/Chat%20Interface/Mobile/merge.png" alt="Chat Interface - Mobile">
 
 **Video Call:**
 *   Video call with Picture-in-Picture (PiP) mode enabled:

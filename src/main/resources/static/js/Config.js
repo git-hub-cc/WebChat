@@ -3,6 +3,7 @@
  * @description 全局配置文件。该文件定义了整个应用程序中使用的常量和默认设置，
  *              包括重连策略、超时时间、媒体约束、UI行为、日志级别以及服务器和 WebRTC 的默认配置。
  *              用户在设置中修改的某些值（如 AI API 配置）会覆盖此处的默认值。
+ *              新增：五级自适应音频质量配置及控制台日志开关。
  * @module Config
  * @exports {object} Config - 包含所有配置项的全局对象。
  */
@@ -118,6 +119,34 @@ const ConfigObj = {
         // SDP 语义，'unified-plan' 是现代标准
         sdpSemantics: 'unified-plan',
     },
+
+    /**
+     * @description 自适应音频质量配置
+     */
+    adaptiveAudioQuality: {
+        interval: 5000, // ms, 检测网络状况的间隔时间
+        logStatsToConsole: true, // 是否在控制台打印详细的评估日志
+        // 基准“良好连接”阈值，用于评估的基础
+        baseGoodConnectionThresholds: {
+            rtt: 120,         // ms (数值越小越好)
+            packetLoss: 0.01, // 1% (数值越小越好)
+            jitter: 20        // ms (数值越小越好)
+        },
+        // 定义5个音质等级的配置 (从低到高)
+        audioQualityProfiles: [
+            { levelName: "极低", maxAverageBitrate: 8000, description: "非常差的网络，优先保障连接" }, // Level 0
+            { levelName: "较低", maxAverageBitrate: 12000, description: "较差网络，基础通话" },       // Level 1
+            { levelName: "标准", maxAverageBitrate: 16000, description: "一般网络，标准音质" },       // Level 2 (初始默认)
+            { levelName: "较高", maxAverageBitrate: 20000, description: "良好网络，提升音质" },       // Level 3
+            { levelName: "极高", maxAverageBitrate: 24000, description: "优秀网络，最佳音质" }        // Level 4
+        ],
+        initialProfileIndex: 2, // 初始默认的音质等级索引 (对应 "标准")
+        // 切换逻辑参数
+        switchToHigherCooldown: 10000,  // 提升等级后的冷却时间 (ms)，防止过于频繁切换
+        switchToLowerCooldown: 5000,   // 降低等级后的冷却时间 (ms), 避免在网络恢复时立即再次降级
+        stabilityCountForUpgrade: 2,  // 需要连续多少次检测良好才能升级 (例如，连续2次良好才升)
+        badQualityDowngradeThreshold: 2 // 连续多少次检测差才考虑降级 (例如，连续2次差才降)
+    }
 };
 
 window.Config = ConfigObj;

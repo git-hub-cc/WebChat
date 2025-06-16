@@ -22,6 +22,8 @@
     --active-bg-color: #e0e0e0; /* 激活背景色 */
     --sent-bg-color: #e1ffc7; /* 已发送消息背景色 */
     --received-bg-color: #ffffff; /* 已接收消息背景色 */
+    --info-color: #2196F3; /* 信息性颜色，可以用于默认状态或一般提示 */
+
 
     /* --- 布局与尺寸变量 --- */
     --sidebar-width: 320px;
@@ -36,6 +38,7 @@
 
     /* --- 通用样式变量 --- */
     --border-radius: 8px;
+    --border-radius-small: 4px; /* 新增，用于更小的圆角 */
     --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     --box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
 
@@ -52,6 +55,13 @@
     --character-message-sender-color: var(--character-primary-color);
     --character-details-name-color: var(--character-primary-color);
     --character-title-color: var(--character-primary-color);
+
+    /* 音频质量指示器颜色 */
+    --audio-quality-level-0-bg: #d9534f; /* 极低 - 红色系 */
+    --audio-quality-level-1-bg: #f0ad4e; /* 较低 - 橙色系 */
+    --audio-quality-level-2-bg: var(--info-color);   /* 标准 - 蓝色系 (或灰色 #777) */
+    --audio-quality-level-3-bg: #5cb85c; /* 较高 - 绿色系 */
+    --audio-quality-level-4-bg: #4CAF50; /* 极高 - 深绿色 */
 }
 
 * {
@@ -1432,6 +1442,31 @@ body {
     color: var(--text-color);
 }
 
+/* 音频质量指示器样式 */
+.call-status-indicator {
+    padding: 4px 8px;
+    border-radius: var(--border-radius-small);
+    font-size: 0.8em;
+    color: var(--text-color-inverted);
+    margin-left: 8px;
+    background-color: rgba(0, 0, 0, 0.2);
+    align-self: center;
+    transition: background-color 0.3s ease, color 0.3s ease; /* 平滑过渡 */
+}
+
+/* 可以为每个等级定义不同的颜色，或使用范围类 */
+.call-status-indicator.quality-level-0 { background-color: var(--audio-quality-level-0-bg); } /* 极低 */
+.call-status-indicator.quality-level-1 { background-color: var(--audio-quality-level-1-bg); } /* 较低 */
+.call-status-indicator.quality-level-2 { background-color: var(--audio-quality-level-2-bg); } /* 标准 */
+.call-status-indicator.quality-level-3 { background-color: var(--audio-quality-level-3-bg); } /* 较高 */
+.call-status-indicator.quality-level-4 { background-color: var(--audio-quality-level-4-bg); } /* 极高 */
+
+/* 或者使用基于范围的类 (VideoCallUIManager 中使用了这种方法) */
+.call-status-indicator.quality-high-range { background-color: var(--accent-color); }
+.call-status-indicator.quality-medium-range { background-color: var(--info-color); }
+.call-status-indicator.quality-low-range { background-color: var(--warning-color); }
+
+
 /* --- 通知 --- */
 .notification-container {
     position: fixed;
@@ -2219,6 +2254,65 @@ input:checked + .slider::before {
     display: block;
     border: 1px solid var(--border-color);
     border-radius: 4px;
+}
+
+/* --- TTS UI Manager: Searchable Select --- */
+.searchable-select-tts {
+    position: relative; /* For options container positioning */
+    flex-grow: 1; /* Take up available space like other inputs */
+}
+
+.searchable-select-input-tts {
+    width: 100%; /* Full width of its parent (.tts-config-item minus label) */
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    box-sizing: border-box; /* Ensure padding and border are inside width */
+}
+.searchable-select-input-tts:disabled {
+    background-color: var(--hover-bg-color, #f0f0f0);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+
+.searchable-select-options-container-tts {
+    position: absolute;
+    top: 100%; /* Position below the input */
+    left: 0;
+    right: 0;
+    z-index: 1050; /* Ensure it's above other elements in the modal */
+    max-height: 150px; /* Limit height and enable scrolling */
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-top: none; /* Avoid double border with input */
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    background-color: var(--received-bg-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.searchable-select-option-tts {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.searchable-select-option-tts:hover {
+    background-color: var(--hover-bg-color);
+    color: var(--primary-color);
+}
+
+.searchable-select-option-tts.no-results {
+    padding: 8px 10px;
+    color: var(--text-color-light);
+    cursor: default;
+    font-style: italic;
 }
 
 /* ========================================================================== */

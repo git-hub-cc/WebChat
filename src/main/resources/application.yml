@@ -39,6 +39,7 @@ allowed:
     - "https://www.ppmc.club"
     - "http://localhost:8080"
     - "http://localhost:3000" # 示例：为本地前端开发环境添加源
+    - "http://192.168.18.126:8080" # 示例：为本地前端开发环境添加源
 
 # OpenAI兼容的API配置
 openai:
