@@ -5,6 +5,8 @@
  *              支持消息列表的虚拟滚动，以及从资源预览跳转到特定消息。
  *              加载更晚的消息现在使用与加载更早消息相同的阈值 (Config.ui.virtualScrollThreshold)，并实现滚动回弹。
  *              新增逻辑以防止用户在还有更多未加载消息时将滚动条停留在绝对底部。
+ *              新增：在群聊输入框中输入 @ 时，显示 AI 成员提及建议。
+ *              优化：AI提及建议列表现在精确显示在输入框上方。
  * @module ChatAreaUIManager
  * @exports {object} ChatAreaUIManager - 对外暴露的单例对象，包含管理聊天区域 UI 的所有方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
@@ -23,7 +25,6 @@
  * @dependents AppInitializer (进行初始化)
  */
 const ChatAreaUIManager = {
-    // 缓存的 DOM 元素引用
     chatAreaEl: null,
     chatHeaderTitleEl: null,
     chatHeaderStatusEl: null,
@@ -42,38 +43,34 @@ const ChatAreaUIManager = {
     peopleLobbyButtonEl: null,
     screenshotMainBtnEl: null,
 
-    // 自定义上下文菜单相关属性
     contextMenuEl: null,
     activeContextMenuMessageElement: null,
     contextMenuAutoHideTimer: null,
+    aiMentionSuggestionsEl: null,
 
-    // 常量
-    MESSAGE_RETRACTION_WINDOW: 5 * 60 * 1000, // 5 分钟 (毫秒)
-    CONTEXT_MENU_AUTOHIDE_DURATION: 3000, // 3 秒 (毫秒)，用于菜单自动隐藏
+    MESSAGE_RETRACTION_WINDOW: 5 * 60 * 1000,
+    CONTEXT_MENU_AUTOHIDE_DURATION: 3000,
 
-    // --- 虚拟滚动属性 ---
     _currentChatIdForVirtualScroll: null,
     _allMessagesForCurrentChat: [],
     _renderedOldestMessageArrayIndex: -1,
-    _renderedNewestMessageArrayIndex: -1, // 跟踪已渲染的最新消息的索引
+    _renderedNewestMessageArrayIndex: -1,
     _isLoadingOlderMessages: false,
-    _isLoadingNewerMessages: false, // 标记是否正在加载新消息
+    _isLoadingNewerMessages: false,
     _loadingIndicatorEl: null,
     _scrollListenerAttached: false,
     _debounceScrollTimer: null,
-    _boundHandleChatScroll: null, // 用于保存 bind 后的滚动处理函数
-    _lastScrollTop: 0, // 用于判断滚动方向
+    _boundHandleChatScroll: null,
+    _lastScrollTop: 0,
 
-    // --- “回到最新”按钮 ---
     _scrollToLatestBtnEl: null,
-    CONTEXT_LOAD_COUNT: 10, // 跳转时加载目标消息前后各多少条
-    MESSAGES_TO_LOAD_ON_SCROLL: 15, // 向上或向下滚动时加载的数量
-
+    CONTEXT_LOAD_COUNT: 10,
+    MESSAGES_TO_LOAD_ON_SCROLL: 15,
 
     /**
      * 初始化模块，获取所有需要的 DOM 元素引用并绑定核心事件。
      */
-    init: function() {
+    init: function () {
         this.chatAreaEl = document.getElementById('chatArea');
         this.chatHeaderTitleEl = document.getElementById('currentChatTitleMain');
         this.chatHeaderStatusEl = document.getElementById('currentChatStatusMain');
@@ -93,6 +90,7 @@ const ChatAreaUIManager = {
         this.screenshotMainBtnEl = document.getElementById('screenshotMainBtn');
 
         this._initContextMenu();
+        this._initAiMentionSuggestions();
 
         if (this.chatBoxEl) {
             this._loadingIndicatorEl = document.createElement('div');
@@ -100,24 +98,61 @@ const ChatAreaUIManager = {
             this._loadingIndicatorEl.innerHTML = '<div class="spinner"></div>';
         }
         this._boundHandleChatScroll = this._debouncedHandleChatScroll.bind(this);
-
-        // “回到最新”按钮的创建和事件绑定移至 _showScrollToLatestButton 中，按需创建
         this.bindEvents();
     },
 
     /**
+     * @private
+     * 初始化AI提及建议的UI元素。
+     * 它将被添加到聊天输入区域的父容器中，以便能正确定位在输入框上方。
+     */
+    _initAiMentionSuggestions: function() {
+        this.aiMentionSuggestionsEl = document.createElement('div');
+        this.aiMentionSuggestionsEl.id = 'aiMentionSuggestions';
+        this.aiMentionSuggestionsEl.className = 'ai-mention-suggestions';
+        this.aiMentionSuggestionsEl.style.display = 'none';
+        this.aiMentionSuggestionsEl.style.position = 'absolute';
+        const chatInputContainer = this.messageInputEl ? this.messageInputEl.closest('.chat-input-container') : null;
+        if (chatInputContainer) {
+            chatInputContainer.style.position = 'relative';
+            chatInputContainer.appendChild(this.aiMentionSuggestionsEl);
+        } else if (this.messageInputEl && this.messageInputEl.parentNode) {
+            Utils.log("ChatAreaUIManager: 无法找到理想的 .chat-input-container 来附加提及建议。尝试添加到输入框的父级。", Utils.logLevels.WARN);
+            this.messageInputEl.parentNode.style.position = 'relative';
+            this.messageInputEl.parentNode.appendChild(this.aiMentionSuggestionsEl);
+        } else {
+            Utils.log("ChatAreaUIManager: 无法找到附加提及建议列表的合适位置。", Utils.logLevels.ERROR);
+            return;
+        }
+        document.addEventListener('click', (event) => {
+            if (this.aiMentionSuggestionsEl && this.aiMentionSuggestionsEl.style.display === 'block' &&
+                !this.aiMentionSuggestionsEl.contains(event.target) && event.target !== this.messageInputEl) {
+                this.aiMentionSuggestionsEl.style.display = 'none';
+            }
+        });
+    },
+
+
+    /**
      * 绑定聊天区域内的所有 UI 事件监听器。
      */
-    bindEvents: function() {
+    bindEvents: function () {
         if (this.messageInputEl) {
             this.messageInputEl.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
                     e.preventDefault();
                     MessageManager.sendMessage();
+                    if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none';
+                } else if (e.key === 'Escape') {
+                    if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none';
                 }
             });
+            this.messageInputEl.addEventListener('input', this._handleMessageInputForMentions.bind(this));
         }
-        if (this.sendButtonEl) this.sendButtonEl.addEventListener('click', MessageManager.sendMessage);
+        if (this.sendButtonEl) this.sendButtonEl.addEventListener('click', () => {
+            MessageManager.sendMessage();
+            if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none';
+        });
         if (this.attachButtonEl) this.attachButtonEl.addEventListener('click', () => {
             const fileInput = document.getElementById('fileInput');
             if (fileInput) fileInput.click();
@@ -129,82 +164,121 @@ const ChatAreaUIManager = {
             } else {
                 this.voiceButtonEl.addEventListener('mousedown', () => { if (!this.voiceButtonEl.disabled) MediaManager.startRecording(); });
                 this.voiceButtonEl.addEventListener('mouseup', () => { if (!this.voiceButtonEl.disabled) MediaManager.stopRecording(); });
-                this.voiceButtonEl.addEventListener('mouseleave', () => { if (!this.voiceButtonEl.disabled && MediaManager.mediaRecorder && MediaManager.mediaRecorder.state === 'recording') MediaManager.stopRecording();});
+                this.voiceButtonEl.addEventListener('mouseleave', () => { if (!this.voiceButtonEl.disabled && MediaManager.mediaRecorder && MediaManager.mediaRecorder.state === 'recording') MediaManager.stopRecording(); });
             }
         }
         if (this.screenshotMainBtnEl) this.screenshotMainBtnEl.addEventListener('click', () => MediaManager.captureScreen());
-
-        if (this.videoCallButtonEl) {
-            this.videoCallButtonEl.addEventListener('click', () => {
-                if(!this.videoCallButtonEl.disabled) VideoCallManager.initiateCall(ChatManager.currentChatId);
-            });
-        }
-        if (this.audioCallButtonEl) {
-            this.audioCallButtonEl.addEventListener('click', () => {
-                if(!this.audioCallButtonEl.disabled) VideoCallManager.initiateAudioCall(ChatManager.currentChatId);
-            });
-        }
-        if (this.screenShareButtonEl) {
-            this.screenShareButtonEl.addEventListener('click', () => {
-                if(!this.screenShareButtonEl.disabled) VideoCallManager.initiateScreenShare(ChatManager.currentChatId);
-            });
-        }
-
+        if (this.videoCallButtonEl) this.videoCallButtonEl.addEventListener('click', () => { if (!this.videoCallButtonEl.disabled) VideoCallManager.initiateCall(ChatManager.currentChatId); });
+        if (this.audioCallButtonEl) this.audioCallButtonEl.addEventListener('click', () => { if (!this.audioCallButtonEl.disabled) VideoCallManager.initiateAudioCall(ChatManager.currentChatId); });
+        if (this.screenShareButtonEl) this.screenShareButtonEl.addEventListener('click', () => { if (!this.screenShareButtonEl.disabled) VideoCallManager.initiateScreenShare(ChatManager.currentChatId); });
         if (this.chatDetailsButtonEl) this.chatDetailsButtonEl.addEventListener('click', () => { if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.toggleChatDetailsView(); });
         if (this.peopleLobbyButtonEl) this.peopleLobbyButtonEl.addEventListener('click', () => { if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.togglePeopleLobbyView(); });
-
         if (this.chatAreaEl) {
             let dragCounter = 0;
             this.chatAreaEl.addEventListener('dragenter', (e) => { e.preventDefault(); e.stopPropagation(); if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) { dragCounter++; if (dragCounter === 1) this.chatAreaEl.classList.add('drag-over'); } });
             this.chatAreaEl.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) e.dataTransfer.dropEffect = 'copy'; else e.dataTransfer.dropEffect = 'none'; });
             this.chatAreaEl.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dragCounter--; if (dragCounter === 0) this.chatAreaEl.classList.remove('drag-over'); });
-            this.chatAreaEl.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); dragCounter = 0; this.chatAreaEl.classList.remove('drag-over'); if (!ChatManager.currentChatId) { NotificationUIManager.showNotification('发送文件前请先选择一个聊天。', 'warning'); return; } if (e.dataTransfer && e.dataTransfer.files.length > 0) { const file = e.dataTransfer.files[0]; MediaManager.processFile(file); } });
+            this.chatAreaEl.addEventListener('drop', (e) => {
+                e.preventDefault(); e.stopPropagation(); dragCounter = 0; this.chatAreaEl.classList.remove('drag-over');
+                if (!ChatManager.currentChatId) { NotificationUIManager.showNotification('发送文件前请先选择一个聊天。', 'warning'); return; }
+                if (e.dataTransfer && e.dataTransfer.files.length > 0) { const file = e.dataTransfer.files[0]; MediaManager.processFile(file); }
+            });
         }
         if (this.chatBoxEl) {
             this.chatBoxEl.addEventListener('contextmenu', this._handleMessageInteraction.bind(this));
-            this.chatBoxEl.addEventListener('dblclick', function(event) {
+            this.chatBoxEl.addEventListener('dblclick', function (event) {
                 const messageElement = event.target.closest('.message:not(.system):not(.retracted)');
-                if (messageElement) {
-                    if (event.target.closest('a, button, input, textarea, select, .file-preview-img, .play-voice-btn, .download-btn, video[controls], audio[controls]')) return;
-                    this._showContextMenu(event, messageElement);
-                }
+                if (messageElement) { if (event.target.closest('a, button, input, textarea, select, .file-preview-img, .play-voice-btn, .download-btn, video[controls], audio[controls]')) return; this._showContextMenu(event, messageElement); }
             }.bind(this));
         }
     },
 
+    _handleMessageInputForMentions: function() {
+        if (!this.messageInputEl || !this.aiMentionSuggestionsEl || !ChatManager.currentChatId || !ChatManager.currentChatId.startsWith('group_')) {
+            if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none';
+            return;
+        }
+        const text = this.messageInputEl.value;
+        const cursorPos = this.messageInputEl.selectionStart;
+        const textBeforeCursor = text.substring(0, cursorPos);
+        const atMatch = textBeforeCursor.match(/@(\w*)$/);
+        if (atMatch) {
+            const query = atMatch[1].toLowerCase();
+            const group = GroupManager.groups[ChatManager.currentChatId];
+            if (group && group.members) {
+                const aiMembers = group.members.reduce((acc, memberId) => {
+                    const contact = UserManager.contacts[memberId];
+                    if (contact && contact.isAI && contact.name.toLowerCase().includes(query)) { acc.push(contact); }
+                    return acc;
+                }, []);
+                if (aiMembers.length > 0) { this._populateAiMentionSuggestions(aiMembers, atMatch[0].length); }
+                else { this.aiMentionSuggestionsEl.style.display = 'none'; }
+            } else { this.aiMentionSuggestionsEl.style.display = 'none'; }
+        } else { this.aiMentionSuggestionsEl.style.display = 'none'; }
+    },
+
     /**
-     * 初始化自定义上下文菜单元素并将其附加到文档中。
-     * 同时绑定全局点击和 Esc 键事件以隐藏菜单。
      * @private
+     * 填充 AI @ 提及建议列表，并正确定位在输入框上方。
+     * @param {Array<object>} aiContacts - 匹配的 AI 联系人对象数组。
+     * @param {number} lengthOfAtAndQuery - `@` 符号加上查询词的长度，用于替换。
      */
-    _initContextMenu: function() {
+    _populateAiMentionSuggestions: function(aiContacts, lengthOfAtAndQuery) {
+        if (!this.aiMentionSuggestionsEl || !this.messageInputEl) return;
+        this.aiMentionSuggestionsEl.innerHTML = '';
+        aiContacts.forEach(contact => {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'mention-suggestion-item';
+            itemEl.textContent = contact.name;
+            itemEl.addEventListener('click', () => {
+                const currentText = this.messageInputEl.value;
+                const cursorPos = this.messageInputEl.selectionStart;
+                const textBefore = currentText.substring(0, cursorPos - lengthOfAtAndQuery);
+                const textAfter = currentText.substring(cursorPos);
+                this.messageInputEl.value = textBefore + '@' + contact.name + ' ' + textAfter;
+                this.messageInputEl.focus();
+                const newCursorPos = textBefore.length + 1 + contact.name.length + 1;
+                this.messageInputEl.setSelectionRange(newCursorPos, newCursorPos);
+                this.aiMentionSuggestionsEl.style.display = 'none';
+            });
+            this.aiMentionSuggestionsEl.appendChild(itemEl);
+        });
+        const inputRow = this.messageInputEl.closest('.input-row');
+        if (inputRow) {
+            this.aiMentionSuggestionsEl.style.bottom = inputRow.offsetHeight + 'px';
+            this.aiMentionSuggestionsEl.style.left = '0px';
+            this.aiMentionSuggestionsEl.style.right = '0px';
+            this.aiMentionSuggestionsEl.style.width = 'auto';
+        } else {
+            this.aiMentionSuggestionsEl.style.bottom = this.messageInputEl.offsetHeight + 5 + 'px';
+            this.aiMentionSuggestionsEl.style.left = this.messageInputEl.offsetLeft + 'px';
+            this.aiMentionSuggestionsEl.style.width = this.messageInputEl.offsetWidth + 'px';
+        }
+        this.aiMentionSuggestionsEl.style.display = 'block';
+    },
+    // ... (其他方法保持不变) ...
+    _initContextMenu: function () {
         this.contextMenuEl = document.createElement('div');
         this.contextMenuEl.id = 'customMessageContextMenu';
         this.contextMenuEl.className = 'custom-context-menu';
         this.contextMenuEl.style.display = 'none';
         document.body.appendChild(this.contextMenuEl);
-        document.addEventListener('click', function(event) { if (this.contextMenuEl && this.contextMenuEl.style.display === 'block' && !this.contextMenuEl.contains(event.target)) this._hideContextMenu(); }.bind(this));
-        document.addEventListener('keydown', function(event) { if (event.key === 'Escape' && this.contextMenuEl && this.contextMenuEl.style.display === 'block') this._hideContextMenu(); }.bind(this));
+        document.addEventListener('click', function (event) {
+            if (this.contextMenuEl && this.contextMenuEl.style.display === 'block' && !this.contextMenuEl.contains(event.target)) this._hideContextMenu();
+        }.bind(this));
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && this.contextMenuEl && this.contextMenuEl.style.display === 'block') this._hideContextMenu();
+        }.bind(this));
     },
-
-    /**
-     * 处理消息元素的交互事件（如右键点击）。
-     * @param {MouseEvent} event - 鼠标事件对象。
-     * @private
-     */
-    _handleMessageInteraction: function(event) {
+    _handleMessageInteraction: function (event) {
         const messageElement = event.target.closest('.message:not(.system):not(.retracted)');
         if (!messageElement) return;
-        if (event.type === 'contextmenu') { event.preventDefault(); this._showContextMenu(event, messageElement); }
+        if (event.type === 'contextmenu') {
+            event.preventDefault();
+            this._showContextMenu(event, messageElement);
+        }
     },
-
-    /**
-     * 显示自定义的上下文菜单，用于对消息进行操作（如删除、撤回）。
-     * @param {MouseEvent} event - 触发菜单的鼠标事件。
-     * @param {HTMLElement} messageElement - 关联的消息 DOM 元素。
-     * @private
-     */
-    _showContextMenu: function(event, messageElement) {
+    _showContextMenu: function (event, messageElement) {
         if (!this.contextMenuEl || !messageElement) return;
         this._clearContextMenuAutoHideTimer();
         const imageViewerModal = document.querySelector('.modal-like.image-viewer');
@@ -214,80 +288,94 @@ const ChatAreaUIManager = {
         const messageId = messageElement.dataset.messageId;
         const messageTimestamp = parseInt(messageElement.dataset.timestamp, 10);
         const isMyMessage = messageElement.classList.contains('sent');
-        if (!messageId) { this._hideContextMenu(); return; }
+        if (!messageId) {
+            this._hideContextMenu();
+            return;
+        }
 
         const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = '删除'; deleteBtn.className = 'context-menu-button';
-        deleteBtn.onclick = function() { this._clearContextMenuAutoHideTimer(); MessageManager.deleteMessageLocally(messageId); this._hideContextMenu(); }.bind(this);
+        deleteBtn.textContent = '删除';
+        deleteBtn.className = 'context-menu-button';
+        deleteBtn.onclick = function () {
+            this._clearContextMenuAutoHideTimer();
+            MessageManager.deleteMessageLocally(messageId);
+            this._hideContextMenu();
+        }.bind(this);
         this.contextMenuEl.appendChild(deleteBtn);
 
         if (isMyMessage && !isNaN(messageTimestamp) && (Date.now() - messageTimestamp < this.MESSAGE_RETRACTION_WINDOW)) {
             const retractBtn = document.createElement('button');
-            retractBtn.textContent = '撤回'; retractBtn.className = 'context-menu-button';
-            retractBtn.onclick = function() { this._clearContextMenuAutoHideTimer(); MessageManager.requestRetractMessage(messageId); this._hideContextMenu(); }.bind(this);
+            retractBtn.textContent = '撤回';
+            retractBtn.className = 'context-menu-button';
+            retractBtn.onclick = function () {
+                this._clearContextMenuAutoHideTimer();
+                MessageManager.requestRetractMessage(messageId);
+                this._hideContextMenu();
+            }.bind(this);
             this.contextMenuEl.appendChild(retractBtn);
         }
-        if (this.contextMenuEl.children.length === 0) { this._hideContextMenu(); return; }
+        if (this.contextMenuEl.children.length === 0) {
+            this._hideContextMenu();
+            return;
+        }
 
         this.contextMenuEl.style.display = 'block';
         const menuRect = this.contextMenuEl.getBoundingClientRect();
-        const menuWidth = menuRect.width; const menuHeight = menuRect.height;
+        const menuWidth = menuRect.width;
+        const menuHeight = menuRect.height;
         this.contextMenuEl.style.display = 'none';
-        let x = event.clientX; let y = event.clientY;
+        let x = event.clientX;
+        let y = event.clientY;
         if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 5;
         if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 5;
-        if (x < 0) x = 5; if (y < 0) y = 5;
-        this.contextMenuEl.style.top = y + 'px'; this.contextMenuEl.style.left = x + 'px';
+        if (x < 0) x = 5;
+        if (y < 0) y = 5;
+        this.contextMenuEl.style.top = y + 'px';
+        this.contextMenuEl.style.left = x + 'px';
         this.contextMenuEl.style.display = 'block';
         this.contextMenuAutoHideTimer = setTimeout(this._hideContextMenu.bind(this), this.CONTEXT_MENU_AUTOHIDE_DURATION);
     },
-
-    /**
-     * 隐藏自定义上下文菜单并清除自动隐藏计时器。
-     * @private
-     */
-    _hideContextMenu: function() {
+    _hideContextMenu: function () {
         this._clearContextMenuAutoHideTimer();
         if (this.contextMenuEl) this.contextMenuEl.style.display = 'none';
         this.activeContextMenuMessageElement = null;
     },
-
-    /**
-     * 清除上下文菜单的自动隐藏计时器。
-     * @private
-     */
-    _clearContextMenuAutoHideTimer: function() {
-        if (this.contextMenuAutoHideTimer) { clearTimeout(this.contextMenuAutoHideTimer); this.contextMenuAutoHideTimer = null; }
+    _clearContextMenuAutoHideTimer: function () {
+        if (this.contextMenuAutoHideTimer) {
+            clearTimeout(this.contextMenuAutoHideTimer);
+            this.contextMenuAutoHideTimer = null;
+        }
     },
-
-    /**
-     * 显示聊天区域，并隐藏“未选择聊天”的占位屏幕。
-     * 同时确保上下文菜单被隐藏。
-     */
     showChatArea: function () {
         if (typeof LayoutUIManager !== 'undefined') LayoutUIManager.showChatAreaLayout();
         if (this.noChatSelectedScreenEl) this.noChatSelectedScreenEl.style.display = 'none';
         if (this.chatBoxEl) this.chatBoxEl.style.display = 'flex';
         this._hideContextMenu();
     },
-
-    /**
-     * 显示“未选择聊天”的占位屏幕。
-     * 重置聊天头部信息，清空消息区域，禁用聊天输入接口，
-     * 并隐藏侧边栏、滚动到底部按钮，同时解除滚动事件监听。
-     */
     showNoChatSelected: function () {
         if (this.chatHeaderTitleEl) this.chatHeaderTitleEl.textContent = '选择一个聊天';
         if (this.chatHeaderStatusEl) this.chatHeaderStatusEl.textContent = '';
-        if (this.chatHeaderAvatarEl) { this.chatHeaderAvatarEl.innerHTML = ''; this.chatHeaderAvatarEl.className = 'chat-avatar-main'; }
+        if (this.chatHeaderAvatarEl) {
+            this.chatHeaderAvatarEl.innerHTML = '';
+            this.chatHeaderAvatarEl.className = 'chat-avatar-main';
+        }
         if (this.chatHeaderMainEl) this.chatHeaderMainEl.className = 'chat-header-main';
-        if (this.chatBoxEl) { this.chatBoxEl.innerHTML = ''; this.chatBoxEl.style.display = 'none'; }
+        if (this.chatBoxEl) {
+            this.chatBoxEl.innerHTML = '';
+            this.chatBoxEl.style.display = 'none';
+        }
         if (this.noChatSelectedScreenEl) this.noChatSelectedScreenEl.style.display = 'flex';
         this.enableChatInterface(false);
         if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.hideSidePanel();
         if (typeof LayoutUIManager !== 'undefined') LayoutUIManager.showChatListArea();
-        if (this.peopleLobbyButtonEl) { this.peopleLobbyButtonEl.style.display = 'block'; this.peopleLobbyButtonEl.disabled = false; }
-        if (this.chatDetailsButtonEl) { this.chatDetailsButtonEl.style.display = 'none'; this.chatDetailsButtonEl.disabled = true; }
+        if (this.peopleLobbyButtonEl) {
+            this.peopleLobbyButtonEl.style.display = 'block';
+            this.peopleLobbyButtonEl.disabled = false;
+        }
+        if (this.chatDetailsButtonEl) {
+            this.chatDetailsButtonEl.style.display = 'none';
+            this.chatDetailsButtonEl.disabled = true;
+        }
         this._hideContextMenu();
         this._detachScrollListener();
         this._currentChatIdForVirtualScroll = null;
@@ -296,14 +384,6 @@ const ChatAreaUIManager = {
         this._renderedNewestMessageArrayIndex = -1;
         this._hideScrollToLatestButton();
     },
-
-    /**
-     * 更新聊天头部的标题、状态信息、头像以及群组状态。
-     * @param {string} title - 聊天标题。
-     * @param {string} status - 聊天状态文本（如在线状态）。
-     * @param {string} [avatarTextParam] - 用于生成头像的文本（如果头像URL不可用）。
-     * @param {boolean} [isGroup=false] - 是否为群组聊天。
-     */
     updateChatHeader: function (title, status, avatarTextParam, isGroup = false) {
         if (this.chatHeaderTitleEl) this.chatHeaderTitleEl.textContent = Utils.escapeHtml(title);
         if (this.chatHeaderStatusEl) this.chatHeaderStatusEl.textContent = Utils.escapeHtml(status);
@@ -325,38 +405,30 @@ const ChatAreaUIManager = {
         }
         if (this.chatHeaderAvatarEl) this.chatHeaderAvatarEl.innerHTML = avatarContentHtml;
         const chatSelected = !!ChatManager.currentChatId;
-        if (this.chatDetailsButtonEl) { this.chatDetailsButtonEl.style.display = chatSelected ? 'block' : 'none'; this.chatDetailsButtonEl.disabled = !chatSelected; }
-        if (this.peopleLobbyButtonEl) { this.peopleLobbyButtonEl.style.display = 'block'; this.peopleLobbyButtonEl.disabled = false; }
+        if (this.chatDetailsButtonEl) {
+            this.chatDetailsButtonEl.style.display = chatSelected ? 'block' : 'none';
+            this.chatDetailsButtonEl.disabled = !chatSelected;
+        }
+        if (this.peopleLobbyButtonEl) {
+            this.peopleLobbyButtonEl.style.display = 'block';
+            this.peopleLobbyButtonEl.disabled = false;
+        }
     },
-
-    /**
-     * 更新聊天头部的状态文本。
-     * @param {string} statusText - 新的状态文本。
-     */
     updateChatHeaderStatus: function (statusText) {
         if (this.chatHeaderStatusEl) this.chatHeaderStatusEl.textContent = Utils.escapeHtml(statusText);
     },
-
-    /**
-     * 启用或禁用聊天输入框及相关按钮（发送、附件、语音、截图、聊天详情）。
-     * 同时根据连接状态更新通话按钮的可用性。
-     * @param {boolean} enabled - true 表示启用，false 表示禁用。
-     */
     enableChatInterface: function (enabled) {
         const elementsToToggle = [this.messageInputEl, this.sendButtonEl, this.attachButtonEl, this.voiceButtonEl, this.chatDetailsButtonEl, this.screenshotMainBtnEl];
-        elementsToToggle.forEach(el => { if (el) el.disabled = !enabled; });
+        elementsToToggle.forEach(el => {
+            if (el) el.disabled = !enabled;
+        });
         if (this.peopleLobbyButtonEl) this.peopleLobbyButtonEl.disabled = false;
         this.setCallButtonsState(enabled && ChatManager.currentChatId ? ConnectionManager.isConnectedTo(ChatManager.currentChatId) : false, ChatManager.currentChatId);
-        if (enabled && this.messageInputEl) setTimeout(() => { if (this.messageInputEl) this.messageInputEl.focus(); }, 100);
+        if (enabled && this.messageInputEl) setTimeout(() => {
+            if (this.messageInputEl) this.messageInputEl.focus();
+        }, 100);
     },
-
-    /**
-     * 设置通话相关按钮（视频、音频、屏幕共享）的启用状态。
-     * 这些按钮的状态取决于整体启用标志、目标对方ID、是否群聊、是否特殊聊天以及浏览器能力。
-     * @param {boolean} enabled - 是否启用通话功能。
-     * @param {string|null} [peerIdContext=null] - 对方的ID。如果为null，则使用当前聊天ID。
-     */
-    setCallButtonsState: function(enabled, peerIdContext = null) {
+    setCallButtonsState: function (enabled, peerIdContext = null) {
         const targetPeerForCall = peerIdContext || ChatManager.currentChatId;
         const isGroupChat = targetPeerForCall?.startsWith('group_');
         const currentContact = UserManager.contacts[targetPeerForCall];
@@ -366,28 +438,10 @@ const ChatAreaUIManager = {
         if (this.videoCallButtonEl) this.videoCallButtonEl.disabled = !finalEnabledState;
         if (this.audioCallButtonEl) this.audioCallButtonEl.disabled = !finalEnabledState;
         if (this.screenShareButtonEl) this.screenShareButtonEl.disabled = !finalEnabledState || !canShareScreen;
-
-        // Note: click listeners are now set in bindEvents and rely on the disabled state.
-        // If dynamic assignment of onclick was desired based on targetPeerForCall, it would need to be updated here.
-        // However, current bindEvents sets them generally.
     },
-
-    /**
-     * 为特定的对方ID设置通话按钮状态。
-     * 仅当该对方是当前聊天对象时，才会更新UI。
-     * @param {string} peerId - 对方的ID。
-     * @param {boolean} enabled - 是否启用通话功能。
-     */
-    setCallButtonsStateForPeer: function(peerId, enabled) {
+    setCallButtonsStateForPeer: function (peerId, enabled) {
         if (ChatManager.currentChatId === peerId) this.setCallButtonsState(enabled, peerId);
     },
-
-    /**
-     * 在聊天框中显示与指定对方断开连接的提示，并提供重新连接的选项。
-     * 如果已存在针对该对方的提示，则更新提示文本和按钮状态。
-     * @param {string} peerId - 断开连接的对方ID。
-     * @param {function} [onReconnectSuccess] - 成功重新连接后的回调函数。
-     */
     showReconnectPrompt: function (peerId, onReconnectSuccess) {
         if (!this.chatBoxEl) return;
         let promptDiv = this.chatBoxEl.querySelector(`.system-message.reconnect-prompt[data-peer-id="${peerId}"]`);
@@ -413,32 +467,63 @@ const ChatAreaUIManager = {
         const cleanupPrompt = (removeImmediately = false) => {
             EventEmitter.off('connectionEstablished', successHandler);
             EventEmitter.off('connectionFailed', failHandler);
-            if (promptDiv && promptDiv.parentNode) { if (removeImmediately) promptDiv.remove(); else setTimeout(() => { if (promptDiv && promptDiv.parentNode) promptDiv.remove(); }, textElement.textContent.includes("失败") ? 5000 : 3000); }
+            if (promptDiv && promptDiv.parentNode) {
+                if (removeImmediately) promptDiv.remove(); else setTimeout(() => {
+                    if (promptDiv && promptDiv.parentNode) promptDiv.remove();
+                }, textElement.textContent.includes("失败") ? 5000 : 3000);
+            }
         };
-        successHandler = (connectedPeerId) => { if (connectedPeerId === peerId) { if (textElement) textElement.textContent = `已重新连接到 ${Utils.escapeHtml(peerName)}。`; if (reconnectButton) reconnectButton.style.display = 'none'; if (cancelButton) { cancelButton.textContent = '好的'; cancelButton.onclick = () => cleanupPrompt(true); } if (typeof onReconnectSuccess === 'function') onReconnectSuccess(); cleanupPrompt(); } };
-        failHandler = (failedPeerId) => { if (failedPeerId === peerId) { if (textElement) textElement.textContent = `无法重新连接到 ${Utils.escapeHtml(peerName)}。请尝试手动连接或刷新页面。`; if (reconnectButton) { reconnectButton.style.display = 'initial'; reconnectButton.disabled = false; } if (cancelButton) cancelButton.textContent = '忽略'; } };
+        successHandler = (connectedPeerId) => {
+            if (connectedPeerId === peerId) {
+                if (textElement) textElement.textContent = `已重新连接到 ${Utils.escapeHtml(peerName)}。`;
+                if (reconnectButton) reconnectButton.style.display = 'none';
+                if (cancelButton) {
+                    cancelButton.textContent = '好的';
+                    cancelButton.onclick = () => cleanupPrompt(true);
+                }
+                if (typeof onReconnectSuccess === 'function') onReconnectSuccess();
+                cleanupPrompt();
+            }
+        };
+        failHandler = (failedPeerId) => {
+            if (failedPeerId === peerId) {
+                if (textElement) textElement.textContent = `无法重新连接到 ${Utils.escapeHtml(peerName)}。请尝试手动连接或刷新页面。`;
+                if (reconnectButton) {
+                    reconnectButton.style.display = 'initial';
+                    reconnectButton.disabled = false;
+                }
+                if (cancelButton) cancelButton.textContent = '忽略';
+            }
+        };
         EventEmitter.on('connectionEstablished', successHandler);
         EventEmitter.on('connectionFailed', failHandler);
         if (reconnectButton) {
             reconnectButton.onclick = async () => {
-                if (textElement) textElement.textContent = `正在检查信令服务器连接...`; reconnectButton.disabled = true;
+                if (textElement) textElement.textContent = `正在检查信令服务器连接...`;
+                reconnectButton.disabled = true;
                 let signalingServerNowConnected;
-                if (ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN) signalingServerNowConnected = true;
-                else { if (textElement) textElement.textContent = `信令服务器未连接。正在尝试连接...`; try { await ConnectionManager.connectWebSocket(); signalingServerNowConnected = ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN; } catch (wsError) { Utils.log(`showReconnectPrompt: 重新连接信令服务器失败: ${wsError.message || wsError}`, Utils.logLevels.ERROR); signalingServerNowConnected = false; } }
-                if (signalingServerNowConnected) { if (textElement) textElement.textContent = `信令服务器已连接。正在尝试重新连接到 ${Utils.escapeHtml(peerName)} 及其他在线联系人...`; ConnectionManager.autoConnectToAllContacts(); }
-                else { if (textElement) textElement.innerHTML = `无法连接到信令服务器。请检查您的网络，或尝试使用“菜单与设置”中的<br>“AI 与 API 配置 > 高级选项”进行手动连接。`; NotificationUIManager.showNotification('尝试使用“菜单与设置”中的“AI 与 API 配置 > 高级选项”进行手动连接。', 'error'); reconnectButton.disabled = false; }
+                if (ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN) signalingServerNowConnected = true; else {
+                    if (textElement) textElement.textContent = `信令服务器未连接。正在尝试连接...`;
+                    try {
+                        await ConnectionManager.connectWebSocket();
+                        signalingServerNowConnected = ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN;
+                    } catch (wsError) {
+                        Utils.log(`showReconnectPrompt: 重新连接信令服务器失败: ${wsError.message || wsError}`, Utils.logLevels.ERROR);
+                        signalingServerNowConnected = false;
+                    }
+                }
+                if (signalingServerNowConnected) {
+                    if (textElement) textElement.textContent = `信令服务器已连接。正在尝试重新连接到 ${Utils.escapeHtml(peerName)} ...`;
+                } else {
+                    if (textElement) textElement.innerHTML = `无法连接到信令服务器。请检查您的网络，或尝试使用“菜单与设置”中的<br>“AI 与 API 配置 > 高级选项”进行手动连接。`;
+                    NotificationUIManager.showNotification('尝试使用“菜单与设置”中的“AI 与 API 配置 > 高级选项”进行手动连接。', 'error');
+                    reconnectButton.disabled = false;
+                }
             };
         }
         if (cancelButton) cancelButton.onclick = () => cleanupPrompt(true);
     },
-
-    /**
-     * 为指定的聊天ID设置聊天区域。
-     * 这包括显示聊天区域、初始化虚拟滚动所需的数据、
-     * 渲染初始消息批次，并附加滚动事件监听器。
-     * @param {string} chatId - 要设置的聊天ID。
-     */
-    setupForChat: function(chatId) {
+    setupForChat: function (chatId) {
         this._detachScrollListener();
         this.showChatArea();
         this._currentChatIdForVirtualScroll = chatId;
@@ -447,28 +532,18 @@ const ChatAreaUIManager = {
         this._isLoadingNewerMessages = false;
         this._renderedOldestMessageArrayIndex = -1;
         this._renderedNewestMessageArrayIndex = -1;
-        this._lastScrollTop = 0; // 重置滚动位置记录
+        this._lastScrollTop = 0;
         this._renderInitialMessageBatch();
         this._attachScrollListener();
         this._hideScrollToLatestButton();
     },
-
-    /**
-     * 将滚动事件监听器附加到聊天框元素上，用于实现虚拟滚动。
-     * @private
-     */
-    _attachScrollListener: function() {
+    _attachScrollListener: function () {
         if (this.chatBoxEl && !this._scrollListenerAttached) {
             this.chatBoxEl.addEventListener('scroll', this._boundHandleChatScroll);
             this._scrollListenerAttached = true;
         }
     },
-
-    /**
-     * 从聊天框元素上移除滚动事件监听器，并清除防抖计时器。
-     * @private
-     */
-    _detachScrollListener: function() {
+    _detachScrollListener: function () {
         if (this.chatBoxEl && this._scrollListenerAttached && this._boundHandleChatScroll) {
             this.chatBoxEl.removeEventListener('scroll', this._boundHandleChatScroll);
             this._scrollListenerAttached = false;
@@ -476,52 +551,33 @@ const ChatAreaUIManager = {
             this._debounceScrollTimer = null;
         }
     },
-
-    /**
-     * 聊天框滚动事件的防抖处理函数。
-     * @private
-     */
-    _debouncedHandleChatScroll: function() {
+    _debouncedHandleChatScroll: function () {
         clearTimeout(this._debounceScrollTimer);
         this._debounceScrollTimer = setTimeout(() => {
             this._handleChatScroll();
-        }, 150); // 调整后的防抖延迟时间
+        }, 150);
     },
-
-    /**
-     * 处理聊天框的滚动事件。
-     * 当滚动到顶部附近时加载更早的消息。
-     * 当滚动到底部附近时加载更新的消息（如果适用）。
-     * 根据滚动位置显示或隐藏“滚动到最新”按钮。
-     * 增加逻辑以防止在有更多未加载消息时滚动条停留在绝对底部。
-     * @private
-     */
-    _handleChatScroll: function() {
+    _handleChatScroll: function () {
         if (!this.chatBoxEl) return;
-        const { scrollTop, scrollHeight, clientHeight } = this.chatBoxEl;
-        this._lastScrollTop = scrollTop; // 更新上次滚动位置
+        const {scrollTop, scrollHeight, clientHeight} = this.chatBoxEl;
+        this._lastScrollTop = scrollTop;
 
-        // --- 加载更早的消息 ---
         if (scrollTop < Config.ui.virtualScrollThreshold && !this._isLoadingOlderMessages && this._renderedOldestMessageArrayIndex > 0) {
             this._loadOlderMessages();
-            // 如果加载了更早的消息，且当前渲染的最新消息不是全部消息的最后一条，显示“滚动到最新”按钮
-            if (this._allMessagesForCurrentChat.length > 0 && this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length -1) {
+            if (this._allMessagesForCurrentChat.length > 0 && this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1) {
                 this._showScrollToLatestButton();
             }
         }
 
-        // --- 处理加载更晚消息的逻辑 ---
         const distanceToBottom = scrollHeight - scrollTop - clientHeight;
         const hasMoreNewerMessages = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
 
         if (hasMoreNewerMessages && !this._isLoadingNewerMessages && distanceToBottom < Config.ui.virtualScrollThreshold) {
-            this._loadNewerMessages(); // 异步加载
+            this._loadNewerMessages();
         }
 
-        // --- 最终检查和调整，防止停留在底部 ---
-        // 此检查在所有可能的加载和滚动调整之后运行
-        requestAnimationFrame(() => { // 使用 rAF 确保在浏览器完成绘制和滚动计算后执行
-            if (!this.chatBoxEl) return; // 再次检查 chatBoxEl 是否存在
+        requestAnimationFrame(() => {
+            if (!this.chatBoxEl) return;
             const finalScrollTop = this.chatBoxEl.scrollTop;
             const finalScrollHeight = this.chatBoxEl.scrollHeight;
             const finalClientHeight = this.chatBoxEl.clientHeight;
@@ -529,17 +585,13 @@ const ChatAreaUIManager = {
             const stillHasMoreNewerMessages = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
 
             if (stillHasMoreNewerMessages && !this._isLoadingNewerMessages && finalDistanceToBottom < 1) {
-                // 如果到达绝对底部，但仍有更多消息未加载，并且当前没有正在加载
-                // 则轻微向上调整scrollTop，以确保用户不会“卡”在底部并持续触发加载（理论上回弹逻辑会处理，但这是额外保护）
-                // 调整的目标是让底部至少有比如 20px 的空间
                 const targetScrollTop = finalScrollHeight - finalClientHeight - 20;
-                if (this.chatBoxEl.scrollTop < targetScrollTop) { // 只有当当前位置比目标位置更高时才调整（避免不必要的向上跳动）
+                if (this.chatBoxEl.scrollTop < targetScrollTop) {
                     this.chatBoxEl.scrollTop = targetScrollTop;
                     Utils.log("ChatAreaUIManager: _handleChatScroll 防止停留在底部，强制向上微调。", Utils.logLevels.DEBUG);
                 }
             }
 
-            // 更新“滚动到最新”按钮的可见性
             const isEffectivelyAtBottom = finalScrollHeight - finalScrollTop - finalClientHeight < 1;
             if (isEffectivelyAtBottom && !stillHasMoreNewerMessages) {
                 this._hideScrollToLatestButton();
@@ -548,13 +600,7 @@ const ChatAreaUIManager = {
             }
         });
     },
-
-    /**
-     * 渲染初始批次的消息到聊天框中。
-     * 通常是加载最新的若干条消息。
-     * @private
-     */
-    _renderInitialMessageBatch: function() {
+    _renderInitialMessageBatch: function () {
         if (!this.chatBoxEl || !this._currentChatIdForVirtualScroll) return;
         this.chatBoxEl.innerHTML = '';
         this._hideLoadingIndicator();
@@ -563,8 +609,7 @@ const ChatAreaUIManager = {
             const placeholder = document.createElement('div');
             placeholder.className = "system-message";
             const contact = UserManager.contacts[this._currentChatIdForVirtualScroll];
-            if (contact && contact.isSpecial) placeholder.textContent = `与 ${contact.name} 开始对话吧！`;
-            else if(this._currentChatIdForVirtualScroll.startsWith('group_') && GroupManager.groups[this._currentChatIdForVirtualScroll]?.owner === UserManager.userId && GroupManager.groups[this._currentChatIdForVirtualScroll]?.members.length === 1) {
+            if (contact && contact.isSpecial) placeholder.textContent = `与 ${contact.name} 开始对话吧！`; else if (this._currentChatIdForVirtualScroll.startsWith('group_') && GroupManager.groups[this._currentChatIdForVirtualScroll]?.owner === UserManager.userId && GroupManager.groups[this._currentChatIdForVirtualScroll]?.members.length === 1) {
                 placeholder.textContent = "您创建了此群组。邀请成员开始聊天吧！";
             } else placeholder.textContent = "暂无消息。开始对话吧！";
             this.chatBoxEl.appendChild(placeholder);
@@ -581,13 +626,7 @@ const ChatAreaUIManager = {
         this._renderedNewestMessageArrayIndex = endIndexInArray;
         this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight;
     },
-
-    /**
-     * 加载并显示更早的消息批次到聊天框顶部。
-     * 这是一个异步操作，会显示加载指示器。
-     * @private
-     */
-    _loadOlderMessages: async function() {
+    _loadOlderMessages: async function () {
         if (this._isLoadingOlderMessages || this._renderedOldestMessageArrayIndex === 0 || !this.chatBoxEl) return;
         this._isLoadingOlderMessages = true;
         this._showLoadingIndicatorAtTop();
@@ -595,9 +634,13 @@ const ChatAreaUIManager = {
         const newBatchEndIndexInArray = currentOldestLoadedIndex - 1;
         const newBatchStartIndexInArray = Math.max(0, newBatchEndIndexInArray - this.MESSAGES_TO_LOAD_ON_SCROLL + 1);
         if (newBatchEndIndexInArray < 0) {
-            this._hideLoadingIndicator(); this._isLoadingOlderMessages = false; this._renderedOldestMessageArrayIndex = 0; return;
+            this._hideLoadingIndicator();
+            this._isLoadingOlderMessages = false;
+            this._renderedOldestMessageArrayIndex = 0;
+            return;
         }
-        const oldScrollHeight = this.chatBoxEl.scrollHeight; const oldScrollTop = this.chatBoxEl.scrollTop;
+        const oldScrollHeight = this.chatBoxEl.scrollHeight;
+        const oldScrollTop = this.chatBoxEl.scrollTop;
         for (let i = newBatchEndIndexInArray; i >= newBatchStartIndexInArray; i--) {
             MessageManager.displayMessage(this._allMessagesForCurrentChat[i], true);
         }
@@ -605,23 +648,17 @@ const ChatAreaUIManager = {
         requestAnimationFrame(() => {
             const newScrollHeight = this.chatBoxEl.scrollHeight;
             this.chatBoxEl.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
-            this._hideLoadingIndicator(); this._isLoadingOlderMessages = false;
+            this._hideLoadingIndicator();
+            this._isLoadingOlderMessages = false;
         });
     },
-
-    /**
-     * 加载并显示更新的消息批次到聊天框底部。
-     * 这是一个异步操作，并实现了滚动回弹效果以避免连续触发加载。
-     * @private
-     */
-    _loadNewerMessages: async function() {
+    _loadNewerMessages: async function () {
         if (this._isLoadingNewerMessages || this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 1 || !this.chatBoxEl) return;
         this._isLoadingNewerMessages = true;
 
         const oldScrollHeight = this.chatBoxEl.scrollHeight;
         const oldScrollTop = this.chatBoxEl.scrollTop;
         const clientHeight = this.chatBoxEl.clientHeight;
-        // 判断加载前是否非常接近底部（例如，在5px容差内）
         const wasAtBottomBeforeLoad = (oldScrollHeight - oldScrollTop - clientHeight) < 5;
 
         const currentNewestLoadedIndex = this._renderedNewestMessageArrayIndex;
@@ -629,61 +666,43 @@ const ChatAreaUIManager = {
         const newBatchEndIndexInArray = Math.min(this._allMessagesForCurrentChat.length - 1, newBatchStartIndexInArray + this.MESSAGES_TO_LOAD_ON_SCROLL - 1);
 
         if (newBatchStartIndexInArray >= this._allMessagesForCurrentChat.length) {
-            this._isLoadingNewerMessages = false; // 没有更多消息可加载
+            this._isLoadingNewerMessages = false;
             return;
         }
 
-        // 渲染新消息
         for (let i = newBatchStartIndexInArray; i <= newBatchEndIndexInArray; i++) {
-            MessageManager.displayMessage(this._allMessagesForCurrentChat[i], false); // false表示追加
+            MessageManager.displayMessage(this._allMessagesForCurrentChat[i], false);
         }
         this._renderedNewestMessageArrayIndex = newBatchEndIndexInArray;
         const newScrollHeight = this.chatBoxEl.scrollHeight;
 
-        // 初步滚动调整：根据用户加载前的状态决定滚动行为
         if (wasAtBottomBeforeLoad) {
-            // 如果用户加载前就在底部，加载新消息后，目标是让他看到新消息，所以滚动到新的底部
             this.chatBoxEl.scrollTop = newScrollHeight;
         } else {
-            // 如果用户之前不在底部（比如正在向上查看历史），尽量保持他当前的视图焦点。
-            // 由于新消息是追加到底部的，旧内容的相对位置不变，所以保持旧的scrollTop值。
             this.chatBoxEl.scrollTop = oldScrollTop;
         }
 
-        // --- 关键的回弹逻辑 ---
-        // 获取在初步滚动调整后的当前滚动位置和底部距离
         const currentScrollTopAfterInitialAdjust = this.chatBoxEl.scrollTop;
         const currentDistanceToBottom = newScrollHeight - currentScrollTopAfterInitialAdjust - clientHeight;
         const stillHasMoreNewerMessagesAfterLoad = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
 
-        // 如果加载完新消息后，视图的底部仍然太靠近“再次触发加载的边缘”，并且确实还有更多消息，则执行回弹
         if (stillHasMoreNewerMessagesAfterLoad && currentDistanceToBottom < Config.ui.virtualScrollThreshold) {
-            // 计算一个目标scrollTop，使得底部距离视口的距离略大于阈值（例如，阈值 + 10px）
             let targetReboundScrollTop = newScrollHeight - clientHeight - (Config.ui.virtualScrollThreshold + 10);
-            // 确保回弹不会导致scrollTop变为负数
             targetReboundScrollTop = Math.max(0, targetReboundScrollTop);
-            // 只有当目标回弹位置比当前位置更靠上时，才执行回弹，避免不必要的抖动
-            // （或者，如果用户本来就在底部，即使回弹目标比当前高，也应该回弹以避免连续加载）
             if (wasAtBottomBeforeLoad || targetReboundScrollTop > currentScrollTopAfterInitialAdjust) {
                 this.chatBoxEl.scrollTop = targetReboundScrollTop;
                 Utils.log(`ChatAreaUIManager: _loadNewerMessages 执行了滚动回弹。目标 scrollTop: ${targetReboundScrollTop.toFixed(0)}`, Utils.logLevels.DEBUG);
             }
         }
 
-        this._isLoadingNewerMessages = false; // 清除加载中标志
-        // 根据是否还有更多消息来更新“滚动到最新”按钮的可见性
+        this._isLoadingNewerMessages = false;
         if (this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 1) {
             this._hideScrollToLatestButton();
         } else {
             this._showScrollToLatestButton();
         }
     },
-
-    /**
-     * 在聊天框顶部显示加载指示器。
-     * @private
-     */
-    _showLoadingIndicatorAtTop: function() {
+    _showLoadingIndicatorAtTop: function () {
         if (this.chatBoxEl && this._loadingIndicatorEl) {
             this._loadingIndicatorEl.style.display = 'block';
             if (this.chatBoxEl.firstChild !== this._loadingIndicatorEl) {
@@ -691,12 +710,7 @@ const ChatAreaUIManager = {
             }
         }
     },
-
-    /**
-     * 隐藏聊天框中的加载指示器。
-     * @private
-     */
-    _hideLoadingIndicator: function() {
+    _hideLoadingIndicator: function () {
         if (this._loadingIndicatorEl) {
             this._loadingIndicatorEl.style.display = 'none';
             if (this._loadingIndicatorEl.parentNode === this.chatBoxEl) {
@@ -704,14 +718,7 @@ const ChatAreaUIManager = {
             }
         }
     },
-
-    /**
-     * 处理当前聊天窗口接收到的新消息。
-     * 将新消息添加到内部消息列表和UI中。
-     * 如果用户接近聊天底部，则自动滚动到底部；否则显示“滚动到最新”按钮。
-     * @param {object} message - 新的消息对象。
-     */
-    handleNewMessageForCurrentChat: function(message) {
+    handleNewMessageForCurrentChat: function (message) {
         if (!this.chatBoxEl || !this._currentChatIdForVirtualScroll || this._currentChatIdForVirtualScroll !== ChatManager.currentChatId) return;
         this._allMessagesForCurrentChat.push(message);
         const isNearBottom = this.chatBoxEl.scrollHeight - this.chatBoxEl.scrollTop - this.chatBoxEl.clientHeight < 150;
@@ -723,24 +730,15 @@ const ChatAreaUIManager = {
         } else {
             this._showScrollToLatestButton();
         }
-        // 如果当前渲染的批次是最新的，则新消息成为新的最新渲染消息
         if (this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 2) {
             this._renderedNewestMessageArrayIndex = this._allMessagesForCurrentChat.length - 1;
         }
     },
-
-    /**
-     * 滚动到指定的历史消息。
-     * 如果目标消息不在当前打开的聊天中，会先尝试切换到对应的聊天。
-     * 然后加载并显示包含目标消息及其上下文的消息批次，并将目标消息滚动到视图中央。
-     * @param {string} targetMessageId - 目标消息的ID。
-     */
-    scrollToMessage: function(targetMessageId) {
+    scrollToMessage: function (targetMessageId) {
         if (!this._currentChatIdForVirtualScroll || !this.chatBoxEl) {
             NotificationUIManager.showNotification("请先打开一个聊天。", "warning");
             return;
         }
-        // 尝试查找此消息属于哪个聊天
         let chatIdForMessage = this._currentChatIdForVirtualScroll;
         let messageExistsInCurrentChat = ChatManager.chats[chatIdForMessage]?.some(m => m.id === targetMessageId);
 
@@ -754,29 +752,16 @@ const ChatAreaUIManager = {
             }
         }
 
-        // 如果消息不在当前打开的聊天中，请先打开该聊天。
         if (this._currentChatIdForVirtualScroll !== chatIdForMessage) {
             ChatManager.openChat(chatIdForMessage, chatIdForMessage.startsWith('group_') ? 'group' : 'contact');
-            // openChat 调用 setupForChat，后者更新 _allMessagesForCurrentChat。
-            // 我们需要等待此操作完成。常见的模式是使用 Promise 或回调。
-            // 为简单起见，这里我们使用 setTimeout。在实际应用中，需要更健壮的解决方案。
             setTimeout(() => {
                 this._performScrollToMessage(targetMessageId);
-            }, 100); // 根据需要调整延迟，或重构 openChat 以返回 Promise
+            }, 100);
             return;
         }
-        // 如果已在正确的聊天中，则继续滚动。
         this._performScrollToMessage(targetMessageId);
     },
-
-    /**
-     * 执行实际的滚动到指定消息的操作。
-     * 假设当前聊天上下文已正确设置为包含目标消息的聊天。
-     * @param {string} targetMessageId - 目标消息的ID。
-     * @private
-     */
-    _performScrollToMessage: function(targetMessageId) {
-        // 此内部函数假定 _currentChatIdForVirtualScroll 和 _allMessagesForCurrentChat 已为目标消息的聊天正确设置。
+    _performScrollToMessage: function (targetMessageId) {
         this._allMessagesForCurrentChat = [...(ChatManager.chats[this._currentChatIdForVirtualScroll] || [])];
         const targetMessageIndex = this._allMessagesForCurrentChat.findIndex(msg => msg.id === targetMessageId);
 
@@ -801,10 +786,10 @@ const ChatAreaUIManager = {
             let extendBackward = Math.floor(diff / 2);
             const potentialStart = Math.max(0, startIndex - extendForward);
             const potentialEnd = Math.min(this._allMessagesForCurrentChat.length - 1, endIndex + extendBackward);
-            if (potentialStart === 0 && potentialEnd < this._allMessagesForCurrentChat.length -1) {
-                endIndex = Math.min(this._allMessagesForCurrentChat.length - 1, startIndex + (this.MESSAGES_TO_LOAD_ON_SCROLL - 1) );
+            if (potentialStart === 0 && potentialEnd < this._allMessagesForCurrentChat.length - 1) {
+                endIndex = Math.min(this._allMessagesForCurrentChat.length - 1, startIndex + (this.MESSAGES_TO_LOAD_ON_SCROLL - 1));
             } else if (potentialEnd === this._allMessagesForCurrentChat.length - 1 && potentialStart > 0) {
-                startIndex = Math.max(0, endIndex - (this.MESSAGES_TO_LOAD_ON_SCROLL - 1) );
+                startIndex = Math.max(0, endIndex - (this.MESSAGES_TO_LOAD_ON_SCROLL - 1));
             } else {
                 startIndex = potentialStart;
                 endIndex = potentialEnd;
@@ -822,8 +807,7 @@ const ChatAreaUIManager = {
         const targetElement = this.chatBoxEl.querySelector(`.message[data-message-id="${targetMessageId}"]`);
         if (targetElement) {
             setTimeout(() => {
-                targetElement.scrollIntoView({ behavior: 'auto', block: 'center' });
-                // 跳转后，重置 lastScrollTop，因为滚动位置是被强制设置的
+                targetElement.scrollIntoView({behavior: 'auto', block: 'center'});
                 this._lastScrollTop = this.chatBoxEl.scrollTop;
             }, 50);
         } else {
@@ -837,13 +821,7 @@ const ChatAreaUIManager = {
             this._hideScrollToLatestButton();
         }
     },
-
-    /**
-     * 显示“滚动到最新消息”按钮。
-     * 如果按钮不存在，则创建它。
-     * @private
-     */
-    _showScrollToLatestButton: function() {
+    _showScrollToLatestButton: function () {
         if (!this.chatBoxEl || !this.chatBoxEl.parentElement) return;
         if (!this._scrollToLatestBtnEl) {
             this._scrollToLatestBtnEl = document.createElement('button');
@@ -856,29 +834,18 @@ const ChatAreaUIManager = {
         }
         this._scrollToLatestBtnEl.style.display = 'flex';
     },
-
-    /**
-     * 隐藏“滚动到最新消息”按钮。
-     * @private
-     */
-    _hideScrollToLatestButton: function() {
+    _hideScrollToLatestButton: function () {
         if (this._scrollToLatestBtnEl) {
             this._scrollToLatestBtnEl.style.display = 'none';
         }
     },
-
-    /**
-     * 滚动到最新的消息。
-     * 这通常涉及重新渲染初始的消息批次（即最新的消息）。
-     * @private
-     */
-    _scrollToLatestMessages: function() {
+    _scrollToLatestMessages: function () {
         Utils.log("ChatAreaUIManager: 滚动到最新消息...", Utils.logLevels.DEBUG);
         this._detachScrollListener();
         this._isLoadingOlderMessages = false;
         this._isLoadingNewerMessages = false;
-        this._renderInitialMessageBatch(); // 这会将 scrollTop 设置为 scrollHeight
-        this._lastScrollTop = this.chatBoxEl.scrollTop; // 更新 lastScrollTop
+        this._renderInitialMessageBatch();
+        this._lastScrollTop = this.chatBoxEl.scrollTop;
         this._attachScrollListener();
         this._hideScrollToLatestButton();
     }

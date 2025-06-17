@@ -15,14 +15,14 @@
     <meta property="og:url" content="https://175.178.216.24/">
     <meta property="og:title" content="PPMC - AI Character Chat Platform">
     <meta property="og:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="og:image" content="https://175.178.216.24/screenshots/Chat%20Interface/Desktop/img.png"> <!-- Assuming this image is accessible at this URL -->
+    <meta property="og:image" content="https://175.178.216.24/img/desktop/img.png"> <!-- Assuming this image is accessible at this URL -->
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://175.178.216.24/">
     <meta property="twitter:title" content="PPMC - AI Character Chat Platform">
     <meta property="twitter:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="twitter:image" content="https://175.178.216.24/screenshots/Chat%20Interface/Desktop/img.png"> <!-- Assuming this image is accessible at this URL -->
+    <meta property="twitter:image" content="https://175.178.216.24/img/desktop/img.png"> <!-- Assuming this image is accessible at this URL -->
     <!-- End of SEO Meta Tags -->
 
     <link rel="stylesheet" href="css/base.css">
@@ -125,6 +125,12 @@
                 </div>
             </div>
             <!-- AI 联系人“关于”部分结束 -->
+            <!-- AI 互动操作部分 -->
+            <div class="details-section" id="aiContactSpecificActions" style="display: none;">
+                <h4>与AI互动</h4>
+                <button id="createGroupWithAiBtnDetails" class="btn btn-secondary" style="width: 100%; margin-top: 5px;">和TA群聊</button>
+            </div>
+            <!-- AI 互动操作部分结束 -->
             <!-- AI TTS 配置部分 -->
             <div class="details-section" id="aiTtsConfigSection" style="display: none;">
                 <h4 class="collapsible-header" id="aiTtsConfigHeader">
@@ -157,7 +163,7 @@
                             GitHub: <a href="https://github.com/git-hub-cc/PPMC" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/PPMC</a><br>
                             Gitee: <a href="https://gitee.com/wyswydx/PPMC" target="_blank" rel="noopener noreferrer">https://gitee.com/wyswydx/PPMC</a>
                         </p>
-                        <div style="margin-top: 20px; padding-top:15px; border-top: 1px solid var(--border-color-light); text-align: center;">
+                        <div style="margin-top: 20px; padding-top:15px; border-top: 1px solid var(--border-color); text-align: center;">
                             <p style="margin-bottom: 10px; font-size: 0.95em;">
                                 项目能走到今天，离不开各位大佬的默默付出（和咖啡续命）。<br>
                                 如果 PPMC 给你带来了哪怕一丝丝的快乐或便利，或者你只是单纯觉得本项目的猫猫开发者很可爱，不妨考虑请我们喝杯咖啡？<br>

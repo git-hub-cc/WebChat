@@ -79,52 +79,52 @@
         </plugin>
 
         <!-- 用于执行 Python 脚本的插件 -->
-        <plugin>
-            <groupId>org.codehaus.mojo</groupId>
-            <artifactId>exec-maven-plugin</artifactId>
-            <version>3.2.0</version>
-            <executions>
-                <!-- clean 时，删除 .min 文件 -->
-                <execution>
-                    <id>run-delete-script-on-clean</id>
-                    <phase>pre-clean</phase>
-                    <goals>
-                        <goal>exec</goal>
-                    </goals>
-                    <configuration>
-                        <executable>python</executable>
-                        <workingDirectory>${project.basedir}</workingDirectory>
-                        <arguments>
-                            <argument>script/01delete_min_files.py</argument>
-                        </arguments>
-                        <environmentVariables>
-                            <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>
-                        </environmentVariables>
-                    </configuration>
-                </execution>
+<!--        <plugin>-->
+<!--            <groupId>org.codehaus.mojo</groupId>-->
+<!--            <artifactId>exec-maven-plugin</artifactId>-->
+<!--            <version>3.2.0</version>-->
+<!--            <executions>-->
+<!--                &lt;!&ndash; clean 时，删除 .min 文件 &ndash;&gt;-->
+<!--                <execution>-->
+<!--                    <id>run-delete-script-on-clean</id>-->
+<!--                    <phase>pre-clean</phase>-->
+<!--                    <goals>-->
+<!--                        <goal>exec</goal>-->
+<!--                    </goals>-->
+<!--                    <configuration>-->
+<!--                        <executable>python</executable>-->
+<!--                        <workingDirectory>${project.basedir}</workingDirectory>-->
+<!--                        <arguments>-->
+<!--                            <argument>script/01delete_min_files.py</argument>-->
+<!--                        </arguments>-->
+<!--                        <environmentVariables>-->
+<!--                            <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>-->
+<!--                        </environmentVariables>-->
+<!--                    </configuration>-->
+<!--                </execution>-->
 
-                <!-- ======================================================= -->
-                <!--          核心修改：将打包时机提前到 generate-resources         -->
-                <!-- ======================================================= -->
-                <execution>
-                    <id>run-compress-script-before-package</id>
-                    <phase>generate-resources</phase>
-                    <goals>
-                        <goal>exec</goal>
-                    </goals>
-                    <configuration>
-                        <executable>python</executable>
-                        <workingDirectory>${project.basedir}</workingDirectory>
-                        <arguments>
-                            <argument>script/02compress_frontend.py</argument>
-                        </arguments>
-                        <environmentVariables>
-                            <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>
-                        </environmentVariables>
-                    </configuration>
-                </execution>
-            </executions>
-        </plugin>
+<!--                &lt;!&ndash; ======================================================= &ndash;&gt;-->
+<!--                &lt;!&ndash;          核心修改：将打包时机提前到 generate-resources         &ndash;&gt;-->
+<!--                &lt;!&ndash; ======================================================= &ndash;&gt;-->
+<!--                <execution>-->
+<!--                    <id>run-compress-script-before-package</id>-->
+<!--                    <phase>generate-resources</phase>-->
+<!--                    <goals>-->
+<!--                        <goal>exec</goal>-->
+<!--                    </goals>-->
+<!--                    <configuration>-->
+<!--                        <executable>python</executable>-->
+<!--                        <workingDirectory>${project.basedir}</workingDirectory>-->
+<!--                        <arguments>-->
+<!--                            <argument>script/02compress_frontend.py</argument>-->
+<!--                        </arguments>-->
+<!--                        <environmentVariables>-->
+<!--                            <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>-->
+<!--                        </environmentVariables>-->
+<!--                    </configuration>-->
+<!--                </execution>-->
+<!--            </executions>-->
+<!--        </plugin>-->
     </plugins>
 </build>
 </project>
