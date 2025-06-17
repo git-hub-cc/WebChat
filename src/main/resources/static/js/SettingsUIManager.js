@@ -11,7 +11,7 @@
  * @property {function} saveAISetting - 保存单个 AI 设置到 localStorage 并触发事件。
  * @property {function} initThemeSelectors - 初始化主题和配色方案的自定义下拉选择器。
  * @property {function} updateNetworkInfoDisplay - 更新模态框中的网络状态信息。
- * @dependencies UserManager, ConnectionManager, ChatManager, ThemeLoader, NotificationManager, Utils, AppInitializer, ModalManager, EventEmitter, Config, DBManager
+ * @dependencies UserManager, ConnectionManager, ChatManager, ThemeLoader, NotificationUIManager, Utils, AppInitializer, ModalUIManager, EventEmitter, Config, DBManager
  * @dependents AppInitializer (进行初始化)
  */
 const SettingsUIManager = {
@@ -85,14 +85,14 @@ const SettingsUIManager = {
         // --- 网络状态 ---
         if (this.checkNetworkBtnModal) this.checkNetworkBtnModal.addEventListener('click', async () => {
             if (this.checkNetworkBtnModal.disabled) {
-                NotificationManager.showNotification('当前已连接到信令服务器。', 'info');
+                NotificationUIManager.showNotification('当前已连接到信令服务器。', 'info');
                 return;
             }
-            NotificationManager.showNotification('正在重新检查网络并尝试连接...', 'info');
+            NotificationUIManager.showNotification('正在重新检查网络并尝试连接...', 'info');
             await AppInitializer.refreshNetworkStatusUI();
             if (!ConnectionManager.isWebSocketConnected) {
                 ConnectionManager.connectWebSocket().catch(err => {
-                    NotificationManager.showNotification('重新建立信令连接失败。', 'error');
+                    NotificationUIManager.showNotification('重新建立信令连接失败。', 'error');
                     Utils.log(`手动重新检查网络: connectWebSocket 失败: ${err.message || err}`, Utils.logLevels.ERROR);
                 });
             }
@@ -127,20 +127,20 @@ const SettingsUIManager = {
         // 新增：清除缓存按钮事件
         if (this.modalClearCacheBtn) {
             this.modalClearCacheBtn.addEventListener('click', () => {
-                ModalManager.showConfirmationModal(
+                ModalUIManager.showConfirmationModal(
                     '您确定要清除所有本地缓存吗？这将删除所有 localStorage 数据和 IndexedDB 数据库中的所有内容。操作完成后，页面将自动刷新。',
                     async () => {
                         try {
                             localStorage.clear();
                             Utils.log('LocalStorage 已清除。', Utils.logLevels.INFO);
                             await DBManager.clearAllData(); // 调用 DBManager 清空所有数据库数据
-                            NotificationManager.showNotification('所有缓存已成功清除。页面即将刷新...', 'success');
+                            NotificationUIManager.showNotification('所有缓存已成功清除。页面即将刷新...', 'success');
                             setTimeout(() => {
                                 window.location.reload();
                             }, 2000); // 延迟2秒后刷新页面，给用户时间看通知
                         } catch (error) {
                             Utils.log(`清除缓存失败: ${error}`, Utils.logLevels.ERROR);
-                            NotificationManager.showNotification('清除缓存时发生错误。请查看控制台。', 'error');
+                            NotificationUIManager.showNotification('清除缓存时发生错误。请查看控制台。', 'error');
                         }
                     },
                     null, // onCancel 回调，此处不需要
@@ -405,7 +405,7 @@ const SettingsUIManager = {
         if ((storageKey === 'apiEndpoint' || storageKey === 'ttsApiEndpoint') && value) {
             try { new URL(value); }
             catch (_) {
-                NotificationManager.showNotification(`${storageKey.replace(/_/g, ' ')} 的 URL 无效。未保存。`, 'error');
+                NotificationUIManager.showNotification(`${storageKey.replace(/_/g, ' ')} 的 URL 无效。未保存。`, 'error');
                 const inputEl = storageKey === 'apiEndpoint' ? this.apiEndpointInput : this.ttsApiEndpointInput;
                 const storedVal = localStorage.getItem(`aiSetting_${storageKey}`);
                 const configVal = serverConfig[storageKey] ?? "";
@@ -417,7 +417,7 @@ const SettingsUIManager = {
             const numValue = parseInt(String(value), 10);
             const configMaxTokens = serverConfig.max_tokens !== undefined ? serverConfig.max_tokens : 2048;
             if (isNaN(numValue) || numValue <= 0) {
-                NotificationManager.showNotification('最大令牌数必须为正数。未保存。', 'error');
+                NotificationUIManager.showNotification('最大令牌数必须为正数。未保存。', 'error');
                 const storedVal = localStorage.getItem('aiSetting_max_tokens');
                 if (this.apiMaxTokensInput) this.apiMaxTokensInput.value = storedVal ?? configMaxTokens;
                 return;
@@ -428,7 +428,7 @@ const SettingsUIManager = {
         localStorage.setItem(`aiSetting_${storageKey}`, String(value));
 
         const friendlyName = storageKey.charAt(0).toUpperCase() + storageKey.slice(1).replace(/_/g, ' ');
-        NotificationManager.showNotification(`${friendlyName} 设置已保存。`, 'success');
+        NotificationUIManager.showNotification(`${friendlyName} 设置已保存。`, 'success');
 
         // 触发配置变更事件
         if (typeof EventEmitter !== 'undefined') {
@@ -445,8 +445,8 @@ const SettingsUIManager = {
         const userId = this.modalUserIdValue?.textContent;
         if (userId && userId !== "生成中...") {
             navigator.clipboard.writeText(userId)
-                .then(() => NotificationManager.showNotification('用户 ID 已复制！', 'success'))
-                .catch(() => NotificationManager.showNotification('复制 ID 失败。', 'error'));
+                .then(() => NotificationUIManager.showNotification('用户 ID 已复制！', 'success'))
+                .catch(() => NotificationUIManager.showNotification('复制 ID 失败。', 'error'));
         }
     },
 
@@ -457,10 +457,10 @@ const SettingsUIManager = {
         const sdpTextEl = document.getElementById('modalSdpText');
         if (sdpTextEl && sdpTextEl.value) {
             navigator.clipboard.writeText(sdpTextEl.value)
-                .then(() => NotificationManager.showNotification('连接信息已复制！', 'success'))
-                .catch(() => NotificationManager.showNotification('复制信息失败。', 'error'));
+                .then(() => NotificationUIManager.showNotification('连接信息已复制！', 'success'))
+                .catch(() => NotificationUIManager.showNotification('复制信息失败。', 'error'));
         } else {
-            NotificationManager.showNotification('没有可复制的连接信息。', 'warning');
+            NotificationUIManager.showNotification('没有可复制的连接信息。', 'warning');
         }
     },
 
@@ -508,7 +508,7 @@ const SettingsUIManager = {
         const qualityIndicator = document.getElementById('modalQualityIndicator');
         const qualityText = document.getElementById('modalQualityText');
         if (!networkInfoEl || !qualityIndicator || !qualityText) return;
-        let html = ''; let overallQuality = '未知'; let qualityClass = '';
+        let html = ''; let overallQuality; let qualityClass;
         if (networkType && networkType.error === null) {
             html += `IPv4: ${networkType.ipv4?'✓':'✗'} | IPv6: ${networkType.ipv6?'✓':'✗'} <br>`;
             html += `UDP: ${networkType.udp?'✓':'✗'} | TCP: ${networkType.tcp?'✓':'✗'} | 中继: ${networkType.relay?'✓':'?'} <br>`;

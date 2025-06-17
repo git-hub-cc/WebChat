@@ -367,9 +367,9 @@
             </div>
             <div class="settings-section">
                 <h3>操作</h3>
-                <button id="modalClearContactsBtn" class="btn btn-danger">清空所有联系人</button>
-                <button id="modalClearAllChatsBtn" class="btn btn-danger">清空所有聊天记录</button>
-                <button id="modalClearCacheBtn" class="btn btn-danger">清除缓存</button> <!-- 新增按钮 -->
+                <button id="modalClearContactsBtn" class="btn btn-danger">清空联系人</button>
+                <button id="modalClearAllChatsBtn" class="btn btn-danger">清空聊天记录</button>
+                <button id="modalClearCacheBtn" class="btn btn-danger">重置页面</button> <!-- 新增按钮 -->
             </div>
         </div>
     </div>
@@ -460,17 +460,17 @@
 <script src="js/UserManager.js"></script>
 <!-- ConnectionManager 依赖 Config, Utils, EventEmitter, UserManager -->
 <script src="js/ConnectionManager.js"></script>
-<!-- MediaManager 依赖 Config, Utils, NotificationManager, MessageManager, MediaUIManager, EventEmitter -->
+<!-- MediaManager 依赖 Config, Utils, NotificationUIManager, MessageManager, MediaUIManager, EventEmitter -->
 <script src="js/MediaManager.js"></script>
-<!-- VideoCallManager 依赖 Config, Utils, NotificationManager, ConnectionManager, UserManager, VideoCallUIManager, ModalManager -->
+<!-- VideoCallManager 依赖 Config, Utils, NotificationUIManager, ConnectionManager, UserManager, VideoCallUIManager, ModalUIManager -->
 <script src="js/VideoCallManager.js"></script>
-<!-- AiApiHandler 依赖 UserManager, ChatManager, MessageManager, Config, Utils, NotificationManager, EventEmitter, SettingsUIManager -->
+<!-- AiApiHandler 依赖 UserManager, ChatManager, MessageManager, Config, Utils, NotificationUIManager, EventEmitter, SettingsUIManager -->
 <script src="js/AiApiHandler.js"></script>
-<!-- MessageManager 依赖 ChatManager, UserManager, ConnectionManager, GroupManager, NotificationManager, AiApiHandler, MediaManager, MessageTtsHandler, Utils, ModalManager, ChatAreaUIManager, Config -->
+<!-- MessageManager 依赖 ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler, MediaManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, Config -->
 <script src="js/MessageManager.js"></script>
-<!-- ChatManager 依赖 DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationManager, Utils, ModalManager -->
+<!-- ChatManager 依赖 DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationUIManager, Utils, ModalUIManager -->
 <script src="js/ChatManager.js"></script>
-<!-- GroupManager 依赖 DBManager, UserManager, ChatManager, ConnectionManager, NotificationManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager -->
+<!-- GroupManager 依赖 DBManager, UserManager, ChatManager, ConnectionManager, NotificationUIManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager -->
 <script src="js/GroupManager.js"></script>
 
 <!-- 专业处理器/管理器 -->
@@ -481,10 +481,10 @@
 
 <!-- UI组件管理器 -->
 <script src="js/UIManager.js"></script>
-<script src="js/ModalManager.js"></script>
-<script src="js/NotificationManager.js"></script>
+<script src="js/ModalUIManager.js"></script>
+<script src="js/NotificationUIManager.js"></script>
 <script src="js/SettingsUIManager.js"></script>
-<script src="js/LayoutManager.js"></script>
+<script src="js/LayoutUIManager.js"></script>
 <script src="js/ChatAreaUIManager.js"></script>
 <script src="js/SidebarUIManager.js"></script>
 <script src="js/DetailsPanelUIManager.js"></script>

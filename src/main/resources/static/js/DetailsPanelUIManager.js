@@ -12,7 +12,7 @@
  * @property {function} updateDetailsPanel - 根据当前聊天ID和类型更新聊天详情面板的内容。
  * @property {function} updateDetailsPanelMembers - 更新群组详情中的成员列表和添加成员下拉框。
  * @property {function} handleAddMemberToGroupDetails - 处理从详情面板添加成员到当前群组的逻辑。
- * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationManager, Utils, ConnectionManager, PeopleLobbyManager, Config, LayoutManager
+ * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationUIManager, Utils, ConnectionManager, PeopleLobbyManager, Config, LayoutUIManager
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (通过按钮点击调用以切换面板显隐)
  */
 const DetailsPanelUIManager = {
@@ -601,7 +601,7 @@ const DetailsPanelUIManager = {
                 if (success && this.contactsDropdownDetailsEl) this.contactsDropdownDetailsEl.value = ""; // 如果成功，重置下拉框
             });
         } else {
-            NotificationManager.showNotification("请选择要添加的联系人。", "warning"); // 如果未选择联系人，提示用户
+            NotificationUIManager.showNotification("请选择要添加的联系人。", "warning"); // 如果未选择联系人，提示用户
         }
     },
 
@@ -670,7 +670,7 @@ const DetailsPanelUIManager = {
             }
         } catch (error) {
             Utils.log(`_loadMoreResources: 加载资源失败 - ${error}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('加载资源失败。', 'error');
+            NotificationUIManager.showNotification('加载资源失败。', 'error');
         } finally {
             this._isResourceLoading = false; // 清除加载中标志
             if (this.resourceGridLoadingIndicatorEl) this.resourceGridLoadingIndicatorEl.style.display = 'none'; // 隐藏加载指示器
@@ -694,7 +694,7 @@ const DetailsPanelUIManager = {
                 const isMobileView = window.innerWidth <= 768; // 判断是否为移动视图
                 // 如果是移动视图且详情面板是打开的，则先切换回聊天区域视图
                 if (isMobileView && appContainer && appContainer.classList.contains('show-details')) {
-                    if (typeof LayoutManager !== 'undefined') LayoutManager.showChatAreaLayout(); // 切换布局
+                    if (typeof LayoutUIManager !== 'undefined') LayoutUIManager.showChatAreaLayout(); // 切换布局
                     this.hideSidePanel(); // 隐藏详情面板
                 }
                 ChatAreaUIManager.scrollToMessage(message.id); // 执行滚动

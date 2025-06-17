@@ -254,9 +254,9 @@ https://175.178.216.24/
     *   `ChatAreaUIManager.js`: (聊天区域UI管理器) 管理主聊天区域 UI。
     *   `SidebarUIManager.js`: (侧边栏UI管理器) 管理联系人/聊天侧边栏。
     *   `DetailsPanelUIManager.js`: (详情面板UI管理器) 管理右侧详情面板。
-    *   `ModalManager.js`: (模态框管理器) 处理各种模态框的创建和显示。
-    *   `NotificationManager.js`: (通知管理器) 管理应用内通知。
-    *   `LayoutManager.js`: (布局管理器) 管理整体应用布局和响应性。
+    *   `ModalUIManager.js`: (模态框管理器) 处理各种模态框的创建和显示。
+    *   `NotificationUIManager.js`: (通知管理器) 管理应用内通知。
+    *   `LayoutUIManager.js`: (布局管理器) 管理整体应用布局和响应性。
     *   `MediaUIManager.js`: (媒体UI管理器) 管理媒体的 UI 方面 (预览等)。
     *   `VideoCallUIManager.js` (现在作为 VideoCallManager 的 UI 部分)
     *   `SettingsUIManager.js`: (设置UI管理器) 管理设置 UI/模态框。

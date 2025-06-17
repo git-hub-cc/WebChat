@@ -1,9 +1,9 @@
 /**
- * @file ModalManager.js
+ * @file ModalUIManager.js
  * @description 模态框管理器，负责集中处理应用中所有模态框的显示、隐藏和相关逻辑。
  *              包括设置、新建联系人/群组、通话、确认对话框以及开源信息提示等。
  * @module ModalManager
- * @exports {object} ModalManager - 对外暴露的单例对象，包含所有模态框管理方法。
+ * @exports {object} ModalUIManager - 对外暴露的单例对象，包含所有模态框管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
  * @property {function} toggleModal - 通用的显示/隐藏模态框的方法。
  * @property {function} showConfirmationModal - 显示一个通用的确认对话框。
@@ -11,10 +11,10 @@
  * @property {function} showCallRequest - 显示来电请求的模态框。
  * @property {function} showOpenSourceInfoModal - 显示开源信息提示模态框。
  * @property {function} showAddContactModalWithId - 显示添加联系人模态框并预填用户ID。
- * @dependencies Utils, NotificationManager, UserManager, GroupManager, AppInitializer, VideoCallManager
+ * @dependencies Utils, NotificationUIManager, UserManager, GroupManager, AppInitializer, VideoCallManager
  * @dependents AppInitializer (进行初始化), 各个模块在需要显示模态框时调用。
  */
-const ModalManager = {
+const ModalUIManager = {
     // 开源信息模态框元素
     openSourceInfoModal: null,
     closeOpenSourceInfoModalBtn: null,
@@ -99,7 +99,7 @@ const ModalManager = {
             const peerId = peerIdInput.value.trim();
             const peerName = peerNameInput.value.trim();
             if (!peerId) {
-                NotificationManager.showNotification('对方 ID 是必填项。', 'warning');
+                NotificationUIManager.showNotification('对方 ID 是必填项。', 'warning');
                 return;
             }
             UserManager.addContact(peerId, peerName || `用户 ${peerId.substring(0, 4)}`);
@@ -113,7 +113,7 @@ const ModalManager = {
             const groupNameInput = document.getElementById('newGroupNameInput'); // 保存引用以便清空
             const groupName = groupNameInput.value.trim();
             if (!groupName) {
-                NotificationManager.showNotification('群组名称是必填项。', 'warning');
+                NotificationUIManager.showNotification('群组名称是必填项。', 'warning');
                 return;
             }
             GroupManager.createGroup(groupName);

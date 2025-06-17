@@ -1,14 +1,14 @@
 /**
- * @file NotificationManager.js
+ * @file NotificationUIManager.js
  * @description 通知管理器，负责在 UI 中显示和管理短暂的弹窗通知。
  *              这是一个独立的 UI 工具模块，为其他模块提供用户反馈。
  * @module NotificationManager
- * @exports {object} NotificationManager - 对外暴露的单例对象，包含显示通知的方法。
+ * @exports {object} NotificationUIManager - 对外暴露的单例对象，包含显示通知的方法。
  * @property {function} showNotification - 显示一个指定类型和消息的通知。
  * @dependencies Utils
  * @dependents 几乎所有其他管理器，在需要向用户提供反馈时调用。
  */
-const NotificationManager = {
+const NotificationUIManager = {
     /**
      * 显示一个通知。
      * @param {string} message - 要显示的通知消息。

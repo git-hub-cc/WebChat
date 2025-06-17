@@ -13,7 +13,7 @@
  * @property {function} sendTo - 通过已建立的数据通道向指定对等端发送消息。
  * @property {function} close - 关闭与指定对等端的连接。
  * @property {boolean} isWebSocketConnected - 指示当前是否已连接到 WebSocket 服务器。
- * @dependencies UserManager, ChatManager, Config, Utils, NotificationManager, EventEmitter, LayoutManager, VideoCallManager, ModalManager, MessageManager, PeopleLobbyManager
+ * @dependencies UserManager, ChatManager, Config, Utils, NotificationUIManager, EventEmitter, LayoutUIManager, VideoCallManager, ModalUIManager, MessageManager, PeopleLobbyManager
  * @dependents AppInitializer (初始化), UserManager (自动连接), GroupManager (广播), VideoCallManager (建立媒体流)
  */
 const ConnectionManager = {
@@ -42,7 +42,7 @@ const ConnectionManager = {
         if (this.websocket && (this.websocket.readyState === WebSocket.OPEN || this.websocket.readyState === WebSocket.CONNECTING)) {
             return Promise.resolve();
         }
-        LayoutManager.updateConnectionStatusIndicator('正在连接信令服务器...');
+        LayoutUIManager.updateConnectionStatusIndicator('正在连接信令服务器...');
         Utils.log('ConnectionManager: 尝试连接到 WebSocket: ' + this.signalingServerUrl, Utils.logLevels.INFO);
         return new Promise((resolve, reject) => {
             try {
@@ -50,7 +50,7 @@ const ConnectionManager = {
 
                 this.websocket.onopen = () => {
                     this.isWebSocketConnected = true; this.wsReconnectAttempts = 0;
-                    LayoutManager.updateConnectionStatusIndicator('信令服务器已连接。');
+                    LayoutUIManager.updateConnectionStatusIndicator('信令服务器已连接。');
                     Utils.log('ConnectionManager: WebSocket 连接已建立。', Utils.logLevels.INFO);
                     this.registerUser(); this.startHeartbeat();
                     EventEmitter.emit('websocketStatusUpdate'); resolve();
@@ -67,26 +67,26 @@ const ConnectionManager = {
                     this.wsReconnectAttempts++; Utils.log(`ConnectionManager: WebSocket 连接已关闭。正在进行第 ${this.wsReconnectAttempts} 次重连尝试...`, Utils.logLevels.WARN);
                     if (this.wsReconnectAttempts <= 10) {
                         const delay = Math.min(30000, 1000 * Math.pow(2, this.wsReconnectAttempts));
-                        LayoutManager.updateConnectionStatusIndicator(`信令服务器已断开。${delay / 1000}秒后尝试重连...`);
+                        LayoutUIManager.updateConnectionStatusIndicator(`信令服务器已断开。${delay / 1000}秒后尝试重连...`);
                         Utils.log(`ConnectionManager: 下一次重连将在 ${delay / 1000} 秒后。`, Utils.logLevels.WARN);
                         if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
                         setTimeout(() => this.connectWebSocket(), delay);
                     } else {
-                        LayoutManager.updateConnectionStatusIndicator('信令服务器连接失败。自动重连已停止。');
-                        NotificationManager.showNotification('无法连接到信令服务器。请检查您的网络并手动刷新或重新连接。', 'error');
+                        LayoutUIManager.updateConnectionStatusIndicator('信令服务器连接失败。自动重连已停止。');
+                        NotificationUIManager.showNotification('无法连接到信令服务器。请检查您的网络并手动刷新或重新连接。', 'error');
                         Utils.log('ConnectionManager: 已达到最大重连次数 (10)，停止自动重连。', Utils.logLevels.ERROR);
                         if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
                     }
                 };
                 this.websocket.onerror = (error) => {
                     Utils.log('ConnectionManager: WebSocket 错误: ' + JSON.stringify(error), Utils.logLevels.ERROR);
-                    LayoutManager.updateConnectionStatusIndicator('信令服务器连接错误。');
+                    LayoutUIManager.updateConnectionStatusIndicator('信令服务器连接错误。');
                     const oldStatus = this.isWebSocketConnected; this.isWebSocketConnected = false;
                     if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
                 };
             } catch (error) {
                 Utils.log('ConnectionManager: 创建 WebSocket 连接失败: ' + error, Utils.logLevels.ERROR);
-                LayoutManager.updateConnectionStatusIndicator('连接信令服务器失败。');
+                LayoutUIManager.updateConnectionStatusIndicator('连接信令服务器失败。');
                 const oldStatus = this.isWebSocketConnected; this.isWebSocketConnected = false;
                 if (oldStatus) EventEmitter.emit('websocketStatusUpdate'); reject(error);
             }
@@ -139,8 +139,8 @@ const ConnectionManager = {
         } else {
             Utils.log('ConnectionManager: WebSocket 未连接，无法发送信令消息。', Utils.logLevels.ERROR);
             if (!isInternalSilentFlag) {
-                if (window.location.protocol === 'file:') NotificationManager.showNotification('正从本地文件系统运行。信令服务器可能不可用。消息未发送。', 'warning');
-                else NotificationManager.showNotification('未连接到信令服务器。消息未发送。', 'error');
+                if (window.location.protocol === 'file:') NotificationUIManager.showNotification('正从本地文件系统运行。信令服务器可能不可用。消息未发送。', 'warning');
+                else NotificationUIManager.showNotification('未连接到信令服务器。消息未发送。', 'error');
             }
         }
     },
@@ -154,17 +154,17 @@ const ConnectionManager = {
         const fromUserId = message.fromUserId;
         switch (message.type) {
             case 'SUCCESS':
-                LayoutManager.updateConnectionStatusIndicator(`用户注册成功: ${UserManager.userId.substring(0,8)}...`);
+                LayoutUIManager.updateConnectionStatusIndicator(`用户注册成功: ${UserManager.userId.substring(0,8)}...`);
                 this.autoConnectToAllContacts(); break;
             case 'ERROR':
-                if (!message.message.includes('不在线')) NotificationManager.showNotification(`信令错误: ${message.message}`, 'error');
+                if (!message.message.includes('不在线')) NotificationUIManager.showNotification(`信令错误: ${message.message}`, 'error');
                 Utils.log(`ConnectionManager: 信令服务器错误: ${message.message}`, Utils.logLevels.ERROR); break;
             case 'OFFER': this.handleRemoteOffer(fromUserId, message.sdp, message.candidates, message.isVideoCall, message.isAudioOnly, message.isScreenShare, message.sdpType); break;
             case 'ANSWER': this.handleRemoteAnswer(fromUserId, message.sdp, message.candidates, message.isVideoCall, message.isAudioOnly, message.isScreenShare, message.sdpType); break;
             case 'ICE_CANDIDATE': this.handleRemoteIceCandidate(fromUserId, message.candidate); break;
             case 'USER_NOT_FOUND':
                 const connDetails = this.connections[message.targetUserId]; const wasSilentAttempt = connDetails?.wasInitiatedSilently || false;
-                if (!wasSilentAttempt) NotificationManager.showNotification(`用户 ${UserManager.contacts[message.targetUserId]?.name || message.targetUserId.substring(0,8) + '...'} 未找到或离线。`, 'warning');
+                if (!wasSilentAttempt) NotificationUIManager.showNotification(`用户 ${UserManager.contacts[message.targetUserId]?.name || message.targetUserId.substring(0,8) + '...'} 未找到或离线。`, 'warning');
                 Utils.log(`ConnectionManager: 用户 ${message.targetUserId} 未找到。(静默尝试: ${wasSilentAttempt})`, Utils.logLevels.WARN);
                 if(ChatManager.currentChatId === message.targetUserId && !wasSilentAttempt && typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.updateChatHeaderStatus(`用户未找到或离线`);
                 if (this.connections[message.targetUserId]) this.close(message.targetUserId, false); break;
@@ -212,7 +212,7 @@ const ConnectionManager = {
             return newPc;
         } catch (error) {
             Utils.log(`ConnectionManager: 严重错误: 初始化 ${peerId} 的 PC 失败: ${error.message}\n堆栈: ${error.stack}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification(`为 ${peerId} 设置连接时出错: ${error.message}`, 'error');
+            NotificationUIManager.showNotification(`为 ${peerId} 设置连接时出错: ${error.message}`, 'error');
             delete this.connections[peerId]; return null;
         }
     },
@@ -232,27 +232,27 @@ const ConnectionManager = {
         if (isManual) { Utils.log("ConnectionManager: 手动创建提议。", Utils.logLevels.INFO); targetPeerId = this.MANUAL_PLACEHOLDER_PEER_ID; }
         else {
             if (UserManager.isSpecialContact(targetPeerId) && UserManager.contacts[targetPeerId]?.isAI) {
-                if (!isSilent) NotificationManager.showNotification(`无法与 ${UserManager.contacts[targetPeerId]?.name || "AI"} 进行  连接。`, "info");
+                if (!isSilent) NotificationUIManager.showNotification(`无法与 ${UserManager.contacts[targetPeerId]?.name || "AI"} 进行  连接。`, "info");
                 else Utils.log(`ConnectionManager: 已跳过向 AI ${UserManager.contacts[targetPeerId]?.name} 发送  提议。`, Utils.logLevels.DEBUG); return;
             }
             if (!targetPeerId && ChatManager.currentChatId && ChatManager.currentChatId !== UserManager.userId && !ChatManager.currentChatId.startsWith('group_')) targetPeerId = ChatManager.currentChatId;
-            if (!targetPeerId && !isSilent) { targetPeerId = prompt('请输入对方 ID:'); promptedForId = true; if (!targetPeerId) { NotificationManager.showNotification("已取消: 未提供对方 ID。", "info"); return; } }
+            if (!targetPeerId && !isSilent) { targetPeerId = prompt('请输入对方 ID:'); promptedForId = true; if (!targetPeerId) { NotificationUIManager.showNotification("已取消: 未提供对方 ID。", "info"); return; } }
             else if (!targetPeerId && isSilent) { Utils.log("ConnectionManager: 静默创建提议时缺少目标 ID。正在中止。", Utils.logLevels.WARN); return; }
             if (targetPeerId === UserManager.userId) {
-                if (!isSilent) NotificationManager.showNotification("无法连接到自己。", "warning"); else Utils.log("ConnectionManager: 已跳过向自己发送提议。", Utils.logLevels.DEBUG);
+                if (!isSilent) NotificationUIManager.showNotification("无法连接到自己。", "warning"); else Utils.log("ConnectionManager: 已跳过向自己发送提议。", Utils.logLevels.DEBUG);
                 if (promptedForId && document.getElementById('modalSdpText')) document.getElementById('modalSdpText').value = "无法连接到自己。"; return;
             }
-            if (!UserManager.userId) { if (!isSilent) NotificationManager.showNotification("您的用户 ID 不可用。", "error"); return; }
+            if (!UserManager.userId) { if (!isSilent) NotificationUIManager.showNotification("您的用户 ID 不可用。", "error"); return; }
             if (!this.isWebSocketConnected) {
-                try { if (!isSilent) NotificationManager.showNotification("信令服务器未连接。正在尝试...", "info"); await this.connectWebSocket(); }
-                catch (e) { if (!isSilent) NotificationManager.showNotification("信令服务器连接失败。无法创建提议。", "error"); return; }
+                try { if (!isSilent) NotificationUIManager.showNotification("信令服务器未连接。正在尝试...", "info"); await this.connectWebSocket(); }
+                catch (e) { if (!isSilent) NotificationUIManager.showNotification("信令服务器连接失败。无法创建提议。", "error"); return; }
             }
         }
         Utils.log(`ConnectionManager: 正在为 ${targetPeerId} 创建提议，来自: ${UserManager.userId}, 视频: ${isVideoCall}, 纯音频: ${isAudioOnly}, 静默: ${isSilent}, 手动: ${isManual}`, Utils.logLevels.DEBUG);
         const pc = this.initConnection(targetPeerId, isVideoCall);
-        if (!pc) { if (!isSilent || isManual) NotificationManager.showNotification("初始化连接以创建提议失败。", "error"); Utils.log(`ConnectionManager: createOffer: initConnection 为 ${targetPeerId} 返回 null。正在中止。`, Utils.logLevels.ERROR); return; }
-        if (pc.signalingState === 'have-local-offer') { if (!isSilent) NotificationManager.showNotification(`已向 ${UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0,6)} 发送过提议。`, "info"); return; }
-        if (pc.signalingState === 'have-remote-offer') { if (!isSilent) NotificationManager.showNotification(`已收到对方的提议。无法创建新提议。`, "info"); return; }
+        if (!pc) { if (!isSilent || isManual) NotificationUIManager.showNotification("初始化连接以创建提议失败。", "error"); Utils.log(`ConnectionManager: createOffer: initConnection 为 ${targetPeerId} 返回 null。正在中止。`, Utils.logLevels.ERROR); return; }
+        if (pc.signalingState === 'have-local-offer') { if (!isSilent) NotificationUIManager.showNotification(`已向 ${UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0,6)} 发送过提议。`, "info"); return; }
+        if (pc.signalingState === 'have-remote-offer') { if (!isSilent) NotificationUIManager.showNotification(`已收到对方的提议。无法创建新提议。`, "info"); return; }
         if (this.connections[targetPeerId]) { this.connections[targetPeerId].isVideoCall = isVideoCall; this.connections[targetPeerId].isAudioOnly = isAudioOnly; this.connections[targetPeerId].isScreenShare = options.isScreenShare || false; this.connections[targetPeerId].wasInitiatedSilently = isSilent && !isManual; }
         else if (targetPeerId !== this.MANUAL_PLACEHOLDER_PEER_ID) { this.connections[targetPeerId] = { peerConnection: pc, dataChannel: null, isVideoCall, isAudioOnly, isScreenShare: options.isScreenShare||false, wasInitiatedSilently: isSilent&&!isManual }; }
         if (pc.signalingState === 'stable' || pc.signalingState === 'new') {
@@ -270,8 +270,8 @@ const ConnectionManager = {
             const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: isVideoCall && !isAudioOnly });
             await pc.setLocalDescription(offer);
             Utils.log(`ConnectionManager: 为 ${targetPeerId} 创建提议成功。状态: ${pc.signalingState}。(手动: ${isManual})`, Utils.logLevels.INFO);
-            if (!pc.localDescription) { if (!isSilent || isManual) NotificationManager.showNotification("错误: 无法确定本地详情。", "error"); this.close(targetPeerId); return; }
-            if (isManual) { this.waitForIceGatheringComplete(targetPeerId, () => { this.updateSdpTextInModal(targetPeerId); NotificationManager.showNotification("提议已创建。请复制信息并发送。", "info"); }); }
+            if (!pc.localDescription) { if (!isSilent || isManual) NotificationUIManager.showNotification("错误: 无法确定本地详情。", "error"); this.close(targetPeerId); return; }
+            if (isManual) { this.waitForIceGatheringComplete(targetPeerId, () => { this.updateSdpTextInModal(targetPeerId); NotificationUIManager.showNotification("提议已创建。请复制信息并发送。", "info"); }); }
             else {
                 if (!isSilent && ChatManager.currentChatId === targetPeerId && typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.updateChatHeaderStatus(`正在连接到 ${UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0,8)}...`);
                 const offerMessagePayload = { type: 'OFFER', userId: UserManager.userId, targetUserId: targetPeerId, sdp: pc.localDescription.sdp, sdpType: pc.localDescription.type, isVideoCall, isAudioOnly, isScreenShare: options.isScreenShare || false };
@@ -279,7 +279,7 @@ const ConnectionManager = {
             }
         } catch (error) {
             Utils.log(`ConnectionManager: 为 ${targetPeerId} 创建提议时发生 WebRTC 错误: ${error.message}\n堆栈: ${error.stack}`, Utils.logLevels.ERROR);
-            if (!isSilent || isManual) NotificationManager.showNotification(`连接提议错误: ${error.message}`, 'error'); this.close(targetPeerId);
+            if (!isSilent || isManual) NotificationUIManager.showNotification(`连接提议错误: ${error.message}`, 'error'); this.close(targetPeerId);
         }
     },
 
@@ -372,27 +372,27 @@ const ConnectionManager = {
     handleAnswer: async function(options = {}) {
         const { isManual = false } = options; if (!isManual) return;
         const sdpTextEl = document.getElementById('modalSdpText');
-        if (!sdpTextEl || !sdpTextEl.value) { NotificationManager.showNotification("请先粘贴应答信息。", "warning"); return; }
+        if (!sdpTextEl || !sdpTextEl.value) { NotificationUIManager.showNotification("请先粘贴应答信息。", "warning"); return; }
         try {
             const answerData = JSON.parse(sdpTextEl.value); sdpTextEl.value = '';
-            if (!answerData.sdp?.sdp || answerData.sdp.type !== 'answer' || !answerData.userId) { NotificationManager.showNotification("无效的应答数据格式。", "error"); return; }
-            if (answerData.userId === UserManager.userId) { NotificationManager.showNotification("无法处理来自自己的应答。", "warning"); return; }
+            if (!answerData.sdp?.sdp || answerData.sdp.type !== 'answer' || !answerData.userId) { NotificationUIManager.showNotification("无效的应答数据格式。", "error"); return; }
+            if (answerData.userId === UserManager.userId) { NotificationUIManager.showNotification("无法处理来自自己的应答。", "warning"); return; }
             const fromUserId = answerData.userId;
             const placeholderConn = this.connections[this.MANUAL_PLACEHOLDER_PEER_ID];
-            if (!placeholderConn?.peerConnection) { NotificationManager.showNotification(`错误: 未找到待处理的手动提议。`, "error"); return; }
+            if (!placeholderConn?.peerConnection) { NotificationUIManager.showNotification(`错误: 未找到待处理的手动提议。`, "error"); return; }
             this.connections[fromUserId] = placeholderConn; delete this.connections[this.MANUAL_PLACEHOLDER_PEER_ID];
             ['iceCandidates', 'reconnectAttempts', 'iceTimers', 'iceGatheringStartTimes', 'connectionTimeouts'].forEach(storeKey => { if (this[storeKey]?.[this.MANUAL_PLACEHOLDER_PEER_ID]) { this[storeKey][fromUserId] = this[storeKey][this.MANUAL_PLACEHOLDER_PEER_ID]; delete this[storeKey][this.MANUAL_PLACEHOLDER_PEER_ID]; }});
             const pc = placeholderConn.peerConnection;
             if (pc.signalingState !== 'have-local-offer') {
-                if (pc.signalingState === 'stable' && this.isConnectedTo(fromUserId)) NotificationManager.showNotification(`已连接到 ${fromUserId}。`, "info");
-                else NotificationManager.showNotification(`错误: 与 ${fromUserId} 的连接处于意外状态 (${pc.signalingState})。`, "error");
-                ModalManager.toggleModal('mainMenuModal', false); return;
+                if (pc.signalingState === 'stable' && this.isConnectedTo(fromUserId)) NotificationUIManager.showNotification(`已连接到 ${fromUserId}。`, "info");
+                else NotificationUIManager.showNotification(`错误: 与 ${fromUserId} 的连接处于意外状态 (${pc.signalingState})。`, "error");
+                ModalUIManager.toggleModal('mainMenuModal', false); return;
             }
             await this.handleRemoteAnswer(fromUserId, answerData.sdp.sdp, answerData.candidates, placeholderConn.isVideoCall, placeholderConn.isAudioOnly, placeholderConn.isScreenShare, 'answer');
             if (fromUserId !== UserManager.userId && !UserManager.contacts[fromUserId]) await UserManager.addContact(fromUserId, `用户 ${fromUserId.substring(0,4)}`);
-            NotificationManager.showNotification(`正在处理来自 ${UserManager.contacts[fromUserId]?.name || fromUserId.substring(0,6)} 的应答...`, "info");
-            ModalManager.toggleModal('mainMenuModal', false);
-        } catch (e) { NotificationManager.showNotification("处理应答时出错: " + e.message, "error"); Utils.log("ConnectionManager.handleAnswer (手动) 出错: " + e, Utils.logLevels.ERROR); }
+            NotificationUIManager.showNotification(`正在处理来自 ${UserManager.contacts[fromUserId]?.name || fromUserId.substring(0,6)} 的应答...`, "info");
+            ModalUIManager.toggleModal('mainMenuModal', false);
+        } catch (e) { NotificationUIManager.showNotification("处理应答时出错: " + e.message, "error"); Utils.log("ConnectionManager.handleAnswer (手动) 出错: " + e, Utils.logLevels.ERROR); }
     },
 
     /**
@@ -410,11 +410,11 @@ const ConnectionManager = {
         const conn = this.connections[fromUserId];
         if (!conn?.peerConnection) { Utils.log(`ConnectionManager: handleRemoteAnswer: 没有 ${fromUserId} 的活动连接。`, Utils.logLevels.WARN); return; }
         const pc = conn.peerConnection; const wasSilentContext = conn.wasInitiatedSilently || false;
-        if (sdpType !== 'answer') { if (!wasSilentContext) NotificationManager.showNotification(`协议错误: 应为 answer 类型的 SDP。`, 'error'); this.close(fromUserId); return; }
+        if (sdpType !== 'answer') { if (!wasSilentContext) NotificationUIManager.showNotification(`协议错误: 应为 answer 类型的 SDP。`, 'error'); this.close(fromUserId); return; }
         if (pc.signalingState !== 'have-local-offer') {
             if (!wasSilentContext) {
                 if (pc.signalingState === 'stable' && this.isConnectedTo(fromUserId)) Utils.log(`ConnectionManager: 与 ${fromUserId} 的连接已稳定。应答可能延迟到达。`, Utils.logLevels.INFO);
-                else NotificationManager.showNotification(`处理 ${fromUserId} 的应答时连接状态错误。状态: ${pc.signalingState}。`, 'error');
+                else NotificationUIManager.showNotification(`处理 ${fromUserId} 的应答时连接状态错误。状态: ${pc.signalingState}。`, 'error');
             } return;
         }
         try {
@@ -429,7 +429,7 @@ const ConnectionManager = {
             }
         } catch (error) {
             Utils.log(`ConnectionManager: 为 ${fromUserId} 设置远程应答/ICE 失败: ${error.message} (状态: ${pc.signalingState})`, Utils.logLevels.ERROR);
-            if (!wasSilentContext) NotificationManager.showNotification(`处理应答时出错: ${error.message}`, 'error'); this.close(fromUserId);
+            if (!wasSilentContext) NotificationUIManager.showNotification(`处理应答时出错: ${error.message}`, 'error'); this.close(fromUserId);
         }
     },
 
@@ -442,18 +442,18 @@ const ConnectionManager = {
     createAnswer: async function(options = {}) {
         const { isManual = false } = options; if (!isManual) return;
         const sdpTextEl = document.getElementById('modalSdpText');
-        if (!sdpTextEl || !sdpTextEl.value) { NotificationManager.showNotification("请先粘贴提议信息。", "warning"); return; }
+        if (!sdpTextEl || !sdpTextEl.value) { NotificationUIManager.showNotification("请先粘贴提议信息。", "warning"); return; }
         try {
             const offerData = JSON.parse(sdpTextEl.value);
-            if (!offerData.sdp?.sdp || offerData.sdp.type !== 'offer' || !offerData.userId) { NotificationManager.showNotification("无效的提议数据格式。", "error"); return; }
-            if (offerData.userId === UserManager.userId) { NotificationManager.showNotification("无法处理来自自己的提议。", "warning"); return; }
+            if (!offerData.sdp?.sdp || offerData.sdp.type !== 'offer' || !offerData.userId) { NotificationUIManager.showNotification("无效的提议数据格式。", "error"); return; }
+            if (offerData.userId === UserManager.userId) { NotificationUIManager.showNotification("无法处理来自自己的提议。", "warning"); return; }
             const fromUserId = offerData.userId; sdpTextEl.value = '正在生成应答...';
             const pc = this.initConnection(fromUserId, offerData.isVideoCall || false);
-            if (!pc) { NotificationManager.showNotification("初始化连接以创建应答失败。", "error"); sdpTextEl.value = '错误: 初始化连接失败。'; return; }
+            if (!pc) { NotificationUIManager.showNotification("初始化连接以创建应答失败。", "error"); sdpTextEl.value = '错误: 初始化连接失败。'; return; }
             if(this.connections[fromUserId]){ this.connections[fromUserId].wasInitiatedSilently = false; this.connections[fromUserId].isVideoCall = offerData.isVideoCall||false; this.connections[fromUserId].isAudioOnly = offerData.isAudioOnly||false; this.connections[fromUserId].isScreenShare = offerData.isScreenShare||false; }
             await this.handleRemoteOffer(fromUserId, offerData.sdp.sdp, offerData.candidates, offerData.isVideoCall, offerData.isAudioOnly, offerData.isScreenShare, 'offer', true);
-            NotificationManager.showNotification("已开始生成应答。模态框内容将会更新。", "info");
-        } catch (e) { NotificationManager.showNotification("创建应答时出错: " + e.message, "error"); Utils.log("ConnectionManager.createAnswer (手动) 出错: " + e, Utils.logLevels.ERROR); if(sdpTextEl) sdpTextEl.value = `错误: ${e.message}`; }
+            NotificationUIManager.showNotification("已开始生成应答。模态框内容将会更新。", "info");
+        } catch (e) { NotificationUIManager.showNotification("创建应答时出错: " + e.message, "error"); Utils.log("ConnectionManager.createAnswer (手动) 出错: " + e, Utils.logLevels.ERROR); if(sdpTextEl) sdpTextEl.value = `错误: ${e.message}`; }
     },
 
     /**
@@ -472,7 +472,7 @@ const ConnectionManager = {
         if (isManualFlow && fromUserId !== UserManager.userId && !UserManager.contacts[fromUserId]) await UserManager.addContact(fromUserId, `用户 ${fromUserId.substring(0,4)}`);
         let pc = this.connections[fromUserId]?.peerConnection;
         if (!pc || (!isManualFlow && pc.signalingState !== 'stable' && pc.signalingState !== 'new')) pc = this.initConnection(fromUserId, isVideoCall);
-        if (!pc) { NotificationManager.showNotification("初始化连接以处理提议失败。", "error"); return; }
+        if (!pc) { NotificationUIManager.showNotification("初始化连接以处理提议失败。", "error"); return; }
         if(this.connections[fromUserId]){ this.connections[fromUserId].wasInitiatedSilently = this.connections[fromUserId].wasInitiatedSilently && !isManualFlow; this.connections[fromUserId].isVideoCall = isVideoCall; this.connections[fromUserId].isAudioOnly = isAudioOnly; this.connections[fromUserId].isScreenShare = isScreenShare||false; }
         try {
             if (typeof sdpString !== 'string' || sdpType !== 'offer') { this.close(fromUserId); return; }
@@ -483,12 +483,12 @@ const ConnectionManager = {
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             if (!pc.localDescription) { this.close(fromUserId); return; }
-            if (isManualFlow) { this.waitForIceGatheringComplete(fromUserId, () => { this.updateSdpTextInModal(fromUserId); NotificationManager.showNotification("应答已创建。请复制信息并发送。", "info"); }); }
+            if (isManualFlow) { this.waitForIceGatheringComplete(fromUserId, () => { this.updateSdpTextInModal(fromUserId); NotificationUIManager.showNotification("应答已创建。请复制信息并发送。", "info"); }); }
             else {
                 const answerPayload = { type: 'ANSWER', userId: UserManager.userId, targetUserId: fromUserId, sdp: pc.localDescription.sdp, sdpType: pc.localDescription.type, isVideoCall: this.connections[fromUserId]?.isVideoCall||false, isAudioOnly: this.connections[fromUserId]?.isAudioOnly||false, isScreenShare: this.connections[fromUserId]?.isScreenShare||false };
                 this.sendSignalingMessage(answerPayload, false);
             }
-        } catch (error) { Utils.log(`ConnectionManager: 处理来自 ${fromUserId} 的远程提议失败: ${error.message}\n堆栈: ${error.stack}`, Utils.logLevels.ERROR); NotificationManager.showNotification(`处理提议时出错: ${error.message}`, 'error'); this.close(fromUserId); }
+        } catch (error) { Utils.log(`ConnectionManager: 处理来自 ${fromUserId} 的远程提议失败: ${error.message}\n堆栈: ${error.stack}`, Utils.logLevels.ERROR); NotificationUIManager.showNotification(`处理提议时出错: ${error.message}`, 'error'); this.close(fromUserId); }
     },
 
     /**
@@ -552,19 +552,64 @@ const ConnectionManager = {
         if (this.connections[currentContextPeerId].dataChannel && this.connections[currentContextPeerId].dataChannel !== channel && this.connections[currentContextPeerId].dataChannel.readyState === 'open') { try { channel.close(); } catch(e) {} return; }
         if (this.connections[currentContextPeerId].dataChannel === channel && channel._listenersAttached) return;
         this.connections[currentContextPeerId].dataChannel = channel; channel._listenersAttached = true;
-        const wasSilentContext = this.connections[currentContextPeerId]?.wasInitiatedSilently || false;
-
         channel.onopen = async () => {
-            let finalPeerId = currentContextPeerId;
-            if (channel._isManualPlaceholderChannel) { for (const actualIdInMap in this.connections) if (this.connections[actualIdInMap]?.dataChannel === channel) { finalPeerId = actualIdInMap; break; } }
-            Utils.log(`ConnectionManager: 与 ${finalPeerId} 的数据通道 ("${channel.label}") 已打开。(静默: ${this.connections[finalPeerId]?.wasInitiatedSilently || false})`, Utils.logLevels.INFO);
-            const contactName = UserManager.contacts[finalPeerId]?.name || finalPeerId.substring(0,8) + '...';
-            if ((!this.connections[finalPeerId]?.wasInitiatedSilently || ChatManager.currentChatId === finalPeerId) && typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.updateChatHeaderStatus(`已连接到 ${contactName}`);
-            if (finalPeerId !== UserManager.userId && finalPeerId !== this.MANUAL_PLACEHOLDER_PEER_ID && !UserManager.contacts[finalPeerId]) await UserManager.addContact(finalPeerId, `用户 ${finalPeerId.substring(0,4)}`);
-            else if (channel._isManualPlaceholderChannel && finalPeerId !== UserManager.userId && finalPeerId !== this.MANUAL_PLACEHOLDER_PEER_ID && (ChatManager.currentChatId === null || ChatManager.currentChatId === this.MANUAL_PLACEHOLDER_PEER_ID || ChatManager.currentChatId === currentContextPeerId)) ChatManager.openChat(finalPeerId, 'contact');
-            EventEmitter.emit('connectionEstablished', finalPeerId);
-            if (ChatManager.currentChatId === finalPeerId && this.connections[finalPeerId] && !this.connections[finalPeerId].isVideoCall && typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.setCallButtonsState(true, finalPeerId);
-            if (this.reconnectAttempts[finalPeerId] !== undefined) this.reconnectAttempts[finalPeerId] = 0;
+            try { // <--- 添加 try
+                let finalPeerId = currentContextPeerId;
+                if (channel._isManualPlaceholderChannel) {
+                    // ... (原有的 placeholder 解析逻辑)
+                    let resolved = false;
+                    for (const actualIdInMap in this.connections) {
+                        if (this.connections[actualIdInMap]?.dataChannel === channel) {
+                            finalPeerId = actualIdInMap;
+                            resolved = true;
+                            break;
+                        }
+                    }
+                    if(!resolved) {
+                        Utils.log(`ConnectionManager: DataChannel onopen: 无法解析手动占位符通道的 finalPeerId。 currentContextPeerId: ${currentContextPeerId}`, Utils.logLevels.WARN);
+                        // 也许在此处直接 return 或做其他处理，因为 finalPeerId 可能不正确
+                    }
+                }
+
+                const logPeerIdForOpen = finalPeerId; // 使用解析后的 finalPeerId 进行日志记录
+                Utils.log(`ConnectionManager: 与 ${logPeerIdForOpen} 的数据通道 ("${channel.label}") 已打开。(静默: ${this.connections[logPeerIdForOpen]?.wasInitiatedSilently || false})`, Utils.logLevels.INFO);
+
+                const contactName = UserManager.contacts[logPeerIdForOpen]?.name || logPeerIdForOpen.substring(0,8) + '...';
+                if ((!this.connections[logPeerIdForOpen]?.wasInitiatedSilently || ChatManager.currentChatId === logPeerIdForOpen) && typeof ChatAreaUIManager !== 'undefined') {
+                    ChatAreaUIManager.updateChatHeaderStatus(`已连接到 ${contactName}`);
+                }
+
+                if (logPeerIdForOpen !== UserManager.userId && logPeerIdForOpen !== this.MANUAL_PLACEHOLDER_PEER_ID && !UserManager.contacts[logPeerIdForOpen]) {
+                    await UserManager.addContact(logPeerIdForOpen, `用户 ${logPeerIdForOpen.substring(0,4)}`);
+                }
+                    // 注意：这里的 ChatManager.openChat 可能会导致问题，因为它内部有 saveCurrentChat (async) 而 openChat 本身不是 async
+                // 如果 openChat 出错，错误不会被这个 try...catch 捕获，而是成为一个独立的 unhandledrejection
+                else if (channel._isManualPlaceholderChannel && logPeerIdForOpen !== UserManager.userId && logPeerIdForOpen !== this.MANUAL_PLACEHOLDER_PEER_ID &&
+                    (ChatManager.currentChatId === null || ChatManager.currentChatId === this.MANUAL_PLACEHOLDER_PEER_ID || ChatManager.currentChatId === currentContextPeerId /* 使用原始的 currentContextPeerId 进行这个判断可能更安全*/ )) {
+                    ChatManager.openChat(logPeerIdForOpen, 'contact');
+                }
+
+                EventEmitter.emit('connectionEstablished', logPeerIdForOpen);
+                if (ChatManager.currentChatId === logPeerIdForOpen && this.connections[logPeerIdForOpen] && !this.connections[logPeerIdForOpen].isVideoCall && typeof ChatAreaUIManager !== 'undefined') {
+                    ChatAreaUIManager.setCallButtonsState(true, logPeerIdForOpen);
+                }
+                if (this.reconnectAttempts[logPeerIdForOpen] !== undefined) {
+                    this.reconnectAttempts[logPeerIdForOpen] = 0;
+                }
+            } catch (e) { // <--- 添加 catch
+                // 在 catch 块中也尝试解析 finalPeerId 以便更准确地记录日志
+                let finalPeerIdForError = currentContextPeerId;
+                if (channel._isManualPlaceholderChannel) {
+                    for (const actualIdInMap in this.connections) {
+                        if (this.connections[actualIdInMap]?.dataChannel === channel) {
+                            finalPeerIdForError = actualIdInMap; break;
+                        }
+                    }
+                }
+                Utils.log(`ConnectionManager: 与 ${finalPeerIdForError} 的数据通道 ("${channel.label}") 的 onopen 处理程序中发生错误: ${e.message}\nStack: ${e.stack}`, Utils.logLevels.ERROR);
+                // 如果需要，可以关闭通道或执行其他清理操作
+                // try { channel.close(); } catch (closeErr) { /* ignore */ }
+            }
         };
         channel.onclose = () => {
             let finalPeerId = currentContextPeerId; if (channel._isManualPlaceholderChannel) for (const actualId in this.connections) if(this.connections[actualId]?.dataChannel === channel) {finalPeerId=actualId;break;}
@@ -665,7 +710,7 @@ const ConnectionManager = {
         switch (pc.iceConnectionState) {
             case 'connected': case 'completed': if (this.reconnectAttempts[peerId] !== undefined) this.reconnectAttempts[peerId] = 0; break;
             case 'disconnected': EventEmitter.emit('connectionDisconnected', peerId); if (!conn.isVideoCall) this.attemptReconnect(peerId); break;
-            case 'failed': if (!wasSilentContext) NotificationManager.showNotification(`与 ${UserManager.contacts[peerId]?.name || peerId.substring(0,8)} 的连接失败。`, 'error'); EventEmitter.emit('connectionFailed', peerId); this.close(peerId, false); break;
+            case 'failed': if (!wasSilentContext) NotificationUIManager.showNotification(`与 ${UserManager.contacts[peerId]?.name || peerId.substring(0,8)} 的连接失败。`, 'error'); EventEmitter.emit('connectionFailed', peerId); this.close(peerId, false); break;
             case 'closed': if (this.connections[peerId]) this.close(peerId, false); break;
         }
     },
@@ -679,7 +724,7 @@ const ConnectionManager = {
         switch (pc.connectionState) {
             case "connected": if (this.reconnectAttempts[peerId] !== undefined) this.reconnectAttempts[peerId] = 0; if ((conn.isVideoCall || (conn.dataChannel?.readyState === 'open')) && !conn._emittedEstablished) { EventEmitter.emit('connectionEstablished', peerId); conn._emittedEstablished = true; } break;
             case "disconnected": EventEmitter.emit('connectionDisconnected', peerId); if (!conn.isVideoCall) this.attemptReconnect(peerId); conn._emittedEstablished = false; break;
-            case "failed": if (!wasSilentContext) NotificationManager.showNotification(`与 ${UserManager.contacts[peerId]?.name || peerId.substring(0,8)} 的连接严重失败。`, 'error'); EventEmitter.emit('connectionFailed', peerId); this.close(peerId, false); conn._emittedEstablished = false; break;
+            case "failed": if (!wasSilentContext) NotificationUIManager.showNotification(`与 ${UserManager.contacts[peerId]?.name || peerId.substring(0,8)} 的连接严重失败。`, 'error'); EventEmitter.emit('connectionFailed', peerId); this.close(peerId, false); conn._emittedEstablished = false; break;
             case "closed": conn._emittedEstablished = false; break;
         }
     },

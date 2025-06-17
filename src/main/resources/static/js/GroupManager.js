@@ -13,8 +13,8 @@
  * @property {function} dissolveGroup - 群主解散一个群组。
  * @property {function} broadcastToGroup - 向群组成员广播消息。
  * @property {function} handleGroupMessage - 处理接收到的群组相关消息。
- * @dependencies DBManager, UserManager, ChatManager, ConnectionManager, NotificationManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager
- * @dependents AppInitializer (进行初始化), ChatManager (管理群组聊天), ModalManager (创建群组时调用)
+ * @dependencies DBManager, UserManager, ChatManager, ConnectionManager, NotificationUIManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager
+ * @dependents AppInitializer (进行初始化), ChatManager (管理群组聊天), ModalUIManager (创建群组时调用)
  */
 const GroupManager = {
     groups: {},
@@ -73,14 +73,13 @@ const GroupManager = {
      */
     createGroup: async function(name) {
         const groupId = 'group_' + Utils.generateId();
-        const group = {
+        this.groups[groupId] = {
             id: groupId, name: name, owner: UserManager.userId, members: [UserManager.userId],
             lastMessage: '群组已创建', lastTime: new Date().toISOString(), unread: 0, leftMembers: []
         };
-        this.groups[groupId] = group;
         await this.saveGroup(groupId);
         ChatManager.renderChatList(ChatManager.currentFilter);
-        NotificationManager.showNotification(`群组 "${name}" 已创建。`, 'success');
+        NotificationUIManager.showNotification(`群组 "${name}" 已创建。`, 'success');
         ChatManager.openChat(groupId, 'group');
         return groupId;
     },
@@ -112,13 +111,13 @@ const GroupManager = {
      */
     addMemberToGroup: async function(groupId, memberId, memberName = null) {
         const group = this.groups[groupId];
-        if (!group) { NotificationManager.showNotification("未找到群组。", "error"); return false; }
-        if (group.owner !== UserManager.userId) { NotificationManager.showNotification("只有群主可以添加成员。", "error"); return false; }
-        if (group.members.includes(memberId)) { NotificationManager.showNotification("用户已在群组中。", "warning"); return false; }
+        if (!group) { NotificationUIManager.showNotification("未找到群组。", "error"); return false; }
+        if (group.owner !== UserManager.userId) { NotificationUIManager.showNotification("只有群主可以添加成员。", "error"); return false; }
+        if (group.members.includes(memberId)) { NotificationUIManager.showNotification("用户已在群组中。", "warning"); return false; }
 
         const contactToAdd = UserManager.contacts[memberId];
         if (contactToAdd && contactToAdd.isSpecial && contactToAdd.isAI) {
-            NotificationManager.showNotification(`${contactToAdd.name} 是 AI 助手，不能添加到群组。`, "warning");
+            NotificationUIManager.showNotification(`${contactToAdd.name} 是 AI 助手，不能添加到群组。`, "warning");
             return false;
         }
 
@@ -141,7 +140,7 @@ const GroupManager = {
 
         const inviteMessage = { type: 'group-invite', groupId: groupId, groupName: group.name, owner: group.owner, members: group.members, invitedBy: UserManager.userId, sender: UserManager.userId };
         ConnectionManager.sendTo(memberId, inviteMessage);
-        NotificationManager.showNotification(`${newMemberDisplayName} 已被添加到群组。`, 'success');
+        NotificationUIManager.showNotification(`${newMemberDisplayName} 已被添加到群组。`, 'success');
         ChatManager.renderChatList(ChatManager.currentFilter);
         return true;
     },
@@ -154,11 +153,11 @@ const GroupManager = {
      */
     removeMemberFromGroup: async function(groupId, memberIdToRemove) {
         const group = this.groups[groupId];
-        if (!group) { NotificationManager.showNotification("未找到群组。", "error"); return false; }
-        if (group.owner !== UserManager.userId) { NotificationManager.showNotification("只有群主可以移除成员。", "error"); return false; }
-        if (memberIdToRemove === UserManager.userId) { NotificationManager.showNotification("群主无法移除自己。请选择解散群组。", "warning"); return false; }
+        if (!group) { NotificationUIManager.showNotification("未找到群组。", "error"); return false; }
+        if (group.owner !== UserManager.userId) { NotificationUIManager.showNotification("只有群主可以移除成员。", "error"); return false; }
+        if (memberIdToRemove === UserManager.userId) { NotificationUIManager.showNotification("群主无法移除自己。请选择解散群组。", "warning"); return false; }
         const memberIndex = group.members.indexOf(memberIdToRemove);
-        if (memberIndex === -1) { NotificationManager.showNotification("用户不在群组中。", "warning"); return false; }
+        if (memberIndex === -1) { NotificationUIManager.showNotification("用户不在群组中。", "warning"); return false; }
         group.members.splice(memberIndex, 1);
         await this.saveGroup(groupId);
         if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.isPanelAreaVisible && ChatManager.currentChatId === groupId) DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
@@ -170,7 +169,7 @@ const GroupManager = {
         this.broadcastToGroup(groupId, systemMessage, [memberIdToRemove]);
         const removalNotification = { type: 'group-removed', groupId: groupId, groupName: group.name, reason: 'removed_by_owner', sender: UserManager.userId, removedMemberId: memberIdToRemove };
         ConnectionManager.sendTo(memberIdToRemove, removalNotification);
-        NotificationManager.showNotification(`${removedName} 已被移出群组。`, 'success');
+        NotificationUIManager.showNotification(`${removedName} 已被移出群组。`, 'success');
         ChatManager.renderChatList(ChatManager.currentFilter);
         return true;
     },
@@ -182,8 +181,8 @@ const GroupManager = {
      */
     leaveGroup: async function(groupId) {
         const group = this.groups[groupId];
-        if (!group) { NotificationManager.showNotification("未找到群组。", "error"); return; }
-        if (group.owner === UserManager.userId) { NotificationManager.showNotification("群主不能离开。请选择解散群组。", "warning"); return; }
+        if (!group) { NotificationUIManager.showNotification("未找到群组。", "error"); return; }
+        if (group.owner === UserManager.userId) { NotificationUIManager.showNotification("群主不能离开。请选择解散群组。", "warning"); return; }
         const myId = UserManager.userId;
         if (!group.members.includes(myId)) return;
         const myName = UserManager.contacts[myId]?.name || `用户 ${myId.substring(0,4)}`;
@@ -197,7 +196,7 @@ const GroupManager = {
             if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showNoChatSelected();
         }
         ChatManager.renderChatList(ChatManager.currentFilter);
-        NotificationManager.showNotification(`您已离开群组 "${group.name}"。`, 'success');
+        NotificationUIManager.showNotification(`您已离开群组 "${group.name}"。`, 'success');
     },
 
     /**
@@ -208,7 +207,7 @@ const GroupManager = {
     dissolveGroup: async function(groupId) {
         const group = this.groups[groupId];
         if (!group) return;
-        if (group.owner !== UserManager.userId) { NotificationManager.showNotification("只有群主可以解散群组。", "error"); return; }
+        if (group.owner !== UserManager.userId) { NotificationUIManager.showNotification("只有群主可以解散群组。", "error"); return; }
         const dissolveNotification = { type: 'group-dissolved', groupId: groupId, groupName: group.name, sender: UserManager.userId };
         this.broadcastToGroup(groupId, dissolveNotification, [UserManager.userId]);
         delete this.groups[groupId];
@@ -219,7 +218,7 @@ const GroupManager = {
             if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showNoChatSelected();
         }
         ChatManager.renderChatList(ChatManager.currentFilter);
-        NotificationManager.showNotification(`群组 "${group.name}" 已被解散。`, 'success');
+        NotificationUIManager.showNotification(`群组 "${group.name}" 已被解散。`, 'success');
     },
 
     /**
@@ -274,10 +273,9 @@ const GroupManager = {
                     id: groupId, name: message.groupName, owner: message.owner, members: message.members || [],
                     lastMessage: `您被 ${inviterName} 邀请加入群聊`, lastTime: new Date().toISOString(), unread: 1, leftMembers: []
                 };
-                group = this.groups[groupId];
                 await this.saveGroup(groupId);
                 ChatManager.renderChatList(ChatManager.currentFilter);
-                NotificationManager.showNotification(`被邀请加入群组: ${message.groupName}`, 'success');
+                NotificationUIManager.showNotification(`被邀请加入群组: ${message.groupName}`, 'success');
             } else { // 如果已存在，更新成员列表
                 group.members = message.members || group.members;
                 await this.saveGroup(groupId);
@@ -344,7 +342,7 @@ const GroupManager = {
                 // 当收到自己被移除的通知时
                 if (message.removedMemberId === UserManager.userId && message.reason === 'removed_by_owner') {
                     const groupNameForNotification = message.groupName || (group ? group.name : null) || `群组 ${groupId}`;
-                    NotificationManager.showNotification(
+                    NotificationUIManager.showNotification(
                         `您正在被移出群组 "${groupNameForNotification}"。此操作将在 5 秒后生效。`,
                         'info', 6000
                     );
@@ -353,7 +351,7 @@ const GroupManager = {
                     // 延迟 5 秒执行，给用户一个反应时间
                     setTimeout(async () => {
                         const finalGroupName = (this.groups[capturedGroupId] ? this.groups[capturedGroupId].name : null) || capturedGroupName;
-                        NotificationManager.showNotification(
+                        NotificationUIManager.showNotification(
                             `您已被移出群组 "${finalGroupName}"。`, 'warning'
                         );
                         // 执行本地清理
@@ -372,7 +370,7 @@ const GroupManager = {
                 break;
             case 'group-dissolved':
                 if (group && sender !== UserManager.userId) {
-                    NotificationManager.showNotification(`群组 "${group.name}" 已被群主解散。`, 'warning');
+                    NotificationUIManager.showNotification(`群组 "${group.name}" 已被群主解散。`, 'warning');
                     delete this.groups[groupId];
                     await DBManager.removeItem('groups', groupId);
                     await ChatManager.clearChat(groupId);
@@ -453,7 +451,7 @@ const GroupManager = {
         if (message.isRetracted) {
             return message.content; // "你撤回了一条消息" 或 "X 撤回了一条消息"
         }
-        let preview = '';
+        let preview;
         const senderName = message.originalSenderName || (UserManager.contacts[message.originalSender || message.sender]?.name || '用户');
         switch (message.type) {
             case 'text': preview = `${senderName}: ${message.content}`; break;

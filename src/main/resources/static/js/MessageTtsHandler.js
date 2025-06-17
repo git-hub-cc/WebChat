@@ -8,7 +8,7 @@
  * @property {function} requestTtsForMessage - 为指定消息文本请求 TTS 音频。
  * @property {function} playTtsAudioFromControl - 处理播放/暂停 TTS 音频的点击事件。
  * @property {function} addTtsPlaceholder - 在消息中添加一个加载中的占位符。
- * @dependencies Config, Utils, UserManager, NotificationManager, AiApiHandler, DBManager
+ * @dependencies Config, Utils, UserManager, NotificationUIManager, AiApiHandler, DBManager
  * @dependents MessageManager (当 AI 消息完成时调用)
  */
 const MessageTtsHandler = {
@@ -26,7 +26,7 @@ const MessageTtsHandler = {
         let cleanedText = text;
         cleanedText = cleanedText.replace(/\*.*?\*/g, '');
         cleanedText = cleanedText.replace(/【.*?】/g, '');
-        cleanedText = cleanedText.replace(/\[.*?\]/g, '');
+        cleanedText = cleanedText.replace(/\[.*?\\]/g, '');
         cleanedText = cleanedText.replace(/\(.*?\)/g, '');
         cleanedText = cleanedText.replace(/（.*?）/g, '');
         const allowedCharsRegex = /[^\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff65-\uff9f\u3000-\u303f\uff01-\uff5ea-zA-Z0-9\s.,!?;:'"-]/g;
@@ -66,8 +66,7 @@ const MessageTtsHandler = {
             const data = encoder.encode(payloadString);
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            return hashHex;
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
         } catch (error) {
             Utils.log(`生成 TTS 缓存键失败: ${error}`, Utils.logLevels.ERROR);
             // Fallback to a simpler, less robust key if crypto fails (should not happen in modern browsers)
@@ -291,12 +290,12 @@ const MessageTtsHandler = {
                 const messageContentElement = messageElement.querySelector('.message-content');
                 if (!contact || !contact.isAI || !contact.aiConfig || !contact.aiConfig.tts) {
                     Utils.log(`无法重试 TTS: 未找到联系人 ${senderId} 或 TTS 配置。`, Utils.logLevels.ERROR);
-                    NotificationManager.showNotification("无法重试 TTS: 缺少配置。", "error");
+                    NotificationUIManager.showNotification("无法重试 TTS: 缺少配置。", "error");
                     return;
                 }
                 if (!messageContentElement) {
                     Utils.log("无法重试 TTS: 未找到消息内容元素。", Utils.logLevels.ERROR);
-                    NotificationManager.showNotification("无法重试 TTS: 缺少消息内容。", "error");
+                    NotificationUIManager.showNotification("无法重试 TTS: 缺少消息内容。", "error");
                     return;
                 }
                 // It's important that the retry logic correctly identifies the original text and ttsConfig
@@ -312,7 +311,7 @@ const MessageTtsHandler = {
                     this.requestTtsForMessage(cleanedText, currentTtsConfig, parentContainer, ttsId);
                 } else {
                     Utils.log(`无法为 ttsId ${ttsId} 重试 TTS: 清理后的文本或 TTS 配置为空。`, Utils.logLevels.WARN);
-                    NotificationManager.showNotification("无法重试 TTS: 缺少必要数据。", "error");
+                    NotificationUIManager.showNotification("无法重试 TTS: 缺少必要数据。", "error");
                 }
             });
             ttsControlContainer.appendChild(errorButton);

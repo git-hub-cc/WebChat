@@ -7,8 +7,8 @@
  * @exports {object} AppInitializer - 包含 init 方法，现在应由 DOMContentLoaded 事件触发。
  * @property {function} init - 应用程序的主初始化函数，是整个应用的启动点。
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
- *               LayoutManager, ModalManager, SettingsUIManager, ChatAreaUIManager, SidebarUIManager,
- *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationManager, Utils, EventEmitter,
+ *               LayoutUIManager, ModalUIManager, SettingsUIManager, ChatAreaUIManager, SidebarUIManager,
+ *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationUIManager, Utils, EventEmitter,
  *               PeopleLobbyManager, AiApiHandler, ThemeLoader, ScreenshotEditorUIManager
  * @dependents DOMContentLoaded (在 index.html 中通过新的方式调用)
  */
@@ -52,9 +52,9 @@ const AppInitializer = {
             await GroupManager.init();
 
             // --- 阶段 3: UI 管理器初始化 (同步, 在核心数据加载后) ---
-            ModalManager.init();
+            ModalUIManager.init();
             SettingsUIManager.init(); // ThemeLoader 已完成，SettingsUIManager 可以安全初始化
-            LayoutManager.init();
+            LayoutUIManager.init();
             ChatAreaUIManager.init();
             SidebarUIManager.init();
             DetailsPanelUIManager.init();
@@ -116,7 +116,7 @@ const AppInitializer = {
 
         } catch (error) {
             Utils.log(`应用初始化失败: ${error.stack || error}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('应用初始化失败，部分功能可能无法使用。', 'error');
+            NotificationUIManager.showNotification('应用初始化失败，部分功能可能无法使用。', 'error');
 
             // --- 回退模式初始化 ---
             if (!UserManager.userId) {
@@ -126,7 +126,7 @@ const AppInitializer = {
                 if(userIdEl) userIdEl.textContent = UserManager.userId;
             }
             // 即使在回退模式下，也尝试初始化 UI 管理器以保证界面可用
-            ModalManager.init(); SettingsUIManager.init(); LayoutManager.init();
+            ModalUIManager.init(); SettingsUIManager.init(); LayoutUIManager.init();
             ChatAreaUIManager.init(); SidebarUIManager.init(); DetailsPanelUIManager.init();
             VideoCallUIManager.init(); MediaUIManager.init(); PeopleLobbyManager.init();
             if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
@@ -146,7 +146,7 @@ const AppInitializer = {
             const loadingOverlay = document.getElementById('loadingOverlay');
             if (loadingOverlay && loadingOverlay.style.display !== 'none') {
                 loadingOverlay.style.display = 'none';
-                ModalManager.showOpenSourceInfoModal();
+                ModalUIManager.showOpenSourceInfoModal();
             }
         }
     },
@@ -223,10 +223,10 @@ const AppInitializer = {
      */
     handleNetworkChange: async function () {
         if (navigator.onLine) {
-            LayoutManager.updateConnectionStatusIndicator('网络已重新连接。正在尝试恢复连接...');
+            LayoutUIManager.updateConnectionStatusIndicator('网络已重新连接。正在尝试恢复连接...');
             ConnectionManager.initialize(); // 尝试重新初始化连接
         } else {
-            LayoutManager.updateConnectionStatusIndicator('网络已断开。');
+            LayoutUIManager.updateConnectionStatusIndicator('网络已断开。');
         }
         await this.refreshNetworkStatusUI();
     },
@@ -241,7 +241,7 @@ const AppInitializer = {
             const btn = document.querySelector('.back-to-list-btn');
             if (btn && window.getComputedStyle(btn).getPropertyValue('display') === "block"){
                 history.pushState(null, null, location.href);
-                if (typeof LayoutManager !== 'undefined') LayoutManager.showChatListArea();
+                if (typeof LayoutUIManager !== 'undefined') LayoutUIManager.showChatListArea();
             }
         });
     },
@@ -306,12 +306,12 @@ const AppInitializer = {
         window.addEventListener('error', (event) => {
             const errorDetails = event.error ? (event.error.stack || event.error.message) : event.message;
             Utils.log(`全局 window 错误: ${errorDetails} 位于 ${event.filename}:${event.lineno}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('应用程序发生错误。请检查控制台以获取详细信息。', 'error');
+            NotificationUIManager.showNotification('应用程序发生错误。请检查控制台以获取详细信息。', 'error');
         });
         window.addEventListener('unhandledrejection', function(event) {
             const reason = event.reason instanceof Error ? (event.reason.stack || event.reason.message) : event.reason;
             Utils.log(`未处理的 Promise rejection: ${reason}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('发生意外错误。请检查控制台。', 'error');
+            NotificationUIManager.showNotification('发生意外错误。请检查控制台。', 'error');
         });
         window.addEventListener('beforeunload', () => {
             MediaManager.releaseAudioResources();
@@ -338,7 +338,7 @@ const AppInitializer = {
                     setTimeout(() => {
                         if (loadingOverlay.style.display !== 'none') {
                             loadingOverlay.style.display = 'none';
-                            ModalManager.showOpenSourceInfoModal();
+                            ModalUIManager.showOpenSourceInfoModal();
                         }
                     }, 500);
                 }

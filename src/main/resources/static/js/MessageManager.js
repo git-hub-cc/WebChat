@@ -13,8 +13,8 @@
  * @property {function} clearChat - 触发清空当前聊天记录的确认流程。
  * @property {function} deleteMessageLocally - 本地删除一条消息。
  * @property {function} requestRetractMessage - 请求撤回一条消息。
- * @dependencies ChatManager, UserManager, ConnectionManager, GroupManager, NotificationManager, AiApiHandler,
- *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalManager, ChatAreaUIManager, UIManager, Config
+ * @dependencies ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler,
+ *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, Config
  * @dependents ChatAreaUIManager (绑定发送按钮事件), ChatManager (调用以显示历史消息)
  */
 const MessageManager = {
@@ -34,7 +34,7 @@ const MessageManager = {
 
         // 检查是否已选择聊天对象
         if (!ChatManager.currentChatId) {
-            NotificationManager.showNotification('请选择一个聊天以发送消息。', 'warning');
+            NotificationUIManager.showNotification('请选择一个聊天以发送消息。', 'warning');
             return;
         }
         const isGroup = ChatManager.currentChatId.startsWith('group_'); // 判断是否为群聊
@@ -46,7 +46,7 @@ const MessageManager = {
         // 处理AI聊天对象的特殊逻辑
         if (contact && contact.isSpecial && contact.isAI && contact.aiConfig) {
             if (currentAudioData || currentSelectedFile) {
-                NotificationManager.showNotification(`不支持向 ${contact.name} 发送音频/文件消息。`, 'warning');
+                NotificationUIManager.showNotification(`不支持向 ${contact.name} 发送音频/文件消息。`, 'warning');
                 if (currentAudioData) MessageManager.cancelAudioData(); // 取消音频
                 if (currentSelectedFile) MessageManager.cancelFileData(); // 取消文件
                 return;
@@ -171,10 +171,10 @@ const MessageManager = {
                 }
             }
             initialHtmlStructure += senderNameHtml; // 添加发送者名称HTML
-            let messageBodyHtml = ''; // 消息主体内容的HTML
+            let messageBodyHtml; // 消息主体内容的HTML
 
             if (message.isRetracted) { // 如果消息已撤回
-                let retractedText = "消息已撤回"; // 默认的撤回提示文本
+                let retractedText; // 默认的撤回提示文本
                 if (message.retractedBy === UserManager.userId) { // 如果是当前用户自己撤回的
                     retractedText = "你撤回了一条消息";
                 } else { // 如果是他人撤回的
@@ -221,7 +221,7 @@ const MessageManager = {
 
             // 更新后重新选择元素引用，因为innerHTML会重构DOM树，旧的引用可能失效
             mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
-            contentElement = mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
+            mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
 
         } else { // 更新现有消息 (通常是AI流式文本的更新，或者消息状态的细微变化不涉及结构重绘)
             if (contentElement && message.type === 'text' && !message.isRetracted) {
@@ -342,16 +342,16 @@ const MessageManager = {
      */
     clearChat: function () {
         if (!ChatManager.currentChatId) { // 检查是否已选择聊天
-            NotificationManager.showNotification('未选择要清空的聊天。', 'warning');
+            NotificationUIManager.showNotification('未选择要清空的聊天。', 'warning');
             return;
         }
         // 显示一个确认模态框，防止用户误操作
-        ModalManager.showConfirmationModal(
+        ModalUIManager.showConfirmationModal(
             '您确定要清空此聊天中的消息吗？此操作无法撤销。', // 提示信息
             () => { // 用户点击确认后的回调函数
                 ChatManager.clearChat(ChatManager.currentChatId).then(success => {
-                    if (success) NotificationManager.showNotification('聊天记录已清空。', 'success');
-                    else NotificationManager.showNotification('清空聊天记录失败。', 'error');
+                    if (success) NotificationUIManager.showNotification('聊天记录已清空。', 'success');
+                    else NotificationUIManager.showNotification('清空聊天记录失败。', 'error');
                 });
             }
         );
@@ -376,7 +376,7 @@ const MessageManager = {
 
             // 更新侧边栏联系人列表或群组列表中的最后消息预览
             const remainingMessages = ChatManager.chats[chatId];
-            let newPreview = "聊天记录已更新"; // 默认预览文本
+            let newPreview; // 默认预览文本
             if (remainingMessages.length > 0) {
                 const lastMsg = remainingMessages[remainingMessages.length - 1]; // 获取新的最后一条消息
                 if (chatId.startsWith('group_')) { // 如果是群聊
@@ -393,9 +393,9 @@ const MessageManager = {
             } else {
                 UserManager.updateContactLastMessage(chatId, newPreview, false, true);
             }
-            NotificationManager.showNotification("消息已删除。", "success");
+            NotificationUIManager.showNotification("消息已删除。", "success");
         } else {
-            NotificationManager.showNotification("无法找到要删除的消息。", "warning");
+            NotificationUIManager.showNotification("无法找到要删除的消息。", "warning");
         }
     },
 
@@ -409,17 +409,17 @@ const MessageManager = {
 
         const message = ChatManager.chats[chatId].find(msg => msg.id === messageId); // 查找要撤回的消息对象
         if (!message) { // 如果未找到消息
-            NotificationManager.showNotification("无法找到要撤回的消息。", "warning");
+            NotificationUIManager.showNotification("无法找到要撤回的消息。", "warning");
             return;
         }
         if (message.sender !== UserManager.userId) { // 检查是否是自己发送的消息
-            NotificationManager.showNotification("只能撤回自己发送的消息。", "error");
+            NotificationUIManager.showNotification("只能撤回自己发送的消息。", "error");
             return;
         }
         const messageTime = new Date(message.timestamp).getTime(); // 获取消息发送时间戳
         // 检查消息是否在可撤回的时间窗口内 (例如：2分钟内)
         if (Date.now() - messageTime > Config.ui.messageRetractionWindow) {
-            NotificationManager.showNotification(`消息已超过${Config.ui.messageRetractionWindow / (60 * 1000)}分钟，无法撤回。`, "warning");
+            NotificationUIManager.showNotification(`消息已超过${Config.ui.messageRetractionWindow / (60 * 1000)}分钟，无法撤回。`, "warning");
             return;
         }
 
@@ -438,11 +438,11 @@ const MessageManager = {
                 // 本地立即更新消息为撤回状态，无需等待服务器确认（乐观更新）
                 this._updateMessageToRetractedState(messageId, chatId, true, myName);
             } else {
-                NotificationManager.showNotification("发送群消息撤回请求失败。", "error");
+                NotificationUIManager.showNotification("发送群消息撤回请求失败。", "error");
             }
         } else { // 如果是聊天消息
             if (!ConnectionManager.isConnectedTo(chatId)) { // 检查与对方的连接状态
-                NotificationManager.showNotification("对方不在线，暂时无法撤回消息。", "warning");
+                NotificationUIManager.showNotification("对方不在线，暂时无法撤回消息。", "warning");
                 return;
             }
             const retractRequest = { // 构建消息撤回请求体
@@ -457,7 +457,7 @@ const MessageManager = {
                 // 本地立即更新消息为撤回状态
                 this._updateMessageToRetractedState(messageId, chatId, true, myName);
             } else {
-                NotificationManager.showNotification("发送消息撤回请求失败。", "error");
+                NotificationUIManager.showNotification("发送消息撤回请求失败。", "error");
             }
         }
     },

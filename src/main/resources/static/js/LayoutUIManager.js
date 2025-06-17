@@ -1,9 +1,9 @@
 /**
- * @file LayoutManager.js
+ * @file LayoutUIManager.js
  * @description 布局管理器，负责处理应用的响应式 UI 布局。
  *              它根据窗口大小（移动端 vs. 桌面端）动态调整主要区域（如侧边栏和聊天区）的显示和隐藏。
  * @module LayoutManager
- * @exports {object} LayoutManager - 对外暴露的单例对象，包含布局管理方法。
+ * @exports {object} LayoutUIManager - 对外暴露的单例对象，包含布局管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定 resize 事件。
  * @property {function} showChatListArea - 在移动端视图下，显示聊天列表区域并隐藏聊天区域。
  * @property {function} showChatAreaLayout - 在移动端视图下，显示聊天区域并隐藏聊天列表。
@@ -11,7 +11,7 @@
  * @dependencies DetailsPanelUIManager
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (打开聊天时调用), ChatManager (返回列表时调用)
  */
-const LayoutManager = {
+const LayoutUIManager = {
     appContainer: null,
     sidebarNav: null,
     chatAreaEl: null,

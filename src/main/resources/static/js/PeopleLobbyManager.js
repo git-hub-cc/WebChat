@@ -7,7 +7,7 @@
  * @property {function} show - 显示人员大厅并获取最新数据。
  * @property {function} hide - 隐藏人员大厅。
  * @property {function} isVisible - 检查人员大厅是否可见。
- * @dependencies UserManager, Utils, NotificationManager, ModalManager, Config
+ * @dependencies UserManager, Utils, NotificationUIManager, ModalUIManager, Config
  */
 const PeopleLobbyManager = {
     onlineUserIds: [],
@@ -56,7 +56,7 @@ const PeopleLobbyManager = {
             return true;
         } catch (error) {
             Utils.log('PeopleLobbyManager: 获取在线用户时出错: ' + error, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('无法加载在线用户列表。', 'error');
+            NotificationUIManager.showNotification('无法加载在线用户列表。', 'error');
             this.onlineUserIds = []; // 即使出错也清空，避免显示旧数据
             return false;
         } finally {
@@ -129,7 +129,7 @@ ${isAlreadyContact ? `<div class="chat-list-meta"><span class="chat-list-badge" 
      */
     handleLobbyUserClick: function(userId) {
         Utils.log(`PeopleLobbyManager: 点击了大厅用户 ${userId}`, Utils.logLevels.DEBUG);
-        ModalManager.showAddContactModalWithId(userId);
+        ModalUIManager.showAddContactModalWithId(userId);
     },
 
     /**

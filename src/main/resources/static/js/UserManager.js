@@ -15,7 +15,7 @@
  * @property {function} removeContact - 移除一个联系人。
  * @property {function} clearAllContacts - 清空所有用户添加的联系人。
  * @property {function} updateUserSetting - 更新并保存用户的偏好设置。
- * @dependencies DBManager, Utils, NotificationManager, ChatManager, ConnectionManager, ThemeLoader, ModalManager, SettingsUIManager, ChatAreaUIManager, EventEmitter
+ * @dependencies DBManager, Utils, NotificationUIManager, ChatManager, ConnectionManager, ThemeLoader, ModalUIManager, SettingsUIManager, ChatAreaUIManager, EventEmitter
  * @dependents AppInitializer (进行初始化), 几乎所有其他管理器都会直接或间接与之交互以获取用户信息或联系人数据。
  */
 const UserManager = {
@@ -211,8 +211,8 @@ const UserManager = {
         const currentTheme = (typeof ThemeLoader !== 'undefined' && ThemeLoader.themes[eventData.newThemeKey])
             ? ThemeLoader.themes[eventData.newThemeKey]
             : null;
-        if (typeof NotificationManager !== 'undefined' && currentTheme) {
-            NotificationManager.showNotification(`主题已切换为 "${currentTheme.name}"`, 'success');
+        if (typeof NotificationUIManager !== 'undefined' && currentTheme) {
+            NotificationUIManager.showNotification(`主题已切换为 "${currentTheme.name}"`, 'success');
         }
     },
 
@@ -356,7 +356,7 @@ const UserManager = {
                 await DBManager.setItem('user', updatedUserData);
             } catch (error) {
                 Utils.log(`保存设置 ${settingKey} 失败: ${error}`, Utils.logLevels.ERROR);
-                NotificationManager.showNotification('保存设置失败。', 'error');
+                NotificationUIManager.showNotification('保存设置失败。', 'error');
             }
         } else {
             Utils.log(`尝试更新未知设置: ${settingKey}`, Utils.logLevels.WARN);
@@ -410,21 +410,21 @@ const UserManager = {
      */
     async addContact(id, name) {
         if (id === this.userId) {
-            NotificationManager.showNotification("您不能添加自己为联系人。", "error");
+            NotificationUIManager.showNotification("您不能添加自己为联系人。", "error");
             return false;
         }
         if (this.isSpecialContact(id)) {
             const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
             const specialContactName = currentDefinitions.find(sc => sc.id === id)?.name || "这个特殊联系人";
-            NotificationManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
+            NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
             if (this.contacts[id] && !ConnectionManager.isConnectedTo(id)) {
                 ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
         }
         if (this.contacts[id]) {
-            NotificationManager.showNotification("该联系人已存在。", "warning");
+            NotificationUIManager.showNotification("该联系人已存在。", "warning");
             if (name && this.contacts[id].name !== name) {
                 this.contacts[id].name = name;
                 await this.saveContact(id);
@@ -449,7 +449,7 @@ const UserManager = {
         this.contacts[id] = newContact;
         await this.saveContact(id);
         if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
-        NotificationManager.showNotification(`联系人 "${newContact.name}" 已添加。`, 'success');
+        NotificationUIManager.showNotification(`联系人 "${newContact.name}" 已添加。`, 'success');
 
         ConnectionManager.createOffer(id, { isSilent: true });
         Utils.log(`尝试与新联系人建立初始连接: ${id}`, Utils.logLevels.INFO);
@@ -466,7 +466,7 @@ const UserManager = {
             const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
             const specialContactName = currentDefinitions.find(sc => sc.id === id)?.name || "这个特殊联系人";
-            NotificationManager.showNotification(`${specialContactName} 是内置联系人，不能被移除。`, "warning");
+            NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能被移除。`, "warning");
             return false;
         }
         if (this.contacts[id]) {
@@ -532,7 +532,7 @@ const UserManager = {
      * @returns {Promise<void>}
      */
     async clearAllContacts() {
-        ModalManager.showConfirmationModal(
+        ModalUIManager.showConfirmationModal(
             "您确定要删除所有用户添加的联系人以及所有可移除的AI助手吗？这也会清空他们的聊天记录。核心内置的特殊联系人将保留。",
             async () => {
                 const tempContacts = { ...this.contacts };
@@ -571,10 +571,10 @@ const UserManager = {
                         if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showNoChatSelected();
                     }
                     if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
-                    NotificationManager.showNotification("所有可移除的联系人、AI助手及其聊天记录已清空。", 'success');
+                    NotificationUIManager.showNotification("所有可移除的联系人、AI助手及其聊天记录已清空。", 'success');
                 } catch (error) {
                     Utils.log("清空联系人失败: " + error, Utils.logLevels.ERROR);
-                    NotificationManager.showNotification("从数据库清空联系人失败。", 'error');
+                    NotificationUIManager.showNotification("从数据库清空联系人失败。", 'error');
                     this.contacts = tempContacts;
                     if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
                 }
@@ -639,10 +639,10 @@ const UserManager = {
         this.isAiServiceHealthy = isHealthy;
         if (isHealthy) {
             this._aiServiceStatusMessage = "服务可用";
-            NotificationManager.showNotification('当前AI服务成功连接。', 'info');
+            NotificationUIManager.showNotification('当前AI服务成功连接。', 'info');
         } else {
             this._aiServiceStatusMessage = "服务不可用";
-            NotificationManager.showNotification('当前AI服务不可用，前往AI 与 API 配置进行修改。', 'error');
+            NotificationUIManager.showNotification('当前AI服务不可用，前往AI 与 API 配置进行修改。', 'error');
         }
         Utils.log(`UserManager: AI 服务状态更新为: ${this._aiServiceStatusMessage}`, Utils.logLevels.INFO);
     },

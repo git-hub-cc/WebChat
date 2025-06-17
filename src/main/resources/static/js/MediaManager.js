@@ -12,7 +12,7 @@
  * @property {function} processFile - 处理用户选择或拖放的文件，进行大小检查并读取数据。
  * @property {function} handleFileSelect - 处理文件输入框的 change 事件。
  * @property {function} captureScreen - 捕获屏幕或窗口内容作为截图。
- * @dependencies Config, Utils, NotificationManager, MessageManager, MediaUIManager, EventEmitter
+ * @dependencies Config, Utils, NotificationUIManager, MessageManager, MediaUIManager, EventEmitter
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定录音和截图按钮事件), MessageManager (播放语音消息)
  */
 const MediaManager = {
@@ -49,7 +49,7 @@ const MediaManager = {
                     MediaUIManager.displayFilePreview(editedFileObject); // 调用UI管理器显示预览
                 }
                 Utils.log('Edited screenshot ready for preview.', Utils.logLevels.INFO);
-                NotificationManager.showNotification('截图编辑完成，已添加到预览。', 'success');
+                NotificationUIManager.showNotification('截图编辑完成，已添加到预览。', 'success');
             });
 
             EventEmitter.on('screenshotEditingCancelled', function() {
@@ -57,7 +57,7 @@ const MediaManager = {
                 if (MessageManager.selectedFile && MessageManager.selectedFile.name && MessageManager.selectedFile.name.startsWith("screenshot_temp_")) {
                     MessageManager.cancelFileData();
                 }
-                NotificationManager.showNotification('截图操作已取消。', 'info');
+                NotificationUIManager.showNotification('截图操作已取消。', 'info');
             });
         } else {
             Utils.log('MediaManager.init: EventEmitter 未定义，无法监听截图编辑事件。', Utils.logLevels.WARN);
@@ -100,7 +100,7 @@ const MediaManager = {
             return true;
         } catch (error) {
             Utils.log(`获取麦克风权限时出错: ${error}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('麦克风访问被拒绝或不可用。', 'error');
+            NotificationUIManager.showNotification('麦克风访问被拒绝或不可用。', 'error');
             const voiceButton = document.getElementById('voiceButtonMain');
             if(voiceButton) voiceButton.disabled = true;
             this.releaseAudioResources();
@@ -228,11 +228,11 @@ const MediaManager = {
     processFile: async function(file) {
         if (!file) return;
         if (file.size > Config.media.maxFileSize) {
-            NotificationManager.showNotification(`文件过大。最大: ${this.formatFileSize(Config.media.maxFileSize)}。`, 'error');
+            NotificationUIManager.showNotification(`文件过大。最大: ${this.formatFileSize(Config.media.maxFileSize)}。`, 'error');
             return;
         }
         if (MessageManager.audioData) {
-            NotificationManager.showNotification('已有待发送的语音消息。请先取消。', 'warning');
+            NotificationUIManager.showNotification('已有待发送的语音消息。请先取消。', 'warning');
             return;
         }
         try {
@@ -244,7 +244,7 @@ const MediaManager = {
             reader.readAsDataURL(file);
         } catch (error) {
             Utils.log(`处理文件时出错: ${error}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification('处理文件时出错。', 'error');
+            NotificationUIManager.showNotification('处理文件时出错。', 'error');
         }
     },
 
@@ -269,15 +269,15 @@ const MediaManager = {
      */
     captureScreen: async function() {
         if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
-            NotificationManager.showNotification('您的浏览器不支持屏幕捕获功能。', 'error');
+            NotificationUIManager.showNotification('您的浏览器不支持屏幕捕获功能。', 'error');
             return;
         }
         if (MessageManager.audioData) {
-            NotificationManager.showNotification('已有待发送的语音消息。请先取消。', 'warning');
+            NotificationUIManager.showNotification('已有待发送的语音消息。请先取消。', 'warning');
             return;
         }
         if (MessageManager.selectedFile) {
-            NotificationManager.showNotification('已有待发送的文件。请先取消。', 'warning');
+            NotificationUIManager.showNotification('已有待发送的文件。请先取消。', 'warning');
             return;
         }
 
@@ -290,12 +290,12 @@ const MediaManager = {
 
             const videoTrack = stream.getVideoTracks()[0];
             if (!videoTrack) {
-                NotificationManager.showNotification('无法获取视频流用于截图。', 'error');
+                NotificationUIManager.showNotification('无法获取视频流用于截图。', 'error');
                 stream.getTracks().forEach(track => track.stop());
                 return;
             }
 
-            NotificationManager.showNotification('1秒后截取屏幕...', 'info', 1000); // 提示用户1秒后截图
+            NotificationUIManager.showNotification('1秒后截取屏幕...', 'info', 1000); // 提示用户1秒后截图
 
             setTimeout(async () => {
                 // 确保流仍然活动，用户可能在延迟期间关闭了共享
@@ -317,7 +317,7 @@ const MediaManager = {
 
                     canvas.toBlob(function(blob) {
                         if (!blob) {
-                            NotificationManager.showNotification('截图失败：无法生成图片 Blob。', 'error');
+                            NotificationUIManager.showNotification('截图失败：无法生成图片 Blob。', 'error');
                             // 此时 stream 变量在 setTimeout 的回调中，但 ScreenshotEditorUIManager 预期会接收到它并停止
                             // 但如果这里失败了，最好也尝试停止
                             if (stream) stream.getTracks().forEach(track => track.stop());
@@ -339,14 +339,14 @@ const MediaManager = {
                             }
                         };
                         reader.onerror = function() {
-                            NotificationManager.showNotification('截图失败：无法读取图片数据。', 'error');
+                            NotificationUIManager.showNotification('截图失败：无法读取图片数据。', 'error');
                             if (stream) stream.getTracks().forEach(track => track.stop());
                         };
                         reader.readAsDataURL(blob);
                     }, 'image/png');
                 } catch (captureError) {
                     Utils.log(`延迟截图或处理时出错: ${captureError.message}`, Utils.logLevels.ERROR);
-                    NotificationManager.showNotification(`截图处理失败: ${captureError.message}`, 'error');
+                    NotificationUIManager.showNotification(`截图处理失败: ${captureError.message}`, 'error');
                     if (stream) stream.getTracks().forEach(track => track.stop());
                 }
             }, 1000); // 延迟1000毫秒 (1秒)
@@ -354,9 +354,9 @@ const MediaManager = {
         } catch (err) {
             Utils.log('屏幕捕获初始设置失败: ' + err.message, Utils.logLevels.ERROR);
             if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
-                NotificationManager.showNotification('截图功能启动失败: ' + err.message, 'error');
+                NotificationUIManager.showNotification('截图功能启动失败: ' + err.message, 'error');
             } else {
-                NotificationManager.showNotification('截图已取消或未授权。', 'info');
+                NotificationUIManager.showNotification('截图已取消或未授权。', 'info');
             }
             if (stream) { // 如果在获取流后但在延迟前出错
                 stream.getTracks().forEach(track => track.stop());

@@ -10,7 +10,7 @@
  * @exports {object} TtsUIManager - 对外暴露的单例对象，包含管理 TTS 配置 UI 的方法。
  * @property {function} populateAiTtsConfigurationForm - 根据联系人配置动态生成 TTS 设置表单。
  * @property {function} handleSaveAiTtsSettings - 处理保存 TTS 设置的逻辑。
- * @dependencies Utils, UserManager, NotificationManager, Config, AiApiHandler
+ * @dependencies Utils, UserManager, NotificationUIManager, Config, AiApiHandler
  * @dependents DetailsPanelUIManager (在更新详情面板时调用)
  */
 const TtsUIManager = {
@@ -520,7 +520,7 @@ const TtsUIManager = {
     handleSaveAiTtsSettings: async function(contactId) {
         const contact = UserManager.contacts[contactId];
         if (!contact || !contact.isAI || !contact.aiConfig) {
-            NotificationManager.showNotification("错误: 未找到联系人或非 AI 联系人。", "error");
+            NotificationUIManager.showNotification("错误: 未找到联系人或非 AI 联系人。", "error");
             return;
         }
 
@@ -564,13 +564,13 @@ const TtsUIManager = {
             try {
                 localStorage.setItem(`ttsConfig_${contactId}`, JSON.stringify(newTtsSettings));
                 await UserManager.saveContact(contactId);
-                NotificationManager.showNotification("TTS 设置已成功保存。", "success");
+                NotificationUIManager.showNotification("TTS 设置已成功保存。", "success");
             } catch (error) {
                 Utils.log(`为 ${contactId} 保存 TTS 设置失败: ${error}`, Utils.logLevels.ERROR);
-                NotificationManager.showNotification("保存 TTS 设置失败。", "error");
+                NotificationUIManager.showNotification("保存 TTS 设置失败。", "error");
             }
         } else {
-            NotificationManager.showNotification("未对 TTS 设置进行任何更改。", "info");
+            NotificationUIManager.showNotification("未对 TTS 设置进行任何更改。", "info");
         }
     }
 };

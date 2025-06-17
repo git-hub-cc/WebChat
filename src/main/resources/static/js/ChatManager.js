@@ -3,7 +3,7 @@
  * @description 核心聊天管理器，管理聊天会话数据、状态、UI渲染，并与 ChatAreaUIManager 协作支持消息列表的虚拟滚动。
  * @module ChatManager
  * @exports {object} ChatManager - 对外暴露的单例对象，包含所有聊天管理功能。
- * @dependencies DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationManager, Utils, ModalManager
+ * @dependencies DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationUIManager, Utils, ModalUIManager
  * @dependents AppInitializer (进行初始化), 几乎所有其他管理器都会直接或间接与之交互。
  */
 const ChatManager = {
@@ -133,7 +133,7 @@ const ChatManager = {
                 statusIndicator = '<span class="online-dot" title="已连接"></span>';
             }
 
-            let avatarContentHtml = '';
+            let avatarContentHtml;
             const avatarClass = `chat-list-avatar ${item.isSpecial ? item.id : ''}`;
             let fallbackText = (item.avatarText) ? Utils.escapeHtml(item.avatarText) :
                 (item.name && item.name.length > 0) ? Utils.escapeHtml(item.name.charAt(0).toUpperCase()) : '?';
@@ -352,7 +352,7 @@ const ChatManager = {
      * @returns {Promise<void>}
      */
     clearAllChats: async function() {
-        ModalManager.showConfirmationModal(
+        ModalUIManager.showConfirmationModal(
             '您确定要清空所有聊天记录吗？此操作无法撤销。',
             async () => {
                 const chatIdsToClear = Object.keys(this.chats);
@@ -374,10 +374,10 @@ const ChatManager = {
                         ChatAreaUIManager.setupForChat(this.currentChatId); // 重设当前聊天区域
                     }
                     this.renderChatList(this.currentFilter); // 重新渲染侧边栏
-                    NotificationManager.showNotification('所有聊天记录已清空。', 'success');
+                    NotificationUIManager.showNotification('所有聊天记录已清空。', 'success');
                 } catch (error) {
                     Utils.log('清空所有聊天记录失败: ' + error, Utils.logLevels.ERROR);
-                    NotificationManager.showNotification('从数据库清空所有聊天记录失败。', 'error');
+                    NotificationUIManager.showNotification('从数据库清空所有聊天记录失败。', 'error');
                     await this.loadChats(); // 失败时从数据库重新加载
                     this.renderChatList(this.currentFilter);
                 }
@@ -392,10 +392,10 @@ const ChatManager = {
      */
     deleteChat: function(chatId, type) {
         const entity = type === 'group' ? GroupManager.groups[chatId] : UserManager.contacts[chatId];
-        if (!entity) { NotificationManager.showNotification(`${type === 'group' ? '群组' : '联系人'}未找到。`, 'error'); return; }
+        if (!entity) { NotificationUIManager.showNotification(`${type === 'group' ? '群组' : '联系人'}未找到。`, 'error'); return; }
 
         if (type === 'contact' && entity.isSpecial) { // 特殊联系人不可删除
-            NotificationManager.showNotification(`${entity.name} 是内置联系人，无法删除。如果需要，您可以清空聊天记录。`, 'warning');
+            NotificationUIManager.showNotification(`${entity.name} 是内置联系人，无法删除。如果需要，您可以清空聊天记录。`, 'warning');
             return;
         }
         const entityName = entity.name;
@@ -404,7 +404,7 @@ const ChatManager = {
             confirmMessage = `您确定要${entity.owner === UserManager.userId ? '解散此群组' : '退出此群组'} ("${entityName}") 吗？所有相关消息都将丢失。`;
         }
 
-        ModalManager.showConfirmationModal(confirmMessage, async () => {
+        ModalUIManager.showConfirmationModal(confirmMessage, async () => {
             await this.clearChat(chatId); // 先清空聊天记录
 
             if (type === 'group') { // 委托给相应管理器删除

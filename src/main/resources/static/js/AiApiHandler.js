@@ -8,7 +8,7 @@
  * @property {function} sendAiMessage - 向 AI 联系人发送消息并处理流式响应。
  * @property {function} checkAiServiceHealth - 执行 AI 服务健康检查。
  * @property {function} handleAiConfigChange - 处理 AI 配置变更，由 AppInitializer 调用。
- * @dependencies UserManager, ChatManager, MessageManager, Config, Utils, NotificationManager, EventEmitter, SettingsUIManager
+ * @dependencies UserManager, ChatManager, MessageManager, Config, Utils, NotificationUIManager, EventEmitter, SettingsUIManager
  * @dependents MessageManager (当检测到消息目标是 AI 时调用), AppInitializer (初始化时及配置变更时调用)
  */
 const AiApiHandler = {
@@ -200,7 +200,7 @@ const AiApiHandler = {
         } catch (error) {
             if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
             Utils.log(`与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
+            NotificationUIManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
         }
     },
@@ -298,7 +298,7 @@ const AiApiHandler = {
 
         } catch (error) {
             Utils.log(`在摘要后与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
-            NotificationManager.showNotification(`错误: 在摘要后无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
+            NotificationUIManager.showNotification(`错误: 在摘要后无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，在摘要后发生错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
         }
     },

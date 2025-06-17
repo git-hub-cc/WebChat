@@ -18,7 +18,7 @@
  *
  * @dependencies
  *  - Utils: 提供通用的工具函数，例如日志记录。
- *  - NotificationManager: 用于向用户显示通知信息（例如，操作成功、错误提示）。
+ *  - NotificationUIManager: 用于向用户显示通知信息（例如，操作成功、错误提示）。
  *  - EventEmitter: 用于模块间的事件发布和订阅机制，例如监听 `rawScreenshotCaptured` 事件以及发出 `screenshotEditingComplete` 或 `screenshotEditingCancelled` 事件。
  *
  * @listens {rawScreenshotCaptured} - 从 EventEmitter 监听此事件，以接收原始截图数据和媒体流。
@@ -186,7 +186,7 @@ const ScreenshotEditorUIManager = {
     _handleRawScreenshot: function(detail) {
         Utils.log('Raw screenshot received by ScreenshotEditorUIManager.', Utils.logLevels.DEBUG);
         if (!detail || !detail.dataUrl || !detail.originalStream) {
-            NotificationManager.showNotification('接收截图数据不完整。', 'error');
+            NotificationUIManager.showNotification('接收截图数据不完整。', 'error');
             if (detail && detail.originalStream) {
                 // 确保停止流，即使数据不完整
                 detail.originalStream.getTracks().forEach(track => track.stop());
@@ -222,7 +222,7 @@ const ScreenshotEditorUIManager = {
             this._showEditor(); // 图像加载成功后显示编辑器
         };
         img.onerror = () => {
-            NotificationManager.showNotification('加载截图到编辑器失败。', 'error');
+            NotificationUIManager.showNotification('加载截图到编辑器失败。', 'error');
             Utils.log('ScreenshotEditorUIManager: 图片加载失败 (img.onerror)。', Utils.logLevels.ERROR);
             this._closeEditorAndStopStream(); // 加载失败则关闭编辑器并停止流
         };
@@ -344,7 +344,7 @@ const ScreenshotEditorUIManager = {
         // 光标样式将由 _updateCursorStyle 根据 cropRect 的存在和鼠标位置设置
         this._updateCursorStyle(this.mouseX, this.mouseY); // 立即更新光标
         if (this.markColorPickerEl) this.markColorPickerEl.style.display = 'none'; // 裁剪工具激活时隐藏颜色选择器
-        NotificationManager.showNotification('裁剪工具已激活。请拖拽选择或调整裁剪区域。', 'info');
+        NotificationUIManager.showNotification('裁剪工具已激活。请拖拽选择或调整裁剪区域。', 'info');
     },
 
     /**
@@ -358,9 +358,9 @@ const ScreenshotEditorUIManager = {
         this.canvasEl.style.cursor = 'crosshair'; // 设置标记工具的光标
         if (this.markColorPickerEl) this.markColorPickerEl.style.display = 'inline-block'; // 显示颜色选择器
         if (this.cropRect) {
-            NotificationManager.showNotification('矩形标记工具已激活。请在选定区域内标记。', 'info');
+            NotificationUIManager.showNotification('矩形标记工具已激活。请在选定区域内标记。', 'info');
         } else {
-            NotificationManager.showNotification('矩形标记工具已激活。请标记。', 'info');
+            NotificationUIManager.showNotification('矩形标记工具已激活。请标记。', 'info');
         }
     },
 
@@ -391,7 +391,7 @@ const ScreenshotEditorUIManager = {
             return;
         }
         Utils.log('ScreenshotEditorUIManager._confirmEdit called.', Utils.logLevels.INFO);
-        NotificationManager.showNotification('正在处理截图...', 'info');
+        NotificationUIManager.showNotification('正在处理截图...', 'info');
 
         const finalCanvas = document.createElement('canvas'); // 创建一个新的离屏 Canvas
         const finalCtx = finalCanvas.getContext('2d');
@@ -434,7 +434,7 @@ const ScreenshotEditorUIManager = {
         // 将离屏 Canvas 内容转换为 Blob
         finalCanvas.toBlob((blob) => {
             if (!blob) {
-                NotificationManager.showNotification('处理截图失败：无法生成图片 Blob。', 'error');
+                NotificationUIManager.showNotification('处理截图失败：无法生成图片 Blob。', 'error');
                 this._closeEditorAndStopStream();
                 return;
             }
@@ -451,7 +451,7 @@ const ScreenshotEditorUIManager = {
                 this._closeEditorAndStopStream(); // 关闭编辑器
             };
             reader.onerror = () => {
-                NotificationManager.showNotification('读取编辑后截图数据失败。', 'error');
+                NotificationUIManager.showNotification('读取编辑后截图数据失败。', 'error');
                 this._closeEditorAndStopStream();
             };
             reader.readAsDataURL(blob);
@@ -715,7 +715,7 @@ const ScreenshotEditorUIManager = {
                         Utils.log("New crop rectangle is too small. Discarding crop.", Utils.logLevels.DEBUG);
                         // 仅当用户尝试裁剪一个比原图小的区域，或者明确裁剪出小于最小尺寸的区域时提示
                         if (this.rawImage && (this.cropRect.w < this.rawImage.width || this.cropRect.h < this.rawImage.height || this.cropRect.w < this.minCropSize || this.cropRect.h < this.minCropSize)) {
-                            NotificationManager.showNotification('裁剪区域过小，请重新选择。', 'warn');
+                            NotificationUIManager.showNotification('裁剪区域过小，请重新选择。', 'warn');
                         }
                         this.cropRect = null; // 抛弃过小的裁剪框
                         this.cropHandles = [];

@@ -254,9 +254,9 @@ The application supports a flexible theming system:
     *   `ChatAreaUIManager.js`: (Chat Area UI Manager) Manages the main chat area UI.
     *   `SidebarUIManager.js`: (Sidebar UI Manager) Manages the contact/chat sidebar.
     *   `DetailsPanelUIManager.js`: (Details Panel UI Manager) Manages the right-side details panel.
-    *   `ModalManager.js`: (Modal Manager) Handles creation and display of various modals.
-    *   `NotificationManager.js`: (Notification Manager) Manages in-app notifications.
-    *   `LayoutManager.js`: (Layout Manager) Manages overall application layout and responsiveness.
+    *   `ModalUIManager.js`: (Modal Manager) Handles creation and display of various modals.
+    *   `NotificationUIManager.js`: (Notification Manager) Manages in-app notifications.
+    *   `LayoutUIManager.js`: (Layout Manager) Manages overall application layout and responsiveness.
     *   `MediaUIManager.js`: (Media UI Manager) Manages UI aspects of media (previews, etc.).
     *   `VideoCallUIManager.js` (Now part of VideoCallManager for UI aspects)
     *   `SettingsUIManager.js`: (Settings UI Manager) Manages the settings UI/modal.

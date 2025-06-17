@@ -2,13 +2,13 @@
  * @file UIManager.js
  * @description 一个高度精简的通用 UI 管理器。
  *              随着项目重构，大部分具体的 UI 管理职责已被移交给了更专业的管理器
- *              （如 ChatAreaUIManager, SidebarUIManager, ModalManager 等）。
+ *              （如 ChatAreaUIManager, SidebarUIManager, ModalUIManager 等）。
  *              此文件现在只保留了不适合放在其他任何地方的、非常通用的 UI 功能。
  * @module UIManager
  * @exports {object} UIManager - 对外暴露的单例对象，包含剩余的通用 UI 方法。
  * @property {function} checkWebRTCSupport - 检查浏览器是否支持 WebRTC。
  * @property {function} showFullImage - 在一个模态框中显示全尺寸图片。
- * @dependencies LayoutManager
+ * @dependencies LayoutUIManager
  * @dependents AppInitializer (调用以检查 WebRTC 支持), MessageManager (调用以显示全尺寸图片)
  */
 const UIManager = {
@@ -19,7 +19,7 @@ const UIManager = {
      */
     checkWebRTCSupport: function () {
         if (typeof RTCPeerConnection === 'undefined') {
-            LayoutManager.updateConnectionStatusIndicator('浏览器不支持 WebRTC。', 'error');
+            LayoutUIManager.updateConnectionStatusIndicator('浏览器不支持 WebRTC。', 'error');
             return false;
         }
         return true;

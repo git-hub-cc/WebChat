@@ -8,7 +8,7 @@
  * @property {function} displayAudioPreview - 显示录制完成的音频预览。
  * @property {function} displayFilePreview - 显示用户选择的文件的预览。
  * @property {function} setRecordingButtonActive - 设置录音按钮的激活（录制中）状态和 UI。
- * @dependencies Utils, MessageManager, MediaManager, NotificationManager
+ * @dependencies Utils, MessageManager, MediaManager, NotificationUIManager
  * @dependents AppInitializer (进行初始化), MediaManager (调用以更新 UI), EventEmitter (监听截图事件)
  */
 const MediaUIManager = {
@@ -98,7 +98,7 @@ const MediaUIManager = {
         this.filePreviewContainerEl.innerHTML = ''; // 清除之前的预览
         const previewDiv = document.createElement('div');
         previewDiv.className = 'file-preview-item';
-        let contentHtml = '';
+        let contentHtml;
 
         // fileObj.data 此时应该是 Object URL (来自截图) 或 Data URL (来自文件选择)
         if (fileObj.type.startsWith('image/')) {
@@ -160,7 +160,7 @@ const MediaUIManager = {
         }
 
         if (elapsedSeconds >= maxDuration) {
-            NotificationManager.showNotification(`已达到最大录制时间 ${maxDuration}秒。`, 'info');
+            NotificationUIManager.showNotification(`已达到最大录制时间 ${maxDuration}秒。`, 'info');
         }
     },
 

@@ -19,7 +19,7 @@
  * @property {function} setupForChat - 为指定聊天设置聊天区域，包括初始化虚拟滚动。
  * @property {function} handleNewMessageForCurrentChat - 处理当前聊天的新消息，将其添加到虚拟滚动列表。
  * @property {function} scrollToMessage - 滚动到指定的消息ID并加载其上下文。
- * @dependencies LayoutManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationManager, Utils, MediaManager, PeopleLobbyManager, EventEmitter, UIManager, Config
+ * @dependencies LayoutUIManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationUIManager, Utils, MediaManager, PeopleLobbyManager, EventEmitter, UIManager, Config
  * @dependents AppInitializer (进行初始化)
  */
 const ChatAreaUIManager = {
@@ -158,7 +158,7 @@ const ChatAreaUIManager = {
             this.chatAreaEl.addEventListener('dragenter', (e) => { e.preventDefault(); e.stopPropagation(); if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) { dragCounter++; if (dragCounter === 1) this.chatAreaEl.classList.add('drag-over'); } });
             this.chatAreaEl.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) e.dataTransfer.dropEffect = 'copy'; else e.dataTransfer.dropEffect = 'none'; });
             this.chatAreaEl.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dragCounter--; if (dragCounter === 0) this.chatAreaEl.classList.remove('drag-over'); });
-            this.chatAreaEl.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); dragCounter = 0; this.chatAreaEl.classList.remove('drag-over'); if (!ChatManager.currentChatId) { NotificationManager.showNotification('发送文件前请先选择一个聊天。', 'warning'); return; } if (e.dataTransfer && e.dataTransfer.files.length > 0) { const file = e.dataTransfer.files[0]; MediaManager.processFile(file); } });
+            this.chatAreaEl.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); dragCounter = 0; this.chatAreaEl.classList.remove('drag-over'); if (!ChatManager.currentChatId) { NotificationUIManager.showNotification('发送文件前请先选择一个聊天。', 'warning'); return; } if (e.dataTransfer && e.dataTransfer.files.length > 0) { const file = e.dataTransfer.files[0]; MediaManager.processFile(file); } });
         }
         if (this.chatBoxEl) {
             this.chatBoxEl.addEventListener('contextmenu', this._handleMessageInteraction.bind(this));
@@ -265,7 +265,7 @@ const ChatAreaUIManager = {
      * 同时确保上下文菜单被隐藏。
      */
     showChatArea: function () {
-        if (typeof LayoutManager !== 'undefined') LayoutManager.showChatAreaLayout();
+        if (typeof LayoutUIManager !== 'undefined') LayoutUIManager.showChatAreaLayout();
         if (this.noChatSelectedScreenEl) this.noChatSelectedScreenEl.style.display = 'none';
         if (this.chatBoxEl) this.chatBoxEl.style.display = 'flex';
         this._hideContextMenu();
@@ -285,7 +285,7 @@ const ChatAreaUIManager = {
         if (this.noChatSelectedScreenEl) this.noChatSelectedScreenEl.style.display = 'flex';
         this.enableChatInterface(false);
         if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.hideSidePanel();
-        if (typeof LayoutManager !== 'undefined') LayoutManager.showChatListArea();
+        if (typeof LayoutUIManager !== 'undefined') LayoutUIManager.showChatListArea();
         if (this.peopleLobbyButtonEl) { this.peopleLobbyButtonEl.style.display = 'block'; this.peopleLobbyButtonEl.disabled = false; }
         if (this.chatDetailsButtonEl) { this.chatDetailsButtonEl.style.display = 'none'; this.chatDetailsButtonEl.disabled = true; }
         this._hideContextMenu();
@@ -422,11 +422,11 @@ const ChatAreaUIManager = {
         if (reconnectButton) {
             reconnectButton.onclick = async () => {
                 if (textElement) textElement.textContent = `正在检查信令服务器连接...`; reconnectButton.disabled = true;
-                let signalingServerNowConnected = false;
+                let signalingServerNowConnected;
                 if (ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN) signalingServerNowConnected = true;
                 else { if (textElement) textElement.textContent = `信令服务器未连接。正在尝试连接...`; try { await ConnectionManager.connectWebSocket(); signalingServerNowConnected = ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN; } catch (wsError) { Utils.log(`showReconnectPrompt: 重新连接信令服务器失败: ${wsError.message || wsError}`, Utils.logLevels.ERROR); signalingServerNowConnected = false; } }
                 if (signalingServerNowConnected) { if (textElement) textElement.textContent = `信令服务器已连接。正在尝试重新连接到 ${Utils.escapeHtml(peerName)} 及其他在线联系人...`; ConnectionManager.autoConnectToAllContacts(); }
-                else { if (textElement) textElement.innerHTML = `无法连接到信令服务器。请检查您的网络，或尝试使用“菜单与设置”中的<br>“AI 与 API 配置 > 高级选项”进行手动连接。`; NotificationManager.showNotification('尝试使用“菜单与设置”中的“AI 与 API 配置 > 高级选项”进行手动连接。', 'error'); reconnectButton.disabled = false; }
+                else { if (textElement) textElement.innerHTML = `无法连接到信令服务器。请检查您的网络，或尝试使用“菜单与设置”中的<br>“AI 与 API 配置 > 高级选项”进行手动连接。`; NotificationUIManager.showNotification('尝试使用“菜单与设置”中的“AI 与 API 配置 > 高级选项”进行手动连接。', 'error'); reconnectButton.disabled = false; }
             };
         }
         if (cancelButton) cancelButton.onclick = () => cleanupPrompt(true);
@@ -499,7 +499,6 @@ const ChatAreaUIManager = {
     _handleChatScroll: function() {
         if (!this.chatBoxEl) return;
         const { scrollTop, scrollHeight, clientHeight } = this.chatBoxEl;
-        const isScrollingDown = scrollTop > this._lastScrollTop;
         this._lastScrollTop = scrollTop; // 更新上次滚动位置
 
         // --- 加载更早的消息 ---
@@ -738,7 +737,7 @@ const ChatAreaUIManager = {
      */
     scrollToMessage: function(targetMessageId) {
         if (!this._currentChatIdForVirtualScroll || !this.chatBoxEl) {
-            NotificationManager.showNotification("请先打开一个聊天。", "warning");
+            NotificationUIManager.showNotification("请先打开一个聊天。", "warning");
             return;
         }
         // 尝试查找此消息属于哪个聊天
@@ -750,7 +749,7 @@ const ChatAreaUIManager = {
             if (foundChatId) {
                 chatIdForMessage = foundChatId;
             } else {
-                NotificationManager.showNotification("未找到目标消息。", "error");
+                NotificationUIManager.showNotification("未找到目标消息。", "error");
                 return;
             }
         }
@@ -782,7 +781,7 @@ const ChatAreaUIManager = {
         const targetMessageIndex = this._allMessagesForCurrentChat.findIndex(msg => msg.id === targetMessageId);
 
         if (targetMessageIndex === -1) {
-            NotificationManager.showNotification("在当前聊天中未找到目标消息。", "error");
+            NotificationUIManager.showNotification("在当前聊天中未找到目标消息。", "error");
             return;
         }
 
