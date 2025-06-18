@@ -47,9 +47,11 @@ const AppInitializer = {
             }
 
             await UserManager.init();
-            // ChatManager.init 和 GroupManager.init 可以考虑并行，但为简单和确保依赖，此处保持顺序
-            await ChatManager.init();
+            // GroupManager.init() muss vor ChatManager.init() aufgerufen werden,
+            // damit ChatManager.renderChatList() Zugriff auf geladene Gruppen hat.
             await GroupManager.init();
+            await ChatManager.init();
+
 
             // --- 阶段 3: UI 管理器初始化 (同步, 在核心数据加载后) ---
             ModalUIManager.init();
@@ -62,7 +64,7 @@ const AppInitializer = {
             MediaUIManager.init();
             PeopleLobbyManager.init();
             if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
-                ScreenshotEditorUIManager.init(); // 初始化截图编辑器UI管理器
+                ScreenshotEditorUIManager.init();
                 Utils.log('ScreenshotEditorUIManager 初始化完成。', Utils.logLevels.INFO);
             } else {
                 Utils.log('ScreenshotEditorUIManager 或其 init 方法未定义。截图编辑功能可能无法使用。', Utils.logLevels.WARN);
@@ -97,16 +99,9 @@ const AppInitializer = {
             asyncOperations.push(aiHealthCheckTask());
 
             // 3. 初始化 WebSocket 连接
-            // ConnectionManager.initialize() 应该在内部处理好其异步性。
-            // 如果 initialize 仅是触发器，而实际连接是 connectWebSocket() 返回 promise，则应推入后者。
-            // 假设 ConnectionManager.initialize() 包含了连接逻辑或能正确返回连接的 Promise。
-            // 为了安全，我们直接使用 connectWebSocket 的 Promise (如果尚未连接或正在连接)
             if (ConnectionManager.websocket === null || ConnectionManager.websocket.readyState === WebSocket.CLOSED) {
                 asyncOperations.push(ConnectionManager.connectWebSocket());
             } else {
-                // 如果已连接或正在连接，initialize 可能是注册用户等操作。
-                // 如果这些操作也是异步的，并且我们想等待它们，也应该让 initialize 返回 promise。
-                // 此处假设如果不是初次连接，initialize 的操作相对较快或不关键阻塞。
                 ConnectionManager.initialize();
             }
 
@@ -121,20 +116,18 @@ const AppInitializer = {
             // --- 回退模式初始化 ---
             if (!UserManager.userId) {
                 UserManager.userId = Utils.generateId(8);
-                UserManager.userSettings.autoConnectEnabled = false; // 在回退模式下禁用自动连接
+                UserManager.userSettings.autoConnectEnabled = false;
                 const userIdEl = document.getElementById('modalUserIdValue');
                 if(userIdEl) userIdEl.textContent = UserManager.userId;
             }
-            // 即使在回退模式下，也尝试初始化 UI 管理器以保证界面可用
             ModalUIManager.init(); SettingsUIManager.init(); LayoutUIManager.init();
             ChatAreaUIManager.init(); SidebarUIManager.init(); DetailsPanelUIManager.init();
             VideoCallUIManager.init(); MediaUIManager.init(); PeopleLobbyManager.init();
             if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
-                ScreenshotEditorUIManager.init(); // 也在回退模式下尝试初始化
+                ScreenshotEditorUIManager.init();
             }
 
 
-            // 在回退模式下仍尝试设置网络监控和基础功能
             if (typeof this.refreshNetworkStatusUI === 'function') await this.refreshNetworkStatusUI();
             if (typeof this.startNetworkMonitoring === 'function') this.startNetworkMonitoring();
             if (typeof MediaManager !== 'undefined' && typeof MediaManager.initVoiceRecording === 'function') MediaManager.initVoiceRecording();
@@ -142,7 +135,6 @@ const AppInitializer = {
             if (typeof this.setupCoreEventListeners === 'function') this.setupCoreEventListeners();
             if (typeof this.smartBackToChatList === 'function') this.smartBackToChatList();
 
-            // 隐藏加载覆盖层，并显示开源信息模态框
             const loadingOverlay = document.getElementById('loadingOverlay');
             if (loadingOverlay && loadingOverlay.style.display !== 'none') {
                 loadingOverlay.style.display = 'none';
@@ -224,7 +216,7 @@ const AppInitializer = {
     handleNetworkChange: async function () {
         if (navigator.onLine) {
             LayoutUIManager.updateConnectionStatusIndicator('网络已重新连接。正在尝试恢复连接...');
-            ConnectionManager.initialize(); // 尝试重新初始化连接
+            ConnectionManager.initialize();
         } else {
             LayoutUIManager.updateConnectionStatusIndicator('网络已断开。');
         }

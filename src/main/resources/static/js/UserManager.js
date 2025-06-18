@@ -5,7 +5,7 @@
  *              现在依赖 ThemeLoader 动态提供特殊联系人定义。
  *              修复了切换主题或初始化时，可能加载非当前主题 AI 角色的问题。
  *              确保 TTS 配置中的 tts_mode 和 version 得到正确处理。
- *              主题切换时，会删除缓存和数据库中仅属于旧主题的 AI 联系人及其聊天记录。
+ *              主题切换时，会删除缓存和数据库中仅属于旧主题的 AI 联系人及其聊天记录，并将其从群组中移除。
  *              新增：添加联系人后，如果群组详情面板打开，会尝试更新其中的添加成员下拉列表。
  * @module UserManager
  * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
@@ -71,21 +71,17 @@ const UserManager = {
 
             if (dbStoredContacts && dbStoredContacts.length > 0) {
                 for (const dbContact of dbStoredContacts) {
-                    // 如果此DB联系人ID已作为当前主题的特殊联系人加载，则跳过（已被ensureSpecialContacts处理）
                     if (this.contacts[dbContact.id] && this.contacts[dbContact.id].isSpecial) {
                         continue;
                     }
 
-                    // 如果此DB联系人未在当前主题定义中，但它在DB中被标记为特殊/AI
-                    // (意味着它可能来自旧主题)，则不加载它。
                     const isSpecialInCurrentTheme = currentThemeSpecialDefs.some(def => def.id === dbContact.id);
                     if (!isSpecialInCurrentTheme && (dbContact.isSpecial || dbContact.isAI)) {
                         Utils.log(`UserManager.init: 跳过DB联系人 ${dbContact.id} ('${dbContact.name}'), 它似乎是旧主题的特殊/AI联系人，且不在当前主题中。`, Utils.logLevels.DEBUG);
                         continue;
                     }
 
-                    // 对于非特殊联系人或在当前主题中未定义的联系人（即用户添加的常规联系人）
-                    dbContact.isSpecial = false; // 确保常规联系人标志正确
+                    dbContact.isSpecial = false;
                     dbContact.isAI = false;
                     if (!dbContact.aiConfig) dbContact.aiConfig = {};
                     if (!dbContact.aiConfig.tts) dbContact.aiConfig.tts = {};
@@ -124,7 +120,7 @@ const UserManager = {
 
     /**
      * 处理主题变更事件，更新特殊联系人。
-     * 如果旧主题中的AI联系人不在新主题中，则将其从缓存、DB和localStorage中删除。
+     * 如果旧主题中的AI联系人不在新主题中，则将其从缓存、DB和localStorage中删除，并从所有群组中移除。
      * @param {object} eventData - 包含 { newThemeKey, newDefinitions } 的事件数据。
      * @returns {Promise<void>}
      */
@@ -160,6 +156,8 @@ const UserManager = {
             }
         }
         this.contacts = contactsToKeepOrBecomeRegular;
+
+        // Entfernt alte AI-Kontakte und ihre Daten
         for (const contactId of oldThemeAiContactsToRemove) {
             try {
                 await DBManager.removeItem('contacts', contactId);
@@ -169,11 +167,44 @@ const UserManager = {
                     if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showNoChatSelected();
                 }
                 if (typeof ChatManager !== 'undefined') await ChatManager.clearChat(contactId);
-                Utils.log(`UserManager: 主题切换 - 已移除旧主题AI联系人 ${contactId} 的数据。`, Utils.logLevels.DEBUG);
+
+                // NEU: Iteriere durch alle Gruppen und entferne den AI-Kontakt
+                if (typeof GroupManager !== 'undefined' && GroupManager.groups) {
+                    for (const groupId in GroupManager.groups) {
+                        const group = GroupManager.groups[groupId];
+                        const memberIndex = group.members.indexOf(contactId);
+                        if (memberIndex !== -1) {
+                            group.members.splice(memberIndex, 1);
+                            if (group.aiPrompts && group.aiPrompts[contactId]) {
+                                delete group.aiPrompts[contactId];
+                            }
+                            await GroupManager.saveGroup(groupId);
+                            Utils.log(`UserManager: AI ${contactId} aus Gruppe ${groupId} entfernt wegen Themenwechsel.`, Utils.logLevels.DEBUG);
+                            // Optional: Systemnachricht in die Gruppe senden
+                            const systemMessageContent = `AI-Kontakt "${contact.name}" ist aufgrund eines Themenwechsels nicht mehr verfügbar und wurde aus dieser Gruppe entfernt.`;
+                            const systemMessage = {
+                                id: `sys_ai_removed_theme_change_${Date.now()}`,
+                                type: 'system',
+                                content: systemMessageContent,
+                                timestamp: new Date().toISOString(),
+                                groupId: groupId
+                            };
+                            ChatManager.addMessage(groupId, systemMessage);
+                            // Die Broadcast-Logik für Systemnachrichten ist nicht immer notwendig,
+                            // da die Gruppenmitgliedschaftsänderung selbst schon eine Art Update ist.
+                            // GroupManager.broadcastToGroup(groupId, systemMessage, [UserManager.userId]);
+                            if (ChatManager.currentChatId === groupId && typeof DetailsPanelUIManager !== 'undefined') {
+                                DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
+                            }
+                        }
+                    }
+                }
+                Utils.log(`UserManager: 主题切换 - 已移除旧主题AI联系人 ${contactId} 的数据及群组关联。`, Utils.logLevels.DEBUG);
             } catch (error) {
                 Utils.log(`UserManager: 主题切换 - 移除旧联系人 ${contactId} 数据时出错: ${error}`, Utils.logLevels.ERROR);
             }
         }
+
         await this.ensureSpecialContacts(newDefinitions, false);
         if (typeof ChatManager !== 'undefined') {
             ChatManager.renderChatList(ChatManager.currentFilter);
@@ -413,7 +444,6 @@ const UserManager = {
         if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
         NotificationUIManager.showNotification(`联系人 "${newContact.name}" 已添加。`, 'success');
 
-        // 新增: 如果详情面板正在显示群组的成员管理，并且当前是群主，则更新它
         if (typeof DetailsPanelUIManager !== 'undefined' &&
             DetailsPanelUIManager.currentView === 'details' &&
             ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {

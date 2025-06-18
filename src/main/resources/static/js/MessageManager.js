@@ -60,7 +60,6 @@ const MessageManager = {
             return;
         }
 
-        // 非AI单聊连接检查
         if (!isGroup && !ConnectionManager.isConnectedTo(targetId)) {
             if (messageText || currentSelectedFile || currentAudioData) {
                 if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showReconnectPrompt(targetId, () => Utils.log("已重新连接，请重新发送消息。", Utils.logLevels.INFO));
@@ -72,30 +71,28 @@ const MessageManager = {
         let messageSent = false;
         let userTextMessageForChat = null;
 
-        // 1. 处理用户发送的文本消息 (先构建，但不立即发送，以便AI提及逻辑可以先处理)
         if (messageText) {
             userTextMessageForChat = { id: `${messageIdBase}_text`, type: 'text', content: messageText, timestamp: nowTimestamp, sender: UserManager.userId };
         }
 
-        // 2. 处理群聊中的 AI @ 提及
         if (isGroup && group && messageText) {
-            let aiMentioned = false;
+            // Entfernt: let aiMentionedThisMessage = false;
             for (const memberId of group.members) {
                 const memberContact = UserManager.contacts[memberId];
                 if (memberContact && memberContact.isAI) {
                     const mentionTag = '@' + memberContact.name;
-                    const mentionRegex = new RegExp(Utils.escapeHtml(mentionTag).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$|\\p{P})', 'u');
+                    const mentionRegex = new RegExp(mentionTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$|\\p{P})', 'u');
                     if (messageText.match(mentionRegex)) {
                         Utils.log(`MessageManager: 检测到对群内AI ${memberContact.name} (${memberContact.id}) 的提及。`, Utils.logLevels.INFO);
+                        // Entfernt: if (!aiMentionedThisMessage) { ... }
                         AiApiHandler.sendGroupAiMessage(targetId, group, memberContact.id, messageText, UserManager.userId)
                             .catch(err => Utils.log(`处理群内AI提及 (${memberContact.name}) 时出错: ${err}`, Utils.logLevels.ERROR));
-                        aiMentioned = true;
+                        // Entfernt: aiMentionedThisMessage = true;
                     }
                 }
             }
         }
 
-        // 3. 发送用户消息（文本、文件、音频）
         if (currentAudioData) {
             const audioMessage = { id: `${messageIdBase}_audio`, type: 'audio', data: currentAudioData, duration: currentAudioDuration, timestamp: nowTimestamp, sender: UserManager.userId };
             if (isGroup) GroupManager.broadcastToGroup(targetId, audioMessage); else ConnectionManager.sendTo(targetId, audioMessage);
@@ -113,7 +110,7 @@ const MessageManager = {
             ChatManager.addMessage(targetId, messagePayload);
             messageSent = true; MessageManager.cancelFileData();
         }
-        // 现在发送之前构建的文本消息 (如果存在)
+
         if (userTextMessageForChat) {
             if (isGroup) GroupManager.broadcastToGroup(targetId, userTextMessageForChat); else ConnectionManager.sendTo(targetId, userTextMessageForChat);
             ChatManager.addMessage(targetId, userTextMessageForChat);
@@ -168,7 +165,6 @@ const MessageManager = {
             let senderNameHtml = '';
             if (!isSentByMe && message.type !== 'system' && !message.isRetracted) {
                 const senderName = message.originalSenderName || (senderContact ? senderContact.name : `用户 ${String(message.sender || '').substring(0, 4)}`);
-                // 在群聊中，或发送者是特殊联系人（包括AI）时，显示发送者名称
                 if ((message.groupId && ChatManager.currentChatId === message.groupId) || (senderContact?.isSpecial)) {
                     senderNameHtml = `<div class="message-sender">${Utils.escapeHtml(senderName)}</div>`;
                 }

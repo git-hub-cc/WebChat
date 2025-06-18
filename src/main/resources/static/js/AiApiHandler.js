@@ -320,15 +320,11 @@ const AiApiHandler = {
             id: thinkingMsgId, type: 'system',
             content: `${aiContact.name} (在群组 ${group.name} 中) 正在思考...`,
             timestamp: new Date().toISOString(),
-            sender: aiContactId, // AI 是发送者（对于思考消息）
+            sender: aiContactId,
             groupId: groupId,
             isThinking: true
         };
-        // 系统消息通常不直接通过 ChatManager.addMessage 添加，而是 MessageManager.displayMessage
-        // 但这里，我们希望它像一个正常的聊天消息一样被记录，所以用 ChatManager.addMessage
         ChatManager.addMessage(groupId, thinkingMessage);
-        // 注意：MessageManager.displayMessage 也会被 ChatManager.addMessage 内部调用（如果消息是当前聊天）
-        // let thinkingElement = chatBox.querySelector(`.message[data-message-id="${thinkingMsgId}"]`); // 此处可能获取不到，因 displayMessage 可能是异步的
 
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
@@ -336,37 +332,30 @@ const AiApiHandler = {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
-            // 1. 获取 AI 的提示词
             let systemPrompt = (group.aiPrompts && group.aiPrompts[aiContactId])
                 ? group.aiPrompts[aiContactId]
                 : aiContact.aiConfig.systemPrompt;
-            systemPrompt += Config.ai.baseSystemPrompt; // 追加基础提示词
+            systemPrompt += Config.ai.baseSystemPrompt;
 
-            // 2. 构建聊天历史
-            const fiveMinutesAgo = new Date().getTime() - (Config.ai.sessionTime); // 沿用单聊的会话时间窗口
+            const fiveMinutesAgo = new Date().getTime() - (Config.ai.sessionTime);
             const groupChatHistory = ChatManager.chats[groupId] || [];
 
-            // 筛选并格式化群聊历史以适应AI API
-            // 注意：需要包含发送者信息，AI才能理解是谁说的
             const recentMessages = groupChatHistory.filter(msg =>
                 new Date(msg.timestamp).getTime() > fiveMinutesAgo &&
-                (msg.type === 'text' || (msg.type === 'system' && !msg.isThinking)) && // 包括非思考中的系统消息
-                msg.id !== thinkingMsgId // 排除当前的思考消息
+                (msg.type === 'text' || (msg.type === 'system' && !msg.isThinking)) &&
+                msg.id !== thinkingMsgId
             );
 
             const contextMessagesForAIHistory = recentMessages.map(msg => {
-                let role = 'system'; // 默认为系统消息
+                let role = 'system';
                 let content = msg.content;
                 if (msg.sender === aiContactId) {
                     role = 'assistant';
-                } else if (msg.sender) { // 其他发送者（包括人类用户和其他AI）
+                } else if (msg.sender) {
                     role = 'user';
                     const senderName = UserManager.contacts[msg.sender]?.name || `用户 ${String(msg.sender).substring(0,4)}`;
                     content = `${senderName}: ${msg.content}`;
                 }
-                // 对于提及AI的原始消息，确保它包含在内，并且可能需要特殊处理其内容
-                // 但为了简化，这里我们假设所有文本消息都按上述方式格式化
-                // mentionedMessageText 已经在 recentMessages 中了，作为最后一条用户消息
                 return { role: role, content: content };
             });
 
@@ -382,9 +371,9 @@ const AiApiHandler = {
                 stream: true,
                 temperature: 0.1,
                 max_tokens: effectiveConfig.maxTokens || 2048,
-                user: originalSenderId, // 将原始发送提及的用户ID作为 user 字段
-                character_id: aiContactId,
-                group_id: groupId // 可以选择性传递群组ID给API
+                user: originalSenderId,
+                // character_id: aiContactId, // Entfernt
+                group_id: groupId
             };
             Utils.log(`发送到群组 AI (${aiContact.name} in ${group.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
@@ -407,20 +396,18 @@ const AiApiHandler = {
             const initialAiResponseMessage = {
                 id: aiResponseMessageId,
                 type: 'text',
-                content: "▍", // 初始光标
+                content: "▍",
                 timestamp: new Date().toISOString(),
-                sender: aiContactId, // AI 是发送者
+                sender: aiContactId,
                 groupId: groupId,
-                originalSender: aiContactId, // 标记为AI发出的
+                originalSender: aiContactId,
                 originalSenderName: aiContact.name,
                 isStreaming: true,
-                isNewlyCompletedAIResponse: false // 流式传输开始时不是“新完成”
+                isNewlyCompletedAIResponse: false
             };
 
-            // 立即将初始流式消息添加到 ChatManager (这会触发 UI 更新，如果当前是此群聊)
             ChatManager.addMessage(groupId, initialAiResponseMessage);
 
-            // 获取UI元素以进行流式更新 (只有当此群聊是当前活动聊天时才直接操作 DOM)
             let aiMessageElement = null;
             if (ChatManager.currentChatId === groupId) {
                 aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiResponseMessageId}"] .message-content`);
@@ -451,18 +438,14 @@ const AiApiHandler = {
                             if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
                                 const chunkContent = jsonChunk.choices[0].delta.content;
                                 fullAiResponseContent += chunkContent;
-                                // 如果是当前聊天，直接更新DOM以实现流式效果
                                 if (aiMessageElement) {
                                     aiMessageElement.innerHTML = MessageManager.formatMessageText(fullAiResponseContent + "▍");
                                     chatBox.scrollTop = chatBox.scrollHeight;
                                 }
-                                // 更新 ChatManager 中的消息内容（用于非当前聊天或后台更新）
-                                // 但要注意频繁调用 addMessage 的性能。更好的方式是更新已存在的消息对象。
-                                // ChatManager.addMessage 将更新现有消息，所以这里是安全的。
                                 ChatManager.addMessage(groupId, {
-                                    ...initialAiResponseMessage, // 使用初始消息的ID和其他属性
-                                    content: fullAiResponseContent + (stopStreaming && boundary >= buffer.length ? "" : "▍"), // 根据是否结束流决定是否加光标
-                                    isStreaming: !(stopStreaming && boundary >= buffer.length) // 更新流状态
+                                    ...initialAiResponseMessage,
+                                    content: fullAiResponseContent + (stopStreaming && boundary >= buffer.length ? "" : "▍"),
+                                    isStreaming: !(stopStreaming && boundary >= buffer.length)
                                 });
                             }
                         } catch (e) { Utils.log(`群组 AI 流: 解析 JSON 出错: ${e}. 缓冲区: ${buffer.substring(0, 100)}`, Utils.logLevels.WARN); }
@@ -473,25 +456,17 @@ const AiApiHandler = {
                 if (stopStreaming) break;
             }
 
-            // 流式传输结束后，最终更新消息状态
             const finalAiResponseMessage = {
                 id: aiResponseMessageId, type: 'text', content: fullAiResponseContent,
                 timestamp: initialAiResponseMessage.timestamp, sender: aiContactId,
                 groupId: groupId, originalSender: aiContactId, originalSenderName: aiContact.name,
-                isStreaming: false, isNewlyCompletedAIResponse: true // 标记为新完成，用于TTS等
+                isStreaming: false, isNewlyCompletedAIResponse: true
             };
             ChatManager.addMessage(groupId, finalAiResponseMessage);
 
-            // AI的回复也需要广播给群内其他人类成员
-            // 排除AI自己和原始提问者（因为他们已经通过 ChatManager.addMessage 看到了）
-            // GroupManager.broadcastToGroup(groupId, finalAiResponseMessage, [aiContactId, originalSenderId]);
-            // 实际上，ChatManager.addMessage已经会更新当前用户的UI。
-            // broadcastToGroup 主要用于通知其他在线的、非当前用户。
-            // 为了确保所有人类成员都能收到，可以广播给所有非AI成员，排除originalSenderId。
-            // AI的回复不应该触发其他AI。
             const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
             humanMembers.forEach(memberId => {
-                if (memberId !== originalSenderId && memberId !== UserManager.userId) { // 避免发给原始提问者和自己（如果自己不是提问者）
+                if (memberId !== originalSenderId && memberId !== UserManager.userId) {
                     ConnectionManager.sendTo(memberId, finalAiResponseMessage);
                 }
             });
@@ -505,16 +480,15 @@ const AiApiHandler = {
             NotificationUIManager.showNotification(`错误: 无法从 ${aiContact.name} (群组内) 获取回复。 ${error.message}`, 'error');
             const errorResponseMessage = {
                 id: `group_ai_error_${aiContactId}_${Date.now()}`,
-                type: 'text', // 可以是text或system，取决于你想如何显示
+                type: 'text',
                 content: `抱歉，我在群组 (${group.name}) 中回复时遇到了问题: ${error.message}`,
                 timestamp: new Date().toISOString(),
-                sender: aiContactId, // AI 作为发送者
+                sender: aiContactId,
                 groupId: groupId,
                 originalSender: aiContactId,
                 originalSenderName: aiContact.name
             };
             ChatManager.addMessage(groupId, errorResponseMessage);
-            // 同样，错误消息也广播给群内其他人（可选）
             const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
             humanMembers.forEach(memberId => {
                 if (memberId !== originalSenderId && memberId !== UserManager.userId) {

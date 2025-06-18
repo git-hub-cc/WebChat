@@ -7,6 +7,7 @@
  *              新增逻辑以防止用户在还有更多未加载消息时将滚动条停留在绝对底部。
  *              新增：在群聊输入框中输入 @ 时，显示 AI 成员提及建议。
  *              优化：AI提及建议列表现在精确显示在输入框上方。
+ *              KORRIGIERT: Regex für @-Erwähnungen ist jetzt weniger restriktiv.
  * @module ChatAreaUIManager
  * @exports {object} ChatAreaUIManager - 对外暴露的单例对象，包含管理聊天区域 UI 的所有方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
@@ -201,20 +202,38 @@ const ChatAreaUIManager = {
         const text = this.messageInputEl.value;
         const cursorPos = this.messageInputEl.selectionStart;
         const textBeforeCursor = text.substring(0, cursorPos);
-        const atMatch = textBeforeCursor.match(/@(\w*)$/);
-        if (atMatch) {
-            const query = atMatch[1].toLowerCase();
+
+        const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
+
+        if (lastAtSymbolIndex !== -1) {
+            // Der Abfragetext ist alles nach dem letzten '@' bis zum Cursor.
+            const query = textBeforeCursor.substring(lastAtSymbolIndex + 1).toLowerCase();
+            // Die Länge von '@' + Abfragetext für die spätere Ersetzung.
+            const lengthOfAtAndQuery = textBeforeCursor.length - lastAtSymbolIndex;
+
             const group = GroupManager.groups[ChatManager.currentChatId];
             if (group && group.members) {
                 const aiMembers = group.members.reduce((acc, memberId) => {
                     const contact = UserManager.contacts[memberId];
-                    if (contact && contact.isAI && contact.name.toLowerCase().includes(query)) { acc.push(contact); }
+                    // Überprüft, ob es ein AI-Kontakt ist UND ob der Name (ganz oder teilweise) mit der Abfrage übereinstimmt.
+                    // Die `includes`-Prüfung erlaubt partielle Übereinstimmungen (z.B. "@Pai" schlägt "Paimon" vor).
+                    if (contact && contact.isAI && contact.name.toLowerCase().includes(query)) {
+                        acc.push(contact);
+                    }
                     return acc;
                 }, []);
-                if (aiMembers.length > 0) { this._populateAiMentionSuggestions(aiMembers, atMatch[0].length); }
-                else { this.aiMentionSuggestionsEl.style.display = 'none'; }
-            } else { this.aiMentionSuggestionsEl.style.display = 'none'; }
-        } else { this.aiMentionSuggestionsEl.style.display = 'none'; }
+
+                if (aiMembers.length > 0) {
+                    this._populateAiMentionSuggestions(aiMembers, lengthOfAtAndQuery);
+                } else {
+                    this.aiMentionSuggestionsEl.style.display = 'none';
+                }
+            } else {
+                this.aiMentionSuggestionsEl.style.display = 'none';
+            }
+        } else {
+            this.aiMentionSuggestionsEl.style.display = 'none';
+        }
     },
 
     /**
@@ -233,10 +252,14 @@ const ChatAreaUIManager = {
             itemEl.addEventListener('click', () => {
                 const currentText = this.messageInputEl.value;
                 const cursorPos = this.messageInputEl.selectionStart;
+                // Text vor dem @-Symbol und dem Suchbegriff
                 const textBefore = currentText.substring(0, cursorPos - lengthOfAtAndQuery);
+                // Text nach dem Cursor
                 const textAfter = currentText.substring(cursorPos);
+
                 this.messageInputEl.value = textBefore + '@' + contact.name + ' ' + textAfter;
                 this.messageInputEl.focus();
+                // Setzt den Cursor nach dem eingefügten Namen und einem Leerzeichen
                 const newCursorPos = textBefore.length + 1 + contact.name.length + 1;
                 this.messageInputEl.setSelectionRange(newCursorPos, newCursorPos);
                 this.aiMentionSuggestionsEl.style.display = 'none';
@@ -256,7 +279,7 @@ const ChatAreaUIManager = {
         }
         this.aiMentionSuggestionsEl.style.display = 'block';
     },
-    // ... (其他方法保持不变) ...
+    // ... (rest of the file remains the same) ...
     _initContextMenu: function () {
         this.contextMenuEl = document.createElement('div');
         this.contextMenuEl.id = 'customMessageContextMenu';
