@@ -2,6 +2,7 @@
  * @file ModalUIManager.js
  * @description 模态框管理器，负责集中处理应用中所有模态框的显示、隐藏和相关逻辑。
  *              包括设置、新建联系人/群组、通话、确认对话框以及开源信息提示等。
+ *              新建群组模态框现在支持通过提供群组ID来修改现有群组名称。
  * @module ModalManager
  * @exports {object} ModalUIManager - 对外暴露的单例对象，包含所有模态框管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
@@ -94,8 +95,8 @@ const ModalUIManager = {
         // 添加新联系人
         const confirmNewContactBtn = document.getElementById('confirmNewContactBtn');
         if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', () => {
-            const peerIdInput = document.getElementById('newPeerIdInput'); // 保存引用以便清空
-            const peerNameInput = document.getElementById('newPeerNameInput'); // 保存引用以便清空
+            const peerIdInput = document.getElementById('newPeerIdInput');
+            const peerNameInput = document.getElementById('newPeerNameInput');
             const peerId = peerIdInput.value.trim();
             const peerName = peerNameInput.value.trim();
             if (!peerId) {
@@ -103,23 +104,35 @@ const ModalUIManager = {
                 return;
             }
             UserManager.addContact(peerId, peerName || `用户 ${peerId.substring(0, 4)}`);
-            peerIdInput.value = ''; // 清空输入框
-            peerNameInput.value = ''; // 清空输入框
+            peerIdInput.value = '';
+            peerNameInput.value = '';
             this.toggleModal('newContactGroupModal', false);
         });
         // 创建新群组
         const confirmNewGroupBtnModal = document.getElementById('confirmNewGroupBtnModal');
-        if (confirmNewGroupBtnModal) confirmNewGroupBtnModal.addEventListener('click', () => {
-            const groupNameInput = document.getElementById('newGroupNameInput'); // 保存引用以便清空
-            const groupName = groupNameInput.value.trim();
-            if (!groupName) {
-                NotificationUIManager.showNotification('群组名称是必填项。', 'warning');
-                return;
-            }
-            GroupManager.createGroup(groupName);
-            groupNameInput.value = ''; // 清空输入框
-            this.toggleModal('newContactGroupModal', false);
-        });
+        if (confirmNewGroupBtnModal) {
+            confirmNewGroupBtnModal.addEventListener('click', () => {
+                const groupNameInput = document.getElementById('newGroupNameInput');
+                const groupIdInput = document.getElementById('newGroupIdInput'); // 获取群组ID输入框
+                const groupName = groupNameInput.value.trim();
+                const customGroupId = groupIdInput.value.trim(); // 获取用户输入的ID
+
+                if (!groupName) {
+                    NotificationUIManager.showNotification('群组名称是必填项。', 'warning');
+                    return;
+                }
+                // 调用 GroupManager.createGroup 并传递用户输入的ID
+                GroupManager.createGroup(groupName, customGroupId).then(createdGroupId => {
+                    if (createdGroupId) { // 如果成功创建或修改
+                        groupNameInput.value = ''; // 清空输入框
+                        groupIdInput.value = '';   // 清空ID输入框
+                        this.toggleModal('newContactGroupModal', false);
+                    }
+                    // 如果 createGroup 返回 null (例如非群主尝试修改)，则模态框不关闭，用户可以更正
+                });
+            });
+        }
+
 
         // --- 通话相关模态框 ---
         this.callingModal = document.getElementById('callingModal');
@@ -260,7 +273,7 @@ const ModalUIManager = {
         const confirmButton = document.createElement('button');
         confirmButton.textContent = options.confirmText || '确认';
         confirmButton.className = `btn ${options.confirmClass || 'btn-danger'}`;
-        confirmButton.addEventListener('click', () => { // Use addEventListener
+        confirmButton.addEventListener('click', () => {
             if (onConfirm) onConfirm();
             modal.remove();
         });
@@ -268,7 +281,7 @@ const ModalUIManager = {
         const cancelButton = document.createElement('button');
         cancelButton.textContent = options.cancelText || '取消';
         cancelButton.className = `btn ${options.cancelClass || 'btn-secondary'}`;
-        cancelButton.addEventListener('click', () => { // Use addEventListener
+        cancelButton.addEventListener('click', () => {
             if (onCancel) onCancel();
             modal.remove();
         });

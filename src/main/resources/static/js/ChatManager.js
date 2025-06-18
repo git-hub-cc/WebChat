@@ -1,6 +1,7 @@
 /**
  * @file ChatManager.js
  * @description 核心聊天管理器，管理聊天会话数据、状态、UI渲染，并与 ChatAreaUIManager 协作支持消息列表的虚拟滚动。
+ *              优化：侧边栏联系人列表现在只显示当前主题定义的AI角色和普通联系人。
  * @module ChatManager
  * @exports {object} ChatManager - 对外暴露的单例对象，包含所有聊天管理功能。
  * @dependencies DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationUIManager, Utils, ModalUIManager
@@ -63,6 +64,7 @@ const ChatManager = {
 
     /**
      * 根据筛选条件渲染侧边栏的聊天列表。
+     * 联系人列表现在只显示当前主题的特殊AI和普通联系人。
      * @param {string} [filter='all'] - 筛选条件 ('all', 'contacts', 'groups')。
      */
     renderChatList: function(filter = 'all') {
@@ -79,15 +81,29 @@ const ChatManager = {
 
         if (filter === 'all' || filter === 'contacts') {
             Object.values(UserManager.contacts).forEach(contact => {
-                itemsToRender.push({
-                    id: contact.id, name: contact.name,
-                    avatarText: contact.avatarText || (contact.isSpecial ? 'S' : contact.name.charAt(0).toUpperCase()),
-                    avatarUrl: contact.avatarUrl || null,
-                    lastMessage: this._formatLastMessagePreview(contact.id, contact.lastMessage, contact.isSpecial ? '准备好聊天！' : '暂无消息'),
-                    lastTime: contact.lastTime, unread: contact.unread || 0, type: 'contact',
-                    online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id),
-                    isSpecial: contact.isSpecial || false
-                });
+                // 条件判断:
+                // 1. 普通联系人 (!contact.isSpecial && !contact.isAI)
+                // 2. 或者 是当前主题的特殊联系人 (contact.isSpecial)
+                //    (UserManager.ensureSpecialContacts 保证了 contact.isSpecial 只对当前主题特殊联系人有效)
+                //    AI历史联系人 (isSpecial: false, isAI: true) 不会在这里显示
+                if ((!contact.isSpecial && !contact.isAI) || contact.isSpecial) {
+                    itemsToRender.push({
+                        id: contact.id,
+                        name: contact.name,
+                        // contact.isSpecial 现在准确反映了它是否为 *当前主题* 的特殊联系人
+                        avatarText: contact.avatarText || (contact.isSpecial ? 'S' : contact.name.charAt(0).toUpperCase()),
+                        avatarUrl: contact.avatarUrl || null,
+                        lastMessage: this._formatLastMessagePreview(contact.id, contact.lastMessage,
+                            (contact.isSpecial && contact.isAI) ? '准备好聊天！' : '暂无消息'),
+                        lastTime: contact.lastTime,
+                        unread: contact.unread || 0,
+                        type: 'contact',
+                        // online状态：当前主题的特殊联系人（包括AI和非AI特殊）通常视为一直在线
+                        // 普通联系人则基于ConnectionManager的状态
+                        online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id),
+                        isSpecial: contact.isSpecial // 这个isSpecial是由UserManager根据当前主题维护的
+                    });
+                }
             });
         }
         if (filter === 'all' || filter === 'groups') {
@@ -117,15 +133,19 @@ const ChatManager = {
         itemsToRender.forEach(item => {
             const li = document.createElement('li');
             li.className = `chat-list-item ${item.id === this.currentChatId ? 'active' : ''} ${item.type === 'group' ? 'group' : ''}`;
+            // item.isSpecial 仍然准确反映是否为当前主题特殊联系人
             if (item.isSpecial) li.classList.add('special-contact', item.id);
             li.setAttribute('data-id', item.id);
             li.setAttribute('data-type', item.type);
             const formattedTime = item.lastTime ? Utils.formatDate(new Date(item.lastTime)) : '';
 
             let statusIndicator = '';
-            if (item.type === 'contact' && ((item.online && !UserManager.contacts[item.id]?.isAI) || (UserManager.isSpecialContact(item.id) && !UserManager.contacts[item.id]?.isAI))) {
+            // 在线状态指示器：只为非AI的联系人（无论是普通还是当前主题特殊非AI）且已连接的显示
+            // 当前主题的特殊AI联系人，其 item.online 已被设为 true，所以也会显示点（如果需要区分，可以再加条件）
+            if (item.type === 'contact' && item.online && !(item.isSpecial && UserManager.contacts[item.id]?.isAI) ) {
                 statusIndicator = '<span class="online-dot" title="已连接"></span>';
             }
+
 
             let avatarContentHtml;
             const avatarClass = `chat-list-avatar ${item.isSpecial ? item.id : ''}`;
@@ -152,14 +172,6 @@ const ChatManager = {
         });
     },
 
-    /**
-     * @private
-     * 辅助函数，格式化最后一条消息预览，处理撤回状态。
-     * @param {string} chatId - 聊天ID。
-     * @param {string} currentLastMessageText - 当前存储的最后一条消息文本。
-     * @param {string} defaultText - 如果没有消息时的默认文本。
-     * @returns {string} - 格式化后的预览文本。
-     */
     _formatLastMessagePreview: function(chatId, currentLastMessageText, defaultText) {
         const chatHistory = this.chats[chatId];
         if (chatHistory && chatHistory.length > 0) {
@@ -171,11 +183,6 @@ const ChatManager = {
         return currentLastMessageText || defaultText;
     },
 
-    /**
-     * 打开指定的聊天会话。
-     * @param {string} chatId - 要打开的聊天的 ID。
-     * @param {string} type - 聊天类型 ('contact' 或 'group')。
-     */
     openChat: function(chatId, type) {
         if (this.currentChatId === chatId) {
             const messageInput = document.getElementById('messageInput');
@@ -195,16 +202,17 @@ const ChatManager = {
 
         if (type === 'group') {
             GroupManager.openGroup(chatId);
-        } else {
+        } else { // type === 'contact'
             const contact = UserManager.contacts[chatId];
             if (contact && typeof ChatAreaUIManager !== 'undefined') {
-                if (contact.isSpecial && contact.isAI) {
+                // contact.isSpecial 现在准确反映了它是否为当前主题定义的特殊联系人
+                if (contact.isSpecial && contact.isAI) { // 当前主题的特殊AI
                     ChatAreaUIManager.updateChatHeader(contact.name, UserManager.getAiServiceStatusMessage(), contact.avatarText || 'S');
                     ChatAreaUIManager.setCallButtonsState(false);
-                } else if (contact.isSpecial) {
+                } else if (contact.isSpecial && !contact.isAI) { // 当前主题的特殊非AI
                     ChatAreaUIManager.updateChatHeader(contact.name, '特殊联系人', contact.avatarText || 'S');
                     ChatAreaUIManager.setCallButtonsState(false);
-                } else {
+                } else { // 普通联系人 (contact.isSpecial is false)
                     ChatAreaUIManager.updateChatHeader(contact.name, ConnectionManager.isConnectedTo(chatId) ? '已连接' : `ID: ${contact.id.substring(0,8)}... (离线)`, contact.name.charAt(0).toUpperCase());
                     ChatAreaUIManager.setCallButtonsState(ConnectionManager.isConnectedTo(chatId), chatId);
                 }
@@ -229,12 +237,6 @@ const ChatManager = {
         }
     },
 
-    /**
-     * 向指定聊天添加一条消息（或更新现有消息），并更新 UI 和数据库。
-     * @param {string} chatId - 目标聊天的 ID。
-     * @param {object} message - 要添加或更新的消息对象。
-     * @returns {Promise<void>}
-     */
     addMessage: async function(chatId, message) {
         if (!this.chats[chatId]) this.chats[chatId] = [];
         let messageExists = false;
@@ -284,22 +286,17 @@ const ChatManager = {
             }
         }
 
-        // HINZUGEFÜGT: Logik für Gruppenbesitzer-Relay
         if (isGroup &&
             GroupManager.groups[chatId] &&
             GroupManager.groups[chatId].owner === UserManager.userId &&
-            message.sender !== UserManager.userId && // Nachricht ist nicht vom Besitzer selbst
-            !message.needsRelay && // Verhindert Endlosschleifen, falls Nachricht bereits als Relay markiert wurde
-            !(UserManager.contacts[message.sender] && UserManager.contacts[message.sender].isAI && message.isStreaming) // Nicht streamende AI-Antworten weiterleiten
+            message.sender !== UserManager.userId &&
+            !message.needsRelay &&
+            !(UserManager.contacts[message.sender] && UserManager.contacts[message.sender].isAI && message.isStreaming)
         ) {
-            Utils.log(`ChatManager.addMessage: Gruppenbesitzer (${UserManager.userId}) leitet Nachricht von ${message.sender} in Gruppe ${chatId} weiter.`, Utils.logLevels.DEBUG);
-            // Die Nachricht an alle anderen menschlichen Mitglieder weiterleiten.
-            // Die `message` hier ist bereits die finale, verarbeitete Nachricht (z.B. AI-Antwort).
-            // Wir schließen den Absender und den Besitzer selbst von der Weiterleitung aus.
+            Utils.log(`ChatManager.addMessage: 群主 (${UserManager.userId}) 正在将来自 ${message.sender} 的消息中继到群组 ${chatId}。`, Utils.logLevels.DEBUG);
             const excludeIdsForRelay = [message.sender, UserManager.userId].filter(Boolean);
-            GroupManager.broadcastToGroup(chatId, { ...message }, excludeIdsForRelay, true); // forceDirect = true, da der Besitzer sendet
+            GroupManager.broadcastToGroup(chatId, { ...message }, excludeIdsForRelay, true);
         }
-
 
         try {
             const messagesForDb = this.chats[chatId].map(msg => {
@@ -313,11 +310,6 @@ const ChatManager = {
         }
     },
 
-    /**
-     * 清空指定聊天的所有消息。
-     * @param {string} chatId - 要清空的聊天 ID。
-     * @returns {Promise<boolean>} - 操作是否成功。
-     */
     clearChat: async function(chatId) {
         if (chatId && this.chats[chatId]) {
             this.chats[chatId] = [];
@@ -341,10 +333,6 @@ const ChatManager = {
         return false;
     },
 
-    /**
-     * 清空所有聊天的聊天记录。
-     * @returns {Promise<void>}
-     */
     clearAllChats: async function() {
         ModalUIManager.showConfirmationModal(
             '您确定要清空所有聊天记录吗？此操作无法撤销。',
@@ -356,7 +344,7 @@ const ChatManager = {
 
                     Object.values(UserManager.contacts).forEach(c => {
                         let defaultMsg = '聊天记录已清空';
-                        if (c.isSpecial) {
+                        if (c.isSpecial) { // 这里的 isSpecial 准确反映了当前主题
                             const specialDef = (typeof ThemeLoader !== 'undefined' && ThemeLoader.getCurrentSpecialContactsDefinitions) ? ThemeLoader.getCurrentSpecialContactsDefinitions().find(sd => sd.id === c.id) : null;
                             defaultMsg = specialDef ? specialDef.initialMessage : defaultMsg;
                         }
@@ -379,17 +367,13 @@ const ChatManager = {
         );
     },
 
-    /**
-     * 删除一个聊天（联系人或群组）。
-     * @param {string} chatId - 要删除的聊天 ID。
-     * @param {string} type - 聊天类型 ('contact' 或 'group')。
-     */
     deleteChat: function(chatId, type) {
         const entity = type === 'group' ? GroupManager.groups[chatId] : UserManager.contacts[chatId];
         if (!entity) { NotificationUIManager.showNotification(`${type === 'group' ? '群组' : '联系人'}未找到。`, 'error'); return; }
 
-        if (type === 'contact' && entity.isSpecial) {
-            NotificationUIManager.showNotification(`${entity.name} 是内置联系人，无法删除。如果需要，您可以清空聊天记录。`, 'warning');
+        // 使用 UserManager.isSpecialContactInCurrentTheme 来判断是否为当前主题的特殊联系人
+        if (type === 'contact' && UserManager.isSpecialContactInCurrentTheme(entity.id)) {
+            NotificationUIManager.showNotification(`${entity.name} 是当前主题的内置联系人，无法删除。如果需要，您可以清空聊天记录。`, 'warning');
             return;
         }
         const entityName = entity.name;
@@ -404,7 +388,7 @@ const ChatManager = {
             if (type === 'group') {
                 if (entity.owner === UserManager.userId) await GroupManager.dissolveGroup(chatId);
                 else await GroupManager.leaveGroup(chatId);
-            } else await UserManager.removeContact(chatId);
+            } else await UserManager.removeContact(chatId); // UserManager.removeContact 会处理 isSpecialContactInCurrentTheme
 
             if (chatId === this.currentChatId) {
                 this.currentChatId = null;
@@ -417,14 +401,6 @@ const ChatManager = {
         });
     },
 
-    /**
-     * 获取指定聊天中特定类型的资源消息（分页，倒序）。
-     * @param {string} chatId - 要获取资源的聊天 ID。
-     * @param {string} resourceType - 资源类型: 'image', 'video', 'audio', 'file'。
-     * @param {number} startIndex - 从符合条件的消息列表中的哪个索引开始（倒序后的索引）。
-     * @param {number} limit - 要获取的消息数量。
-     * @returns {Promise<Array<object>>} - 解析为消息对象数组的 Promise。
-     */
     getMessagesWithResources: async function(chatId, resourceType, startIndex, limit) {
         if (!this.chats[chatId]) {
             return [];

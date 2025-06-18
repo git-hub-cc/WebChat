@@ -40,7 +40,7 @@ https://175.178.216.24/
     *   **模块化设计：**通过各种 UI 管理器实现清晰的关注点分离。
     *   **响应式设计：**适应不同的屏幕尺寸（桌面/移动设备）。
     *   **主题化：**
-        *   支持多种主题（例如，原神、斗破苍穹、仙逆、遮天、蜡笔小新、迷宫饭、咒术回战、Telegram）。
+        *   支持多种主题（例如，原神、斗破苍穹、仙逆、遮天、蜡笔小新、迷宫饭、咒术回战）。
         *   大多数主题提供浅色和深色模式。
         *   主题的CSS文件位于 `css/` 目录，而定义了特殊AI联系人（`SPECIAL_CONTACTS_DEFINITIONS`）的JSON数据文件位于 `data/` 目录。
         *   主题选择在会话间保持不变。
@@ -343,7 +343,6 @@ https://175.178.216.24/
     *   本项目使用标准的 Web 技术 (HTML, CSS, JavaScript) 和 Java Spring Boot 构建，并依赖于现代 Web 浏览器提供的功能。
     *   灵感来源于各种 Web 聊天应用程序以及以下资源和社区成员：
         *   **对话式 AI 服务 (示例)：** [阿里云百炼大模型平台](https://bailian.console.aliyun.com/)及类似服务。
-        *   **页面布局与 UI 灵感：** [Telegram Web](https://web.telegram.org/)。
         *   **主题概念与灵感：** [@卤v (LuV)](https://space.bilibili.com/1290496974)。
         *   **素材资源：** 感谢互联网上许多无名贡献者提供的开放素材资源 (用户在使用素材时应确保合规)。
         *   **本项目也在以下地址开源：** [https://github.com/git-hub-cc/PPMC](https://github.com/git-hub-cc/PPMC) (欢迎 Star 和 Fork！)

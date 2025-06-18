@@ -124,7 +124,7 @@ body {
     background-color: var(--wm-void-purple);
     color: var(--text-color);
     font-family: "LXGW WenKai TC", serif;
-    border: 1px solid rgba(var(--wm-text-bright-rgb), 0.1);
+    border: 1px solid rgba(var(--wm-text-bright-rgb), 0.1); /* MODIFIED: Corrected variable */
 }
 
 /* --- 角色特定样式 (深色) --- */
@@ -355,9 +355,9 @@ body {
 }
 .btn-primary { background-color: var(--wm-brilliant-gold); color: var(--text-color-inverted); border: 1px solid rgba(var(--wm-dark-bg-rgb),0.3); }
 .btn-primary:hover { background-color: rgb(190, 140, 30); box-shadow: 0 2px 6px rgba(var(--wm-brilliant-gold-rgb),0.3); }
-.btn-secondary { background-color: var(--wm-void-purple); color: var(--text-color); border: 1px solid rgba(var(--text-color-rgb),0.1); }
+.btn-secondary { background-color: var(--wm-void-purple); color: var(--text-color); border: 1px solid rgba(var(--wm-text-bright-rgb),0.1); } /* Corrected for better contrast */
 .btn-secondary:hover { background-color: rgb(70, 50, 110); box-shadow: 0 2px 6px rgba(var(--wm-void-purple-rgb),0.3); }
-.btn-danger { background-color: var(--wm-blood-omen-red); color: var(--text-color); border: 1px solid rgba(var(--text-color-rgb),0.1); }
+.btn-danger { background-color: var(--wm-blood-omen-red); color: var(--text-color); border: 1px solid rgba(var(--wm-text-bright-rgb),0.1); } /* Corrected for better contrast */
 .btn-danger:hover { background-color: rgb(130, 20, 30); box-shadow: 0 2px 6px rgba(var(--wm-blood-omen-red-rgb),0.3); }
 .btn-success { background-color: var(--wm-brilliant-gold); color: var(--text-color-inverted); } /* 同主按钮 */
 .btn-success:hover { background-color: rgb(190, 140, 30); }
@@ -390,7 +390,7 @@ body {
 /* Video Call */
 .video-call-avatar { background-color: var(--wm-void-purple); border: 1px solid var(--border-color); }
 .video-call-button.end-call { background: var(--danger-color); }
-.video-call-button.active { background: var(--wm-brilliant-gold); color: var(--wm-text-dark); }
+.video-call-button.active { background: var(--wm-brilliant-gold); color: var(--wm-dark-bg); } /* MODIFIED: --wm-text-dark to --wm-dark-bg */
 
 /* Toggle Switch */
 input:checked + .slider { background-color: var(--wm-brilliant-gold); }

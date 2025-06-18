@@ -1,15 +1,13 @@
 /**
  * @file GroupManager.js
  * @description 核心群组管理器，负责处理所有与群组相关的逻辑，包括创建、加载、成员管理和消息广播。
- *              新增：处理群组消息撤回请求。
- *              新增：支持群组内 AI 成员的特定提示词。
- *              优化：添加AI成员到群组后，如果群主正在查看详情，会更新提示词编辑区。
- *              新增：当群主更改群组信息（AI成员、AI提示词）时，通知其他成员。
+ *              新增：支持群组内 AI 成员的特定提示词。当群主添加AI成员到群组，或修改群内AI提示词时，会进行相应处理。
+ *              createGroup 方法现在支持通过提供群组ID来修改现有群组名称（如果用户是群主）。
  * @module GroupManager
  * @exports {object} GroupManager - 对外暴露的单例对象，包含所有群组管理功能。
  * @property {object} groups - 存储所有群组数据的对象，格式为 { groupId: groupObject }。
  * @property {function} init - 初始化模块，从数据库加载群组数据。
- * @property {function} createGroup - 创建一个新群组。
+ * @property {function} createGroup - 创建一个新群组，或修改现有群组的名称。
  * @property {function} addMemberToGroup - 向群组中添加一个新成员。
  * @property {function} removeMemberFromGroup - 从群组中移除一个成员。
  * @property {function} leaveGroup - 当前用户离开一个群组。
@@ -48,7 +46,7 @@ const GroupManager = {
                         ...group,
                         members: group.members || [],
                         leftMembers: group.leftMembers || [],
-                        aiPrompts: group.aiPrompts || {}
+                        aiPrompts: group.aiPrompts || {} // 确保 aiPrompts 字段存在
                     };
                 });
             }
@@ -62,7 +60,14 @@ const GroupManager = {
      */
     saveGroup: async function(groupId) {
         if (this.groups[groupId]) {
-            try { await DBManager.setItem('groups', this.groups[groupId]); }
+            try {
+                // 确保 aiPrompts 存在才保存
+                const groupToSave = {
+                    ...this.groups[groupId],
+                    aiPrompts: this.groups[groupId].aiPrompts || {}
+                };
+                await DBManager.setItem('groups', groupToSave);
+            }
             catch (error) { Utils.log(`保存群组 ${groupId} 失败: ${error}`, Utils.logLevels.ERROR); }
         }
     },
@@ -77,29 +82,83 @@ const GroupManager = {
     },
 
     /**
-     * 创建一个新群组。
-     * 初始化 aiPrompts 字段。
-     * @param {string} name - 新群组的名称。
-     * @returns {Promise<string>} - 返回新创建的群组 ID。
+     * 创建一个新群组，或修改现有群组的名称（如果提供了groupIdInput且用户是群主）。
+     * @param {string} name - 新群组的名称或要更新的名称。
+     * @param {string|null} [groupIdInput=null] - (可选) 要创建或修改的群组的ID (用户输入，可能不带 'group_' 前缀)。如果为null或空，则创建新群组并自动生成ID。
+     * @returns {Promise<string|null>} - 成功时返回群组ID (例如 "group_xxxx")，失败或仅修改名称时可能返回null或群组ID。
      */
-    createGroup: async function(name) {
-        const groupId = 'group_' + Utils.generateId();
-        this.groups[groupId] = {
-            id: groupId,
-            name: name,
-            owner: UserManager.userId,
-            members: [UserManager.userId],
-            lastMessage: '群组已创建',
-            lastTime: new Date().toISOString(),
-            unread: 0,
-            leftMembers: [],
-            aiPrompts: {}
-        };
-        await this.saveGroup(groupId);
-        ChatManager.renderChatList(ChatManager.currentFilter);
-        NotificationUIManager.showNotification(`群组 "${name}" 已创建。`, 'success');
-        ChatManager.openChat(groupId, 'group');
-        return groupId;
+    createGroup: async function(name, groupIdInput = null) {
+        let effectiveGroupId = groupIdInput ? groupIdInput.trim() : null;
+
+        // 确保群组ID有 'group_' 前缀，除非它是用户手动输入的且已包含 (同时也处理空字符串的情况)
+        if (effectiveGroupId && effectiveGroupId !== "" && !effectiveGroupId.startsWith('group_')) {
+            effectiveGroupId = 'group_' + effectiveGroupId;
+        } else if (effectiveGroupId === "") { // 如果用户输入的是空字符串，则视为未提供ID
+            effectiveGroupId = null;
+        }
+
+        if (effectiveGroupId && this.groups[effectiveGroupId]) {
+            // 这是修改逻辑
+            const group = this.groups[effectiveGroupId];
+            if (group.owner === UserManager.userId) {
+                if (group.name !== name) {
+                    group.name = name;
+                    group.lastTime = new Date().toISOString(); // 更新最后活动时间
+                    // 可选：系统消息通知名称更改
+                    ChatManager.addMessage(effectiveGroupId, {
+                        id: `sys_name_change_${Date.now()}`,
+                        type: 'system',
+                        content: `群组名称已更改为 "${name}"`,
+                        timestamp: new Date().toISOString(),
+                        groupId: effectiveGroupId
+                    });
+                    this.broadcastToGroup(effectiveGroupId, {
+                        type: 'system',
+                        content: `群组名称已由群主更改为 "${name}"`,
+                        timestamp: new Date().toISOString(),
+                        groupId: effectiveGroupId,
+                        sender: UserManager.userId // 明确发送者
+                    }, [UserManager.userId]); // 广播给除自己外的所有成员
+
+                    await this.saveGroup(effectiveGroupId);
+                    ChatManager.renderChatList(ChatManager.currentFilter);
+                    if (ChatManager.currentChatId === effectiveGroupId) {
+                        this.openGroup(effectiveGroupId); // 刷新聊天头部
+                    }
+                    NotificationUIManager.showNotification(`群组 "${name}" 名称已更新。`, 'success');
+                    return effectiveGroupId;
+                } else {
+                    NotificationUIManager.showNotification('群组名称未发生变化。', 'info');
+                    return effectiveGroupId; // 名称未变，但操作认为是成功的（找到了群组）
+                }
+            } else {
+                NotificationUIManager.showNotification('只有群主可以修改群组名称。', 'error');
+                return null; // 修改失败
+            }
+        } else {
+            // 这是创建新群组逻辑
+            const finalGroupId = effectiveGroupId || ('group_' + Utils.generateId());
+            if (this.groups[finalGroupId]) { // 即使是用户提供的ID，也再次检查是否已存在（防止并发或意外情况）
+                NotificationUIManager.showNotification(`ID为 "${finalGroupId.replace('group_','')}" 的群组已存在。`, 'error');
+                return null;
+            }
+            this.groups[finalGroupId] = {
+                id: finalGroupId,
+                name: name,
+                owner: UserManager.userId,
+                members: [UserManager.userId],
+                lastMessage: '群组已创建',
+                lastTime: new Date().toISOString(),
+                unread: 0,
+                leftMembers: [],
+                aiPrompts: {} // 初始化 aiPrompts 为空对象
+            };
+            await this.saveGroup(finalGroupId);
+            ChatManager.renderChatList(ChatManager.currentFilter);
+            NotificationUIManager.showNotification(`群组 "${name}" 已创建。`, 'success');
+            ChatManager.openChat(finalGroupId, 'group');
+            return finalGroupId;
+        }
     },
 
     /**
@@ -122,6 +181,7 @@ const GroupManager = {
 
     /**
      * 向群组中添加一个新成员。
+     * 如果添加的是AI成员，且操作者是群主，则将其默认提示词存入群组的aiPrompts中。
      * @param {string} groupId - 目标群组的 ID。
      * @param {string} memberId - 要添加的成员 ID。
      * @param {string|null} [memberName=null] - 要添加的成员名称。
@@ -136,6 +196,17 @@ const GroupManager = {
         const contactToAdd = UserManager.contacts[memberId];
         group.members.push(memberId);
         group.leftMembers = group.leftMembers.filter(lm => lm.id !== memberId);
+
+        // 新增逻辑：如果添加的是AI成员，且操作者是群主，则缓存其默认提示词
+        if (contactToAdd && contactToAdd.isAI && group.owner === UserManager.userId) {
+            if (!group.aiPrompts) {
+                group.aiPrompts = {};
+            }
+            const defaultPrompt = (contactToAdd.aiConfig && contactToAdd.aiConfig.systemPrompt) ? contactToAdd.aiConfig.systemPrompt : "";
+            group.aiPrompts[memberId] = defaultPrompt;
+            Utils.log(`GroupManager: 已为 AI 成员 ${memberId} 在群组 ${groupId} 中设置初始提示词。`, Utils.logLevels.DEBUG);
+        }
+
         await this.saveGroup(groupId);
 
         if (typeof DetailsPanelUIManager !== 'undefined' &&
@@ -143,6 +214,7 @@ const GroupManager = {
             ChatManager.currentChatId === groupId) {
             DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
             if (contactToAdd && contactToAdd.isAI && group.owner === UserManager.userId) {
+                // 触发详情面板更新群组内AI提示词编辑区
                 DetailsPanelUIManager._updateForGroup(groupId);
             }
         }
@@ -154,7 +226,7 @@ const GroupManager = {
         if (contactToAdd && contactToAdd.isAI) {
             systemMessageContent += ` (${newMemberDisplayName} 是一个AI助手)`;
         }
-        const systemMessage = { type: 'system', content: systemMessageContent, timestamp: new Date().toISOString(), groupId: groupId };
+        const systemMessage = { type: 'user', content: systemMessageContent, timestamp: new Date().toISOString(), groupId: groupId };
         ChatManager.addMessage(groupId, systemMessage);
 
         if (!(contactToAdd && contactToAdd.isAI)) {
@@ -167,18 +239,21 @@ const GroupManager = {
                 members: group.members,
                 invitedBy: UserManager.userId,
                 sender: UserManager.userId,
-                aiPrompts: group.aiPrompts,
+                aiPrompts: group.aiPrompts, // 发送包含 aiPrompts 的邀请
                 lastMessage: group.lastMessage,
                 lastTime: group.lastTime
             };
             ConnectionManager.sendTo(memberId, inviteMessage);
         } else {
+            // 对于AI成员，也广播系统消息，但不发送完整的inviteMessage
             this.broadcastToGroup(groupId, systemMessage, []);
+            // 广播AI成员添加事件，包含其默认(现在是群组特定初始)提示词
             const memberAddedMessage = {
                 type: 'group-member-added',
                 groupId: groupId,
                 addedMemberId: memberId,
-                addedMemberDetails: contactToAdd,
+                addedMemberDetails: contactToAdd, // 包含其 aiConfig
+                groupAiPrompt: group.aiPrompts[memberId], // 发送群组特定提示词
                 sender: UserManager.userId
             };
             this.broadcastToGroup(groupId, memberAddedMessage, [UserManager.userId, memberId]);
@@ -190,6 +265,7 @@ const GroupManager = {
 
     /**
      * 从群组中移除一个成员。
+     * 如果移除的是AI成员，也从群组的aiPrompts中删除其特定提示词。
      * @param {string} groupId - 目标群组的 ID。
      * @param {string} memberIdToRemove - 要移除的成员 ID。
      * @returns {Promise<boolean>} - 操作是否成功。
@@ -204,12 +280,21 @@ const GroupManager = {
 
         const removedContact = UserManager.contacts[memberIdToRemove];
         group.members.splice(memberIndex, 1);
-        if (group.aiPrompts && group.aiPrompts[memberIdToRemove]) {
+        // 新增逻辑：如果移除的是AI成员，也从aiPrompts中删除
+        if (removedContact && removedContact.isAI && group.aiPrompts && group.aiPrompts[memberIdToRemove]) {
             delete group.aiPrompts[memberIdToRemove];
+            Utils.log(`GroupManager: 已从群组 ${groupId} 的特定提示词中移除 AI ${memberIdToRemove}。`, Utils.logLevels.DEBUG);
         }
+
         await this.saveGroup(groupId);
 
-        if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.currentView === 'details' && ChatManager.currentChatId === groupId) DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
+        if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.currentView === 'details' && ChatManager.currentChatId === groupId) {
+            DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
+            if (removedContact && removedContact.isAI && group.owner === UserManager.userId) {
+                // 触发详情面板更新群组内AI提示词编辑区
+                DetailsPanelUIManager._updateForGroup(groupId);
+            }
+        }
         if (ChatManager.currentChatId === groupId) this.openGroup(groupId);
 
         const removerName = UserManager.contacts[UserManager.userId]?.name || UserManager.userId.substring(0,4);
@@ -296,7 +381,7 @@ const GroupManager = {
     broadcastToGroup: function(groupId, message, excludeIds = [], forceDirect = false) {
         const group = this.groups[groupId];
         if (!group) {
-            Utils.log(`broadcastToGroup: Gruppe ${groupId} nicht gefunden.`, Utils.logLevels.WARN);
+            Utils.log(`broadcastToGroup: 群组 ${groupId} 未找到。`, Utils.logLevels.WARN);
             return false;
         }
         message.groupId = groupId;
@@ -304,6 +389,12 @@ const GroupManager = {
         message.originalSender = message.originalSender || message.sender;
         const originalSenderContact = UserManager.contacts[message.originalSender];
         message.originalSenderName = message.originalSenderName || (originalSenderContact ? originalSenderContact.name : `用户 ${String(message.originalSender).substring(0,4)}`);
+
+        // 确保消息中包含最新的aiPrompts（如果消息类型相关）
+        if (message.type === 'group-invite' || message.type === 'group-member-added' || message.type === 'group-ai-prompt-updated') {
+            message.aiPrompts = group.aiPrompts || {};
+        }
+
 
         const humanMembersToSendTo = group.members.filter(memberId => {
             const memberContact = UserManager.contacts[memberId];
@@ -314,24 +405,24 @@ const GroupManager = {
 
         if (group.owner === UserManager.userId || forceDirect) {
             humanMembersToSendTo.forEach(memberId => {
-                if (ConnectionManager.isConnectedTo(memberId)) { // HINZUGEFÜGT: Verbindung prüfen
+                if (ConnectionManager.isConnectedTo(memberId)) {
                     ConnectionManager.sendTo(memberId, { ...message });
                 } else {
-                    Utils.log(`broadcastToGroup: Keine aktive Verbindung zu ${memberId} in Gruppe ${groupId}. Nachricht nicht gesendet.`, Utils.logLevels.WARN);
+                    Utils.log(`broadcastToGroup: 与 ${memberId} 在群组 ${groupId} 中没有活动连接。消息未发送。`, Utils.logLevels.WARN);
                 }
             });
         } else {
             if (group.owner !== UserManager.userId && !excludeIds.includes(group.owner)) {
-                if (ConnectionManager.isConnectedTo(group.owner)) { // HINZUGEFÜGT: Verbindung zum Besitzer prüfen
+                if (ConnectionManager.isConnectedTo(group.owner)) {
                     const relayMessage = { ...message, needsRelay: true };
                     ConnectionManager.sendTo(group.owner, relayMessage);
                 } else {
-                    Utils.log(`broadcastToGroup: Keine aktive Verbindung zum Gruppenbesitzer ${group.owner} für Relay. Nachricht nicht gesendet.`, Utils.logLevels.WARN);
+                    Utils.log(`broadcastToGroup: 与群主 ${group.owner} 没有活动连接以进行中继。消息未发送。`, Utils.logLevels.WARN);
                 }
             }
         }
-        Utils.log(`Versuche, an Gruppe ${groupId} zu senden (menschliche Mitglieder), Typ: ${message.type}, Ausgeschlossen: ${excludeIds.join(',')}`, Utils.logLevels.DEBUG);
-        return true; // Gibt jetzt immer true zurück, da der Sendeversuch unternommen wird. Ob es ankommt, hängt von sendTo ab.
+        Utils.log(`尝试向群组 ${groupId} 发送 (人类成员), 类型: ${message.type}, 排除: ${excludeIds.join(',')}`, Utils.logLevels.DEBUG);
+        return true;
     },
 
     /**
@@ -354,14 +445,14 @@ const GroupManager = {
                     lastTime: message.lastTime || new Date().toISOString(),
                     unread: 1,
                     leftMembers: message.leftMembers || [],
-                    aiPrompts: message.aiPrompts || {}
+                    aiPrompts: message.aiPrompts || {} // 确保从邀请中获取aiPrompts
                 };
                 await this.saveGroup(groupId);
                 ChatManager.renderChatList(ChatManager.currentFilter);
                 NotificationUIManager.showNotification(`被邀请加入群组: ${message.groupName}`, 'success');
             } else {
                 group.members = message.members || group.members;
-                group.aiPrompts = message.aiPrompts || group.aiPrompts || {};
+                group.aiPrompts = message.aiPrompts || group.aiPrompts || {}; // 合并或更新aiPrompts
                 if (message.lastTime && (!group.lastTime || new Date(message.lastTime) > new Date(group.lastTime))) {
                     group.lastMessage = message.lastMessage || group.lastMessage;
                     group.lastTime = message.lastTime;
@@ -374,6 +465,7 @@ const GroupManager = {
         }
         if (!group) {
             if (type === 'group-removed' && message.removedMemberId === UserManager.userId && message.reason === 'removed_by_owner') {
+                // 此处允许继续，以便显示被移除的通知，即使群组本地已删除
             } else {
                 Utils.log(`收到未知或本地已删除群组 ${groupId} 的消息。类型: ${type}。正在忽略。`, Utils.logLevels.WARN);
                 return;
@@ -388,11 +480,12 @@ const GroupManager = {
             });
             const excludeListForBroadcast = [originalSender || sender, UserManager.userId].filter(Boolean);
 
-            if (type === 'group-retract-message-request') {
-                this.broadcastToGroup(groupId, message, excludeListForBroadcast);
-            } else {
-                this.broadcastToGroup(groupId, message, excludeListForBroadcast);
+            // 确保转发的消息也包含最新的 aiPrompts (如果消息类型需要)
+            if (message.type === 'group-invite' || message.type === 'group-member-added' || message.type === 'group-ai-prompt-updated') {
+                message.aiPrompts = group.aiPrompts || {};
             }
+
+            this.broadcastToGroup(groupId, message, excludeListForBroadcast);
 
             if (type !== 'group-retract-message-request' || message.originalSender !== UserManager.userId) {
                 if((originalSender || sender) !== UserManager.userId) ChatManager.addMessage(groupId, message);
@@ -415,6 +508,7 @@ const GroupManager = {
                         if(!group.leftMembers.find(lm => lm.id === message.leftMemberId)) {
                             group.leftMembers.push({ id: message.leftMemberId, name: leftMemberName, leftTime: new Date().toISOString() });
                         }
+                        // 如果离开的成员是AI，也从特定提示词中移除
                         if (group.aiPrompts && group.aiPrompts[message.leftMemberId]) {
                             delete group.aiPrompts[message.leftMemberId];
                         }
@@ -469,7 +563,6 @@ const GroupManager = {
                 break;
             case 'group-retract-message-request':
                 if (group && group.members.includes(UserManager.userId)) {
-                    const originalMessageObject = ChatManager.chats[groupId]?.find(m => m.id === message.originalMessageId);
                     const retractedByName = message.originalSenderName || UserManager.contacts[message.originalSender]?.name || `用户 ${String(message.originalSender).substring(0,4)}`;
                     MessageManager._updateMessageToRetractedState(
                         message.originalMessageId, groupId,
@@ -478,7 +571,7 @@ const GroupManager = {
                     );
                 }
                 break;
-            case 'group-member-added':
+            case 'group-member-added': // 当其他成员（非自己）被添加时
                 if (group && group.members.includes(UserManager.userId) && sender !== UserManager.userId) {
                     if (!group.members.includes(message.addedMemberId)) {
                         group.members.push(message.addedMemberId);
@@ -493,6 +586,12 @@ const GroupManager = {
                             UserManager.contacts[message.addedMemberId] = contactData;
                             await UserManager.saveContact(message.addedMemberId);
                         }
+                        // 更新群组特定提示词 (如果消息中携带了)
+                        if (message.addedMemberDetails && message.addedMemberDetails.isAI && message.groupAiPrompt !== undefined) {
+                            if (!group.aiPrompts) group.aiPrompts = {};
+                            group.aiPrompts[message.addedMemberId] = message.groupAiPrompt;
+                        }
+
                         await this.saveGroup(groupId);
 
                         const addedContactName = UserManager.contacts[message.addedMemberId]?.name || `用户 ${message.addedMemberId.substring(0,4)}`;
@@ -500,7 +599,7 @@ const GroupManager = {
                         let systemContent = `${inviterName} 邀请 ${addedContactName} 加入了群聊。`;
                         if(UserManager.contacts[message.addedMemberId]?.isAI) systemContent += ` (${addedContactName} 是一个AI助手)`;
 
-                        ChatManager.addMessage(groupId, { type: 'system', content: systemContent, timestamp: new Date().toISOString(), groupId: groupId });
+                        ChatManager.addMessage(groupId, { type: 'user', content: systemContent, timestamp: new Date().toISOString(), groupId: groupId });
 
                         if (ChatManager.currentChatId === groupId) {
                             this.openGroup(groupId);
@@ -510,10 +609,11 @@ const GroupManager = {
                     }
                 }
                 break;
-            case 'group-member-removed':
+            case 'group-member-removed': // 当其他成员（非自己）被移除时
                 if (group && group.members.includes(UserManager.userId) && sender !== UserManager.userId) {
                     if (group.members.includes(message.removedMemberId)) {
                         group.members = group.members.filter(id => id !== message.removedMemberId);
+                        // 如果移除的是AI成员，也从特定提示词中移除
                         if (group.aiPrompts && group.aiPrompts[message.removedMemberId]) {
                             delete group.aiPrompts[message.removedMemberId];
                         }
@@ -544,6 +644,11 @@ const GroupManager = {
                     const updaterName = UserManager.contacts[sender]?.name || "群主";
                     const systemContent = `${updaterName} 更新了 AI "${aiName}" 在群组中的行为指示。`;
                     ChatManager.addMessage(groupId, { type: 'system', content: systemContent, timestamp: new Date().toISOString(), groupId: groupId });
+
+                    // 如果当前聊天是此群组，且详情面板打开，则刷新详情面板
+                    if (ChatManager.currentChatId === groupId && typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.isPanelAreaVisible && DetailsPanelUIManager.currentView === 'details') {
+                        DetailsPanelUIManager._updateForGroup(groupId);
+                    }
                 }
                 break;
         }
@@ -609,16 +714,20 @@ const GroupManager = {
     },
 
     /**
-     * 通知群成员AI提示词已更改。
+     * @description 通知群成员AI提示词已更改。
+     *              此方法由 DetailsPanelUIManager 调用，当群主保存群组内AI的特定提示词后。
      * @param {string} groupId - 群组ID。
      * @param {string} aiMemberId - AI成员ID。
      * @param {string} newPrompt - 新的提示词。
      * @returns {void}
      */
     notifyAiPromptChanged: function(groupId, aiMemberId, newPrompt) {
-        if (!this.groups[groupId] || this.groups[groupId].owner !== UserManager.userId) return;
+        if (!this.groups[groupId] || this.groups[groupId].owner !== UserManager.userId) {
+            Utils.log(`notifyAiPromptChanged: 操作被拒绝。用户 ${UserManager.userId} 不是群组 ${groupId} 的所有者，或群组不存在。`, Utils.logLevels.WARN);
+            return;
+        }
 
-        Utils.log(`群主 ${UserManager.userId} 正在通知群 ${groupId} 关于 AI ${aiMemberId} 的提示词变更。`, Utils.logLevels.INFO);
+        Utils.log(`群主 ${UserManager.userId} 正在通知群 ${groupId} 关于 AI ${aiMemberId} 的提示词变更。新提示词: "${String(newPrompt).substring(0,30)}..."`, Utils.logLevels.INFO);
         const promptUpdateMessage = {
             type: 'group-ai-prompt-updated',
             groupId: groupId,
@@ -626,15 +735,16 @@ const GroupManager = {
             newPrompt: newPrompt,
             sender: UserManager.userId
         };
+        // 广播给除自己外的所有人类成员
         this.broadcastToGroup(groupId, promptUpdateMessage, [UserManager.userId]);
 
-        const aiName = UserManager.contacts[aiMemberId]?.name || "AI";
+        const aiName = UserManager.contacts[aiMemberId]?.name || `AI ${aiMemberId.substring(0,4)}`;
         const systemMessageContent = `您更新了 AI "${aiName}" 在群组中的行为指示。`;
         const systemMessage = {
             id: `sys_prompt_update_local_${Date.now()}`, type: 'system',
             content: systemMessageContent, timestamp: new Date().toISOString(),
             groupId: groupId
         };
-        ChatManager.addMessage(groupId, systemMessage);
+        ChatManager.addMessage(groupId, systemMessage); // 本地显示系统消息
     }
 };

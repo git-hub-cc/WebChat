@@ -481,7 +481,7 @@ body {
     border-color: rgba(var(--ww-carbon-ink-text-rgb),0.15);
 }
 .btn-secondary:hover {
-    background-color: darken(var(--ww-polished-alloy-border), 5%);
+    background-color: var(--ww-polished-alloy-border);
     border-color: var(--ww-skywake-blue);
     box-shadow: 0 2px 5px rgba(var(--ww-polished-alloy-border-rgb),0.25), 0 0 4px var(--ww-skywake-blue);
     transform: translateY(-2px);
@@ -492,7 +492,7 @@ body {
     box-shadow: 0 2px 5px rgba(var(--ww-system-alert-red-rgb),0.2);
 }
 .btn-danger:hover {
-    background-color: lighten(var(--ww-system-alert-red), 8%);
+    background-color: var(--ww-system-alert-red);
     box-shadow: 0 3px 7px rgba(var(--ww-system-alert-red-rgb),0.3), 0 0 8px var(--ww-system-alert-red);
     transform: translateY(-2px);
 }
@@ -501,7 +501,7 @@ body {
     border-color: var(--ww-verdant-flash);
 }
 .btn-success:hover {
-    background-color: lighten(var(--ww-verdant-flash), 8%);
+    background-color: var(--ww-verdant-flash);
     box-shadow: 0 2px 5px rgba(var(--ww-verdant-flash-rgb),0.25);
     transform: translateY(-2px);
 }
@@ -546,9 +546,9 @@ body {
 /* Video Call */
 .video-call-avatar { background-color: var(--ww-polished-alloy-border); border: 1px solid var(--border-color); box-shadow: 0 0 8px rgba(var(--ww-carbon-ink-text-rgb),0.1); }
 .video-call-button.end-call { background: var(--danger-color); box-shadow: 0 0 6px var(--danger-color); }
-.video-call-button.end-call:hover { background: lighten(var(--danger-color), 8%); }
+.video-call-button.end-call:hover { background: var(--danger-color); }
 .video-call-button.active { background: var(--ww-skywake-blue); color: var(--ww-clear-data-panel); box-shadow: 0 0 6px var(--ww-skywake-blue); }
-.video-call-button.active:hover { background: lighten(var(--ww-skywake-blue),8%); }
+.video-call-button.active:hover { background: var(--ww-skywake-blue) }
 
 /* Toggle Switch */
 .switch input { opacity: 0; width: 0; height: 0; }

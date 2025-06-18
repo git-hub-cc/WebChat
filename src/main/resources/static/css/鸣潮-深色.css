@@ -525,7 +525,7 @@ body {
     border-color: rgba(var(--ww-beacon-white-rgb),0.2);
 }
 .btn-secondary:hover {
-    background-color: lighten(var(--ww-fractured-steel-border), 5%);
+    background-color: var(--ww-fractured-steel-border);
     border-color: var(--ww-tacet-glow-cyan);
     box-shadow: 0 2px 6px rgba(var(--ww-fractured-steel-border-rgb),0.3), 0 0 5px var(--ww-tacet-glow-cyan);
     transform: translateY(-2px);
@@ -537,7 +537,7 @@ body {
     box-shadow: 0 2px 5px rgba(var(--ww-lament-crimson-rgb),0.25);
 }
 .btn-danger:hover {
-    background-color: lighten(var(--ww-lament-crimson), 10%);
+    background-color: var(--ww-lament-crimson);
     box-shadow: 0 3px 8px rgba(var(--ww-lament-crimson-rgb),0.4), 0 0 10px var(--ww-lament-crimson);
     transform: translateY(-2px);
 }
@@ -547,7 +547,7 @@ body {
     border-color: var(--ww-glacio-frost-blue);
 }
 .btn-success:hover {
-    background-color: lighten(var(--ww-glacio-frost-blue), 10%);
+    background-color: var(--ww-glacio-frost-blue);
     box-shadow: 0 2px 6px rgba(var(--ww-glacio-frost-blue-rgb),0.3);
     transform: translateY(-2px);
 }
@@ -599,9 +599,9 @@ body {
 /* Video Call */
 .video-call-avatar { background-color: var(--ww-fractured-steel-border); border: 1px solid var(--border-color); box-shadow: 0 0 10px rgba(0,0,0,0.3); }
 .video-call-button.end-call { background: var(--danger-color); box-shadow: 0 0 8px var(--danger-color); }
-.video-call-button.end-call:hover { background: lighten(var(--danger-color), 10%); }
+.video-call-button.end-call:hover { background: var(--danger-color); }
 .video-call-button.active { background: var(--ww-tacet-glow-cyan); color: var(--ww-nightfall-gray-bg); box-shadow: 0 0 8px var(--ww-tacet-glow-cyan); }
-.video-call-button.active:hover { background: lighten(var(--ww-tacet-glow-cyan),10%); }
+.video-call-button.active:hover { background: var(--ww-tacet-glow-cyan); }
 
 /* Toggle Switch */
 .switch input { opacity: 0; width: 0; height: 0; }

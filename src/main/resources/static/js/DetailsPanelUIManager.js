@@ -3,6 +3,7 @@
  * @description 管理应用右侧详情面板的 UI 元素和交互。此面板可以显示当前选定聊天的详细信息（包括联系人信息、群组成员、AI配置、资源预览）或人员大厅。
  *              新增: 群主可查看和编辑群内 AI 的特定提示词。
  *              优化: 当群主修改AI提示词后，会向群内发送系统消息通知。
+ *              修复: 主题切换后，添加成员下拉列表现在能正确反映当前主题的AI角色。
  * @module DetailsPanelUIManager
  * @exports {object} DetailsPanelUIManager - 对外暴露的单例对象，包含管理右侧详情面板的所有方法。
  * @property {function} init - 初始化模块，获取DOM元素引用并绑定基础事件。
@@ -37,7 +38,7 @@ const DetailsPanelUIManager = {
     deleteContactBtnDetailsEl: null,
     detailsGroupManagementEl: null,
     groupAiPromptsSectionEl: null,
-    groupAiPromptsListContainerEl: null,
+    groupAiPromptsListContainerEl: null, // 将在这里动态创建
     groupActionsDetailsEl: null,
     leaveGroupBtnDetailsEl: null,
     dissolveGroupBtnDetailsEl: null,
@@ -95,32 +96,31 @@ const DetailsPanelUIManager = {
         this.deleteContactBtnDetailsEl = document.getElementById('deleteContactBtnDetails');
         this.detailsGroupManagementEl = document.getElementById('detailsGroupManagement');
 
+        // 动态创建群组AI提示词管理区域的容器，如果它不存在
         this.groupAiPromptsSectionEl = document.getElementById('groupAiPromptsSection');
-        if (!this.groupAiPromptsSectionEl) {
+        if (!this.groupAiPromptsSectionEl && this.detailsGroupManagementEl) { // 确保在群组管理部分之后插入
             this.groupAiPromptsSectionEl = document.createElement('div');
             this.groupAiPromptsSectionEl.className = 'details-section';
             this.groupAiPromptsSectionEl.id = 'groupAiPromptsSection';
-            this.groupAiPromptsSectionEl.style.display = 'none';
+            this.groupAiPromptsSectionEl.style.display = 'none'; // 初始隐藏
             const header = document.createElement('h4');
-            header.textContent = 'AI 提示词管理';
+            header.textContent = '群内AI行为指示';
             this.groupAiPromptsSectionEl.appendChild(header);
             this.groupAiPromptsListContainerEl = document.createElement('div');
-            this.groupAiPromptsListContainerEl.id = 'groupAiPromptsListContainer';
+            this.groupAiPromptsListContainerEl.id = 'groupAiPromptsListContainer'; // 用于容纳每个AI的编辑项
             this.groupAiPromptsSectionEl.appendChild(this.groupAiPromptsListContainerEl);
-            const groupManagementEl = document.getElementById('detailsGroupManagement');
-            if (this.detailsPanelContentEl && groupManagementEl && groupManagementEl.parentNode === this.detailsPanelContentEl) {
-                this.detailsPanelContentEl.insertBefore(this.groupAiPromptsSectionEl, groupManagementEl.nextSibling);
-            } else if (this.detailsPanelContentEl) {
-                this.detailsPanelContentEl.appendChild(this.groupAiPromptsSectionEl);
-            }
-        } else {
+
+            // 插入到群组管理部分之后
+            this.detailsGroupManagementEl.parentNode.insertBefore(this.groupAiPromptsSectionEl, this.detailsGroupManagementEl.nextSibling);
+        } else if (this.groupAiPromptsSectionEl) { // 如果已存在，获取其内部列表容器
             this.groupAiPromptsListContainerEl = this.groupAiPromptsSectionEl.querySelector('#groupAiPromptsListContainer');
-            if (!this.groupAiPromptsListContainerEl && this.groupAiPromptsSectionEl) {
+            if (!this.groupAiPromptsListContainerEl) { // 如果容器内没有列表，也创建它
                 this.groupAiPromptsListContainerEl = document.createElement('div');
                 this.groupAiPromptsListContainerEl.id = 'groupAiPromptsListContainer';
                 this.groupAiPromptsSectionEl.appendChild(this.groupAiPromptsListContainerEl);
             }
         }
+
 
         this.groupActionsDetailsEl = document.getElementById('groupActionsDetails');
         this.leaveGroupBtnDetailsEl = document.getElementById('leaveGroupBtnDetails');
@@ -261,11 +261,6 @@ const DetailsPanelUIManager = {
         Utils.log("DetailsPanelUIManager: 右侧面板已隐藏。", Utils.logLevels.DEBUG);
     },
 
-    /**
-     * 更新主聊天详情面板的内容，根据传入的聊天ID和类型（联系人或群组）。
-     * @param {string} chatId - 当前选中的聊天ID。
-     * @param {string} type - 聊天类型， 'contact' 或 'group'。
-     */
     updateDetailsPanel: function (chatId, type) {
         if (!this.detailsPanelEl || !this.detailsPanelContentEl) return;
         this.detailsPanelEl.className = 'details-panel';
@@ -273,6 +268,7 @@ const DetailsPanelUIManager = {
             this.aiContactAboutSectionEl, this.aiTtsConfigSectionEl, this.resourcePreviewSectionEl,
             this.groupAiPromptsSectionEl]
             .forEach(el => { if (el) el.style.display = 'none'; });
+
         if (this.currentChatActionsDetailsEl && this.clearCurrentChatBtnDetailsEl) {
             this.currentChatActionsDetailsEl.style.display = chatId ? 'block' : 'none';
             if (chatId) {
@@ -294,8 +290,13 @@ const DetailsPanelUIManager = {
         if (!contact || !this.detailsPanelEl) return;
         if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = `${contact.name} 信息`;
         this.detailsPanelEl.classList.add('contact-details-active');
-        if (contact.isSpecial) this.detailsPanelEl.classList.add(contact.id);
-        else this.detailsPanelEl.classList.add('human-contact-active');
+        if (UserManager.isSpecialContactInCurrentTheme(contactId)) {
+            this.detailsPanelEl.classList.add(contact.id);
+        } else if (contact.isAI) {
+            this.detailsPanelEl.classList.add('historical-ai-contact-active');
+        } else {
+            this.detailsPanelEl.classList.add('human-contact-active');
+        }
         if (this.detailsNameEl) this.detailsNameEl.textContent = contact.name;
         if (this.detailsIdEl) this.detailsIdEl.textContent = `ID: ${contact.id}`;
         if (this.detailsAvatarEl) {
@@ -303,7 +304,11 @@ const DetailsPanelUIManager = {
             let fallbackText = (contact.avatarText) ? Utils.escapeHtml(contact.avatarText) :
                 (contact.name && contact.name.length > 0) ? Utils.escapeHtml(contact.name.charAt(0).toUpperCase()) : '?';
             let avatarContentHtml;
-            if (contact.isSpecial) this.detailsAvatarEl.classList.add('special-avatar', contact.id);
+            if (UserManager.isSpecialContactInCurrentTheme(contactId)) {
+                this.detailsAvatarEl.classList.add('special-avatar', contact.id);
+            } else if (contact.isAI) {
+                this.detailsAvatarEl.classList.add('historical-ai-avatar');
+            }
             if (contact.avatarUrl) {
                 avatarContentHtml = `<img src="${contact.avatarUrl}" alt="${fallbackText}" class="avatar-image" data-fallback-text="${fallbackText}" data-entity-id="${contact.id}">`;
             } else {
@@ -312,8 +317,11 @@ const DetailsPanelUIManager = {
             this.detailsAvatarEl.innerHTML = avatarContentHtml;
         }
         if (this.detailsStatusEl) {
-            if (contact.isSpecial) this.detailsStatusEl.textContent = (contact.isAI ? 'AI 助手' : '特殊联系人') ;
-            else this.detailsStatusEl.textContent = ConnectionManager.isConnectedTo(contactId) ? '已连接' : '离线';
+            if (UserManager.isSpecialContact(contactId)) {
+                this.detailsStatusEl.textContent = (contact.isAI ? 'AI 助手' : '特殊联系人') ;
+            } else {
+                this.detailsStatusEl.textContent = ConnectionManager.isConnectedTo(contactId) ? '已连接' : '离线';
+            }
         }
         if (this.resourcePreviewSectionEl && this.resourcePreviewPanelContentEl) {
             this.resourcePreviewSectionEl.style.display = 'block';
@@ -322,7 +330,7 @@ const DetailsPanelUIManager = {
             this._attachResourceScrollListener();
             this._switchResourceTypeAndLoad(this._currentResourceType);
         }
-        if (contact.isSpecial) {
+        if (UserManager.isSpecialContact(contactId)) {
             if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'none';
             if (contact.isAI && contact.aboutDetails && this.aiContactAboutSectionEl) {
                 this._populateAiAboutSection(contact);
@@ -399,17 +407,18 @@ const DetailsPanelUIManager = {
         }
     },
 
-    /**
-     * 更新详情面板以显示指定群组的信息。
-     * 包括群组成员列表、操作按钮，以及（如果适用）AI成员的提示词管理。
-     * @param {string} groupId - 群组的ID。
-     * @private
-     */
     _updateForGroup: function(groupId) {
         const group = GroupManager.groups[groupId];
         if (!group || !this.detailsPanelEl) return;
         if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = `${group.name} 信息`;
         this.detailsPanelEl.classList.add('group-chat-active');
+        Array.from(this.detailsPanelEl.classList).forEach(cls => {
+            if (cls.startsWith('AI_') || cls.endsWith('-active')) {
+                if (cls !== 'group-chat-active' && cls !== 'contact-details-active') {
+                    this.detailsPanelEl.classList.remove(cls);
+                }
+            }
+        });
         if (this.detailsNameEl) this.detailsNameEl.textContent = group.name;
         if (this.detailsIdEl) this.detailsIdEl.textContent = `群组 ID: ${group.id.substring(6)}`;
         if (this.detailsAvatarEl) {
@@ -441,7 +450,9 @@ const DetailsPanelUIManager = {
             }
         }
         this.updateDetailsPanelMembers(groupId);
-        if (this.groupAiPromptsSectionEl && isOwner) {
+
+        // AI提示词管理部分
+        if (this.groupAiPromptsSectionEl && isOwner) { // 确保容器存在
             const aiMembersInGroup = group.members.filter(memberId => {
                 const contact = UserManager.contacts[memberId];
                 return contact && contact.isAI;
@@ -451,101 +462,123 @@ const DetailsPanelUIManager = {
                 this._populateGroupAiPromptsEditor(groupId, group, aiMembersInGroup);
             } else {
                 this.groupAiPromptsSectionEl.style.display = 'none';
+                if(this.groupAiPromptsListContainerEl) this.groupAiPromptsListContainerEl.innerHTML = ''; // 清空内容
             }
         } else if (this.groupAiPromptsSectionEl) {
             this.groupAiPromptsSectionEl.style.display = 'none';
+            if(this.groupAiPromptsListContainerEl) this.groupAiPromptsListContainerEl.innerHTML = '';
         }
+
         if (this.aiContactAboutSectionEl) this.aiContactAboutSectionEl.style.display = 'none';
         if (this.aiTtsConfigSectionEl) this.aiTtsConfigSectionEl.style.display = 'none';
-        if (this.resourcePreviewSectionEl) this.resourcePreviewSectionEl.style.display = 'none';
-        if (this.resourcePreviewPanelContentEl) this.resourcePreviewPanelContentEl.style.display = 'none';
+        if (this.resourcePreviewSectionEl) {
+            this.resourcePreviewSectionEl.style.display = 'none';
+            if (this.resourcePreviewPanelContentEl) this.resourcePreviewPanelContentEl.style.display = 'none';
+        }
         this._detachResourceScrollListener();
     },
 
-    /**
-     * @private
-     * 填充群组内 AI 成员的提示词编辑区域。
-     * @param {string} groupId - 当前群组 ID。
-     * @param {object} group - 当前群组对象。
-     * @param {Array<string>} aiMemberIds - 群组内所有 AI 成员的 ID 列表。
-     */
     _populateGroupAiPromptsEditor: function(groupId, group, aiMemberIds) {
-        if (!this.groupAiPromptsListContainerEl) return;
+        if (!this.groupAiPromptsListContainerEl) {
+            Utils.log("DetailsPanelUIManager: groupAiPromptsListContainerEl 未找到，无法填充AI提示词编辑器。", Utils.logLevels.ERROR);
+            return;
+        }
         this.groupAiPromptsListContainerEl.innerHTML = '';
         aiMemberIds.forEach(aiId => {
             const aiContact = UserManager.contacts[aiId];
-            if (!aiContact) return;
+            if (!aiContact || !aiContact.isAI) return;
+
             const itemDiv = document.createElement('div');
             itemDiv.className = 'ai-prompt-editor-item';
             itemDiv.dataset.aiId = aiId;
+
             const nameHeader = document.createElement('h5');
             nameHeader.textContent = `AI角色: ${aiContact.name}`;
             itemDiv.appendChild(nameHeader);
-            const currentPrompt = (group.aiPrompts && group.aiPrompts[aiId])
-                ? group.aiPrompts[aiId]
-                : (aiContact.aiConfig ? aiContact.aiConfig.systemPrompt : "无默认提示词");
+
+            let currentPromptText = "";
+            if (group.aiPrompts && group.aiPrompts[aiId] !== undefined) {
+                currentPromptText = group.aiPrompts[aiId];
+            } else if (aiContact.aiConfig && aiContact.aiConfig.systemPrompt !== undefined) {
+                currentPromptText = aiContact.aiConfig.systemPrompt;
+            }
+
             const promptTextarea = document.createElement('textarea');
-            promptTextarea.value = currentPrompt;
-            promptTextarea.placeholder = "输入此AI在群组中的特定提示词...";
+            promptTextarea.value = currentPromptText;
+            promptTextarea.placeholder = "输入此AI在群组中的特定行为指示...";
             promptTextarea.rows = 3;
-            promptTextarea.style.width = '100%';
-            promptTextarea.style.marginBottom = '5px';
+            promptTextarea.className = 'group-ai-prompt-textarea'; // 添加类名方便选择
             itemDiv.appendChild(promptTextarea);
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.marginTop = '8px';
+            buttonContainer.style.display = 'flex';
+            buttonContainer.style.gap = '8px';
+
+
             const saveBtn = document.createElement('button');
-            saveBtn.textContent = '保存提示词';
+            saveBtn.textContent = '保存指示';
             saveBtn.className = 'btn btn-primary btn-sm';
-            saveBtn.style.marginRight = '5px';
             saveBtn.addEventListener('click', async () => {
                 const newPrompt = promptTextarea.value.trim();
                 let promptChanged = false;
-                if (newPrompt) {
-                    if (!group.aiPrompts) group.aiPrompts = {};
-                    if (group.aiPrompts[aiId] !== newPrompt) {
-                        group.aiPrompts[aiId] = newPrompt;
-                        promptChanged = true;
-                    }
-                } else {
-                    if (group.aiPrompts && group.aiPrompts[aiId]) {
-                        delete group.aiPrompts[aiId];
-                        promptChanged = true;
-                    }
+                if (!group.aiPrompts) group.aiPrompts = {};
+
+                // 只有当新提示词与当前存储的群组特定提示词不同时，才算改变
+                // 或者如果之前没有特定提示词，而新提示词非空
+                if ((group.aiPrompts[aiId] === undefined && newPrompt !== "") || (group.aiPrompts[aiId] !== undefined && group.aiPrompts[aiId] !== newPrompt)) {
+                    group.aiPrompts[aiId] = newPrompt;
+                    promptChanged = true;
                 }
+
                 if (promptChanged) {
                     await GroupManager.saveGroup(groupId);
-                    // 通知 GroupManager, dass ein Prompt geändert wurde, damit er es broadcasten kann
                     if (typeof GroupManager.notifyAiPromptChanged === 'function') {
-                        GroupManager.notifyAiPromptChanged(groupId, aiId, newPrompt || (aiContact.aiConfig ? aiContact.aiConfig.systemPrompt : ""));
+                        GroupManager.notifyAiPromptChanged(groupId, aiId, newPrompt);
                     }
-                    NotificationUIManager.showNotification(`AI "${aiContact.name}" 在此群组的提示词已更新。`, 'success');
-                    // Die Systemnachricht wird jetzt von GroupManager.notifyAiPromptChanged behandelt
+                    NotificationUIManager.showNotification(`AI "${aiContact.name}" 在此群组的行为指示已更新。`, 'success');
                 } else {
-                    NotificationUIManager.showNotification('提示词未发生变化。', 'info');
+                    NotificationUIManager.showNotification('行为指示未发生变化。', 'info');
                 }
             });
-            itemDiv.appendChild(saveBtn);
+            buttonContainer.appendChild(saveBtn);
+
             const resetBtn = document.createElement('button');
             resetBtn.textContent = '重置为默认';
             resetBtn.className = 'btn btn-secondary btn-sm';
             resetBtn.addEventListener('click', async () => {
-                const defaultPrompt = aiContact.aiConfig ? aiContact.aiConfig.systemPrompt : "";
+                const defaultPrompt = (aiContact.aiConfig && aiContact.aiConfig.systemPrompt) ? aiContact.aiConfig.systemPrompt : "";
                 let promptChanged = false;
-                if (group.aiPrompts && group.aiPrompts[aiId]) {
+
+                if (group.aiPrompts && group.aiPrompts[aiId] !== undefined && group.aiPrompts[aiId] !== defaultPrompt) {
+                    // 如果存在特定提示词且与默认不同，则重置为默认
+                    group.aiPrompts[aiId] = defaultPrompt;
+                    promptChanged = true;
+                } else if (group.aiPrompts && group.aiPrompts[aiId] === undefined && defaultPrompt !== "") {
+                    // 如果不存在特定提示词，但默认提示词非空（理论上第一次添加AI时已设置，但作为保险）
+                    group.aiPrompts[aiId] = defaultPrompt;
+                    promptChanged = true;
+                } else if (group.aiPrompts && group.aiPrompts[aiId] !== undefined && defaultPrompt === "" && group.aiPrompts[aiId] !== "") {
+                    // 如果默认提示词为空，但存在特定提示词，则应删除特定提示词记录
                     delete group.aiPrompts[aiId];
                     promptChanged = true;
                 }
-                promptTextarea.value = defaultPrompt;
+
+
+                promptTextarea.value = defaultPrompt; // 更新UI显示
                 if (promptChanged) {
                     await GroupManager.saveGroup(groupId);
-                    // 通知 GroupManager, dass ein Prompt geändert wurde (auf Default zurückgesetzt)
                     if (typeof GroupManager.notifyAiPromptChanged === 'function') {
                         GroupManager.notifyAiPromptChanged(groupId, aiId, defaultPrompt);
                     }
-                    NotificationUIManager.showNotification(`AI "${aiContact.name}" 在此群组的提示词已重置为默认。`, 'success');
+                    NotificationUIManager.showNotification(`AI "${aiContact.name}" 在此群组的行为指示已重置为默认。`, 'success');
                 } else {
-                    NotificationUIManager.showNotification(`AI "${aiContact.name}" 已在使用默认提示词。`, 'info');
+                    NotificationUIManager.showNotification(`AI "${aiContact.name}" 已在使用默认指示或无变化。`, 'info');
                 }
             });
-            itemDiv.appendChild(resetBtn);
+            buttonContainer.appendChild(resetBtn);
+            itemDiv.appendChild(buttonContainer);
+
             this.groupAiPromptsListContainerEl.appendChild(itemDiv);
         });
     },
@@ -573,15 +606,22 @@ const DetailsPanelUIManager = {
             btn.parentNode.replaceChild(newBtn, btn);
             newBtn.addEventListener('click', () => GroupManager.removeMemberFromGroup(groupId, newBtn.dataset.memberId));
         });
+
         this.contactsDropdownDetailsEl.innerHTML = '<option value="">选择要添加的联系人...</option>';
         Object.values(UserManager.contacts).forEach(contact => {
-            if (!group.members.includes(contact.id) && !(group.leftMembers?.find(lm => lm.id === contact.id))) {
+            const isAlreadyMember = group.members.includes(contact.id);
+            const hasLeft = group.leftMembers?.some(lm => lm.id === contact.id);
+            const isAddableCurrentThemeAI = UserManager.isSpecialContactInCurrentTheme(contact.id) && contact.isAI;
+            const isRegularContact = !contact.isSpecial && !contact.isAI;
+
+            if (!isAlreadyMember && !hasLeft && (isAddableCurrentThemeAI || isRegularContact)) {
                 const option = document.createElement('option');
                 option.value = contact.id;
                 option.textContent = `${contact.name} ${contact.isAI ? '(AI助手)' : ''}`;
                 this.contactsDropdownDetailsEl.appendChild(option);
             }
         });
+
         leftMemberListDetailsEl.innerHTML = '';
         if (group.owner === UserManager.userId && group.leftMembers && group.leftMembers.length > 0 && this.leftMembersAreaEl) {
             group.leftMembers.forEach(leftMember => {

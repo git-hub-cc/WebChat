@@ -156,9 +156,9 @@
                     <div class="collapsible-content attribution-sub-content" id="ttsAttributionCollapsibleContent" style="display: none;">
                         <p>
                             <strong>对话AI：</strong><a href="https://bailian.console.aliyun.com/" target="_blank" rel="noopener noreferrer" >阿里</a><br>
-                            <strong>页面布局：</strong><a href="https://web.telegram.org/" target="_blank" rel="noopener noreferrer" >telegram</a><br>
                             <strong>素材资源：</strong><a href="#" target="_blank" rel="noopener noreferrer" >网络</a><br>
-                            <strong>主题概念：</strong><a href="https://space.bilibili.com/1290496974" target="_blank" rel="noopener noreferrer" >@卤v</a><br>
+                            <strong>主题概念：</strong><a href="https://space.bilibili.com/1290496974" target="_blank" rel="noopener noreferrer" >卤v</a><br>
+                            <strong>提示词工程：</strong><a href="https://space.bilibili.com/326625155" target="_blank" rel="noopener noreferrer" >君尘陌</a><br>
                             <strong>项目开源地址：</strong><br>
                             GitHub: <a href="https://github.com/git-hub-cc/PPMC" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/PPMC</a><br>
                             Gitee: <a href="https://gitee.com/wyswydx/PPMC" target="_blank" rel="noopener noreferrer">https://gitee.com/wyswydx/PPMC</a>
@@ -384,21 +384,28 @@
 <div id="newContactGroupModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>新建聊天 / 群组</h2>
+            <h2>管理联系人与群组</h2> <!-- MODIFIED: 更通用的标题 -->
             <button class="icon-btn close-modal-btn" data-modal-id="newContactGroupModal">✕</button>
         </div>
         <div class="modal-body">
             <div class="settings-section">
-                <h3>添加新联系人</h3>
-                <input type="text" id="newPeerIdInput" placeholder="输入对方 ID">
-                <input type="text" id="newPeerNameInput" placeholder="输入对方昵称 (可选)">
-                <button id="confirmNewContactBtn" class="btn btn-primary">添加/修改联系人</button>
+                <h3>联系人操作</h3> <!-- MODIFIED: 更通用的子标题 -->
+                <p style="font-size: 0.85em; color: var(--text-color-light); margin-bottom: 8px;">
+                    输入对方ID。若ID已存在，可修改其昵称。若ID不存在，则添加新联系人。
+                </p> <!-- ADDED/MODIFIED: 描述文本 -->
+                <input type="text" id="newPeerIdInput" placeholder="输入对方 ID (必填)">
+                <input type="text" id="newPeerNameInput" placeholder="输入对方昵称 (修改或新建时可选)"> <!-- MODIFIED: Placeholder更清晰 -->
+                <button id="confirmNewContactBtn" class="btn btn-primary">添加 / 修改联系人</button> <!-- Text is already good -->
             </div>
             <hr>
             <div class="settings-section">
-                <h3>创建新群组</h3>
-                <input type="text" id="newGroupNameInput" placeholder="输入群组名称">
-                <button id="confirmNewGroupBtnModal" class="btn btn-primary">创建群组</button>
+                <h3>创建或修改群组</h3> <!-- This title is already good -->
+                <p style="font-size: 0.85em; color: var(--text-color-light); margin-bottom: 8px;">
+                    输入群组名称。如果提供已存在的群组ID且您是群主，则将修改其名称；否则将创建新群组。
+                </p> <!-- This description is already good -->
+                <input type="text" id="newGroupNameInput" placeholder="输入群组名称 (必填)">
+                <input type="text" id="newGroupIdInput" placeholder="群组 ID (可选, 留空则自动生成)" style="margin-top: 10px;">
+                <button id="confirmNewGroupBtnModal" class="btn btn-primary">创建 / 修改群组</button> <!-- Text is already good -->
             </div>
         </div>
     </div>

@@ -202,6 +202,7 @@ const MessageManager = {
                             messageBodyHtml = `<div class="message-content-wrapper"><div class="file-info"><span class="file-icon">📄</span><div class="file-details"><div class="file-name">${safeFileName}</div><div class="file-meta">${MediaManager.formatFileSize(message.size || 0)}</div></div><a href="${message.data}" download="${safeFileName}" class="download-btn">下载</a></div></div>`;
                         }
                         break;
+                    case 'user':
                     case 'system':
                         messageBodyHtml = `<div class="message-content system-text">${this.formatMessageText(textContent)}</div>`;
                         break;

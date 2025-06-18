@@ -343,7 +343,6 @@ This project utilizes and is inspired by several concepts and resources. We exte
     *   This project is built using standard web technologies (HTML, CSS, JavaScript) and Java Spring Boot, relying on features provided by modern web browsers.
     *   Inspiration was drawn from various web chat applications and the following resources and community members:
         *   **Conversational AI Services (Example):** [Alibaba Cloud Bailian Large Model Platform](https://bailian.console.aliyun.com/) and similar services.
-        *   **Page Layout & UI Inspiration:** [Telegram Web](https://web.telegram.org/).
         *   **Theme Concepts & Inspiration:** [@卤v (LuV)](https://space.bilibili.com/1290496974).
         *   **Material Resources:** Thanks to the many unnamed contributors of open material resources on the internet (users should ensure compliance when using materials).
         *   **This project is also open-sourced at:** [https://github.com/git-hub-cc/PPMC](https://github.com/git-hub-cc/PPMC) (Stars and Forks are welcome!)

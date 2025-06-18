@@ -21,21 +21,26 @@
 
     /* 角色特定颜色 */
     --zt-yefan-primary: var(--zt-sun-gold);
-    --zt-yefan-secondary: rgba(218, 165, 32, 0.15);
+    --zt-yefan-secondary: rgba(var(--zt-sun-gold-rgb), 0.15); /* MODIFIED: Use --zt-sun-gold-rgb directly */
     --zt-jiziyue-primary: var(--zt-imperial-purple);
-    --zt-jiziyue-secondary: rgba(100, 60, 150, 0.15);
+    --zt-jiziyue-secondary: rgba(var(--zt-imperial-purple-rgb), 0.15);
     --zt-pangbo-primary: #E67E22; /* 热情橙 */
-    --zt-pangbo-secondary: rgba(230, 126, 34, 0.15);
+    --zt-pangbo-primary-rgb: 230, 126, 34; /* ADDED RGB */
+    --zt-pangbo-secondary: rgba(var(--zt-pangbo-primary-rgb), 0.15);
     --zt-heihuang-primary: #555555; /* 无耻黑 */
-    --zt-heihuang-secondary: rgba(85, 85, 85, 0.2);
+    --zt-heihuang-primary-rgb: 85, 85, 85; /* ADDED RGB */
+    --zt-heihuang-secondary: rgba(var(--zt-heihuang-primary-rgb), 0.2);
     --zt-henren-primary: #E0E0E0; /* 神秘银白 */
-    --zt-henren-secondary: rgba(224, 224, 224, 0.3);
+    --zt-henren-primary-rgb: 224, 224, 224; /* ADDED RGB */
+    --zt-henren-secondary: rgba(var(--zt-henren-primary-rgb), 0.3);
     --zt-wushi-primary: var(--zt-star-gold); /* 霸气金 */
-    --zt-wushi-secondary: rgba(255, 215, 0, 0.2);
+    --zt-wushi-secondary: rgba(var(--zt-star-gold-rgb), 0.2); /* MODIFIED: Use --zt-star-gold-rgb directly */
     --zt-duande-primary: #8D6E63; /* 盗墓土棕 */
-    --zt-duande-secondary: rgba(141, 110, 99, 0.2);
+    --zt-duande-primary-rgb: 141, 110, 99; /* ADDED RGB */
+    --zt-duande-secondary: rgba(var(--zt-duande-primary-rgb), 0.2);
     --zt-jiangtaixu-primary: #B0BEC5; /* 神王银灰 */
-    --zt-jiangtaixu-secondary: rgba(176, 190, 197, 0.2);
+    --zt-jiangtaixu-primary-rgb: 176, 190, 197; /* ADDED RGB */
+    --zt-jiangtaixu-secondary: rgba(var(--zt-jiangtaixu-primary-rgb), 0.2);
 
 
     /* 覆盖  Chat 原有变量 */
@@ -129,7 +134,7 @@ body {
     background-color: var(--zt-border-gold-gray);
     font-family: "LXGW WenKai TC", serif;
     border: 1px solid rgba(var(--zt-text-deep-brown-rgb), 0.1);
-    color: var(--text-color-deep-brown);
+    color: var(--zt-text-deep-brown); /* Corrected from --text-color-deep-brown */
 }
 
 /* --- 角色特定样式 (浅色) --- */
@@ -141,7 +146,7 @@ body {
 }
 .chat-list-item.active.AI_叶凡 { background-color: var(--zt-yefan-secondary); box-shadow: 0 0 8px var(--zt-yefan-primary) inset; }
 .chat-list-item.active.AI_叶凡 .chat-list-name { color: var(--zt-yefan-primary); }
-.chat-header-main.current-chat-AI_叶凡 .chat-title-main { color: var(--zt-yefan-primary); text-shadow: 0 0 2px rgba(var(--zt-yefan-primary-rgb),0.3); }
+.chat-header-main.current-chat-AI_叶凡 .chat-title-main { color: var(--zt-yefan-primary); text-shadow: 0 0 2px rgba(var(--zt-sun-gold-rgb),0.3); } /* MODIFIED: Corrected variable */
 .message.received[data-sender-id="AI_叶凡"] { border-left: 2px solid var(--zt-yefan-primary); background-color: rgba(var(--zt-sun-gold-rgb),0.05);}
 .message.received[data-sender-id="AI_叶凡"] .message-sender { color: var(--zt-yefan-primary); }
 .details-panel.AI_叶凡 #aiContactAboutSection h4 span, .details-panel.AI_叶凡 #detailsName { color: var(--zt-yefan-primary); }
@@ -166,7 +171,7 @@ body {
 .chat-list-item.active.AI_庞博 { background-color: var(--zt-pangbo-secondary); box-shadow: 0 0 8px var(--zt-pangbo-primary) inset; }
 .chat-list-item.active.AI_庞博 .chat-list-name { color: var(--zt-pangbo-primary); }
 .chat-header-main.current-chat-AI_庞博 .chat-title-main { color: var(--zt-pangbo-primary); }
-.message.received[data-sender-id="AI_庞博"] { border-left: 2px solid var(--zt-pangbo-primary); background-color: rgba(230, 126, 34, 0.05); }
+.message.received[data-sender-id="AI_庞博"] { border-left: 2px solid var(--zt-pangbo-primary); background-color: rgba(var(--zt-pangbo-primary-rgb), 0.05); }
 .message.received[data-sender-id="AI_庞博"] .message-sender { color: var(--zt-pangbo-primary); }
 .details-panel.AI_庞博 #aiContactAboutSection h4 span, .details-panel.AI_庞博 #detailsName { color: var(--zt-pangbo-primary); }
 
@@ -178,7 +183,7 @@ body {
 .chat-list-item.active.AI_黑皇 { background-color: var(--zt-heihuang-secondary); box-shadow: 0 0 8px var(--zt-heihuang-primary) inset; }
 .chat-list-item.active.AI_黑皇 .chat-list-name { color: var(--zt-heihuang-primary); text-shadow: 0 0 1px var(--zt-star-gold); }
 .chat-header-main.current-chat-AI_黑皇 .chat-title-main { color: var(--zt-heihuang-primary); }
-.message.received[data-sender-id="AI_黑皇"] { border-left: 2px solid var(--zt-heihuang-primary); background-color: rgba(85,85,85,0.05); }
+.message.received[data-sender-id="AI_黑皇"] { border-left: 2px solid var(--zt-heihuang-primary); background-color: rgba(var(--zt-heihuang-primary-rgb),0.05); }
 .message.received[data-sender-id="AI_黑皇"] .message-sender { color: var(--zt-heihuang-primary); }
 .details-panel.AI_黑皇 #aiContactAboutSection h4 span, .details-panel.AI_黑皇 #detailsName { color: var(--zt-heihuang-primary); }
 
@@ -216,7 +221,7 @@ body {
 .chat-list-item.active.AI_段德 { background-color: var(--zt-duande-secondary); box-shadow: 0 0 8px var(--zt-duande-primary) inset; }
 .chat-list-item.active.AI_段德 .chat-list-name { color: var(--zt-duande-primary); }
 .chat-header-main.current-chat-AI_段德 .chat-title-main { color: var(--zt-duande-primary); }
-.message.received[data-sender-id="AI_段德"] { border-left: 2px solid var(--zt-duande-primary); background-color: rgba(141,110,99,0.05); }
+.message.received[data-sender-id="AI_段德"] { border-left: 2px solid var(--zt-duande-primary); background-color: rgba(var(--zt-duande-primary-rgb),0.05); }
 .message.received[data-sender-id="AI_段德"] .message-sender { color: var(--zt-duande-primary); }
 .details-panel.AI_段德 #aiContactAboutSection h4 span, .details-panel.AI_段德 #detailsName { color: var(--zt-duande-primary); }
 
@@ -228,7 +233,7 @@ body {
 .chat-list-item.active.AI_姜太虚 { background-color: var(--zt-jiangtaixu-secondary); box-shadow: 0 0 8px var(--zt-jiangtaixu-primary) inset; }
 .chat-list-item.active.AI_姜太虚 .chat-list-name { color: var(--zt-text-deep-brown); } /* Use darker text for light bg */
 .chat-header-main.current-chat-AI_姜太虚 .chat-title-main { color: var(--zt-text-deep-brown); }
-.message.received[data-sender-id="AI_姜太虚"] { border-left: 2px solid var(--zt-jiangtaixu-primary); background-color: rgba(176,190,197,0.1); }
+.message.received[data-sender-id="AI_姜太虚"] { border-left: 2px solid var(--zt-jiangtaixu-primary); background-color: rgba(var(--zt-jiangtaixu-primary-rgb),0.1); }
 .message.received[data-sender-id="AI_姜太虚"] .message-sender { color: var(--zt-text-deep-brown); }
 .details-panel.AI_姜太虚 #aiContactAboutSection h4 span, .details-panel.AI_姜太虚 #detailsName { color: var(--zt-text-deep-brown); }
 

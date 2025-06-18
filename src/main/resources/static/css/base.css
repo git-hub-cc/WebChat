@@ -8,7 +8,7 @@
 
 :root {
     /* --- 全局颜色与主题变量 --- */
-    --primary-color: #0088cc; /* 主题色 (Telegram Blue) */
+    --primary-color: #0088cc; /* 主题色 */
     --primary-color-dark: #0077b3; /* 主题色深色，用于悬停状态 */
     --secondary-color: #f5f5f5; /* 次要颜色，用于浅灰色背景 */
     --text-color: #212121; /* 主要文本颜色 */
@@ -88,8 +88,6 @@ body {
     /* 防止在移动设备上视口高度变化时页面抖动 */
     height: 100dvh;
     overflow: hidden;
-    background-color: #d1d1d1; /* 备用背景色 */
-    background-image: linear-gradient(to bottom right, #d0e4f0, #f0e4d0);
     color: var(--text-color);
     font-family: var(--font-family), serif;
     line-height: 1.6;
@@ -2398,6 +2396,109 @@ input:checked + .slider::before {
 
 .mention-suggestion-item:hover {
     background-color: var(--hover-bg-color, #f0f0f0);
+}
+
+/* DetailsPanelUIManager - Group AI Prompt Editor Styles */
+#groupAiPromptsSection h4 { /* 与其他 details-section h4 保持一致 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#groupAiPromptsListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4); /* 每个AI提示词编辑项之间的间距 */
+}
+
+.ai-prompt-editor-item {
+    padding: var(--spacing-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background-color: var(--secondary-color); /* 或者 var(--received-bg-color) */
+}
+
+.ai-prompt-editor-item h5 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-2);
+    font-size: 1.05em; /* 稍大一点的字体 */
+    font-weight: 500;
+}
+
+.ai-prompt-editor-item textarea {
+    width: 100%;
+    min-height: 60px; /* 至少3行的高度 */
+    padding: var(--spacing-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    font-family: var(--font-family);
+    font-size: 0.9em;
+    resize: vertical; /* 允许垂直调整大小 */
+    margin-bottom: var(--spacing-2);
+}
+
+.ai-prompt-editor-item .btn-sm { /* 用于小号按钮，如果项目中没有此通用类，则需要定义 */
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: 0.85em;
+}
+
+/* DetailsPanelUIManager - Group AI Prompt Editor Styles */
+#groupAiPromptsSection h4 { /* 与其他 details-section h4 保持一致 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+#groupAiPromptsListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4); /* 每个AI提示词编辑项之间的间距 */
+}
+
+.ai-prompt-editor-item {
+    padding: var(--spacing-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background-color: var(--secondary-color); /* 或者 var(--received-bg-color) */
+}
+
+.ai-prompt-editor-item h5 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-2);
+    font-size: 1.05em;
+    font-weight: 500;
+}
+
+.ai-prompt-editor-item textarea {
+    width: 100%;
+    min-height: 60px; /* 至少3行的高度 */
+    padding: var(--spacing-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    font-family: var(--font-family);
+    font-size: 0.9em;
+    resize: vertical; /* 允许垂直调整大小 */
+    margin-bottom: var(--spacing-2);
+}
+
+.ai-prompt-editor-item .btn-sm { /* 用于小号按钮，如果项目中没有此通用类，则需要定义 */
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: 0.85em;
+}
+/* 你可能还需要为按钮容器添加flex布局以使按钮并排 */
+.ai-prompt-editor-item > div:last-child { /* 指向按钮容器 */
+    display: flex;
+    gap: 10px; /* 按钮间距 */
 }
 
 /* ========================================================================== */

@@ -20,30 +20,45 @@
 
     /* 角色特定颜色 (浅色) - Ensuring good contrast on light bg */
     --hi3-himeko-primary-light: #E64A19;
-    --hi3-himeko-secondary-light: rgba(230, 74, 25, 0.15);
-    --hi3-himeko-glow-light: rgba(230, 74, 25, 0.5);
+    --hi3-himeko-primary-light-rgb: 230, 74, 25; /* ADDED RGB */
+    --hi3-himeko-secondary-light: rgba(var(--hi3-himeko-primary-light-rgb), 0.15);
+    --hi3-himeko-glow-light: rgba(var(--hi3-himeko-primary-light-rgb), 0.5);
+
     --hi3-seeleveliona-primary-light: #5E35B1; /* Deep Purple, slightly lighter for light theme */
-    --hi3-seeleveliona-secondary-light: rgba(94, 53, 177, 0.15);
-    --hi3-seeleveliona-glow-light: rgba(94, 53, 177, 0.5);
+    --hi3-seeleveliona-primary-light-rgb: 94, 53, 177; /* ADDED RGB */
+    --hi3-seeleveliona-secondary-light: rgba(var(--hi3-seeleveliona-primary-light-rgb), 0.15);
+    --hi3-seeleveliona-glow-light: rgba(var(--hi3-seeleveliona-primary-light-rgb), 0.5);
+
     --hi3-keqing-primary-light: #7E57C2; /* Lighter Purple */
-    --hi3-keqing-secondary-light: rgba(126, 87, 194, 0.15);
-    --hi3-keqing-glow-light: rgba(126, 87, 194, 0.4);
+    --hi3-keqing-primary-light-rgb: 126, 87, 194; /* ADDED RGB */
+    --hi3-keqing-secondary-light: rgba(var(--hi3-keqing-primary-light-rgb), 0.15);
+    --hi3-keqing-glow-light: rgba(var(--hi3-keqing-primary-light-rgb), 0.4);
+
     --hi3-aponia-primary-light: #0288D1; /* Stronger Blue */
-    --hi3-aponia-secondary-light: rgba(2, 136, 209, 0.12);
-    --hi3-aponia-glow-light: rgba(2, 136, 209, 0.4);
+    --hi3-aponia-primary-light-rgb: 2, 136, 209; /* ADDED RGB */
+    --hi3-aponia-secondary-light: rgba(var(--hi3-aponia-primary-light-rgb), 0.12);
+    --hi3-aponia-glow-light: rgba(var(--hi3-aponia-primary-light-rgb), 0.4);
+
     --hi3-fischloz-primary-light: #8E24AA; /* Darker Purple */
-    --hi3-fischloz-secondary-light: rgba(142, 36, 170, 0.15);
-    --hi3-fischloz-glow-light: rgba(142, 36, 170, 0.5);
+    --hi3-fischloz-primary-light-rgb: 142, 36, 170; /* ADDED RGB */
+    --hi3-fischloz-secondary-light: rgba(var(--hi3-fischloz-primary-light-rgb), 0.15); /* MODIFIED: Uses new -rgb var */
+    --hi3-fischloz-glow-light: rgba(var(--hi3-fischloz-primary-light-rgb), 0.5); /* MODIFIED: Uses new -rgb var */
     --hi3-fischloz-oz-text-light: var(--hi3-interface-dark-text);
+
     --hi3-origin-primary-light: #D81B60; /* Magenta/Pink for contrast */
-    --hi3-origin-secondary-light: rgba(216, 27, 96, 0.15);
-    --hi3-origin-glow-light: rgba(216, 27, 96, 0.5);
+    --hi3-origin-primary-light-rgb: 216, 27, 96; /* ADDED RGB */
+    --hi3-origin-secondary-light: rgba(var(--hi3-origin-primary-light-rgb), 0.15);
+    --hi3-origin-glow-light: rgba(var(--hi3-origin-primary-light-rgb), 0.5);
+
     --hi3-aichan-primary-light: #43A047; /* Darker Green */
-    --hi3-aichan-secondary-light: rgba(67, 160, 71, 0.15);
-    --hi3-aichan-glow-light: rgba(67, 160, 71, 0.5);
+    --hi3-aichan-primary-light-rgb: 67, 160, 71; /* ADDED RGB */
+    --hi3-aichan-secondary-light: rgba(var(--hi3-aichan-primary-light-rgb), 0.15);
+    --hi3-aichan-glow-light: rgba(var(--hi3-aichan-primary-light-rgb), 0.5);
+
     --hi3-rozaliya-primary-light: #E91E63; /* Strong Pink */
-    --hi3-rozaliya-secondary-light: rgba(233, 30, 99, 0.15);
-    --hi3-rozaliya-glow-light: rgba(233, 30, 99, 0.5);
+    --hi3-rozaliya-primary-light-rgb: 233, 30, 99; /* ADDED RGB */
+    --hi3-rozaliya-secondary-light: rgba(var(--hi3-rozaliya-primary-light-rgb), 0.15);
+    --hi3-rozaliya-glow-light: rgba(var(--hi3-rozaliya-primary-light-rgb), 0.5);
 
 
     /* 覆盖  Chat 原有变量 */
@@ -87,6 +102,7 @@ body {
     background-image:
             radial-gradient(circle at 1px 1px, rgba(var(--hi3-light-divider-line-rgb), 0.3) 1px, transparent 0),
             radial-gradient(circle at 15px 15px, rgba(var(--hi3-light-divider-line-rgb), 0.3) 1px, transparent 0);
+    background-size: 30px 30px; /* MODIFIED: Added background-size for radial-gradients */
 }
 
 .app-container {
@@ -100,6 +116,8 @@ body {
 .app-container::before, .app-container::after {
     content: '';
     position: absolute;
+    width: 10px; /* Define size */
+    height: 10px; /* Define size */
     border-color: var(--hi3-tech-blue);
     opacity: 0.5;
 }
@@ -183,43 +201,44 @@ body {
 .message.received.is-character-message {
     border-left-width: 3px;
     border-image-slice: 1;
-    border-image-source: linear-gradient(to bottom, var(--special-contact-color), var(--special-contact-secondary-glow));
+    /* border-image-source: linear-gradient(to bottom, var(--special-contact-color), var(--special-contact-secondary-glow)); */ /* This can be problematic if secondary-glow is rgba */
+    border-left-color: var(--special-contact-color); /* Fallback if border-image is tricky */
 }
 .message.received.is-character-message .message-sender { font-weight: 600; }
 .chat-header-main.is-character-chat .chat-title-main { text-shadow: 0 0 3px var(--special-contact-glow); }
 
 /* Applying vars for each character - Light theme */
-.AI_Himeko_崩坏3 { --special-contact-color: var(--hi3-himeko-primary-light); --special-contact-secondary-glow: var(--hi3-himeko-secondary-light); --special-contact-glow: var(--hi3-himeko-glow-light); }
+.AI_Himeko_崩坏3 { --special-contact-color: var(--hi3-himeko-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-himeko-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-himeko-primary-light-rgb), 0.5); }
 .chat-list-item.AI_Himeko_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_Himeko_崩坏3, .details-avatar.AI_Himeko_崩坏3, #callingModalAvatar.AI_Himeko_崩坏3 { background-color: var(--hi3-himeko-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-himeko-glow-light); }
 
-.AI_SeeleVeliona_崩坏3 { --special-contact-color: var(--hi3-seeleveliona-primary-light); --special-contact-secondary-glow: var(--hi3-seeleveliona-secondary-light); --special-contact-glow: var(--hi3-seeleveliona-glow-light); }
+.AI_SeeleVeliona_崩坏3 { --special-contact-color: var(--hi3-seeleveliona-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-seeleveliona-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-seeleveliona-primary-light-rgb), 0.5); }
 .chat-list-item.AI_SeeleVeliona_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_SeeleVeliona_崩坏3, .details-avatar.AI_SeeleVeliona_崩坏3, #callingModalAvatar.AI_SeeleVeliona_崩坏3 { background-color: var(--hi3-seeleveliona-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-seeleveliona-glow-light); }
 
-.AI_Keqing_崩坏3 { --special-contact-color: var(--hi3-keqing-primary-light); --special-contact-secondary-glow: var(--hi3-keqing-secondary-light); --special-contact-glow: var(--hi3-keqing-glow-light); }
+.AI_Keqing_崩坏3 { --special-contact-color: var(--hi3-keqing-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-keqing-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-keqing-primary-light-rgb), 0.4); }
 .chat-list-item.AI_Keqing_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_Keqing_崩坏3, .details-avatar.AI_Keqing_崩坏3, #callingModalAvatar.AI_Keqing_崩坏3 { background-color: var(--hi3-keqing-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-keqing-glow-light); }
 
-.AI_Aponia_崩坏3 { --special-contact-color: var(--hi3-aponia-primary-light); --special-contact-secondary-glow: var(--hi3-aponia-secondary-light); --special-contact-glow: var(--hi3-aponia-glow-light); }
+.AI_Aponia_崩坏3 { --special-contact-color: var(--hi3-aponia-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-aponia-primary-light-rgb), 0.12); --special-contact-glow: rgba(var(--hi3-aponia-primary-light-rgb), 0.4); }
 .chat-list-item.AI_Aponia_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_Aponia_崩坏3, .details-avatar.AI_Aponia_崩坏3, #callingModalAvatar.AI_Aponia_崩坏3 { background-color: var(--hi3-aponia-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-aponia-glow-light); }
 
-.AI_FischlOz_崩坏3 { --special-contact-color: var(--hi3-fischloz-primary-light); --special-contact-secondary-glow: var(--hi3-fischloz-secondary-light); --special-contact-glow: var(--hi3-fischloz-glow-light); }
+.AI_FischlOz_崩坏3 { --special-contact-color: var(--hi3-fischloz-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-fischloz-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-fischloz-primary-light-rgb), 0.5); }
 .chat-list-item.AI_FischlOz_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_FischlOz_崩坏3, .details-avatar.AI_FischlOz_崩坏3, #callingModalAvatar.AI_FischlOz_崩坏3 { background-color: var(--hi3-fischloz-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-fischloz-glow-light); }
 .chat-list-item.special-contact.AI_FischlOz_崩坏3 .chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-fischloz-oz-text-light); opacity: 0.9; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-light-rgb),0.3); padding: 0 2px; border-radius: 2px;}
 
 
-.AI_HerrscherOfOrigin_崩坏3 { --special-contact-color: var(--hi3-origin-primary-light); --special-contact-secondary-glow: var(--hi3-origin-secondary-light); --special-contact-glow: var(--hi3-origin-glow-light); }
+.AI_HerrscherOfOrigin_崩坏3 { --special-contact-color: var(--hi3-origin-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-origin-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-origin-primary-light-rgb), 0.5); }
 .chat-list-item.AI_HerrscherOfOrigin_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_HerrscherOfOrigin_崩坏3, .details-avatar.AI_HerrscherOfOrigin_崩坏3, #callingModalAvatar.AI_HerrscherOfOrigin_崩坏3 { background-color: var(--hi3-origin-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-origin-glow-light); }
 
-.AI_AiChan_崩坏3 { --special-contact-color: var(--hi3-aichan-primary-light); --special-contact-secondary-glow: var(--hi3-aichan-secondary-light); --special-contact-glow: var(--hi3-aichan-glow-light); }
+.AI_AiChan_崩坏3 { --special-contact-color: var(--hi3-aichan-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-aichan-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-aichan-primary-light-rgb), 0.5); }
 .chat-list-item.AI_AiChan_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_AiChan_崩坏3, .details-avatar.AI_AiChan_崩坏3, #callingModalAvatar.AI_AiChan_崩坏3 { background-color: var(--hi3-aichan-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-aichan-glow-light); }
 
-.AI_Rozaliya_崩坏3 { --special-contact-color: var(--hi3-rozaliya-primary-light); --special-contact-secondary-glow: var(--hi3-rozaliya-secondary-light); --special-contact-glow: var(--hi3-rozaliya-glow-light); }
+.AI_Rozaliya_崩坏3 { --special-contact-color: var(--hi3-rozaliya-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-rozaliya-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-rozaliya-primary-light-rgb), 0.5); }
 .chat-list-item.AI_Rozaliya_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_Rozaliya_崩坏3, .details-avatar.AI_Rozaliya_崩坏3, #callingModalAvatar.AI_Rozaliya_崩坏3 { background-color: var(--hi3-rozaliya-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-rozaliya-glow-light); }
 
@@ -459,6 +478,7 @@ body {
 .modal-content::before, .modal-content::after {
     content: '';
     position: absolute;
+    width: 8px; height: 8px; /* Define size */
     border-color: var(--hi3-tech-blue);
     opacity: 0.6;
 }
@@ -496,7 +516,7 @@ body {
 .video-call-button.active { background: var(--hi3-tech-blue); color: var(--hi3-hyperion-hull-bg); box-shadow: 0 0 8px var(--hi3-tech-blue);}
 
 /* Toggle Switch - Honkai Style Light */
-.switch { position: relative; display: inline-block; }
+.switch { position: relative; display: inline-block; width: 34px; height: 14px;}
 .switch input { opacity: 0; width: 0; height: 0; }
 .slider {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
@@ -504,16 +524,19 @@ body {
     border: 1px solid rgba(var(--hi3-light-divider-line-rgb),0.8);
 
     border-radius: var(--border-radius);
+    transition: .4s;
 }
 .slider:before {
-    position: absolute; content: ""; left: 3px; bottom: 3px;
+    position: absolute; content: ""; height: 10px; width: 10px; left: 2px; bottom: 1px;
     background-color: var(--hi3-hyperion-hull-bg);
     border: 1px solid var(--hi3-tech-blue);
 
     border-radius: 2px;
+    transition: .4s;
 }
 input:checked + .slider { background-color: var(--hi3-tech-blue); box-shadow: 0 0 5px var(--hi3-tech-blue); border-color: var(--hi3-tech-blue); }
 input:checked + .slider:before {
+    transform: translateX(18px);
     background-color: var(--hi3-hyperion-hull-bg);
     border-color: var(--hi3-interface-dark-text);
 }

@@ -2,7 +2,7 @@
  * @file AiApiHandler.js
  * @description 负责处理与后端 AI API 的所有通信，包括构建上下文、发送请求以及处理流式响应和对话摘要。
  *              现在会优先使用用户在设置中配置的 API 参数。
- *              新增：处理群组中对 AI 的提及。
+ *              更新：在群聊中处理对 AI 的提及，提示词获取逻辑调整为支持非当前主题定义的AI角色。
  * @module AiApiHandler
  * @exports {object} AiApiHandler - 对外暴露的单例对象，包含与 AI 交互的方法。
  * @property {object} activeSummaries - 内部缓存，用于存储每个 AI 联系人的当前活动对话摘要。键为联系人 ID，值为摘要字符串。
@@ -80,13 +80,20 @@ const AiApiHandler = {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
-            const fiveMinutesAgo = new Date().getTime() - (Config.ai.sessionTime);
+            const contextWindow = (typeof Config !== 'undefined' && Config.ai && Config.ai.sessionTime !== undefined)
+                ? Config.ai.sessionTime
+                : (10 * 60 * 1000); // Fallback auf 10 Minuten
+            const timeThreshold = new Date().getTime() - contextWindow;
+
             const chatHistory = ChatManager.chats[targetId] || [];
-            const recentMessages = chatHistory.filter(msg => new Date(msg.timestamp).getTime() > fiveMinutesAgo && msg.type === 'text');
+            const recentMessages = chatHistory.filter(msg => new Date(msg.timestamp).getTime() > timeThreshold && msg.type === 'text');
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
 
             const messagesForRequestBody = [];
-            messagesForRequestBody.push({role: "system", content: contact.aiConfig.systemPrompt + Config.ai.baseSystemPrompt});
+            // 使用 contact.aiConfig.systemPrompt 作为基础
+            const systemPromptBase = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
+            messagesForRequestBody.push({role: "system", content: systemPromptBase + Config.ai.baseSystemPrompt});
+
 
             if (this.activeSummaries[targetId]) {
                 Utils.log(`AiApiHandler: Including stored summary for ${targetId} in the request.`, Utils.logLevels.DEBUG);
@@ -227,8 +234,9 @@ const AiApiHandler = {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
+            const systemPromptBase = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
             const newAiApiMessages = [
-                { role: "system", content: contact.aiConfig.systemPrompt + Config.ai.baseSystemPrompt },
+                { role: "system", content: systemPromptBase + Config.ai.baseSystemPrompt },
                 { role: "system", content: `上下文摘要:\n${summaryContent}` },
                 { role: "user", content: `${originalMessageText} [发送于: ${new Date().toLocaleString()}]` }
             ];
@@ -300,6 +308,7 @@ const AiApiHandler = {
 
     /**
      * @description 在群组聊天中处理对 AI 的提及，并获取 AI 的回复。
+     *              提示词获取逻辑调整为：群组特定提示词 > AI角色在UserManager中的当前配置 > 默认空提示词。
      * @param {string} groupId - 群组 ID。
      * @param {object} group - 群组对象 (来自 GroupManager.groups[groupId])。
      * @param {string} aiContactId - 被提及的 AI 的 ID。
@@ -308,8 +317,8 @@ const AiApiHandler = {
      * @returns {Promise<void>}
      */
     sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId) {
-        const aiContact = UserManager.contacts[aiContactId];
-        if (!aiContact || !aiContact.isAI) {
+        const aiContact = UserManager.contacts[aiContactId]; // 从 UserManager 获取最新的AI联系人信息
+        if (!aiContact || !aiContact.isAI) { // 确保它确实是一个AI
             Utils.log(`AiApiHandler.sendGroupAiMessage: 目标 ${aiContactId} 不是有效的AI联系人。`, Utils.logLevels.WARN);
             return;
         }
@@ -332,16 +341,30 @@ const AiApiHandler = {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
-            let systemPrompt = (group.aiPrompts && group.aiPrompts[aiContactId])
-                ? group.aiPrompts[aiContactId]
-                : aiContact.aiConfig.systemPrompt;
-            systemPrompt += Config.ai.baseSystemPrompt;
+            let systemPromptBase = "";
+            if (group.aiPrompts && group.aiPrompts[aiContactId] !== undefined) {
+                systemPromptBase = group.aiPrompts[aiContactId]; // 优先使用群组特定提示词
+                Utils.log(`AiApiHandler.sendGroupAiMessage: 使用群组特定提示词 for AI ${aiContactId} in group ${groupId}.`, Utils.logLevels.DEBUG);
+            } else if (aiContact.aiConfig && aiContact.aiConfig.systemPrompt !== undefined) {
+                systemPromptBase = aiContact.aiConfig.systemPrompt; // 使用AI联系人当前的默认提示词
+                Utils.log(`AiApiHandler.sendGroupAiMessage: 使用AI默认提示词 for AI ${aiContactId} in group ${groupId}.`, Utils.logLevels.DEBUG);
+            } else {
+                Utils.log(`AiApiHandler.sendGroupAiMessage: AI ${aiContactId} 在群组 ${groupId} 中无特定提示词，也无默认提示词。使用空提示词。`, Utils.logLevels.WARN);
+            }
+            const finalSystemPrompt = systemPromptBase + Config.ai.baseGroupSystemPrompt;
 
-            const fiveMinutesAgo = new Date().getTime() - (Config.ai.sessionTime);
+
+            const groupContextWindow = (typeof Config !== 'undefined' && Config.ai && Config.ai.groupAiSessionTime !== undefined)
+                ? Config.ai.groupAiSessionTime
+                : (3 * 60 * 1000);
+            const timeThreshold = new Date().getTime() - groupContextWindow;
+
+            // Fetch chat history *before* the current @-mention message was added.
+            // The `mentionedMessageText` will be added explicitly later.
             const groupChatHistory = ChatManager.chats[groupId] || [];
 
             const recentMessages = groupChatHistory.filter(msg =>
-                new Date(msg.timestamp).getTime() > fiveMinutesAgo &&
+                new Date(msg.timestamp).getTime() > timeThreshold &&
                 (msg.type === 'text' || (msg.type === 'system' && !msg.isThinking)) &&
                 msg.id !== thinkingMsgId
             );
@@ -360,10 +383,19 @@ const AiApiHandler = {
             });
 
             const messagesForRequestBody = [];
-            messagesForRequestBody.push({ role: "system", content: systemPrompt });
+            messagesForRequestBody.push({ role: "system", content: finalSystemPrompt });
             messagesForRequestBody.push(...contextMessagesForAIHistory);
 
-            Utils.log(`AiApiHandler.sendGroupAiMessage: 为 ${aiContact.name} (群组 ${group.name}) 发送 AI 请求。`, Utils.logLevels.DEBUG);
+            // Explicitly add the user's @-mention message that triggered this call
+            const triggeringSenderName = UserManager.contacts[originalSenderId]?.name || `用户 ${String(originalSenderId).substring(0,4)}`;
+            const userTriggerMessage = {
+                role: 'user',
+                content: `${triggeringSenderName}: ${mentionedMessageText} [发送于: ${new Date().toLocaleString()}]`
+            };
+            messagesForRequestBody.push(userTriggerMessage);
+
+
+            Utils.log(`AiApiHandler.sendGroupAiMessage: 为 ${aiContact.name} (群组 ${group.name}) 发送 AI 请求。Kontextfenster: ${groupContextWindow / 60000} Minuten.`, Utils.logLevels.DEBUG);
 
             const requestBody = {
                 model: effectiveConfig.model,
@@ -371,9 +403,9 @@ const AiApiHandler = {
                 stream: true,
                 temperature: 0.1,
                 max_tokens: effectiveConfig.maxTokens || 2048,
-                user: originalSenderId,
-                // character_id: aiContactId, // Entfernt
-                group_id: groupId
+                // user: originalSenderId,
+                group_id: groupId,
+                character_id: aiContactId // 添加character_id
             };
             Utils.log(`发送到群组 AI (${aiContact.name} in ${group.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
@@ -592,15 +624,11 @@ const AiApiHandler = {
         try {
             const isHealthy = await this.checkAiServiceHealth();
             UserManager.updateAiServiceStatus(isHealthy);
-            if (typeof EventEmitter !== 'undefined') {
-                EventEmitter.emit('aiServiceStatusUpdated', UserManager.isAiServiceHealthy);
-            }
+            // EventEmitter.emit('aiServiceStatusUpdated'...) is now called within UserManager.updateAiServiceStatus
         } catch (e) {
             Utils.log("处理 AI 配置变更时，健康检查出错: " + e.message, Utils.logLevels.ERROR);
             UserManager.updateAiServiceStatus(false);
-            if (typeof EventEmitter !== 'undefined') {
-                EventEmitter.emit('aiServiceStatusUpdated', false);
-            }
+            // EventEmitter.emit('aiServiceStatusUpdated'...) is now called within UserManager.updateAiServiceStatus
         }
     }
 };

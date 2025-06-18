@@ -1,12 +1,7 @@
 /**
  * @file UserManager.js
  * @description 核心用户管理器，负责处理当前用户的信息、设置、所有联系人（包括特殊 AI 联系人）的数据管理。
- *              它与数据库交互以持久化用户和联系人数据，并确保主题定义的特殊联系人被正确加载和合并。
- *              现在依赖 ThemeLoader 动态提供特殊联系人定义。
- *              修复了切换主题或初始化时，可能加载非当前主题 AI 角色的问题。
- *              确保 TTS 配置中的 tts_mode 和 version 得到正确处理。
- *              主题切换时，会删除缓存和数据库中仅属于旧主题的 AI 联系人及其聊天记录，并将其从群组中移除。
- *              新增：添加联系人后，如果群组详情面板打开，会尝试更新其中的添加成员下拉列表。
+ *              它与数据库交互以持久化用户和联系人数据。AI联系人在主题切换后会被保留，其配置会根据当前主题定义或历史数据进行更新。
  * @module UserManager
  * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
  * @property {string|null} userId - 当前用户的唯一 ID。
@@ -16,6 +11,8 @@
  * @property {function} removeContact - 移除一个联系人。
  * @property {function} clearAllContacts - 清空所有用户添加的联系人。
  * @property {function} updateUserSetting - 更新并保存用户的偏好设置。
+ * @property {function} isSpecialContact - 检查一个联系人是否为广义上的特殊联系人（特殊标记或AI）。
+ * @property {function} isSpecialContactInCurrentTheme - 检查一个联系人是否由当前主题定义为特殊。
  * @dependencies DBManager, Utils, NotificationUIManager, ChatManager, ConnectionManager, ThemeLoader, ModalUIManager, SettingsUIManager, ChatAreaUIManager, EventEmitter, GroupManager
  * @dependents AppInitializer (进行初始化), 几乎所有其他管理器都会直接或间接与之交互以获取用户信息或联系人数据。
  */
@@ -31,7 +28,6 @@ const UserManager = {
 
     /**
      * 初始化用户管理器。加载或创建当前用户数据，并加载所有联系人。
-     * 现在确保只加载当前主题的 AI 角色和用户添加的常规联系人。
      * @returns {Promise<void>}
      */
     async init() {
@@ -56,41 +52,27 @@ const UserManager = {
 
             this.contacts = {};
 
+            let dbStoredContacts = [];
+            try {
+                dbStoredContacts = await DBManager.getAllItems('contacts');
+                if (dbStoredContacts && dbStoredContacts.length > 0) {
+                    for (const dbContact of dbStoredContacts) {
+                        if (!dbContact.aiConfig) dbContact.aiConfig = {};
+                        if (!dbContact.aiConfig.tts) dbContact.aiConfig.tts = {};
+                        if (dbContact.aiConfig.tts.tts_mode === undefined) dbContact.aiConfig.tts.tts_mode = 'Preset';
+                        if (dbContact.aiConfig.tts.version === undefined) dbContact.aiConfig.tts.version = 'v4';
+                        this.contacts[dbContact.id] = dbContact;
+                    }
+                }
+            } catch (error) {
+                Utils.log(`UserManager.init: 从 DB 加载联系人失败: ${error}`, Utils.logLevels.ERROR);
+            }
+
             const currentThemeSpecialDefs = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions()
                 : [];
 
             await this.ensureSpecialContacts(currentThemeSpecialDefs, false);
-
-            let dbStoredContacts = [];
-            try {
-                dbStoredContacts = await DBManager.getAllItems('contacts');
-            } catch (error) {
-                Utils.log(`UserManager.init: 从 DB 加载联系人失败: ${error}`, Utils.logLevels.ERROR);
-            }
-
-            if (dbStoredContacts && dbStoredContacts.length > 0) {
-                for (const dbContact of dbStoredContacts) {
-                    if (this.contacts[dbContact.id] && this.contacts[dbContact.id].isSpecial) {
-                        continue;
-                    }
-
-                    const isSpecialInCurrentTheme = currentThemeSpecialDefs.some(def => def.id === dbContact.id);
-                    if (!isSpecialInCurrentTheme && (dbContact.isSpecial || dbContact.isAI)) {
-                        Utils.log(`UserManager.init: 跳过DB联系人 ${dbContact.id} ('${dbContact.name}'), 它似乎是旧主题的特殊/AI联系人，且不在当前主题中。`, Utils.logLevels.DEBUG);
-                        continue;
-                    }
-
-                    dbContact.isSpecial = false;
-                    dbContact.isAI = false;
-                    if (!dbContact.aiConfig) dbContact.aiConfig = {};
-                    if (!dbContact.aiConfig.tts) dbContact.aiConfig.tts = {};
-                    if (dbContact.aiConfig.tts.tts_mode === undefined) dbContact.aiConfig.tts.tts_mode = 'Preset';
-                    if (dbContact.aiConfig.tts.version === undefined) dbContact.aiConfig.tts.version = 'v4';
-                    dbContact.aboutDetails = null;
-                    this.contacts[dbContact.id] = dbContact;
-                }
-            }
 
             if (typeof EventEmitter !== 'undefined') {
                 EventEmitter.on('themeChanged', this.handleThemeChange.bind(this));
@@ -115,12 +97,12 @@ const UserManager = {
         if (typeof SettingsUIManager !== 'undefined' && SettingsUIManager.updateCopyIdButtonState) {
             SettingsUIManager.updateCopyIdButtonState();
         }
-        Utils.log(`用户管理器已初始化。用户 ID: ${this.userId} (${this.userName})。已加载 ${Object.keys(this.contacts).length} 个联系人。`, Utils.logLevels.INFO);
+        Utils.log(`用户管理器已初始化。用户 ID: ${this.userId} (${this.userName})。当前管理 ${Object.keys(this.contacts).length} 个联系人。`, Utils.logLevels.INFO);
     },
 
     /**
-     * 处理主题变更事件，更新特殊联系人。
-     * 如果旧主题中的AI联系人不在新主题中，则将其从缓存、DB和localStorage中删除，并从所有群组中移除。
+     * 处理主题变更事件，调用 ensureSpecialContacts 更新联系人列表。
+     * 同时，如果当前打开的是群组聊天且详情面板可见，则刷新详情面板的成员列表。
      * @param {object} eventData - 包含 { newThemeKey, newDefinitions } 的事件数据。
      * @returns {Promise<void>}
      */
@@ -128,90 +110,25 @@ const UserManager = {
         Utils.log(`UserManager: 正在处理 themeChanged 事件。新主题密钥: ${eventData.newThemeKey}`, Utils.logLevels.INFO);
         const newDefinitions = eventData.newDefinitions || [];
 
-        const oldThemeAiContactsToRemove = [];
-        const contactsToKeepOrBecomeRegular = {};
-        const currentContactIds = Object.keys(this.contacts);
-
-        for (const contactId of currentContactIds) {
-            const contact = this.contacts[contactId];
-            if (!contact) continue;
-            const isSpecialInNewTheme = newDefinitions.some(def => def.id === contact.id);
-            if (contact.isSpecial && contact.isAI) {
-                if (!isSpecialInNewTheme) {
-                    oldThemeAiContactsToRemove.push(contactId);
-                    Utils.log(`UserManager: 主题切换 - 标记移除旧主题AI联系人: ${contactId} ('${contact.name}')`, Utils.logLevels.DEBUG);
-                }
-            } else if (contact.isSpecial && !contact.isAI) {
-                if (!isSpecialInNewTheme) {
-                    contact.isSpecial = false;
-                    contact.isAI = false;
-                    contact.aiConfig = { tts: { tts_mode: 'Preset', version: 'v4' } };
-                    contact.aboutDetails = null;
-                    contactsToKeepOrBecomeRegular[contactId] = contact;
-                }
-            } else {
-                if (!isSpecialInNewTheme) {
-                    contactsToKeepOrBecomeRegular[contactId] = contact;
-                }
-            }
-        }
-        this.contacts = contactsToKeepOrBecomeRegular;
-
-        // Entfernt alte AI-Kontakte und ihre Daten
-        for (const contactId of oldThemeAiContactsToRemove) {
-            try {
-                await DBManager.removeItem('contacts', contactId);
-                localStorage.removeItem(`ttsConfig_${contactId}`);
-                if (ChatManager.currentChatId === contactId) {
-                    ChatManager.currentChatId = null;
-                    if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showNoChatSelected();
-                }
-                if (typeof ChatManager !== 'undefined') await ChatManager.clearChat(contactId);
-
-                // NEU: Iteriere durch alle Gruppen und entferne den AI-Kontakt
-                if (typeof GroupManager !== 'undefined' && GroupManager.groups) {
-                    for (const groupId in GroupManager.groups) {
-                        const group = GroupManager.groups[groupId];
-                        const memberIndex = group.members.indexOf(contactId);
-                        if (memberIndex !== -1) {
-                            group.members.splice(memberIndex, 1);
-                            if (group.aiPrompts && group.aiPrompts[contactId]) {
-                                delete group.aiPrompts[contactId];
-                            }
-                            await GroupManager.saveGroup(groupId);
-                            Utils.log(`UserManager: AI ${contactId} aus Gruppe ${groupId} entfernt wegen Themenwechsel.`, Utils.logLevels.DEBUG);
-                            // Optional: Systemnachricht in die Gruppe senden
-                            const systemMessageContent = `AI-Kontakt "${contact.name}" ist aufgrund eines Themenwechsels nicht mehr verfügbar und wurde aus dieser Gruppe entfernt.`;
-                            const systemMessage = {
-                                id: `sys_ai_removed_theme_change_${Date.now()}`,
-                                type: 'system',
-                                content: systemMessageContent,
-                                timestamp: new Date().toISOString(),
-                                groupId: groupId
-                            };
-                            ChatManager.addMessage(groupId, systemMessage);
-                            // Die Broadcast-Logik für Systemnachrichten ist nicht immer notwendig,
-                            // da die Gruppenmitgliedschaftsänderung selbst schon eine Art Update ist.
-                            // GroupManager.broadcastToGroup(groupId, systemMessage, [UserManager.userId]);
-                            if (ChatManager.currentChatId === groupId && typeof DetailsPanelUIManager !== 'undefined') {
-                                DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
-                            }
-                        }
-                    }
-                }
-                Utils.log(`UserManager: 主题切换 - 已移除旧主题AI联系人 ${contactId} 的数据及群组关联。`, Utils.logLevels.DEBUG);
-            } catch (error) {
-                Utils.log(`UserManager: 主题切换 - 移除旧联系人 ${contactId} 数据时出错: ${error}`, Utils.logLevels.ERROR);
-            }
-        }
-
         await this.ensureSpecialContacts(newDefinitions, false);
+
         if (typeof ChatManager !== 'undefined') {
             ChatManager.renderChatList(ChatManager.currentFilter);
-            if (ChatManager.currentChatId && this.contacts[ChatManager.currentChatId] && this.contacts[ChatManager.currentChatId].isSpecial) {
-                ChatManager.openChat(ChatManager.currentChatId, 'contact');
+            if (ChatManager.currentChatId && this.contacts[ChatManager.currentChatId]) {
+                const contact = this.contacts[ChatManager.currentChatId];
+                const type = contact.type || 'contact';
+                ChatManager.openChat(ChatManager.currentChatId, type);
+            }
+
+            // 新增：刷新群组详情面板的成员添加列表
+            if (ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_') &&
+                typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.isPanelAreaVisible &&
+                DetailsPanelUIManager.currentView === 'details') {
+                Utils.log(`UserManager.handleThemeChange: 主题已更改，当前为群组 ${ChatManager.currentChatId} 且详情面板可见，正在刷新成员列表。`, Utils.logLevels.DEBUG);
+                DetailsPanelUIManager.updateDetailsPanelMembers(ChatManager.currentChatId);
             }
         }
+
         const currentTheme = (typeof ThemeLoader !== 'undefined' && ThemeLoader.themes[eventData.newThemeKey])
             ? ThemeLoader.themes[eventData.newThemeKey]
             : null;
@@ -221,11 +138,21 @@ const UserManager = {
     },
 
     /**
-     * 检查给定的 ID 是否为特殊联系人（基于当前加载的主题定义）。
+     * 检查一个联系人是否为广义上的特殊联系人（即其 isSpecial 标记为 true 或 isAI 标记为 true）。
      * @param {string} contactId - 要检查的联系人 ID。
      * @returns {boolean}
      */
     isSpecialContact: function(contactId) {
+        const contact = this.contacts[contactId];
+        return !!(contact && (contact.isSpecial || contact.isAI));
+    },
+
+    /**
+     * 检查给定的 ID 是否为当前主题定义的特殊联系人。
+     * @param {string} contactId - 要检查的联系人 ID。
+     * @returns {boolean}
+     */
+    isSpecialContactInCurrentTheme: function(contactId) {
         const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
             ? ThemeLoader.getCurrentSpecialContactsDefinitions()
             : [];
@@ -235,96 +162,117 @@ const UserManager = {
     /**
      * 确保所有在提供的 `definitions` 中定义的特殊联系人都存在于 `this.contacts` 中，
      * 并合并来自数据库和 localStorage 的持久化数据。
-     * @param {Array<object>} definitions - 特殊联系人定义数组。
+     * 同时，处理那些在 `this.contacts` 中存在但不在新定义中的旧特殊联系人。
+     * @param {Array<object>} newThemeDefinitions - 新主题的特殊联系人定义数组。
      * @param {boolean} [isFallbackMode=false] - 是否处于回退模式（不访问数据库）。
      * @returns {Promise<void>}
      */
-    async ensureSpecialContacts(definitions, isFallbackMode = false) {
-        if (!definitions || !Array.isArray(definitions)) {
+    async ensureSpecialContacts(newThemeDefinitions, isFallbackMode = false) {
+        if (!newThemeDefinitions || !Array.isArray(newThemeDefinitions)) {
             Utils.log("UserManager.ensureSpecialContacts: 收到无效或空定义。正在中止。", Utils.logLevels.WARN);
             return;
         }
-        for (const scDef of definitions) {
-            let contactDataFromDef = {
-                id: scDef.id, name: scDef.name,
-                lastMessage: scDef.initialMessage || '你好！',
-                lastTime: new Date().toISOString(), unread: 0,
-                isSpecial: true, avatarText: scDef.avatarText,
-                avatarUrl: scDef.avatarUrl || null, type: 'contact',
-                isAI: scDef.isAI || false,
-                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || { tts: {} })),
-                aboutDetails: scDef.aboutDetails ? JSON.parse(JSON.stringify(scDef.aboutDetails)) : null
-            };
-            if (!contactDataFromDef.aiConfig.tts) contactDataFromDef.aiConfig.tts = {};
-            if (contactDataFromDef.aiConfig.tts.tts_mode === undefined) contactDataFromDef.aiConfig.tts.tts_mode = 'Preset';
-            if (contactDataFromDef.aiConfig.tts.version === undefined) contactDataFromDef.aiConfig.tts.version = 'v4';
 
-            let finalContactData = { ...contactDataFromDef };
+        const processedContactIds = new Set();
+
+        for (const scDef of newThemeDefinitions) {
+            processedContactIds.add(scDef.id);
+            let existingContact = this.contacts[scDef.id];
             let dbContact = null;
             if (!isFallbackMode) {
-                try {
-                    dbContact = await DBManager.getItem('contacts', scDef.id);
-                } catch (dbError) {
-                    Utils.log(`UserManager.ensureSpecialContacts: 从 DB 获取联系人 ${scDef.id} 时出错: ${dbError}`, Utils.logLevels.ERROR);
-                }
+                try { dbContact = await DBManager.getItem('contacts', scDef.id); }
+                catch (dbError) { Utils.log(`ensureSpecialContacts: 获取DB联系人 ${scDef.id} 失败: ${dbError}`, Utils.logLevels.ERROR); }
             }
-            if (dbContact) {
-                finalContactData.name = dbContact.name || finalContactData.name;
-                if (dbContact.lastTime && new Date(dbContact.lastTime) > new Date(finalContactData.lastTime)) {
-                    finalContactData.lastMessage = dbContact.lastMessage || finalContactData.lastMessage;
-                    finalContactData.lastTime = dbContact.lastTime;
-                }
-                finalContactData.unread = dbContact.unread !== undefined ? dbContact.unread : 0;
-                finalContactData.avatarUrl = dbContact.avatarUrl !== undefined ? dbContact.avatarUrl : finalContactData.avatarUrl;
-                if (dbContact.aiConfig && finalContactData.isAI) {
-                    const { tts: dbTtsConfig, ...otherDbAiConfig } = dbContact.aiConfig;
-                    const themeDefTtsMode = contactDataFromDef.aiConfig.tts?.tts_mode;
-                    const dbTtsMode = dbTtsConfig?.tts_mode;
-                    const themeDefVersion = contactDataFromDef.aiConfig.tts?.version;
-                    const dbVersion = dbTtsConfig?.version;
-                    finalContactData.aiConfig = {
-                        ...contactDataFromDef.aiConfig, ...otherDbAiConfig,
-                        tts: {
-                            ...(contactDataFromDef.aiConfig.tts || {}),
-                            ...(dbTtsConfig || {}),
-                            tts_mode: themeDefTtsMode || dbTtsMode || 'Preset',
-                            version: themeDefVersion || dbVersion || 'v4'
-                        }
-                    };
-                } else if (!finalContactData.isAI) {
-                    finalContactData.aiConfig = { tts: { tts_mode: 'Preset', version: 'v4' } };
-                }
-                finalContactData.aboutDetails = dbContact.aboutDetails || finalContactData.aboutDetails;
-            }
-            if (!finalContactData.aiConfig) finalContactData.aiConfig = {};
-            if (!finalContactData.aiConfig.tts) finalContactData.aiConfig.tts = {};
-            if (finalContactData.aiConfig.tts.tts_mode === undefined) finalContactData.aiConfig.tts.tts_mode = 'Preset';
-            if (finalContactData.aiConfig.tts.version === undefined) finalContactData.aiConfig.tts.version = 'v4';
 
-            if (finalContactData.isAI) {
+            const baseDataFromDef = {
+                id: scDef.id, name: scDef.name,
+                isSpecial: true,
+                avatarText: scDef.avatarText, avatarUrl: scDef.avatarUrl || null,
+                type: 'contact', isAI: scDef.isAI || false,
+                aiConfig: JSON.parse(JSON.stringify(scDef.aiConfig || { tts: {} })),
+                aboutDetails: scDef.aboutDetails ? JSON.parse(JSON.stringify(scDef.aboutDetails)) : null,
+            };
+            if (!baseDataFromDef.aiConfig.tts) baseDataFromDef.aiConfig.tts = {};
+            if (baseDataFromDef.aiConfig.tts.tts_mode === undefined) baseDataFromDef.aiConfig.tts.tts_mode = 'Preset';
+            if (baseDataFromDef.aiConfig.tts.version === undefined) baseDataFromDef.aiConfig.tts.version = 'v4';
+
+            if (existingContact) {
+                existingContact.isSpecial = true;
+                existingContact.isAI = baseDataFromDef.isAI;
+                existingContact.name = baseDataFromDef.name;
+                existingContact.avatarText = baseDataFromDef.avatarText;
+                existingContact.avatarUrl = baseDataFromDef.avatarUrl;
+                existingContact.aboutDetails = baseDataFromDef.aboutDetails;
+
+                const mergedAiConfig = { ...(baseDataFromDef.aiConfig || {tts: {}}) };
+                if (existingContact.aiConfig) {
+                    Object.assign(mergedAiConfig, existingContact.aiConfig);
+                    if (existingContact.aiConfig.tts) {
+                        Object.assign(mergedAiConfig.tts, existingContact.aiConfig.tts);
+                    }
+                }
+                if (dbContact && dbContact.aiConfig && baseDataFromDef.isAI) {
+                    Object.assign(mergedAiConfig, dbContact.aiConfig);
+                    if (dbContact.aiConfig.tts) {
+                        Object.assign(mergedAiConfig.tts, dbContact.aiConfig.tts);
+                    }
+                }
+                existingContact.aiConfig = mergedAiConfig;
+
+                existingContact.lastMessage = (dbContact && dbContact.lastMessage !== undefined) ? dbContact.lastMessage : (existingContact.lastMessage !== undefined ? existingContact.lastMessage : (scDef.initialMessage || '你好！'));
+                existingContact.lastTime = (dbContact && dbContact.lastTime) ? dbContact.lastTime : (existingContact.lastTime || new Date().toISOString());
+                existingContact.unread = (dbContact && dbContact.unread !== undefined) ? dbContact.unread : (existingContact.unread || 0);
+
+            } else {
+                this.contacts[scDef.id] = { ...baseDataFromDef };
+                existingContact = this.contacts[scDef.id];
+
+                if (dbContact) {
+                    existingContact.name = dbContact.name || existingContact.name;
+                    existingContact.lastMessage = dbContact.lastMessage !== undefined ? dbContact.lastMessage : (scDef.initialMessage || '你好！');
+                    existingContact.lastTime = dbContact.lastTime || new Date().toISOString();
+                    existingContact.unread = dbContact.unread !== undefined ? dbContact.unread : 0;
+                    existingContact.avatarUrl = dbContact.avatarUrl !== undefined ? dbContact.avatarUrl : existingContact.avatarUrl;
+                    if (dbContact.aiConfig && existingContact.isAI) {
+                        Object.assign(existingContact.aiConfig, dbContact.aiConfig);
+                        if(dbContact.aiConfig.tts) Object.assign(existingContact.aiConfig.tts, dbContact.aiConfig.tts);
+                    }
+                } else {
+                    existingContact.lastMessage = scDef.initialMessage || '你好！';
+                    existingContact.lastTime = new Date().toISOString();
+                    existingContact.unread = 0;
+                }
+            }
+
+            if (existingContact.isAI) {
                 const storedTtsSettingsJson = localStorage.getItem(`ttsConfig_${scDef.id}`);
                 if (storedTtsSettingsJson) {
                     try {
                         const storedTtsSettings = JSON.parse(storedTtsSettingsJson);
-                        const localStorageTtsMode = storedTtsSettings.tts_mode;
-                        const localStorageVersion = storedTtsSettings.version;
-                        finalContactData.aiConfig.tts = {
-                            ...(finalContactData.aiConfig.tts || {}),
-                            ...storedTtsSettings,
-                            tts_mode: localStorageTtsMode || finalContactData.aiConfig.tts.tts_mode || 'Preset',
-                            version: localStorageVersion || finalContactData.aiConfig.tts.version || 'v4'
-                        };
-                    } catch (e) {
-                        Utils.log(`从 localStorage 解析 ${scDef.id} 的 TTS 设置时出错: ${e}`, Utils.logLevels.WARN);
-                    }
+                        Object.assign(existingContact.aiConfig.tts, storedTtsSettings);
+                    } catch (e) { Utils.log(`从localStorage解析TTS配置(${scDef.id})失败: ${e}`, Utils.logLevels.WARN); }
                 }
             }
-            if (finalContactData.aiConfig && finalContactData.aiConfig.tts && finalContactData.aiConfig.tts.version === undefined) {
-                finalContactData.aiConfig.tts.version = 'v4';
-            }
-            this.contacts[scDef.id] = finalContactData;
+            if (!existingContact.aiConfig) existingContact.aiConfig = {};
+            if (!existingContact.aiConfig.tts) existingContact.aiConfig.tts = {};
+            if (existingContact.aiConfig.tts.tts_mode === undefined) existingContact.aiConfig.tts.tts_mode = 'Preset';
+            if (existingContact.aiConfig.tts.version === undefined) existingContact.aiConfig.tts.version = 'v4';
+
             if (!isFallbackMode) {
                 await this.saveContact(scDef.id);
+            }
+        }
+
+        for (const contactId in this.contacts) {
+            if (!processedContactIds.has(contactId)) {
+                const contact = this.contacts[contactId];
+                if (contact.isSpecial) {
+                    contact.isSpecial = false;
+                    Utils.log(`ensureSpecialContacts: 联系人 ${contactId} ('${contact.name}') isSpecial设为false。AI状态: ${contact.isAI}`, Utils.logLevels.DEBUG);
+                    if (!isFallbackMode) {
+                        await this.saveContact(contactId);
+                    }
+                }
             }
         }
     },
@@ -403,30 +351,32 @@ const UserManager = {
             NotificationUIManager.showNotification("您不能添加自己为联系人。", "error");
             return false;
         }
-        if (this.isSpecialContact(id)) {
+        if (this.isSpecialContactInCurrentTheme(id)) {
             const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
             const specialContactName = currentDefinitions.find(sc => sc.id === id)?.name || "这个特殊联系人";
             NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
             if (establishConnection && this.contacts[id] && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
-                Utils.log(`UserManager.addContact: 为特殊联系人 ${id} (非AI) 尝试连接 (establishConnection=true)。`, Utils.logLevels.DEBUG);
                 ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
         }
+
         if (this.contacts[id]) {
-            NotificationUIManager.showNotification("该联系人已存在。", "warning");
+            NotificationUIManager.showNotification("该联系人已在您的列表中。", "info");
+            let contactChanged = false;
             if (name && this.contacts[id].name !== name) {
                 this.contacts[id].name = name;
-                await this.saveContact(id);
-                if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
+                contactChanged = true;
             }
-            if (establishConnection && !ConnectionManager.isConnectedTo(id)) {
-                const existingConn = ConnectionManager.connections[id];
-                if (!existingConn || (existingConn.peerConnection && existingConn.peerConnection.signalingState === 'stable' && existingConn.peerConnection.connectionState !== 'connecting')) {
-                    Utils.log(`UserManager.addContact: 联系人 ${id} 已存在但未连接，尝试建立连接 (establishConnection=true)。`, Utils.logLevels.DEBUG);
-                    ConnectionManager.createOffer(id, { isSilent: true });
-                }
+            if (this.contacts[id].isSpecial) {
+                this.contacts[id].isSpecial = false;
+                contactChanged = true;
+            }
+            if(contactChanged) await this.saveContact(id);
+            if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
+            if (establishConnection && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
+                ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
         }
@@ -453,27 +403,24 @@ const UserManager = {
             }
         }
 
-
         if (establishConnection) {
-            Utils.log(`UserManager.addContact: 尝试与新联系人 ${id} 建立初始连接 (establishConnection=true)。`, Utils.logLevels.INFO);
             ConnectionManager.createOffer(id, { isSilent: true });
-        } else {
-            Utils.log(`UserManager.addContact: 新联系人 ${id} 已添加，但不尝试建立连接 (establishConnection=false)。`, Utils.logLevels.INFO);
         }
         return true;
     },
 
     /**
      * 移除一个联系人。
+     * 不允许移除当前主题定义的特殊联系人。
      * @param {string} id - 要移除的联系人 ID。
      * @returns {Promise<boolean>} - 操作是否成功。
      */
     async removeContact(id) {
-        if (this.isSpecialContact(id)) {
+        if (this.isSpecialContactInCurrentTheme(id)) {
             const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
             const specialContactName = currentDefinitions.find(sc => sc.id === id)?.name || "这个特殊联系人";
-            NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能被移除。`, "warning");
+            NotificationUIManager.showNotification(`${specialContactName} 是当前主题的内置联系人，不能被移除。`, "warning");
             return false;
         }
         if (this.contacts[id]) {
@@ -482,15 +429,34 @@ const UserManager = {
             try {
                 await DBManager.removeItem('contacts', id);
                 localStorage.removeItem(`ttsConfig_${id}`);
+                if (tempContact.isAI && typeof GroupManager !== 'undefined' && GroupManager.groups) {
+                    for (const groupId in GroupManager.groups) {
+                        const group = GroupManager.groups[groupId];
+                        const memberIndex = group.members.indexOf(id);
+                        if (memberIndex !== -1) {
+                            group.members.splice(memberIndex, 1);
+                            if (group.aiPrompts && group.aiPrompts[id]) {
+                                delete group.aiPrompts[id];
+                            }
+                            await GroupManager.saveGroup(groupId);
+                            if (ChatManager.currentChatId === groupId && typeof DetailsPanelUIManager !== 'undefined') {
+                                DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
+                            }
+                        }
+                    }
+                }
                 if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
+                NotificationUIManager.showNotification(`联系人 "${tempContact.name}" 已删除。`, 'success');
                 return true;
             } catch (error) {
                 Utils.log(`从数据库移除联系人 ${id} 失败: ${error}`, Utils.logLevels.ERROR);
                 this.contacts[id] = tempContact;
                 if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
+                NotificationUIManager.showNotification("删除联系人失败。", "error");
                 return false;
             }
         }
+        NotificationUIManager.showNotification("未找到要删除的联系人。", "warning");
         return false;
     },
 
@@ -534,49 +500,72 @@ const UserManager = {
     },
 
     /**
-     * 清空所有用户添加的联系人及其聊天记录。
-     * AI 助手（如果它们不是通过当前主题定义的“不可移除”特殊联系人）也将被删除。
+     * 清空所有非当前主题特殊联系人。
      * @returns {Promise<void>}
      */
     async clearAllContacts() {
         ModalUIManager.showConfirmationModal(
-            "您确定要删除所有用户添加的联系人以及所有可移除的AI助手吗？这也会清空他们的聊天记录。核心内置的特殊联系人将保留。",
+            "您确定要删除所有非当前主题的特殊联系人以及所有您手动添加的联系人吗？这也会清空他们的聊天记录和群组关联。当前主题的内置特殊联系人将保留。",
             async () => {
-                const tempContacts = { ...this.contacts };
+                const tempContactsSnapshot = { ...this.contacts };
                 const contactIdsToRemove = [];
-                const contactsToKeepExplicitlyBasedOnCurrentTheme = {};
+                const contactsToKeep = {};
+
                 const currentSpecialDefs = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                     ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
+
                 currentSpecialDefs.forEach(def => {
-                    if (tempContacts[def.id]) {
-                        contactsToKeepExplicitlyBasedOnCurrentTheme[def.id] = tempContacts[def.id];
+                    if (tempContactsSnapshot[def.id]) {
+                        contactsToKeep[def.id] = tempContactsSnapshot[def.id];
                     }
                 });
-                Object.keys(tempContacts).forEach(id => {
-                    if (!contactsToKeepExplicitlyBasedOnCurrentTheme[id]) {
+
+                Object.keys(tempContactsSnapshot).forEach(id => {
+                    if (!contactsToKeep[id]) {
                         contactIdsToRemove.push(id);
                     }
                 });
-                this.contacts = contactsToKeepExplicitlyBasedOnCurrentTheme;
+
+                this.contacts = contactsToKeep;
+
                 try {
                     for (const contactId of contactIdsToRemove) {
+                        const removedContactDetails = tempContactsSnapshot[contactId];
                         await DBManager.removeItem('contacts', contactId);
                         localStorage.removeItem(`ttsConfig_${contactId}`);
                         if (typeof ChatManager !== 'undefined') await ChatManager.clearChat(contactId);
                         if (typeof ConnectionManager !== 'undefined' && ConnectionManager.connections[contactId]) {
                             ConnectionManager.close(contactId);
                         }
+                        if (removedContactDetails && removedContactDetails.isAI && typeof GroupManager !== 'undefined' && GroupManager.groups) {
+                            for (const groupId in GroupManager.groups) {
+                                const group = GroupManager.groups[groupId];
+                                const memberIndex = group.members.indexOf(contactId);
+                                if (memberIndex !== -1) {
+                                    group.members.splice(memberIndex, 1);
+                                    if (group.aiPrompts && group.aiPrompts[contactId]) {
+                                        delete group.aiPrompts[contactId];
+                                    }
+                                    await GroupManager.saveGroup(groupId);
+                                    if (ChatManager.currentChatId === groupId && typeof DetailsPanelUIManager !== 'undefined') {
+                                        DetailsPanelUIManager.updateDetailsPanelMembers(groupId);
+                                    }
+                                }
+                            }
+                        }
                     }
+
                     if (ChatManager.currentChatId && !ChatManager.currentChatId.startsWith('group_') && contactIdsToRemove.includes(ChatManager.currentChatId)) {
                         ChatManager.currentChatId = null;
                         if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showNoChatSelected();
                     }
+
                     if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
-                    NotificationUIManager.showNotification("所有可移除的联系人、AI助手及其聊天记录已清空。", 'success');
+                    NotificationUIManager.showNotification("所有非当前主题特殊联系人及手动添加的联系人均已清空。", 'success');
                 } catch (error) {
                     Utils.log("清空联系人失败: " + error, Utils.logLevels.ERROR);
-                    NotificationUIManager.showNotification("从数据库清空联系人失败。", 'error');
-                    this.contacts = tempContacts;
+                    NotificationUIManager.showNotification("清空联系人时出错。", 'error');
+                    this.contacts = tempContactsSnapshot;
                     if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter);
                 }
             }
@@ -593,11 +582,19 @@ const UserManager = {
         const isMyMessage = message.sender === UserManager.userId || message.originalSender === UserManager.userId;
         let senderContact = this.contacts[message.sender];
         let senderName;
+
         if (message.isRetracted) { return message.content; }
-        if (senderContact && senderContact.isSpecial) { senderName = senderContact.name; }
-        else if (isMyMessage) { senderName = "您"; }
-        else if (senderContact) { senderName = senderContact.name; }
-        else { senderName = "对方"; }
+
+        if (this.isSpecialContact(message.sender) && senderContact) {
+            senderName = senderContact.name;
+        } else if (isMyMessage) {
+            senderName = "您";
+        } else if (senderContact) {
+            senderName = senderContact.name;
+        } else {
+            senderName = "对方";
+        }
+
         switch (message.type) {
             case 'text': preview = `${senderName}: ${message.content}`; break;
             case 'image': preview = `${senderName}: [图片]`; break;
@@ -622,12 +619,13 @@ const UserManager = {
         this.isAiServiceHealthy = isHealthy;
         if (isHealthy) {
             this._aiServiceStatusMessage = "服务可用";
-            NotificationUIManager.showNotification('当前AI服务成功连接。', 'info');
         } else {
             this._aiServiceStatusMessage = "服务不可用";
-            NotificationUIManager.showNotification('当前AI服务不可用，前往AI 与 API 配置进行修改。', 'error');
         }
         Utils.log(`UserManager: AI 服务状态更新为: ${this._aiServiceStatusMessage}`, Utils.logLevels.INFO);
+        if(typeof EventEmitter !== 'undefined'){
+            EventEmitter.emit('aiServiceStatusUpdated', this.isAiServiceHealthy);
+        }
     },
 
     /**

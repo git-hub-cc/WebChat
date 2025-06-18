@@ -120,13 +120,13 @@ body {
     border: 1px solid var(--jjk-steel-frame-light);
     color: var(--text-color);
 }
-.search-bar::placeholder { color: var(--jjk-text-color-light); }
+.search-bar::placeholder { color: var(--text-color-light); } /* MODIFIED: Corrected variable */
 .search-bar:focus {
     border-color: var(--jjk-cursed-energy-blue);
     box-shadow: 0 0 0 2.5px rgba(var(--jjk-cursed-energy-blue-rgb),0.25), 0 0 5px rgba(var(--jjk-cursed-energy-blue-rgb),0.05) inset;
 }
 .nav-tabs { border-bottom: 1px solid var(--border-color); }
-.nav-tab { color: var(--jjk-text-color-light); padding: 10px 0;}
+.nav-tab { color: var(--text-color-light); padding: 10px 0;}
 .nav-tab:hover { color: var(--jjk-cursed-energy-blue); }
 .nav-tab.active {
     color: var(--jjk-cursed-energy-blue);
@@ -307,7 +307,7 @@ body {
 }
 .no-chat-selected .placeholder-text {
     font-size: 1.1em;
-    color: var(--jjk-text-color-light);
+    color: var(--text-color-light);
 }
 
 .status-indicator.global {
@@ -343,8 +343,8 @@ body {
     box-shadow: 0 0 5px rgba(var(--jjk-cursed-energy-blue-rgb),0.1) inset;
     text-align: center;
 }
-.message-sender { color: var(--jjk-text-color-light); font-weight: 500; margin-bottom: 4px; display: block;}
-.message .timestamp { color: var(--jjk-text-color-light); opacity: 0.8; }
+.message-sender { color: var(--text-color-light); font-weight: 500; margin-bottom: 4px; display: block;}
+.message .timestamp { color: var(--text-color-light); opacity: 0.8; }
 
 .chat-input-container {
     background-color: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.8);
@@ -356,12 +356,12 @@ body {
     border: 1px solid var(--jjk-steel-frame-light);
     color: var(--text-color);
 }
-#messageInput::placeholder { color: var(--jjk-text-color-light); }
+#messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.25), 0 0 8px rgba(var(--jjk-cursed-energy-blue-rgb),0.05) inset;
 }
-.icon-btn { color: var(--jjk-text-color-light); padding: 8px; border-radius: 50%; }
+.icon-btn { color: var(--text-color-light); padding: 8px; border-radius: 50%; }
 .icon-btn:hover { color: var(--jjk-cursed-energy-blue); background-color: rgba(var(--jjk-cursed-energy-blue-rgb),0.08); transform: scale(1.1); }
 #sendButtonMain { color: var(--jjk-cursed-energy-blue); font-weight: 600; font-size: 1.5em; }
 #sendButtonMain:hover { transform: translateX(2px) scale(1.05); filter: brightness(0.9); }

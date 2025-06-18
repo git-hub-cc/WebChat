@@ -4,6 +4,7 @@
  *              AI 配置现在优先从 localStorage 加载。主题切换现在无刷新。
  *              修复了切换配色方案后，主题选择器点击事件处理不当的问题。
  *              新增“清除缓存”按钮，用于清除 localStorage 和 IndexedDB 数据。
+ *              用户切换主题或配色方案后，自动隐藏菜单。
  * @module SettingsUIManager
  * @exports {object} SettingsUIManager - 对外暴露的单例对象，包含所有设置 UI 管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素、加载设置并绑定事件。
@@ -228,6 +229,7 @@ const SettingsUIManager = {
     /**
      * @private 填充配色方案选择器的选项。
      *          修改为调用 ThemeLoader.applyTheme() 无刷新切换。
+     *          切换后自动隐藏菜单。
      */
     _populateColorSchemeSelector: function() {
         if (!this.colorSchemeSelectedValueEl || !this.colorSchemeOptionsContainerEl || typeof ThemeLoader === 'undefined') return;
@@ -256,6 +258,10 @@ const SettingsUIManager = {
                 this._populateThemeSelectorWithOptions();
 
                 this.colorSchemeOptionsContainerEl.style.display = 'none';
+                // 切换配色方案后隐藏主菜单模态框
+                if (typeof ModalUIManager !== 'undefined') {
+                    ModalUIManager.toggleModal('mainMenuModal', false);
+                }
             });
             this.colorSchemeOptionsContainerEl.appendChild(optionDiv);
         }
@@ -271,6 +277,7 @@ const SettingsUIManager = {
     /**
      * @private 根据当前生效的配色方案，填充主题选择器的选项。
      *          修改为调用 ThemeLoader.applyTheme() 无刷新切换。
+     *          切换后自动隐藏菜单。
      */
     _populateThemeSelectorWithOptions: function() {
         if (!this.themeSelectedValueEl || !this.themeOptionsContainerEl || typeof ThemeLoader === 'undefined') return;
@@ -330,6 +337,10 @@ const SettingsUIManager = {
                         this.themeSelectedValueEl.dataset.currentThemeKey = selectedKey;
                     }
                     this.themeOptionsContainerEl.style.display = 'none';
+                    // 切换主题后隐藏主菜单模态框
+                    if (typeof ModalUIManager !== 'undefined') {
+                        ModalUIManager.toggleModal('mainMenuModal', false);
+                    }
                 });
                 this.themeOptionsContainerEl.appendChild(optionDiv);
             }
