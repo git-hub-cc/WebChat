@@ -3,10 +3,11 @@
  * @description 文本转语音 (TTS) 处理器，负责处理 AI 消息的语音合成功能。
  *              包括清理文本、向 TTS API 发送请求、处理响应以及管理消息中的播放控件 UI。
  *              现在实现了 TTS 音频的 IndexedDB 缓存。
+ *              更新：cleanTextForTts 现在仅保留中日韩字符、拉丁字母、数字、中英文逗号句号，其他标点替换为英文逗号。
  * @module MessageTtsHandler
  * @exports {object} MessageTtsHandler - 对外暴露的单例对象，包含所有 TTS 相关处理方法。
  * @property {function} requestTtsForMessage - 为指定消息文本请求 TTS 音频。
- * @property {function} playTtsAudioFromControl - 处理播放/暂停 TTS 音频的点击事件。
+ * @property {function} playTtsAudioFromControl - 处理播放/暂停 TTS 音调的点击事件。
  * @property {function} addTtsPlaceholder - 在消息中添加一个加载中的占位符。
  * @dependencies Config, Utils, UserManager, NotificationUIManager, AiApiHandler, DBManager
  * @dependents MessageManager (当 AI 消息完成时调用)
@@ -17,22 +18,85 @@ const MessageTtsHandler = {
     _TTS_CACHE_STORE_NAME: 'ttsCache',
 
     /**
-     * 清理文本，移除不适合 TTS 的特殊字符、标记等。
+     * 清理文本，以适应TTS。
+     * 规则：
+     * 1. 移除 Markdown 风格的强调、各类括号及其内容。
+     * 2. 保留中日韩字符 (Unicode ranges: \u4e00-\u9fff, \u3040-\u309f, \u30a0-\u30ff, \uff65-\uff9f, \uac00-\ud7af)。
+     * 3. 保留拉丁字母 (a-zA-Z) 和数字 (0-9)。
+     * 4. 保留英文逗号 (,), 英文句号 (.), 中文逗号 (，), 中文句号 (。)。
+     * 5. 其他所有标点符号都替换为英文逗号 (,).
+     * 6. 移除所有非上述保留或转换的字符（例如，表情符号等）。
+     * 7. 对逗号和句号进行规范化处理。
      * @param {string} text - 原始消息文本。
      * @returns {string} - 清理后的纯文本。
      */
     cleanTextForTts: function (text) {
         if (typeof text !== 'string') return '';
         let cleanedText = text;
+
+        // 1. Remove Markdown-style emphasis, and various bracketed/parenthesized content
         cleanedText = cleanedText.replace(/\*.*?\*/g, '');
-        cleanedText = cleanedText.replace(/【.*?】/g, '');
-        cleanedText = cleanedText.replace(/\[.*?\\]/g, '');
-        cleanedText = cleanedText.replace(/\(.*?\)/g, '');
-        cleanedText = cleanedText.replace(/（.*?）/g, '');
-        const allowedCharsRegex = /[^\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff65-\uff9f\u3000-\u303f\uff01-\uff5ea-zA-Z0-9\s.,!?;:'"-]/g;
-        cleanedText = cleanedText.replace(allowedCharsRegex, ' ');
-        cleanedText = cleanedText.replace(/\s+/g, ' ');
-        return cleanedText.trim();
+        cleanedText = cleanedText.replace(/【.*?】/g, ''); // Chinese square brackets
+        cleanedText = cleanedText.replace(/\[.*?\\]/g, ''); // Square brackets
+        cleanedText = cleanedText.replace(/\(.*?\)/g, ''); // Parentheses
+        cleanedText = cleanedText.replace(/（.*?）/g, ''); // Full-width parentheses
+
+        // 2. Define characters to keep as is, and punctuation to convert to an English comma
+        // Keep: CJK characters, Latin letters (a-zA-Z), Digits (0-9),
+        // English comma, English period, Chinese comma (，), Chinese period (。)
+        const keepCharsRegex = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff65-\uff9f\uac00-\ud7afa-zA-Z0-9,.\uff0c\uff0e]/u;
+
+        // Punctuation to convert to an English comma (,)
+        const convertToCommaPunctuationRegex = /[!?"#$%&'()*+\-/:;<=>@[\\\]^_`{|}~\u3001\uff01\uff1f\uff1b\uff1a\u2013\u2014\u2026「」『』《》〈〉·—～]/gu;
+
+        let resultBuilder = "";
+        for (let i = 0; i < cleanedText.length; i++) {
+            const char = cleanedText[i];
+            if (keepCharsRegex.test(char)) {
+                resultBuilder += char;
+            } else if (convertToCommaPunctuationRegex.test(char)) {
+                resultBuilder += ",";
+            }
+            // Characters not matching either regex (e.g., emojis, other symbols not in convertToComma) are dropped.
+        }
+        cleanedText = resultBuilder;
+
+        // 3. Normalize all kept Chinese commas (，) to English commas (,)
+        //    and all kept Chinese periods (。) to English periods (.)
+        cleanedText = cleanedText.replace(/\uff0c/g, ','); // ， to ,
+        cleanedText = cleanedText.replace(/\uff0e/g, '.'); // 。 to .
+
+        // 4. Consolidate multiple commas into a single English comma,
+        //    and multiple periods into a single English period.
+        cleanedText = cleanedText.replace(/,{2,}/g, ',');
+        cleanedText = cleanedText.replace(/\.{2,}/g, '.');
+
+        // 5. Handle mixed sequences like ",." or ".,". Generally, a period is a stronger separator.
+        //    Remove commas if they are directly adjacent to a period.
+        cleanedText = cleanedText.replace(/,\./g, '.'); // Sequence ",." becomes "."
+        cleanedText = cleanedText.replace(/\.,/g, '.'); // Sequence ".," becomes "."
+
+        // 6. Remove any leading or trailing commas or periods that might exist after processing.
+        cleanedText = cleanedText.replace(/^[,.]+/, '');
+        cleanedText = cleanedText.replace(/[,.]+$/, '');
+
+        // 7. Ensure a space around Latin words/numbers if they are adjacent to CJK characters
+        // or punctuation (comma/period), to improve TTS readability.
+        // This is a common pattern that helps TTS engines.
+        // Example: "你好world" -> "你好 world", "world你好" -> "world 你好"
+        // "数字123你好" -> "数字123 你好", "你好123" -> "你好 123"
+        // "你好,world" -> "你好, world" (no, comma is fine)
+        // "world.你好" -> "world. 你好" (no, period is fine)
+
+        // Add space after CJK if followed by Latin/Number, unless already a space or punctuation
+        cleanedText = cleanedText.replace(/([\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff65-\uff9f\uac00-\ud7af])([a-zA-Z0-9])(?![,\s.])/gu, '$1 $2');
+        // Add space before CJK if preceded by Latin/Number, unless already a space or punctuation
+        cleanedText = cleanedText.replace(/([a-zA-Z0-9])([\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff65-\uff9f\uac00-\ud7af])(?<![,\s.])/gu, '$1 $2');
+
+        // Normalize multiple spaces that might have been introduced or existed.
+        cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
+
+        return cleanedText;
     },
 
     /**

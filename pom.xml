@@ -95,7 +95,7 @@
 <!--                        <executable>python</executable>-->
 <!--                        <workingDirectory>${project.basedir}</workingDirectory>-->
 <!--                        <arguments>-->
-<!--                            <argument>script/01delete_min_files.py</argument>-->
+<!--                            <argument>script/python/01delete_min_files.py</argument>-->
 <!--                        </arguments>-->
 <!--                        <environmentVariables>-->
 <!--                            <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>-->
@@ -116,7 +116,7 @@
 <!--                        <executable>python</executable>-->
 <!--                        <workingDirectory>${project.basedir}</workingDirectory>-->
 <!--                        <arguments>-->
-<!--                            <argument>script/02compress_frontend.py</argument>-->
+<!--                            <argument>script/python/02compress_frontend.py</argument>-->
 <!--                        </arguments>-->
 <!--                        <environmentVariables>-->
 <!--                            <PYTHONIOENCODING>UTF-8</PYTHONIOENCODING>-->

@@ -184,7 +184,20 @@ const ChatManager = {
     },
 
     openChat: function(chatId, type) {
+        // Check if we are in mobile view.
+        // Access LayoutUIManager.appContainer if LayoutUIManager is initialized, otherwise query directly.
+        const isMobileView = (typeof LayoutUIManager !== 'undefined' && LayoutUIManager.appContainer) ?
+            LayoutUIManager.appContainer.classList.contains('mobile-view') :
+            document.querySelector('.app-container')?.classList.contains('mobile-view'); // Fallback
+
         if (this.currentChatId === chatId) {
+            if (isMobileView) {
+                // In mobile view, even if it's the same chat, we need to ensure the chat area is shown
+                // if the user clicked on the chat item from the list.
+                if (typeof LayoutUIManager !== 'undefined' && LayoutUIManager.showChatAreaLayout) {
+                    LayoutUIManager.showChatAreaLayout();
+                }
+            }
             const messageInput = document.getElementById('messageInput');
             if (messageInput) setTimeout(() => messageInput.focus(), 0);
             return;

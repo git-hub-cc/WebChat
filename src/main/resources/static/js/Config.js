@@ -3,7 +3,6 @@
  * @description 全局配置文件。该文件定义了整个应用程序中使用的常量和默认设置，
  *              包括重连策略、超时时间、媒体约束、UI行为、日志级别以及服务器和 WebRTC 的默认配置。
  *              用户在设置中修改的某些值（如 AI API 配置）会覆盖此处的默认值。
- *              新增：五级自适应音频质量配置及控制台日志开关。
  * @module Config
  * @exports {object} Config - 包含所有配置项的全局对象。
  */
@@ -117,11 +116,11 @@ const ConfigObj = {
             jitter: 20
         },
         audioQualityProfiles: [
-            { levelName: "极低", maxAverageBitrate: 8000, description: "非常差的网络，优先保障连接" },
-            { levelName: "较低", maxAverageBitrate: 12000, description: "较差网络，基础通话" },
-            { levelName: "标准", maxAverageBitrate: 16000, description: "一般网络，标准音质" },
-            { levelName: "较高", maxAverageBitrate: 20000, description: "良好网络，提升音质" },
-            { levelName: "极高", maxAverageBitrate: 48000, description: "优秀网络，最佳音质" }
+            { levelName: "极低", maxAverageBitrate: 8000, sdpFmtpLine: "minptime=40;useinbandfec=1;stereo=0;maxaveragebitrate=8000;cbr=1;maxplaybackrate=8000", description: "非常差的网络，优先保障连接" },
+            { levelName: "较低", maxAverageBitrate: 12000, sdpFmtpLine: "minptime=20;useinbandfec=1;stereo=0;maxaveragebitrate=12000;cbr=1;maxplaybackrate=12000", description: "较差网络，基础通话" },
+            { levelName: "标准", maxAverageBitrate: 16000, sdpFmtpLine: "minptime=10;useinbandfec=1;stereo=0;maxaveragebitrate=16000;cbr=0;maxplaybackrate=16000", description: "一般网络，标准音质" },
+            { levelName: "较高", maxAverageBitrate: 20000, sdpFmtpLine: "minptime=10;useinbandfec=1;stereo=0;maxaveragebitrate=20000;cbr=0;maxplaybackrate=20000", description: "良好网络，提升音质" },
+            { levelName: "极高", maxAverageBitrate: 48000, sdpFmtpLine: "minptime=5;useinbandfec=1;stereo=1;maxaveragebitrate=48000;cbr=0;maxplaybackrate=48000", description: "优秀网络，最佳音质" }
         ],
         initialProfileIndex: 2,
         switchToHigherCooldown: 10000,

@@ -19,8 +19,8 @@ logging:
 websocket:
   max:
     # 消息缓冲区大小（单位：KB）
-    text-buffer-size-kb: 128
-    binary-buffer-size-kb: 128
+    text-buffer-size-kb: 1024
+    binary-buffer-size-kb: 1024
     # 会话空闲超时时间（单位：分钟）
     session-timeout-min: 5
 
