@@ -253,7 +253,7 @@ body {
 .AI_FischlOz_崩坏3 { --special-contact-color: var(--hi3-fischloz-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-fischloz-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-fischloz-primary-dark-rgb), 0.6); }
 .chat-list-item.AI_FischlOz_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_FischlOz_崩坏3, .details-avatar.AI_FischlOz_崩坏3, #callingModalAvatar.AI_FischlOz_崩坏3 { background-color: var(--hi3-fischloz-primary-dark); color: var(--hi3-fischloz-oz-text); border-color: var(--hi3-fischloz-glow); }
-.chat-list-item.special-contact.AI_FischlOz_崩坏3 .chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-deep-space-bg); opacity: 0.7; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-dark-rgb),0.5); padding: 0 2px; border-radius: 2px;}
+.chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-deep-space-bg); opacity: 0.7; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-dark-rgb),0.5); padding: 0 2px; border-radius: 2px;}
 
 /* 始源之律者 */
 .AI_HerrscherOfOrigin_崩坏3 { --special-contact-color: var(--hi3-origin-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-origin-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-origin-primary-dark-rgb), 0.6); }
@@ -523,14 +523,7 @@ body {
     border-radius: var(--border-radius-large);
     position: relative; /* For accents */
 }
-/* Modal corner accents */
-.modal-content::before, .modal-content::after {
-    content: '';
-    position: absolute;
-    width: 8px; height: 8px; /* Define size */
-    border-color: var(--hi3-energy-stream-cyan);
-    opacity: 0.7;
-}
+
 .modal-content::before { top: -2px; left: -2px; border-top: 2px solid; border-left: 2px solid; border-top-left-radius: var(--border-radius-large); }
 .modal-content::after { bottom: -2px; right: -2px; border-bottom: 2px solid; border-right: 2px solid; border-bottom-right-radius: var(--border-radius-large); }
 

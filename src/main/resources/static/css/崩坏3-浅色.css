@@ -227,7 +227,7 @@ body {
 .AI_FischlOz_崩坏3 { --special-contact-color: var(--hi3-fischloz-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-fischloz-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-fischloz-primary-light-rgb), 0.5); }
 .chat-list-item.AI_FischlOz_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_FischlOz_崩坏3, .details-avatar.AI_FischlOz_崩坏3, #callingModalAvatar.AI_FischlOz_崩坏3 { background-color: var(--hi3-fischloz-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-fischloz-glow-light); }
-.chat-list-item.special-contact.AI_FischlOz_崩坏3 .chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-fischloz-oz-text-light); opacity: 0.9; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-light-rgb),0.3); padding: 0 2px; border-radius: 2px;}
+.chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-fischloz-oz-text-light); opacity: 0.9; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-light-rgb),0.3); padding: 0 2px; border-radius: 2px;}
 
 
 .AI_HerrscherOfOrigin_崩坏3 { --special-contact-color: var(--hi3-origin-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-origin-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-origin-primary-light-rgb), 0.5); }
@@ -474,13 +474,6 @@ body {
     border: 1px solid var(--hi3-light-divider-line);
     border-radius: var(--border-radius-large);
     position: relative;
-}
-.modal-content::before, .modal-content::after {
-    content: '';
-    position: absolute;
-    width: 8px; height: 8px; /* Define size */
-    border-color: var(--hi3-tech-blue);
-    opacity: 0.6;
 }
 .modal-content::before { top: -2px; left: -2px; border-top: 2px solid; border-left: 2px solid; border-top-left-radius: var(--border-radius-large); }
 .modal-content::after { bottom: -2px; right: -2px; border-bottom: 2px solid; border-right: 2px solid; border-bottom-right-radius: var(--border-radius-large); }

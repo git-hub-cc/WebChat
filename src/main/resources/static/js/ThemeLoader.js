@@ -18,16 +18,16 @@
 const ThemeLoader = {
     // 定义所有可用的主题
     themes: {
-        "崩坏3-浅色": { name: "崩坏3", css: "css/崩坏3-浅色.css", dataJs: "data/崩坏3.json", defaultSpecialContacts: true },
-        "崩坏3-深色": { name: "崩坏3", css: "css/崩坏3-深色.css", dataJs: "data/崩坏3.json" },
-        "原神-浅色": { name: "原神", css: "css/原神-浅色.css", dataJs: "data/原神.json"  },
+        "原神-浅色": { name: "原神", css: "css/原神-浅色.css", dataJs: "data/原神.json", defaultSpecialContacts: true  },
         "原神-深色": { name: "原神", css: "css/原神-深色.css", dataJs: "data/原神.json" },
-        "蜡笔小新-浅色": { name: "蜡笔小新", css: "css/蜡笔小新-浅色.css", dataJs: "data/蜡笔小新.json"},
-        "蜡笔小新-深色": { name: "蜡笔小新", css: "css/蜡笔小新-深色.css", dataJs: "data/蜡笔小新.json" },
         "迷宫饭-浅色": { name: "迷宫饭", css: "css/迷宫饭-浅色.css", dataJs: "data/迷宫饭.json" },
         "迷宫饭-深色": { name: "迷宫饭", css: "css/迷宫饭-深色.css", dataJs: "data/迷宫饭.json" },
         "斗破苍穹-浅色": { name: "斗破苍穹", css: "css/斗破苍穹-浅色.css", dataJs: "data/斗破苍穹.json" },
         "斗破苍穹-深色": { name: "斗破苍穹", css: "css/斗破苍穹-深色.css", dataJs: "data/斗破苍穹.json" },
+        "崩坏3-浅色": { name: "崩坏3", css: "css/崩坏3-浅色.css", dataJs: "data/崩坏3.json" },
+        "崩坏3-深色": { name: "崩坏3", css: "css/崩坏3-深色.css", dataJs: "data/崩坏3.json" },
+        "蜡笔小新-浅色": { name: "蜡笔小新", css: "css/蜡笔小新-浅色.css", dataJs: "data/蜡笔小新.json"},
+        "蜡笔小新-深色": { name: "蜡笔小新", css: "css/蜡笔小新-深色.css", dataJs: "data/蜡笔小新.json" },
         // "鸣潮-浅色": { name: "鸣潮", css: "css/鸣潮-浅色.css", dataJs: "data/鸣潮.json" },
         // "鸣潮-深色": { name: "鸣潮", css: "css/鸣潮-深色.css", dataJs: "data/鸣潮.json" },
         // "星穹铁道-浅色": { name: "星穹铁道", css: "css/星穹铁道-浅色.css", dataJs: "data/星穹铁道.json" },
