@@ -447,7 +447,7 @@ body {
 
 /* --- Details Panel (玄金或冰蓝) --- */
 .details-panel {
-    background-color: rgba(var(--dq-light-misty-scroll-bg-rgb), 0.7); /* 玄金意境 */
+    background-color: rgba(var(--dq-light-misty-scroll-bg-rgb), 0.8); /* 玄金意境 */
     border-left: 1px solid var(--border-color);
     box-shadow: -1px 0 5px rgba(var(--dq-light-text-ink-black-rgb), 0.05);
 }

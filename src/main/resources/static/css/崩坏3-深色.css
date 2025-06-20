@@ -452,7 +452,7 @@ body {
 
 /* --- Details Panel --- */
 .details-panel {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.5); /* More transparent */
+    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.8); /* More transparent */
     backdrop-filter: blur(3px);
     border-left: 1px solid var(--border-color);
 }

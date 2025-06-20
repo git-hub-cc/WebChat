@@ -269,7 +269,7 @@ body {
 }
 
 /* --- Details Panel --- */
-.details-panel { background-color: rgba(var(--cs-night-teal-bg-rgb), 0.75); border-left: 1px solid var(--border-color); }
+.details-panel { background-color: rgba(var(--cs-night-teal-bg-rgb), 0.8); border-left: 1px solid var(--border-color); }
 .details-header { background-color: rgba(var(--cs-night-teal-bg-rgb), 0.85); }
 .details-avatar { border: 2px solid var(--border-color); box-shadow: 0 0 8px rgba(var(--cs-text-chalk-white-rgb), 0.1); }
 #detailsName { text-shadow: 0 0 5px rgba(var(--cs-text-chalk-white-rgb), 0.2); }

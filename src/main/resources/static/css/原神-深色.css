@@ -600,7 +600,7 @@ img {
 .details-panel {
     /* width: 300px; -- Removed as value > 20px */
     /* min-width: 260px; -- Removed as value > 20px */
-    background-color: rgba(var(--gi-night-deep-rgb), 0.5);
+    background-color: rgba(var(--gi-night-deep-rgb), 0.8);
     border-left: 1px solid var(--color-border-secondary);
     padding: 20px;
     overflow-y: auto;

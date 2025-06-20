@@ -593,7 +593,7 @@ img {
 
 /* ℹ️ 详情面板 .details-panel (Assuming it's a right sidebar) */
 .details-panel {
-    background-color: rgba(var(--gi-parchment-dark-rgb), 0.3);
+    background-color: rgba(var(--gi-parchment-dark-rgb), 0.8);
     border-left: 1px solid var(--color-border-secondary);
     padding: 20px;
     overflow-y: auto;
