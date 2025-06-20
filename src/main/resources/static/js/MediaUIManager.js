@@ -2,6 +2,7 @@
  * @file MediaUIManager.js
  * @description 媒体 UI 管理器，负责处理与媒体相关的用户界面元素，如录音和文件选择的预览。
  *              它将 UI 展示逻辑与 MediaManager 的核心功能逻辑分离。
+ *              文件名过长时，在预览和消息中会进行截断显示。
  * @module MediaUIManager
  * @exports {object} MediaUIManager - 对外暴露的单例对象，包含管理媒体 UI 的方法。
  * @property {function} init - 初始化模块，获取 DOM 元素。
@@ -98,17 +99,35 @@ const MediaUIManager = {
         this.filePreviewContainerEl.innerHTML = ''; // 清除之前的预览
         const previewDiv = document.createElement('div');
         previewDiv.className = 'file-preview-item';
+
+        const originalFileName = fileObj.name; // Keep original for title and potentially for MessageManager
+        const escapedOriginalFileName = Utils.escapeHtml(originalFileName);
+        const displayFileName = Utils.truncateFileName(escapedOriginalFileName, 25); // Truncate for display in preview (25 chars)
+
         let contentHtml;
 
         // fileObj.data 此时应该是 Object URL (来自截图) 或 Data URL (来自文件选择)
         if (fileObj.type.startsWith('image/')) {
-            contentHtml = `<img src="${fileObj.data}" alt="预览" style="max-height: 50px; border-radius: 4px; margin-right: 8px;"> ${Utils.escapeHtml(fileObj.name)}`;
+            contentHtml = `<img src="${fileObj.data}" alt="预览" style="max-height: 50px; border-radius: 4px; margin-right: 8px;" title="${escapedOriginalFileName}"> ${displayFileName}`;
         } else if (fileObj.type.startsWith('video/')) {
-            contentHtml = `🎬 ${Utils.escapeHtml(fileObj.name)} (视频)`;
+            contentHtml = `🎬 <span title="${escapedOriginalFileName}">${displayFileName}</span> (视频)`;
         } else {
-            contentHtml = `📄 ${Utils.escapeHtml(fileObj.name)} (${MediaManager.formatFileSize(fileObj.size)})`;
+            contentHtml = `📄 <span title="${escapedOriginalFileName}">${displayFileName}</span> (${MediaManager.formatFileSize(fileObj.size)})`;
         }
         previewDiv.innerHTML = `<span>${contentHtml}</span><button class="cancel-file-preview" title="移除附件">✕</button>`;
+
+        // If the main content is in a span, set title there.
+        const mainSpan = previewDiv.querySelector('span');
+        if(mainSpan && !fileObj.type.startsWith('image/')) { // Images already have title on img or use the filename span
+            const fileNameSpan = mainSpan.querySelector('span[title]');
+            if (fileNameSpan) { // If a specific span for filename exists
+                fileNameSpan.title = escapedOriginalFileName;
+            } else { // Fallback to main span
+                mainSpan.title = escapedOriginalFileName;
+            }
+        }
+
+
         this.filePreviewContainerEl.appendChild(previewDiv);
         const cancelBtn = this.filePreviewContainerEl.querySelector('.cancel-file-preview');
         if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelFileData()); // 使用 addEventListener

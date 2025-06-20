@@ -75,9 +75,12 @@ const ConfigObj = {
      * 这些是默认值，UI 管理器将从 localStorage 加载用户配置的值来覆盖它们。
      */
     server: {
-        signalingServerUrl: 'wss://175.178.216.24/signaling',
-        apiEndpoint: 'https://175.178.216.24/v1/chat/completions',
-        lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids',
+        // signalingServerUrl: 'wss://175.178.216.24/signaling',
+        // apiEndpoint: 'https://175.178.216.24/v1/chat/completions',
+        // lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids',
+        signalingServerUrl: 'ws://localhost:8080/signaling',
+        apiEndpoint: 'http://localhost:8080/v1/chat/completions',
+        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids',
         api_key: "Bearer sk-xxxx",
         model: "qwen-turbo-2025-04-28",
         max_tokens: 2048,

@@ -194,6 +194,7 @@ body {
     text-align: center;
     font-size: 14px;
     font-weight: 500;
+    margin: 4px;
 }
 
 .btn-primary,
@@ -547,10 +548,6 @@ body {
     font-weight: 600;
 }
 
-.chat-status-main {
-    color: var(--text-color-light);
-    font-size: 12px;
-}
 
 .chat-actions-main {
     display: flex;
@@ -2499,6 +2496,41 @@ input:checked + .slider::before {
 .ai-prompt-editor-item > div:last-child { /* 指向按钮容器 */
     display: flex;
     gap: 10px; /* 按钮间距 */
+}
+
+/* --- Status Indicator Dot for Chat Header --- */
+.chat-status-main {
+    position: relative; /* For positioning the ::before element */
+    padding-left: 15px; /* Space for the dot */
+    min-height: 1em;    /* Ensure it doesn't collapse if text is empty */
+    line-height: 1.2;   /* Helps with vertical alignment of the dot */
+}
+
+.chat-status-main::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: calc(50% - 4px); /* Vertically center (assuming 8px dot height) */
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: none; /* Hidden by default, shown by status classes */
+}
+
+.chat-status-main.status-indicator-active::before {
+    background-color: var(--accent-color); /* Green */
+    box-shadow: 0 0 4px var(--accent-color);
+    display: inline-block;
+}
+
+.chat-status-main.status-indicator-inactive::before {
+    background-color: var(--danger-color); /* Red */
+    box-shadow: 0 0 4px var(--danger-color);
+    display: inline-block;
+}
+
+.chat-status-main.status-indicator-neutral::before {
+    display: none; /* Explicitly hide for neutral states if needed */
 }
 
 /* ========================================================================== */

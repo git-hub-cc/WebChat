@@ -11,7 +11,7 @@ from typing import List, Dict, Set
 # ==============================================================================
 
 # 目标目录：Spring Boot 项目的文件
-TARGET_DIR: str = "../src/main/java/club/ppmc"
+TARGET_DIR: str = "../../src/main/java/club/ppmc"
 
 # 输出文件名
 OUTPUT_FILE: str = "data.md"

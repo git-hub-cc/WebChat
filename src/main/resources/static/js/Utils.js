@@ -12,6 +12,7 @@
  * @property {function} reassembleChunk - 将接收到的数据分片重组为完整数据。
  * @property {function} generateId - 生成一个指定长度的随机 ID。
  * @property {function} formatDate - 将 Date 对象格式化为用户友好的字符串。
+ * @property {function} truncateFileName - 如果文件名太长，则截断文件名并添加省略号。
  * @dependencies Config, ConnectionManager
  * @dependents 几乎所有其他模块。
  */
@@ -311,5 +312,19 @@ const Utils = {
             dateString = dateObj.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) + (includeTime ? ` ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : '');
         }
         return dateString;
+    },
+
+    /**
+     * 如果文件名太长，则截断文件名并添加省略号。
+     * @param {string} filename - 原始文件名。
+     * @param {number} maxLength - 显示的最大长度，超出则截断。
+     * @returns {string} - 截断后的文件名（如果需要），否则为原始文件名。
+     */
+    truncateFileName: function(filename, maxLength) {
+        if (typeof filename !== 'string') return '';
+        if (filename.length > maxLength) {
+            return filename.substring(0, maxLength) + "...";
+        }
+        return filename;
     }
 };

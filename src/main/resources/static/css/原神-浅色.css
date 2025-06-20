@@ -532,7 +532,6 @@ img {
     border-top: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-container); /* Matches sidebar header */
     display: flex;
-    align-items: center;
     gap: 10px; /* Space between input and button */
     box-shadow: 0 -1px 3px rgba(var(--gi-brown-dark-rgb), 0.05);
 }
@@ -587,7 +586,6 @@ img {
 /* If using FontAwesome: <i class="fas fa-paper-plane"></i> */
 /* For now, a simple text placeholder */
 #sendButtonMain::after {
-    content: "➢"; /* Or "➤", "🕊️" */
 }
 
 

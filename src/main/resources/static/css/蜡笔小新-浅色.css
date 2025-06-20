@@ -311,3 +311,6 @@ input:checked + .slider { background-color: var(--cs-shinchan-red); }
 .details-panel.human-contact-active #contactActionsDetails { display: block; }
 .details-panel.group-chat-active #detailsGroupManagement,
 .details-panel.group-chat-active #groupActionsDetails { display: block; }
+.message .download-btn{
+    color: la;
+}

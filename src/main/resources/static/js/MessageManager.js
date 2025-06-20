@@ -5,6 +5,7 @@
  *              同时，它也负责将消息渲染到聊天窗口中。
  *              支持消息的本地删除和撤回请求。
  *              新增：在群聊中检测对AI的@提及，并触发AI响应。
+ *              文件名过长时，在预览和消息中会进行截断显示。
  * @module MessageManager
  * @exports {object} MessageManager - 对外暴露的单例对象，包含消息处理的所有核心方法。
  * @property {function} sendMessage - 从输入框发送消息，处理文本、文件和语音消息。
@@ -191,15 +192,18 @@ const MessageManager = {
                         messageBodyHtml = `<div class="message-content-wrapper"><div class="voice-message"><button class="play-voice-btn" data-audio="${message.data}" onclick="MediaManager.playAudio(this)">▶</button><span class="voice-duration">${Utils.formatTime(message.duration)}</span></div></div>`;
                         break;
                     case 'file':
-                        const safeFileName = Utils.escapeHtml(message.fileName || 'file');
+                        const originalFileName = message.fileName || '文件'; // Default if no filename
+                        const escapedOriginalFileName = Utils.escapeHtml(originalFileName);
+                        const displayFileName = Utils.truncateFileName(escapedOriginalFileName, 10); // Truncate for chat display
+
                         if (message.fileType?.startsWith('image/')) {
-                            messageBodyHtml = `<div class="message-content-wrapper"><img src="${message.data}" alt="${safeFileName}" class="file-preview-img" onclick="UIManager.showFullImage('${message.data}', '${safeFileName}')"></div>`;
+                            messageBodyHtml = `<div class="message-content-wrapper"><img src="${message.data}" alt="${escapedOriginalFileName}" class="file-preview-img" onclick="UIManager.showFullImage('${message.data}', '${escapedOriginalFileName}')" title="${escapedOriginalFileName}"></div>`;
                         } else if (message.fileType?.startsWith('video/')) {
-                            messageBodyHtml = `<div class="message-content-wrapper"><video controls class="file-preview-video" style="max-width:100%;"><source src="${message.data}" type="${message.fileType}"></video></div>`;
+                            messageBodyHtml = `<div class="message-content-wrapper"><video controls class="file-preview-video" style="max-width:100%;" title="${escapedOriginalFileName}"><source src="${message.data}" type="${message.fileType}"></video></div>`;
                         } else if (message.fileType?.startsWith('audio/')) {
-                            messageBodyHtml = `<div class="message-content-wrapper"><div class="file-info"><span class="file-icon">🎵</span><div class="file-details"><div class="file-name">${safeFileName}</div><audio controls src="${message.data}" style="width:100%"></audio></div></div></div>`;
+                            messageBodyHtml = `<div class="message-content-wrapper"><div class="file-info"><span class="file-icon">🎵</span><div class="file-details"><div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div><audio controls src="${message.data}" style="width:100%"></audio></div></div></div>`;
                         } else {
-                            messageBodyHtml = `<div class="message-content-wrapper"><div class="file-info"><span class="file-icon">📄</span><div class="file-details"><div class="file-name">${safeFileName}</div><div class="file-meta">${MediaManager.formatFileSize(message.size || 0)}</div></div><a href="${message.data}" download="${safeFileName}" class="download-btn">下载</a></div></div>`;
+                            messageBodyHtml = `<div class="message-content-wrapper"><div class="file-info"><span class="file-icon">📄</span><div class="file-details"><div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div><div class="file-meta">${MediaManager.formatFileSize(message.size || 0)}</div></div><a href="${message.data}" download="${escapedOriginalFileName}" class="download-btn">下载</a></div></div>`;
                         }
                         break;
                     case 'user':
