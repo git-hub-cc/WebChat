@@ -57,7 +57,7 @@
     --warning-color: #FFA000; /* 浅色下的警告色 */
 
     --sent-bg-color: rgba(var(--ww-skywake-blue-rgb), 0.1); /* 发送消息背景带主色调 */
-    --received-bg-color: rgba(var(--ww-dawn-sky-bg-rgb), 0.8); /* 接收消息背景更融入 */
+    --received-bg-color: rgba(var(--ww-dawn-sky-bg-rgb), 0.9); /* 接收消息背景更融入 */
 
     --border-color: rgba(var(--ww-polished-alloy-border-rgb), 0.6);
     --hover-bg-color: rgba(var(--ww-skywake-blue-rgb), 0.06);

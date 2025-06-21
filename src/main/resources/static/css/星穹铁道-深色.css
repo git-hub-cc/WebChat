@@ -53,7 +53,7 @@
     --warning-color: var(--hsr-stellaron-magenta);
 
     --sent-bg-color: rgba(var(--hsr-deep-cosmos-bg-rgb), 0.75);
-    --received-bg-color: rgba(var(--hsr-nebula-cluster-panel-rgb), 0.85);
+    --received-bg-color: rgba(var(--hsr-nebula-cluster-panel-rgb), 0.9);
 
     --border-color: rgba(var(--hsr-meteorite-iron-border-rgb), 0.6);
     --hover-bg-color: rgba(var(--hsr-star-gleam-white-rgb), 0.05); /* Slightly more visible hover */

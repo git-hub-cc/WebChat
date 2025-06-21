@@ -48,7 +48,7 @@
     --warning-color: #B8860B; /* 暗金黄色警告 */
 
     --sent-bg-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.75); /* 发送消息 - 更深的洞穴感 */
-    --received-bg-color: rgba(var(--mgf-ancient-stone-border-rgb), 0.3); /* 接收消息 - 半透明古石 */
+    --received-bg-color: rgba(var(--mgf-ancient-stone-border-rgb), 0.9); /* 接收消息 - 半透明古石 */
 
     --border-color: rgba(var(--mgf-ancient-stone-border-rgb), 0.55);
     --hover-bg-color: rgba(var(--mgf-bone-white-rgb), 0.06);
@@ -352,7 +352,7 @@ body {
 }
 .modal-header h2 { color: var(--mgf-torch-flame-orange); text-shadow: 0 0 4px rgba(var(--mgf-torch-flame-orange-rgb),0.35); }
 .close-modal-btn:hover { color: var(--mgf-torch-flame-orange); }
-.modal-body input[type="text"], .modal-body textarea {
+.modal-body input, .modal-body textarea {
     background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.75);
     color: var(--text-color);
     border: 1px solid var(--border-color);
@@ -401,3 +401,6 @@ input:checked + .slider { background-color: var(--mgf-torch-flame-orange); }
 .details-panel.group-chat-active #groupActionsDetails { display: block; }
 
 .notification { background: var(--mgf-dark-earth-panel); border-left-color: var(--mgf-torch-flame-orange); color: var(--text-color);}
+#ttsConfigFormContainer .tts-config-item * {
+    color: #ccc;
+}

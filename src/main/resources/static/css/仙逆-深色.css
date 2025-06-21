@@ -45,7 +45,7 @@
     --warning-color: #D48806; /* 暗金黄色警告 */
 
     --sent-bg-color: rgba(var(--xn-deep-black-bg-rgb), 0.8); /* 发送消息 - 更深的虚空感 */
-    --received-bg-color: rgba(var(--xn-border-dark-rgb), 0.35); /* 接收消息 - 半透明玄铁 */
+    --received-bg-color: rgba(var(--xn-border-dark-rgb), 0.9); /* 接收消息 - 半透明玄铁 */
 
     --border-color: rgba(var(--xn-border-dark-rgb), 0.6);
     --hover-bg-color: rgba(var(--xn-soul-silver-rgb), 0.04);

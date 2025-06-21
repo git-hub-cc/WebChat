@@ -47,7 +47,7 @@
     --warning-color: #FFC107; /* 明黄色警告 */
 
     --sent-bg-color: rgba(var(--cs-night-teal-bg-rgb), 0.75); /* 发送消息 - 稍暗 */
-    --received-bg-color: rgba(var(--cs-playtime-blue-panel-rgb), 0.85); /* 接收消息 - 面板蓝 */
+    --received-bg-color: rgba(var(--cs-playtime-blue-panel-rgb), 0.9); /* 接收消息 - 面板蓝 */
 
     --border-color: rgba(var(--cs-border-storybook-rgb), 0.6);
     --hover-bg-color: rgba(var(--cs-text-chalk-white-rgb), 0.07);

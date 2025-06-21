@@ -55,7 +55,7 @@ const MessageManager = {
             }
             if (!messageText) return;
             const userMessage = { id: messageIdBase, type: 'text', content: messageText, timestamp: nowTimestamp, sender: UserManager.userId };
-            ChatManager.addMessage(targetId, userMessage);
+            await ChatManager.addMessage(targetId, userMessage);
             input.value = ''; input.style.height = 'auto'; input.focus();
             await AiApiHandler.sendAiMessage(targetId, contact, messageText);
             return;
@@ -77,7 +77,7 @@ const MessageManager = {
         }
 
         if (isGroup && group && messageText) {
-            // Entfernt: let aiMentionedThisMessage = false;
+            // Efferent: let aiMentionedThisMessage = false;
             for (const memberId of group.members) {
                 const memberContact = UserManager.contacts[memberId];
                 if (memberContact && memberContact.isAI) {
@@ -85,10 +85,10 @@ const MessageManager = {
                     const mentionRegex = new RegExp(mentionTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$|\\p{P})', 'u');
                     if (messageText.match(mentionRegex)) {
                         Utils.log(`MessageManager: 检测到对群内AI ${memberContact.name} (${memberContact.id}) 的提及。`, Utils.logLevels.INFO);
-                        // Entfernt: if (!aiMentionedThisMessage) { ... }
+                        // Efferent: if (!aiMentionedThisMessage) { ... }
                         AiApiHandler.sendGroupAiMessage(targetId, group, memberContact.id, messageText, UserManager.userId)
                             .catch(err => Utils.log(`处理群内AI提及 (${memberContact.name}) 时出错: ${err}`, Utils.logLevels.ERROR));
-                        // Entfernt: aiMentionedThisMessage = true;
+                        // Efferent: aiMentionedThisMessage = true;
                     }
                 }
             }
@@ -97,7 +97,7 @@ const MessageManager = {
         if (currentAudioData) {
             const audioMessage = { id: `${messageIdBase}_audio`, type: 'audio', data: currentAudioData, duration: currentAudioDuration, timestamp: nowTimestamp, sender: UserManager.userId };
             if (isGroup) GroupManager.broadcastToGroup(targetId, audioMessage); else ConnectionManager.sendTo(targetId, audioMessage);
-            ChatManager.addMessage(targetId, audioMessage);
+            await ChatManager.addMessage(targetId, audioMessage);
             messageSent = true; MessageManager.cancelAudioData();
         }
         if (currentSelectedFile) {
@@ -108,13 +108,13 @@ const MessageManager = {
                 timestamp: nowTimestamp, sender: UserManager.userId
             };
             if (isGroup) GroupManager.broadcastToGroup(targetId, messagePayload); else ConnectionManager.sendTo(targetId, messagePayload);
-            ChatManager.addMessage(targetId, messagePayload);
+            await ChatManager.addMessage(targetId, messagePayload);
             messageSent = true; MessageManager.cancelFileData();
         }
 
         if (userTextMessageForChat) {
             if (isGroup) GroupManager.broadcastToGroup(targetId, userTextMessageForChat); else ConnectionManager.sendTo(targetId, userTextMessageForChat);
-            ChatManager.addMessage(targetId, userTextMessageForChat);
+            await ChatManager.addMessage(targetId, userTextMessageForChat);
             messageSent = true; input.value = ''; input.style.height = 'auto';
         }
 
@@ -177,8 +177,8 @@ const MessageManager = {
                 if (message.retractedBy === UserManager.userId) {
                     retractedText = "你撤回了一条消息";
                 } else {
-                    const retracterName = UserManager.contacts[message.retractedBy]?.name || (message.originalSenderName && message.retractedBy === (message.originalSender || message.sender) ? message.originalSenderName : null) || `用户 ${String(message.retractedBy || message.sender || '').substring(0,4)}`;
-                    retractedText = `${Utils.escapeHtml(retracterName)} 撤回了一条消息`;
+                    const retractedName = UserManager.contacts[message.retractedBy]?.name || (message.originalSenderName && message.retractedBy === (message.originalSender || message.sender) ? message.originalSenderName : null) || `用户 ${String(message.retractedBy || message.sender || '').substring(0,4)}`;
+                    retractedText = `${Utils.escapeHtml(retractedName)} 撤回了一条消息`;
                 }
                 messageBodyHtml = `<div class="message-content-wrapper"><div class="message-content">${Utils.escapeHtml(retractedText)}</div></div>`;
             } else {
@@ -218,7 +218,7 @@ const MessageManager = {
             initialHtmlStructure += `<div class="timestamp">${message.timestamp ? Utils.formatDate(new Date(message.timestamp), true) : '正在发送...'}</div>`;
             msgDiv.innerHTML = initialHtmlStructure;
             mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
-            contentElement = mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
+            mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
         } else {
             if (contentElement && message.type === 'text' && !message.isRetracted) {
                 const textContent = message.content;
@@ -400,7 +400,7 @@ const MessageManager = {
      * @param {string} messageId - 要撤回的消息的ID。
      * @param {string} chatId - 消息所在的聊天ID。
      * @param {boolean} isOwnRetraction - 指示是否是当前用户自己执行的撤回操作。
-     * @param {string} [retractedByName=null] - 撤回者的显示名称（主要用于他人撤回时，若为null则尝试自动获取）。
+     * @param {null} [retractedByName=null] - 撤回者的显示名称（主要用于他人撤回时，若为null则尝试自动获取）。
      * @private
      */
     _updateMessageToRetractedState: function(messageId, chatId, isOwnRetraction, retractedByName = null) {

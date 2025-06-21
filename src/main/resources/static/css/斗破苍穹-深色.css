@@ -121,7 +121,7 @@
     --warning-color: #B8860B; /* 暗金黄色警告 */
 
     --sent-bg-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.75); /* 发送消息 - 深邃夜空 */
-    --received-bg-color: rgba(var(--dq-dark-volcanic-border-rgb), 0.4); /* 接收消息 - 火山岩 */
+    --received-bg-color: rgba(var(--dq-dark-volcanic-border-rgb), 0.9); /* 接收消息 - 火山岩 */
 
     --border-color: rgba(var(--dq-dark-volcanic-border-rgb), 0.7);
     --hover-bg-color: rgba(var(--dq-dark-text-ash-white-rgb), 0.04);
@@ -1001,4 +1001,7 @@ input:checked + .slider:before { transform: translateX(20px); }
 }
 .notification.success {
     border-left-color: var(--dq-dark-ancient-gold);
+}
+#ttsConfigFormContainer .tts-config-item * {
+    color: #ccc;
 }

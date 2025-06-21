@@ -53,7 +53,7 @@
     --warning-color: #F39C12;
 
     --sent-bg-color: rgba(var(--hsr-nav-compass-blue-rgb), 0.08); /* Slightly more distinct */
-    --received-bg-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.75); /* Slightly more distinct */
+    --received-bg-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.9); /* Slightly more distinct */
 
     --border-color: rgba(var(--hsr-polished-rail-border-rgb), 0.75); /* Slightly stronger */
     --hover-bg-color: rgba(var(--hsr-nav-compass-blue-rgb), 0.05); /* Slightly more visible */

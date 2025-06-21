@@ -3,13 +3,14 @@
  * @description 视频通话 UI 管理器，负责管理所有与视频通话相关的用户界面元素。
  *              包括本地/远程视频的显示、通话控制按钮的更新，以及画中画 (PiP) 模式的 UI 和拖动功能。
  *              现在能显示五级音频质量状态。
+ *              优化了 PiP 模式拖动效果，防止页面文字在拖动时被选中，并提升拖动响应速度。
  * @module VideoCallUIManager
  * @exports {object} VideoCallUIManager - 对外暴露的单例对象，包含管理视频通话 UI 的方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
  * @property {function} showCallContainer - 显示或隐藏整个通话 UI 容器。
  * @property {function} updateUIForCallState - 根据通话状态更新所有相关的 UI 元素。
  * @property {function} togglePipMode - 切换画中画模式。
- * @dependencies Utils, VideoCallManager, EventEmitter
+ * @dependencies Utils, VideoCallManager, EventEmitter, LayoutUIManager
  * @dependents AppInitializer (进行初始化), VideoCallManager (调用以更新 UI)
  */
 const VideoCallUIManager = {
@@ -27,7 +28,8 @@ const VideoCallUIManager = {
     dragInfo: {
         active: false, currentX: 0, currentY: 0,
         initialX: 0, initialY: 0, xOffset: 0, yOffset: 0,
-        draggedElement: null
+        draggedElement: null,
+        originalTransition: '' // To store original transition property
     },
     _boundDragStart: null,
     _boundDragStartTouch: null,
@@ -319,20 +321,29 @@ const VideoCallUIManager = {
      * @param {MouseEvent|TouchEvent} e - 事件对象。
      */
     dragStart: function (e) {
-        if (e.target.classList.contains('video-call-button') || e.target.closest('.video-call-button') || e.target.id === 'audioQualityIndicator') return; // Don't drag if clicking on controls
+        if (e.target.classList.contains('video-call-button') || e.target.closest('.video-call-button') || e.target.id === 'audioQualityIndicator') return;
         if (!this.isPipMode || !VideoCallManager.isCallActive || !this.callContainer) return;
+
+        e.preventDefault();
 
         this.dragInfo.draggedElement = this.callContainer;
         this.dragInfo.active = true;
+        this.dragInfo.originalTransition = this.dragInfo.draggedElement.style.transition;
+        this.dragInfo.draggedElement.style.transition = 'none'; // Disable CSS transitions during drag
         this.dragInfo.draggedElement.style.cursor = 'grabbing';
         const rect = this.dragInfo.draggedElement.getBoundingClientRect();
+
+        document.body.style.userSelect = 'none';
+        if (typeof LayoutUIManager !== 'undefined' && LayoutUIManager.appContainer) {
+            LayoutUIManager.appContainer.style.userSelect = 'none';
+        }
+
 
         if (e.type === "touchstart") {
             this.dragInfo.initialX = e.touches[0].clientX - rect.left;
             this.dragInfo.initialY = e.touches[0].clientY - rect.top;
             document.addEventListener("touchmove", this._boundDragTouch, {passive: false});
             document.addEventListener("touchend", this._boundDragEndTouch);
-            e.preventDefault();
         } else {
             this.dragInfo.initialX = e.clientX - rect.left;
             this.dragInfo.initialY = e.clientY - rect.top;
@@ -347,9 +358,10 @@ const VideoCallUIManager = {
      */
     drag: function (e) {
         if (!this.dragInfo.active || !this.dragInfo.draggedElement) return;
+        e.preventDefault();
+
         let currentX, currentY;
         if (e.type === "touchmove") {
-            e.preventDefault();
             currentX = e.touches[0].clientX - this.dragInfo.initialX;
             currentY = e.touches[0].clientY - this.dragInfo.initialY;
         } else {
@@ -360,6 +372,11 @@ const VideoCallUIManager = {
         const viewportHeight = window.innerHeight;
         currentX = Math.max(0, Math.min(currentX, viewportWidth - this.dragInfo.draggedElement.offsetWidth));
         currentY = Math.max(0, Math.min(currentY, viewportHeight - this.dragInfo.draggedElement.offsetHeight));
+
+        // Apply position updates using requestAnimationFrame for smoother rendering
+        // However, for direct manipulation like dragging, direct style update is often preferred for responsiveness
+        // If lag is still an issue, this is where rAF would be added.
+        // For now, direct update is kept as it's usually very responsive for `left/top`.
         this.dragInfo.draggedElement.style.left = currentX + "px";
         this.dragInfo.draggedElement.style.top = currentY + "px";
     },
@@ -370,7 +387,14 @@ const VideoCallUIManager = {
     dragEnd: function () {
         if (!this.dragInfo.active) return;
         this.dragInfo.active = false;
+
+        document.body.style.userSelect = '';
+        if (typeof LayoutUIManager !== 'undefined' && LayoutUIManager.appContainer) {
+            LayoutUIManager.appContainer.style.userSelect = '';
+        }
+
         if (this.dragInfo.draggedElement) {
+            this.dragInfo.draggedElement.style.transition = this.dragInfo.originalTransition || ''; // Restore original transition
             this.dragInfo.draggedElement.style.cursor = 'grab';
             this.dragInfo.draggedElement.dataset.pipLeft = this.dragInfo.draggedElement.style.left;
             this.dragInfo.draggedElement.dataset.pipTop = this.dragInfo.draggedElement.style.top;
@@ -391,6 +415,7 @@ const VideoCallUIManager = {
             this.callContainer.classList.remove('pip-mode');
             this.callContainer.style.left = ''; this.callContainer.style.top = '';
             this.callContainer.style.right = ''; this.callContainer.style.bottom = '';
+            this.callContainer.style.transition = ''; // Ensure transition is reset if it was 'none'
         }
     }
 };

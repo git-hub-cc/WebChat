@@ -45,7 +45,7 @@
     --warning-color: #FFA500;                     /* 橙色警告 */
 
     --sent-bg-color: rgba(var(--wm-brilliant-gold-rgb), 0.15); /* 发送消息 - 淡金色 */
-    --received-bg-color: rgba(var(--wm-panel-bg-rgb), 1);  /* 接收消息 - 纯白 */
+    --received-bg-color: rgba(var(--wm-panel-bg-rgb), 0.9);  /* 接收消息 - 纯白 */
 
     --border-color: var(--wm-border-color);
     --hover-bg-color: rgba(var(--wm-brilliant-gold-rgb), 0.08);

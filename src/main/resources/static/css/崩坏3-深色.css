@@ -74,7 +74,7 @@
     --warning-color: #FFAB00;
 
     --sent-bg-color: rgba(var(--hi3-energy-stream-cyan-rgb), 0.12);
-    --received-bg-color: rgba(var(--hi3-tech-border-rgb), 0.25);
+    --received-bg-color: rgba(var(--hi3-tech-border-rgb), 0.9);
 
     --border-color: rgba(var(--hi3-tech-border-rgb), 0.45); /* Slightly darker border */
     --hover-bg-color: rgba(var(--hi3-data-glow-white-rgb), 0.05); /* Less pronounced hover */

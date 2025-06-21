@@ -4,6 +4,7 @@
  *              包括清理文本、向 TTS API 发送请求、处理响应以及管理消息中的播放控件 UI。
  *              现在实现了 TTS 音频的 IndexedDB 缓存。
  *              更新：cleanTextForTts 现在仅保留中日韩字符、拉丁字母、数字、中英文逗号句号，其他标点替换为英文逗号。
+ *              修复：TTS 音频现在缓存于 IndexedDB，播放时通过 Object URL 加载，以优化性能和管理。
  * @module MessageTtsHandler
  * @exports {object} MessageTtsHandler - 对外暴露的单例对象，包含所有 TTS 相关处理方法。
  * @property {function} requestTtsForMessage - 为指定消息文本请求 TTS 音频。
@@ -185,8 +186,7 @@ const MessageTtsHandler = {
             const cachedItem = await DBManager.getItem(this._TTS_CACHE_STORE_NAME, cacheKey);
             if (cachedItem && cachedItem.audioBlob instanceof Blob && cachedItem.audioBlob.size > 0) {
                 Utils.log(`TTS Cache HIT for key ${cacheKey} (ttsId ${ttsId}). Using cached audio.`, Utils.logLevels.INFO);
-                const preloadedAudioObjectURL = URL.createObjectURL(cachedItem.audioBlob);
-                this.updateTtsControlToPlay(parentContainer, ttsId, preloadedAudioObjectURL);
+                this.updateTtsControlToPlay(parentContainer, ttsId, cacheKey);
                 return;
             }
             Utils.log(`TTS Cache MISS for key ${cacheKey} (ttsId ${ttsId}). Fetching from API.`, Utils.logLevels.DEBUG);
@@ -225,10 +225,8 @@ const MessageTtsHandler = {
                 Utils.log(`MessageTtsHandler: Caching audio blob for key ${cacheKey} (ttsId ${ttsId}), size: ${audioBlob.size}`, Utils.logLevels.DEBUG);
                 await DBManager.setItem(this._TTS_CACHE_STORE_NAME, { id: cacheKey, audioBlob: audioBlob });
 
-                // 5. Update UI
-                const preloadedAudioObjectURL = URL.createObjectURL(audioBlob);
-                Utils.log(`MessageTtsHandler: ttsId ${ttsId} 的 TTS 音频已获取并缓存。Object URL: ${preloadedAudioObjectURL}`, Utils.logLevels.DEBUG);
-                this.updateTtsControlToPlay(parentContainer, ttsId, preloadedAudioObjectURL);
+                // 5. Update UI to play using cacheKey
+                this.updateTtsControlToPlay(parentContainer, ttsId, cacheKey);
 
             } else {
                 throw new Error(`TTS API 响应缺少 audio_url。消息: ${result.msg || '未知错误'}`);
@@ -240,21 +238,19 @@ const MessageTtsHandler = {
         }
     },
 
-    // _preloadAndSetAudio method is removed as its logic is integrated into requestTtsForMessage
-
     /**
      * 将 TTS 控件更新为播放按钮。
      * @param {HTMLElement} parentContainer - 消息内容的父容器元素。
      * @param {string} ttsId - 关联的 TTS ID。
-     * @param {string} audioUrl - 预加载的音频 Object URL。
+     * @param {string} cacheKey - 用于从 IndexedDB 检索音频的缓存键。
      */
-    updateTtsControlToPlay: function (parentContainer, ttsId, audioUrl) {
+    updateTtsControlToPlay: function (parentContainer, ttsId, cacheKey) {
         const ttsControlContainer = parentContainer.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
         if (ttsControlContainer) {
             ttsControlContainer.innerHTML = '';
             const playButton = document.createElement('button');
             playButton.className = 'tts-play-button';
-            playButton.dataset.audioUrl = audioUrl;
+            playButton.dataset.cacheKey = cacheKey; // Store cache key
             playButton.title = "播放/暂停语音";
             playButton.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -268,63 +264,112 @@ const MessageTtsHandler = {
      * 处理播放/暂停 TTS 音频的点击事件。
      * @param {HTMLElement} buttonElement - 被点击的播放按钮。
      */
-    playTtsAudioFromControl: function (buttonElement) {
-        const audioUrl = buttonElement.dataset.audioUrl;
-        if (!audioUrl) return;
+    playTtsAudioFromControl: async function (buttonElement) {
+        const cacheKey = buttonElement.dataset.cacheKey;
+        if (!cacheKey) {
+            Utils.log("TTS Playback: Cache key not found on button.", Utils.logLevels.WARN);
+            return;
+        }
 
-        const revokeCurrentAudioObjectURL = (audioInstance) => {
-            if (audioInstance && audioInstance.src && audioInstance.src.startsWith('blob:') && audioInstance.dataset.managedObjectURL === 'true') {
-                URL.revokeObjectURL(audioInstance.src);
-                Utils.log(`已撤销 object URL: ${audioInstance.src}`, Utils.logLevels.DEBUG);
-                delete audioInstance.dataset.managedObjectURL;
-            }
-        };
-
+        // If this button is already playing and we click it again (toggle pause/play)
         if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
             if (this._currentlyPlayingTtsAudio.paused) {
-                this._currentlyPlayingTtsAudio.play().catch(e => Utils.log("恢复播放 TTS 音频时出错: " + e, Utils.logLevels.ERROR));
+                this._currentlyPlayingTtsAudio.play().catch(e => {
+                    Utils.log("恢复播放 TTS 音频时出错: " + e, Utils.logLevels.ERROR);
+                    // UI update for error can be added here if needed
+                });
                 buttonElement.classList.add('playing');
             } else {
                 this._currentlyPlayingTtsAudio.pause();
                 buttonElement.classList.remove('playing');
             }
-        } else {
-            if (this._currentlyPlayingTtsAudio) {
-                this._currentlyPlayingTtsAudio.pause();
-                revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
-                if (this._currentlyPlayingTtsButton) this._currentlyPlayingTtsButton.classList.remove('playing');
-            }
-            this._currentlyPlayingTtsAudio = new Audio(audioUrl);
-            this._currentlyPlayingTtsButton = buttonElement;
-            // Mark object URLs for revocation
-            if (audioUrl.startsWith('blob:')) this._currentlyPlayingTtsAudio.dataset.managedObjectURL = 'true';
+            return;
+        }
 
-            this._currentlyPlayingTtsAudio.play().then(() => buttonElement.classList.add('playing'))
+        // Stop and clean up any currently playing audio
+        if (this._currentlyPlayingTtsAudio) {
+            this._currentlyPlayingTtsAudio.pause();
+            if (this._currentlyPlayingTtsButton && this._currentlyPlayingTtsButton.dataset.objectUrl) {
+                URL.revokeObjectURL(this._currentlyPlayingTtsButton.dataset.objectUrl);
+                delete this._currentlyPlayingTtsButton.dataset.objectUrl;
+            }
+            if (this._currentlyPlayingTtsButton) {
+                this._currentlyPlayingTtsButton.classList.remove('playing');
+            }
+        }
+        this._currentlyPlayingTtsAudio = null;
+        this._currentlyPlayingTtsButton = null;
+
+        // Fetch audio from DB
+        try {
+            const cachedItem = await DBManager.getItem(this._TTS_CACHE_STORE_NAME, cacheKey);
+            if (!cachedItem || !cachedItem.audioBlob || !(cachedItem.audioBlob instanceof Blob) || cachedItem.audioBlob.size === 0) {
+                Utils.log(`TTS Playback: Audio blob not found or invalid in cache for key ${cacheKey}.`, Utils.logLevels.ERROR);
+                buttonElement.innerHTML = '💾'; // Icon for cache miss / DB error
+                buttonElement.title = "音频缓存未找到或无效，请尝试重试TTS生成。";
+                // Consider adding a retry mechanism or more specific error UI
+                setTimeout(() => {
+                    if (buttonElement.innerHTML === '💾') {
+                        buttonElement.innerHTML = '';
+                        buttonElement.title = "播放/暂停语音";
+                    }
+                }, 3000);
+                return;
+            }
+
+            const audioBlob = cachedItem.audioBlob;
+            const objectURL = URL.createObjectURL(audioBlob);
+            buttonElement.dataset.objectUrl = objectURL; // Store for revocation
+
+            this._currentlyPlayingTtsAudio = new Audio(objectURL);
+            this._currentlyPlayingTtsButton = buttonElement;
+
+            this._currentlyPlayingTtsAudio.play()
+                .then(() => {
+                    buttonElement.classList.add('playing');
+                })
                 .catch(e => {
                     Utils.log("播放 TTS 音频时出错: " + e, Utils.logLevels.ERROR);
                     buttonElement.classList.remove('playing');
                     buttonElement.innerHTML = '⚠️'; buttonElement.title = "初始化音频时出错";
                     setTimeout(() => { if (buttonElement.innerHTML === '⚠️') { buttonElement.innerHTML = ''; buttonElement.title = "播放/暂停语音"; } }, 2000);
-                    revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
-                    this._currentlyPlayingTtsAudio = null; this._currentlyPlayingTtsButton = null;
+
+                    URL.revokeObjectURL(objectURL);
+                    delete buttonElement.dataset.objectUrl;
+                    if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
+                        this._currentlyPlayingTtsAudio = null;
+                        this._currentlyPlayingTtsButton = null;
+                    }
                 });
+
             this._currentlyPlayingTtsAudio.onended = () => {
                 buttonElement.classList.remove('playing');
+                URL.revokeObjectURL(objectURL);
+                delete buttonElement.dataset.objectUrl;
                 if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
-                    revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
-                    this._currentlyPlayingTtsAudio = null; this._currentlyPlayingTtsButton = null;
+                    this._currentlyPlayingTtsAudio = null;
+                    this._currentlyPlayingTtsButton = null;
                 }
             };
+
             this._currentlyPlayingTtsAudio.onerror = (event) => {
                 Utils.log(`TTS 音频播放期间出错: ${event.target.error ? event.target.error.message : "未知错误"}`, Utils.logLevels.ERROR);
                 buttonElement.classList.remove('playing');
                 buttonElement.innerHTML = '⚠️'; buttonElement.title = "播放音频时出错";
                 setTimeout(() => { if (buttonElement.innerHTML === '⚠️') { buttonElement.innerHTML = ''; buttonElement.title = "播放/暂停语音"; } }, 2000);
+
+                URL.revokeObjectURL(objectURL);
+                delete buttonElement.dataset.objectUrl;
                 if (this._currentlyPlayingTtsAudio && this._currentlyPlayingTtsButton === buttonElement) {
-                    revokeCurrentAudioObjectURL(this._currentlyPlayingTtsAudio);
-                    this._currentlyPlayingTtsAudio = null; this._currentlyPlayingTtsButton = null;
+                    this._currentlyPlayingTtsAudio = null;
+                    this._currentlyPlayingTtsButton = null;
                 }
             };
+
+        } catch (dbError) {
+            Utils.log(`TTS Playback: Error fetching audio from DB for key ${cacheKey}: ${dbError}`, Utils.logLevels.ERROR);
+            buttonElement.innerHTML = '⚠️'; buttonElement.title = "读取音频缓存失败";
+            setTimeout(() => { if (buttonElement.innerHTML === '⚠️') { buttonElement.innerHTML = ''; buttonElement.title = "播放/暂停语音"; } }, 2000);
         }
     },
 

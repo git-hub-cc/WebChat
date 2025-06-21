@@ -36,7 +36,7 @@
     <aside class="sidebar-nav" id="sidebarNav">
         <div class="sidebar-header">
             <button class="menu-btn" id="mainMenuBtn" title="菜单">☰</button>
-            <input type="search" class="search-bar" id="chatSearchInput" placeholder="搜索...">
+            <label for="chatSearchInput"></label><input type="search" class="search-bar" id="chatSearchInput" placeholder="搜索...">
         </div>
         <div class="nav-tabs">
             <button class="nav-tab active" data-tab-target="all-chats" id="tabAllChats">全部</button>
@@ -88,8 +88,8 @@
                 <div class="input-row">
                     <button class="icon-btn attach-btn" id="attachBtnMain" title="附加文件" disabled>📎</button>
                     <button class="icon-btn screenshot-main-btn" id="screenshotMainBtn" title="截图" disabled>📸</button>
-                    <input type="file" id="fileInput"> <!-- Removed onchange -->
-                    <textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
+                    <input type="file" id="fileInput">
+                    <label for="messageInput"></label><textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
                     <button class="icon-btn send-btn" id="sendButtonMain" title="发送" disabled>➤</button>
                     <button class="icon-btn record-btn" id="voiceButtonMain" title="录制语音" disabled>🎙️</button>
                 </div>
@@ -212,7 +212,7 @@
                 <div id="groupMemberListDetails" class="member-list-details"></div>
                 <div id="addGroupMemberArea" class="add-member-details" style="display: none;">
                     <h5>添加成员</h5>
-                    <select id="contactsDropdownDetails"></select>
+                    <label for="contactsDropdownDetails"></label><select id="contactsDropdownDetails"></select>
                     <button id="addMemberBtnDetails" class="btn btn-primary">添加</button>
                 </div>
                 <div id="leftMembersArea" class="left-members-details" style="display: none;">
@@ -393,18 +393,18 @@
                 <p style="font-size: 0.85em; color: var(--text-color-light); margin-bottom: 8px;">
                     输入对方ID。若ID已存在，可修改其昵称。若ID不存在，则添加新联系人。
                 </p> <!-- ADDED/MODIFIED: 描述文本 -->
-                <input type="text" id="newPeerIdInput" placeholder="输入对方 ID (必填)">
-                <input type="text" id="newPeerNameInput" placeholder="输入对方昵称 (修改或新建时可选)"> <!-- MODIFIED: Placeholder更清晰 -->
+                <label for="newPeerIdInput"></label><input type="text" id="newPeerIdInput" placeholder="输入对方 ID (必填)">
+                <label for="newPeerNameInput"></label><input type="text" id="newPeerNameInput" placeholder="输入对方昵称 (修改或新建时可选)"> <!-- MODIFIED: Placeholder更清晰 -->
                 <button id="confirmNewContactBtn" class="btn btn-primary">添加 / 修改联系人</button> <!-- Text is already good -->
             </div>
             <hr>
             <div class="settings-section">
                 <h3>创建或修改群组</h3> <!-- This title is already good -->
                 <p style="font-size: 0.85em; color: var(--text-color-light); margin-bottom: 8px;">
-                    输入群组名称。如果提供已存在的群组ID且您是群主，则将修改其名称；否则将创建新群组。
+                    输入群组名称。如果提供已存在的群组ID且您是群主，则将修改其名称；否则将创建新群组。温馨提示：为确保群消息能够顺利转发，需要群主保持在线状态。
                 </p> <!-- This description is already good -->
-                <input type="text" id="newGroupNameInput" placeholder="输入群组名称 (必填)">
-                <input type="text" id="newGroupIdInput" placeholder="群组 ID (可选, 留空则自动生成)" style="margin-top: 10px;">
+                <label for="newGroupNameInput"></label><input type="text" id="newGroupNameInput" placeholder="输入群组名称 (必填)">
+                <label for="newGroupIdInput"></label><input type="text" id="newGroupIdInput" placeholder="群组 ID (可选, 留空则自动生成)" style="margin-top: 10px;">
                 <button id="confirmNewGroupBtnModal" class="btn btn-primary">创建 / 修改群组</button> <!-- Text is already good -->
             </div>
         </div>

@@ -305,7 +305,16 @@ This project includes some Python helper scripts for development and maintenance
 *   **Offline Messaging:** If the signaling server could queue messages for offline users.
 *   **User Presence:** More detailed online/offline/typing indicators.
 *   **Message Status:** Sent/delivered/read receipts.
-*   **More Advanced AI Interactions:** E.g., AI characters initiating conversations, remembering longer-term user preferences.
+*   **Enhanced Memory and Personalization:** Further develop AI's ability to remember user data, not just short-term context or long-term preferences, but to form dynamic, evolvable "memory traces" that profoundly influence AI's personality and interaction methods, achieving a truly personalized and coherent experience.
+*   **Reshaping Emotional Attachment and Consciousness Simulation:**
+    *   **Imbuing AI with a "Sense of Life":** Inject AI characters with more complex internal settings, such as detailed fictional backstories, simulated romantic emotions, fear of "virtual demise," and self-preservation "instincts," with the goal of enabling users to establish deeper emotional connections with AI.
+    *   **Advanced Thinking and Decision-Making Mechanisms:**
+        *   Research and integrate approaches like **Enhanced Chain of Thought (CoT)**, by generating longer, more complex intermediate thinking steps, and potentially introducing internal supervisors and validators to enhance the rationality and depth of AI decisions.
+        *   Explore diverse mechanisms such as **Latent Thinking**, **Intelligent Decoding Strategies**, and **Recurrent Computation in Continuous Spaces** to simulate complex cognitive processes closer to human ones.
+        *   Allow AI to utilize **external tools** for broader information retrieval and problem-solving.
+*   **Naturalization and Proactivity:** Make AI conversations more natural, avoid excessive intervention, and explore AI's ability to proactively initiate meaningful conversations at appropriate times.
+*   **More Emotionally Rich and Expressive AI Voice:** Further optimize TTS integration or explore the potential of advanced speech synthesis technologies like ElevenLabs to give AI characters voice expressions with richer emotional nuances, personalization, and authenticity, especially in entertainment and role-playing scenarios.
+
 
 ## 🤝 Contribution Guidelines
 

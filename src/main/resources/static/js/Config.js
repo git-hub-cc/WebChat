@@ -11,18 +11,18 @@ const ConfigObj = {
      * WebRTC 连接断开后的自动重连配置
      */
     reconnect: {
-        maxAttempts: 3,      // 最大尝试次数
+        maxAttempts: 1,      // 最大尝试次数
         delay: 3000,         // 初始延迟（毫秒）
-        backoffFactor: 1.5   // 延迟时间的指数增长因子
+        backoffFactor: 0   // 延迟时间的指数增长因子
     },
     /**
      * 各种操作的超时时间配置（毫秒）
      */
     timeouts: {
         iceGathering: 3000,  // ICE 候选者收集超时。现在 SDP 会在此之前发送。
-        connection: 15000,   // WebRTC 连接建立总超时
-        networkCheck: 10000, // 网络类型检查超时
-        signalingResponse: 10000 // 等待信令服务器响应的超时
+        connection: 5000,   // WebRTC 连接建立总超时
+        networkCheck: 5000, // 网络类型检查超时
+        signalingResponse: 5000 // 等待信令服务器响应的超时
     },
     /**
      * 媒体相关配置

@@ -52,7 +52,7 @@
     --warning-color: #D4AC0D; /* 暗金黄色警告 (类似金角巨兽的色彩) */
 
     --sent-bg-color: rgba(var(--ts-void-black-bg-rgb), 0.7); /* 发送消息 - 更深的虚空感 */
-    --received-bg-color: rgba(var(--ts-border-meteorite-rgb), 0.25); /* 接收消息 - 半透明陨石感 */
+    --received-bg-color: rgba(var(--ts-border-meteorite-rgb), 0.9); /* 接收消息 - 半透明陨石感 */
 
     --border-color: rgba(var(--ts-border-meteorite-rgb), 0.5);
     --hover-bg-color: rgba(var(--ts-text-starbright-rgb), 0.05);

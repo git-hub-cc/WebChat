@@ -407,7 +407,7 @@ body {
     display: flex;
     justify-content: space-around;
     padding-block-start: var(--spacing-3);
-    border-bottom: 1px solid var(--border-color);
+    /*border-bottom: 1px solid var(--border-color);*/
 }
 
 .nav-tab {
@@ -1020,11 +1020,11 @@ body {
 }
 
 .tts-config-content-details {
-    padding-inline-start: 12px;
-    margin-block-start: 10px;
-    margin-inline-start: 5px;
-    padding-block-start: 5px;
-    border-inline-start: 2px solid var(--border-color);
+    /*padding-inline-start: 12px;*/
+    /*margin-block-start: 10px;*/
+    /*margin-inline-start: 5px;*/
+    /*padding-block-start: 5px;*/
+    /*border-inline-start: 2px solid var(--border-color);*/
 }
 
 #ttsConfigFormContainer .tts-config-item {
@@ -1086,7 +1086,7 @@ body {
 
 /* --- 详情面板: TTS 署名信息 --- */
 .tts-attribution-section {
-    margin-inline: 5px;
+    /*margin-inline: 5px;*/
 }
 
 /* 这是一个特殊的、自定义样式的可折叠标题 */
@@ -1107,7 +1107,7 @@ body {
 .tts-attribution-section .attribution-sub-content {
     padding-inline-start: 12px;
     margin-top: 8px;
-    border-inline-start: 2px solid var(--hover-bg-color);
+    /*border-inline-start: 2px solid var(--hover-bg-color);*/
     font-size: 0.85em;
 }
 
@@ -1554,11 +1554,11 @@ body {
 }
 
 .collapsible-content {
-    padding-top: 5px;
-    padding-inline-start: 15px;
-    margin-top: 0;
-    margin-bottom: 10px;
-    border-inline-start: 2px solid var(--hover-bg-color);
+    /*padding-top: 5px;*/
+    /*padding-inline-start: 15px;*/
+    /*margin-top: 0;*/
+    /*margin-bottom: 10px;*/
+    /*border-inline-start: 2px solid var(--hover-bg-color);*/
     /* 默认隐藏，由 JS 通过 style.display 控制 */
 }
 
