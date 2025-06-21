@@ -377,8 +377,9 @@ public class OpenAIServiceImpl implements OpenAIService {
                                         invalidateAndRemoveApiKey(currentApiKey, "授权问题 (" + clientResponse.statusCode() + ")");
                                         keyInvalidated = true;
                                     } else if (clientResponse.statusCode().isSameCodeAs(HttpStatus.TOO_MANY_REQUESTS)) {
-                                        invalidateAndRemoveApiKey(currentApiKey, "请求过多 (429) - 密钥可能已达限额");
-                                        keyInvalidated = true;
+                                        // **[MODIFIED]** 根据新要求，当收到429 (Too Many Requests) 错误时，不再移除API密钥
+                                        logger.warn("OpenAI API密钥 '{}' 遭遇 429 (Too Many Requests). 根据策略，密钥将不会被移除。", maskApiKey(currentApiKey));
+                                        // keyInvalidated 保持 false
                                     }
 
                                     String errorMessage = "OpenAI API Error: " + errorBody;
@@ -431,8 +432,9 @@ public class OpenAIServiceImpl implements OpenAIService {
                                         invalidateAndRemoveApiKey(currentApiKey, "授权问题 (" + clientResponse.statusCode() + ")");
                                         keyInvalidated = true;
                                     } else if (clientResponse.statusCode().isSameCodeAs(HttpStatus.TOO_MANY_REQUESTS)) {
-                                        invalidateAndRemoveApiKey(currentApiKey, "请求过多 (429) - 密钥可能已达限额");
-                                        keyInvalidated = true;
+                                        // **[MODIFIED]** 根据新要求，当收到429 (Too Many Requests) 错误时，不再移除API密钥
+                                        logger.warn("OpenAI API密钥 '{}' 遭遇 429 (Too Many Requests). 根据策略，密钥将不会被移除。", maskApiKey(currentApiKey));
+                                        // keyInvalidated 保持 false
                                     }
 
                                     String errorMessage = "OpenAI API Error: " + errorBody;

@@ -94,7 +94,7 @@ const ModalUIManager = {
         if (newChatFab) newChatFab.addEventListener('click', () => this.toggleModal('newContactGroupModal', true));
         // 添加新联系人
         const confirmNewContactBtn = document.getElementById('confirmNewContactBtn');
-        if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', () => {
+        if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', () => { 
             const peerIdInput = document.getElementById('newPeerIdInput');
             const peerNameInput = document.getElementById('newPeerNameInput');
             const peerId = peerIdInput.value.trim();
@@ -103,10 +103,13 @@ const ModalUIManager = {
                 NotificationUIManager.showNotification('对方 ID 是必填项。', 'warning');
                 return;
             }
-            UserManager.addContact(peerId, peerName || `用户 ${peerId.substring(0, 4)}`);
-            peerIdInput.value = '';
-            peerNameInput.value = '';
-            this.toggleModal('newContactGroupModal', false);
+            UserManager.addContact(peerId, peerName || `用户 ${peerId.substring(0, 4)}`).then(success => { 
+                if (success) { 
+                    peerIdInput.value = '';
+                    peerNameInput.value = '';
+                    this.toggleModal('newContactGroupModal', false);
+                } 
+            }); 
         });
         // 创建新群组
         const confirmNewGroupBtnModal = document.getElementById('confirmNewGroupBtnModal');

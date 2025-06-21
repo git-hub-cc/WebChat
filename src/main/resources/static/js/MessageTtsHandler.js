@@ -47,7 +47,7 @@ const MessageTtsHandler = {
         const keepCharsRegex = /[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uff65-\uff9f\uac00-\ud7afa-zA-Z0-9,.\uff0c\uff0e]/u;
 
         // Punctuation to convert to an English comma (,)
-        const convertToCommaPunctuationRegex = /[!?"#$%&'()*+\-/:;<=>@[\\\]^_`{|}~\u3001\uff01\uff1f\uff1b\uff1a\u2013\u2014\u2026「」『』《》〈〉·—～]/gu;
+        const convertToCommaPunctuationRegex = /[!?"#$%&'()*+\-\/:;<=>@[\\\]^_`{|}~\u3001\uff01\uff1f\uff1b\uff1a\u2013\u2014\u2026「」『』《》〈〉·～]/gu;
 
         let resultBuilder = "";
         for (let i = 0; i < cleanedText.length; i++) {
@@ -63,18 +63,18 @@ const MessageTtsHandler = {
 
         // 3. Normalize all kept Chinese commas (，) to English commas (,)
         //    and all kept Chinese periods (。) to English periods (.)
-        cleanedText = cleanedText.replace(/\uff0c/g, ','); // ， to ,
-        cleanedText = cleanedText.replace(/\uff0e/g, '.'); // 。 to .
+        cleanedText = cleanedText.replace(/\uff0c/g, '，'); // ， to ，
+        cleanedText = cleanedText.replace(/\uff0e/g, '。'); // 。 to 。
 
         // 4. Consolidate multiple commas into a single English comma,
         //    and multiple periods into a single English period.
-        cleanedText = cleanedText.replace(/,{2,}/g, ',');
-        cleanedText = cleanedText.replace(/\.{2,}/g, '.');
+        cleanedText = cleanedText.replace(/,{2,}/g, '，');
+        cleanedText = cleanedText.replace(/\.{2,}/g, '。');
 
         // 5. Handle mixed sequences like ",." or ".,". Generally, a period is a stronger separator.
         //    Remove commas if they are directly adjacent to a period.
-        cleanedText = cleanedText.replace(/,\./g, '.'); // Sequence ",." becomes "."
-        cleanedText = cleanedText.replace(/\.,/g, '.'); // Sequence ".," becomes "."
+        cleanedText = cleanedText.replace(/,\./g, '。'); // Sequence ",." becomes "."
+        cleanedText = cleanedText.replace(/\.,/g, '。'); // Sequence ".," becomes "."
 
         // 6. Remove any leading or trailing commas or periods that might exist after processing.
         cleanedText = cleanedText.replace(/^[,.]+/, '');

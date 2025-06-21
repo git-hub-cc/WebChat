@@ -26,9 +26,9 @@
     使用 Playwright Test 的 API 来与页面交互并进行断言。
 
 5.  **运行测试**:
-    在终端中运行：
+    在终端中运行, 可选参数`--headed`
     ```bash
-    npx playwright test
+    npx playwright test 
     ```
 
 6.  **查看测试报告**:

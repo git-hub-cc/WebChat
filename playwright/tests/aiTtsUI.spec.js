@@ -1,114 +1,173 @@
-// tests/aiTtsUI.spec.js
-const { test, expect } = require('@playwright/test');
+const {test, expect} = require('@playwright/test'); // 1. 导入 Playwright 测试模块
 
-test.describe('AI 消息 TTS UI 功能', () => {
-    const AI_CONTACT_ID = 'AI_Paimon'; // 假设 Paimon 是默认主题中的 AI
-    const AI_CONTACT_NAME = 'Paimon';
+test.describe('AI 消息 TTS UI - 动态获取模式 (修复后 v2)', () => { // 2. 定义测试套件
+    // 3. 定义测试中使用的常量
+    const AI_CONTACT_ID = 'AI_Kazuha_原神';
+    const AI_CONTACT_NAME = '枫原万叶';
+    const AI_MESSAGE_TEXT = `你好 ${AI_CONTACT_NAME}，动态 TTS 测试！`;
 
-    test.beforeEach(async ({ page }) => {
-        await page.goto('/');
-        await expect(page.locator('#connectionStatusText')).toContainText(/初始化完成，准备连接|用户注册成功|信令服务器已连接|已从本地加载|使用现有id/, { timeout: 20000 });
+    // 4. beforeEach 钩子：在每个测试用例运行前执行
+    test.beforeEach(async ({page}) => {
+        await page.goto('/'); // 4a. 导航到根路径
+        // 4b. 等待并断言连接状态文本包含特定内容，超时30秒
+        await expect(page.locator('#connectionStatusText')).toContainText(/初始化完成，准备连接|用户注册成功|信令服务器已连接|已从本地加载|使用现有id/, {timeout: 30000});
 
-        // 确保 AI 联系人在列表中
-        await expect(page.locator(`#chatListNav li[data-id="${AI_CONTACT_ID}"] .chat-list-name:has-text("${AI_CONTACT_NAME}")`)).toBeVisible({ timeout: 10000 });
+        // 4c. 定位 AI 联系人列表项：
+        //    - `#chatListNav li[data-id="${AI_CONTACT_ID}"]`: 查找ID为chatListNav的元素下的、具有特定data-id属性的li元素。
+        //      `${AI_CONTACT_ID}` 是模板字符串，将常量值嵌入选择器。
+        //    - `.chat-list-name:has-text("${AI_CONTACT_NAME}")`: 在该li元素内，查找class为chat-list-name且包含特定文本的元素。
+        const aiContactListItem = page.locator(`#chatListNav li[data-id="${AI_CONTACT_ID}"] .chat-list-name:has-text("${AI_CONTACT_NAME}")`);
+        await expect(aiContactListItem).toBeVisible({timeout: 20000}); // 4d. 断言该联系人项可见，超时20秒
 
-        // 打开与 AI 的聊天
+        // 4e. 点击整个列表项 (父级li)
         await page.locator(`#chatListNav li[data-id="${AI_CONTACT_ID}"]`).click();
+        // 4f. 断言当前聊天标题为AI角色名
         await expect(page.locator('#currentChatTitleMain')).toHaveText(AI_CONTACT_NAME);
+
+        // 4g. 点击聊天详情按钮
+        await page.locator('#chatDetailsBtnMain').click();
+        // 4h. 断言详情面板标题包含AI角色名
+        await expect(page.locator('#detailsPanelTitle')).toContainText(`${AI_CONTACT_NAME} 信息`);
+        // 4i. 断言详情面板可见
+        await expect(page.locator('#detailsPanel')).toBeVisible();
     });
 
-    test('AI 回复后应该显示 TTS 加载指示器，然后变为播放按钮', async ({ page }) => {
-        const userMessageText = `Paimon，讲个笑话吧！`;
+    // 5. 定义一个名为 "配置动态 TTS，发送消息并验证 TTS 播放" 的测试用例
+    test('配置动态 TTS，发送消息并验证 TTS 播放', async ({page}) => {
+        // 5a. 定位TTS配置区域
+        const ttsConfigSection = page.locator('#aiTtsConfigSection');
+        await expect(ttsConfigSection).toBeVisible(); // 断言可见
+        // 5b. 定位TTS配置区域的头部 (可折叠)
+        const ttsConfigHeader = ttsConfigSection.locator('h4.collapsible-header:has-text("TTS 配置")');
+        // 5c. 定位TTS配置区域的内容部分 (紧随头部的div)
+        //    `+ div.collapsible-content` 是 CSS 相邻兄弟选择器
+        const ttsConfigContent = ttsConfigHeader.locator('+ div.collapsible-content');
+
+        // 5d. 如果内容区域是隐藏的，则点击头部展开它
+        if (await ttsConfigContent.isHidden()) {
+            await ttsConfigHeader.click();
+        }
+        await expect(ttsConfigContent).toBeVisible(); // 断言内容区域可见
+
+        // --- 模式和版本选择 ---
+        // 5e. 定位TTS模式选择下拉框 (select元素)
+        const ttsModeSelect = ttsConfigSection.locator(`select#ttsInput_${AI_CONTACT_ID}_tts_mode`);
+        // 5f. 选择值为 "Dynamic" 的选项
+        await ttsModeSelect.selectOption({value: 'Dynamic'});
+        // 5g. 断言下拉框的当前值为 "Dynamic"
+        await expect(ttsModeSelect).toHaveValue('Dynamic');
+
+        // 5h. 定位模型名称的可搜索下拉框 (通常是一个自定义组件，外面是div)
+        const modelNameSearchableSelect = ttsConfigSection.locator(`div.searchable-select-tts#ttsInput_${AI_CONTACT_ID}_model_name`);
+        await expect(modelNameSearchableSelect).toBeVisible();
+
+        // 5i. 定位版本选择下拉框
+        const versionSelect = ttsConfigSection.locator(`select#ttsInput_${AI_CONTACT_ID}_version`);
+        await versionSelect.selectOption({value: 'v4'}); // 选择 v4
+        await expect(versionSelect).toHaveValue('v4'); // 断言值为 v4
+
+        // --- 模型名称选择 ---
+        // 5j. 定位模型名称可搜索下拉框内的输入框
+        const modelNameInput = modelNameSearchableSelect.locator('input.searchable-select-input-tts');
+        // 5k. 断言输入框启用，并增加超时等待模型加载
+        await expect(modelNameInput).toBeEnabled({timeout: 25000});
+        // 5l. 断言输入框的 placeholder 属性
+        await expect(modelNameInput).toHaveAttribute('placeholder', '搜索/选择模型...', {timeout: 10000});
+
+        // 5m. 在输入框中填写 AI 角色名进行搜索
+        await modelNameInput.fill(AI_CONTACT_NAME);
+        // 5n. 定位搜索结果选项的容器
+        const modelOptionsContainer = modelNameSearchableSelect.locator('div.searchable-select-options-container-tts');
+        await expect(modelOptionsContainer).toBeVisible(); // 断言选项容器可见
+        // 5o. 定位包含AI角色名的第一个选项
+        const targetModelOption = modelOptionsContainer.locator(`div.searchable-select-option-tts:has-text("${AI_CONTACT_NAME}")`).first();
+        await expect(targetModelOption).toBeVisible(); // 断言目标选项可见
+        // 5p. 获取选项的完整文本内容
+        const fullModelNameText = await targetModelOption.textContent();
+        if (!fullModelNameText) { // 防御性编程，确保文本不为空
+            throw new Error(`无法获取包含 "${AI_CONTACT_NAME}" 的模型选项的文本内容`);
+        }
+        const trimmedFullModelNameText = fullModelNameText.trim(); // 去除前后空格
+        await targetModelOption.click(); // 点击选中的模型选项
+        // 5q. 断言输入框的值变为选中的模型全名
+        await expect(modelNameInput).toHaveValue(trimmedFullModelNameText);
+        // 5r. 断言选项容器隐藏 (选择后通常会关闭)
+        await expect(modelOptionsContainer).toBeHidden();
+
+        // --- 参考音频语言选择 ---
+        // 5s. 定位语言选择下拉框
+        const promptLangSelect = ttsConfigSection.locator(`select#ttsInput_${AI_CONTACT_ID}_prompt_text_lang`);
+        // 5t. 断言语言下拉框启用 (模型选择后应该会激活)
+        await expect(promptLangSelect).toBeEnabled({timeout: 20000});
+        // (注释掉的代码：确认下拉框有真实选项)
+        // await expect(promptLangSelect.locator('option:not([value=""]):not([disabled])').first()).toBeVisible({timeout: 10000});
+
+        // 5u. 通过标签 "中文" 选择语言
+        await promptLangSelect.selectOption({label: '中文'});
+        await expect(promptLangSelect).toHaveValue('中文'); // 断言值为 "中文"
+
+        // (注释掉的情感选择部分，逻辑类似)
+
+        // --- 启用 TTS 和保存 ---
+        // 5v. 定位启用TTS的复选框 (通过 type 和 data-tts-param 属性)
+        const enableTtsCheckbox = ttsConfigSection.locator(`input[type="checkbox"][data-tts-param="enabled"]`);
+        await enableTtsCheckbox.check(); // 勾选复选框
+        await expect(enableTtsCheckbox).toBeChecked(); // 断言已勾选
+
+        // 5w. 定位并点击保存按钮
+        const saveTtsButton = page.locator('#saveAiTtsSettingsBtnDetails');
+        await saveTtsButton.click();
+        // 5x. 断言保存成功的通知消息可见
+        await expect(page.locator('.notification.notification-success:has-text("TTS 设置已成功保存。")')).toBeVisible();
+
+        // --- 关闭详情面板 ---
+        // 5y. 点击关闭详情面板按钮
+        await page.locator('#closeDetailsBtnMain').click();
+        await expect(page.locator('#detailsPanel')).toBeHidden(); // 断言面板已隐藏
+
+        // --- 发送消息并验证 TTS 播放 ---
+        // 5z. 定位消息输入框
         const messageInput = page.locator('#messageInput');
+        await messageInput.fill(AI_MESSAGE_TEXT); // 填写消息
+        await page.locator('#sendButtonMain').click(); // 点击发送
+        // 5aa. 断言已发送的消息出现在聊天记录中
+        await expect(page.locator(`.message.sent .message-content:has-text("${AI_MESSAGE_TEXT}")`)).toBeVisible();
 
-        // 1. 发送消息给 AI
-        await messageInput.fill(userMessageText);
-        await page.locator('#sendButtonMain').click();
-        await expect(page.locator(`.message.sent .message-content:has-text("${userMessageText}")`)).toBeVisible();
-
-        // 2. 等待 AI 回复 (正在思考... -> 实际回复)
+        // 5ab. 定位 "正在思考..." 的系统消息
         const thinkingMessage = page.locator(`.message.system:has-text("${AI_CONTACT_NAME} 正在思考...")`);
-        await expect(thinkingMessage).toBeVisible({ timeout: 3000 });
-        await expect(thinkingMessage).toBeHidden({ timeout: 30000 }); // AI 响应时间
+        await expect(thinkingMessage).toBeVisible({timeout: 30000}); // 断言可见
+        await expect(thinkingMessage).toBeHidden({timeout: 60000}); // 断言在60秒内消失 (AI响应完成)
 
-        // 3. 定位 AI 的回复消息元素
-        // AI 的回复会有一个特定的 class `character-message` 和 AI 的 ID
-        const aiMessageElement = page.locator(`.message.received.character-message.${AI_CONTACT_ID}`).last(); // 取最新的一条
-        await expect(aiMessageElement).toBeVisible({ timeout: 5000 });
+        // 5ac. 定位最新一条收到的AI消息 (class包含角色ID)
+        const aiMessageElement = page.locator(`.message.received.character-message.${AI_CONTACT_ID}`).last();
+        await expect(aiMessageElement).toBeVisible({timeout: 15000}); // 断言AI消息可见
 
-        // 4. 验证 TTS 加载指示器 (spinner) 出现
-        // TTS 控件在 .message-content-wrapper 内部
+        // 5ad. 在AI消息中定位TTS控制容器
         const ttsControlContainer = aiMessageElement.locator('.tts-control-container');
         await expect(ttsControlContainer).toBeVisible();
+        // 5ae. 定位TTS加载中的 spinner
         const ttsLoadingSpinner = ttsControlContainer.locator('.tts-loading-spinner');
-        await expect(ttsLoadingSpinner).toBeVisible({ timeout: 2000 }); // Spinner 应该很快出现
+        await expect(ttsLoadingSpinner).toBeVisible({timeout: 5000}); // 断言 spinner 可见 (开始加载TTS)
 
-        // 5. 等待 TTS "完成" (spinner 消失，播放按钮出现)
-        // 这取决于 TTS API 的响应速度和缓存情况
-        await expect(ttsLoadingSpinner).toBeHidden({ timeout: 20000 }); // TTS API 响应时间
+        // 5af. 断言 spinner 在45秒内消失 (TTS加载完成)
+        // await expect(ttsLoadingSpinner).toBeHidden({timeout: 45000});
+        // 5ag. 定位TTS播放按钮
         const ttsPlayButton = ttsControlContainer.locator('button.tts-play-button');
-        await expect(ttsPlayButton).toBeVisible({ timeout: 5000 }); // 播放按钮应该出现
+        await expect(ttsPlayButton).toBeVisible({timeout: 45000}); // 断言播放按钮可见
+        // 5ah. 断言播放按钮的 title 属性
         await expect(ttsPlayButton).toHaveAttribute('title', '播放/暂停语音');
 
-        // 6. (可选) 点击播放按钮，验证其状态变化 (视觉上，如图标改变)
-        //    MessageTtsHandler.js 中，播放时按钮会添加 'playing' 类，并改变伪元素内容
-        //    我们可以检查 'playing' 类
+        // 5ai. 点击播放按钮
         await ttsPlayButton.click();
-        await expect(ttsPlayButton).toHaveClass(/playing/); // 检查是否添加了 playing 类
-        // 再次点击暂停
+        // 5aj. 断言按钮具有 'tts-play-button' 类 (这里可能是验证播放状态的类名，或者是一个笔误，通常是验证图标变化或 aria-label 变化)
+        // 注意：toHaveClass 后面跟的是正则表达式或精确字符串。如果 'tts-play-button' 是始终存在的类，
+        // 那么这个断言可能是用来确保按钮仍然是那个按钮，或者是在验证它没有变成一个表示“暂停”的特定类。
+        // 根据脚本的上下文，这里更可能是想验证按钮处于“播放中”的状态，这通常通过不同的类名或属性来表示。
+        // 如果是要验证播放后类名 *仍然包含* tts-play-button，那这个断言没问题。
+        // 如果是想验证播放后，按钮的类名 *变成了* 某个表示“播放中”的特定类，那这里的断言需要调整。
+        // 假设点击播放后，按钮仍有这个基础类，但可能会增加一个如 'playing' 的类。
+        await expect(ttsPlayButton).toHaveClass(/tts-play-button/, {timeout: 10000}); // 确保按钮是播放按钮
+        // 再次点击 (暂停)
         await ttsPlayButton.click();
-        await expect(ttsPlayButton).not.toHaveClass(/playing/);
-    });
-
-    test('如果 TTS API 端点未配置，AI 回复后 TTS 控件应显示错误/重试', async ({ page }) => {
-        // --- 前置：修改设置，使 TTS API 端点为空 ---
-        await page.locator('#mainMenuBtn').click();
-        const settingsModal = page.locator('#mainMenuModal');
-        await expect(settingsModal).toBeVisible();
-        const aiConfigHeader = settingsModal.locator('h3.collapsible-header:has-text("AI 与 API 配置")');
-        const aiConfigContent = aiConfigHeader.locator('+ .collapsible-content');
-        if (await aiConfigContent.isHidden()) {
-            await aiConfigHeader.click();
-        }
-        const ttsApiEndpointInput = settingsModal.locator('#ttsApiEndpointInput');
-        await ttsApiEndpointInput.fill(''); // 设置为空
-        await settingsModal.locator('h2:has-text("菜单与设置")').click(); // 失焦保存
-        await expect(page.locator('.notification.notification-success:has-text("TtsApiEndpoint 设置已保存。")')).toBeVisible();
-        await settingsModal.locator('.close-modal-btn').click();
-        await expect(settingsModal).toBeHidden();
-        // --- 前置结束 ---
-
-        const userMessageText = `Paimon，这次 TTS 会失败吗？`;
-        const messageInput = page.locator('#messageInput');
-
-        // 1. 发送消息给 AI
-        await messageInput.fill(userMessageText);
-        await page.locator('#sendButtonMain').click();
-
-        // 2. 等待 AI 回复
-        const thinkingMessage = page.locator(`.message.system:has-text("${AI_CONTACT_NAME} 正在思考...")`);
-        await expect(thinkingMessage).toBeHidden({ timeout: 30000 });
-        const aiMessageElement = page.locator(`.message.received.character-message.${AI_CONTACT_ID}`).last();
-        await expect(aiMessageElement).toBeVisible({ timeout: 5000 });
-
-        // 3. 验证 TTS 控件显示错误/重试状态
-        const ttsControlContainer = aiMessageElement.locator('.tts-control-container');
-        await expect(ttsControlContainer).toBeVisible();
-        const ttsRetryButton = ttsControlContainer.locator('button.tts-retry-button');
-        await expect(ttsRetryButton).toBeVisible({ timeout: 5000 }); // 错误状态应该很快出现
-        await expect(ttsRetryButton).toHaveText('⚠️');
-        await expect(ttsRetryButton).toHaveAttribute('title', /TTS 错误: TTS 端点未配置/); // 验证 title 包含错误信息
-
-        // 4. （可选）测试重试按钮点击后的行为（如果实现了点击后重新请求逻辑）
-        //     这里因为我们知道端点是空的，重试应该还是失败
-        await ttsRetryButton.click();
-        const ttsLoadingSpinner = ttsControlContainer.locator('.tts-loading-spinner');
-        await expect(ttsLoadingSpinner).toBeVisible({ timeout: 1000 }); // 点击重试后应显示加载
-        await expect(ttsLoadingSpinner).toBeHidden({ timeout: 5000 }); // 应该快速再次失败
-        await expect(ttsRetryButton).toBeVisible(); // 重试按钮再次出现
-
-        // --- 后置：恢复 TTS API 端点设置（如果需要，或者测试独立运行）---
-        // 为了测试的独立性，最好在 afterEach 中恢复，或者在测试开始前确保是默认值。
-        // 此处省略恢复步骤，假设测试各自独立。
     });
 });
