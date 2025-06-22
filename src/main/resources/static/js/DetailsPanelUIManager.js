@@ -4,6 +4,8 @@
  *              新增: 群主可查看和编辑群内 AI 的特定提示词。
  *              优化: 当群主修改AI提示词后，会向群内发送系统消息通知。
  *              修复: 主题切换后，添加成员下拉列表现在能正确反映当前主题的AI角色。
+ *              更新: 群组成员列表现在显示在线状态和与当前用户的连接状态，并提供重连按钮。
+ *              新增: 定期自动刷新群成员状态，并对在线但未连接的成员尝试自动连接。
  * @module DetailsPanelUIManager
  * @exports {object} DetailsPanelUIManager - 对外暴露的单例对象，包含管理右侧详情面板的所有方法。
  * @property {function} init - 初始化模块，获取DOM元素引用并绑定基础事件。
@@ -76,6 +78,9 @@ const DetailsPanelUIManager = {
     _isResourceLoading: false,
     _resourceScrollListenerAttached: false,
     _boundHandleResourceGridScroll: null,
+
+    _groupMemberRefreshInterval: null, // 用于存储群成员刷新定时器
+    GROUP_MEMBER_REFRESH_INTERVAL_MS: 3000, // 3秒刷新间隔
 
     /**
      * 初始化模块。获取所有必要的DOM元素引用，并绑定初始事件监听器。
@@ -162,7 +167,40 @@ const DetailsPanelUIManager = {
         }
         this._boundHandleResourceGridScroll = this._handleResourceGridScroll.bind(this);
         this.bindEvents();
+
+        // 监听连接状态变化以更新群成员状态
+        EventEmitter.on('connectionEstablished', (peerId) => {
+            this._tryRefreshGroupMembersView(peerId);
+        });
+        EventEmitter.on('connectionClosed', (peerId) => {
+            this._tryRefreshGroupMembersView(peerId);
+        });
+        EventEmitter.on('connectionFailed', (peerId) => {
+            this._tryRefreshGroupMembersView(peerId);
+        });
+        // 监听在线用户列表变化，以更新状态
+        EventEmitter.on('onlineUsersUpdated', () => {
+            if (this.currentView === 'details' && ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
+                this.updateDetailsPanelMembers(ChatManager.currentChatId);
+            }
+        });
+
     },
+
+    /**
+     * @private
+     * 尝试刷新群成员视图，如果当前正在查看该群组的详情。
+     * @param {string} peerId - 发生连接状态变化的成员ID。
+     */
+    _tryRefreshGroupMembersView: function(peerId) {
+        if (this.currentView === 'details' && ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
+            const group = GroupManager.groups[ChatManager.currentChatId];
+            if (group && group.members.includes(peerId)) {
+                this.updateDetailsPanelMembers(ChatManager.currentChatId);
+            }
+        }
+    },
+
 
     /**
      * 绑定模块所需的事件监听器。
@@ -202,11 +240,23 @@ const DetailsPanelUIManager = {
         this.isPanelAreaVisible = show;
         if (this.detailsPanelContentEl) this.detailsPanelContentEl.style.display = 'none';
         if (this.peopleLobbyContentEl) this.peopleLobbyContentEl.style.display = 'none';
+
+        // 清除旧的定时器
+        if (this._groupMemberRefreshInterval) {
+            clearInterval(this._groupMemberRefreshInterval);
+            this._groupMemberRefreshInterval = null;
+            Utils.log("DetailsPanelUIManager: 已清除群成员刷新定时器。", Utils.logLevels.DEBUG);
+        }
+
         if (show) {
             if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'flex';
             if (appContainer) appContainer.classList.add('show-details');
             if (viewType === 'details' && this.detailsPanelContentEl) {
                 this.detailsPanelContentEl.style.display = 'block';
+                // 如果是群组详情，启动定时刷新
+                if (ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
+                    this._startGroupMemberRefreshTimer();
+                }
             } else if (viewType === 'lobby' && this.peopleLobbyContentEl) {
                 this.peopleLobbyContentEl.style.display = 'flex';
             }
@@ -234,7 +284,7 @@ const DetailsPanelUIManager = {
         if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = '人员大厅';
         if (this.resourcePreviewSectionEl) this.resourcePreviewSectionEl.style.display = 'none';
         if (this.groupAiPromptsSectionEl) this.groupAiPromptsSectionEl.style.display = 'none';
-        if (PeopleLobbyManager) await PeopleLobbyManager.show();
+        if (PeopleLobbyManager) await PeopleLobbyManager.show(); // show会获取最新数据
         this._setPanelVisibility(true, 'lobby');
         Utils.log("DetailsPanelUIManager: 显示人员大厅视图。", Utils.logLevels.DEBUG);
     },
@@ -280,8 +330,14 @@ const DetailsPanelUIManager = {
         }
         if (type === 'contact') {
             this._updateForContact(chatId);
+            // 联系人详情不需要定时刷新成员状态
+            if (this._groupMemberRefreshInterval) {
+                clearInterval(this._groupMemberRefreshInterval);
+                this._groupMemberRefreshInterval = null;
+            }
         } else if (type === 'group') {
             this._updateForGroup(chatId);
+            // _updateForGroup 内部会决定是否启动定时器
         }
     },
 
@@ -425,7 +481,7 @@ const DetailsPanelUIManager = {
             this.detailsAvatarEl.innerHTML = '👥';
             this.detailsAvatarEl.className = 'details-avatar group';
         }
-        if (this.detailsStatusEl) this.detailsStatusEl.textContent = `${group.members.length} 名成员`;
+        if (this.detailsStatusEl) this.detailsStatusEl.textContent = `${group.members.length} 名成员 (上限 ${GroupManager.MAX_GROUP_MEMBERS})`;
         if (this.detailsGroupManagementEl) this.detailsGroupManagementEl.style.display = 'block';
         if (this.groupActionsDetailsEl) this.groupActionsDetailsEl.style.display = 'block';
         const isOwner = group.owner === UserManager.userId;
@@ -449,7 +505,7 @@ const DetailsPanelUIManager = {
                 this.dissolveGroupBtnDetailsEl.addEventListener('click', () => ChatManager.deleteChat(groupId, 'group'));
             }
         }
-        this.updateDetailsPanelMembers(groupId);
+        this.updateDetailsPanelMembers(groupId); // 初始渲染成员列表
 
         // AI提示词管理部分
         if (this.groupAiPromptsSectionEl && isOwner) { // 确保容器存在
@@ -476,6 +532,11 @@ const DetailsPanelUIManager = {
             if (this.resourcePreviewPanelContentEl) this.resourcePreviewPanelContentEl.style.display = 'none';
         }
         this._detachResourceScrollListener();
+        // 在这里决定是否启动定时器，而不是在 _setPanelVisibility 中
+        // 确保只有当当前聊天是群组且详情面板为此群组打开时才启动
+        if (ChatManager.currentChatId === groupId && this.isPanelAreaVisible && this.currentView === 'details') {
+            this._startGroupMemberRefreshTimer();
+        }
     },
 
     _populateGroupAiPromptsEditor: function(groupId, group, aiMemberIds) {
@@ -589,22 +650,58 @@ const DetailsPanelUIManager = {
         const leftMemberListDetailsEl = document.getElementById('leftMemberListDetails');
         this.groupMemberListDetailsEl.innerHTML = '';
         this.groupMemberCountEl.textContent = group.members.length;
+
         group.members.forEach(memberId => {
             const member = UserManager.contacts[memberId] || {id: memberId, name: `用户 ${memberId.substring(0, 4)}`};
             const item = document.createElement('div');
             item.className = 'member-item-detail';
-            let html = `<span>${Utils.escapeHtml(member.name)} ${memberId === UserManager.userId ? '(您)' : ''} ${member.isAI ? '(AI)' : ''}</span>`;
-            if (memberId === group.owner) html += '<span class="owner-badge">群主</span>';
-            else if (group.owner === UserManager.userId) {
-                html += `<button class="remove-member-btn-detail" data-member-id="${memberId}" title="移除成员">✕</button>`;
+
+            let memberInfoHtml = `<span class="member-name">${Utils.escapeHtml(member.name)} ${memberId === UserManager.userId ? '(您)' : ''} ${member.isAI ? '(AI)' : ''}</span>`;
+            let statusHtml = '';
+            let actionsHtml = '';
+
+            if (memberId !== UserManager.userId && !member.isAI) { // 非当前用户且非AI，显示连接状态和重连按钮
+                const isConnected = ConnectionManager.isConnectedTo(memberId);
+                // 优先使用 PeopleLobbyManager 的在线状态，如果不可用则默认离线
+                const isOnline = PeopleLobbyManager.onlineUserIds ? PeopleLobbyManager.onlineUserIds.includes(memberId) : false;
+                let onlineStatusText = isOnline ? '在线' : '离线';
+                let statusClass = isOnline ? 'online-not-connected' : 'offline'; // 默认为未连接的在线或离线
+
+                if (isConnected) {
+                    onlineStatusText = '已连接';
+                    statusClass = 'connected';
+                }
+
+                statusHtml = `<span class="member-status ${statusClass}">(${onlineStatusText})</span>`;
+                if (!isConnected && isOnline) { // 仅当在线但未连接时显示重连按钮
+                    actionsHtml += `<button class="reconnect-member-btn-detail" data-member-id="${memberId}" title="重新连接">🔄</button>`;
+                }
             }
-            item.innerHTML = html;
+
+            if (memberId === group.owner) {
+                memberInfoHtml += '<span class="owner-badge">群主</span>';
+            } else if (group.owner === UserManager.userId) { // 当前用户是群主，可以移除其他成员
+                actionsHtml += `<button class="remove-member-btn-detail" data-member-id="${memberId}" title="移除成员">✕</button>`;
+            }
+            item.innerHTML = `${memberInfoHtml} ${statusHtml} <span class="member-actions">${actionsHtml}</span>`;
             this.groupMemberListDetailsEl.appendChild(item);
         });
+
         this.groupMemberListDetailsEl.querySelectorAll('.remove-member-btn-detail').forEach(btn => {
             const newBtn = btn.cloneNode(true);
             btn.parentNode.replaceChild(newBtn, btn);
             newBtn.addEventListener('click', () => GroupManager.removeMemberFromGroup(groupId, newBtn.dataset.memberId));
+        });
+
+        this.groupMemberListDetailsEl.querySelectorAll('.reconnect-member-btn-detail').forEach(btn => {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', async () => {
+                const targetMemberId = newBtn.dataset.memberId;
+                NotificationUIManager.showNotification(`尝试重新连接到 ${UserManager.contacts[targetMemberId]?.name || targetMemberId.substring(0,4)}...`, 'info');
+                await ConnectionManager.createOffer(targetMemberId, { isSilent: false }); // isSilent: false 以便用户看到连接尝试
+                // 按钮将通过事件监听器自动更新状态
+            });
         });
 
         this.contactsDropdownDetailsEl.innerHTML = '<option value="">选择要添加的联系人...</option>';
@@ -655,6 +752,76 @@ const DetailsPanelUIManager = {
             NotificationUIManager.showNotification("请选择要添加的联系人。", "warning");
         }
     },
+
+    /**
+     * @private
+     * 启动一个定时器，定期刷新群组成员列表和尝试自动连接。
+     */
+    _startGroupMemberRefreshTimer: function() {
+        // 清除任何已存在的定时器，以防重复启动
+        if (this._groupMemberRefreshInterval) {
+            clearInterval(this._groupMemberRefreshInterval);
+            this._groupMemberRefreshInterval = null;
+        }
+
+        // 立即执行一次
+        this._refreshGroupMembersAndAutoConnect();
+
+        // 设置定时器
+        this._groupMemberRefreshInterval = setInterval(() => {
+            // 确保只在群组详情仍然可见且是当前聊天时执行
+            if (this.isPanelAreaVisible && this.currentView === 'details' &&
+                ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
+                this._refreshGroupMembersAndAutoConnect();
+            } else {
+                // 如果条件不满足，清除定时器
+                if (this._groupMemberRefreshInterval) {
+                    clearInterval(this._groupMemberRefreshInterval);
+                    this._groupMemberRefreshInterval = null;
+                    Utils.log("DetailsPanelUIManager: 群组成员自动刷新定时器已停止（条件不满足）。", Utils.logLevels.DEBUG);
+                }
+            }
+        }, this.GROUP_MEMBER_REFRESH_INTERVAL_MS);
+        Utils.log("DetailsPanelUIManager: 已启动群成员状态自动刷新和连接定时器。", Utils.logLevels.DEBUG);
+    },
+
+    /**
+     * @private
+     * 刷新群组成员列表UI，并对在线但未连接的成员尝试自动发起连接。
+     */
+    _refreshGroupMembersAndAutoConnect: async function() {
+        const groupId = ChatManager.currentChatId;
+        if (!groupId || !groupId.startsWith('group_')) return;
+
+        const group = GroupManager.groups[groupId];
+        if (!group) return;
+
+        // 1. (可选但推荐) 获取最新的在线用户列表
+        // 如果 PeopleLobbyManager 不会自动更新，或者更新频率不够，可以在这里调用
+        if (PeopleLobbyManager && typeof PeopleLobbyManager.fetchOnlineUsers === 'function') {
+            // Utils.log("DetailsPanelUIManager: 正在为群成员状态刷新获取最新在线用户列表...", Utils.logLevels.DEBUG);
+            await PeopleLobbyManager.fetchOnlineUsers(); // 等待获取完成
+        }
+
+        // 2. 刷新成员列表UI (updateDetailsPanelMembers 内部会使用 PeopleLobbyManager.onlineUserIds)
+        this.updateDetailsPanelMembers(groupId);
+        Utils.log(`DetailsPanelUIManager: 定时刷新群成员 (${groupId}) 状态。`, Utils.logLevels.DEBUG);
+
+        // 3. 尝试自动连接在线但未连接的成员
+        group.members.forEach(memberId => {
+            if (memberId === UserManager.userId || (UserManager.contacts[memberId] && UserManager.contacts[memberId].isAI)) {
+                return; // 不连接自己或AI
+            }
+            const isConnected = ConnectionManager.isConnectedTo(memberId);
+            const isOnline = PeopleLobbyManager.onlineUserIds ? PeopleLobbyManager.onlineUserIds.includes(memberId) : false;
+
+            if (isOnline && !isConnected) {
+                Utils.log(`DetailsPanelUIManager: 自动尝试连接到群成员 ${memberId} (在线但未连接)。`, Utils.logLevels.INFO);
+                ConnectionManager.createOffer(memberId, { isSilent: true }); // 静默尝试连接
+            }
+        });
+    },
+
 
     _switchResourceTypeAndLoad: function(resourceType) {
         if (!this._currentResourceChatId || !this.resourceGridContainerEl) return;

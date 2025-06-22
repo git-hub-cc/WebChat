@@ -406,7 +406,7 @@ body {
 
 /* --- Details Panel --- */
 .details-panel {
-    background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.8);
+    background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.9);
     backdrop-filter: blur(3px);
     border-left: 1px solid var(--border-color);
 }

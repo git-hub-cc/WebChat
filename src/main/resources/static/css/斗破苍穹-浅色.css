@@ -402,7 +402,6 @@ body {
 .chat-input-container {
     background-color: rgba(var(--dq-light-misty-scroll-bg-rgb), 0.6);
     border-top: 1px solid var(--border-color);
-    padding: 10px;
     box-shadow: 0 -1px 3px rgba(var(--dq-light-text-ink-black-rgb),0.03);
 }
 #messageInput {
@@ -447,7 +446,7 @@ body {
 
 /* --- Details Panel (玄金或冰蓝) --- */
 .details-panel {
-    background-color: rgba(var(--dq-light-misty-scroll-bg-rgb), 0.8); /* 玄金意境 */
+    background-color: rgba(var(--dq-light-misty-scroll-bg-rgb), 0.9); /* 玄金意境 */
     border-left: 1px solid var(--border-color);
     box-shadow: -1px 0 5px rgba(var(--dq-light-text-ink-black-rgb), 0.05);
 }

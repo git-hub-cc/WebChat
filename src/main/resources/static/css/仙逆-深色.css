@@ -306,7 +306,7 @@ body {
 }
 
 /* --- Details Panel --- */
-.details-panel { background-color: rgba(var(--xn-deep-black-bg-rgb), 0.7); border-left: 1px solid var(--border-color); }
+.details-panel { background-color: rgba(var(--xn-deep-black-bg-rgb), 0.9); border-left: 1px solid var(--border-color); }
 .details-header { background-color: rgba(var(--xn-deep-black-bg-rgb), 0.8); }
 .details-avatar { border: 2px solid var(--border-color); box-shadow: 0 0 10px rgba(var(--xn-soul-silver-rgb), 0.05); }
 #detailsName { text-shadow: 0 0 5px rgba(var(--xn-soul-silver-rgb), 0.2); }

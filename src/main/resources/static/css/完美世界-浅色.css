@@ -328,7 +328,7 @@ body {
 }
 
 /* --- Details Panel --- */
-.details-panel { background-color: rgba(var(--wm-light-bg-rgb), 0.8); border-left: 1px solid var(--border-color); }
+.details-panel { background-color: rgba(var(--wm-light-bg-rgb), 0.9); border-left: 1px solid var(--border-color); }
 .details-header { background-color: rgba(var(--wm-panel-bg-rgb), 0.9); }
 .details-avatar { border: 2px solid var(--border-color); box-shadow: 0 0 10px rgba(var(--wm-text-dark-rgb), 0.03); }
 #detailsName { text-shadow: 0 0 5px rgba(var(--wm-text-dark-rgb), 0.1); }

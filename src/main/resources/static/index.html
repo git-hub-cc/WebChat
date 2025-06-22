@@ -143,22 +143,18 @@
                     <button id="saveAiTtsSettingsBtnDetails" class="btn btn-primary" style="margin-top: 15px; width: 100%;">保存 TTS 设置</button>
                 </div>
                 <div class="tts-attribution-section">
-                    <p>
-                        <strong>GPT-SoVITS 开发者：</strong><a href="https://space.bilibili.com/5760446" target="_blank" rel="noopener noreferrer" >@花儿不哭</a><br>
-                        <strong>模型训练者：</strong><a href="https://space.bilibili.com/6589795" target="_blank" rel="noopener noreferrer" >@红血球AE3803</a>  <a href="https://space.bilibili.com/518098961" target="_blank" rel="noopener noreferrer" >@白菜工厂1145号员工</a><br>
-                        <strong>推理特化包适配 & 在线推理：</strong><a href="https://space.bilibili.com/1918820" target="_blank" rel="noopener noreferrer" >@AI-Hobbyist</a><br>
-                    </p>
-                </div>
-                <div class="tts-attribution-section">
                     <h5 class="collapsible-header attribution-sub-header" id="ttsAttributionCollapsibleTrigger">
                         更多 <span class="collapse-icon">▶</span>
                     </h5>
                     <div class="collapsible-content attribution-sub-content" id="ttsAttributionCollapsibleContent" style="display: none;">
                         <p>
+                            <strong>GPT-SoVITS开发者：</strong><a href="https://space.bilibili.com/5760446" target="_blank" rel="noopener noreferrer" >@花儿不哭</a><br>
+                            <strong>TTS模型训练者：</strong><a href="https://space.bilibili.com/6589795" target="_blank" rel="noopener noreferrer" >@红血球AE3803</a>  <br><a href="https://space.bilibili.com/518098961" target="_blank" rel="noopener noreferrer" >@白菜工厂1145号员工</a><br>
+                            <strong>TTS推理特化包适配者：</strong><a href="https://space.bilibili.com/1918820" target="_blank" rel="noopener noreferrer" >@AI-Hobbyist</a><br>
+                            <strong>提示词工程：</strong><a href="https://space.bilibili.com/326625155" target="_blank" rel="noopener noreferrer" >君尘陌</a><br>
+                            <strong>主题概念：</strong><a href="https://space.bilibili.com/1290496974" target="_blank" rel="noopener noreferrer" >卤v</a><br>
                             <strong>对话AI：</strong><a href="https://bailian.console.aliyun.com/" target="_blank" rel="noopener noreferrer" >阿里</a><br>
                             <strong>素材资源：</strong><a href="#" target="_blank" rel="noopener noreferrer" >网络</a><br>
-                            <strong>主题概念：</strong><a href="https://space.bilibili.com/1290496974" target="_blank" rel="noopener noreferrer" >卤v</a><br>
-                            <strong>提示词工程：</strong><a href="https://space.bilibili.com/326625155" target="_blank" rel="noopener noreferrer" >君尘陌</a><br>
                             <strong>项目开源地址：</strong><br>
                             GitHub: <a href="https://github.com/git-hub-cc/PPMC" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/PPMC</a><br>
                             Gitee: <a href="https://gitee.com/wyswydx/PPMC" target="_blank" rel="noopener noreferrer">https://gitee.com/wyswydx/PPMC</a>
@@ -211,7 +207,7 @@
                 <h4>成员 (<span id="groupMemberCount">0</span>)</h4>
                 <div id="groupMemberListDetails" class="member-list-details"></div>
                 <div id="addGroupMemberArea" class="add-member-details" style="display: none;">
-                    <h5>添加成员</h5>
+                    <h5>添加成员 (群组上限20人)</h5>
                     <label for="contactsDropdownDetails"></label><select id="contactsDropdownDetails"></select>
                     <button id="addMemberBtnDetails" class="btn btn-primary">添加</button>
                 </div>
@@ -364,12 +360,16 @@
                 </div>
             </div>
             <div class="settings-section">
-                <h3>网络状态</h3>
-                <div id="modalNetworkInfo">检测中...</div>
-                <div class="connection-quality">
-                    质量: <div class="quality-indicator" id="modalQualityIndicator"></div> <span id="modalQualityText">未知</span>
+                <h3 class="collapsible-header"> <!-- MODIFIED: Added class -->
+                    网络状态 <span class="collapse-icon">▶</span> <!-- MODIFIED: Added icon -->
+                </h3>
+                <div class="collapsible-content" style="display: none;"> <!-- MODIFIED: Wrapped content, set display: none -->
+                    <div id="modalNetworkInfo">检测中...</div>
+                    <div class="connection-quality">
+                        质量: <div class="quality-indicator" id="modalQualityIndicator"></div> <span id="modalQualityText">未知</span>
+                    </div>
+                    <button id="checkNetworkBtnModal" class="btn btn-secondary">重新检测网络</button>
                 </div>
-                <button id="checkNetworkBtnModal" class="btn btn-secondary">重新检测网络</button>
             </div>
             <div class="settings-section">
                 <h3>操作</h3>
@@ -401,7 +401,7 @@
             <div class="settings-section">
                 <h3>创建或修改群组</h3> <!-- This title is already good -->
                 <p style="font-size: 0.85em; color: var(--text-color-light); margin-bottom: 8px;">
-                    输入群组名称。如果提供已存在的群组ID且您是群主，则将修改其名称；否则将创建新群组。温馨提示：为确保群消息能够顺利转发，需要群主保持在线状态。
+                    输入群组名称。如果提供已存在的群组ID且您是群主，则将修改其名称；否则将创建新群组 (群组人数上限20人)。
                 </p> <!-- This description is already good -->
                 <label for="newGroupNameInput"></label><input type="text" id="newGroupNameInput" placeholder="输入群组名称 (必填)">
                 <label for="newGroupIdInput"></label><input type="text" id="newGroupIdInput" placeholder="群组 ID (可选, 留空则自动生成)" style="margin-top: 10px;">

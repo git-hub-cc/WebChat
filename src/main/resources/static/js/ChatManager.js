@@ -2,6 +2,7 @@
  * @file ChatManager.js
  * @description 核心聊天管理器，管理聊天会话数据、状态、UI渲染，并与 ChatAreaUIManager 协作支持消息列表的虚拟滚动。
  *              优化：侧边栏联系人列表现在只显示当前主题定义的AI角色和普通联系人。
+ *              更新：移除了群主消息转发的相关逻辑，因为群组连接已改为 Mesh 架构。
  * @module ChatManager
  * @exports {object} ChatManager - 对外暴露的单例对象，包含所有聊天管理功能。
  * @dependencies DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationUIManager, Utils, ModalUIManager
@@ -299,17 +300,10 @@ const ChatManager = {
             }
         }
 
-        if (isGroup &&
-            GroupManager.groups[chatId] &&
-            GroupManager.groups[chatId].owner === UserManager.userId &&
-            message.sender !== UserManager.userId &&
-            !message.needsRelay &&
-            !(UserManager.contacts[message.sender] && UserManager.contacts[message.sender].isAI && message.isStreaming)
-        ) {
-            Utils.log(`ChatManager.addMessage: 群主 (${UserManager.userId}) 正在将来自 ${message.sender} 的消息中继到群组 ${chatId}。`, Utils.logLevels.DEBUG);
-            const excludeIdsForRelay = [message.sender, UserManager.userId].filter(Boolean);
-            GroupManager.broadcastToGroup(chatId, { ...message }, excludeIdsForRelay, true);
-        }
+        // 移除了群主转发逻辑
+        // if (isGroup &&
+        //     GroupManager.groups[chatId] &&
+        //     GroupManager.groups[chatId].owner === UserManager.userId && ... ) { ... }
 
         try {
             const messagesForDb = this.chats[chatId].map(msg => {

@@ -373,7 +373,7 @@ body {
 
 /* --- Details Panel --- */
 .details-panel {
-    background-color: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.85);
+    background-color: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.9);
     border-left: 1px solid var(--border-color);
     box-shadow: -1px 0 3px rgba(var(--jjk-ink-black-rgb),0.05);
 }

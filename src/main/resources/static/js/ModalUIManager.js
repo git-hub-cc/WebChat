@@ -3,6 +3,7 @@
  * @description 模态框管理器，负责集中处理应用中所有模态框的显示、隐藏和相关逻辑。
  *              包括设置、新建联系人/群组、通话、确认对话框以及开源信息提示等。
  *              新建群组模态框现在支持通过提供群组ID来修改现有群组名称。
+ *              更新：在群组描述中提及人数上限。
  * @module ModalManager
  * @exports {object} ModalUIManager - 对外暴露的单例对象，包含所有模态框管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
@@ -94,7 +95,7 @@ const ModalUIManager = {
         if (newChatFab) newChatFab.addEventListener('click', () => this.toggleModal('newContactGroupModal', true));
         // 添加新联系人
         const confirmNewContactBtn = document.getElementById('confirmNewContactBtn');
-        if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', () => { 
+        if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', () => {
             const peerIdInput = document.getElementById('newPeerIdInput');
             const peerNameInput = document.getElementById('newPeerNameInput');
             const peerId = peerIdInput.value.trim();
@@ -103,13 +104,13 @@ const ModalUIManager = {
                 NotificationUIManager.showNotification('对方 ID 是必填项。', 'warning');
                 return;
             }
-            UserManager.addContact(peerId, peerName || `用户 ${peerId.substring(0, 4)}`).then(success => { 
-                if (success) { 
+            UserManager.addContact(peerId, peerName || `用户 ${peerId.substring(0, 4)}`).then(success => {
+                if (success) {
                     peerIdInput.value = '';
                     peerNameInput.value = '';
                     this.toggleModal('newContactGroupModal', false);
-                } 
-            }); 
+                }
+            });
         });
         // 创建新群组
         const confirmNewGroupBtnModal = document.getElementById('confirmNewGroupBtnModal');

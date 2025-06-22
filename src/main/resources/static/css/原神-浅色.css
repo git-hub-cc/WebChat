@@ -532,7 +532,6 @@ img {
     border-top: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-container); /* Matches sidebar header */
     display: flex;
-    gap: 10px; /* Space between input and button */
     box-shadow: 0 -1px 3px rgba(var(--gi-brown-dark-rgb), 0.05);
 }
 .chat-input-container textarea {
@@ -591,7 +590,7 @@ img {
 
 /* ℹ️ 详情面板 .details-panel (Assuming it's a right sidebar) */
 .details-panel {
-    background-color: rgba(var(--gi-parchment-dark-rgb), 0.8);
+    background-color: rgba(var(--gi-parchment-dark-rgb), 0.9);
     border-left: 1px solid var(--color-border-secondary);
     padding: 20px;
     overflow-y: auto;

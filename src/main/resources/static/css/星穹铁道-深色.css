@@ -423,7 +423,7 @@ body {
 
 /* --- Details Panel --- */
 .details-panel {
-    background-color: rgba(var(--hsr-deep-cosmos-bg-rgb), 0.85);
+    background-color: rgba(var(--hsr-deep-cosmos-bg-rgb), 0.9);
     border-left: 1px solid var(--border-color);
     backdrop-filter: blur(6px);
 }

@@ -3,6 +3,7 @@
  * @description 核心群组管理器，负责处理所有与群组相关的逻辑，包括创建、加载、成员管理和消息广播。
  *              新增：支持群组内 AI 成员的特定提示词。当群主添加AI成员到群组，或修改群内AI提示词时，会进行相应处理。
  *              createGroup 方法现在支持通过提供群组ID来修改现有群组名称（如果用户是群主）。
+ *              更新：群组连接方式改为 Mesh 架构，成员直接互连，群人数上限20人。移除了群主消息转发逻辑。
  * @module GroupManager
  * @exports {object} GroupManager - 对外暴露的单例对象，包含所有群组管理功能。
  * @property {object} groups - 存储所有群组数据的对象，格式为 { groupId: groupObject }。
@@ -21,6 +22,7 @@
 const GroupManager = {
     groups: {},
     currentGroupId: null,
+    MAX_GROUP_MEMBERS: 20, // 群组成员上限
 
     /**
      * 初始化群组管理器，从数据库加载所有群组数据。
@@ -113,7 +115,7 @@ const GroupManager = {
                         groupId: effectiveGroupId
                     });
                     this.broadcastToGroup(effectiveGroupId, {
-                        type: 'system',
+                        type: 'system', // 消息类型保持不变，但广播逻辑已改为mesh
                         content: `群组名称已由群主更改为 "${name}"`,
                         timestamp: new Date().toISOString(),
                         groupId: effectiveGroupId,
@@ -170,7 +172,7 @@ const GroupManager = {
         const group = this.groups[groupId];
         if (group && typeof ChatAreaUIManager !== 'undefined') {
             ChatAreaUIManager.updateChatHeader(
-                group.name, `${group.members.length} 名成员`, '👥', true
+                group.name, `${group.members.length} 名成员 (上限 ${this.MAX_GROUP_MEMBERS})`, '👥', true
             );
             this.clearUnread(groupId);
             ChatAreaUIManager.setCallButtonsState(false);
@@ -182,6 +184,7 @@ const GroupManager = {
     /**
      * 向群组中添加一个新成员。
      * 如果添加的是AI成员，且操作者是群主，则将其默认提示词存入群组的aiPrompts中。
+     * 新成员将尝试与其他成员建立连接。
      * @param {string} groupId - 目标群组的 ID。
      * @param {string} memberId - 要添加的成员 ID。
      * @param {string|null} [memberName=null] - 要添加的成员名称。
@@ -192,8 +195,14 @@ const GroupManager = {
         if (!group) { NotificationUIManager.showNotification("未找到群组。", "error"); return false; }
         if (group.owner !== UserManager.userId) { NotificationUIManager.showNotification("只有群主可以添加成员。", "error"); return false; }
         if (group.members.includes(memberId)) { NotificationUIManager.showNotification("用户已在群组中。", "warning"); return false; }
+        if (group.members.length >= this.MAX_GROUP_MEMBERS) {
+            NotificationUIManager.showNotification(`群组已满 (最多 ${this.MAX_GROUP_MEMBERS} 人)。`, "error");
+            return false;
+        }
 
         const contactToAdd = UserManager.contacts[memberId];
+        const oldMembers = [...group.members]; // 记录添加前的成员列表
+
         group.members.push(memberId);
         group.leftMembers = group.leftMembers.filter(lm => lm.id !== memberId);
 
@@ -218,7 +227,7 @@ const GroupManager = {
                 DetailsPanelUIManager._updateForGroup(groupId);
             }
         }
-        if (ChatManager.currentChatId === groupId) this.openGroup(groupId);
+        if (ChatManager.currentChatId === groupId) this.openGroup(groupId); // 更新群组头部信息（如成员数量）
 
         const inviterName = UserManager.contacts[UserManager.userId]?.name || UserManager.userId.substring(0,4);
         const newMemberDisplayName = memberName || UserManager.contacts[memberId]?.name || `用户 ${memberId.substring(0,4)}`;
@@ -226,38 +235,38 @@ const GroupManager = {
         if (contactToAdd && contactToAdd.isAI) {
             systemMessageContent += ` (${newMemberDisplayName} 是一个AI助手)`;
         }
-        const systemMessage = { type: 'user', content: systemMessageContent, timestamp: new Date().toISOString(), groupId: groupId };
+        const systemMessage = { type: 'user', content: systemMessageContent, timestamp: new Date().toISOString(), groupId: groupId }; // 依然是 user 类型以便显示
         ChatManager.addMessage(groupId, systemMessage);
 
-        if (!(contactToAdd && contactToAdd.isAI)) {
-            this.broadcastToGroup(groupId, systemMessage, [memberId]);
-            const inviteMessage = {
-                type: 'group-invite',
+        // 广播给所有现有成员（除新成员外），新成员已加入
+        const memberAddedNotification = {
+            type: 'group-member-added',
+            groupId: groupId,
+            addedMemberId: memberId,
+            addedMemberDetails: contactToAdd, // 包含其 aiConfig
+            groupAiPrompt: (contactToAdd && contactToAdd.isAI) ? group.aiPrompts[memberId] : undefined,
+            sender: UserManager.userId,
+            allMembers: [...group.members] // 包含新成员后的完整列表
+        };
+        this.broadcastToGroup(groupId, memberAddedNotification, [memberId, UserManager.userId]); // 不发给新成员和自己
+
+        // 向新成员发送完整的群组邀请信息，包含所有成员列表，以便新成员连接
+        if (!(contactToAdd && contactToAdd.isAI)) { // AI成员不通过P2P连接
+            const inviteMessageToNewMember = {
+                type: 'group-invite', // 新成员接收的是邀请类型，包含所有信息
                 groupId: groupId,
                 groupName: group.name,
                 owner: group.owner,
-                members: group.members,
+                members: [...group.members], // 发送包含新成员的完整列表
                 invitedBy: UserManager.userId,
                 sender: UserManager.userId,
-                aiPrompts: group.aiPrompts, // 发送包含 aiPrompts 的邀请
+                aiPrompts: group.aiPrompts,
                 lastMessage: group.lastMessage,
                 lastTime: group.lastTime
             };
-            ConnectionManager.sendTo(memberId, inviteMessage);
-        } else {
-            // 对于AI成员，也广播系统消息，但不发送完整的inviteMessage
-            this.broadcastToGroup(groupId, systemMessage, []);
-            // 广播AI成员添加事件，包含其默认(现在是群组特定初始)提示词
-            const memberAddedMessage = {
-                type: 'group-member-added',
-                groupId: groupId,
-                addedMemberId: memberId,
-                addedMemberDetails: contactToAdd, // 包含其 aiConfig
-                groupAiPrompt: group.aiPrompts[memberId], // 发送群组特定提示词
-                sender: UserManager.userId
-            };
-            this.broadcastToGroup(groupId, memberAddedMessage, [UserManager.userId, memberId]);
+            ConnectionManager.sendTo(memberId, inviteMessageToNewMember);
         }
+
         NotificationUIManager.showNotification(`${newMemberDisplayName} 已被添加到群组。`, 'success');
         ChatManager.renderChatList(ChatManager.currentFilter);
         return true;
@@ -302,19 +311,22 @@ const GroupManager = {
         const systemMessage = { id: `sys_${Date.now()}`, type: 'system', content: `${removerName} 已将 ${removedName} 移出群聊。`, timestamp: new Date().toISOString(), groupId: groupId };
         ChatManager.addMessage(groupId, systemMessage);
 
-        this.broadcastToGroup(groupId, systemMessage, [memberIdToRemove]);
+        // 广播给剩余成员，某人被移除了
+        const memberRemovedNotificationToGroup = {
+            type: 'group-member-removed',
+            groupId: groupId,
+            removedMemberId: memberIdToRemove,
+            sender: UserManager.userId,
+            allMembers: [...group.members] // 移除后的成员列表
+        };
+        this.broadcastToGroup(groupId, memberRemovedNotificationToGroup, [memberIdToRemove, UserManager.userId]); // 不发给被移除者和自己
 
+        // 通知被移除的成员
         if (!(removedContact && removedContact.isAI)) {
             const removalNotificationToRemovedUser = { type: 'group-removed', groupId: groupId, groupName: group.name, reason: 'removed_by_owner', sender: UserManager.userId, removedMemberId: memberIdToRemove };
             ConnectionManager.sendTo(memberIdToRemove, removalNotificationToRemovedUser);
-        } else {
-            const memberRemovedMessage = {
-                type: 'group-member-removed',
-                groupId: groupId,
-                removedMemberId: memberIdToRemove,
-                sender: UserManager.userId
-            };
-            this.broadcastToGroup(groupId, memberRemovedMessage, [UserManager.userId, memberIdToRemove]);
+            // 断开与被移除成员的连接
+            ConnectionManager.close(memberIdToRemove);
         }
 
         NotificationUIManager.showNotification(`${removedName} 已被移出群组。`, 'success');
@@ -333,9 +345,26 @@ const GroupManager = {
         if (group.owner === UserManager.userId) { NotificationUIManager.showNotification("群主不能离开。请选择解散群组。", "warning"); return; }
         const myId = UserManager.userId;
         if (!group.members.includes(myId)) return;
+
         const myName = UserManager.contacts[myId]?.name || `用户 ${myId.substring(0,4)}`;
-        const leaveMessage = { type: 'group-member-left', groupId: groupId, leftMemberId: myId, leftMemberName: myName, sender: myId };
-        this.broadcastToGroup(groupId, leaveMessage, [myId], true);
+        // 通知其他成员此用户已离开
+        const leaveMessage = {
+            type: 'group-member-left',
+            groupId: groupId,
+            leftMemberId: myId,
+            leftMemberName: myName,
+            sender: myId,
+            allMembers: group.members.filter(id => id !== myId) // 离开后的成员列表
+        };
+        this.broadcastToGroup(groupId, leaveMessage, [myId]); // 不发给自己
+
+        // 断开与所有群成员的连接
+        group.members.forEach(memberId => {
+            if (memberId !== myId) {
+                ConnectionManager.close(memberId);
+            }
+        });
+
         delete this.groups[groupId];
         await DBManager.removeItem('groups', groupId);
         await ChatManager.clearChat(groupId);
@@ -357,7 +386,15 @@ const GroupManager = {
         if (!group) return;
         if (group.owner !== UserManager.userId) { NotificationUIManager.showNotification("只有群主可以解散群组。", "error"); return; }
         const dissolveNotification = { type: 'group-dissolved', groupId: groupId, groupName: group.name, sender: UserManager.userId };
-        this.broadcastToGroup(groupId, dissolveNotification, [UserManager.userId]);
+        this.broadcastToGroup(groupId, dissolveNotification, [UserManager.userId]); // 不发给自己
+
+        // 断开与所有群成员的连接（虽然他们收到解散通知后也会自行清理）
+        group.members.forEach(memberId => {
+            if (memberId !== UserManager.userId) {
+                ConnectionManager.close(memberId);
+            }
+        });
+
         delete this.groups[groupId];
         await DBManager.removeItem('groups', groupId);
         await ChatManager.clearChat(groupId);
@@ -370,15 +407,14 @@ const GroupManager = {
     },
 
     /**
-     * 向群组成员广播消息。
+     * 向群组成员广播消息。现在直接发送给所有非AI成员。
      * AI 成员不会收到广播消息。
      * @param {string} groupId - 目标群组的 ID。
      * @param {object} message - 要广播的消息对象。
      * @param {string[]} [excludeIds=[]] - 要排除的用户 ID 列表。
-     * @param {boolean} [forceDirect=false] - 是否强制直接发送（即使不是群主）。
      * @returns {boolean} - 操作是否成功。
      */
-    broadcastToGroup: function(groupId, message, excludeIds = [], forceDirect = false) {
+    broadcastToGroup: function(groupId, message, excludeIds = []) {
         const group = this.groups[groupId];
         if (!group) {
             Utils.log(`broadcastToGroup: 群组 ${groupId} 未找到。`, Utils.logLevels.WARN);
@@ -394,34 +430,26 @@ const GroupManager = {
         if (message.type === 'group-invite' || message.type === 'group-member-added' || message.type === 'group-ai-prompt-updated') {
             message.aiPrompts = group.aiPrompts || {};
         }
+        // 确保消息中包含最新的成员列表 (如果消息类型需要)
+        if (['group-invite', 'group-member-added', 'group-member-removed', 'group-member-left'].includes(message.type)) {
+            if (!message.allMembers) message.allMembers = [...group.members]; // 如果消息中没有，则使用当前群组的成员列表
+        }
 
-
-        const humanMembersToSendTo = group.members.filter(memberId => {
+        const membersToSendTo = group.members.filter(memberId => {
             const memberContact = UserManager.contacts[memberId];
-            return !(memberContact && memberContact.isAI) &&
-                memberId !== UserManager.userId &&
-                !excludeIds.includes(memberId);
+            return !(memberContact && memberContact.isAI) && // 不发给AI
+                memberId !== UserManager.userId &&      // 不发给自己 (除非是测试或特殊情况，通常由调用者控制)
+                !excludeIds.includes(memberId);         // 不发给排除列表中的人
         });
 
-        if (group.owner === UserManager.userId || forceDirect) {
-            humanMembersToSendTo.forEach(memberId => {
-                if (ConnectionManager.isConnectedTo(memberId)) {
-                    ConnectionManager.sendTo(memberId, { ...message });
-                } else {
-                    Utils.log(`broadcastToGroup: 与 ${memberId} 在群组 ${groupId} 中没有活动连接。消息未发送。`, Utils.logLevels.WARN);
-                }
-            });
-        } else {
-            if (group.owner !== UserManager.userId && !excludeIds.includes(group.owner)) {
-                if (ConnectionManager.isConnectedTo(group.owner)) {
-                    const relayMessage = { ...message, needsRelay: true };
-                    ConnectionManager.sendTo(group.owner, relayMessage);
-                } else {
-                    Utils.log(`broadcastToGroup: 与群主 ${group.owner} 没有活动连接以进行中继。消息未发送。`, Utils.logLevels.WARN);
-                }
+        membersToSendTo.forEach(memberId => {
+            if (ConnectionManager.isConnectedTo(memberId)) {
+                ConnectionManager.sendTo(memberId, { ...message });
+            } else {
+                Utils.log(`broadcastToGroup: 与 ${memberId} 在群组 ${groupId} 中没有活动连接。消息未发送。`, Utils.logLevels.WARN);
             }
-        }
-        Utils.log(`尝试向群组 ${groupId} 发送 (人类成员), 类型: ${message.type}, 排除: ${excludeIds.join(',')}`, Utils.logLevels.DEBUG);
+        });
+        Utils.log(`尝试向群组 ${groupId} 发送消息 (人类成员), 类型: ${message.type}, 排除: ${excludeIds.join(',')}, 目标人数: ${membersToSendTo.length}`, Utils.logLevels.DEBUG);
         return true;
     },
 
@@ -436,7 +464,7 @@ const GroupManager = {
         Utils.log(`正在处理群组消息: ${groupId}, 类型: ${type}, 来自: ${sender}, 原始发送者: ${originalSender}`, Utils.logLevels.DEBUG);
 
         if (type === 'group-invite') {
-            if (!this.groups[groupId]) {
+            if (!this.groups[groupId]) { // 如果本地不存在此群组，则创建
                 const inviterName = UserManager.contacts[message.invitedBy]?.name || message.invitedBy.substring(0,4);
                 this.groups[groupId] = {
                     id: groupId, name: message.groupName, owner: message.owner,
@@ -450,7 +478,19 @@ const GroupManager = {
                 await this.saveGroup(groupId);
                 ChatManager.renderChatList(ChatManager.currentFilter);
                 NotificationUIManager.showNotification(`被邀请加入群组: ${message.groupName}`, 'success');
-            } else {
+
+                // 新成员收到邀请后，尝试连接群内其他成员
+                const myId = UserManager.userId;
+                if (this.groups[groupId].members.includes(myId)) {
+                    this.groups[groupId].members.forEach(memberId => {
+                        if (memberId !== myId && !(UserManager.contacts[memberId] && UserManager.contacts[memberId].isAI)) {
+                            Utils.log(`新成员 ${myId} 尝试连接群成员 ${memberId}`, Utils.logLevels.DEBUG);
+                            ConnectionManager.createOffer(memberId, { isSilent: true });
+                        }
+                    });
+                }
+
+            } else { // 如果群组已存在 (例如，通过其他方式已加入或信息同步)
                 group.members = message.members || group.members;
                 group.aiPrompts = message.aiPrompts || group.aiPrompts || {}; // 合并或更新aiPrompts
                 if (message.lastTime && (!group.lastTime || new Date(message.lastTime) > new Date(group.lastTime))) {
@@ -463,35 +503,19 @@ const GroupManager = {
             }
             return;
         }
+
+        // 对于非邀请消息，如果群组不存在本地 (除非是被移除通知)，则忽略
         if (!group) {
             if (type === 'group-removed' && message.removedMemberId === UserManager.userId && message.reason === 'removed_by_owner') {
-                // 此处允许继续，以便显示被移除的通知，即使群组本地已删除
+                // 允许处理被移除通知，即使群组在本地可能已被删除
             } else {
                 Utils.log(`收到未知或本地已删除群组 ${groupId} 的消息。类型: ${type}。正在忽略。`, Utils.logLevels.WARN);
                 return;
             }
         }
 
-        if (message.needsRelay && group && group.owner === UserManager.userId) {
-            delete message.needsRelay;
-            const humanMembersToBroadcast = group.members.filter(memberId => {
-                const contact = UserManager.contacts[memberId];
-                return !(contact && contact.isAI);
-            });
-            const excludeListForBroadcast = [originalSender || sender, UserManager.userId].filter(Boolean);
-
-            // 确保转发的消息也包含最新的 aiPrompts (如果消息类型需要)
-            if (message.type === 'group-invite' || message.type === 'group-member-added' || message.type === 'group-ai-prompt-updated') {
-                message.aiPrompts = group.aiPrompts || {};
-            }
-
-            this.broadcastToGroup(groupId, message, excludeListForBroadcast);
-
-            if (type !== 'group-retract-message-request' || message.originalSender !== UserManager.userId) {
-                if((originalSender || sender) !== UserManager.userId) ChatManager.addMessage(groupId, message);
-            }
-            return;
-        }
+        // 移除中继逻辑，因为消息现在是直接发送的
+        // if (message.needsRelay && group && group.owner === UserManager.userId) { ... }
 
         switch (type) {
             case 'text': case 'file': case 'image': case 'audio': case 'system':
@@ -499,11 +523,11 @@ const GroupManager = {
                     ChatManager.addMessage(groupId, message);
                 }
                 break;
-            case 'group-member-left':
+            case 'group-member-left': // 其他成员离开
                 if (group && group.members.includes(message.leftMemberId)) {
                     group.members = group.members.filter(id => id !== message.leftMemberId);
                     const leftMemberName = message.leftMemberName || `用户 ${String(message.leftMemberId).substring(0,4)}`;
-                    if (group.owner === UserManager.userId) {
+                    if (group.owner === UserManager.userId) { // 只有群主记录离开的成员
                         if(!group.leftMembers) group.leftMembers = [];
                         if(!group.leftMembers.find(lm => lm.id === message.leftMemberId)) {
                             group.leftMembers.push({ id: message.leftMemberId, name: leftMemberName, leftTime: new Date().toISOString() });
@@ -514,8 +538,10 @@ const GroupManager = {
                         }
                     }
                     await this.saveGroup(groupId);
-                    if(group.members.includes(UserManager.userId)) {
-                        ChatManager.addMessage(groupId, { id: `sys_${Date.now()}`, type: 'system', content: `${leftMemberName} 离开了群聊。`, groupId: groupId, timestamp: new Date().toISOString()});
+                    if(group.members.includes(UserManager.userId)) { // 如果当前用户仍在群内
+                        ChatManager.addMessage(groupId, { id: `sys_left_${Date.now()}`, type: 'system', content: `${leftMemberName} 离开了群聊。`, groupId: groupId, timestamp: new Date().toISOString()});
+                        // 断开与离开成员的连接
+                        ConnectionManager.close(message.leftMemberId);
                     }
                     if (ChatManager.currentChatId === groupId) {
                         this.openGroup(groupId);
@@ -524,7 +550,7 @@ const GroupManager = {
                     ChatManager.renderChatList(ChatManager.currentFilter);
                 }
                 break;
-            case 'group-removed':
+            case 'group-removed': // 自己被群主移除
                 if (message.removedMemberId === UserManager.userId && message.reason === 'removed_by_owner') {
                     const groupNameForNotification = message.groupName || (group ? group.name : null) || `群组 ${groupId}`;
                     NotificationUIManager.showNotification(
@@ -537,6 +563,13 @@ const GroupManager = {
                         NotificationUIManager.showNotification(
                             `您已被移出群组 "${finalGroupName}"。`, 'warning'
                         );
+                        // 断开与所有剩余群成员的连接
+                        if (this.groups[capturedGroupId]) {
+                            this.groups[capturedGroupId].members.forEach(memberId => {
+                                if (memberId !== UserManager.userId) ConnectionManager.close(memberId);
+                            });
+                        }
+
                         delete this.groups[capturedGroupId];
                         await DBManager.removeItem('groups', capturedGroupId);
                         await ChatManager.clearChat(capturedGroupId);
@@ -548,9 +581,14 @@ const GroupManager = {
                     }, 5000);
                 }
                 break;
-            case 'group-dissolved':
-                if (group && sender !== UserManager.userId) {
+            case 'group-dissolved': // 群组被解散
+                if (group && sender !== UserManager.userId) { // 如果不是自己解散的
                     NotificationUIManager.showNotification(`群组 "${group.name}" 已被群主解散。`, 'warning');
+                    // 断开与所有群成员（主要是群主）的连接
+                    group.members.forEach(memberId => {
+                        if (memberId !== UserManager.userId) ConnectionManager.close(memberId);
+                    });
+
                     delete this.groups[groupId];
                     await DBManager.removeItem('groups', groupId);
                     await ChatManager.clearChat(groupId);
@@ -566,7 +604,7 @@ const GroupManager = {
                     const retractedByName = message.originalSenderName || UserManager.contacts[message.originalSender]?.name || `用户 ${String(message.originalSender).substring(0,4)}`;
                     MessageManager._updateMessageToRetractedState(
                         message.originalMessageId, groupId,
-                        false,
+                        false, // 不是自己撤回的
                         retractedByName
                     );
                 }
@@ -575,7 +613,7 @@ const GroupManager = {
                 if (group && group.members.includes(UserManager.userId) && sender !== UserManager.userId) {
                     if (!group.members.includes(message.addedMemberId)) {
                         group.members.push(message.addedMemberId);
-                        if (message.addedMemberDetails && !UserManager.contacts[message.addedMemberId]) {
+                        if (message.addedMemberDetails && !UserManager.contacts[message.addedMemberId]) { // 如果本地没有此联系人，则添加
                             const contactData = { ...message.addedMemberDetails };
                             if (!contactData.aiConfig) contactData.aiConfig = { tts: { tts_mode: 'Preset', version: 'v4' } };
                             else if (!contactData.aiConfig.tts) contactData.aiConfig.tts = { tts_mode: 'Preset', version: 'v4' };
@@ -591,7 +629,6 @@ const GroupManager = {
                             if (!group.aiPrompts) group.aiPrompts = {};
                             group.aiPrompts[message.addedMemberId] = message.groupAiPrompt;
                         }
-
                         await this.saveGroup(groupId);
 
                         const addedContactName = UserManager.contacts[message.addedMemberId]?.name || `用户 ${message.addedMemberId.substring(0,4)}`;
@@ -600,6 +637,11 @@ const GroupManager = {
                         if(UserManager.contacts[message.addedMemberId]?.isAI) systemContent += ` (${addedContactName} 是一个AI助手)`;
 
                         ChatManager.addMessage(groupId, { type: 'user', content: systemContent, timestamp: new Date().toISOString(), groupId: groupId });
+
+                        // 当前用户尝试连接新加入的成员 (如果新成员不是AI)
+                        if (!(UserManager.contacts[message.addedMemberId] && UserManager.contacts[message.addedMemberId].isAI)) {
+                            ConnectionManager.createOffer(message.addedMemberId, { isSilent: true });
+                        }
 
                         if (ChatManager.currentChatId === groupId) {
                             this.openGroup(groupId);
@@ -624,6 +666,9 @@ const GroupManager = {
                         let systemContent = `${removerName} 已将 ${removedContactName} 移出群聊。`;
 
                         ChatManager.addMessage(groupId, { type: 'system', content: systemContent, timestamp: new Date().toISOString(), groupId: groupId });
+
+                        // 断开与被移除成员的连接
+                        ConnectionManager.close(message.removedMemberId);
 
                         if (ChatManager.currentChatId === groupId) {
                             this.openGroup(groupId);

@@ -562,6 +562,7 @@ body {
     min-height: 0;
     padding: var(--spacing-4);
     overflow-y: auto;
+    overscroll-behavior-y: contain; /* 禁用手机端滑动到顶部时的页面刷新 */
 }
 
 /* 虚拟滚动时加载旧消息的指示器样式 */
@@ -887,7 +888,6 @@ body {
 
 #filePreviewContainer,
 #audioPreviewContainer {
-    margin-bottom: 5px;
     border-radius: var(--border-radius);
     background: var(--secondary-color);
     font-size: 13px;
@@ -1159,6 +1159,66 @@ body {
 
 #detailsGroupManagement #addGroupMemberArea button#addMemberBtnDetails {
     width: 100%; /* Make button full width */
+}
+
+/* --- 详情面板: 群组成员列表项状态 --- */
+.member-item-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2) 0; /* 垂直内边距，无水平内边距以允许内容对齐 */
+    border-bottom: 1px solid var(--border-color);
+}
+.member-item-detail:last-child {
+    border-bottom: none;
+}
+.member-item-detail .member-name {
+    flex-grow: 1; /* 允许名称占据多余空间 */
+    margin-right: var(--spacing-2); /* 与状态/按钮间留出空间 */
+}
+.member-item-detail .member-status {
+    font-size: 0.85em;
+    color: var(--text-color-light);
+    margin-right: var(--spacing-2);
+    white-space: nowrap; /* 防止状态文本换行 */
+}
+.member-item-detail .member-status.connected {
+    color: var(--accent-color);
+}
+.member-item-detail .member-status.online-not-connected {
+    color: var(--warning-color);
+}
+.member-item-detail .member-status.offline {
+    color: #aaa; /* 更浅的灰色表示离线 */
+}
+.member-item-detail .member-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1); /* 按钮之间的间隙 */
+}
+.member-item-detail .remove-member-btn-detail,
+.member-item-detail .reconnect-member-btn-detail {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.member-item-detail .remove-member-btn-detail {
+    background-color: rgba(244, 67, 54, 0.1); /* 浅红色背景 */
+    color: var(--danger-color);
+}
+.member-item-detail .remove-member-btn-detail:hover {
+    background-color: rgba(244, 67, 54, 0.2);
+    border-color: var(--danger-color);
+}
+.member-item-detail .reconnect-member-btn-detail {
+    background-color: rgba(0, 136, 204, 0.1); /* 浅主题色背景 */
+    color: var(--primary-color);
+}
+.member-item-detail .reconnect-member-btn-detail:hover {
+    background-color: rgba(0, 136, 204, 0.2);
+    border-color: var(--primary-color);
 }
 
 
@@ -2423,55 +2483,6 @@ input:checked + .slider::before {
 .ai-prompt-editor-item h5 {
     margin-top: 0;
     margin-bottom: var(--spacing-2);
-    font-size: 1.05em; /* 稍大一点的字体 */
-    font-weight: 500;
-}
-
-.ai-prompt-editor-item textarea {
-    width: 100%;
-    min-height: 60px; /* 至少3行的高度 */
-    padding: var(--spacing-2);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-small);
-    font-family: var(--font-family);
-    font-size: 0.9em;
-    resize: vertical; /* 允许垂直调整大小 */
-    margin-bottom: var(--spacing-2);
-}
-
-.ai-prompt-editor-item .btn-sm { /* 用于小号按钮，如果项目中没有此通用类，则需要定义 */
-    padding: var(--spacing-1) var(--spacing-2);
-    font-size: 0.85em;
-}
-
-/* DetailsPanelUIManager - Group AI Prompt Editor Styles */
-#groupAiPromptsSection h4 { /* 与其他 details-section h4 保持一致 */
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: var(--spacing-2);
-    margin-bottom: var(--spacing-3);
-    border-bottom: 1px solid var(--border-color);
-    font-size: 14px;
-    font-weight: 600;
-}
-
-#groupAiPromptsListContainer {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-4); /* 每个AI提示词编辑项之间的间距 */
-}
-
-.ai-prompt-editor-item {
-    padding: var(--spacing-3);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-small);
-    background-color: var(--secondary-color); /* 或者 var(--received-bg-color) */
-}
-
-.ai-prompt-editor-item h5 {
-    margin-top: 0;
-    margin-bottom: var(--spacing-2);
     font-size: 1.05em;
     font-weight: 500;
 }
@@ -2651,5 +2662,9 @@ input:checked + .slider::before {
     }
     .chat-details-main-header{
         display: none;
+    }
+    #messageInput {
+        line-height: 1;
+        padding: 5px 10px;
     }
 }

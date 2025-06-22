@@ -536,7 +536,6 @@ img {
     border-top: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-container);
     display: flex;
-    gap: 10px;
     box-shadow: 0 -1px 3px rgba(0,0,0, 0.1);
 }
 .chat-input-container textarea {
@@ -598,7 +597,7 @@ img {
 .details-panel {
     /* width: 300px; -- Removed as value > 20px */
     /* min-width: 260px; -- Removed as value > 20px */
-    background-color: rgba(var(--gi-night-deep-rgb), 0.8);
+    background-color: rgba(var(--gi-night-deep-rgb), 0.9);
     border-left: 1px solid var(--color-border-secondary);
     padding: 20px;
     overflow-y: auto;

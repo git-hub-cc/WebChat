@@ -4,6 +4,7 @@
  *              包括媒体流的获取、信令交换、连接协商以及通话状态管理。
  *              通话中基于网络状况进行自适应音频质量调整及控制台日志。
  *              默认采用单声道 Opus，优化差网络下表现，并支持动态调整音频参数。
+ *              新增：当 setRemoteDescription 遇到 m-line 顺序错误时，中止通话。
  * @module VideoCallManager
  * @exports {object} VideoCallManager - 对外暴露的单例对象，包含所有通话管理方法。
  * @property {function} init - 初始化模块，包括音乐播放器。
@@ -717,8 +718,12 @@ const VideoCallManager = {
             this._startAdaptiveAudioCheck(peerId);
 
         } catch (e) {
-            Utils.log("处理提议时出错: " + e, Utils.logLevels.ERROR);
-            this.hangUpMedia();
+            Utils.log(`处理来自 ${peerId} 的提议时出错: ${e.message}`, Utils.logLevels.ERROR);
+            if (e.message && e.message.includes("The order of m-lines")) {
+                NotificationUIManager.showNotification("通话协商失败 (媒体描述不匹配)，通话已结束。", "error");
+                Utils.log(`M-line 顺序错误，为 ${peerId} 中止通话。`, Utils.logLevels.ERROR);
+            }
+            this.hangUpMedia(true); // 发生错误时，通知对方并挂断
         }
     },
 
@@ -750,7 +755,11 @@ const VideoCallManager = {
             this._startAdaptiveAudioCheck(peerId);
         } catch (e) {
             Utils.log("处理应答时出错: " + e, Utils.logLevels.ERROR);
-            this.hangUpMedia();
+            if (e.message && e.message.includes("The order of m-lines")) {
+                NotificationUIManager.showNotification("通话协商失败 (媒体描述不匹配)，通话已结束。", "error");
+                Utils.log(`M-line 顺序错误，为 ${peerId} 中止通话。`, Utils.logLevels.ERROR);
+            }
+            this.hangUpMedia(true); // 发生错误时，通知对方并挂断
         }
     },
 

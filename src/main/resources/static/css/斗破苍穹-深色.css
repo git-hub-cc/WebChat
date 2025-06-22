@@ -411,7 +411,6 @@ body {
 .chat-input-container {
     background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.75);
     border-top: 1px solid var(--border-color);
-    padding: 10px;
     box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
 }
 #messageInput {
@@ -456,7 +455,7 @@ body {
 
 /* --- Details Panel (幽冥玄晶或魂渊暗色) --- */
 .details-panel {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.8); /* 魂渊暗色 */
+    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.9); /* 魂渊暗色 */
     border-left: 1px solid var(--border-color);
     box-shadow: -2px 0 8px rgba(0,0,0, 0.3);
 }
