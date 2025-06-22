@@ -734,16 +734,6 @@ body {
 
 
 /* --- 文件与媒体消息 --- */
-.message img.file-preview-img,
-.message video.file-preview-video {
-    display: block;
-    max-width: 100%;
-    max-height: 300px;
-    margin-top: 5px;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-}
-
 .message .file-info {
     display: flex;
     align-items: center;
@@ -752,10 +742,46 @@ body {
     background-color: rgba(0, 0, 0, 0.03);
 }
 
-.message .file-icon {
+.message .thumbnail-placeholder { /* 用于替代旧的 .file-icon */
+    flex-shrink: 0;
+    /* 宽度和高度由JS动态设置，这里可以设置一个最大/最小约束或初始大小 */
+    max-width: 150px;
+    max-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-inline-end: var(--spacing-2);
-    font-size: 24px;
+    font-size: 24px; /* 初始 emoji 图标大小 */
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius-small);
+    overflow: hidden;
+    position: relative; /* 为了播放/查看覆盖图标 */
 }
+
+.message .message-thumbnail { /* 实际的 img 或 video 缩略图 */
+    display: block;
+    /* 宽度和高度由JS动态设置以保持宽高比 */
+    object-fit: cover; /* 或 contain，取决于期望效果 */
+    border-radius: var(--border-radius-small);
+}
+
+.message .file-info .play-overlay-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2em;
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    padding: 10px;
+    display: none; /* 默认隐藏 */
+    pointer-events: none; /* 不捕获点击，让父级 .file-info 处理 */
+}
+.message .file-info:hover .play-overlay-icon { /* 在整个 file-info 悬停时显示 */
+    display: block;
+}
+
 
 .message .file-name {
     font-weight: 500;
@@ -766,12 +792,23 @@ body {
     font-size: 12px;
 }
 
-.message .download-btn {
-    margin-inline-start: auto; /* 使用逻辑属性使其在 LTR 布局中靠右 */
+.message .download-btn,
+.message .play-media-btn { /* 合并通用文件按钮样式 */
+    margin-inline-start: var(--spacing-2); /* 与 file-info 分开 */
     color: var(--primary-color);
     font-size: 13px;
     text-decoration: none;
+    background-color: var(--hover-bg-color);
+    padding: 5px 8px;
+    border-radius: var(--border-radius-small);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
 }
+.message .download-btn:hover,
+.message .play-media-btn:hover {
+    background-color: var(--active-bg-color);
+}
+
 
 .message .voice-message {
     display: flex;
@@ -2193,7 +2230,7 @@ input:checked + .slider::before {
 
 .resource-grid-container {
     display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 columns */
+    grid-template-columns: repeat(2, 1fr); /* 2 columns */
     gap: 5px; /* Gap between items */
     padding: var(--spacing-2);
     overflow-y: auto;
@@ -2220,16 +2257,48 @@ input:checked + .slider::before {
     box-shadow: 0 0 5px rgba(0,0,0,0.2);
 }
 
-.resource-preview-item img.thumbnail,
-.resource-preview-item video.thumbnail {
+/* 更新：用于详情页资源预览的缩略图占位符 */
+.resource-preview-item .thumbnail-placeholder-resource {
     width: 100%;
     height: 100%;
-    object-fit: cover; /* Cover the area, might crop */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em; /* 初始 emoji 图标大小 */
+    color: var(--text-color-light);
+    background-color: var(--secondary-color);
+    position: relative; /* For overlay icon */
 }
 
-.resource-preview-item .file-icon,
-.resource-preview-item .audio-icon {
-    font-size: 2em; /* Larger icon */
+/* 更新：用于详情页资源预览的实际缩略图 */
+.resource-preview-item .message-thumbnail-resource {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 填充并裁剪以适应正方形容器 */
+}
+/* 资源预览中的播放/查看覆盖图标 */
+.resource-preview-item .thumbnail-placeholder-resource .play-overlay-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5em; /* 调整图标大小以适应预览格 */
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 50%;
+    padding: 8px;
+    display: none; /* 默认隐藏 */
+    pointer-events: none;
+}
+
+.resource-preview-item:hover .thumbnail-placeholder-resource .play-overlay-icon {
+    display: block; /* 悬停时显示 */
+}
+
+
+.resource-preview-item .file-icon-resource { /* 用于非图片/视频的资源图标 */
+    font-size: 2em;
     color: var(--text-color-light);
     margin-bottom: var(--spacing-1);
 }
@@ -2284,7 +2353,7 @@ input:checked + .slider::before {
 }
 .scroll-to-latest-btn {
     position: absolute;
-    bottom: 70px; /* Adjust based on input area height */
+    bottom: 110px; /* Adjust based on input area height */
     right: 20px;
     z-index: 10;
     width: 40px;
@@ -2495,6 +2564,364 @@ input:checked + .slider::before {
 
 .chat-status-main.status-indicator-neutral::before {
     display: none; /* Explicitly hide for neutral states if needed */
+}
+
+/* MessageManager.js - displayMessage 视频预览相关样式 */
+.video-preview-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: var(--border-radius-small);
+    transition: background-color 0.2s;
+    position: relative; /* 为了播放图标定位 */
+}
+
+.video-preview-container:hover {
+    background-color: var(--hover-bg-color);
+}
+
+.video-preview-container .thumbnail-placeholder { /* 更新这里以应用到缩略图占位符 */
+    flex-shrink: 0;
+    /* 宽度和高度在JS中根据图片/视频比例设置 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-inline-end: var(--spacing-2);
+    font-size: 24px;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius-small);
+    overflow: hidden;
+    position: relative;
+    /* 设置一个固定的最大宽度，JS会根据比例调整高度 */
+    max-width: 150px; /*  与CSS一致 */
+    max-height: 150px; /* 与CSS一致 */
+}
+
+.video-preview-container .message-thumbnail { /* 实际的img/video缩略图 */
+    display: block;
+    object-fit: cover; /* 或 contain */
+    border-radius: var(--border-radius-small);
+    /* 宽度和高度由JS设置 */
+}
+
+
+.video-preview-container .file-details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden; /* 防止文件名过长溢出 */
+}
+
+.video-preview-container .file-name {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.video-preview-container .file-meta {
+    font-size: 0.8em;
+    color: var(--text-color-light); /* 使用css变量 */
+}
+
+.video-preview-container .thumbnail-placeholder .play-overlay-icon { /* 播放图标 */
+    font-size: 1.5em;
+    color: var(--primary-color);
+    /* margin-left: auto; */ /* 移除了这个，因为是在placeholder内部居中 */
+    /* padding-right: 5px; */
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    position: absolute; /* 覆盖在缩略图上 */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0,0,0,0.3);
+    border-radius: 50%;
+    padding: 5px;
+    color: white;
+}
+
+.video-preview-container:hover .thumbnail-placeholder .play-overlay-icon {
+    opacity: 1;
+}
+
+/* 图片预览容器也使用类似的样式，但用不同的图标 */
+.image-preview-container {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: var(--border-radius-small);
+    transition: background-color 0.2s;
+    position: relative;
+}
+.image-preview-container:hover {
+    background-color: var(--hover-bg-color);
+}
+.image-preview-container .thumbnail-placeholder { /* 应用到缩略图占位符 */
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-inline-end: var(--spacing-2);
+    font-size: 24px;
+    background-color: var(--secondary-color);
+    border-radius: var(--border-radius-small);
+    overflow: hidden;
+    position: relative;
+    max-width: 150px;
+    max-height: 150px;
+}
+.image-preview-container .message-thumbnail { /* 实际的img缩略图 */
+    display: block;
+    object-fit: cover;
+    border-radius: var(--border-radius-small);
+}
+.image-preview-container .file-details { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
+.image-preview-container .file-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.image-preview-container .file-meta { font-size: 0.8em; color: var(--text-color-light); } /* 使用css变量 */
+.image-preview-container .thumbnail-placeholder .play-overlay-icon { /* 查看图标 */
+    font-size: 1.3em; /* 可以稍微小一点 */
+    color: var(--primary-color);
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0,0,0,0.3);
+    border-radius: 50%;
+    padding: 5px;
+    color: white;
+}
+.image-preview-container:hover .thumbnail-placeholder .play-overlay-icon {
+    opacity: 1;
+}
+
+
+/* UIManager.js - showFullVideo 相关样式 */
+.modal-like.video-viewer {
+    background-color: rgba(0,0,0,0.9); /* 深色背景以便视频观看 */
+}
+
+.modal-close-button.top-right {
+    position: absolute;
+    top: 10px; /* 调整位置 */
+    right: 15px;
+    background: rgba(30, 30, 30, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 35px; /* 稍大一点 */
+    height: 35px;
+    font-size: 20px;
+    line-height: 35px; /* 垂直居中 */
+    text-align: center;
+    cursor: pointer;
+    z-index: 1003; /* 确保在视频控件之上 */
+    transition: background-color 0.2s;
+    font-weight: bold;
+}
+.modal-close-button.top-right:hover {
+    background-color: rgba(200, 0, 0, 0.8); /* 悬停时更红 */
+}
+
+/* --- DetailsPanelUIManager: Resource Preview & Calendar --- */
+.resource-search-container {
+    margin-bottom: var(--spacing-3); /* 搜索框与标签之间的间距 */
+}
+
+#resourceSearchInputDetailsPanel {
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--border-color);
+    border-radius: 20px; /* 与侧边栏搜索框一致 */
+    background-color: var(--received-bg-color);
+    font-size: 14px;
+}
+#resourceSearchInputDetailsPanel:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+
+/* 资源预览 - 文本预览特定样式 */
+.resource-text-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* 文本左对齐 */
+    padding: var(--spacing-2);
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* 防止文本溢出 */
+    font-size: 0.8em;
+    line-height: 1.3;
+    text-align: left;
+}
+
+.resource-text-icon {
+    font-size: 1.5em; /* 文本图标大小 */
+    margin-bottom: var(--spacing-1);
+    align-self: center; /* 图标居中 */
+}
+
+.resource-text-snippet {
+    /* 多行文本省略，需要JS配合或固定行数 */
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* 显示3行 */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-all; /* 对于长单词或无空格文本 */
+    color: var(--text-color);
+}
+
+/* 日历容器样式 */
+.calendar-container-rps {
+    padding: var(--spacing-3);
+    background-color: #fff; /* 或 var(--received-bg-color) */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    margin-top: var(--spacing-2);
+    flex-grow: 1;
+    display: flex; /* Enable flex for internal alignment */
+    flex-direction: column;
+    align-items: center; /* Center calendar grid */
+}
+.calendar-loading, .calendar-error {
+    text-align: center;
+    padding: var(--spacing-4);
+    color: var(--text-color-light);
+}
+
+.calendar-header-rps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-3);
+    width: 100%;
+    max-width: 300px; /* Limit header width for better appearance */
+}
+
+.calendar-nav-btn-rps {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 0 var(--spacing-2);
+}
+.calendar-nav-btn-rps:hover {
+    color: var(--primary-color-dark);
+}
+
+.calendar-monthyear-rps {
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.calendar-grid-rps {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    width: 100%;
+    max-width: 300px; /* Match header width */
+}
+
+.calendar-day-header-rps,
+.calendar-day-rps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-1);
+    text-align: center;
+    font-size: 0.85em;
+    border-radius: var(--border-radius-small);
+}
+
+.calendar-day-header-rps {
+    font-weight: bold;
+    color: var(--text-color-light);
+}
+
+.calendar-day-rps {
+    height: 30px; /* Fixed height for day cells */
+    border: 1px solid transparent;
+}
+
+.calendar-day-rps.empty {
+    visibility: hidden;
+}
+
+.calendar-day-rps.has-messages-rps {
+    background-color: var(--sent-bg-color); /* 使用发送消息的背景色 */
+    color: var(--text-color);
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid var(--accent-color);
+}
+.calendar-day-rps.has-messages-rps:hover {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+}
+.calendar-day-rps.no-messages-rps {
+    color: var(--text-color-light);
+    opacity: 0.7;
+}
+
+/* 确保资源搜索框显示在tab之上 */
+#resourcePreviewPanelContent .resource-search-container {
+    order: -1; /* 将搜索框提到最前面 */
+}
+
+/* DetailsPanelUIManager.js - 资源预览 - 文本消息项样式 */
+.resource-preview-item.text-message-preview {
+    display: flex; /* 改为flex，允许内部元素按消息布局 */
+    flex-direction: column; /* 内容垂直排列 */
+    align-items: flex-start; /* 左对齐 */
+    padding: var(--spacing-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background-color: var(--received-bg-color); /* 使用类似接收消息的背景 */
+    cursor: pointer;
+    margin-bottom: var(--spacing-1); /* 文本项之间略微间距 */
+    height: auto; /* 高度由内容决定 */
+    aspect-ratio: unset; /* 移除正方形限制 */
+}
+
+.resource-preview-item.text-message-preview:hover {
+    background-color: var(--hover-bg-color);
+}
+
+.resource-text-sender-preview {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--primary-color); /* 可以用主题色 */
+    margin-bottom: 3px;
+}
+
+.resource-text-content-preview {
+    font-size: 0.9em;
+    color: var(--text-color);
+    word-break: break-word; /* 允许长单词换行 */
+    /* 可以考虑多行省略，但可能需要JS辅助 */
+    max-height: 60px; /* 限制最大高度，例如约3行 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /* 为了简单的多行省略，可以用以下技巧，但兼容性有限 */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+.resource-preview-item.text-message-preview .resource-timestamp {
+    font-size: 0.7em;
+    color: var(--text-color-light);
+    margin-top: 4px;
+    align-self: flex-end; /* 时间戳靠右 */
+    /* 移除了绝对定位，使其在flex流中 */
 }
 
 /* ========================================================================== */

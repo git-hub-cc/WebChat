@@ -3,6 +3,7 @@
  * @description 提供一系列通用工具函数，供整个应用程序使用。
  *              包括日志记录、HTML 转义、网络检查、数据分片处理、ID 生成和日期格式化等。
  *              sendInChunks 现在实现了基于 RTCDataChannel.bufferedAmount 的背压控制。
+ *              新增: generateFileHash 用于计算文件Blob的SHA-256哈希。
  * @module Utils
  * @exports {object} Utils - 对外暴露的单例对象，包含所有工具函数。
  * @property {function} log - 根据设置的日志级别在控制台打印日志。
@@ -13,6 +14,7 @@
  * @property {function} generateId - 生成一个指定长度的随机 ID。
  * @property {function} formatDate - 将 Date 对象格式化为用户友好的字符串。
  * @property {function} truncateFileName - 如果文件名太长，则截断文件名并添加省略号。
+ * @property {function} generateFileHash - 计算文件Blob的SHA-256哈希。
  * @dependencies Config, ConnectionManager (仅在 reassembleChunk 中间接引用)
  * @dependents 几乎所有其他模块。
  */
@@ -335,5 +337,26 @@ const Utils = {
             return filename.substring(0, maxLength) + "..."; // 截断并添加省略号
         }
         return filename; // 否则返回原始文件名
+    },
+
+    /**
+     * 计算文件Blob的SHA-256哈希值。
+     * @param {Blob} blob - 要计算哈希的文件Blob对象。
+     * @returns {Promise<string>} - 文件的SHA-256哈希字符串。
+     * @throws {Error} 如果输入不是Blob或哈希计算失败。
+     */
+    generateFileHash: async function(blob) {
+        if (!(blob instanceof Blob)) {
+            throw new Error("generateFileHash: 输入必须是一个Blob对象。");
+        }
+        try {
+            const buffer = await blob.arrayBuffer(); // 将Blob转为ArrayBuffer
+            const hashBuffer = await crypto.subtle.digest('SHA-256', buffer); // 计算哈希
+            const hashArray = Array.from(new Uint8Array(hashBuffer)); // 转为字节数组
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // 转为16进制字符串
+        } catch (error) {
+            this.log(`generateFileHash: 计算哈希失败 - ${error.message}`, this.logLevels.ERROR);
+            throw error; // 重新抛出错误，让调用者处理
+        }
     }
 };

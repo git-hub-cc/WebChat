@@ -196,6 +196,13 @@
                     <!-- AI 提示词编辑器将由 JS 在此动态填充 -->
                 </div>
             </div>
+
+            <!-- 聊天操作部分 -->
+            <div class="details-section" id="currentChatActionsDetails" style="display: none;">
+                <h4>操作</h4>
+                <button id="clearCurrentChatBtnDetails" class="btn btn-warning">清空聊天记录</button>
+            </div>
+
             <!-- 群组操作部分 -->
             <div class="details-section" id="groupActionsDetails" style="display: none;">
                 <h4>群组设置</h4>
@@ -203,29 +210,33 @@
                 <button id="dissolveGroupBtnDetails" class="btn btn-danger">解散群组</button>
             </div>
 
-            <!-- 聊天操作部分 -->
-            <div class="details-section" id="currentChatActionsDetails" style="display: none;">
-                <h4>操作</h4>
-                <button id="clearCurrentChatBtnDetails" class="btn btn-warning">清空聊天记录</button>
-            </div>
             <!-- 联系人设置部分 -->
             <div class="details-section" id="contactActionsDetails" style="display: none;">
                 <h4>联系人设置</h4>
                 <button id="deleteContactBtnDetails" class="btn btn-danger">删除联系人</button>
             </div>
-            <!-- 聊天资源预览部分 - 新位置 -->
+            <!-- 聊天资源预览部分 - MODIFIED -->
             <div class="details-section" id="resourcePreviewSection" style="display: none;">
-                <h4 id="resourcePreviewHeaderTitle">资源</h4> <!-- 移除了 collapsible-header 类和图标 -->
-                <!-- 内容区域现在总是可见（由JS控制整体section的显隐），且有内边距 -->
+                <h4 id="resourcePreviewHeaderTitle">聊天资源</h4>
                 <div id="resourcePreviewPanelContent" style="display: flex; flex-direction: column; height: auto; overflow: hidden; padding-top: 10px; margin-top: 10px;">
-                    <div class="resource-category-tabs" id="resourceCategoryTabsContainer">
-                        <button class="resource-category-tab active" data-resource-type="image">图片</button>
-                        <button class="resource-category-tab" data-resource-type="video">视频</button>
-                        <button class="resource-category-tab" data-resource-type="audio">音频</button>
-                        <button class="resource-category-tab" data-resource-type="file">文件</button>
+                    <!-- 新增: 资源搜索框 -->
+                    <div class="resource-search-container" style="margin-bottom: 10px;">
+                        <input type="search" id="resourceSearchInputDetailsPanel" placeholder="搜索资源内容..." class="search-bar" style="width: 100%;">
                     </div>
-                    <div id="resourceGridContainer" class="resource-grid-container">
+                    <!-- 修改: 资源分类标签 -->
+                    <div class="resource-category-tabs" id="resourceCategoryTabsContainer">
+                        <button class="resource-category-tab active" data-resource-type="imagery">影像</button>
+                        <button class="resource-category-tab" data-resource-type="text">文本</button>
+                        <button class="resource-category-tab" data-resource-type="other">其它</button>
+                        <button class="resource-category-tab" data-resource-type="date">日期</button>
+                    </div>
+                    <!-- 资源网格容器 (影像、文本、其它) -->
+                    <div id="resourceGridContainer" class="resource-grid-container" style="display: grid;">
                         <!-- Resource items will be populated here by JS -->
+                    </div>
+                    <!-- 新增: 日历容器 (日期) -->
+                    <div id="calendarContainerDetailsPanel" class="calendar-container-rps" style="display: none;">
+                        <!-- Calendar will be rendered here by JS -->
                     </div>
                     <div id="resourceGridLoadingIndicator" class="loading-indicator-grid" style="display: none;">
                         <div class="spinner"></div>
@@ -280,6 +291,8 @@
     <div class="video-streams">
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" autoplay playsinline muted></video>
+        <!-- 音频质量指示器移到这里，使其在视频流之上 -->
+        <div id="audioQualityIndicator" class="call-status-indicator" style="position: absolute; top: 10px; left: 10px; z-index: 3; display: none;">质量</div>
     </div>
     <div class="video-call-controls">
         <button class="video-call-button toggle-camera" id="toggleCameraBtn">📹</button>

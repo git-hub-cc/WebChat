@@ -469,38 +469,48 @@ const ChatManager = {
     /**
      * 获取指定聊天中包含特定类型资源的消息。
      * @param {string} chatId - 聊天ID。
-     * @param {string} resourceType - 资源类型 ('image', 'video', 'audio', 'file')。
+     * @param {string} resourceType - 资源类型 ('imagery', 'text', 'other', 'image', 'video', 'audio', 'file')。
      * @param {number} startIndex - 开始获取的索引。
      * @param {number} limit - 要获取的最大数量。
      * @returns {Promise<Array<object>>} - 包含资源消息的数组。
      */
     getMessagesWithResources: async function(chatId, resourceType, startIndex, limit) {
-        if (!this.chats[chatId]) { // 如果没有此聊天的消息
+        if (!this.chats[chatId]) {
             return [];
         }
         const allMessages = this.chats[chatId];
         const filteredMessages = [];
 
-        // 从后往前遍历消息，以便最新的资源先被找到
         for (let i = allMessages.length - 1; i >= 0; i--) {
             const msg = allMessages[i];
-            // 跳过已撤回或正在思考中的消息
             if (msg.isRetracted || msg.isThinking) continue;
 
             let isMatch = false;
             switch (resourceType) {
-                case 'image':
+                case 'imagery':
+                    isMatch = (msg.type === 'image') ||
+                        (msg.type === 'file' && msg.fileType && msg.fileType.startsWith('image/')) ||
+                        (msg.type === 'file' && msg.fileType && msg.fileType.startsWith('video/'));
+                    break;
+                case 'text':
+                    isMatch = msg.type === 'text';
+                    break;
+                case 'other':
+                    isMatch = msg.type === 'audio' ||
+                        (msg.type === 'file' && msg.fileType &&
+                            !msg.fileType.startsWith('image/') &&
+                            !msg.fileType.startsWith('video/'));
+                    break;
+                case 'image': // 保留旧的单一类型，以防直接调用
                     isMatch = msg.type === 'image' || (msg.type === 'file' && msg.fileType && msg.fileType.startsWith('image/'));
                     break;
                 case 'video':
                     isMatch = msg.type === 'file' && msg.fileType && msg.fileType.startsWith('video/');
                     break;
                 case 'audio':
-                    // 包括语音消息和音频文件
                     isMatch = msg.type === 'audio' || (msg.type === 'file' && msg.fileType && msg.fileType.startsWith('audio/'));
                     break;
                 case 'file':
-                    // 只包括非图片、视频、音频的普通文件
                     isMatch = msg.type === 'file' && msg.fileType &&
                         !msg.fileType.startsWith('image/') &&
                         !msg.fileType.startsWith('video/') &&
@@ -511,7 +521,26 @@ const ChatManager = {
                 filteredMessages.push(msg);
             }
         }
-        // 返回请求范围内的消息
         return filteredMessages.slice(startIndex, startIndex + limit);
+    },
+
+    /**
+     * 获取指定聊天中所有有消息的日期。
+     * @param {string} chatId - 聊天ID。
+     * @returns {Promise<Array<string>>} - YYYY-MM-DD格式的日期字符串数组。
+     */
+    getDatesWithMessages: async function(chatId) {
+        if (!this.chats[chatId]) return [];
+        const dates = new Set();
+        this.chats[chatId].forEach(msg => {
+            if (msg.timestamp && !msg.isThinking && !msg.isRetracted) { // 只考虑实际的、非临时消息
+                const date = new Date(msg.timestamp);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                dates.add(`${year}-${month}-${day}`);
+            }
+        });
+        return Array.from(dates).sort((a,b) => new Date(b).getTime() - new Date(a).getTime()); // 按日期降序返回
     }
 };

@@ -7,6 +7,11 @@
  *              新增：在群聊中检测对AI的@提及，并触发AI响应。
  *              文件名过长时，在预览和消息中会进行截断显示。
  *              修复：文件消息现在能正确显示文件大小。
+ *              修改: 文件发送时，将Blob存入DB的fileCache，消息体中存储fileHash。显示时按需加载。
+ *              修改: 视频文件消息现在点击后全屏播放。
+ *              优化: 图片和视频文件消息现在显示缩略图预览。
+ *              修复：移除发送消息后对 scrollToLatestMessages 的调用，以防止消息消失。
+ *              修复：向 sendGroupAiMessage 传递触发消息的ID，防止AI上下文中重复出现该消息。
  * @module MessageManager
  * @exports {object} MessageManager - 对外暴露的单例对象，包含消息处理的所有核心方法。
  * @property {function} sendMessage - 从输入框发送消息，处理文本、文件和语音消息。
@@ -17,12 +22,12 @@
  * @property {function} deleteMessageLocally - 本地删除一条消息。
  * @property {function} requestRetractMessage - 请求撤回一条消息。
  * @dependencies ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler,
- *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, Config
+ *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, Config, DBManager
  * @dependents ChatAreaUIManager (绑定发送按钮事件), ChatManager (调用以显示历史消息)
  */
 const MessageManager = {
-    selectedFile: null, // 当前选择的文件
-    audioData: null,    // 当前录制的音频数据
+    selectedFile: null, // 当前选择的文件 { blob, hash, name, type, size, previewUrl }
+    audioData: null,    // 当前录制的音频数据 (Data URL)
     audioDuration: 0,   // 当前录制的音频时长
 
     /**
@@ -31,8 +36,9 @@ const MessageManager = {
      */
     sendMessage: async function () {
         const input = document.getElementById('messageInput');
-        const messageText = input.value.trim(); // 获取并去除首尾空格的文本
-        const currentSelectedFile = MessageManager.selectedFile;
+        const originalMessageText = input.value; // 保留原始输入文本，用于后续判断是否清空
+        const messageText = originalMessageText.trim(); // 获取并去除首尾空格的文本
+        const currentSelectedFile = MessageManager.selectedFile; // 结构: { blob, hash, name, type, size, previewUrl }
         const currentAudioData = MessageManager.audioData;
         const currentAudioDuration = MessageManager.audioDuration;
 
@@ -58,8 +64,10 @@ const MessageManager = {
             if (!messageText) return; // 无文本则不发送
             const userMessage = { id: messageIdBase, type: 'text', content: messageText, timestamp: nowTimestamp, sender: UserManager.userId };
             await ChatManager.addMessage(targetId, userMessage); // 添加用户消息到聊天
-            input.value = ''; input.style.height = 'auto'; input.focus(); // 清空并聚焦输入框
-            await AiApiHandler.sendAiMessage(targetId, contact, messageText); // 调用AI处理
+            input.value = ''; input.style.height = 'auto'; // 清空输入框
+            // AI消息发送后，它会自己更新UI并滚动，所以这里不需要强制scrollToLatest
+            await AiApiHandler.sendAiMessage(targetId, contact, messageText);
+            input.focus(); // 聚焦输入框
             return;
         }
 
@@ -90,8 +98,9 @@ const MessageManager = {
                     const mentionRegex = new RegExp(mentionTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$|\\p{P})', 'u');
                     if (messageText.match(mentionRegex)) { // 如果匹配到提及
                         Utils.log(`MessageManager: 检测到对群内AI ${memberContact.name} (${memberContact.id}) 的提及。`, Utils.logLevels.INFO);
-                        // 调用AI处理群消息
-                        AiApiHandler.sendGroupAiMessage(targetId, group, memberContact.id, messageText, UserManager.userId)
+                        // 传递 userTextMessageForChat.id 作为 triggeringMessageId
+                        const triggeringMsgId = userTextMessageForChat ? userTextMessageForChat.id : null;
+                        AiApiHandler.sendGroupAiMessage(targetId, group, memberContact.id, messageText, UserManager.userId, triggeringMsgId)
                             .catch(err => Utils.log(`处理群内AI提及 (${memberContact.name}) 时出错: ${err}`, Utils.logLevels.ERROR));
                     }
                 }
@@ -108,28 +117,64 @@ const MessageManager = {
         }
         // 处理文件消息
         if (currentSelectedFile) {
-            const messagePayload = {
-                id: `${messageIdBase}_file`, type: 'file', fileId: `${Date.now()}-${Utils.generateId(6)}`, // 文件唯一ID
-                fileName: currentSelectedFile.name, fileType: currentSelectedFile.type,
-                size: currentSelectedFile.size, // 文件大小
-                data: currentSelectedFile.data, // 文件数据 (URL)
-                timestamp: nowTimestamp, sender: UserManager.userId
-            };
-            if (isGroup) GroupManager.broadcastToGroup(targetId, messagePayload);
-            else ConnectionManager.sendTo(targetId, messagePayload);
-            await ChatManager.addMessage(targetId, messagePayload);
-            messageSent = true; MessageManager.cancelFileData();
+            try {
+                await DBManager.setItem('fileCache', {
+                    id: currentSelectedFile.hash,
+                    fileBlob: currentSelectedFile.blob,
+                    metadata: {
+                        name: currentSelectedFile.name,
+                        type: currentSelectedFile.type,
+                        size: currentSelectedFile.size
+                    }
+                });
+                Utils.log(`文件 ${currentSelectedFile.name} (hash: ${currentSelectedFile.hash.substring(0,8)}...) 已存入fileCache。`, Utils.logLevels.INFO);
+
+                const messagePayload = {
+                    id: `${messageIdBase}_file`,
+                    type: 'file',
+                    fileId: currentSelectedFile.hash,
+                    fileName: currentSelectedFile.name,
+                    fileType: currentSelectedFile.type,
+                    size: currentSelectedFile.size,
+                    fileHash: currentSelectedFile.hash,
+                    timestamp: nowTimestamp,
+                    sender: UserManager.userId
+                };
+
+                if (isGroup) GroupManager.broadcastToGroup(targetId, messagePayload);
+                else ConnectionManager.sendTo(targetId, messagePayload);
+                await ChatManager.addMessage(targetId, messagePayload);
+                messageSent = true; MessageManager.cancelFileData();
+            } catch (dbError) {
+                Utils.log(`将文件存入fileCache失败: ${dbError}`, Utils.logLevels.ERROR);
+                NotificationUIManager.showNotification('发送文件失败：无法保存到本地缓存。', 'error');
+                MessageManager.cancelFileData();
+                return;
+            }
         }
 
         // 发送最终的文本消息（如果有）
+        // 这个 addMessage 调用会更新 ChatAreaUIManager._allMessagesForCurrentChat
         if (userTextMessageForChat) {
             if (isGroup) GroupManager.broadcastToGroup(targetId, userTextMessageForChat);
             else ConnectionManager.sendTo(targetId, userTextMessageForChat);
             await ChatManager.addMessage(targetId, userTextMessageForChat);
-            messageSent = true; input.value = ''; input.style.height = 'auto'; // 清空输入框
+            messageSent = true;
         }
 
-        if (messageSent) input.focus(); // 如果发送了消息，则重新聚焦输入框
+        if (messageSent) {
+            // 如果原始文本消息被发送了，清空输入框
+            if (messageText && originalMessageText === input.value) {
+                input.value = '';
+                input.style.height = 'auto';
+            }
+
+            // ChatAreaUIManager.handleNewMessageForCurrentChat (通过 ChatManager.addMessage 调用)
+            // 已经处理了新消息的追加和在用户接近底部时的滚动。
+            // 此处调用 scrollToLatestMessages() 会导致仅渲染一个批次，使旧消息消失。
+            // 因此，移除此显式调用。
+            input.focus(); // 聚焦输入框
+        }
     },
 
     /**
@@ -212,24 +257,60 @@ const MessageManager = {
                     case 'text':
                         messageBodyHtml = `<div class="message-content-wrapper"><div class="message-content">${this.formatMessageText(textContent + (showStreamingCursor ? "▍" : ""))}</div></div>`;
                         break;
-                    case 'audio':
+                    case 'audio': // 音频消息仍然使用data URL
                         messageBodyHtml = `<div class="message-content-wrapper"><div class="voice-message"><button class="play-voice-btn" data-audio="${message.data}" onclick="MediaManager.playAudio(this)">▶</button><span class="voice-duration">${Utils.formatTime(message.duration)}</span></div></div>`;
                         break;
                     case 'file':
                         const originalFileName = message.fileName || '文件';
                         const escapedOriginalFileName = Utils.escapeHtml(originalFileName);
-                        const displayFileName = Utils.truncateFileName(escapedOriginalFileName, 10); // 截断文件名
-                        const fileSizeForDisplay = message.size || message.fileSize || 0; // 文件大小
+                        const displayFileName = Utils.truncateFileName(escapedOriginalFileName, 10);
+                        const fileSizeForDisplay = message.size || message.fileSize || 0;
+                        const fileHash = message.fileHash;
+                        let fileSpecificContainerClass = "";
+                        let initialIconContent = "📄"; // 默认文件图标
 
                         if (message.fileType?.startsWith('image/')) {
-                            messageBodyHtml = `<div class="message-content-wrapper"><img src="${message.data}" alt="${escapedOriginalFileName}" class="file-preview-img" onclick="UIManager.showFullImage('${message.data}', '${escapedOriginalFileName}')" title="${escapedOriginalFileName}"></div>`;
+                            fileSpecificContainerClass = "image-preview-container";
+                            initialIconContent = "🖼️";
                         } else if (message.fileType?.startsWith('video/')) {
-                            messageBodyHtml = `<div class="message-content-wrapper"><video controls class="file-preview-video" style="max-width:100%;" title="${escapedOriginalFileName}"><source src="${message.data}" type="${message.fileType}"></video></div>`;
+                            fileSpecificContainerClass = "video-preview-container";
+                            initialIconContent = "🎬";
                         } else if (message.fileType?.startsWith('audio/')) {
-                            messageBodyHtml = `<div class="message-content-wrapper"><div class="file-info"><span class="file-icon">🎵</span><div class="file-details"><div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div><audio controls src="${message.data}" style="width:100%"></audio></div></div></div>`;
-                        } else { // 其他文件
-                            messageBodyHtml = `<div class="message-content-wrapper"><div class="file-info"><span class="file-icon">📄</span><div class="file-details"><div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div><div class="file-meta">${MediaManager.formatFileSize(fileSizeForDisplay)}</div></div><a href="${message.data}" download="${escapedOriginalFileName}" class="download-btn">下载</a></div></div>`;
+                            fileSpecificContainerClass = "audio-file-container";
+                            initialIconContent = "🎵";
                         }
+
+                        // 缩略图占位符 - 将由 _renderThumbnailPreview 异步填充
+                        const thumbnailPlaceholderHtml = `<div class="thumbnail-placeholder" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}" data-filetype="${message.fileType}">
+                                                             ${initialIconContent}
+                                                             ${ (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? `<span class="play-overlay-icon">${message.fileType.startsWith('image/') ? '👁️' : '▶'}</span>` : '' }
+                                                           </div>`;
+                        // 文件详情（名称和大小）
+                        const fileDetailsHtml = `
+                            <div class="file-details">
+                                <div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div>
+                                <div class="file-meta">${MediaManager.formatFileSize(fileSizeForDisplay)}</div>
+                            </div>`;
+
+                        // 构建消息主体
+                        messageBodyHtml = `
+                            <div class="message-content-wrapper">
+                                <div class="file-info ${fileSpecificContainerClass}" 
+                                     data-hash="${fileHash}" 
+                                     data-filename="${escapedOriginalFileName}" 
+                                     data-filetype="${message.fileType}"
+                                     ${(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? 'style="cursor:pointer;"' : ''}>
+                                    ${thumbnailPlaceholderHtml}
+                                    ${fileDetailsHtml}
+                                    
+                                </div>`;
+                        // 为非图片/视频的音频文件或通用文件添加外部操作按钮
+                        if (message.fileType?.startsWith('audio/')) {
+                            messageBodyHtml += `<button class="play-media-btn" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}" data-filetype="${message.fileType}">播放</button>`;
+                        } else if (!(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {
+                            messageBodyHtml += `<button class="download-file-btn" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}">下载</button>`;
+                        }
+                        messageBodyHtml += `</div>`; // 关闭 message-content-wrapper
                         break;
                     case 'user': // 用户加入/离开等系统消息（目前也用 'system'）
                     case 'system': // 系统消息
@@ -246,6 +327,28 @@ const MessageManager = {
             // 重新获取内容元素，因为innerHTML会重建DOM
             mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
             contentElement = mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
+
+            // 为新创建的文件消息按钮绑定事件
+            if (!message.isRetracted && message.type === 'file') {
+                const fileInfoContainer = msgDiv.querySelector('.file-info'); // 通用容器
+                if (fileInfoContainer && (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {
+                    fileInfoContainer.addEventListener('click', (e) => {
+                        const target = e.currentTarget;
+                        if (target.classList.contains('image-preview-container')) {
+                            this._handleViewFileClick(target);
+                        } else if (target.classList.contains('video-preview-container')) {
+                            this._handlePlayVideoFullScreenClick(target);
+                        }
+                    });
+                }
+
+                const playMediaBtn = msgDiv.querySelector('.play-media-btn'); // 音频文件播放按钮
+                if (playMediaBtn) playMediaBtn.addEventListener('click', (e) => this._handlePlayMediaClick(e.target));
+
+                const downloadBtn = msgDiv.querySelector('.download-file-btn'); // 通用文件下载按钮
+                if (downloadBtn) downloadBtn.addEventListener('click', (e) => this._handleDownloadFileClick(e.target));
+            }
+
         } else { // 如果是更新现有消息的文本内容
             if (contentElement && message.type === 'text' && !message.isRetracted) {
                 const textContent = message.content;
@@ -255,18 +358,20 @@ const MessageManager = {
         }
         // 如果消息被撤回，移除所有可交互元素的功能
         if (message.isRetracted) {
-            const actionableElements = msgDiv.querySelectorAll('img[onclick], .play-voice-btn, .download-btn, video[controls], audio[controls]');
+            const actionableElements = msgDiv.querySelectorAll('.file-info[style*="cursor:pointer"], button.play-media-btn, button.download-file-btn, .play-voice-btn');
             actionableElements.forEach(el => {
-                if (el.tagName === 'IMG' || el.classList.contains('play-voice-btn') || el.classList.contains('download-btn')) {
-                    el.onclick = null; // 移除点击事件
-                    if (el.tagName === 'A') el.removeAttribute('href'); // 移除下载链接
-                } else if (el.tagName === 'VIDEO' || el.tagName === 'AUDIO') {
-                    el.removeAttribute('controls'); el.removeAttribute('src'); // 移除播放控件和源
-                    if (el.srcObject) el.srcObject = null; // 清理 MediaStream
-                }
+                if(el.tagName === 'BUTTON') el.disabled = true;
+                el.onclick = null; // 移除点击事件
+                el.style.cursor = 'default';
             });
             msgDiv.style.cursor = 'default'; // 重置光标
         }
+
+        // 异步渲染图片/视频缩略图
+        if (!message.isRetracted && message.type === 'file' && (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {
+            this._renderThumbnailPreview(msgDiv, message);
+        }
+
         // 处理AI消息的TTS
         if (message.type === 'text' && isAIMessage && ttsConfig?.enabled && !message.isStreaming && message.isNewlyCompletedAIResponse && !message.isRetracted) {
             const textForTts = MessageTtsHandler.cleanTextForTts(message.content); // 清理文本
@@ -296,6 +401,288 @@ const MessageManager = {
     },
 
     /**
+     * @private
+     * 异步渲染文件消息中的图片或视频缩略图。
+     * @param {HTMLElement} messageDiv - 包含消息的 DOM 元素。
+     * @param {object} message - 消息对象。
+     */
+    _renderThumbnailPreview: async function(messageDiv, message) {
+        const placeholder = messageDiv.querySelector('.thumbnail-placeholder');
+        if (!placeholder) return;
+
+        const fileHash = placeholder.dataset.hash;
+        const fileType = placeholder.dataset.filetype;
+
+        try {
+            const cachedItem = await DBManager.getItem('fileCache', fileHash);
+            if (!cachedItem || !cachedItem.fileBlob) {
+                placeholder.textContent = '⚠️';
+                placeholder.title = '无法加载预览：文件缓存未找到。';
+                Utils.log(`缩略图预览：文件缓存未找到 (hash: ${fileHash})`, Utils.logLevels.WARN);
+                return;
+            }
+
+            const blob = cachedItem.fileBlob;
+            const objectURL = URL.createObjectURL(blob);
+
+            let mediaElement;
+            let loadEventName;
+
+            if (fileType.startsWith('image/')) {
+                mediaElement = document.createElement('img');
+                mediaElement.alt = '图片预览';
+                loadEventName = 'load';
+            } else if (fileType.startsWith('video/')) {
+                mediaElement = document.createElement('video');
+                mediaElement.muted = true;
+                mediaElement.alt = '视频预览';
+                mediaElement.preload = "metadata"; // 提示浏览器仅加载元数据
+                loadEventName = 'loadedmetadata';
+            } else {
+                URL.revokeObjectURL(objectURL);
+                return; // 非图片或视频，不处理缩略图
+            }
+
+            mediaElement.classList.add('message-thumbnail'); // 用于样式
+
+            const loadPromise = new Promise((resolve, reject) => {
+                mediaElement.addEventListener(loadEventName, () => {
+                    const dimensions = fileType.startsWith('image/') ?
+                        { width: mediaElement.naturalWidth, height: mediaElement.naturalHeight } :
+                        { width: mediaElement.videoWidth, height: mediaElement.videoHeight };
+                    resolve(dimensions);
+                }, { once: true });
+                mediaElement.addEventListener('error', () => reject(new Error(`${fileType.startsWith('image/') ? 'Image' : 'Video'} ${loadEventName} error`)), { once: true });
+            });
+
+            mediaElement.src = objectURL;
+            if (fileType.startsWith('video/')) {
+                mediaElement.load(); // 触发视频元数据加载
+            }
+
+            try {
+                const dimensions = await loadPromise;
+                let { width, height } = dimensions;
+
+                if (width === 0 || height === 0) { // 处理尺寸获取失败的情况
+                    Utils.log(`缩略图预览：无法获取媒体尺寸 (hash: ${fileHash})`, Utils.logLevels.WARN);
+                    width = 150; height = 100; // 默认回退尺寸
+                }
+
+                const aspectRatio = width / height;
+                const MAX_WIDTH = 150;
+                const MAX_HEIGHT = 150;
+
+                if (aspectRatio > 1) { // 宽图
+                    mediaElement.style.width = `${MAX_WIDTH}px`;
+                    mediaElement.style.height = 'auto';
+                } else { // 高图或方形图
+                    mediaElement.style.height = `${MAX_HEIGHT}px`;
+                    mediaElement.style.width = 'auto';
+                }
+                // 确保不超过最大尺寸限制，同时保持比例
+                mediaElement.style.maxWidth = `${MAX_WIDTH}px`;
+                mediaElement.style.maxHeight = `${MAX_HEIGHT}px`;
+
+                placeholder.innerHTML = ''; // 清空占位符内容（如 emoji 图标）
+                placeholder.appendChild(mediaElement); // 添加实际的缩略图元素
+
+                // 预览加载并设置好尺寸后，可以释放 Object URL，因为显示的是位图/元数据
+                URL.revokeObjectURL(objectURL);
+
+            } catch (error) {
+                Utils.log(`加载媒体预览尺寸失败 (hash: ${fileHash}): ${error.message}`, Utils.logLevels.ERROR);
+                placeholder.textContent = '⚠️';
+                placeholder.title = '预览加载失败。';
+                URL.revokeObjectURL(objectURL); // 出错时也释放
+            }
+        } catch (error) {
+            Utils.log(`处理媒体预览失败 (hash: ${fileHash}): ${error.message}`, Utils.logLevels.ERROR);
+            placeholder.textContent = '⚠️';
+            placeholder.title = '预览生成失败。';
+            // 如果 objectURL 在此之前已创建，确保它被释放（但这里可能未创建）
+        }
+    },
+
+
+    /**
+     * @private
+     * 处理文件消息中“查看”按钮（通常是图片）的点击事件。
+     * @param {HTMLElement} buttonOrContainerElement - 被点击的按钮或包含data属性的容器元素。
+     */
+    _handleViewFileClick: async function(buttonOrContainerElement) {
+        const fileHash = buttonOrContainerElement.dataset.hash;
+        const fileName = buttonOrContainerElement.dataset.filename;
+        // const fileType = buttonOrContainerElement.dataset.filetype; // 可选
+
+        if (!fileHash) {
+            NotificationUIManager.showNotification("无法查看文件：缺少文件信息。", "error");
+            return;
+        }
+        try {
+            const cachedItem = await DBManager.getItem('fileCache', fileHash);
+            if (cachedItem && cachedItem.fileBlob) {
+                const objectURL = URL.createObjectURL(cachedItem.fileBlob);
+                UIManager.showFullImage(objectURL, fileName); // UIManager.showFullImage 现在不负责revoke，调用者应确保
+                // 注意：由于 UIManager.showFullImage 的 click to close 会立即 remove modal，
+                // revokeObjectURL 需要在 modal.remove() 之后执行，或者 showFullImage 内部处理。
+                // 为简单起见，这里假设 showFullImage 弹出后用户会关闭，Object URL 生命周期较短。
+                // 更安全的做法是 showFullImage 返回一个 Promise，在 Promise resolve 时 revoke。
+                // 或者，让 UIManager 负责 revoke，但它需要知道 src 是否为 Object URL。
+                // 当前 UIManager.showFullImage 未做此处理，这里暂时依赖浏览器回收，或手动管理。
+                // 后续优化：UIManager.showFullImage/showFullVideo 应该接受一个 onclose 回调来执行 revoke。
+            } else {
+                NotificationUIManager.showNotification("无法查看：文件未在缓存中找到。", "error");
+            }
+        } catch (error) {
+            Utils.log(`查看文件 (hash: ${fileHash}) 出错: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification("查看文件时出错。", "error");
+        }
+    },
+
+    /**
+     * @private
+     * 处理视频预览容器的点击事件，用于全屏播放视频。
+     * @param {HTMLElement} previewContainerElement - 被点击的视频预览容器元素。
+     */
+    _handlePlayVideoFullScreenClick: async function(previewContainerElement) {
+        const fileHash = previewContainerElement.dataset.hash;
+        const fileName = previewContainerElement.dataset.filename;
+        const fileType = previewContainerElement.dataset.filetype;
+
+        if (!fileHash || !fileType || !fileName) {
+            NotificationUIManager.showNotification("无法播放视频：缺少文件信息。", "error");
+            return;
+        }
+
+        try {
+            const cachedItem = await DBManager.getItem('fileCache', fileHash);
+            if (cachedItem && cachedItem.fileBlob) {
+                const objectURL = URL.createObjectURL(cachedItem.fileBlob);
+                UIManager.showFullVideo(objectURL, fileName, fileType); // UIManager.showFullVideo 内部会处理 Object URL 的 revoke
+            } else {
+                NotificationUIManager.showNotification("无法播放：视频文件未在缓存中找到。", "error");
+            }
+        } catch (error) {
+            Utils.log(`全屏播放视频 (hash: ${fileHash}) 出错: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification("播放视频时出错。", "error");
+        }
+    },
+
+
+    /**
+     * @private
+     * 处理文件消息中“播放”按钮（目前主要是音频文件）的点击事件。
+     * @param {HTMLElement} buttonElement - 被点击的按钮元素。
+     */
+    _handlePlayMediaClick: async function(buttonElement) {
+        const fileHash = buttonElement.dataset.hash;
+        const fileName = buttonElement.dataset.filename;
+        const fileType = buttonElement.dataset.filetype;
+
+        // 确保此函数只处理音频文件
+        if (!fileType || !fileType.startsWith('audio/')) {
+            Utils.log(`_handlePlayMediaClick: 非音频类型 (${fileType})，不处理。`, Utils.logLevels.WARN);
+            return;
+        }
+
+        if (!fileHash) { // fileType 已在上一步检查
+            NotificationUIManager.showNotification("无法播放媒体：缺少文件信息。", "error");
+            return;
+        }
+
+        try {
+            const cachedItem = await DBManager.getItem('fileCache', fileHash);
+            if (cachedItem && cachedItem.fileBlob) {
+                const objectURL = URL.createObjectURL(cachedItem.fileBlob);
+
+                const mediaElement = document.createElement('audio'); // 显式创建 audio
+                mediaElement.controls = true;
+                mediaElement.src = objectURL;
+                mediaElement.style.maxWidth = '100%';
+                mediaElement.title = fileName;
+
+                const fileInfoDiv = buttonElement.closest('.file-info');
+                if (fileInfoDiv) {
+                    const existingPlayer = fileInfoDiv.querySelector('audio');
+                    if (existingPlayer) {
+                        existingPlayer.remove();
+                        buttonElement.style.display = '';
+                        URL.revokeObjectURL(existingPlayer.src);
+                        return;
+                    }
+                    // 将播放器插入到按钮之前或之后，而不是替换整个 file-info
+                    // 或将播放器作为 file-info 的兄弟节点插入
+                    buttonElement.parentNode.insertBefore(mediaElement, buttonElement.nextSibling);
+                    buttonElement.style.display = 'none'; // 隐藏播放按钮，显示播放器
+                } else { // 如果找不到 .file-info，直接在按钮旁边操作
+                    buttonElement.parentNode.insertBefore(mediaElement, buttonElement.nextSibling);
+                    buttonElement.style.display = 'none';
+                }
+
+
+                mediaElement.play().catch(e => Utils.log(`播放音频文件 ${fileName} 出错: ${e}`, Utils.logLevels.ERROR));
+                mediaElement.onended = () => {
+                    URL.revokeObjectURL(objectURL);
+                    mediaElement.remove();
+                    buttonElement.style.display = '';
+                };
+                mediaElement.onerror = () => { // 处理播放器错误
+                    URL.revokeObjectURL(objectURL);
+                    mediaElement.remove();
+                    buttonElement.style.display = '';
+                    NotificationUIManager.showNotification(`播放音频 "${fileName}" 失败。`, 'error');
+                };
+            } else {
+                NotificationUIManager.showNotification("无法播放：文件未在缓存中找到。", "error");
+            }
+        } catch (error) {
+            Utils.log(`播放媒体文件 (hash: ${fileHash}) 出错: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification("播放媒体时出错。", "error");
+        }
+    },
+
+    /**
+     * @private
+     * 处理文件消息中“下载”按钮的点击事件。
+     * @param {HTMLElement} buttonElement - 被点击的按钮元素。
+     */
+    _handleDownloadFileClick: async function(buttonElement) {
+        const fileHash = buttonElement.dataset.hash;
+        const fileName = buttonElement.dataset.filename;
+
+        if (!fileHash || !fileName) {
+            NotificationUIManager.showNotification("无法下载文件：缺少文件信息。", "error");
+            return;
+        }
+        buttonElement.disabled = true; // 防止重复点击
+        buttonElement.textContent = "下载中...";
+        try {
+            const cachedItem = await DBManager.getItem('fileCache', fileHash);
+            if (cachedItem && cachedItem.fileBlob) {
+                const objectURL = URL.createObjectURL(cachedItem.fileBlob);
+                const a = document.createElement('a');
+                a.href = objectURL;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(objectURL); // 下载完成后立即释放
+                NotificationUIManager.showNotification(`文件 "${fileName}" 已开始下载。`, "success");
+            } else {
+                NotificationUIManager.showNotification("无法下载：文件未在缓存中找到。", "error");
+            }
+        } catch (error) {
+            Utils.log(`下载文件 (hash: ${fileHash}) 出错: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification("下载文件时出错。", "error");
+        } finally {
+            buttonElement.disabled = false;
+            buttonElement.textContent = "下载";
+        }
+    },
+
+
+    /**
      * 格式化消息文本，转换换行符为 <br>，将 URL 转换为可点击的链接，并处理流式光标。
      * @param {string} text - 要格式化的原始文本。
      * @returns {string} - 格式化后的 HTML 字符串。
@@ -317,9 +704,9 @@ const MessageManager = {
      * 取消当前已选择但未发送的文件。
      */
     cancelFileData: function () {
-        // 如果是 Blob URL，则释放它
-        if (MessageManager.selectedFile && MessageManager.selectedFile.data && typeof MessageManager.selectedFile.data === 'string' && MessageManager.selectedFile.data.startsWith('blob:')) {
-            URL.revokeObjectURL(MessageManager.selectedFile.data);
+        // 如果是 Blob URL (用于预览的 Object URL)，则释放它
+        if (MessageManager.selectedFile && MessageManager.selectedFile.previewUrl) {
+            URL.revokeObjectURL(MessageManager.selectedFile.previewUrl);
         }
         MessageManager.selectedFile = null; // 清空已选文件
         document.getElementById('filePreviewContainer').innerHTML = ''; // 清空预览UI
@@ -370,11 +757,18 @@ const MessageManager = {
         if (!chatId || !ChatManager.chats[chatId]) return; // 检查聊天是否存在
         const messageIndex = ChatManager.chats[chatId].findIndex(msg => msg.id === messageId); // 查找消息索引
         if (messageIndex !== -1) { // 如果找到消息
-            ChatManager.chats[chatId].splice(messageIndex, 1); // 从内存中删除
+            // 如果是文件消息，且预览时创建了Object URL并存储在DOM元素上，尝试在这里释放
             const messageElement = document.querySelector(`.message[data-message-id="${messageId}"]`);
             if (messageElement) {
+                const mediaThumbnail = messageElement.querySelector('.message-thumbnail');
+                if (mediaThumbnail && mediaThumbnail.dataset.objectUrlForRevoke) {
+                    URL.revokeObjectURL(mediaThumbnail.dataset.objectUrlForRevoke);
+                    delete mediaThumbnail.dataset.objectUrlForRevoke;
+                }
                 messageElement.remove(); // 从UI中删除
             }
+
+            ChatManager.chats[chatId].splice(messageIndex, 1); // 从内存中删除
             ChatManager.saveCurrentChat(); // 保存更改到数据库
             // 更新最后消息预览
             const remainingMessages = ChatManager.chats[chatId];
@@ -466,8 +860,11 @@ const MessageManager = {
             retractedBy: isOwnRetraction ? UserManager.userId : (originalMessage.sender || null), // 记录撤回者
             originalType: originalMessage.type, // 保留原始类型
             // 清理文件和媒体相关属性
-            data: null, fileId: null, fileName: null, fileType: null, fileSize: null, size: null, duration: null,
-            // 重置临时状态
+            data: null, // 确保移除旧的 data 字段 (如果有)
+            fileHash: originalMessage.fileHash || null, // 保留哈希，以备未来可能的“恢复”或调试
+            // 确保其他与文件内容相关的字段也被清理或设为null，例如预览URL等
+            // 但 fileName, fileType, size 可以保留作为撤回消息的元信息
+            // 清理临时状态
             isNewlyCompletedAIResponse: false, isStreaming: false, isThinking: false
         };
         ChatManager.addMessage(chatId, retractedMessage); // 将撤回后的消息添加到聊天记录 (addMessage会处理更新)

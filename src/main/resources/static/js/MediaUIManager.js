@@ -3,6 +3,7 @@
  * @description 媒体 UI 管理器，负责处理与媒体相关的用户界面元素，如录音和文件选择的预览。
  *              它将 UI 展示逻辑与 MediaManager 的核心功能逻辑分离。
  *              文件名过长时，在预览和消息中会进行截断显示。
+ *              修改: displayFilePreview 现在使用 fileObj.previewUrl (一个Object URL) 来显示预览。
  * @module MediaUIManager
  * @exports {object} MediaUIManager - 对外暴露的单例对象，包含管理媒体 UI 的方法。
  * @property {function} init - 初始化模块，获取 DOM 元素。
@@ -24,10 +25,10 @@ const MediaUIManager = {
         this.filePreviewContainerEl = document.getElementById('filePreviewContainer');
         // 预览中的播放/取消事件监听器在创建预览时动态添加。
 
-        // 监听截图完成事件以更新预览
-        EventEmitter.on('screenshotTakenForPreview', (fileObject) => {
-            this.displayFilePreview(fileObject); // 显示文件预览
-        });
+        // 监听截图完成事件以更新预览 (注意: 这个事件现在由MediaManager在 'screenshotEditingComplete' 后触发，并传递处理好的fileObject)
+        // EventEmitter.on('screenshotTakenForPreview', (fileObject) => { // 这个事件可能不再需要，或者语义已变
+        //     this.displayFilePreview(fileObject); // 显示文件预览
+        // });
     },
 
     /**
@@ -42,7 +43,13 @@ const MediaUIManager = {
         }
         // 清除文件预览（如果存在），因为一次只能预览一种媒体
         if (this.filePreviewContainerEl) this.filePreviewContainerEl.innerHTML = '';
-        MessageManager.selectedFile = null; // 确保 MessageManager 中的文件也被清空
+        if (MessageManager.selectedFile) { // 清空MessageManager中的文件和其预览URL
+            if (MessageManager.selectedFile.previewUrl) {
+                URL.revokeObjectURL(MessageManager.selectedFile.previewUrl);
+            }
+            MessageManager.selectedFile = null;
+        }
+
 
         const formattedDuration = Utils.formatTime(duration); // 格式化时长
         // 构建音频预览HTML
@@ -84,7 +91,7 @@ const MediaUIManager = {
 
     /**
      * 在输入区域显示用户选择的文件的预览。
-     * @param {object} fileObj - 包含文件信息（data (URL for preview), type, name, size, blob?）的对象。
+     * @param {object} fileObj - 包含文件信息（blob, hash, name, type, size, previewUrl）的对象。
      */
     displayFilePreview: function(fileObj) {
         if (!this.filePreviewContainerEl) { // 防御性检查
@@ -107,11 +114,11 @@ const MediaUIManager = {
 
         let contentHtml;
 
-        // fileObj.data 此时应该是 Object URL (来自截图) 或 Data URL (来自文件选择)
-        if (fileObj.type.startsWith('image/')) { // 如果是图片
-            contentHtml = `<img src="${fileObj.data}" alt="预览" style="max-height: 50px; border-radius: 4px; margin-right: 8px;" title="${escapedOriginalFileName}"> ${displayFileName}`;
-        } else if (fileObj.type.startsWith('video/')) { // 如果是视频
-            contentHtml = `🎬 <span title="${escapedOriginalFileName}">${displayFileName}</span> (视频)`;
+        // 使用 previewUrl (Object URL) 进行预览
+        if (fileObj.type.startsWith('image/') && fileObj.previewUrl) {
+            contentHtml = `<img src="${fileObj.previewUrl}" alt="预览" style="max-height: 50px; border-radius: 4px; margin-right: 8px;" title="${escapedOriginalFileName}"> ${displayFileName}`;
+        } else if (fileObj.type.startsWith('video/') && fileObj.previewUrl) {
+            contentHtml = `🎬 <span title="${escapedOriginalFileName}">${displayFileName}</span> (视频) <video src="${fileObj.previewUrl}" style="display:none;" controls></video>`; // 预览时可以不显示播放器，或显示一个小的
         } else { // 其他文件类型
             contentHtml = `📄 <span title="${escapedOriginalFileName}">${displayFileName}</span> (${MediaManager.formatFileSize(fileObj.size)})`;
         }
@@ -119,7 +126,7 @@ const MediaUIManager = {
 
         // 如果主要内容在span内（非图片情况），则在该span上设置title属性
         const mainSpan = previewDiv.querySelector('span');
-        if(mainSpan && !fileObj.type.startsWith('image/')) {
+        if(mainSpan && !(fileObj.type.startsWith('image/') && fileObj.previewUrl)) {
             const fileNameSpan = mainSpan.querySelector('span[title]'); // 查找特定的文件名span
             if (fileNameSpan) { // 如果存在
                 fileNameSpan.title = escapedOriginalFileName;

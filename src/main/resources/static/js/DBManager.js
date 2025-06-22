@@ -1,6 +1,7 @@
 /**
  * @file DBManager.js
  * @description 数据库管理器，封装了对 IndexedDB 的所有操作，提供了一个简单的 Promise-based API 来进行数据持久化。
+ *              新增: fileCache 对象存储用于缓存文件Blob数据。
  * @module DBManager
  * @exports {object} DBManager - 对外暴露的单例对象，包含数据库操作方法。
  * @property {function} init - 初始化并打开数据库连接。
@@ -16,7 +17,7 @@
 const DBManager = {
     db: null,
     dbName: 'ModernChatDB',
-    dbVersion: 3, // 数据库版本号 (为模式更改而增加)
+    dbVersion: 4, // 数据库版本号 (为 fileCache 增加版本)
 
     /**
      * 初始化并打开 IndexedDB 数据库。如果数据库不存在或版本较低，会触发 onupgradeneeded 来创建或升级表结构。
@@ -60,6 +61,11 @@ const DBManager = {
                 if (!db.objectStoreNames.contains('ttsCache')) {
                     db.createObjectStore('ttsCache', { keyPath: 'id' }); // 'id' 将存储哈希值
                     Utils.log('对象存储 ttsCache 已创建。', Utils.logLevels.INFO);
+                }
+                // 新增：文件缓存表
+                if (!db.objectStoreNames.contains('fileCache')) {
+                    db.createObjectStore('fileCache', { keyPath: 'id' }); // 'id' 将存储文件内容的哈希值
+                    Utils.log('对象存储 fileCache 已创建。', Utils.logLevels.INFO);
                 }
                 Utils.log('数据库架构已升级/创建。', Utils.logLevels.INFO);
             };

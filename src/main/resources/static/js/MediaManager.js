@@ -4,6 +4,7 @@
  *              它不直接操作 UI，而是将 UI 更新委托给 MediaUIManager 或通过 EventEmitter 通知。
  *              截图功能现在会将原始截图数据传递给 ScreenshotEditorUIManager 进行编辑。
  *              用户同意分享后，延迟1秒进行截图。
+ *              修改: processFile 和截图现在会计算文件哈希，并将Blob和哈希传递给MessageManager，而不是Data URL。
  * @module MediaManager
  * @exports {object} MediaManager - 对外暴露的单例对象，包含媒体处理的核心方法。
  * @property {function} initVoiceRecording - 初始化语音录制功能，检查浏览器支持。
@@ -44,12 +45,12 @@ const MediaManager = {
 
         // 监听截图编辑完成和取消事件 (通过 EventEmitter)
         if (typeof EventEmitter !== 'undefined') {
-            EventEmitter.on('screenshotEditingComplete', function(editedFileObject) {
+            EventEmitter.on('screenshotEditingComplete', async function(editedFileObject) { // editedFileObject 包含 { blob, hash, name, type, size, previewUrl }
                 // 将编辑后的图片设置为待发送文件
-                MessageManager.selectedFile = editedFileObject;
+                MessageManager.selectedFile = editedFileObject; // editedFileObject 已经包含了所需的全部信息
                 // 调用UI管理器显示预览
                 if (typeof MediaUIManager !== 'undefined') {
-                    MediaUIManager.displayFilePreview(editedFileObject);
+                    MediaUIManager.displayFilePreview(editedFileObject); // 使用包含 previewUrl 的对象
                 }
                 Utils.log('Edited screenshot ready for preview.', Utils.logLevels.INFO);
                 NotificationUIManager.showNotification('截图编辑完成，已添加到预览。', 'success');
@@ -58,7 +59,7 @@ const MediaManager = {
             EventEmitter.on('screenshotEditingCancelled', function() {
                 Utils.log('Screenshot editing was cancelled by user or editor.', Utils.logLevels.INFO);
                 // 如果当前预览的是临时截图文件，则取消它
-                if (MessageManager.selectedFile && MessageManager.selectedFile.name && MessageManager.selectedFile.name.startsWith("screenshot_temp_")) {
+                if (MessageManager.selectedFile && MessageManager.selectedFile.name && MessageManager.selectedFile.name.startsWith("screenshot_temp_")) { // 假设临时截图有特定前缀
                     MessageManager.cancelFileData();
                 }
                 NotificationUIManager.showNotification('截图操作已取消。', 'info');
@@ -99,7 +100,7 @@ const MediaManager = {
                 const audioBlob = new Blob(this.audioChunks, { type: this.mediaRecorder.mimeType });
                 const reader = new FileReader(); // 使用 FileReader 转为 Data URL
                 reader.onloadend = () => {
-                    MessageManager.audioData = reader.result; // 存储音频数据
+                    MessageManager.audioData = reader.result; // 存储音频数据 (Data URL)
                     MessageManager.audioDuration = this.recordingDuration; // 存储时长
                     // 更新UI显示音频预览
                     if (typeof MediaUIManager !== 'undefined') MediaUIManager.displayAudioPreview(reader.result, this.recordingDuration);
@@ -263,14 +264,20 @@ const MediaManager = {
             return;
         }
         try {
-            const reader = new FileReader(); // 使用 FileReader 读取文件内容
-            reader.onload = (e) => {
-                // 存储文件信息到 MessageManager
-                MessageManager.selectedFile = { data: e.target.result, type: file.type, name: file.name, size: file.size, blob: file };
-                // 更新UI显示文件预览
-                if (typeof MediaUIManager !== 'undefined') MediaUIManager.displayFilePreview(MessageManager.selectedFile);
+            const fileHash = await Utils.generateFileHash(file); // 计算文件哈希
+            const previewUrl = URL.createObjectURL(file); // 为预览创建Object URL
+
+            // 存储文件信息到 MessageManager
+            MessageManager.selectedFile = {
+                blob: file, // 原始File对象 (也是Blob)
+                hash: fileHash,
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                previewUrl: previewUrl // 用于预览的Object URL
             };
-            reader.readAsDataURL(file); // 读取为 Data URL
+            // 更新UI显示文件预览
+            if (typeof MediaUIManager !== 'undefined') MediaUIManager.displayFilePreview(MessageManager.selectedFile);
         } catch (error) {
             Utils.log(`处理文件时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification('处理文件时出错。', 'error');
@@ -350,21 +357,21 @@ const MediaManager = {
                     ctx.drawImage(bitmap, 0, 0);
 
                     // 将 Canvas 内容转为 Blob
-                    canvas.toBlob(function(blob) {
+                    canvas.toBlob(async function(blob) { // 注意这里变成 async
                         if (!blob) { // 如果生成 Blob 失败
                             NotificationUIManager.showNotification('截图失败：无法生成图片 Blob。', 'error');
                             if (stream) stream.getTracks().forEach(track => track.stop());
                             return;
                         }
-                        // 将 Blob 转为 Data URL
+                        // 将 Blob 转为 Data URL (用于传递给编辑器，编辑器内部可能需要Data URL显示)
                         const reader = new FileReader();
                         reader.onloadend = function() {
                             const dataUrl = reader.result;
                             // 通过 EventEmitter 发送原始截图数据给编辑器
                             if (typeof EventEmitter !== 'undefined') {
-                                EventEmitter.emit('rawScreenshotCaptured', {
-                                    dataUrl: dataUrl,
-                                    blob: blob,
+                                EventEmitter.emit('rawScreenshotCaptured', { // 编辑器接收原始 dataUrl 和 blob
+                                    dataUrl: dataUrl, // 编辑器仍然使用 dataUrl 进行初始显示和编辑
+                                    blob: blob,       // 编辑器也接收 blob，以便在编辑确认后使用
                                     originalStream: stream // 传递原始流，以便编辑器可以停止它
                                 });
                                 Utils.log("Raw screenshot captured after delay, event emitted.", Utils.logLevels.INFO);

@@ -4,6 +4,7 @@
  * 该文件负责管理截图编辑器的用户界面 (UI) 和交互逻辑。
  * 它提供了图像裁剪和矩形标记（支持颜色选择）的核心功能。
  * 用户可以通过此模块对捕获的屏幕截图进行初步编辑，然后再进行后续处理。
+ * 修改: _confirmEdit 现在会计算编辑后图像的哈希，并连同Blob一起发送。
  *
  * @module ScreenshotEditorUIManager
  *
@@ -22,7 +23,7 @@
  *  - EventEmitter: 用于模块间的事件发布和订阅机制，例如监听 `rawScreenshotCaptured` 事件以及发出 `screenshotEditingComplete` 或 `screenshotEditingCancelled` 事件。
  *
  * @listens {rawScreenshotCaptured} - 从 EventEmitter 监听此事件，以接收原始截图数据和媒体流。
- * @fires {screenshotEditingComplete} - 当编辑完成并确认后，通过 EventEmitter 发出此事件，携带编辑后的图像文件对象 (包含 dataUrl, blob 等)。
+ * @fires {screenshotEditingComplete} - 当编辑完成并确认后，通过 EventEmitter 发出此事件，携带编辑后的图像文件对象 (包含 blob, hash, name, type, size, previewUrl)。
  * @fires {screenshotEditingCancelled} - 当编辑被用户取消后，通过 EventEmitter 发出此事件。
  */
 const ScreenshotEditorUIManager = {
@@ -189,11 +190,12 @@ const ScreenshotEditorUIManager = {
      * @private
      * @param {object} detail - 事件传递的数据对象。
      * @param {string} detail.dataUrl - 原始截图的 Base64 Data URL。
+     * @param {Blob} detail.blob - 原始截图的Blob对象。
      * @param {MediaStream} detail.originalStream - 截图时使用的原始媒体流。
      */
     _handleRawScreenshot: function(detail) {
         Utils.log('原始截图已由 ScreenshotEditorUIManager 接收。', Utils.logLevels.DEBUG);
-        if (!detail || !detail.dataUrl || !detail.originalStream) { // 检查数据完整性
+        if (!detail || !detail.dataUrl || !detail.blob || !detail.originalStream) { // 检查数据完整性
             NotificationUIManager.showNotification('接收截图数据不完整。', 'error');
             if (detail && detail.originalStream) { // 即使数据不完整，也尝试停止流
                 detail.originalStream.getTracks().forEach(track => track.stop());
@@ -234,7 +236,7 @@ const ScreenshotEditorUIManager = {
             Utils.log('ScreenshotEditorUIManager: 图片加载失败 (img.onerror)。', Utils.logLevels.ERROR);
             this._closeEditorAndStopStream(); // 关闭编辑器并停止流
         };
-        img.src = detail.dataUrl; // 设置图像源
+        img.src = detail.dataUrl; // 设置图像源 (编辑器内部仍然使用dataUrl进行绘制)
     },
 
     /**
@@ -387,7 +389,7 @@ const ScreenshotEditorUIManager = {
      * 将其转换为Blob和DataURL，然后通过 EventEmitter 发出 `screenshotEditingComplete` 事件。
      * @private
      */
-    _confirmEdit: function() {
+    _confirmEdit: async function() { // 标记为 async
         if (!this.isEditorActive || !this.canvasEl || !this.ctx || !this.rawImage) {
             Utils.log('确认编辑被调用，但编辑器未激活或画布未准备好。', Utils.logLevels.WARN);
             this._closeEditorAndStopStream(); // 确保清理
@@ -434,30 +436,35 @@ const ScreenshotEditorUIManager = {
         });
 
         // 将离屏 Canvas 内容转换为 Blob
-        finalCanvas.toBlob((blob) => {
+        finalCanvas.toBlob(async (blob) => { // 内部回调改为 async
             if (!blob) { // 如果生成 Blob 失败
                 NotificationUIManager.showNotification('处理截图失败：无法生成图片 Blob。', 'error');
                 this._closeEditorAndStopStream();
                 return;
             }
-            // 使用 FileReader 将 Blob 转换为 Data URL
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const editedDataUrl = reader.result; // 获取 Data URL
+
+            try {
+                const fileHash = await Utils.generateFileHash(blob); // 计算哈希
+                const previewUrl = URL.createObjectURL(blob); // 创建预览 Object URL
                 const fileName = `screenshot_edited_${Date.now()}.png`; // 生成文件名
+
                 // 构建文件对象
                 const editedFile = {
-                    data: editedDataUrl, blob: blob, type: 'image/png',
-                    name: fileName, size: blob.size
+                    blob: blob, // 实际文件Blob
+                    hash: fileHash,
+                    name: fileName,
+                    type: 'image/png',
+                    size: blob.size,
+                    previewUrl: previewUrl // 用于预览的 Object URL
+                    // 不再需要 data: dataUrl (DataURL) 字段，除非其他地方仍然强制依赖
                 };
                 EventEmitter.emit('screenshotEditingComplete', editedFile); // 发出编辑完成事件
                 this._closeEditorAndStopStream(); // 关闭编辑器
-            };
-            reader.onerror = () => { // 读取 Blob 失败
-                NotificationUIManager.showNotification('读取编辑后截图数据失败。', 'error');
+            } catch (hashError) {
+                Utils.log(`计算编辑后截图哈希失败: ${hashError}`, Utils.logLevels.ERROR);
+                NotificationUIManager.showNotification('处理截图失败：哈希计算错误。', 'error');
                 this._closeEditorAndStopStream();
-            };
-            reader.readAsDataURL(blob); // 开始读取
+            }
         }, 'image/png'); // 指定输出格式
     },
 

@@ -3,6 +3,7 @@
  * @description 负责处理与后端 AI API 的所有通信，包括构建上下文、发送请求以及处理流式响应和对话摘要。
  *              现在会优先使用用户在设置中配置的 API 参数。
  *              更新：在群聊中处理对 AI 的提及，提示词获取逻辑调整为支持非当前主题定义的AI角色。
+ *              修复：在 sendGroupAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
  * @module AiApiHandler
  * @exports {object} AiApiHandler - 对外暴露的单例对象，包含与 AI 交互的方法。
  * @property {object} activeSummaries - 内部缓存，用于存储每个 AI 联系人的当前活动对话摘要。键为联系人 ID，值为摘要字符串。
@@ -356,9 +357,10 @@ const AiApiHandler = {
      * @param {string} aiContactId - 被提及的 AI 的 ID。
      * @param {string} mentionedMessageText - 包含提及的完整消息文本。
      * @param {string} originalSenderId - 发送提及消息的用户 ID。
+     * @param {string|null} [triggeringMessageId=null] - 触发此AI调用的用户消息的ID，用于从上下文中排除此消息。
      * @returns {Promise<void>}
      */
-    sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId) {
+    sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId, triggeringMessageId = null) {
         const aiContact = UserManager.contacts[aiContactId]; // 从 UserManager 获取最新的AI联系人信息
         if (!aiContact || !aiContact.isAI) { // 确保它确实是一个AI
             Utils.log(`AiApiHandler.sendGroupAiMessage: 目标 ${aiContactId} 不是有效的AI联系人。`, Utils.logLevels.WARN);
@@ -415,7 +417,8 @@ const AiApiHandler = {
             const recentMessages = groupChatHistory.filter(msg =>
                 new Date(msg.timestamp).getTime() > timeThreshold &&
                 (msg.type === 'text' || (msg.type === 'system' && !msg.isThinking)) && // 排除思考中的系统消息
-                msg.id !== thinkingMsgId // 排除当前正在思考的消息
+                msg.id !== thinkingMsgId && // 排除当前正在思考的消息
+                msg.id !== triggeringMessageId // 修复：排除触发此调用的用户消息本身
             );
 
             const contextMessagesForAIHistory = recentMessages.map(msg => {

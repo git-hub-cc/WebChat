@@ -94,8 +94,7 @@ const ConfigObj = {
         iceServers: [
             {
                 urls: [
-                    "turn:175.178.216.24:3478?transport=udp",
-                    "turn:175.178.216.24:3478?transport=tcp"
+                    "turn:175.178.216.24:3478?transport=udp"
                 ],
                 username: "test",
                 credential: "123456"
