@@ -172,6 +172,37 @@
                 </div>
             </div>
             <!-- AI TTS 配置部分结束 -->
+
+            <!-- 群组管理部分 -->
+            <div class="details-section" id="detailsGroupManagement" style="display: none;">
+                <h4 id="groupMemberListHeader">成员 (<span id="groupMemberCount">0</span>)<span class="collapse-icon">▶</span></h4>
+                <div id="groupMemberListContainer" class="collapsible-content" style="display:none;">
+                    <div id="groupMemberListDetails" class="member-list-details"></div>
+                    <div id="addGroupMemberArea" class="add-member-details" style="display: none;">
+                        <h5>添加成员 (群组上限20人)</h5>
+                        <label for="contactsDropdownDetails"></label><select id="contactsDropdownDetails"></select>
+                        <button id="addMemberBtnDetails" class="btn btn-primary">添加</button>
+                    </div>
+                    <div id="leftMembersArea" class="left-members-details" style="display: none;">
+                        <h5>已退出的成员</h5>
+                        <div id="leftMemberListDetails"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 群组内 AI 提示词管理部分 (仅群主可见) -->
+            <div class="details-section" id="groupAiPromptsSection" style="display: none;">
+                <h4 id="groupAiPromptsHeader">群内AI行为指示 <span class="collapse-icon">▶</span></h4>
+                <div id="groupAiPromptsListContainer" class="collapsible-content" style="display:none;">
+                    <!-- AI 提示词编辑器将由 JS 在此动态填充 -->
+                </div>
+            </div>
+            <!-- 群组操作部分 -->
+            <div class="details-section" id="groupActionsDetails" style="display: none;">
+                <h4>群组设置</h4>
+                <button id="leaveGroupBtnDetails" class="btn btn-danger">退出群组</button>
+                <button id="dissolveGroupBtnDetails" class="btn btn-danger">解散群组</button>
+            </div>
+
             <!-- 聊天操作部分 -->
             <div class="details-section" id="currentChatActionsDetails" style="display: none;">
                 <h4>操作</h4>
@@ -202,25 +233,6 @@
                 </div>
             </div>
             <!-- 聊天资源预览部分结束 -->
-            <!-- 群组管理部分 -->
-            <div class="details-section" id="detailsGroupManagement" style="display: none;">
-                <h4>成员 (<span id="groupMemberCount">0</span>)</h4>
-                <div id="groupMemberListDetails" class="member-list-details"></div>
-                <div id="addGroupMemberArea" class="add-member-details" style="display: none;">
-                    <h5>添加成员 (群组上限20人)</h5>
-                    <label for="contactsDropdownDetails"></label><select id="contactsDropdownDetails"></select>
-                    <button id="addMemberBtnDetails" class="btn btn-primary">添加</button>
-                </div>
-                <div id="leftMembersArea" class="left-members-details" style="display: none;">
-                    <h5>已退出的成员</h5>
-                    <div id="leftMemberListDetails"></div>
-                </div>
-            </div>
-            <div class="details-section" id="groupActionsDetails" style="display: none;">
-                <h4>群组设置</h4>
-                <button id="leaveGroupBtnDetails" class="btn btn-danger">退出群组</button>
-                <button id="dissolveGroupBtnDetails" class="btn btn-danger">解散群组</button>
-            </div>
         </div>
         <!-- 人员大厅内容容器 -->
         <div class="lobby-content" id="peopleLobbyContent" style="display: none; flex-direction: column; flex-grow: 1; overflow: hidden;">

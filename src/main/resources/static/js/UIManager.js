@@ -18,8 +18,8 @@ const UIManager = {
      * @returns {boolean} - true 表示支持，false 表示不支持。
      */
     checkWebRTCSupport: function () {
-        if (typeof RTCPeerConnection === 'undefined') {
-            LayoutUIManager.updateConnectionStatusIndicator('浏览器不支持 WebRTC。', 'error');
+        if (typeof RTCPeerConnection === 'undefined') { // 检查 RTCPeerConnection 是否定义
+            LayoutUIManager.updateConnectionStatusIndicator('浏览器不支持 WebRTC。', 'error'); // 更新状态指示
             return false;
         }
         return true;
@@ -31,8 +31,9 @@ const UIManager = {
      * @param {string} [altText="图片"] - 图片的替代文本。
      */
     showFullImage: function (src, altText = "图片") {
-        const modal = document.createElement('div');
-        modal.className = 'modal-like image-viewer';
+        const modal = document.createElement('div'); // 创建模态框容器
+        modal.className = 'modal-like image-viewer'; // 应用样式
+        // 设置模态框样式
         modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
         modal.style.position = 'fixed';
         modal.style.top = '0';
@@ -42,20 +43,21 @@ const UIManager = {
         modal.style.display = 'flex';
         modal.style.alignItems = 'center';
         modal.style.justifyContent = 'center';
-        modal.style.zIndex = '1001';
+        modal.style.zIndex = '1001'; // 确保在顶层
 
-        const img = document.createElement('img');
+        const img = document.createElement('img'); // 创建图片元素
         img.src = src;
         img.alt = altText;
+        // 设置图片样式
         img.style.maxWidth = '90%';
         img.style.maxHeight = '90%';
-        img.style.objectFit = 'contain';
-        img.style.borderRadius = 'var(--border-radius)';
-        img.style.boxShadow = '0 0 30px rgba(0,0,0,0.5)';
+        img.style.objectFit = 'contain'; // 保持图片比例
+        img.style.borderRadius = 'var(--border-radius)'; // 应用圆角
+        img.style.boxShadow = '0 0 30px rgba(0,0,0,0.5)'; // 添加阴影
 
-        modal.appendChild(img);
+        modal.appendChild(img); // 将图片添加到模态框
         // 点击模态框任意位置关闭
-        modal.addEventListener('click', () => modal.remove()); // Use addEventListener
-        document.body.appendChild(modal);
+        modal.addEventListener('click', () => modal.remove());
+        document.body.appendChild(modal); // 将模态框添加到body
     },
 };

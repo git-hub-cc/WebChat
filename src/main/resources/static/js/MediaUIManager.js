@@ -9,12 +9,12 @@
  * @property {function} displayAudioPreview - 显示录制完成的音频预览。
  * @property {function} displayFilePreview - 显示用户选择的文件的预览。
  * @property {function} setRecordingButtonActive - 设置录音按钮的激活（录制中）状态和 UI。
- * @dependencies Utils, MessageManager, MediaManager, NotificationUIManager
+ * @dependencies Utils, MessageManager, MediaManager, NotificationUIManager, EventEmitter
  * @dependents AppInitializer (进行初始化), MediaManager (调用以更新 UI), EventEmitter (监听截图事件)
  */
 const MediaUIManager = {
-    audioPreviewContainerEl: null,
-    filePreviewContainerEl: null,
+    audioPreviewContainerEl: null, // 音频预览容器元素
+    filePreviewContainerEl: null,  // 文件预览容器元素
 
     /**
      * 初始化模块，获取 UI 元素的引用。
@@ -26,7 +26,7 @@ const MediaUIManager = {
 
         // 监听截图完成事件以更新预览
         EventEmitter.on('screenshotTakenForPreview', (fileObject) => {
-            this.displayFilePreview(fileObject);
+            this.displayFilePreview(fileObject); // 显示文件预览
         });
     },
 
@@ -36,42 +36,43 @@ const MediaUIManager = {
      * @param {number} duration - 音频时长（秒）。
      */
     displayAudioPreview: function (audioDataUrl, duration) {
-        if (!this.audioPreviewContainerEl) {
+        if (!this.audioPreviewContainerEl) { // 防御性检查
             Utils.log("未找到音频预览容器。", Utils.logLevels.ERROR);
             return;
         }
-        // 清除文件预览（如果存在）
+        // 清除文件预览（如果存在），因为一次只能预览一种媒体
         if (this.filePreviewContainerEl) this.filePreviewContainerEl.innerHTML = '';
-        MessageManager.selectedFile = null; // 确保文件也被清空
+        MessageManager.selectedFile = null; // 确保 MessageManager 中的文件也被清空
 
-        const formattedDuration = Utils.formatTime(duration);
+        const formattedDuration = Utils.formatTime(duration); // 格式化时长
+        // 构建音频预览HTML
         this.audioPreviewContainerEl.innerHTML = `
 <div class="voice-message-preview">
     <span>🎙️ 语音消息 (${formattedDuration})</span>
-<audio controls src="${audioDataUrl}" style="display:none;"></audio>
+<audio controls src="${audioDataUrl}" style="display:none;"></audio> <!-- 隐藏默认播放器 -->
 <button class="btn-play-preview">播放</button>
 <button class="btn-cancel-preview">取消</button>
 </div>
 `;
         const playBtn = this.audioPreviewContainerEl.querySelector('.btn-play-preview');
         const cancelBtn = this.audioPreviewContainerEl.querySelector('.btn-cancel-preview');
-        const audioEl = this.audioPreviewContainerEl.querySelector('audio');
+        const audioEl = this.audioPreviewContainerEl.querySelector('audio'); // 获取<audio>元素
 
         // 绑定预览播放按钮的事件
         if (playBtn && audioEl) {
-            playBtn.addEventListener('click', () => { // 使用 addEventListener
-                if (audioEl.paused) {
+            playBtn.addEventListener('click', () => {
+                if (audioEl.paused) { // 如果暂停，则播放
                     audioEl.play().catch(e => Utils.log("播放预览音频时出错: " + e, Utils.logLevels.ERROR));
                     playBtn.textContent = "暂停";
-                } else {
+                } else { // 如果正在播放，则暂停
                     audioEl.pause();
                     playBtn.textContent = "播放";
                 }
             });
-            audioEl.onended = () => { playBtn.textContent = "播放"; };
+            audioEl.onended = () => { playBtn.textContent = "播放"; }; // 播放结束时重置按钮文本
         }
         // 绑定取消按钮的事件
-        if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelAudioData()); // 使用 addEventListener
+        if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelAudioData());
     },
 
     /**
@@ -86,13 +87,13 @@ const MediaUIManager = {
      * @param {object} fileObj - 包含文件信息（data (URL for preview), type, name, size, blob?）的对象。
      */
     displayFilePreview: function(fileObj) {
-        if (!this.filePreviewContainerEl) {
+        if (!this.filePreviewContainerEl) { // 防御性检查
             Utils.log("未找到文件预览容器。", Utils.logLevels.ERROR);
             return;
         }
         // 清除音频预览（如果存在）
         if (this.audioPreviewContainerEl) this.audioPreviewContainerEl.innerHTML = '';
-        MessageManager.audioData = null; // 确保音频数据也被清空
+        MessageManager.audioData = null;
         MessageManager.audioDuration = 0;
 
 
@@ -100,29 +101,29 @@ const MediaUIManager = {
         const previewDiv = document.createElement('div');
         previewDiv.className = 'file-preview-item';
 
-        const originalFileName = fileObj.name; // Keep original for title and potentially for MessageManager
-        const escapedOriginalFileName = Utils.escapeHtml(originalFileName);
-        const displayFileName = Utils.truncateFileName(escapedOriginalFileName, 25); // Truncate for display in preview (25 chars)
+        const originalFileName = fileObj.name; // 保留原始文件名
+        const escapedOriginalFileName = Utils.escapeHtml(originalFileName); // 转义HTML字符
+        const displayFileName = Utils.truncateFileName(escapedOriginalFileName, 25); // 截断文件名以适应预览区 (25字符)
 
         let contentHtml;
 
         // fileObj.data 此时应该是 Object URL (来自截图) 或 Data URL (来自文件选择)
-        if (fileObj.type.startsWith('image/')) {
+        if (fileObj.type.startsWith('image/')) { // 如果是图片
             contentHtml = `<img src="${fileObj.data}" alt="预览" style="max-height: 50px; border-radius: 4px; margin-right: 8px;" title="${escapedOriginalFileName}"> ${displayFileName}`;
-        } else if (fileObj.type.startsWith('video/')) {
+        } else if (fileObj.type.startsWith('video/')) { // 如果是视频
             contentHtml = `🎬 <span title="${escapedOriginalFileName}">${displayFileName}</span> (视频)`;
-        } else {
+        } else { // 其他文件类型
             contentHtml = `📄 <span title="${escapedOriginalFileName}">${displayFileName}</span> (${MediaManager.formatFileSize(fileObj.size)})`;
         }
         previewDiv.innerHTML = `<span>${contentHtml}</span><button class="cancel-file-preview" title="移除附件">✕</button>`;
 
-        // If the main content is in a span, set title there.
+        // 如果主要内容在span内（非图片情况），则在该span上设置title属性
         const mainSpan = previewDiv.querySelector('span');
-        if(mainSpan && !fileObj.type.startsWith('image/')) { // Images already have title on img or use the filename span
-            const fileNameSpan = mainSpan.querySelector('span[title]');
-            if (fileNameSpan) { // If a specific span for filename exists
+        if(mainSpan && !fileObj.type.startsWith('image/')) {
+            const fileNameSpan = mainSpan.querySelector('span[title]'); // 查找特定的文件名span
+            if (fileNameSpan) { // 如果存在
                 fileNameSpan.title = escapedOriginalFileName;
-            } else { // Fallback to main span
+            } else { // 否则设置在主span上
                 mainSpan.title = escapedOriginalFileName;
             }
         }
@@ -130,7 +131,7 @@ const MediaUIManager = {
 
         this.filePreviewContainerEl.appendChild(previewDiv);
         const cancelBtn = this.filePreviewContainerEl.querySelector('.cancel-file-preview');
-        if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelFileData()); // 使用 addEventListener
+        if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelFileData()); // 绑定取消事件
     },
 
     /**
@@ -146,9 +147,9 @@ const MediaUIManager = {
     resetRecordingButtonUI: function() {
         const voiceButton = document.getElementById('voiceButtonMain');
         if (voiceButton) {
-            voiceButton.classList.remove('recording');
-            voiceButton.innerHTML = '🎙️';
-            const timerEl = document.getElementById('recordingVoiceTimer');
+            voiceButton.classList.remove('recording'); // 移除录制中样式
+            voiceButton.innerHTML = '🎙️'; // 重置图标
+            const timerEl = document.getElementById('recordingVoiceTimer'); // 移除计时器
             if(timerEl) timerEl.remove();
         }
     },
@@ -164,20 +165,23 @@ const MediaUIManager = {
 
         if (!voiceButton) return;
 
+        // 如果计时器不存在且按钮处于录制状态，则创建计时器元素
         if (!voiceTimerEl && voiceButton.classList.contains('recording')) {
             voiceTimerEl = document.createElement('span');
             voiceTimerEl.id = 'recordingVoiceTimer';
             voiceTimerEl.className = 'audio-timer-indicator';
             voiceButton.appendChild(voiceTimerEl);
         } else if (!voiceButton?.classList.contains('recording') && voiceTimerEl) {
-            voiceTimerEl.remove(); // 如果按钮不再是录音状态，则清理计时器
+            // 如果按钮不再是录音状态，则清理计时器
+            voiceTimerEl.remove();
             return;
         }
 
-        if (voiceTimerEl) {
+        if (voiceTimerEl) { // 更新计时器文本
             voiceTimerEl.textContent = Utils.formatTime(elapsedSeconds);
         }
 
+        // 如果达到最大录制时间，显示通知
         if (elapsedSeconds >= maxDuration) {
             NotificationUIManager.showNotification(`已达到最大录制时间 ${maxDuration}秒。`, 'info');
         }
@@ -190,11 +194,11 @@ const MediaUIManager = {
     setRecordingButtonActive: function(isActive) {
         const voiceButton = document.getElementById('voiceButtonMain');
         if (voiceButton) {
-            if (isActive) {
-                voiceButton.classList.add('recording');
-                voiceButton.innerHTML = '🛑'; // 录制时显示停止图标
-            } else {
-                this.resetRecordingButtonUI(); // 停止时重置按钮
+            if (isActive) { // 如果激活
+                voiceButton.classList.add('recording'); // 添加录制中样式
+                voiceButton.innerHTML = '🛑'; // 显示停止图标
+            } else { // 如果非激活
+                this.resetRecordingButtonUI(); // 重置按钮UI
             }
         }
     }

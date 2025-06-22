@@ -13,7 +13,7 @@
  * @property {function} showCallRequest - 显示来电请求的模态框。
  * @property {function} showOpenSourceInfoModal - 显示开源信息提示模态框。
  * @property {function} showAddContactModalWithId - 显示添加联系人模态框并预填用户ID。
- * @dependencies Utils, NotificationUIManager, UserManager, GroupManager, AppInitializer, VideoCallManager
+ * @dependencies Utils, NotificationUIManager, UserManager, GroupManager, AppInitializer, VideoCallManager, Config
  * @dependents AppInitializer (进行初始化), 各个模块在需要显示模态框时调用。
  */
 const ModalUIManager = {
@@ -44,33 +44,35 @@ const ModalUIManager = {
         this.closeOpenSourceInfoModalBtn = document.getElementById('closeOpenSourceInfoModalBtn');
         this.permanentlyCloseOpenSourceInfoModalBtn = document.getElementById('permanentlyCloseOpenSourceInfoModalBtn');
         this.openSourceModalTimerSpan = document.getElementById('openSourceModalTimer');
-        this._bindOpenSourceInfoModalEvents();
+        this._bindOpenSourceInfoModalEvents(); // 绑定此模态框的特定事件
 
         // --- 主菜单/设置模态框 ---
         this.mainMenuModal = document.getElementById('mainMenuModal');
         if (this.mainMenuModal) {
+            // 关闭按钮
             const closeMainMenuBtn = this.mainMenuModal.querySelector('.close-modal-btn[data-modal-id="mainMenuModal"]');
             if (closeMainMenuBtn) {
                 closeMainMenuBtn.addEventListener('click', () => this.toggleModal('mainMenuModal', false));
             }
-            // 当点击模态框覆盖层（即非内容区域）时关闭模态框
+            // 点击模态框覆盖层（即非内容区域）时关闭模态框
             this.mainMenuModal.addEventListener('click', (event) => {
-                if (event.target === this.mainMenuModal) {
+                if (event.target === this.mainMenuModal) { // 确保点击的是模态框本身，而不是其子元素
                     this.toggleModal('mainMenuModal', false);
                 }
             });
         }
 
+        // 主菜单打开按钮
         const mainMenuBtn = document.getElementById('mainMenuBtn');
         if (mainMenuBtn) {
             mainMenuBtn.addEventListener('click', () => {
                 this.toggleModal('mainMenuModal', true);
                 // 打开主菜单时刷新相关 UI 状态
                 if (typeof AppInitializer !== 'undefined' && AppInitializer.refreshNetworkStatusUI) {
-                    AppInitializer.refreshNetworkStatusUI();
+                    AppInitializer.refreshNetworkStatusUI(); // 刷新网络状态
                 }
                 if (typeof SettingsUIManager !== 'undefined') {
-                    SettingsUIManager.updateMainMenuControlsState();
+                    SettingsUIManager.updateMainMenuControlsState(); // 更新菜单内控件状态
                 }
             });
         }
@@ -79,11 +81,12 @@ const ModalUIManager = {
         // --- 新建联系人/群组模态框 ---
         this.newContactGroupModal = document.getElementById('newContactGroupModal');
         if (this.newContactGroupModal) {
+            // 关闭按钮
             const closeNewContactGroupModalBtn = this.newContactGroupModal.querySelector('.close-modal-btn[data-modal-id="newContactGroupModal"]');
             if (closeNewContactGroupModalBtn) {
                 closeNewContactGroupModalBtn.addEventListener('click', () => this.toggleModal('newContactGroupModal', false));
             }
-            // 当点击模态框覆盖层（即非内容区域）时关闭模态框
+            // 点击模态框覆盖层关闭
             this.newContactGroupModal.addEventListener('click', (event) => {
                 if (event.target === this.newContactGroupModal) {
                     this.toggleModal('newContactGroupModal', false);
@@ -91,28 +94,31 @@ const ModalUIManager = {
             });
         }
 
+        // 新建聊天悬浮按钮
         const newChatFab = document.getElementById('newChatFab');
         if (newChatFab) newChatFab.addEventListener('click', () => this.toggleModal('newContactGroupModal', true));
-        // 添加新联系人
+
+        // 添加新联系人按钮
         const confirmNewContactBtn = document.getElementById('confirmNewContactBtn');
         if (confirmNewContactBtn) confirmNewContactBtn.addEventListener('click', () => {
             const peerIdInput = document.getElementById('newPeerIdInput');
             const peerNameInput = document.getElementById('newPeerNameInput');
             const peerId = peerIdInput.value.trim();
             const peerName = peerNameInput.value.trim();
-            if (!peerId) {
+            if (!peerId) { // 检查ID是否为空
                 NotificationUIManager.showNotification('对方 ID 是必填项。', 'warning');
                 return;
             }
+            // 调用 UserManager 添加联系人
             UserManager.addContact(peerId, peerName || `用户 ${peerId.substring(0, 4)}`).then(success => {
-                if (success) {
-                    peerIdInput.value = '';
+                if (success) { // 如果成功
+                    peerIdInput.value = ''; // 清空输入框
                     peerNameInput.value = '';
-                    this.toggleModal('newContactGroupModal', false);
+                    this.toggleModal('newContactGroupModal', false); // 关闭模态框
                 }
             });
         });
-        // 创建新群组
+        // 创建/修改新群组按钮
         const confirmNewGroupBtnModal = document.getElementById('confirmNewGroupBtnModal');
         if (confirmNewGroupBtnModal) {
             confirmNewGroupBtnModal.addEventListener('click', () => {
@@ -121,18 +127,18 @@ const ModalUIManager = {
                 const groupName = groupNameInput.value.trim();
                 const customGroupId = groupIdInput.value.trim(); // 获取用户输入的ID
 
-                if (!groupName) {
+                if (!groupName) { // 检查群组名称是否为空
                     NotificationUIManager.showNotification('群组名称是必填项。', 'warning');
                     return;
                 }
-                // 调用 GroupManager.createGroup 并传递用户输入的ID
+                // 调用 GroupManager 创建或修改群组
                 GroupManager.createGroup(groupName, customGroupId).then(createdGroupId => {
-                    if (createdGroupId) { // 如果成功创建或修改
+                    if (createdGroupId) { // 如果成功
                         groupNameInput.value = ''; // 清空输入框
-                        groupIdInput.value = '';   // 清空ID输入框
-                        this.toggleModal('newContactGroupModal', false);
+                        groupIdInput.value = '';
+                        this.toggleModal('newContactGroupModal', false); // 关闭模态框
                     }
-                    // 如果 createGroup 返回 null (例如非群主尝试修改)，则模态框不关闭，用户可以更正
+                    // 如果 GroupManager.createGroup 返回 null (例如非群主尝试修改)，则模态框不关闭，用户可以更正
                 });
             });
         }
@@ -155,16 +161,16 @@ const ModalUIManager = {
      * 绑定开源信息模态框的内部事件。
      */
     _bindOpenSourceInfoModalEvents: function () {
-        if (this.closeOpenSourceInfoModalBtn) {
+        if (this.closeOpenSourceInfoModalBtn) { // 关闭按钮
             this.closeOpenSourceInfoModalBtn.addEventListener('click', () => this.hideOpenSourceInfoModal());
         }
-        if (this.permanentlyCloseOpenSourceInfoModalBtn) {
+        if (this.permanentlyCloseOpenSourceInfoModalBtn) { // “不再显示”按钮
             this.permanentlyCloseOpenSourceInfoModalBtn.addEventListener('click', () => {
-                localStorage.setItem('hideOpenSourceModalPermanently', 'true');
+                localStorage.setItem('hideOpenSourceModalPermanently', 'true'); // 存储偏好
                 this.hideOpenSourceInfoModal();
             });
         }
-        if (this.openSourceInfoModal) {
+        if (this.openSourceInfoModal) { // 点击外部关闭
             this.openSourceInfoModal.addEventListener('click', (event) => {
                 if (event.target === this.openSourceInfoModal) {
                     this.hideOpenSourceInfoModal();
@@ -178,25 +184,28 @@ const ModalUIManager = {
      * 如果用户已选择“不再显示”，则不执行任何操作。
      */
     showOpenSourceInfoModal: function () {
-        if (localStorage.getItem('hideOpenSourceModalPermanently') === 'true') {
+        if (localStorage.getItem('hideOpenSourceModalPermanently') === 'true') { // 检查用户偏好
             return;
         }
         if (this.openSourceInfoModal && this.openSourceModalTimerSpan) {
-            this.openSourceInfoModal.style.display = 'flex';
-            let countdown = 8;
-            this.openSourceModalTimerSpan.textContent = countdown;
+            this.openSourceInfoModal.style.display = 'flex'; // 显示模态框
+            let countdown = 8; // 倒计时8秒
+            this.openSourceModalTimerSpan.textContent = countdown; // 更新倒计时显示
 
+            // 清理可能存在的旧定时器
             if (this.openSourceModalAutoCloseTimer) clearTimeout(this.openSourceModalAutoCloseTimer);
             if (this.openSourceModalCountdownInterval) clearInterval(this.openSourceModalCountdownInterval);
 
+            // 启动倒计时更新
             this.openSourceModalCountdownInterval = setInterval(() => {
                 countdown--;
                 this.openSourceModalTimerSpan.textContent = countdown;
                 if (countdown <= 0) {
-                    clearInterval(this.openSourceModalCountdownInterval);
+                    clearInterval(this.openSourceModalCountdownInterval); // 清除间隔
                 }
             }, 1000);
 
+            // 启动自动关闭定时器
             this.openSourceModalAutoCloseTimer = setTimeout(() => {
                 this.hideOpenSourceInfoModal();
             }, 8000);
@@ -210,8 +219,9 @@ const ModalUIManager = {
      */
     hideOpenSourceInfoModal: function () {
         if (this.openSourceInfoModal) {
-            this.openSourceInfoModal.style.display = 'none';
+            this.openSourceInfoModal.style.display = 'none'; // 隐藏模态框
         }
+        // 清除定时器
         if (this.openSourceModalAutoCloseTimer) clearTimeout(this.openSourceModalAutoCloseTimer);
         if (this.openSourceModalCountdownInterval) clearInterval(this.openSourceModalCountdownInterval);
         this.openSourceModalAutoCloseTimer = null;
@@ -226,7 +236,7 @@ const ModalUIManager = {
     toggleModal: function (modalId, show) {
         const modal = document.getElementById(modalId);
         if (modal) {
-            modal.style.display = show ? 'flex' : 'none';
+            modal.style.display = show ? 'flex' : 'none'; // 'flex' 用于居中对齐模态框内容
         } else {
             Utils.log(`未找到 ID 为 '${modalId}' 的模态框。`, Utils.logLevels.WARN);
         }
@@ -245,6 +255,7 @@ const ModalUIManager = {
      * @param {string} [options.cancelClass='btn-secondary'] - 取消按钮的 CSS 类。
      */
     showConfirmationModal: function (message, onConfirm, onCancel = null, options = {}) {
+        // 移除可能已存在的同ID模态框，防止重复
         const existingModal = document.getElementById('genericConfirmationModal');
         if (existingModal) {
             existingModal.remove();
@@ -253,44 +264,47 @@ const ModalUIManager = {
         const modalId = 'genericConfirmationModal';
         const modal = document.createElement('div');
         modal.id = modalId;
-        modal.className = 'modal-like confirmation-modal';
-        modal.style.display = 'flex';
+        modal.className = 'modal-like confirmation-modal'; // 应用基础和特定样式
+        modal.style.display = 'flex'; // 立即显示
 
         const modalContent = document.createElement('div');
         modalContent.className = 'modal-content';
 
+        // 头部
         const modalHeader = document.createElement('div');
         modalHeader.className = 'modal-header';
         const titleElement = document.createElement('h2');
-        titleElement.textContent = options.title || '确认操作';
+        titleElement.textContent = options.title || '确认操作'; // 使用选项或默认标题
         modalHeader.appendChild(titleElement);
 
+        // 内容体
         const modalBody = document.createElement('div');
         modalBody.className = 'modal-body';
         const messageParagraph = document.createElement('p');
-        messageParagraph.innerHTML = Utils.escapeHtml(message).replace(/\n/g, '<br>');
+        messageParagraph.innerHTML = Utils.escapeHtml(message).replace(/\n/g, '<br>'); // 支持换行
         modalBody.appendChild(messageParagraph);
 
+        // 底部按钮区
         const modalFooter = document.createElement('div');
         modalFooter.className = 'modal-footer';
 
         const confirmButton = document.createElement('button');
         confirmButton.textContent = options.confirmText || '确认';
-        confirmButton.className = `btn ${options.confirmClass || 'btn-danger'}`;
+        confirmButton.className = `btn ${options.confirmClass || 'btn-danger'}`; // 默认危险操作样式
         confirmButton.addEventListener('click', () => {
-            if (onConfirm) onConfirm();
-            modal.remove();
+            if (onConfirm) onConfirm(); // 执行确认回调
+            modal.remove(); // 关闭模态框
         });
 
         const cancelButton = document.createElement('button');
         cancelButton.textContent = options.cancelText || '取消';
-        cancelButton.className = `btn ${options.cancelClass || 'btn-secondary'}`;
+        cancelButton.className = `btn ${options.cancelClass || 'btn-secondary'}`; // 默认次要按钮样式
         cancelButton.addEventListener('click', () => {
-            if (onCancel) onCancel();
-            modal.remove();
+            if (onCancel) onCancel(); // 执行取消回调
+            modal.remove(); // 关闭模态框
         });
 
-        modalFooter.appendChild(cancelButton);
+        modalFooter.appendChild(cancelButton); // 先添加取消按钮（通常在左侧）
         modalFooter.appendChild(confirmButton);
         modalContent.appendChild(modalHeader);
         modalContent.appendChild(modalBody);
@@ -305,7 +319,7 @@ const ModalUIManager = {
             }
         });
 
-        document.body.appendChild(modal);
+        document.body.appendChild(modal); // 添加到DOM
     },
 
     /**
@@ -321,33 +335,34 @@ const ModalUIManager = {
             return;
         }
 
-        this.callingModalTitle.textContent = `${callType}...`;
-        this.callingModalText.textContent = `正在联系 ${Utils.escapeHtml(peerName)}...`;
+        this.callingModalTitle.textContent = `${callType}...`; // 设置标题
+        this.callingModalText.textContent = `正在联系 ${Utils.escapeHtml(peerName)}...`; // 设置文本
 
+        // 设置头像
         let avatarContentHtml;
-        const peerContact = UserManager.contacts[VideoCallManager.currentPeerId];
+        const peerContact = UserManager.contacts[VideoCallManager.currentPeerId]; // 获取对方联系人信息
         let fallbackText = (peerContact && peerContact.avatarText) ? Utils.escapeHtml(peerContact.avatarText) :
             (peerName && peerName.length > 0) ? Utils.escapeHtml(peerName.charAt(0).toUpperCase()) : '?';
 
-        this.callingModalAvatar.className = 'video-call-avatar'; // 重置类名
-        if (peerContact && peerContact.isSpecial) {
+        this.callingModalAvatar.className = 'video-call-avatar'; // 重置头像类名
+        if (peerContact && peerContact.isSpecial) { // 如果是特殊联系人，添加特定类
             this.callingModalAvatar.classList.add(peerContact.id);
         }
 
-        if (peerContact && peerContact.avatarUrl) {
+        if (peerContact && peerContact.avatarUrl) { // 如果有头像URL
             avatarContentHtml = `<img src="${peerContact.avatarUrl}" alt="${fallbackText}" class="avatar-image" data-fallback-text="${fallbackText}" data-entity-id="${peerContact.id}">`;
-        } else {
+        } else { // 否则使用文本头像
             avatarContentHtml = fallbackText;
         }
         this.callingModalAvatar.innerHTML = avatarContentHtml;
 
-        // Ensure previous listener is removed if any, then add new one
-        const newCancelBtn = this.callingModalCancelBtn.cloneNode(true);
-        this.callingModalCancelBtn.parentNode.replaceChild(newCancelBtn, this.callingModalCancelBtn);
-        this.callingModalCancelBtn = newCancelBtn;
-        this.callingModalCancelBtn.addEventListener('click', onCancelCall);
+        // 确保取消按钮的事件监听器被正确替换，避免重复绑定
+        const newCancelBtn = this.callingModalCancelBtn.cloneNode(true); // 克隆按钮
+        this.callingModalCancelBtn.parentNode.replaceChild(newCancelBtn, this.callingModalCancelBtn); // 替换旧按钮
+        this.callingModalCancelBtn = newCancelBtn; // 更新引用
+        this.callingModalCancelBtn.addEventListener('click', onCancelCall); // 绑定新的取消回调
 
-        this.callingModal.style.display = 'flex';
+        this.callingModal.style.display = 'flex'; // 显示模态框
     },
 
     /**
@@ -355,8 +370,8 @@ const ModalUIManager = {
      */
     hideCallingModal: function () {
         if (this.callingModal && this.callingModal.style.display !== 'none') {
-            this.callingModal.style.display = 'none';
-            // No need to remove listener here if we cloneNode on show
+            this.callingModal.style.display = 'none'; // 隐藏模态框
+            // 由于每次显示时都克隆并替换按钮，这里无需显式移除监听器
         }
     },
 
@@ -367,7 +382,7 @@ const ModalUIManager = {
      * @param {boolean} [isScreenShare=false] - 是否为屏幕共享请求。
      */
     showCallRequest: function (peerId, audioOnly = false, isScreenShare = false) {
-        if (!this.videoCallRequestModal) return;
+        if (!this.videoCallRequestModal) return; // 防御性检查
 
         const requestTitle = this.videoCallRequestModal.querySelector('h3');
         const requestDesc = this.videoCallRequestModal.querySelector('p');
@@ -375,9 +390,10 @@ const ModalUIManager = {
         let acceptBtn = this.videoCallRequestModal.querySelector('.accept-call');
         let rejectBtn = this.videoCallRequestModal.querySelector('.reject-call');
 
-        const peerName = UserManager.contacts[peerId]?.name || `用户 ${peerId.substring(0, 4)}`;
-        let avatarContentHtml = (UserManager.contacts[peerId]?.name?.charAt(0).toUpperCase() || 'P');
+        const peerName = UserManager.contacts[peerId]?.name || `用户 ${peerId.substring(0, 4)}`; // 获取对方名称
+        let avatarContentHtml = (UserManager.contacts[peerId]?.name?.charAt(0).toUpperCase() || 'P'); // 默认头像文本
 
+        // 设置头像
         const peerContact = UserManager.contacts[peerId];
         if (peerContact && peerContact.avatarUrl) {
             avatarContentHtml = `<img src="${peerContact.avatarUrl}" alt="${Utils.escapeHtml(peerName.charAt(0))}" class="avatar-image">`;
@@ -386,6 +402,7 @@ const ModalUIManager = {
         }
         if (avatarEl) avatarEl.innerHTML = avatarContentHtml;
 
+        // 设置通话类型文本
         let callTypeString = "视频通话";
         if (isScreenShare) callTypeString = "屏幕共享";
         else if (audioOnly) callTypeString = "语音通话";
@@ -393,6 +410,7 @@ const ModalUIManager = {
         if (requestTitle) requestTitle.textContent = `${callTypeString}请求`;
         if (requestDesc) requestDesc.textContent = `${peerName} ${isScreenShare ? '想要共享屏幕' : '正在呼叫'}...`;
 
+        // 重新绑定接受和拒绝按钮的事件监听器
         if(acceptBtn) {
             const newAcceptBtn = acceptBtn.cloneNode(true);
             acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
@@ -406,7 +424,7 @@ const ModalUIManager = {
             rejectBtn.addEventListener('click', () => VideoCallManager.rejectCall());
         }
 
-        this.videoCallRequestModal.style.display = 'flex';
+        this.videoCallRequestModal.style.display = 'flex'; // 显示模态框
     },
 
     /**
@@ -421,15 +439,15 @@ const ModalUIManager = {
      * @param {string} userId - 要预填的用户ID。
      */
     showAddContactModalWithId: function(userId) {
-        this.toggleModal('newContactGroupModal', true);
+        this.toggleModal('newContactGroupModal', true); // 显示模态框
         const peerIdInput = document.getElementById('newPeerIdInput');
         const peerNameInput = document.getElementById('newPeerNameInput');
         if (peerIdInput) {
-            peerIdInput.value = userId;
+            peerIdInput.value = userId; // 预填ID
         }
         if (peerNameInput) {
             peerNameInput.value = ''; // 清空昵称，让用户填写
-            peerNameInput.focus();
+            peerNameInput.focus(); // 聚焦昵称输入框
         }
     }
 };

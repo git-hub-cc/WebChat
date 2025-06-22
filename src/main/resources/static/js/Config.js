@@ -13,7 +13,7 @@ const ConfigObj = {
     reconnect: {
         maxAttempts: 1,      // 最大尝试次数
         delay: 3000,         // 初始延迟（毫秒）
-        backoffFactor: 0   // 延迟时间的指数增长因子
+        backoffFactor: 0   // 延迟时间的指数增长因子 (0 表示不增长)
     },
     /**
      * 各种操作的超时时间配置（毫秒）
@@ -35,21 +35,22 @@ const ConfigObj = {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+            // channelCount: 1, // 默认单声道，已移至 VideoCallManager
         }
     },
     /**
      * 文件/消息分片传输时每个分片的大小（字节）
      */
-    chunkSize: 64 * 1024,
+    chunkSize: 64 * 1024, // 64KB
     /**
      * UI 行为相关配置
      */
     ui: {
-        messageRenderBatchSize: 30,
-        virtualScrollBatchSize: 20,
-        virtualScrollThreshold: 150,
-        typingIndicatorTimeout: 3000,
-        messageRetractionWindow: 5 * 60 * 1000
+        messageRenderBatchSize: 30, // 初始加载消息批次大小 (ChatAreaUIManager未使用，可考虑移除或整合)
+        virtualScrollBatchSize: 20, // 虚拟滚动时加载的批次大小 (ChatAreaUIManager未使用，可考虑移除或整合)
+        virtualScrollThreshold: 150, // 触发虚拟滚动的阈值 (像素)
+        typingIndicatorTimeout: 3000, // “正在输入”指示器超时时间
+        messageRetractionWindow: 5 * 60 * 1000 // 消息可撤回时间窗口 (5分钟)
     },
     /**
      * 日志级别配置
@@ -61,8 +62,8 @@ const ConfigObj = {
      * AI 相关配置
      */
     ai: {
-        sessionTime: 10 * 60 * 1000, // AI 对话上下文的有效时间窗口（10分钟） - Einzelchat
-        groupAiSessionTime: 3 * 60 * 1000, // AI 群聊上下文的有效时间窗口（3分钟）- NEU
+        sessionTime: 10 * 60 * 1000, // AI 对话上下文的有效时间窗口（10分钟） - 单独聊天
+        groupAiSessionTime: 3 * 60 * 1000, // AI 群聊上下文的有效时间窗口（3分钟）- 群聊
         baseSystemPrompt: "一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示）。",
         baseGroupSystemPrompt: "当前情境说明：你现在处于一个群聊环境中，**冒号（:）之前的是用户名，冒号（:）之后的是该用户的发言内容。一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示），小概率触发调侃其它用户。",
     },
@@ -75,16 +76,16 @@ const ConfigObj = {
      * 这些是默认值，UI 管理器将从 localStorage 加载用户配置的值来覆盖它们。
      */
     server: {
-        // signalingServerUrl: 'wss://175.178.216.24/signaling',
-        // apiEndpoint: 'https://175.178.216.24/v1/chat/completions',
-        // lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids',
-        signalingServerUrl: 'ws://localhost:8080/signaling',
-        apiEndpoint: 'http://localhost:8080/v1/chat/completions',
-        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids',
-        api_key: "Bearer sk-xxxx",
-        model: "qwen-turbo-2025-04-28",
-        max_tokens: 2048,
-        ttsApiEndpoint: 'https://gsv2p.acgnai.top',
+        // signalingServerUrl: 'wss://175.178.216.24/signaling', // 信令服务器 URL
+        // apiEndpoint: 'https://175.178.216.24/v1/chat/completions', // AI聊天 API 端点
+        // lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids', // 人员大厅 API 端点
+        signalingServerUrl: 'ws://localhost:8080/signaling', // 本地开发示例
+        apiEndpoint: 'http://localhost:8080/v1/chat/completions', // 本地开发示例
+        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids', // 本地开发示例
+        api_key: "Bearer sk-xxxx", // API 密钥
+        model: "qwen-turbo-2025-04-28", // 默认 AI 模型
+        max_tokens: 2048, // AI 回复最大令牌数
+        ttsApiEndpoint: 'https://gsv2p.acgnai.top', // TTS API 端点
     },
     /**
      * WebRTC RTCPeerConnection 的详细配置
@@ -99,38 +100,40 @@ const ConfigObj = {
                 username: "test",
                 credential: "123456"
             },
+            // 可以添加更多 STUN/TURN 服务器
         ],
-        iceTransportPolicy: 'all',
-        bundlePolicy: 'max-bundle',
-        rtcpMuxPolicy: 'require',
-        iceCandidatePoolSize: 0,
-        sdpSemantics: 'unified-plan',
+        iceTransportPolicy: 'all', // 'all' 或 'relay'
+        bundlePolicy: 'max-bundle', // 'balanced', 'max-compat', 'max-bundle'
+        rtcpMuxPolicy: 'require',   // 'negotiate' 或 'require'
+        iceCandidatePoolSize: 0,   // 预先收集的 ICE 候选者数量
+        sdpSemantics: 'unified-plan', // SDP 语义 ('plan-b' 或 'unified-plan')
     },
 
     /**
      * @description 自适应音频质量配置
      */
     adaptiveAudioQuality: {
-        interval: 5000,
-        logStatsToConsole: true,
-        baseGoodConnectionThresholds: {
-            rtt: 120,
-            packetLoss: 0.01,
-            jitter: 20
+        interval: 5000, // 检查间隔 (毫秒)
+        logStatsToConsole: true, // 是否在控制台打印统计信息
+        baseGoodConnectionThresholds: { // 良好连接的基准阈值
+            rtt: 120,        // 往返时延 (ms)
+            packetLoss: 0.01, // 丢包率 (0.0 到 1.0)
+            jitter: 20       // 抖动 (ms)
         },
-        audioQualityProfiles: [
-            { levelName: "极低", maxAverageBitrate: 8000, sdpFmtpLine: "minptime=40;useinbandfec=1;stereo=0;maxaveragebitrate=8000;cbr=1;maxplaybackrate=8000", description: "非常差的网络，优先保障连接" },
+        audioQualityProfiles: [ // 音频质量配置档案数组，从低到高
+            { levelName: "极低", maxAverageBitrate: 8000,  sdpFmtpLine: "minptime=40;useinbandfec=1;stereo=0;maxaveragebitrate=8000;cbr=1;maxplaybackrate=8000",   description: "非常差的网络，优先保障连接" },
             { levelName: "较低", maxAverageBitrate: 12000, sdpFmtpLine: "minptime=20;useinbandfec=1;stereo=0;maxaveragebitrate=12000;cbr=1;maxplaybackrate=12000", description: "较差网络，基础通话" },
             { levelName: "标准", maxAverageBitrate: 16000, sdpFmtpLine: "minptime=10;useinbandfec=1;stereo=0;maxaveragebitrate=16000;cbr=0;maxplaybackrate=16000", description: "一般网络，标准音质" },
             { levelName: "较高", maxAverageBitrate: 20000, sdpFmtpLine: "minptime=10;useinbandfec=1;stereo=0;maxaveragebitrate=20000;cbr=0;maxplaybackrate=20000", description: "良好网络，提升音质" },
-            { levelName: "极高", maxAverageBitrate: 48000, sdpFmtpLine: "minptime=5;useinbandfec=1;stereo=1;maxaveragebitrate=48000;cbr=0;maxplaybackrate=48000", description: "优秀网络，最佳音质" }
+            { levelName: "极高", maxAverageBitrate: 48000, sdpFmtpLine: "minptime=5;useinbandfec=1;stereo=1;maxaveragebitrate=48000;cbr=0;maxplaybackrate=48000",  description: "优秀网络，最佳音质" }
         ],
-        initialProfileIndex: 2,
-        switchToHigherCooldown: 10000,
-        switchToLowerCooldown: 5000,
-        stabilityCountForUpgrade: 2,
-        badQualityDowngradeThreshold: 2
+        initialProfileIndex: 2, // 初始配置档案索引 (对应 "标准")
+        switchToHigherCooldown: 10000, // 提升质量的冷却时间 (毫秒)
+        switchToLowerCooldown: 5000,   // 降低质量的冷却时间 (毫秒)
+        stabilityCountForUpgrade: 2,   // 连续多少次良好检查后才提升质量
+        badQualityDowngradeThreshold: 2 // 连续多少次差质量检查后才降低质量
     }
 };
 
+// 将配置对象挂载到 window 对象上，以便全局访问
 window.Config = ConfigObj;

@@ -16,7 +16,7 @@
  * @dependents AppInitializer (确保其早期执行), SettingsUIManager (用于主题切换), UserManager (依赖其加载的数据)
  */
 const ThemeLoader = {
-    // 定义所有可用的主题
+    // 定义所有可用的主题及其配置
     themes: {
         "原神-浅色": { name: "原神", css: "css/原神-浅色.css", dataJs: "data/原神.json", defaultSpecialContacts: true  },
         "原神-深色": { name: "原神", css: "css/原神-深色.css", dataJs: "data/原神.json" },
@@ -43,11 +43,11 @@ const ThemeLoader = {
         // "吞噬星空-浅色": { name: "吞噬星空", css: "css/吞噬星空-浅色.css", dataJs: "data/吞噬星空.json" },
         // "吞噬星空-深色": { name: "吞噬星空", css: "css/吞噬星空-深色.css", dataJs: "data/吞噬星空.json" }
     },
-    COLOR_SCHEME_KEY: 'selectedColorScheme',
-    DEFAULT_COLOR_SCHEME: 'light',
-    _currentEffectiveColorScheme: 'light',
-    _currentThemeKey: null,
-    _systemColorSchemeListener: null,
+    COLOR_SCHEME_KEY: 'selectedColorScheme', // localStorage 中存储配色方案偏好的键
+    DEFAULT_COLOR_SCHEME: 'light', // 默认配色方案
+    _currentEffectiveColorScheme: 'light', // 当前生效的配色方案 (light/dark)
+    _currentThemeKey: null, // 当前应用的主题键名
+    _systemColorSchemeListener: null, // 系统配色方案变化监听器
     _currentSpecialContactsDefinitions: [], // 存储当前主题的特殊联系人定义
 
     /**
@@ -56,15 +56,15 @@ const ThemeLoader = {
      * @returns {Promise<Array<object>>} - 解析后的特殊联系人定义数组。
      */
     async _parseDataJson(dataJsonUrl) {
-        if (!dataJsonUrl) return [];
+        if (!dataJsonUrl) return []; // 如果URL为空，则返回空数组
         try {
-            const response = await fetch(dataJsonUrl);
-            if (!response.ok) {
+            const response = await fetch(dataJsonUrl); // 获取JSON文件
+            if (!response.ok) { // 检查响应状态
                 (Utils?.log || console.log)(`ThemeLoader: 获取 data JSON 失败 ${dataJsonUrl}: ${response.statusText}`, Utils?.logLevels?.WARN || 2);
                 return [];
             }
-            const definitions = await response.json();
-            if (Array.isArray(definitions)) {
+            const definitions = await response.json(); // 解析JSON
+            if (Array.isArray(definitions)) { // 确保是数组
                 return definitions;
             } else {
                 (Utils?.log || console.log)(`ThemeLoader: 从 ${dataJsonUrl} 解析的内容不是数组。`, Utils?.logLevels?.WARN || 2);
@@ -82,25 +82,26 @@ const ThemeLoader = {
      * @returns {Promise<void>}
      */
     async _loadThemeCore(themeKey) {
-        const themeConfig = this.themes[themeKey];
-        if (!themeConfig) {
+        const themeConfig = this.themes[themeKey]; // 获取主题配置
+        if (!themeConfig) { // 如果配置不存在
             console.error(`ThemeLoader: 未找到键为 "${themeKey}" 的主题。`);
             return;
         }
 
-        const themeStylesheet = document.getElementById('theme-stylesheet');
-        if (themeStylesheet && themeConfig.css) {
-            themeStylesheet.setAttribute('href', themeConfig.css);
+        const themeStylesheet = document.getElementById('theme-stylesheet'); // 获取主题样式表元素
+        if (themeStylesheet && themeConfig.css) { // 如果元素和CSS路径都存在
+            themeStylesheet.setAttribute('href', themeConfig.css); // 设置新的CSS路径
         } else if (!themeStylesheet) {
             console.error("ThemeLoader: 严重错误 - 未找到 'theme-stylesheet' 元素。");
-        } else if (!themeConfig.css) {
+        } else if (!themeConfig.css) { // 如果主题未定义CSS
             (Utils?.log || console.log)(`ThemeLoader: 主题 "${themeKey}" 未定义 CSS。`, Utils?.logLevels?.WARN || 2);
-            themeStylesheet.setAttribute('href', '');
+            themeStylesheet.setAttribute('href', ''); // 清空href
         }
 
+        // 加载并解析与主题相关的特殊联系人数据
         this._currentSpecialContactsDefinitions = await this._parseDataJson(themeConfig.dataJs);
-        this._currentThemeKey = themeKey;
-        localStorage.setItem('selectedTheme', themeKey);
+        this._currentThemeKey = themeKey; // 更新当前主题键
+        localStorage.setItem('selectedTheme', themeKey); // 保存到localStorage
     },
 
     /**
@@ -108,31 +109,34 @@ const ThemeLoader = {
      * @returns {Promise<void>}
      */
     async init() {
+        // 获取用户偏好的配色方案，或使用默认值
         const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
-        this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
+        this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme); // 计算生效的配色方案
 
-        let savedThemeKey = localStorage.getItem('selectedTheme');
-        let themeToLoadKey;
+        let savedThemeKey = localStorage.getItem('selectedTheme'); // 获取上次保存的主题
+        let themeToLoadKey; // 最终要加载的主题键
 
+        // 判断使用哪个主题
         if (savedThemeKey && this.themes[savedThemeKey] && this._isThemeCompatible(savedThemeKey, this._currentEffectiveColorScheme)) {
+            // 如果保存的主题有效且与当前配色方案兼容，则使用它
             themeToLoadKey = savedThemeKey;
-        } else {
+        } else { // 否则，需要查找一个合适的主题
             let newThemeKey;
-            if (savedThemeKey && this.themes[savedThemeKey]) {
-                const baseName = this._getBaseThemeName(savedThemeKey);
-                const suffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
-                const counterpartKey = `${baseName}-${suffix}`;
+            if (savedThemeKey && this.themes[savedThemeKey]) { // 如果保存的主题存在但可能不兼容
+                const baseName = this._getBaseThemeName(savedThemeKey); // 获取基础名称
+                const suffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色'; // 配色方案后缀
+                const counterpartKey = `${baseName}-${suffix}`; // 尝试找到对应配色方案的版本
                 if (this.themes[counterpartKey] && this._isThemeCompatible(counterpartKey, this._currentEffectiveColorScheme)) {
                     newThemeKey = counterpartKey;
                 }
             }
-            if (!newThemeKey) {
+            if (!newThemeKey) { // 如果仍未找到，则使用备用逻辑查找
                 newThemeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
             }
             themeToLoadKey = newThemeKey;
         }
-        await this._loadThemeCore(themeToLoadKey);
-        this._setupSystemColorSchemeListener(preferredColorScheme);
+        await this._loadThemeCore(themeToLoadKey); // 加载主题核心
+        this._setupSystemColorSchemeListener(preferredColorScheme); // 设置系统配色方案监听器
         (Utils?.log || console.log)("ThemeLoader: 初始化完成。", Utils?.logLevels?.INFO || 1);
     },
 
@@ -142,17 +146,18 @@ const ThemeLoader = {
      * @returns {Promise<void>}
      */
     async applyTheme(themeKey) {
-        if (!this.themes[themeKey]) {
+        if (!this.themes[themeKey]) { // 如果主题键无效，则回退
             (Utils?.log || console.log)(`ThemeLoader: 尝试应用无效的主题键: ${themeKey}。正在回退。`, Utils?.logLevels?.ERROR || 3);
             themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
         }
 
-        await this._loadThemeCore(themeKey);
+        await this._loadThemeCore(themeKey); // 加载主题核心
 
+        // 触发主题变更事件
         if (typeof EventEmitter !== 'undefined') {
             EventEmitter.emit('themeChanged', {
                 newThemeKey: themeKey,
-                newDefinitions: [...this._currentSpecialContactsDefinitions] // 发送副本
+                newDefinitions: [...this._currentSpecialContactsDefinitions] // 发送定义副本
             });
             (Utils?.log || console.log)(`ThemeLoader: 已为 ${themeKey} 触发 themeChanged 事件。`, Utils?.logLevels?.INFO || 1);
         } else {
@@ -167,27 +172,28 @@ const ThemeLoader = {
      * @returns {Promise<void>}
      */
     async updateColorSchemePreference(newSchemeKeyFromUser) {
-        const newEffectiveColorScheme = this._getEffectiveColorScheme(newSchemeKeyFromUser);
-        const currentStoredScheme = localStorage.getItem(this.COLOR_SCHEME_KEY);
+        const newEffectiveColorScheme = this._getEffectiveColorScheme(newSchemeKeyFromUser); // 计算新的生效方案
+        const currentStoredScheme = localStorage.getItem(this.COLOR_SCHEME_KEY); // 获取当前存储的偏好
 
+        // 如果生效方案或用户偏好发生变化
         if (newEffectiveColorScheme !== this._currentEffectiveColorScheme || newSchemeKeyFromUser !== currentStoredScheme) {
-            this._currentEffectiveColorScheme = newEffectiveColorScheme;
-            localStorage.setItem(this.COLOR_SCHEME_KEY, newSchemeKeyFromUser);
+            this._currentEffectiveColorScheme = newEffectiveColorScheme; // 更新生效方案
+            localStorage.setItem(this.COLOR_SCHEME_KEY, newSchemeKeyFromUser); // 保存用户偏好
             (Utils?.log || console.log)(`ThemeLoader: 配色方案偏好已更新为 '${newSchemeKeyFromUser}'。生效方案: '${this._currentEffectiveColorScheme}'`, Utils?.logLevels?.INFO || 1);
 
             let themeToApplyKey;
-            const currentBaseName = this._getBaseThemeName(this._currentThemeKey);
-            const targetSuffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
-            const candidateThemeKey = `${currentBaseName}-${targetSuffix}`;
+            const currentBaseName = this._getBaseThemeName(this._currentThemeKey); // 获取当前主题的基础名称
+            const targetSuffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色'; // 目标后缀
+            const candidateThemeKey = `${currentBaseName}-${targetSuffix}`; // 尝试构建对应方案的主题键
 
             if (this.themes[candidateThemeKey] && this._isThemeCompatible(candidateThemeKey, this._currentEffectiveColorScheme)) {
-                themeToApplyKey = candidateThemeKey;
+                themeToApplyKey = candidateThemeKey; // 如果存在且兼容，则使用
             } else {
-                themeToApplyKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
+                themeToApplyKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme); // 否则查找备用
             }
 
-            await this.applyTheme(themeToApplyKey);
-            this._setupSystemColorSchemeListener(newSchemeKeyFromUser);
+            await this.applyTheme(themeToApplyKey); // 应用新主题
+            this._setupSystemColorSchemeListener(newSchemeKeyFromUser); // 更新系统监听器
         }
     },
 
@@ -196,7 +202,7 @@ const ThemeLoader = {
      * @returns {Array<object>}
      */
     getCurrentSpecialContactsDefinitions() {
-        return [...this._currentSpecialContactsDefinitions];
+        return [...this._currentSpecialContactsDefinitions]; // 返回副本以防外部修改
     },
 
     /**
@@ -205,8 +211,8 @@ const ThemeLoader = {
      * @returns {string} - 主题的基础名称。
      */
     _getBaseThemeName: function(themeKey) {
-        if (!themeKey) return "unknown";
-        return themeKey.replace(/-浅色$/, "").replace(/-深色$/, "");
+        if (!themeKey) return "unknown"; // 默认基础名
+        return themeKey.replace(/-浅色$/, "").replace(/-深色$/, ""); // 移除后缀
     },
 
     /**
@@ -216,10 +222,10 @@ const ThemeLoader = {
      * @returns {boolean} - 是否兼容。
      */
     _isThemeCompatible: function(themeKey, colorScheme) {
-        if (!this.themes[themeKey]) return false;
-        if (colorScheme === 'light') return themeKey.endsWith('-浅色');
-        if (colorScheme === 'dark') return themeKey.endsWith('-深色');
-        return false;
+        if (!this.themes[themeKey]) return false; // 主题不存在则不兼容
+        if (colorScheme === 'light') return themeKey.endsWith('-浅色'); // 浅色方案匹配浅色主题
+        if (colorScheme === 'dark') return themeKey.endsWith('-深色'); // 深色方案匹配深色主题
+        return false; // 其他情况不兼容
     },
 
     /**
@@ -230,10 +236,11 @@ const ThemeLoader = {
     _getEffectiveColorScheme: function(preferredScheme) {
         if (preferredScheme === 'light') return 'light';
         if (preferredScheme === 'dark') return 'dark';
+        // 如果是 'auto'，则根据系统设置判断
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            return 'dark';
+            return 'dark'; // 系统为深色
         }
-        return 'light';
+        return 'light'; // 默认为浅色
     },
 
     /**
@@ -243,16 +250,19 @@ const ThemeLoader = {
      */
     _findFallbackThemeKeyForScheme: function(colorScheme) {
         const suffix = colorScheme === 'light' ? '-浅色' : '-深色';
+        // 查找第一个匹配后缀的主题
         for (const key in this.themes) {
             if (key.endsWith(suffix)) return key;
         }
+        // 如果找不到，则返回 themes 对象中的第一个主题作为最终备选
         const firstKey = Object.keys(this.themes)[0];
         if (firstKey) {
             (Utils?.log || console.log)(`ThemeLoader: 未找到方案 '${colorScheme}' 的主题，回退到第一个可用的主题: ${firstKey}`, Utils?.logLevels?.WARN || 2);
             return firstKey;
         }
+        // 理论上不应发生，除非 themes 对象为空
         console.error("ThemeLoader: 严重错误 - ThemeLoader.themes 中未定义任何主题。");
-        return '原神-浅色';
+        return '原神-浅色'; // 绝对备选
     },
 
     /**
@@ -261,18 +271,20 @@ const ThemeLoader = {
      */
     _setupSystemColorSchemeListener: function(preferredScheme) {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        // 移除旧的监听器（如果存在）
         if (this._systemColorSchemeListener) {
             mediaQuery.removeEventListener('change', this._systemColorSchemeListener);
             this._systemColorSchemeListener = null;
         }
 
-        if (preferredScheme === 'auto') {
+        if (preferredScheme === 'auto') { // 只有当用户选择 'auto' 时才监听系统变化
             this._systemColorSchemeListener = async (e) => {
-                const newSystemEffectiveColorScheme = e.matches ? 'dark' : 'light';
-                if (newSystemEffectiveColorScheme !== this._currentEffectiveColorScheme) {
+                const newSystemEffectiveColorScheme = e.matches ? 'dark' : 'light'; // 获取新的系统配色方案
+                if (newSystemEffectiveColorScheme !== this._currentEffectiveColorScheme) { // 如果发生变化
                     (Utils?.log || console.log)(`ThemeLoader: 系统配色方案变更为: ${newSystemEffectiveColorScheme}。更新应用主题。`, Utils?.logLevels?.INFO || 1);
-                    this._currentEffectiveColorScheme = newSystemEffectiveColorScheme;
+                    this._currentEffectiveColorScheme = newSystemEffectiveColorScheme; // 更新内部状态
 
+                    // 查找并应用新主题
                     const currentBaseName = this._getBaseThemeName(this._currentThemeKey);
                     const newSuffix = newSystemEffectiveColorScheme === 'light' ? '浅色' : '深色';
                     let newThemeToApplyKey = `${currentBaseName}-${newSuffix}`;
@@ -283,7 +295,7 @@ const ThemeLoader = {
                     await this.applyTheme(newThemeToApplyKey);
                 }
             };
-            mediaQuery.addEventListener('change', this._systemColorSchemeListener);
+            mediaQuery.addEventListener('change', this._systemColorSchemeListener); // 添加监听器
         }
     },
 

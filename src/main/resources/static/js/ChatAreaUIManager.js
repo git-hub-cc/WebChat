@@ -892,7 +892,7 @@ const ChatAreaUIManager = {
 
                 if (signalingServerNowConnected) { // 如果信令服务器连接成功
                     if (textElement) textElement.textContent = `信令服务器已连接。正在尝试重新连接到 ${Utils.escapeHtml(peerName)} ...`;
-                    await ConnectionManager.autoConnectToContacts();
+                    await ConnectionManager.autoConnectToContacts(); // 尝试自动连接
                 } else { // 如果信令服务器连接失败
                     if (textElement) textElement.innerHTML = `无法连接到信令服务器。请检查您的网络，或尝试使用“菜单与设置”中的<br>“AI 与 API 配置 > 高级选项”进行手动连接。`;
                     NotificationUIManager.showNotification('尝试使用“菜单与设置”中的“AI 与 API 配置 > 高级选项”进行手动连接。', 'error');

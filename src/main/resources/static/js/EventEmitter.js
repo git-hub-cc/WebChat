@@ -19,10 +19,10 @@ const EventEmitter = {
      * @param {Function} callback - 事件触发时执行的回调函数。
      */
     on: function (event, callback) {
-        if (!this.events[event]) {
+        if (!this.events[event]) { // 如果此事件尚无监听器，则创建一个新的 Set
             this.events[event] = new Set();
         }
-        this.events[event].add(callback);
+        this.events[event].add(callback); // 添加回调到 Set 中
         Utils.log(`为事件添加了监听器: ${event}`, Utils.logLevels.DEBUG);
     },
 
@@ -32,9 +32,9 @@ const EventEmitter = {
      * @param {...*} args - 传递给监听器回调的参数。
      */
     emit: function (event, ...args) {
-        if (this.events[event]) {
+        if (this.events[event]) { // 检查是否有此事件的监听器
             Utils.log(`正在触发事件: ${event}，参数: ${JSON.stringify(args)}`, Utils.logLevels.DEBUG);
-            this.events[event].forEach(callback => {
+            this.events[event].forEach(callback => { // 遍历并执行所有回调
                 try {
                     callback(...args);
                 } catch (e) {
@@ -50,11 +50,11 @@ const EventEmitter = {
      * @param {Function} [callback] - 要移除的特定回调函数。如果未提供，则移除该事件的所有监听器。
      */
     off: function (event, callback) {
-        if (this.events[event]) {
-            if (callback) {
+        if (this.events[event]) { // 检查是否有此事件的监听器
+            if (callback) { // 如果提供了回调，则只移除该特定回调
                 this.events[event].delete(callback);
                 Utils.log(`移除了指定的事件监听器: ${event}`, Utils.logLevels.DEBUG);
-            } else {
+            } else { // 否则，移除此事件的所有监听器
                 delete this.events[event];
                 Utils.log(`移除了所有事件监听器: ${event}`, Utils.logLevels.DEBUG);
             }
@@ -67,10 +67,10 @@ const EventEmitter = {
      * @param {Function} callback - 事件触发时执行的回调函数。
      */
     once: function(event, callback) {
-        const onceCallback = (...args) => {
+        const onceCallback = (...args) => { // 创建一个包装回调
             this.off(event, onceCallback); // 执行后立即移除自身
-            callback(...args);
+            callback(...args); // 执行原始回调
         };
-        this.on(event, onceCallback);
+        this.on(event, onceCallback); // 注册包装回调
     }
 };

@@ -12,10 +12,10 @@
  * @dependents AppInitializer (进行初始化), ChatManager (设置活动标签), EventEmitter (用于更新状态)
  */
 const SidebarUIManager = {
-    chatSearchInputEl: null,
-    tabAllChatsEl: null,
-    tabContactsEl: null,
-    tabGroupsEl: null,
+    chatSearchInputEl: null, // 聊天搜索输入框
+    tabAllChatsEl: null,     // “全部”标签页
+    tabContactsEl: null,   // “联系人”标签页
+    tabGroupsEl: null,     // “群组”标签页
 
     /**
      * 初始化模块，获取所有需要的 DOM 元素引用并绑定核心事件。
@@ -26,7 +26,7 @@ const SidebarUIManager = {
         this.tabContactsEl = document.getElementById('tabContacts');
         this.tabGroupsEl = document.getElementById('tabGroups');
 
-        this.bindEvents();
+        this.bindEvents(); // 绑定事件
     },
 
     /**
@@ -47,14 +47,16 @@ const SidebarUIManager = {
      * @param {string} tabName - 要激活的标签页名称 ('all', 'contacts', 'groups')。
      */
     setActiveTab: function (tabName) {
+        // 移除所有标签页的激活状态
         document.querySelectorAll('.nav-tabs .nav-tab').forEach(tab => tab.classList.remove('active'));
-        let targetTabId = '';
+        let targetTabId = ''; // 目标标签页的ID
+        // 根据名称确定ID
         if (tabName === 'all') targetTabId = 'tabAllChats';
         else if (tabName === 'contacts') targetTabId = 'tabContacts';
         else if (tabName === 'groups') targetTabId = 'tabGroups';
 
         const activeTabEl = document.getElementById(targetTabId);
-        if (activeTabEl) activeTabEl.classList.add('active');
+        if (activeTabEl) activeTabEl.classList.add('active'); // 添加激活状态
     },
 
     /**
@@ -63,6 +65,7 @@ const SidebarUIManager = {
      * @param {string} query - 搜索框中的查询字符串。
      */
     filterChatList: function (query) {
+        // 调用 ChatManager 重新渲染列表，它会使用当前的过滤器和搜索查询
         ChatManager.renderChatList(ChatManager.currentFilter);
     },
 
@@ -72,24 +75,24 @@ const SidebarUIManager = {
      * @param {boolean} isConnected - 是否已连接。
      */
     updateChatListItemStatus: function (peerId, isConnected) {
-        const itemEl = document.querySelector(`.chat-list-item[data-id="${peerId}"]`);
-        if (itemEl && itemEl.dataset.type === 'contact') {
-            // 特殊联系人总是显示为在线，无需更新
+        const itemEl = document.querySelector(`.chat-list-item[data-id="${peerId}"]`); // 查找列表项
+        if (itemEl && itemEl.dataset.type === 'contact') { // 确保是联系人项
+            // 特殊联系人（包括主题AI和非AI）总是显示为在线（或由其自身逻辑决定），无需此通用状态更新
             if (UserManager.isSpecialContact(peerId)) return;
 
-            const nameEl = itemEl.querySelector('.chat-list-name');
+            const nameEl = itemEl.querySelector('.chat-list-name'); // 查找名称元素
             if (nameEl) {
-                let onlineDot = nameEl.querySelector('.online-dot');
-                if (isConnected) {
-                    if (!onlineDot) {
+                let onlineDot = nameEl.querySelector('.online-dot'); // 查找在线状态点
+                if (isConnected) { // 如果已连接
+                    if (!onlineDot) { // 如果点不存在，则创建
                         onlineDot = document.createElement('span');
                         onlineDot.className = 'online-dot';
                         onlineDot.title = "已连接";
                         nameEl.appendChild(onlineDot);
                     }
-                    onlineDot.style.display = 'inline-block';
-                } else {
-                    if (onlineDot) onlineDot.style.display = 'none';
+                    onlineDot.style.display = 'inline-block'; // 显示点
+                } else { // 如果未连接
+                    if (onlineDot) onlineDot.style.display = 'none'; // 隐藏点
                 }
             }
         }

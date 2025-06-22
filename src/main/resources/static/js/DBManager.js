@@ -16,7 +16,7 @@
 const DBManager = {
     db: null,
     dbName: 'ModernChatDB',
-    dbVersion: 3, // 数据库版本号 (incremented for schema change)
+    dbVersion: 3, // 数据库版本号 (为模式更改而增加)
 
     /**
      * 初始化并打开 IndexedDB 数据库。如果数据库不存在或版本较低，会触发 onupgradeneeded 来创建或升级表结构。
@@ -29,12 +29,12 @@ const DBManager = {
                 resolve(this.db);
                 return;
             }
-            const request = indexedDB.open(this.dbName, this.dbVersion);
-            request.onerror = (event) => {
+            const request = indexedDB.open(this.dbName, this.dbVersion); // 打开数据库
+            request.onerror = (event) => { // 打开失败
                 Utils.log('数据库打开错误: ' + event.target.errorCode, Utils.logLevels.ERROR);
                 reject('数据库打开错误: ' + event.target.errorCode);
             };
-            request.onsuccess = (event) => {
+            request.onsuccess = (event) => { // 打开成功
                 this.db = event.target.result;
                 Utils.log('数据库已成功打开。', Utils.logLevels.INFO);
                 resolve(this.db);
@@ -44,21 +44,21 @@ const DBManager = {
                 const db = event.target.result;
                 Utils.log('需要升级数据库。旧版本: ' + event.oldVersion + ', 新版本: ' + event.newVersion, Utils.logLevels.INFO);
                 // 检查并创建需要的对象存储（表）
-                if (!db.objectStoreNames.contains('user')) {
+                if (!db.objectStoreNames.contains('user')) { // 用户信息表
                     db.createObjectStore('user', { keyPath: 'id' });
                 }
-                if (!db.objectStoreNames.contains('contacts')) {
+                if (!db.objectStoreNames.contains('contacts')) { // 联系人表
                     db.createObjectStore('contacts', { keyPath: 'id' });
                 }
-                if (!db.objectStoreNames.contains('chats')) {
+                if (!db.objectStoreNames.contains('chats')) { // 聊天记录表
                     db.createObjectStore('chats', { keyPath: 'id' });
                 }
-                if (!db.objectStoreNames.contains('groups')) {
+                if (!db.objectStoreNames.contains('groups')) { // 群组信息表
                     db.createObjectStore('groups', { keyPath: 'id' });
                 }
-                // Add TTS cache store
+                // 添加 TTS 缓存表
                 if (!db.objectStoreNames.contains('ttsCache')) {
-                    db.createObjectStore('ttsCache', { keyPath: 'id' }); // 'id' will store the hash
+                    db.createObjectStore('ttsCache', { keyPath: 'id' }); // 'id' 将存储哈希值
                     Utils.log('对象存储 ttsCache 已创建。', Utils.logLevels.INFO);
                 }
                 Utils.log('数据库架构已升级/创建。', Utils.logLevels.INFO);
@@ -89,8 +89,8 @@ const DBManager = {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName, 'readwrite').put(item);
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(request.result); // 成功时返回键
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`在 ${storeName} 中设置项目时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -108,8 +108,8 @@ const DBManager = {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName).get(key);
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(request.result); // 成功时返回结果
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`从 ${storeName} 获取项目时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -126,8 +126,8 @@ const DBManager = {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName).getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(request.result); // 成功时返回结果数组
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`从 ${storeName} 获取所有项目时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -145,8 +145,8 @@ const DBManager = {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName, 'readwrite').delete(key);
-                request.onsuccess = () => resolve();
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(); // 成功时 resolve
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`从 ${storeName} 移除项目时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -163,8 +163,8 @@ const DBManager = {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName, 'readwrite').clear();
-                request.onsuccess = () => resolve();
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(); // 成功时 resolve
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`清空存储区 ${storeName} 时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -178,16 +178,16 @@ const DBManager = {
      */
     clearAllData: function() {
         return new Promise(async (resolve, reject) => {
-            if (!this.db) {
+            if (!this.db) { // 检查数据库是否已初始化
                 Utils.log("数据库未初始化，无法清空数据。", Utils.logLevels.ERROR);
                 reject(new Error("数据库未初始化。"));
                 return;
             }
             try {
-                const storeNames = Array.from(this.db.objectStoreNames);
+                const storeNames = Array.from(this.db.objectStoreNames); // 获取所有表名
                 Utils.log(`准备清空以下存储区: ${storeNames.join(', ')}`, Utils.logLevels.INFO);
-                const clearPromises = storeNames.map(storeName => this.clearStore(storeName));
-                await Promise.all(clearPromises);
+                const clearPromises = storeNames.map(storeName => this.clearStore(storeName)); // 创建清空每个表的 Promise
+                await Promise.all(clearPromises); // 等待所有表清空完成
                 Utils.log("所有数据库存储区已清空。", Utils.logLevels.INFO);
                 resolve();
             } catch (error) {

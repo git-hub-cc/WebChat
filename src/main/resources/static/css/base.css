@@ -2380,91 +2380,8 @@ input:checked + .slider::before {
     border-bottom: 1px solid var(--border-color);
     font-size: 14px;
     font-weight: 600;
-}
-
-#groupAiPromptsListContainer {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-4); /* 每个AI提示词编辑项之间的间距 */
-}
-
-.ai-prompt-editor-item {
-    padding: var(--spacing-3);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-small);
-    background-color: var(--secondary-color); /* 或者 var(--received-bg-color) */
-}
-
-.ai-prompt-editor-item h5 {
-    margin-top: 0;
-    margin-bottom: var(--spacing-2);
-    font-size: 1.05em;
-    font-weight: 500;
-}
-
-.ai-prompt-editor-item textarea {
-    width: 100%;
-    min-height: 60px; /* 至少3行的高度 */
-    padding: var(--spacing-2);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-small);
-    font-family: var(--font-family);
-    font-size: 0.9em;
-    resize: vertical; /* 允许垂直调整大小 */
-    margin-bottom: var(--spacing-2);
-}
-
-.ai-prompt-editor-item .btn-sm { /* 用于小号按钮，如果项目中没有此通用类，则需要定义 */
-    padding: var(--spacing-1) var(--spacing-2);
-    font-size: 0.85em;
-}
-
-/* ChatAreaUIManager - AI @ 提及建议列表样式 */
-.chat-input-container { /* 确保这个容器是相对定位的，以便子绝对定位元素正确工作 */
-    position: relative;
-}
-
-.ai-mention-suggestions {
-    position: absolute;
-    /* bottom: 100%;  现在通过JS设置，相对于 .input-row 的高度 */
-    left: 0;        /* 相对于 .chat-input-container */
-    right: 0;       /* 相对于 .chat-input-container */
-    max-height: 150px; /* 或者根据需要调整 */
-    overflow-y: auto;
-    background-color: var(--received-bg-color, #fff);
-    border: 1px solid var(--border-color, #ccc);
-    border-bottom: none; /* 避免与输入区域的顶部边框重叠 */
-    border-radius: var(--border-radius-small) var(--border-radius-small) 0 0; /* 顶部圆角 */
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* 向上投影 */
-    z-index: 100;
-    /* 其他需要的样式，如 padding, font-size 等 */
-}
-
-.mention-suggestion-item {
-    padding: var(--spacing-2) var(--spacing-3);
+    /* 使其也表现为可折叠头部 */
     cursor: pointer;
-    font-size: 0.9em;
-    border-bottom: 1px solid var(--border-color); /* 项目之间的分隔线 */
-}
-
-.mention-suggestion-item:last-child {
-    border-bottom: none; /* 最后一项无下边框 */
-}
-
-.mention-suggestion-item:hover {
-    background-color: var(--hover-bg-color, #f0f0f0);
-}
-
-/* DetailsPanelUIManager - Group AI Prompt Editor Styles */
-#groupAiPromptsSection h4 { /* 与其他 details-section h4 保持一致 */
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: var(--spacing-2);
-    margin-bottom: var(--spacing-3);
-    border-bottom: 1px solid var(--border-color);
-    font-size: 14px;
-    font-weight: 600;
 }
 
 #groupAiPromptsListContainer {
@@ -2507,6 +2424,42 @@ input:checked + .slider::before {
 .ai-prompt-editor-item > div:last-child { /* 指向按钮容器 */
     display: flex;
     gap: 10px; /* 按钮间距 */
+}
+
+/* ChatAreaUIManager - AI @ 提及建议列表样式 */
+.chat-input-container { /* 确保这个容器是相对定位的，以便子绝对定位元素正确工作 */
+    position: relative;
+}
+
+.ai-mention-suggestions {
+    position: absolute;
+    /* bottom: 100%;  现在通过JS设置，相对于 .input-row 的高度 */
+    left: 0;        /* 相对于 .chat-input-container */
+    right: 0;       /* 相对于 .chat-input-container */
+    max-height: 150px; /* 或者根据需要调整 */
+    overflow-y: auto;
+    background-color: var(--received-bg-color, #fff);
+    border: 1px solid var(--border-color, #ccc);
+    border-bottom: none; /* 避免与输入区域的顶部边框重叠 */
+    border-radius: var(--border-radius-small) var(--border-radius-small) 0 0; /* 顶部圆角 */
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1); /* 向上投影 */
+    z-index: 100;
+    /* 其他需要的样式，如 padding, font-size 等 */
+}
+
+.mention-suggestion-item {
+    padding: var(--spacing-2) var(--spacing-3);
+    cursor: pointer;
+    font-size: 0.9em;
+    border-bottom: 1px solid var(--border-color); /* 项目之间的分隔线 */
+}
+
+.mention-suggestion-item:last-child {
+    border-bottom: none; /* 最后一项无下边框 */
+}
+
+.mention-suggestion-item:hover {
+    background-color: var(--hover-bg-color, #f0f0f0);
 }
 
 /* --- Status Indicator Dot for Chat Header --- */

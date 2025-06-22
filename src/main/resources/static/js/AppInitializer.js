@@ -92,11 +92,11 @@ const AppInitializer = {
                 try {
                     const isAiHealthy = await AiApiHandler.checkAiServiceHealth(); // 检查AI服务
                     UserManager.updateAiServiceStatus(isAiHealthy); // 更新UserManager中的状态
-                    EventEmitter.emit('aiServiceStatusUpdated', UserManager.isAiServiceHealthy); // 触发事件
+                    // EventEmitter.emit('aiServiceStatusUpdated', ...) 现在由 UserManager.updateAiServiceStatus 内部触发
                 } catch (e) {
                     Utils.log("初始化期间 AI 健康检查出错: " + e.message, Utils.logLevels.ERROR);
                     UserManager.updateAiServiceStatus(false); // 失败则设为不健康
-                    EventEmitter.emit('aiServiceStatusUpdated', false); // 触发事件
+                    // EventEmitter.emit('aiServiceStatusUpdated', ...) 现在由 UserManager.updateAiServiceStatus 内部触发
                 }
             };
             asyncOperations.push(aiHealthCheckTask());
