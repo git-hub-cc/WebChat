@@ -7,13 +7,15 @@
  *              新增 ResourcePreviewUIManager 初始化。
  *              修复：WebSocket 连接检查逻辑，以适应 ConnectionManager 的拆分。
  *                    ConnectionManager.initialize()现在会正确启动并管理WebSocket连接。
+ *              定时器逻辑已移至 TimerManager。
+ *              修改：AI 服务健康检查现在会在其他关键异步任务（如WebSocket初始化）之后执行。
  * @module AppInitializer
  * @exports {object} AppInitializer - 包含 init 方法，现在应由 DOMContentLoaded 事件触发。
  * @property {function} init - 应用程序的主初始化函数，是整个应用的启动点。
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
  *               LayoutUIManager, ModalUIManager, SettingsUIManager, ChatAreaUIManager, SidebarUIManager,
  *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationUIManager, Utils, EventEmitter,
- *               PeopleLobbyManager, AiApiHandler, ThemeLoader, ScreenshotEditorUIManager, ResourcePreviewUIManager, WebSocketManager
+ *               PeopleLobbyManager, AiApiHandler, ThemeLoader, ScreenshotEditorUIManager, ResourcePreviewUIManager, WebSocketManager, TimerManager
  * @dependents DOMContentLoaded (在 index.html 中通过新的方式调用)
  */
 const AppInitializer = {
@@ -29,7 +31,7 @@ const AppInitializer = {
      * 6.  初始化所有 UI 管理器。
      * 7.  初始化媒体和通话的核心逻辑。
      * 8.  设置全局事件监听器和网络监控。
-     * 9.  并行执行 AI 服务健康检查、刷新网络 UI 和初始化 WebSocket 连接。
+     * 9.  并行执行部分异步任务（刷新网络UI, WebSocket连接），然后串行执行AI服务健康检查。
      * @returns {Promise<void>}
      */
     init: async function () {
@@ -37,6 +39,7 @@ const AppInitializer = {
         Utils.setLogLevelFromConfig(); // 从配置设置日志级别
         this.initializeGlobalImageErrorHandler(); // 初始化全局图片错误处理器
         if (!Utils.checkWebRTCSupport()) return; // 检查WebRTC支持，不支持则退出
+        TimerManager.init(); // 初始化 TimerManager
 
         try {
             // --- 阶段 2: 核心数据加载 (主要是顺序异步) ---
@@ -90,48 +93,40 @@ const AppInitializer = {
             this.setupCoreEventListeners();     // 设置核心事件监听器 (依赖各管理器对象存在)
             this.smartBackToChatList();       // 处理移动端返回按钮
 
-            // --- 阶段 5: 并行执行的异步操作 ---
-            const asyncOperations = []; // 用于收集所有并行异步任务的Promise
+            // --- 阶段 5: 并行执行的初始异步操作 ---
+            const initialAsyncOperations = []; // 用于收集并行异步任务的Promise
 
             // 1. 刷新网络状态UI (依赖 SettingsUIManager.init())
-            asyncOperations.push(this.refreshNetworkStatusUI());
+            initialAsyncOperations.push(this.refreshNetworkStatusUI());
 
-            // 2. AI 服务健康检查 (依赖 UserManager.init(), AiApiHandler, EventEmitter)
-            const aiHealthCheckTask = async () => {
-                try {
-                    const isAiHealthy = await AiApiHandler.checkAiServiceHealth(); // 检查AI服务
-                    UserManager.updateAiServiceStatus(isAiHealthy); // 更新UserManager中的状态
-                } catch (e) {
-                    Utils.log("初始化期间 AI 健康检查出错: " + e.message, Utils.logLevels.ERROR);
-                    UserManager.updateAiServiceStatus(false); // 失败则设为不健康
-                }
-            };
-            asyncOperations.push(aiHealthCheckTask());
-
-            // 3. 初始化 WebSocket 连接 (并处理注册)
+            // 2. 初始化 WebSocket 连接 (并处理注册)
             if (typeof ConnectionManager !== 'undefined' && typeof ConnectionManager.initialize === 'function') {
-                // ConnectionManager.initialize() 会调用 WebSocketManager.init()，
-                // WebSocketManager.init() 会处理 WebSocket 是否已打开的情况，并确保 _onStatusChangeHandler 被调用 (触发 REGISTER)。
-                // ConnectionManager.initialize() 返回 WebSocketManager.init() 的 Promise，
-                // 而 WebSocketManager.init() 返回 WebSocketManager.connect() 的 Promise (或 Promise.resolve() 如果已连接)。
                 const cmInitPromise = ConnectionManager.initialize();
                 if (cmInitPromise && typeof cmInitPromise.catch === 'function') {
-                    asyncOperations.push(cmInitPromise.catch(wsError => {
+                    initialAsyncOperations.push(cmInitPromise.catch(wsError => {
                         Utils.log(`AppInitializer: WebSocket 初始化/连接失败: ${wsError.message || wsError}`, Utils.logLevels.ERROR);
-                        // 即使 WebSocket 连接失败，也允许其他异步操作继续
-                        // 可以在这里更新UI或通知用户，但 Promise.all 仍会等待其他操作
                     }));
                 } else {
                     Utils.log('AppInitializer: ConnectionManager.initialize() did not return a valid Promise. WebSocket initialization might be incomplete.', Utils.logLevels.ERROR);
-                    // Optionally push a resolved promise to avoid breaking Promise.all, or handle as critical error
-                    asyncOperations.push(Promise.resolve());
+                    initialAsyncOperations.push(Promise.resolve()); // Push resolved to not break Promise.all
                 }
             } else {
                 Utils.log('AppInitializer: ConnectionManager 未定义或其 initialize 方法未定义，无法初始化 WebSocket 连接。', Utils.logLevels.ERROR);
+                initialAsyncOperations.push(Promise.resolve());
             }
 
+            await Promise.all(initialAsyncOperations); // 等待这些初始并行任务完成
 
-            await Promise.all(asyncOperations); // 等待所有并行任务完成
+            // --- 阶段 6: 后续异步操作 (如 AI 健康检查) ---
+            // AI 服务健康检查 (依赖 UserManager.init(), AiApiHandler, EventEmitter, and now critical async ops are done)
+            try {
+                // AiApiHandler.checkAiServiceHealth() 内部会记录端点是否配置
+                const isAiHealthy = await AiApiHandler.checkAiServiceHealth();
+                UserManager.updateAiServiceStatus(isAiHealthy);
+            } catch (e) {
+                Utils.log("初始化期间 AI 健康检查出错: " + e.message, Utils.logLevels.ERROR);
+                UserManager.updateAiServiceStatus(false);
+            }
 
             Utils.log('应用已初始化 (所有主要异步任务已启动或完成)', Utils.logLevels.INFO);
 
@@ -390,6 +385,10 @@ const AppInitializer = {
                         if (typeof ConnectionManager !== 'undefined' && ConnectionManager.close) ConnectionManager.close(peerId, true);
                     }
                 }
+            }
+            // Stop all timers when leaving the page
+            if (typeof TimerManager !== 'undefined') {
+                TimerManager.stopAllTasks();
             }
         });
 

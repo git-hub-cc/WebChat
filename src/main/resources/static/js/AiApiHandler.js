@@ -31,8 +31,8 @@ const AiApiHandler = {
      */
     _getEffectiveAiConfig: function() {
         const config = {};
-        const serverConfig = (typeof window.Config !== 'undefined' && window.Config && typeof window.Config.server === 'object' && window.Config.server !== null)
-            ? window.Config.server
+        const serverConfig = (typeof Config !== 'undefined' && Config && typeof Config.server === 'object' && Config.server !== null)
+            ? Config.server
             : {};
         const fallbackDefaults = { apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: '' };
 
@@ -78,6 +78,8 @@ const AiApiHandler = {
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
+                // 这个错误现在会在 checkAiServiceHealth 中首先被捕获和记录
+                Utils.log("AiApiHandler.sendAiMessage: AI API 端点未配置。请在设置中配置。", Utils.logLevels.ERROR);
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
@@ -199,6 +201,8 @@ const AiApiHandler = {
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
+                // 这个错误现在会在 checkAiServiceHealth 中首先被捕获和记录
+                Utils.log("AiApiHandler._handleSummaryResponse: AI API 端点未配置。", Utils.logLevels.ERROR);
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
@@ -281,6 +285,8 @@ const AiApiHandler = {
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
+                // 这个错误现在会在 checkAiServiceHealth 中首先被捕获和记录
+                Utils.log("AiApiHandler.sendGroupAiMessage: AI API 端点未配置。", Utils.logLevels.ERROR);
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
@@ -437,6 +443,9 @@ const AiApiHandler = {
 
         if (!effectiveConfig.apiEndpoint) {
             Utils.log("AiApiHandler: AI API 端点未配置，无法进行健康检查。", Utils.logLevels.ERROR);
+            // No NotificationUIManager here, as AppInitializer will update UserManager,
+            // which in turn will trigger an EventEmitter event, and ChatAreaUIManager
+            // will update the header if an AI chat is active.
             return false;
         }
 

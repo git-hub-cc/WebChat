@@ -4,15 +4,12 @@
  *              它协调文本、文件和语音消息的发送流程，并调用相应的模块（如 AiApiHandler）来处理特定类型的消息。
  *              同时，它也负责将消息渲染到聊天窗口中。
  *              支持消息的本地删除和撤回请求。
- *              新增：在群聊中检测对AI的@提及，并触发AI响应。
- *              文件名过长时，在预览和消息中会进行截断显示。
- *              修复：文件消息现在能正确显示文件大小。
- *              修改: 文件发送时，将Blob存入DB的fileCache，消息体中存储fileHash。显示时按需加载。
- *                    实际文件数据现在通过'file-transfer'类型的消息发送。
- *              修改: 视频文件消息现在点击后全屏播放。
- *              优化: 图片和视频文件消息现在显示缩略图预览 (使用 MediaUIManager.renderMediaThumbnail)。
- *              修复：移除发送消息后对 scrollToLatestMessages 的调用，以防止消息消失。
- *              修复：向 sendGroupAiMessage 传递触发消息的ID，防止AI上下文中重复出现该消息。
+ *              在群聊中检测对AI的@提及，并触发AI响应。文件名过长时，在预览和消息中会进行截断显示。
+ *              文件消息现在能正确显示文件大小。文件发送时，将Blob存入DB的fileCache，消息体中存储fileHash。
+ *              实际文件数据现在通过'file-transfer'类型的消息发送。视频文件消息现在点击后全屏播放。
+ *              图片和视频文件消息现在显示缩略图预览。
+ *              新增：在群聊中发送消息时，会检查并提醒用户是否有在线但未连接的群成员。
+ *              私聊时，如果对方不在线，则提示用户消息无法发送，并阻止消息发送。
  * @module MessageManager
  * @exports {object} MessageManager - 对外暴露的单例对象，包含消息处理的所有核心方法。
  * @property {function} sendMessage - 从输入框发送消息，处理文本、文件和语音消息。
@@ -23,17 +20,20 @@
  * @property {function} deleteMessageLocally - 本地删除一条消息。
  * @property {function} requestRetractMessage - 请求撤回一条消息。
  * @dependencies ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler,
- *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, Config, DBManager
+ *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, Config, DBManager, PeopleLobbyManager
  * @dependents ChatAreaUIManager (绑定发送按钮事件), ChatManager (调用以显示历史消息)
  */
 const MessageManager = {
     selectedFile: null, // 当前选择的文件 { blob, hash, name, type, size, previewUrl }
     audioData: null,    // 当前录制的音频数据 (Data URL)
     audioDuration: 0,   // 当前录制的音频时长
+    _lastUnconnectedNotificationTime: 0, // 上次显示未连接成员通知的时间戳
+    _UNCONNECTED_NOTIFICATION_COOLDOWN: 30000, // 30秒冷却时间
 
     /**
      * 发送消息。根据输入框内容、已选择的文件或已录制的音频，构建并发送消息。
      * 在群聊中，会检测对AI的@提及并触发AI响应。
+     * 同时，在群聊中发送消息时，会检查并提醒用户是否有在线但未连接的群成员。
      */
     sendMessage: async function () {
         const input = document.getElementById('messageInput');
@@ -54,6 +54,47 @@ const MessageManager = {
         const nowTimestamp = new Date().toISOString();
         const messageIdBase = `msg_${Date.now()}_${Utils.generateId(4)}`;
 
+        // 检查群聊中是否有未连接的在线成员 (仅当有内容要发送时)
+        if (isGroup && group && (messageText || currentSelectedFile || currentAudioData)) {
+            const currentTime = Date.now();
+            // 检查是否在冷却期内
+            if (currentTime - this._lastUnconnectedNotificationTime > this._UNCONNECTED_NOTIFICATION_COOLDOWN) {
+                const myUserId = UserManager.userId;
+                const groupMembers = group.members;
+                const onlineUsers = new Set(PeopleLobbyManager.onlineUserIds || []);
+                const unconnectedOnlineMembersInfo = [];
+
+                for (const memberId of groupMembers) {
+                    if (memberId === myUserId) continue;
+                    const memberContact = UserManager.contacts[memberId];
+                    if (memberContact && memberContact.isAI) continue;
+
+                    if (onlineUsers.has(memberId) && !ConnectionManager.isConnectedTo(memberId)) {
+                        unconnectedOnlineMembersInfo.push({
+                            id: memberId,
+                            name: memberContact?.name || `用户 ${memberId.substring(0,4)}`
+                        });
+                    }
+                }
+
+                if (unconnectedOnlineMembersInfo.length > 0) {
+                    let namesToShow = unconnectedOnlineMembersInfo.slice(0, 2).map(m => m.name).join('、');
+                    if (unconnectedOnlineMembersInfo.length > 2) {
+                        namesToShow += ` 等 ${unconnectedOnlineMembersInfo.length} 人`;
+                    } else if (unconnectedOnlineMembersInfo.length > 0 && unconnectedOnlineMembersInfo.length <=2) {
+                        namesToShow += ` 共 ${unconnectedOnlineMembersInfo.length} 位成员`;
+                    }
+
+
+                    const notificationMessage = `注意: 群内在线成员 ${namesToShow} 当前未与您建立直接连接，他们可能无法收到此消息。可尝试在详情面板中手动连接或等待自动连接。`;
+                    NotificationUIManager.showNotification(notificationMessage, 'warning', 7000);
+                    Utils.log(`MessageManager.sendMessage: 检测到 ${unconnectedOnlineMembersInfo.length} 位未连接的在线群成员。`, Utils.logLevels.WARN);
+                    this._lastUnconnectedNotificationTime = currentTime; // 更新上次通知时间
+                }
+            }
+        }
+
+
         if (contact && contact.isSpecial && contact.isAI && contact.aiConfig && !isGroup) {
             if (currentAudioData || currentSelectedFile) {
                 NotificationUIManager.showNotification(`不支持向 ${contact.name} 发送音频/文件消息。`, 'warning');
@@ -72,7 +113,8 @@ const MessageManager = {
 
         if (!isGroup && !ConnectionManager.isConnectedTo(targetId)) {
             if (messageText || currentSelectedFile || currentAudioData) {
-                if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.showReconnectPrompt(targetId, () => Utils.log("已重新连接，请重新发送消息。", Utils.logLevels.INFO));
+                const contactName = UserManager.contacts[targetId]?.name || `用户 ${targetId.substring(0,4)}`;
+                NotificationUIManager.showNotification(`${contactName} 不在线，消息将无法发送。`, 'warning');
                 return;
             }
         }
@@ -287,24 +329,24 @@ const MessageManager = {
                         }
 
                         const thumbnailPlaceholderHtml = `<div class="thumbnail-placeholder" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}" data-filetype="${message.fileType}">
-                                                             ${initialIconContent}
-                                                             ${ (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? `<span class="play-overlay-icon">${message.fileType.startsWith('image/') ? '👁️' : '▶'}</span>` : '' }
-                                                           </div>`;
+    ${initialIconContent}
+${ (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? `<span class="play-overlay-icon">${message.fileType.startsWith('image/') ? '👁️' : '▶'}</span>` : '' }
+</div>`;
                         const fileDetailsHtml = `
-                            <div class="file-details">
-                                <div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div>
-                                <div class="file-meta">${MediaManager.formatFileSize(fileSizeForDisplay)}</div>
-                            </div>`;
+<div class="file-details">
+    <div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div>
+<div class="file-meta">${MediaManager.formatFileSize(fileSizeForDisplay)}</div>
+</div>`;
                         messageBodyHtml = `
-                            <div class="message-content-wrapper">
-                                <div class="file-info ${fileSpecificContainerClass}" 
-                                     data-hash="${fileHash}" 
-                                     data-filename="${escapedOriginalFileName}" 
-                                     data-filetype="${message.fileType}"
-                                     ${(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? 'style="cursor:pointer;"' : ''}>
-                                    ${thumbnailPlaceholderHtml}
-                                    ${fileDetailsHtml}
-                                </div>`;
+<div class="message-content-wrapper">
+    <div class="file-info ${fileSpecificContainerClass}"
+data-hash="${fileHash}"
+data-filename="${escapedOriginalFileName}"
+data-filetype="${message.fileType}"
+${(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? 'style="cursor:pointer;"' : ''}>
+${thumbnailPlaceholderHtml}
+${fileDetailsHtml}
+</div>`;
                         if (message.fileType?.startsWith('audio/')) {
                             messageBodyHtml += `<button class="play-media-btn" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}" data-filetype="${message.fileType}">播放</button>`;
                         } else if (!(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {

@@ -14,7 +14,7 @@
  * @property {function} rejectCall - 拒绝来电。
  * @property {function} hangUpMedia - 挂断当前通话的媒体流（不关闭连接）。
  * @property {function} handleMessage - 处理与通话相关的  消息。
- * @dependencies Config, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter
+ * @dependencies Config, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter, TimerManager
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定通话按钮事件)
  */
 const VideoCallManager = {
@@ -29,7 +29,7 @@ const VideoCallManager = {
     isAudioOnly: false,
     callRequestTimeout: null,
     isScreenSharing: false,
-    statsInterval: null,
+    // statsInterval: null, // Deprecated, adaptive audio uses its own timer via TimerManager
     musicPlayer: null,
     isMusicPlaying: false,
     _boundEnableMusicPlay: null,
@@ -50,7 +50,7 @@ const VideoCallManager = {
         video: [{mimeType: 'video/VP9'}, {mimeType: 'video/VP8'}, {mimeType: 'video/H264'}]
     },
 
-    _adaptiveAudioIntervalId: null,
+    // _adaptiveAudioIntervalId: null, // Moved to TimerManager
     _currentAudioProfileIndex: {},
     _lastProfileSwitchTime: {},
     _consecutiveGoodChecks: {},
@@ -868,8 +868,9 @@ const VideoCallManager = {
         ModalUIManager.hideCallingModal();
         ModalUIManager.hideCallRequest();
 
-        if (this.statsInterval) clearInterval(this.statsInterval);
-        this.statsInterval = null;
+        // statsInterval is deprecated and adaptive audio timer handled by TimerManager
+        // if (this.statsInterval) clearInterval(this.statsInterval);
+        // this.statsInterval = null;
 
         this._stopAdaptiveAudioCheck(peerIdCleaned);
         if (peerIdCleaned) {
@@ -1062,11 +1063,11 @@ const VideoCallManager = {
             Utils.log("尝试为未定义的 peerId 启动自适应音频检测，已跳过。", Utils.logLevels.WARN);
             return;
         }
-        if (this._adaptiveAudioIntervalId && this._adaptiveAudioIntervalId[peerId]) {
+        const taskName = `adaptiveAudio_${peerId}`;
+        if (typeof TimerManager !== 'undefined' && TimerManager.hasTask(taskName)) {
             // Already running for this peer
             return;
         }
-        if (!this._adaptiveAudioIntervalId) this._adaptiveAudioIntervalId = {};
 
         this._currentAudioProfileIndex[peerId] = Config.adaptiveAudioQuality.initialProfileIndex;
         this._lastProfileSwitchTime[peerId] = 0;
@@ -1077,10 +1078,16 @@ const VideoCallManager = {
         // Apply initial bitrate, sdpFmtpLine will be handled by initial negotiation
         this._applyAudioProfileToSender(peerId, Config.adaptiveAudioQuality.initialProfileIndex);
 
-        this._adaptiveAudioIntervalId[peerId] = setInterval(() => {
-            this._checkAndAdaptAudioQuality(peerId);
-        }, Config.adaptiveAudioQuality.interval);
-        Utils.log(`已为 ${peerId} 启动自适应音频质量检测，初始等级: ${Config.adaptiveAudioQuality.audioQualityProfiles[Config.adaptiveAudioQuality.initialProfileIndex].levelName} (isCaller: ${this.isCaller})。`, Utils.logLevels.INFO);
+        if (typeof TimerManager !== 'undefined') {
+            TimerManager.addPeriodicTask(
+                taskName,
+                () => this._checkAndAdaptAudioQuality(peerId),
+                Config.adaptiveAudioQuality.interval
+            );
+            Utils.log(`已为 ${peerId} 启动自适应音频质量检测 (via TimerManager)，初始等级: ${Config.adaptiveAudioQuality.audioQualityProfiles[Config.adaptiveAudioQuality.initialProfileIndex].levelName} (isCaller: ${this.isCaller})。`, Utils.logLevels.INFO);
+        } else {
+            Utils.log("VideoCallManager: TimerManager 未定义，无法启动自适应音频检测。", Utils.logLevels.ERROR);
+        }
     },
 
     /**
@@ -1089,32 +1096,27 @@ const VideoCallManager = {
      * @param {string} [peerId] - (可选) 如果提供，则仅清理特定对方的状态和定时器。
      */
     _stopAdaptiveAudioCheck: function(peerId) {
-        if (peerId && this._adaptiveAudioIntervalId && this._adaptiveAudioIntervalId[peerId]) {
-            clearInterval(this._adaptiveAudioIntervalId[peerId]);
-            delete this._adaptiveAudioIntervalId[peerId];
-            Utils.log(`已停止对 ${peerId} 的自适应音频质量检测。`, Utils.logLevels.INFO);
+        if (peerId && typeof TimerManager !== 'undefined') {
+            const taskName = `adaptiveAudio_${peerId}`;
+            TimerManager.removePeriodicTask(taskName);
+            Utils.log(`已停止对 ${peerId} 的自适应音频质量检测 (via TimerManager)。`, Utils.logLevels.INFO);
             delete this._currentAudioProfileIndex[peerId];
             delete this._lastProfileSwitchTime[peerId];
             delete this._consecutiveGoodChecks[peerId];
             delete this._consecutiveBadChecks[peerId];
             // Do not delete _lastNegotiatedSdpFmtpLine[peerId] here, cleanupCallMediaAndState handles it
-            if (Object.keys(this._adaptiveAudioIntervalId).length === 0) {
-                this._adaptiveAudioIntervalId = null;
-            }
-        } else if (!peerId && this._adaptiveAudioIntervalId) {
-            Utils.log(`正在停止所有自适应音频质量检测...`, Utils.logLevels.INFO);
-            for (const id in this._adaptiveAudioIntervalId) {
-                if (this._adaptiveAudioIntervalId.hasOwnProperty(id)) {
-                    clearInterval(this._adaptiveAudioIntervalId[id]);
-                    Utils.log(`已停止对 ${id} 的自适应音频质量检测。`, Utils.logLevels.DEBUG);
+        } else if (!peerId && typeof TimerManager !== 'undefined') { // Stop all adaptive audio tasks
+            Utils.log(`正在停止所有自适应音频质量检测 (via TimerManager)...`, Utils.logLevels.INFO);
+            for (const id in this._currentAudioProfileIndex) { // Iterate over peers we were tracking
+                if (this._currentAudioProfileIndex.hasOwnProperty(id)) {
+                    TimerManager.removePeriodicTask(`adaptiveAudio_${id}`);
                 }
             }
-            this._adaptiveAudioIntervalId = null;
             this._currentAudioProfileIndex = {};
             this._lastProfileSwitchTime = {};
             this._consecutiveGoodChecks = {};
             this._consecutiveBadChecks = {};
-            Utils.log(`所有自适应音频质量检测已停止并清理状态。`, Utils.logLevels.INFO);
+            Utils.log(`所有自适应音频质量检测已停止并清理状态 (via TimerManager)。`, Utils.logLevels.INFO);
         }
     },
     /**
@@ -1198,6 +1200,8 @@ const VideoCallManager = {
         const pc = WebRTCManager.connections[peerId].peerConnection;
         if (!pc || pc.signalingState === 'closed' || pc.connectionState === 'closed' || pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
             Utils.log(`AdaptiveAudioCheck for ${peerId}: PeerConnection 不存在或已关闭/失败/断开. 跳过。`, Utils.logLevels.DEBUG);
+            // If connection is down, TimerManager should remove this task eventually if the component managing it (e.g., VideoCallManager during hangUpMedia) does so.
+            // Or TimerManager itself could have logic to stop tasks for non-existent/closed connections if it had access to that state.
             return;
         }
 

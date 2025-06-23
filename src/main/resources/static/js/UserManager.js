@@ -2,6 +2,7 @@
  * @file UserManager.js
  * @description 核心用户管理器，负责处理当前用户的信息、设置、所有联系人（包括特殊 AI 联系人）的数据管理。
  *              它与数据库交互以持久化用户和联系人数据。AI联系人在主题切换后会被保留，其配置会根据当前主题定义或历史数据进行更新。
+ *              在处理群组添加成员事件时，会确保根据收到的详情正确创建新联系人。
  * @module UserManager
  * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
  * @property {string|null} userId - 当前用户的唯一 ID。
@@ -362,45 +363,89 @@ const UserManager = {
     },
 
     /**
-     * 添加一个新联系人。
-     * @param {string} id - 新联系人的 ID。
-     * @param {string} name - 新联系人的名称。
-     * @param {boolean} [establishConnection=true] - 是否在添加后尝试建立连接。
+     * 添加一个新联系人，或根据提供的数据创建联系人（用于从群消息中添加）。
+     * @param {string|object} idOrData - 新联系人的 ID (string)，或包含联系人完整数据的对象 (object)。
+     * @param {string} [name] - 新联系人的名称 (如果 idOrData 是 string)。
+     * @param {boolean} [establishConnection=true] - 是否在添加后尝试建立连接 (仅当 idOrData 是 string 时有效)。
      * @returns {Promise<boolean>} - 操作是否成功。
      */
-    async addContact(id, name, establishConnection = true) {
+    addContact: async function(idOrData, name, establishConnection = true) {
+        let id, contactData, isFromGroupMessage = false;
+
+        if (typeof idOrData === 'object' && idOrData !== null) {
+            // 处理从群消息传递过来的联系人数据对象
+            id = idOrData.id;
+            contactData = idOrData;
+            isFromGroupMessage = true;
+            establishConnection = false; // 从群消息创建时不主动建连，由群逻辑处理
+            Utils.log(`UserManager.addContact: 正在尝试根据群组消息详情添加联系人 ${id}`, Utils.logLevels.DEBUG);
+        } else if (typeof idOrData === 'string') {
+            // 处理手动或通过其他方式添加的联系人ID
+            id = idOrData;
+        } else {
+            NotificationUIManager.showNotification("添加联系人失败：无效的参数。", "error");
+            return false;
+        }
+
+        if (!id) {
+            NotificationUIManager.showNotification("添加联系人失败：ID无效。", "error");
+            return false;
+        }
+
         if (id === this.userId) { // 不能添加自己
             NotificationUIManager.showNotification("您不能添加自己为联系人。", "error");
             return false;
         }
+
         // 检查是否为当前主题的特殊联系人
         if (this.isSpecialContactInCurrentTheme(id)) {
             const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
             const specialContactName = currentDefinitions.find(sc => sc.id === id)?.name || "这个特殊联系人";
-            NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
-            // 如果是特殊联系人且未连接，尝试连接
-            if (establishConnection && this.contacts[id] && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
+            // 只有当不是从群消息创建时才显示通知 (避免重复)
+            if (!isFromGroupMessage) NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
+
+            // 如果是特殊联系人且未连接，尝试连接 (仅当非群消息创建且需要建连时)
+            if (!isFromGroupMessage && establishConnection && this.contacts[id] && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
                 ConnectionManager.createOffer(id, { isSilent: true });
             }
-            return true; // 即使是特殊联系人，也视为操作“成功”（因为已存在）
+            return true;
         }
 
         if (this.contacts[id]) { // 如果联系人已存在
-            NotificationUIManager.showNotification("该联系人已在您的列表中。", "info");
+            // 只有当不是从群消息创建时才显示通知
+            if (!isFromGroupMessage) NotificationUIManager.showNotification("该联系人已在您的列表中。", "info");
             let contactChanged = false;
-            if (name && this.contacts[id].name !== name) { // 如果名称有变化，则更新
+
+            if (isFromGroupMessage && contactData) { // 如果是从群消息传递数据，则尝试更新现有联系人信息
+                if (contactData.name && this.contacts[id].name !== contactData.name) { this.contacts[id].name = contactData.name; contactChanged = true; }
+                if (contactData.avatarText && this.contacts[id].avatarText !== contactData.avatarText) { this.contacts[id].avatarText = contactData.avatarText; contactChanged = true; }
+                if (contactData.avatarUrl !== undefined && this.contacts[id].avatarUrl !== contactData.avatarUrl) { this.contacts[id].avatarUrl = contactData.avatarUrl; contactChanged = true; }
+                // AI 配置的合并需要更细致，这里仅作示例，可能需要深拷贝和逐字段比较
+                if (contactData.isAI !== undefined && this.contacts[id].isAI !== contactData.isAI) { this.contacts[id].isAI = contactData.isAI; contactChanged = true; }
+                if (contactData.aiConfig) { // 简单合并，确保 aiConfig 和 tts 结构
+                    if (!this.contacts[id].aiConfig) this.contacts[id].aiConfig = {};
+                    Object.assign(this.contacts[id].aiConfig, contactData.aiConfig);
+                    if (contactData.aiConfig.tts) {
+                        if (!this.contacts[id].aiConfig.tts) this.contacts[id].aiConfig.tts = {};
+                        Object.assign(this.contacts[id].aiConfig.tts, contactData.aiConfig.tts);
+                    }
+                    contactChanged = true;
+                }
+            } else if (name && this.contacts[id].name !== name) { // 手动添加时，如果名称有变化则更新
                 this.contacts[id].name = name;
                 contactChanged = true;
             }
+
             if (this.contacts[id].isSpecial) { // 如果之前是特殊联系人，现在手动添加则变为普通
                 this.contacts[id].isSpecial = false;
                 contactChanged = true;
             }
-            if(contactChanged) await this.saveContact(id); // 保存更改
-            if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter); // 刷新列表
-            // 如果未连接，尝试连接
-            if (establishConnection && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
+            if(contactChanged) await this.saveContact(id);
+            if (typeof ChatManager !== 'undefined' && !isFromGroupMessage) ChatManager.renderChatList(ChatManager.currentFilter);
+
+            // 如果未连接，尝试连接 (仅当非群消息创建且需要建连时)
+            if (!isFromGroupMessage && establishConnection && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
                 ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
@@ -408,20 +453,35 @@ const UserManager = {
 
         // 创建新联系人对象
         const newContact = {
-            id: id, name: name || `用户 ${id.substring(0, 4)}`, lastMessage: '',
-            lastTime: new Date().toISOString(), unread: 0, isSpecial: false, // 新手动添加的非特殊
-            avatarText: name ? name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase(),
-            avatarUrl: null, type: 'contact', isAI: false, // 新手动添加的非AI
-            aiConfig: { tts: { tts_mode: 'Preset', version: 'v4' } }, // 默认TTS配置
-            aboutDetails: null
+            id: id,
+            name: isFromGroupMessage ? (contactData.name || `用户 ${id.substring(0, 4)}`) : (name || `用户 ${id.substring(0, 4)}`),
+            lastMessage: '',
+            lastTime: new Date().toISOString(),
+            unread: 0,
+            isSpecial: false, // 新手动添加的非特殊
+            avatarText: isFromGroupMessage
+                ? (contactData.avatarText || (contactData.name ? contactData.name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase()))
+                : (name ? name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase()),
+            avatarUrl: isFromGroupMessage ? (contactData.avatarUrl || null) : null,
+            type: 'contact',
+            isAI: isFromGroupMessage ? (contactData.isAI || false) : false,
+            aiConfig: isFromGroupMessage ? (contactData.aiConfig || { tts: { tts_mode: 'Preset', version: 'v4' } }) : { tts: { tts_mode: 'Preset', version: 'v4' } },
+            aboutDetails: isFromGroupMessage ? (contactData.aboutDetails || null) : null
         };
-        this.contacts[id] = newContact; // 添加到内存
-        await this.saveContact(id); // 保存到数据库
-        if (typeof ChatManager !== 'undefined') ChatManager.renderChatList(ChatManager.currentFilter); // 刷新列表
-        NotificationUIManager.showNotification(`联系人 "${newContact.name}" 已添加。`, 'success');
+        // 确保 aiConfig 和 tts 结构完整
+        if (!newContact.aiConfig) newContact.aiConfig = {};
+        if (!newContact.aiConfig.tts) newContact.aiConfig.tts = {};
+        if (newContact.aiConfig.tts.tts_mode === undefined) newContact.aiConfig.tts.tts_mode = 'Preset';
+        if (newContact.aiConfig.tts.version === undefined) newContact.aiConfig.tts.version = 'v4';
 
-        // 如果当前在群组详情页且是群主，则刷新成员添加列表
-        if (typeof DetailsPanelUIManager !== 'undefined' &&
+        this.contacts[id] = newContact;
+        await this.saveContact(id);
+
+        if (typeof ChatManager !== 'undefined' && !isFromGroupMessage) ChatManager.renderChatList(ChatManager.currentFilter);
+        if (!isFromGroupMessage) NotificationUIManager.showNotification(`联系人 "${newContact.name}" 已添加。`, 'success');
+
+        // 如果当前在群组详情页且是群主，则刷新成员添加列表 (仅当非群消息创建时)
+        if (!isFromGroupMessage && typeof DetailsPanelUIManager !== 'undefined' &&
             DetailsPanelUIManager.currentView === 'details' &&
             ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
             const currentGroup = GroupManager.groups[ChatManager.currentChatId];
@@ -430,11 +490,12 @@ const UserManager = {
             }
         }
 
-        if (establishConnection) { // 如果需要建立连接
-            ConnectionManager.createOffer(id, { isSilent: true }); // 静默尝试连接
+        if (!isFromGroupMessage && establishConnection) { // 如果需要建立连接
+            ConnectionManager.createOffer(id, { isSilent: true });
         }
         return true;
     },
+
 
     /**
      * 移除一个联系人。

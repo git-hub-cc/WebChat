@@ -81,7 +81,7 @@ const SettingsUIManager = {
         if (this.apiMaxTokensInput) this.apiMaxTokensInput.addEventListener('blur', () => {
             const val = parseInt(this.apiMaxTokensInput.value, 10);
             // 获取服务器配置或默认值
-            const serverConfig = (typeof window.Config !== 'undefined' && window.Config && window.Config.server) ? window.Config.server : {};
+            const serverConfig = (typeof Config !== 'undefined' && Config && Config.server) ? Config.server : {};
             const configMaxTokens = serverConfig.max_tokens !== undefined ? serverConfig.max_tokens : 2048;
             this.saveAISetting('max_tokens', isNaN(val) ? configMaxTokens : val); // 如果无效则使用配置/默认值
         });
@@ -371,11 +371,11 @@ const SettingsUIManager = {
 
     /**
      * 从 localStorage 加载 AI 相关设置，如果不存在则使用 Config.js 的默认值，并填充到输入框。
-     * 此函数不再修改 window.Config.server。
+     * 此函数不再修改 Config.server。
      */
     loadAISettings: function() {
-        const serverConfig = (typeof window.Config !== 'undefined' && window.Config && typeof window.Config.server === 'object' && window.Config.server !== null)
-            ? window.Config.server
+        const serverConfig = (typeof Config !== 'undefined' && Config && typeof Config.server === 'object' && Config.server !== null)
+            ? Config.server
             : {}; // 默认服务器配置
 
         // 定义要加载的设置项及其属性
@@ -419,13 +419,13 @@ const SettingsUIManager = {
 
     /**
      * 保存单个 AI 设置到 localStorage，并触发 'aiConfigChanged' 事件。
-     * 不再修改 window.Config.server。
+     * 不再修改 Config.server。
      * @param {string} storageKey - 在 localStorage 中使用的键名 (例如 'apiEndpoint', 'api_key')。
      * @param {string|number} value - 要保存的值。
      */
     saveAISetting: function(storageKey, value) {
-        const serverConfig = (typeof window.Config !== 'undefined' && window.Config && typeof window.Config.server === 'object' && window.Config.server !== null)
-            ? window.Config.server
+        const serverConfig = (typeof Config !== 'undefined' && Config && typeof Config.server === 'object' && Config.server !== null)
+            ? Config.server
             : {};
 
         // URL 校验

@@ -6,7 +6,8 @@ server:
 spring:
   application:
     name: Web-Chat
-
+  jackson:
+    time-zone: Asia/Shanghai
 # 日志配置
 logging:
   level:

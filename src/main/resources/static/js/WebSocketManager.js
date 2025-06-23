@@ -4,14 +4,15 @@
  *              负责连接、断开、重连、心跳以及原始信令消息的发送和接收。
  * @module WebSocketManager
  * @exports {object} WebSocketManager
- * @dependencies Utils, Config, LayoutUIManager, EventEmitter
+ * @dependencies Utils, Config, LayoutUIManager, EventEmitter, TimerManager
  */
 const WebSocketManager = {
     websocket: null, // WebSocket 实例
     isWebSocketConnected: false, // WebSocket 是否已连接
     signalingServerUrl: Config.server.signalingServerUrl, // 信令服务器 URL
     wsReconnectAttempts: 0, // WebSocket 重连尝试次数
-    heartbeatInterval: null, // 心跳定时器
+    // heartbeatInterval: null, // Moved to TimerManager
+    _HEARTBEAT_TASK_NAME: 'webSocketHeartbeat', // Unique name for heartbeat task
 
     _onMessageHandler: null, // 外部设置的消息处理回调
     _onStatusChangeHandler: null, // 外部设置的状态变更回调
@@ -132,22 +133,29 @@ const WebSocketManager = {
      */
     startHeartbeat: function() {
         this.stopHeartbeat(); // 先停止可能存在的旧心跳
-        this.heartbeatInterval = setInterval(() => {
-            if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                this.sendRawMessage({ type: 'PING' }); // 发送 PING 消息
-                Utils.log('WebSocketManager: 发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
-            }
-        }, 25000); // 每25秒发送一次
+        if (typeof TimerManager !== 'undefined') {
+            TimerManager.addPeriodicTask(
+                this._HEARTBEAT_TASK_NAME,
+                () => {
+                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                        this.sendRawMessage({ type: 'PING' }); // 发送 PING 消息
+                        Utils.log('WebSocketManager: 发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
+                    }
+                },
+                25000 // 每25秒发送一次
+            );
+        } else {
+            Utils.log("WebSocketManager: TimerManager 未定义，无法启动心跳。", Utils.logLevels.ERROR);
+        }
     },
 
     /**
      * 停止 WebSocket 心跳定时器。
      */
     stopHeartbeat: function() {
-        if (this.heartbeatInterval) {
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = null;
-            Utils.log('WebSocketManager: 已停止 WebSocket 心跳', Utils.logLevels.DEBUG);
+        if (typeof TimerManager !== 'undefined') {
+            TimerManager.removePeriodicTask(this._HEARTBEAT_TASK_NAME);
+            Utils.log('WebSocketManager: 已停止 WebSocket 心跳 (via TimerManager)', Utils.logLevels.DEBUG);
         }
     },
 

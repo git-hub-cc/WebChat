@@ -5,7 +5,7 @@
  *              优化: 当群主修改AI提示词后，会向群内发送系统消息通知。
  *              修复: 主题切换后，添加成员下拉列表现在能正确反映当前主题的AI角色。
  *              更新: 群组成员列表现在显示在线状态和与当前用户的连接状态，并提供重连按钮。
- *              新增: 定期自动刷新群成员状态，并对在线但未连接的成员尝试自动连接。
+ *              新增: 定期自动刷新群成员状态，并对在线但未连接的成员尝试自动连接。 (定时器逻辑移至 TimerManager)
  *              优化：详情页的群成员顺序调整为：群主第一（无论在线状态），然后是在线人类成员，接着是AI成员，最后是离线人类成员。
  *              更新：群组详情页现在会显示资源预览模块，方便用户跳转到相关的媒体内容，该模块位于所有群组设置之后。
  *              更新：群组详情页的“群成员列表”和“群内AI行为指示”部分现在默认折叠，并可展开/收起。
@@ -20,7 +20,7 @@
  * @property {function} updateDetailsPanel - 根据当前聊天ID和类型更新聊天详情面板的内容。
  * @property {function} updateDetailsPanelMembers - 更新群组详情中的成员列表和添加成员下拉框。
  * @property {function} handleAddMemberToGroupDetails - 处理从详情面板添加成员到当前群组的逻辑。
- * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationUIManager, Utils, ConnectionManager, PeopleLobbyManager, Config, LayoutUIManager, EventEmitter, DBManager, ResourcePreviewUIManager
+ * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationUIManager, Utils, ConnectionManager, PeopleLobbyManager, Config, LayoutUIManager, EventEmitter, DBManager, ResourcePreviewUIManager, TimerManager
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (通过按钮点击调用以切换面板显隐)
  */
 const DetailsPanelUIManager = {
@@ -69,8 +69,9 @@ const DetailsPanelUIManager = {
     peopleLobbyContentEl: null,
     resourcePreviewSectionEl: null, // Still need this reference to show/hide the whole section
 
-    _groupMemberRefreshInterval: null,
-    GROUP_MEMBER_REFRESH_INTERVAL_MS: 3000,
+    // _groupMemberRefreshInterval: null, // Moved to TimerManager
+    GROUP_MEMBER_REFRESH_INTERVAL_MS: 3000, // Interval value remains, used by TimerManager
+    _GROUP_MEMBER_REFRESH_TASK_NAME: 'groupMemberStatusRefresh', // Unique name for the timer task
 
     /**
      * 初始化模块。
@@ -182,10 +183,13 @@ const DetailsPanelUIManager = {
         if (this.peopleLobbyContentEl) this.peopleLobbyContentEl.style.display = 'none';
         // ResourcePreviewUIManager 将自行管理其内部元素的显隐
 
-        if (this._groupMemberRefreshInterval) {
-            clearInterval(this._groupMemberRefreshInterval);
-            this._groupMemberRefreshInterval = null;
+        // Stop timer if panel is hidden or view changes from group details
+        if (!show || (show && viewType === 'details' && !(ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_'))) || (show && viewType === 'lobby') ) {
+            if (typeof TimerManager !== 'undefined') {
+                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
+            }
         }
+
 
         if (show) {
             if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'flex';
@@ -197,7 +201,7 @@ const DetailsPanelUIManager = {
                     ResourcePreviewUIManager.loadResourcesForChat(ChatManager.currentChatId);
                 }
                 if (ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
-                    this._startGroupMemberRefreshTimer();
+                    this._startGroupMemberRefreshTimer(); // Start timer via TimerManager
                 }
             } else if (viewType === 'lobby' && this.peopleLobbyContentEl) {
                 this.peopleLobbyContentEl.style.display = 'flex';
@@ -299,9 +303,9 @@ const DetailsPanelUIManager = {
         }
         if (type === 'contact') {
             this._updateForContact(chatId);
-            if (this._groupMemberRefreshInterval) {
-                clearInterval(this._groupMemberRefreshInterval);
-                this._groupMemberRefreshInterval = null;
+            // Stop timer if switching away from a group to a contact
+            if (typeof TimerManager !== 'undefined') {
+                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
             }
         } else if (type === 'group') {
             this._updateForGroup(chatId);
@@ -739,22 +743,17 @@ const DetailsPanelUIManager = {
      * 启动群成员状态的自动刷新定时器。
      */
     _startGroupMemberRefreshTimer: function() {
-        if (this._groupMemberRefreshInterval) {
-            clearInterval(this._groupMemberRefreshInterval);
-            this._groupMemberRefreshInterval = null;
+        if (typeof TimerManager !== 'undefined') {
+            TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME); // Remove old if exists
+            TimerManager.addPeriodicTask(
+                this._GROUP_MEMBER_REFRESH_TASK_NAME,
+                this._refreshGroupMembersAndAutoConnect.bind(this),
+                this.GROUP_MEMBER_REFRESH_INTERVAL_MS,
+                true // Run immediately
+            );
+        } else {
+            Utils.log("DetailsPanelUIManager: TimerManager 未定义，无法启动群成员刷新定时器。", Utils.logLevels.ERROR);
         }
-        this._refreshGroupMembersAndAutoConnect();
-        this._groupMemberRefreshInterval = setInterval(() => {
-            if (this.isPanelAreaVisible && this.currentView === 'details' &&
-                ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
-                this._refreshGroupMembersAndAutoConnect();
-            } else {
-                if (this._groupMemberRefreshInterval) {
-                    clearInterval(this._groupMemberRefreshInterval);
-                    this._groupMemberRefreshInterval = null;
-                }
-            }
-        }, this.GROUP_MEMBER_REFRESH_INTERVAL_MS);
     },
 
     /**
@@ -763,9 +762,28 @@ const DetailsPanelUIManager = {
      */
     _refreshGroupMembersAndAutoConnect: async function() {
         const groupId = ChatManager.currentChatId;
-        if (!groupId || !groupId.startsWith('group_')) return;
+        if (!groupId || !groupId.startsWith('group_')) {
+            // If no longer a group chat, or no chat, stop the timer
+            if (typeof TimerManager !== 'undefined') {
+                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
+            }
+            return;
+        }
         const group = GroupManager.groups[groupId];
-        if (!group) return;
+        if (!group) {
+            if (typeof TimerManager !== 'undefined') {
+                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
+            }
+            return;
+        }
+        // Ensure panel is still visible and in correct view
+        if (!this.isPanelAreaVisible || this.currentView !== 'details') {
+            if (typeof TimerManager !== 'undefined') {
+                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
+            }
+            return;
+        }
+
 
         if (PeopleLobbyManager && typeof PeopleLobbyManager.fetchOnlineUsers === 'function') {
             await PeopleLobbyManager.fetchOnlineUsers();

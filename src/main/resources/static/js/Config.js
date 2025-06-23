@@ -6,7 +6,7 @@
  * @module Config
  * @exports {object} Config - 包含所有配置项的全局对象。
  */
-const ConfigObj = {
+const Config = {
     /**
      * 日志级别配置
      * 可选值: 'DEBUG', 'INFO', 'WARN', 'ERROR'
@@ -126,5 +126,3 @@ const ConfigObj = {
         badQualityDowngradeThreshold: 2 // 连续多少次差质量检查后才降低质量
     }
 };
-
-window.Config = ConfigObj;
