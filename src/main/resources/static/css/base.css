@@ -648,7 +648,7 @@ body {
 
 .message .message-content-wrapper {
     display: flex;
-    align-items: flex-start;
+    align-items: flex-end;
 }
 
 .message .message-content {

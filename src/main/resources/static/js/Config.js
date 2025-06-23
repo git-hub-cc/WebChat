@@ -8,12 +8,18 @@
  */
 const ConfigObj = {
     /**
+     * 日志级别配置
+     * 可选值: 'DEBUG', 'INFO', 'WARN', 'ERROR'
+     * 'DEBUG' 用于开发时详细排查问题，'INFO' 或 'ERROR' 用于生产环境。
+     */
+    logLevel: 'DEBUG',
+    /**
      * WebRTC 连接断开后的自动重连配置
      */
     reconnect: {
-        maxAttempts: 1,      // 最大尝试次数
+        maxAttempts: 3,      // 最大尝试次数
         delay: 3000,         // 初始延迟（毫秒）
-        backoffFactor: 0   // 延迟时间的指数增长因子 (0 表示不增长)
+        backoffFactor: 1.5   // 延迟时间的指数增长因子 (0 表示不增长)
     },
     /**
      * 各种操作的超时时间配置（毫秒）
@@ -28,6 +34,8 @@ const ConfigObj = {
      * 媒体相关配置
      */
     media: {
+        music: '/music/call.mp3', // 呼叫音乐文件路径
+        chunkSize: 64 * 1024, // 文件/消息分片传输时每个分片的大小（字节）
         maxAudioDuration: 60, // 语音消息最大录制时长（秒）
         imageCompression: 0.8, // 图片压缩质量 (0-1)
         maxFileSize: 50 * 1024 * 1024, // 最大上传文件大小 (50 MB)
@@ -35,13 +43,8 @@ const ConfigObj = {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
-            // channelCount: 1, // 默认单声道，已移至 VideoCallManager
         }
     },
-    /**
-     * 文件/消息分片传输时每个分片的大小（字节）
-     */
-    chunkSize: 64 * 1024, // 64KB
     /**
      * UI 行为相关配置
      */
@@ -53,12 +56,6 @@ const ConfigObj = {
         messageRetractionWindow: 5 * 60 * 1000 // 消息可撤回时间窗口 (5分钟)
     },
     /**
-     * 日志级别配置
-     * 可选值: 'DEBUG', 'INFO', 'WARN', 'ERROR'
-     * 'DEBUG' 用于开发时详细排查问题，'INFO' 或 'ERROR' 用于生产环境。
-     */
-    logLevel: 'DEBUG',
-    /**
      * AI 相关配置
      */
     ai: {
@@ -67,10 +64,6 @@ const ConfigObj = {
         baseSystemPrompt: "一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示）。",
         baseGroupSystemPrompt: "当前情境说明：你现在处于一个群聊环境中，**冒号（:）之前的是用户名，冒号（:）之后的是该用户的发言内容。一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示），小概率触发调侃其它用户。",
     },
-    /**
-     * 呼叫音乐文件路径
-     */
-    music: '/music/call.mp3',
     /**
      * 服务器相关配置。
      * 这些是默认值，UI 管理器将从 localStorage 加载用户配置的值来覆盖它们。
@@ -94,7 +87,7 @@ const ConfigObj = {
         iceServers: [
             {
                 urls: [
-                    "turn:175.178.216.24:3478?transport=udp"
+                    "turn:175.178.216.24:3478"
                 ],
                 username: "test",
                 credential: "123456"
@@ -134,5 +127,4 @@ const ConfigObj = {
     }
 };
 
-// 将配置对象挂载到 window 对象上，以便全局访问
 window.Config = ConfigObj;

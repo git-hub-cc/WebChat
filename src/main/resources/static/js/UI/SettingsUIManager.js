@@ -96,7 +96,7 @@ const SettingsUIManager = {
             NotificationUIManager.showNotification('正在重新检查网络并尝试连接...', 'info');
             await AppInitializer.refreshNetworkStatusUI(); // 刷新网络状态UI
             if (!ConnectionManager.isWebSocketConnected) { // 如果未连接，则尝试连接
-                ConnectionManager.connectWebSocket().catch(err => {
+                WebSocketManager.connect().catch(err => {
                     NotificationUIManager.showNotification('重新建立信令连接失败。', 'error');
                     Utils.log(`手动重新检查网络: connectWebSocket 失败: ${err.message || err}`, Utils.logLevels.ERROR);
                 });

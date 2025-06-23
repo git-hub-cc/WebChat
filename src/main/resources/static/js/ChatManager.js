@@ -167,7 +167,7 @@ const ChatManager = {
             }
 
             li.innerHTML = `
-    <div class="${avatarClass}">${avatarContentHtml}</div>
+   <div class="${avatarClass}">${avatarContentHtml}</div>
 <div class="chat-list-info">
     <div class="chat-list-name">${Utils.escapeHtml(item.name)} ${statusIndicator}</div>
     <div class="chat-list-preview">${Utils.escapeHtml(item.lastMessage)}</div>

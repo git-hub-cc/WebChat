@@ -4,6 +4,7 @@
  *              现在会优先使用用户在设置中配置的 API 参数。
  *              更新：在群聊中处理对 AI 的提及，提示词获取逻辑调整为支持非当前主题定义的AI角色。
  *              修复：在 sendGroupAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
+ *              重构：通用 API 请求逻辑已移至 Utils.fetchApiStream。
  * @module AiApiHandler
  * @exports {object} AiApiHandler - 对外暴露的单例对象，包含与 AI 交互的方法。
  * @property {object} activeSummaries - 内部缓存，用于存储每个 AI 联系人的当前活动对话摘要。键为联系人 ID，值为摘要字符串。
@@ -33,10 +34,6 @@ const AiApiHandler = {
         const serverConfig = (typeof window.Config !== 'undefined' && window.Config && typeof window.Config.server === 'object' && window.Config.server !== null)
             ? window.Config.server
             : {};
-        // SettingsUIManager.FALLBACK_AI_DEFAULTS 似乎未定义，注释掉以避免潜在错误，或确保其在SettingsUIManager中定义
-        // const fallbackDefaults = (typeof SettingsUIManager !== 'undefined' && SettingsUIManager && typeof SettingsUIManager.FALLBACK_AI_DEFAULTS === 'object' && SettingsUIManager.FALLBACK_AI_DEFAULTS !== null)
-        //     ? SettingsUIManager.FALLBACK_AI_DEFAULTS
-        //     : { apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: '' };
         const fallbackDefaults = { apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: '' };
 
 
@@ -94,7 +91,6 @@ const AiApiHandler = {
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
 
             const messagesForRequestBody = [];
-            // 使用 contact.aiConfig.systemPrompt 作为基础
             const systemPromptBase = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
             messagesForRequestBody.push({role: "system", content: systemPromptBase + Config.ai.baseSystemPrompt});
 
@@ -106,7 +102,6 @@ const AiApiHandler = {
 
             messagesForRequestBody.push(...contextMessagesForAIHistory);
 
-            // 查找最后一个用户消息并添加时间戳
             for (let i = messagesForRequestBody.length - 1; i >= 0; i--) {
                 if (messagesForRequestBody[i].role === 'user') {
                     messagesForRequestBody[i].content = (messagesForRequestBody[i].content || '') + ` [发送于: ${new Date().toLocaleString()}]`;
@@ -122,120 +117,58 @@ const AiApiHandler = {
                 stream: true,
                 temperature: 0.1,
                 max_tokens: effectiveConfig.maxTokens || 2048,
-                user: UserManager.userId, // 可选，用于标识请求来源
-                character_id: targetId // 新增：角色ID
+                user: UserManager.userId,
+                character_id: targetId
             };
             Utils.log(`正在发送到 AI (${contact.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
-            const response = await fetch(effectiveConfig.apiEndpoint, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" }, body: JSON.stringify(requestBody)
-            });
-            if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove(); // "正在思考"消息可能会在API响应前被移除
-
-            if (!response.ok) {
-                const errorData = await response.text();
-                Utils.log(`AI API 错误 (${response.status}) for ${contact.name}: ${errorData}`, Utils.logLevels.ERROR);
-                throw new Error(`针对 ${contact.name} 的 API 请求失败，状态码 ${response.status}。`);
-            }
+            if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove(); // 响应前移除思考消息
 
             const aiMessageId = `ai_stream_${Date.now()}`;
             let fullAiResponseContent = "";
             const initialAiMessage = { id: aiMessageId, type: 'text', content: "▍", timestamp: new Date().toISOString(), sender: targetId, isStreaming: true };
-            MessageManager.displayMessage(initialAiMessage, false); // 初始显示流式光标
+            MessageManager.displayMessage(initialAiMessage, false);
             let aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
+            let initialMessageAddedToCache = false;
+            let summaryMsgId = null; // 用于存储“正在回忆”消息的ID
 
-            let isSummaryMode = false, summaryContent = "", summaryMsgId = null, initialMessageAddedToCache = false;
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = ""; // 用于累积未处理完的JSON块
-            while (true) {
-                const {value, done: readerDone} = await reader.read();
-                if (readerDone) { // 流结束
-                    // 解码剩余的缓冲区内容（如果有）
-                    buffer += decoder.decode(); // 解码最后一部分
-                    break;
-                }
-                buffer += decoder.decode(value, {stream: true}); // 解码当前块，stream:true 表示可能有未完成的多字节字符
-
-                // 检查是否是流式结束标记（如果API使用特定标记）
-                let stopStreaming = (buffer.trim() === "[DONE]" || buffer.includes("[DONE]"));
-                if (stopStreaming) {
-                    buffer = buffer.substring(0, buffer.indexOf("[DONE]")); // 移除结束标记
-                }
-
-                // 处理缓冲区中的JSON对象
-                let boundary = 0; // 当前处理到的缓冲区的起始位置
-                while (boundary < buffer.length) {
-                    const startIdx = buffer.indexOf('{', boundary); // 查找下一个JSON对象的开始
-                    if (startIdx === -1) { // 当前缓冲区没有完整的JSON对象开始
-                        buffer = buffer.substring(boundary); // 保留未处理部分
-                        break;
-                    }
-                    // 查找匹配的 '}' 以确定JSON对象的结束
-                    let openBraces = 0;
-                    let endIdx = -1;
-                    for (let i = startIdx; i < buffer.length; i++) {
-                        if (buffer[i] === '{') openBraces++;
-                        else if (buffer[i] === '}') {
-                            openBraces--;
-                            if (openBraces === 0) {
-                                endIdx = i;
-                                break;
-                            }
+            await Utils.fetchApiStream(
+                effectiveConfig.apiEndpoint,
+                requestBody,
+                { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                (jsonChunk, isSummaryModeChunk) => { // onChunkReceived
+                    if (isSummaryModeChunk) {
+                        if (aiMessageElement) { aiMessageElement.closest('.message')?.remove(); }
+                    } else {
+                        if (!initialMessageAddedToCache) {
+                            ChatManager.addMessage(targetId, initialAiMessage);
+                            initialMessageAddedToCache = true;
+                        }
+                        const chunkContent = jsonChunk.choices[0].delta.content;
+                        fullAiResponseContent += chunkContent;
+                        if (aiMessageElement) {
+                            aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent + "▍");
+                            chatBox.scrollTop = chatBox.scrollHeight;
                         }
                     }
-
-                    if (endIdx !== -1) { // 找到了一个完整的JSON对象
-                        const jsonString = buffer.substring(startIdx, endIdx + 1);
-                        try {
-                            const jsonChunk = JSON.parse(jsonString);
-                            if (jsonChunk.status === 'summary') { // 处理摘要状态
-                                isSummaryMode = true;
-                                if (aiMessageElement) { aiMessageElement.closest('.message')?.remove(); } // 移除旧的AI消息元素
-                                if (!summaryMsgId) {
-                                    summaryMsgId = `summary_status_${Date.now()}`;
-                                    MessageManager.displayMessage({ id: summaryMsgId, type: 'system', content: `${contact.name} 正在回忆过去的事件...`, timestamp: new Date().toISOString(), sender: targetId }, false);
-                                }
-                            } else if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) { // 处理内容块
-                                const chunkContent = jsonChunk.choices[0].delta.content;
-                                if (isSummaryMode) {
-                                    summaryContent += chunkContent;
-                                } else {
-                                    if (!initialMessageAddedToCache) { // 首次收到内容时，将初始消息加入缓存
-                                        ChatManager.addMessage(targetId, initialAiMessage);
-                                        initialMessageAddedToCache = true;
-                                    }
-                                    fullAiResponseContent += chunkContent;
-                                    if (aiMessageElement) { // 更新UI
-                                        aiMessageElement.innerHTML = MessageManager.formatMessageText(fullAiResponseContent + "▍");
-                                        chatBox.scrollTop = chatBox.scrollHeight; // 滚动到底部
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            Utils.log(`AI 流: 解析 JSON 出错: ${e}. 缓冲区: ${buffer.substring(0, 100)}`, Utils.logLevels.WARN);
-                        }
-                        boundary = endIdx + 1; // 更新处理边界
-                        if (boundary >= buffer.length) buffer = ""; // 如果已处理完，清空缓冲区
-                    } else { // JSON对象未完整，保留从 '{' 开始的部分
-                        buffer = buffer.substring(startIdx);
-                        break;
+                },
+                async (finalContent, isSummaryModeEnd, summaryContentEnd) => { // onStreamEnd
+                    if (isSummaryModeEnd) {
+                        await this._handleSummaryResponse(targetId, contact, messageText, summaryContentEnd, summaryMsgId, chatBox);
+                    } else {
+                        if (aiMessageElement) aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent);
+                        const finalAiMessage = { id: aiMessageId, type: 'text', content: fullAiResponseContent, timestamp: initialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
+                        ChatManager.addMessage(targetId, finalAiMessage);
                     }
+                },
+                () => { // onSummaryStart
+                    summaryMsgId = `summary_status_${Date.now()}`;
+                    MessageManager.displayMessage({ id: summaryMsgId, type: 'system', content: `${contact.name} 正在回忆过去的事件...`, timestamp: new Date().toISOString(), sender: targetId }, false);
                 }
-                if (stopStreaming) break; // 如果是流结束标记，则跳出主循环
-            }
-
-            if (isSummaryMode) { // 如果是摘要模式
-                await this._handleSummaryResponse(targetId, contact, messageText, summaryContent, summaryMsgId, chatBox);
-            } else { // 普通响应模式
-                if (aiMessageElement) aiMessageElement.innerHTML = MessageManager.formatMessageText(fullAiResponseContent); // 移除最后的流式光标
-                const finalAiMessage = { id: aiMessageId, type: 'text', content: fullAiResponseContent, timestamp: initialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
-                ChatManager.addMessage(targetId, finalAiMessage); // 更新消息缓存
-            }
+            );
 
         } catch (error) {
-            if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove(); // 移除“正在思考”
+            if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
             Utils.log(`与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
@@ -258,10 +191,10 @@ const AiApiHandler = {
      */
     _handleSummaryResponse: async function(targetId, contact, originalMessageText, summaryContent, summaryMsgId, chatBox) {
         Utils.log(`--- 收到关于 [${contact.name}] 的摘要 ---\n${summaryContent}`, Utils.logLevels.INFO);
-        this.activeSummaries[targetId] = summaryContent; // 存储摘要
+        this.activeSummaries[targetId] = summaryContent;
         Utils.log(`AiApiHandler: 已为联系人 ${targetId} 存储摘要。它将在后续请求中使用。`, Utils.logLevels.DEBUG);
 
-        if (summaryMsgId) chatBox.querySelector(`.message[data-message-id="${summaryMsgId}"]`)?.remove(); // 移除“正在回忆...”
+        if (summaryMsgId) chatBox.querySelector(`.message[data-message-id="${summaryMsgId}"]`)?.remove();
 
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
@@ -269,11 +202,10 @@ const AiApiHandler = {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
-            // 构建使用摘要的请求体
             const systemPromptBase = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
             const newAiApiMessages = [
                 { role: "system", content: systemPromptBase + Config.ai.baseSystemPrompt },
-                { role: "system", content: `上下文摘要:\n${summaryContent}` }, // 加入摘要
+                { role: "system", content: `上下文摘要:\n${summaryContent}` },
                 { role: "user", content: `${originalMessageText} [发送于: ${new Date().toLocaleString()}]` }
             ];
             const newRequestBody = {
@@ -283,64 +215,31 @@ const AiApiHandler = {
             };
             Utils.log(`正在使用摘要上下文重新发送到 AI (${contact.name}) (流式): ${JSON.stringify(newRequestBody.messages)}`, Utils.logLevels.DEBUG);
 
-            const summaryResponse = await fetch(effectiveConfig.apiEndpoint, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" }, body: JSON.stringify(newRequestBody)
-            });
-            if (!summaryResponse.ok) {
-                throw new Error(`在摘要后，API 请求失败，状态码 ${summaryResponse.status}。`);
-            }
-
-            // 处理流式响应 (与 sendAiMessage 中类似)
             const newAiMessageId = `ai_stream_${Date.now()}`;
             let newFullAiResponseContent = "";
             const newInitialAiMessage = { id: newAiMessageId, type: 'text', content: "▍", timestamp: new Date().toISOString(), sender: targetId, isStreaming: true };
-            ChatManager.addMessage(targetId, newInitialAiMessage); // 先添加空消息到缓存
-            MessageManager.displayMessage(newInitialAiMessage, false); // UI上显示流式光标
+            ChatManager.addMessage(targetId, newInitialAiMessage);
+            MessageManager.displayMessage(newInitialAiMessage, false);
             let newAiMessageElement = chatBox.querySelector(`.message[data-message-id="${newAiMessageId}"] .message-content`);
 
-            const summaryReader = summaryResponse.body.getReader();
-            const summaryDecoder = new TextDecoder();
-            let summaryBuffer = "";
-            while (true) {
-                const { value, done: readerDone } = await summaryReader.read();
-                if (readerDone) { summaryBuffer += summaryDecoder.decode(); break; }
-                summaryBuffer += summaryDecoder.decode(value, { stream: true });
-                let stopStreaming = (summaryBuffer.trim() === "[DONE]" || summaryBuffer.includes("[DONE]"));
-                if(stopStreaming) summaryBuffer = summaryBuffer.substring(0, summaryBuffer.indexOf("[DONE]"));
-
-                let boundary = 0;
-                while(boundary < summaryBuffer.length) {
-                    const startIdx = summaryBuffer.indexOf('{', boundary);
-                    if (startIdx === -1) { summaryBuffer = summaryBuffer.substring(boundary); break; }
-                    let openBraces = 0, endIdx = -1;
-                    for (let i = startIdx; i < summaryBuffer.length; i++) {
-                        if (summaryBuffer[i] === '{') openBraces++;
-                        else if (summaryBuffer[i] === '}') { openBraces--; if (openBraces === 0) { endIdx = i; break; } }
+            await Utils.fetchApiStream(
+                effectiveConfig.apiEndpoint,
+                newRequestBody,
+                { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                (jsonChunk) => { // onChunkReceived (摘要后不应再有摘要模式)
+                    const chunkContent = jsonChunk.choices[0].delta.content;
+                    newFullAiResponseContent += chunkContent;
+                    if (newAiMessageElement) {
+                        newAiMessageElement.innerHTML = Utils.formatMessageText(newFullAiResponseContent + "▍");
+                        chatBox.scrollTop = chatBox.scrollHeight;
                     }
-                    if (endIdx !== -1) {
-                        const jsonString = summaryBuffer.substring(startIdx, endIdx + 1);
-                        try {
-                            const jsonChunk = JSON.parse(jsonString);
-                            if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
-                                newFullAiResponseContent += jsonChunk.choices[0].delta.content;
-                                if (newAiMessageElement) { // 更新UI
-                                    newAiMessageElement.innerHTML = MessageManager.formatMessageText(newFullAiResponseContent + "▍");
-                                    chatBox.scrollTop = chatBox.scrollHeight;
-                                }
-                            }
-                        } catch (e) {
-                            Utils.log(`AI 摘要响应流: 解析 JSON 出错: ${e}.`, Utils.logLevels.WARN);
-                        }
-                        boundary = endIdx + 1;
-                        if(boundary >= summaryBuffer.length) summaryBuffer = "";
-                    } else { summaryBuffer = summaryBuffer.substring(startIdx); break; }
+                },
+                () => { // onStreamEnd
+                    if (newAiMessageElement) newAiMessageElement.innerHTML = Utils.formatMessageText(newFullAiResponseContent);
+                    const finalAiMessage = { id: newAiMessageId, type: 'text', content: newFullAiResponseContent, timestamp: newInitialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
+                    ChatManager.addMessage(targetId, finalAiMessage);
                 }
-                if (stopStreaming) break;
-            }
-
-            if (newAiMessageElement) newAiMessageElement.innerHTML = MessageManager.formatMessageText(newFullAiResponseContent); // 移除最后的流式光标
-            const finalAiMessage = { id: newAiMessageId, type: 'text', content: newFullAiResponseContent, timestamp: newInitialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
-            ChatManager.addMessage(targetId, finalAiMessage); // 更新消息缓存
+            );
 
         } catch (error) {
             Utils.log(`在摘要后与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
@@ -361,8 +260,8 @@ const AiApiHandler = {
      * @returns {Promise<void>}
      */
     sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId, triggeringMessageId = null) {
-        const aiContact = UserManager.contacts[aiContactId]; // 从 UserManager 获取最新的AI联系人信息
-        if (!aiContact || !aiContact.isAI) { // 确保它确实是一个AI
+        const aiContact = UserManager.contacts[aiContactId];
+        if (!aiContact || !aiContact.isAI) {
             Utils.log(`AiApiHandler.sendGroupAiMessage: 目标 ${aiContactId} 不是有效的AI联系人。`, Utils.logLevels.WARN);
             return;
         }
@@ -373,11 +272,11 @@ const AiApiHandler = {
             id: thinkingMsgId, type: 'system',
             content: `${aiContact.name} (在群组 ${group.name} 中) 正在思考...`,
             timestamp: new Date().toISOString(),
-            sender: aiContactId, // 系统消息的发送者设为AI本身
-            groupId: groupId, // 标记此消息属于哪个群组
+            sender: aiContactId,
+            groupId: groupId,
             isThinking: true
         };
-        ChatManager.addMessage(groupId, thinkingMessage); // 显示“正在思考”
+        ChatManager.addMessage(groupId, thinkingMessage);
 
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
@@ -385,62 +284,52 @@ const AiApiHandler = {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
-            // 获取系统提示词
             let systemPromptBase = "";
-            // 优先使用群组特定提示词
             if (group.aiPrompts && group.aiPrompts[aiContactId] !== undefined && group.aiPrompts[aiContactId].trim() !== "") {
                 systemPromptBase = group.aiPrompts[aiContactId];
                 Utils.log(`AiApiHandler.sendGroupAiMessage: 使用群组 ${groupId} 中为 AI ${aiContactId} 设置的特定提示词。`, Utils.logLevels.INFO);
             }
-            // 如果群组特定提示词不存在或为空，则使用AI的默认提示词
             else if (aiContact.aiConfig && aiContact.aiConfig.systemPrompt !== undefined && aiContact.aiConfig.systemPrompt.trim() !== "") {
                 systemPromptBase = aiContact.aiConfig.systemPrompt;
                 Utils.log(`AiApiHandler.sendGroupAiMessage: 使用 AI ${aiContactId} 在群组 ${groupId} 中的默认提示词。`, Utils.logLevels.INFO);
             }
-            // 如果两者都无，则systemPromptBase保持为空字符串 (或由Config.ai.baseGroupSystemPrompt处理)
             else {
                 Utils.log(`AiApiHandler.sendGroupAiMessage: AI ${aiContactId} 在群组 ${groupId} 中无特定提示词，也无默认提示词。将仅使用基础群聊提示词。`, Utils.logLevels.WARN);
             }
-            // 附加基础群聊提示词
             const finalSystemPrompt = systemPromptBase + Config.ai.baseGroupSystemPrompt;
 
 
-            // 构建上下文历史
             const groupContextWindow = (typeof Config !== 'undefined' && Config.ai && Config.ai.groupAiSessionTime !== undefined)
                 ? Config.ai.groupAiSessionTime
-                : (3 * 60 * 1000); // 回退到3分钟
+                : (3 * 60 * 1000);
             const timeThreshold = new Date().getTime() - groupContextWindow;
 
-            // 获取在当前提及消息之前的聊天记录
             const groupChatHistory = ChatManager.chats[groupId] || [];
 
             const recentMessages = groupChatHistory.filter(msg =>
                 new Date(msg.timestamp).getTime() > timeThreshold &&
-                (msg.type === 'text' || (msg.type === 'system' && !msg.isThinking)) && // 排除思考中的系统消息
-                msg.id !== thinkingMsgId && // 排除当前正在思考的消息
-                msg.id !== triggeringMessageId // 修复：排除触发此调用的用户消息本身
+                (msg.type === 'text' || (msg.type === 'system' && !msg.isThinking)) &&
+                msg.id !== thinkingMsgId &&
+                msg.id !== triggeringMessageId
             );
 
             const contextMessagesForAIHistory = recentMessages.map(msg => {
-                let role = 'system'; // 默认角色
+                let role = 'system';
                 let content = msg.content;
-                if (msg.sender === aiContactId) { // 如果是AI自己的回复
+                if (msg.sender === aiContactId) {
                     role = 'assistant';
-                } else if (msg.sender) { // 如果是其他用户或系统消息但有发送者
+                } else if (msg.sender) {
                     role = 'user';
-                    // 为用户消息添加发送者名称前缀，以便AI区分
                     const senderName = UserManager.contacts[msg.sender]?.name || `用户 ${String(msg.sender).substring(0,4)}`;
                     content = `${senderName}: ${msg.content}`;
                 }
-                // 对于没有明确 sender 的 system 消息，role 保持 'system'
                 return { role: role, content: content };
             });
 
             const messagesForRequestBody = [];
-            messagesForRequestBody.push({ role: "system", content: finalSystemPrompt }); // 系统提示词
-            messagesForRequestBody.push(...contextMessagesForAIHistory); // 上下文历史
+            messagesForRequestBody.push({ role: "system", content: finalSystemPrompt });
+            messagesForRequestBody.push(...contextMessagesForAIHistory);
 
-            // 显式添加触发此调用的用户提及消息
             const triggeringSenderName = UserManager.contacts[originalSenderId]?.name || `用户 ${String(originalSenderId).substring(0,4)}`;
             const userTriggerMessage = {
                 role: 'user',
@@ -457,136 +346,78 @@ const AiApiHandler = {
                 stream: true,
                 temperature: 0.1,
                 max_tokens: effectiveConfig.maxTokens || 2048,
-                // user: originalSenderId, // 可选，用于标识请求来源
-                group_id: groupId, // 新增：群组ID
-                character_id: aiContactId // 添加character_id
+                group_id: groupId,
+                character_id: aiContactId
             };
             Utils.log(`发送到群组 AI (${aiContact.name} in ${group.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
-            const response = await fetch(effectiveConfig.apiEndpoint, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" }, body: JSON.stringify(requestBody)
-            });
-
-            // 响应到达后移除“正在思考”
             const thinkingElementToRemove = document.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
             if (thinkingElementToRemove && thinkingElementToRemove.parentNode) thinkingElementToRemove.remove();
 
 
-            if (!response.ok) {
-                const errorData = await response.text();
-                Utils.log(`群组 AI API 错误 (${response.status}) for ${aiContact.name}: ${errorData}`, Utils.logLevels.ERROR);
-                throw new Error(`针对 ${aiContact.name} 的群组 AI API 请求失败，状态码 ${response.status}。`);
-            }
-
             const aiResponseMessageId = `group_ai_msg_${aiContactId}_${Date.now()}`;
             let fullAiResponseContent = "";
-            const initialAiResponseMessage = { // AI在群组中的回复消息
-                id: aiResponseMessageId,
-                type: 'text',
-                content: "▍", // 初始流式光标
-                timestamp: new Date().toISOString(),
-                sender: aiContactId, // 发送者是AI
-                groupId: groupId, // 标记属于此群组
-                originalSender: aiContactId, // 原始发送者也是AI
-                originalSenderName: aiContact.name, // AI的名称
-                isStreaming: true,
-                isNewlyCompletedAIResponse: false // 初始为false，完成后设为true
+            const initialAiResponseMessage = {
+                id: aiResponseMessageId, type: 'text', content: "▍",
+                timestamp: new Date().toISOString(), sender: aiContactId,
+                groupId: groupId, originalSender: aiContactId,
+                originalSenderName: aiContact.name, isStreaming: true,
+                isNewlyCompletedAIResponse: false
             };
-
-            // 将初始的AI回复消息添加到聊天记录（用于非当前聊天或后续更新）
             ChatManager.addMessage(groupId, initialAiResponseMessage);
-
-            // 如果当前正在查看此群聊，则获取DOM元素以实时更新UI
             let aiMessageElement = null;
             if (ChatManager.currentChatId === groupId) {
                 aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiResponseMessageId}"] .message-content`);
             }
 
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-            while (true) {
-                const {value, done: readerDone} = await reader.read();
-                if (readerDone) { buffer += decoder.decode(); break; }
-                buffer += decoder.decode(value, {stream: true});
-                let stopStreaming = (buffer.trim() === "[DONE]" || buffer.includes("[DONE]"));
-                if (stopStreaming) buffer = buffer.substring(0, buffer.indexOf("[DONE]"));
-
-                let boundary = 0;
-                while (boundary < buffer.length) {
-                    const startIdx = buffer.indexOf('{', boundary);
-                    if (startIdx === -1) { buffer = buffer.substring(boundary); break; }
-                    let openBraces = 0, endIdx = -1;
-                    for (let i = startIdx; i < buffer.length; i++) {
-                        if (buffer[i] === '{') openBraces++;
-                        else if (buffer[i] === '}') { openBraces--; if (openBraces === 0) { endIdx = i; break; } }
+            await Utils.fetchApiStream(
+                effectiveConfig.apiEndpoint,
+                requestBody,
+                { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                (jsonChunk) => { // onChunkReceived
+                    const chunkContent = jsonChunk.choices[0].delta.content;
+                    fullAiResponseContent += chunkContent;
+                    if (aiMessageElement) {
+                        aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent + "▍");
+                        chatBox.scrollTop = chatBox.scrollHeight;
                     }
-                    if (endIdx !== -1) {
-                        const jsonString = buffer.substring(startIdx, endIdx + 1);
-                        try {
-                            const jsonChunk = JSON.parse(jsonString);
-                            if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
-                                const chunkContent = jsonChunk.choices[0].delta.content;
-                                fullAiResponseContent += chunkContent;
-                                if (aiMessageElement) { // 如果在当前聊天UI中，则实时更新
-                                    aiMessageElement.innerHTML = MessageManager.formatMessageText(fullAiResponseContent + "▍");
-                                    chatBox.scrollTop = chatBox.scrollHeight;
-                                }
-                                // 更新 ChatManager 中的消息记录（即使不在当前UI中也更新，确保数据一致性）
-                                ChatManager.addMessage(groupId, {
-                                    ...initialAiResponseMessage,
-                                    content: fullAiResponseContent + (stopStreaming && boundary >= buffer.length ? "" : "▍"), // 如果是最后一块且已停止流，则不加光标
-                                    isStreaming: !(stopStreaming && boundary >= buffer.length) // 更新流状态
-                                });
-                            }
-                        } catch (e) {
-                            Utils.log(`群组 AI 流: 解析 JSON 出错: ${e}. 缓冲区: ${buffer.substring(0, 100)}`, Utils.logLevels.WARN);
+                    ChatManager.addMessage(groupId, {
+                        ...initialAiResponseMessage,
+                        content: fullAiResponseContent + "▍", // Keep cursor until stream ends
+                        isStreaming: true
+                    });
+                },
+                () => { // onStreamEnd
+                    const finalAiResponseMessage = {
+                        id: aiResponseMessageId, type: 'text', content: fullAiResponseContent,
+                        timestamp: initialAiResponseMessage.timestamp, sender: aiContactId,
+                        groupId: groupId, originalSender: aiContactId, originalSenderName: aiContact.name,
+                        isStreaming: false, isNewlyCompletedAIResponse: true
+                    };
+                    ChatManager.addMessage(groupId, finalAiResponseMessage);
+
+                    const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
+                    humanMembers.forEach(memberId => {
+                        if (memberId !== originalSenderId && memberId !== UserManager.userId) {
+                            ConnectionManager.sendTo(memberId, finalAiResponseMessage);
                         }
-                        boundary = endIdx + 1;
-                        if (boundary >= buffer.length) buffer = "";
-                    } else { buffer = buffer.substring(startIdx); break; }
+                    });
                 }
-                if (stopStreaming) break;
-            }
-
-            // 流结束后，最终更新消息对象
-            const finalAiResponseMessage = {
-                id: aiResponseMessageId, type: 'text', content: fullAiResponseContent,
-                timestamp: initialAiResponseMessage.timestamp, sender: aiContactId,
-                groupId: groupId, originalSender: aiContactId, originalSenderName: aiContact.name,
-                isStreaming: false, isNewlyCompletedAIResponse: true
-            };
-            ChatManager.addMessage(groupId, finalAiResponseMessage); // 保存最终消息
-
-            // 将AI的回复广播给群内其他人类成员
-            const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
-            humanMembers.forEach(memberId => {
-                if (memberId !== originalSenderId && memberId !== UserManager.userId) { // 不发给触发者和自己 (如果自己是触发者)
-                    ConnectionManager.sendTo(memberId, finalAiResponseMessage);
-                }
-            });
-
+            );
 
         } catch (error) {
-            // 确保移除“正在思考”
             const thinkingElementToRemove = document.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
             if (thinkingElementToRemove && thinkingElementToRemove.parentNode) thinkingElementToRemove.remove();
 
             Utils.log(`在群组 (${group.name}) 中与 AI (${aiContact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`错误: 无法从 ${aiContact.name} (群组内) 获取回复。 ${error.message}`, 'error');
-            // 发送错误消息到群聊
             const errorResponseMessage = {
-                id: `group_ai_error_${aiContactId}_${Date.now()}`,
-                type: 'text',
+                id: `group_ai_error_${aiContactId}_${Date.now()}`, type: 'text',
                 content: `抱歉，我在群组 (${group.name}) 中回复时遇到了问题: ${error.message}`,
-                timestamp: new Date().toISOString(),
-                sender: aiContactId, // 错误消息也由AI发送
-                groupId: groupId,
-                originalSender: aiContactId,
-                originalSenderName: aiContact.name
+                timestamp: new Date().toISOString(), sender: aiContactId,
+                groupId: groupId, originalSender: aiContactId, originalSenderName: aiContact.name
             };
             ChatManager.addMessage(groupId, errorResponseMessage);
-            // 将错误消息广播给其他人类成员
             const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
             humanMembers.forEach(memberId => {
                 if (memberId !== originalSenderId && memberId !== UserManager.userId) {
@@ -609,76 +440,40 @@ const AiApiHandler = {
             return false;
         }
 
-        // 健康检查请求体
         const healthCheckPayload = {
-            model: effectiveConfig.model, // 使用当前配置的模型
-            messages: [ { role: "user", content: "回复ok." } ], // 简单的测试消息
-            stream: true, // 使用流式响应进行测试，更接近实际使用场景
-            max_tokens: 5 // 限制最大令牌数，避免不必要的消耗
+            model: effectiveConfig.model,
+            messages: [ { role: "user", content: "回复ok." } ],
+            stream: true,
+            max_tokens: 5
         };
 
         try {
             Utils.log(`AiApiHandler: 正在向 ${effectiveConfig.apiEndpoint} (模型: ${effectiveConfig.model}) 执行健康检查 (流式)`, Utils.logLevels.DEBUG);
-            const response = await fetch(effectiveConfig.apiEndpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey || "" },
-                body: JSON.stringify(healthCheckPayload)
-            });
+            let fullStreamedContent = "";
+            let healthCheckPassed = false;
 
-            if (!response.ok) {
-                Utils.log(`AiApiHandler: AI 服务健康检查失败。状态: ${response.status}`, Utils.logLevels.WARN);
-                return false;
-            }
-
-            // 解析流式响应
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-            let fullStreamedContent = ""; // 用于累积流式响应内容
-
-            while (true) {
-                const {value, done: readerDone} = await reader.read();
-                if (readerDone) { buffer += decoder.decode(); break; } // 流结束
-                buffer += decoder.decode(value, {stream: true});
-                let stopStreaming = (buffer.trim() === "[DONE]" || buffer.includes("[DONE]"));
-                if (stopStreaming) buffer = buffer.substring(0, buffer.indexOf("[DONE]"));
-                // 处理缓冲区中的JSON对象 (与sendAiMessage中逻辑类似)
-                let boundary = 0;
-                while (boundary < buffer.length) {
-                    const startIdx = buffer.indexOf('{', boundary);
-                    if (startIdx === -1) { buffer = buffer.substring(boundary); break; }
-                    let openBraces = 0, endIdx = -1;
-                    for (let i = startIdx; i < buffer.length; i++) {
-                        if (buffer[i] === '{') openBraces++;
-                        else if (buffer[i] === '}') { openBraces--; if (openBraces === 0) { endIdx = i; break; } }
+            await Utils.fetchApiStream(
+                effectiveConfig.apiEndpoint,
+                healthCheckPayload,
+                { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey || "" },
+                (jsonChunk) => { // onChunkReceived
+                    if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
+                        fullStreamedContent += jsonChunk.choices[0].delta.content;
                     }
-                    if (endIdx !== -1) {
-                        const jsonString = buffer.substring(startIdx, endIdx + 1);
-                        try {
-                            const jsonChunk = JSON.parse(jsonString);
-                            if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
-                                fullStreamedContent += jsonChunk.choices[0].delta.content;
-                            }
-                        } catch (e) {
-                            Utils.log(`AI 健康检查流: 解析 JSON 出错: ${e}. 缓冲区: ${buffer.substring(0, 100)}`, Utils.logLevels.WARN);
-                        }
-                        boundary = endIdx + 1;
-                        if (boundary >= buffer.length) buffer = "";
-                    } else { buffer = buffer.substring(startIdx); break; }
+                },
+                () => { // onStreamEnd
+                    const trimmedContent = fullStreamedContent.trim();
+                    Utils.log(`AI 健康检查流式响应内容: "${trimmedContent}" (长度: ${trimmedContent.length})`, Utils.logLevels.DEBUG);
+                    if (trimmedContent.toLowerCase().includes("ok") && trimmedContent.length < 10) {
+                        Utils.log("AiApiHandler: AI 服务健康检查成功 (流式)。", Utils.logLevels.INFO);
+                        healthCheckPassed = true;
+                    } else {
+                        Utils.log(`AiApiHandler: AI 服务健康检查失败 (流式)。内容: "${trimmedContent}", 长度: ${trimmedContent.length}`, Utils.logLevels.WARN);
+                        healthCheckPassed = false;
+                    }
                 }
-                if (stopStreaming) break;
-            }
-            const trimmedContent = fullStreamedContent.trim();
-            Utils.log(`AI 健康检查流式响应内容: "${trimmedContent}" (长度: ${trimmedContent.length})`, Utils.logLevels.DEBUG);
-
-            // 检查响应内容是否符合预期 (例如，包含 "ok" 且长度较短)
-            if (trimmedContent.toLowerCase().includes("ok") && trimmedContent.length < 10) {
-                Utils.log("AiApiHandler: AI 服务健康检查成功 (流式)。", Utils.logLevels.INFO);
-                return true;
-            } else {
-                Utils.log(`AiApiHandler: AI 服务健康检查失败 (流式)。内容: "${trimmedContent}", 长度: ${trimmedContent.length}`, Utils.logLevels.WARN);
-                return false;
-            }
+            );
+            return healthCheckPassed;
         } catch (error) {
             Utils.log(`AiApiHandler: AI 服务健康检查期间出错: ${error.message}`, Utils.logLevels.ERROR);
             return false;
@@ -694,12 +489,10 @@ const AiApiHandler = {
         Utils.log("AiApiHandler: AI 配置已更改，正在重新检查服务健康状况...", Utils.logLevels.INFO);
         try {
             const isHealthy = await this.checkAiServiceHealth();
-            UserManager.updateAiServiceStatus(isHealthy); // 更新状态，内部会触发事件
-            // EventEmitter.emit('aiServiceStatusUpdated'...) is now called within UserManager.updateAiServiceStatus
+            UserManager.updateAiServiceStatus(isHealthy);
         } catch (e) {
             Utils.log("处理 AI 配置变更时，健康检查出错: " + e.message, Utils.logLevels.ERROR);
-            UserManager.updateAiServiceStatus(false); // 更新状态，内部会触发事件
-            // EventEmitter.emit('aiServiceStatusUpdated'...) is now called within UserManager.updateAiServiceStatus
+            UserManager.updateAiServiceStatus(false);
         }
     }
 };

@@ -976,10 +976,19 @@ const ChatAreaUIManager = {
                 } else { // 如果未连接，尝试重新连接
                     if (textElement) textElement.textContent = `信令服务器未连接。正在尝试连接...`;
                     try {
-                        await ConnectionManager.connectWebSocket(); // 异步连接WebSocket
-                        signalingServerNowConnected = ConnectionManager.isWebSocketConnected && ConnectionManager.websocket?.readyState === WebSocket.OPEN;
+                        await WebSocketManager.connect(); // 异步连接WebSocket
+                        // 检查 WebSocket 的 readyState 以确定连接状态
+                        // ConnectionManager.isWebSocketConnected 可能会有延迟更新
+                        if (ConnectionManager.websocket && ConnectionManager.websocket.readyState === WebSocket.OPEN) {
+                            signalingServerNowConnected = true;
+                            if (!ConnectionManager.isWebSocketConnected) {
+                                Utils.log("ChatAreaUIManager (Reconnect Prompt): WebSocket is OPEN, but ConnectionManager.isWebSocketConnected is false. Proceeding as connected based on readyState.", Utils.logLevels.WARN);
+                            }
+                        } else {
+                            signalingServerNowConnected = false;
+                        }
                     } catch (wsError) {
-                        Utils.log(`showReconnectPrompt: 重新连接信令服务器失败: ${wsError.message || wsError}`, Utils.logLevels.ERROR);
+                        Utils.log(`showReconnectPrompt: 重新连接信令服务器的尝试 (WebSocketManager.connect) 失败: ${wsError.message || wsError}`, Utils.logLevels.ERROR);
                         signalingServerNowConnected = false;
                     }
                 }

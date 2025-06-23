@@ -14,7 +14,7 @@
  * @property {function} rejectCall - 拒绝来电。
  * @property {function} hangUpMedia - 挂断当前通话的媒体流（不关闭连接）。
  * @property {function} handleMessage - 处理与通话相关的  消息。
- * @dependencies Config, Utils, NotificationUIManager, ConnectionManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter
+ * @dependencies Config, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定通话按钮事件)
  */
 const VideoCallManager = {
@@ -63,7 +63,7 @@ const VideoCallManager = {
      */
     init: function () {
         try {
-            this.musicPlayer = new Audio(Config.music);
+            this.musicPlayer = new Audio(Config.media.music);
             this.musicPlayer.loop = true;
             this.musicPlayer.addEventListener('ended', () => {
                 if (this.isMusicPlaying) this.musicPlayer.play().catch(e => Utils.log(`音乐循环播放错误: ${e}`, Utils.logLevels.WARN));
@@ -410,7 +410,7 @@ const VideoCallManager = {
      * @returns {Promise<void>}
      */
     setupPeerConnection: async function (isOfferCreatorForMedia) {
-        const conn = ConnectionManager.connections[this.currentPeerId];
+        const conn = WebRTCManager.connections[this.currentPeerId];
         if (!conn || !conn.peerConnection) { Utils.log("setupPeerConnection: 没有 PeerConnection。", Utils.logLevels.ERROR); this.hangUpMedia(); return; }
         const pc = conn.peerConnection;
         pc.getSenders().forEach(sender => { if (sender.track) try {pc.removeTrack(sender);}catch(e){Utils.log("移除旧轨道时出错: "+e,Utils.logLevels.WARN);}});
@@ -607,7 +607,7 @@ const VideoCallManager = {
      */
     createAndSendOffer: async function () {
         if (!this.currentPeerId || !this.isCallActive) return; // Check if call is active, not just pending
-        const conn = ConnectionManager.connections[this.currentPeerId];
+        const conn = WebRTCManager.connections[this.currentPeerId];
         if (!conn || !conn.peerConnection) {
             Utils.log("没有 PC 用于创建提议", Utils.logLevels.ERROR);
             this.hangUpMedia();
@@ -664,7 +664,7 @@ const VideoCallManager = {
      * @returns {Promise<void>}
      */
     handleOffer: async function (sdpOffer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
-        const conn = ConnectionManager.connections[peerId];
+        const conn = WebRTCManager.connections[peerId];
         if (!conn || !conn.peerConnection) {
             Utils.log("没有 PC 来处理提议", Utils.logLevels.ERROR);
             return;
@@ -740,7 +740,7 @@ const VideoCallManager = {
             Utils.log(`收到来自 ${peerId} 的应答，但当前通话不匹配或未激活。忽略。`, Utils.logLevels.WARN);
             return;
         }
-        const conn = ConnectionManager.connections[peerId];
+        const conn = WebRTCManager.connections[peerId];
         if (!conn || !conn.peerConnection) {
             Utils.log(`处理来自 ${peerId} 的应答时没有 PeerConnection。忽略。`, Utils.logLevels.ERROR);
             return;
@@ -880,8 +880,10 @@ const VideoCallManager = {
 
         this.releaseMediaResources();
 
+        Utils.log(`peerIdCleaned ${peerIdCleaned}`, Utils.logLevels.INFO);
+        Utils.log(`WebRTCManager.connections ${typeof WebRTCManager !== 'undefined' ? WebRTCManager.connections : 'WebRTCManager undefined'}`, Utils.logLevels.INFO);
         if (peerIdCleaned) {
-            const conn = ConnectionManager.connections[peerIdCleaned];
+            const conn = typeof WebRTCManager !== 'undefined' ? WebRTCManager.connections[peerIdCleaned] : null;
             if (conn && conn.peerConnection) {
                 conn.peerConnection.getSenders().forEach(sender => {
                     if (sender.track) {
@@ -1033,7 +1035,7 @@ const VideoCallManager = {
      */
     _initiateRenegotiation: function(peerId) {
         Utils.log(`Caller (this.isCaller=${this.isCaller}) attempting to initiate renegotiation with ${peerId} for sdpFmtpLine change.`, Utils.logLevels.INFO);
-        const conn = ConnectionManager.connections[peerId];
+        const conn = WebRTCManager.connections[peerId];
 
         // Ensure this client is the original caller, the call is active, it's the correct peer,
         // and the PeerConnection is in a stable state for sending a new offer.
@@ -1189,11 +1191,11 @@ const VideoCallManager = {
      * @param {string} peerId - 当前通话的对方ID。
      */
     _checkAndAdaptAudioQuality: async function(peerId) {
-        if (!peerId || !ConnectionManager.connections[peerId]) {
+        if (!peerId || typeof WebRTCManager === 'undefined' || !WebRTCManager.connections[peerId]) {
             Utils.log(`AdaptiveAudioCheck: 对方 ${peerId || '未知'} 的连接信息不存在。跳过。`, Utils.logLevels.WARN);
             return;
         }
-        const pc = ConnectionManager.connections[peerId].peerConnection;
+        const pc = WebRTCManager.connections[peerId].peerConnection;
         if (!pc || pc.signalingState === 'closed' || pc.connectionState === 'closed' || pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
             Utils.log(`AdaptiveAudioCheck for ${peerId}: PeerConnection 不存在或已关闭/失败/断开. 跳过。`, Utils.logLevels.DEBUG);
             return;
@@ -1331,11 +1333,11 @@ const VideoCallManager = {
      * @param {number} levelIndex - 要应用的配置档案的索引。
      */
     _applyAudioProfileToSender: function(peerId, levelIndex) {
-        if (!peerId || !ConnectionManager.connections[peerId]) {
+        if (!peerId || typeof WebRTCManager === 'undefined' || !WebRTCManager.connections[peerId]) {
             Utils.log(`_applyAudioProfileToSender: 对方 ${peerId || '未知'} 的连接信息不存在。跳过。`, Utils.logLevels.WARN);
             return;
         }
-        const pc = ConnectionManager.connections[peerId].peerConnection;
+        const pc = WebRTCManager.connections[peerId].peerConnection;
         if (!pc || !this.localStream) {
             Utils.log(`_applyAudioProfileToSender: PeerConnection 或本地流 (for ${peerId}) 不存在。跳过。`, Utils.logLevels.WARN);
             return;

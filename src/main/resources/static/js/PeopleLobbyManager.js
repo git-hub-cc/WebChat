@@ -120,7 +120,7 @@ const PeopleLobbyManager = {
 
             // 构建列表项HTML
             li.innerHTML = `
-    <div class="chat-list-avatar">${avatarContentHtml}</div>
+   <div class="chat-list-avatar">${avatarContentHtml}</div>
 <div class="chat-list-info">
     <div class="chat-list-name">${Utils.escapeHtml(name)}</div>
     <div class="chat-list-preview">${isAlreadyContact ? '已是联系人' : '点击添加'}</div>

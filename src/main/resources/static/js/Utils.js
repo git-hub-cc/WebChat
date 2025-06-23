@@ -4,6 +4,9 @@
  *              包括日志记录、HTML 转义、网络检查、数据分片处理、ID 生成和日期格式化等。
  *              sendInChunks 现在实现了基于 RTCDataChannel.bufferedAmount 的背压控制。
  *              新增: generateFileHash 用于计算文件Blob的SHA-256哈希。
+ *              新增: makeElementCollapsible, formatMessageText, clipRectToArea, isPointInRect, showFullImage, showFullVideo 等从其他模块迁移过来的通用工具函数。
+ *              新增: fetchApiStream 用于封装流式API请求的通用逻辑。
+ *              新增: checkWebRTCSupport 从 UIManager 迁移过来。
  * @module Utils
  * @exports {object} Utils - 对外暴露的单例对象，包含所有工具函数。
  * @property {function} log - 根据设置的日志级别在控制台打印日志。
@@ -15,7 +18,15 @@
  * @property {function} formatDate - 将 Date 对象格式化为用户友好的字符串。
  * @property {function} truncateFileName - 如果文件名太长，则截断文件名并添加省略号。
  * @property {function} generateFileHash - 计算文件Blob的SHA-256哈希。
- * @dependencies Config, ConnectionManager (仅在 reassembleChunk 中间接引用)
+ * @property {function} makeElementCollapsible - 使指定的头部和内容元素可折叠。
+ * @property {function} formatMessageText - 格式化消息文本，转换换行符、URL，并处理流式光标。
+ * @property {function} clipRectToArea - 将一个矩形裁剪到指定的区域内。
+ * @property {function} isPointInRect - 检查一个点是否位于一个矩形内部。
+ * @property {function} showFullImage - 在一个模态框中显示全尺寸图片。
+ * @property {function} showFullVideo - 在一个模态框中显示全屏视频。
+ * @property {function} fetchApiStream - 发起一个流式 API 请求并处理响应。
+ * @property {function} checkWebRTCSupport - 检查浏览器是否支持 WebRTC。
+ * @dependencies Config, ConnectionManager (仅在 reassembleChunk 中间接引用), NotificationUIManager (用于 fetchApiStream 错误处理), LayoutUIManager (用于 checkWebRTCSupport)
  * @dependents 几乎所有其他模块。
  */
 const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, ALL: 4 }; // 定义日志级别
@@ -129,7 +140,7 @@ const Utils = {
      * @param {string|null} [fileId=null] - 文件的唯一 ID，用于标识分片所属。
      * @param {number} [chunkSize=Config.chunkSize] - 每个分片的大小。
      */
-    sendInChunks: async function (dataString, dataChannel, peerId, fileId = null, chunkSize = Config.chunkSize || 64 * 1024) {
+    sendInChunks: async function (dataString, dataChannel, peerId, fileId = null, chunkSize = Config.media.chunkSize || 64 * 1024) {
         // 如果数据不大，直接发送
         if (dataString.length <= chunkSize) {
             try {
@@ -358,5 +369,403 @@ const Utils = {
             this.log(`generateFileHash: 计算哈希失败 - ${error.message}`, this.logLevels.ERROR);
             throw error; // 重新抛出错误，让调用者处理
         }
-    }
+    },
+
+    /**
+     * 使指定的头部和内容元素可折叠。
+     * 会给头部添加一个展开/收起图标，并处理点击事件。
+     * @param {HTMLElement|null} headerEl - 点击以触发展开/折叠的头部元素。
+     * @param {HTMLElement|null} contentEl - 要展开/折叠的内容元素。
+     */
+    makeElementCollapsible: function(headerEl, contentEl) {
+        if (headerEl && contentEl) {
+            // 确保内容元素有 'collapsible-content' 类
+            contentEl.classList.add('collapsible-content');
+            // 确保头部元素有 'collapsible-header' 类
+            headerEl.classList.add('collapsible-header');
+
+            // 查找或创建折叠图标
+            let icon = headerEl.querySelector('.collapse-icon');
+            if (!icon) {
+                icon = document.createElement('span');
+                icon.className = 'collapse-icon';
+                // 尝试将图标插入到头部文本之后，如果找不到文本节点，则追加到末尾
+                let textNodeFound = false;
+                for (let i = 0; i < headerEl.childNodes.length; i++) {
+                    if (headerEl.childNodes[i].nodeType === Node.TEXT_NODE && headerEl.childNodes[i].textContent.trim() !== '') {
+                        if (headerEl.childNodes[i].nextSibling) {
+                            headerEl.insertBefore(icon, headerEl.childNodes[i].nextSibling);
+                        } else {
+                            headerEl.appendChild(icon);
+                        }
+                        textNodeFound = true;
+                        break;
+                    }
+                }
+                if (!textNodeFound) { // 如果没有有效文本节点，则直接追加图标
+                    headerEl.appendChild(icon);
+                }
+            }
+            // 根据内容元素的初始显示状态设置图标和头部的 'active' 类
+            if (contentEl.style.display === 'none' || getComputedStyle(contentEl).display === 'none') {
+                icon.textContent = '▶'; // 折叠状态图标
+                headerEl.classList.remove('active');
+            } else {
+                icon.textContent = '▼'; // 展开状态图标
+                headerEl.classList.add('active');
+            }
+
+            // 移除可能存在的旧监听器，防止重复绑定
+            const oldListener = headerEl._collapsibleListener; // 假设之前用此属性存储
+            if (oldListener) {
+                headerEl.removeEventListener('click', oldListener);
+            }
+
+            // 定义并绑定新的点击监听器
+            const newListener = function() { // 使用 function 关键字以确保 this 指向 headerEl
+                this.classList.toggle('active'); // 切换头部 'active' 类
+                const currentIcon = this.querySelector('.collapse-icon');
+                if (contentEl.style.display === "block" || contentEl.style.display === "") {
+                    contentEl.style.display = "none"; // 折叠内容
+                    if(currentIcon) currentIcon.textContent = '▶'; // 更新为折叠图标
+                } else {
+                    contentEl.style.display = "block"; // 展开内容
+                    if(currentIcon) currentIcon.textContent = '▼'; // 更新为展开图标
+                }
+            };
+            headerEl.addEventListener('click', newListener);
+            headerEl._collapsibleListener = newListener; // 保存监听器引用，以便将来移除
+        }
+    },
+
+    /**
+     * 格式化消息文本，转换换行符为 <br>，将 URL 转换为可点击的链接，并处理流式光标。
+     * @param {string} text - 要格式化的原始文本。
+     * @returns {string} - 格式化后的 HTML 字符串。
+     */
+    formatMessageText: function (text) {
+        if (typeof text !== 'string') return '';
+        let escapedText = Utils.escapeHtml(text); // HTML转义
+        escapedText = escapedText.replace(/ {2,}/g, ' '); // 替换多个空格为一个
+        escapedText = escapedText.replace(/\n/g, '<br>'); // 换行符转<br>
+        escapedText = escapedText.replace(/▍/g, '<span class="streaming-cursor">▍</span>'); // 流式光标
+        // URL转链接
+        const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+        return escapedText.replace(urlRegex, function (url) {
+            return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+        });
+    },
+
+    /**
+     * 将一个矩形裁剪到指定的区域内。
+     * 返回一个新的、位于全局坐标系下的裁剪后矩形 {x, y, w, h}，
+     * 如果两个矩形没有重叠部分，则返回 null。
+     * @param {object} rect - 需要被裁剪的矩形，格式为 {x, y, w, h}。
+     * @param {object} clipArea - 用于裁剪的区域，格式为 {x, y, w, h}。
+     * @returns {object|null} 裁剪后的矩形对象，或在无重叠时返回 null。
+     */
+    clipRectToArea: function(rect, clipArea) {
+        if (!rect || !clipArea) return null; // 防御性检查
+
+        // 计算重叠区域的左上角坐标
+        const finalX = Math.max(rect.x, clipArea.x);
+        const finalY = Math.max(rect.y, clipArea.y);
+
+        // 计算重叠区域的右下角坐标
+        const rectRight = rect.x + rect.w;
+        const rectBottom = rect.y + rect.h;
+        const clipAreaRight = clipArea.x + clipArea.w;
+        const clipAreaBottom = clipArea.y + clipArea.h;
+        const finalRight = Math.min(rectRight, clipAreaRight);
+        const finalBottom = Math.min(rectBottom, clipAreaBottom);
+
+        // 计算重叠区域的宽度和高度
+        const finalW = finalRight - finalX;
+        const finalH = finalBottom - finalY;
+
+        if (finalW <= 0 || finalH <= 0) { // 如果没有重叠
+            return null;
+        }
+        // 返回裁剪后的矩形
+        return { x: finalX, y: finalY, w: finalW, h: finalH };
+    },
+
+    /**
+     * 检查一个点是否位于一个矩形内部。
+     * @param {number} px - 点的X坐标。
+     * @param {number} py - 点的Y坐标。
+     * @param {object} rect - 矩形对象 {x, y, w, h}。
+     * @returns {boolean} 是否在内部。
+     */
+    isPointInRect: function(px, py, rect) {
+        return rect && px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h;
+    },
+
+    /**
+     * 在一个覆盖全屏的模态框中显示一张图片。
+     * @param {string} src - 图片的源 URL。
+     * @param {string} [altText="图片"] - 图片的替代文本。
+     */
+    showFullImage: function (src, altText = "图片") {
+        const modal = document.createElement('div'); // 创建模态框容器
+        modal.className = 'modal-like image-viewer'; // 应用样式
+        // 设置模态框样式
+        modal.style.backgroundColor = 'rgba(0,0,0,0.85)';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '1001'; // 确保在顶层
+
+        const img = document.createElement('img'); // 创建图片元素
+        img.src = src;
+        img.alt = altText;
+        // 设置图片样式
+        img.style.maxWidth = '90%';
+        img.style.maxHeight = '90%';
+        img.style.objectFit = 'contain'; // 保持图片比例
+        img.style.borderRadius = 'var(--border-radius)'; // 应用圆角
+        img.style.boxShadow = '0 0 30px rgba(0,0,0,0.5)'; // 添加阴影
+
+        modal.appendChild(img); // 将图片添加到模态框
+        // 点击模态框任意位置关闭
+        modal.addEventListener('click', () => {
+            modal.remove();
+            // 如果 src 是 Object URL，调用者应负责 revoke
+            // 但通常对于图片，src 是 Data URL 或普通 URL，不需要 revoke
+            if (src.startsWith('blob:')) { // 简单检查是否为 Object URL
+                URL.revokeObjectURL(src);
+                Utils.log(`Object URL ${src.substring(0, 50)}... 已释放 (showFullImage)。`, Utils.logLevels.DEBUG);
+            }
+        });
+        document.body.appendChild(modal); // 将模态框添加到body
+    },
+
+    /**
+     * 在一个覆盖全屏的模态框中显示一个视频。
+     * @param {string} src - 视频的源 URL (通常是 Object URL)。
+     * @param {string} [altText="视频"] - 视频的替代文本或标题。
+     * @param {string} [fileType] - 视频的 MIME 类型，可选。
+     */
+    showFullVideo: function (src, altText = "视频", fileType) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-like video-viewer'; // 与图片查看器类似的类名
+        modal.style.backgroundColor = 'rgba(0,0,0,0.9)';
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '1001';
+
+        const videoContainer = document.createElement('div');
+        videoContainer.style.display = 'flex';
+        videoContainer.style.alignItems = 'center';
+        videoContainer.style.justifyContent = 'center';
+        videoContainer.style.width = '95vw';
+        videoContainer.style.height = '95vh';
+        videoContainer.style.position = 'relative';
+
+
+        const video = document.createElement('video');
+        video.src = src;
+        video.controls = true;
+        video.autoplay = true;
+        video.style.display = 'block';
+        video.style.maxHeight = '100%';
+        video.style.maxWidth = '100%';
+        video.style.height = 'auto';
+        video.style.width = 'auto';
+        video.style.objectFit = 'contain';
+        video.style.borderRadius = 'var(--border-radius)';
+        video.style.boxShadow = '0 0 30px rgba(0,0,0,0.5)';
+        if (fileType) {
+            const source = document.createElement('source');
+            source.src = src;
+            source.type = fileType;
+            video.appendChild(source);
+        }
+        video.setAttribute('title', altText);
+
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '×';
+        closeButton.className = 'modal-close-button top-right';
+        closeButton.style.position = 'absolute';
+        closeButton.style.top = '10px';
+        closeButton.style.right = '10px';
+        closeButton.style.zIndex = '1002';
+        closeButton.style.fontSize = '1.8em';
+        closeButton.style.padding = '0.1em 0.4em';
+        closeButton.style.lineHeight = '1';
+        closeButton.style.background = 'rgba(30, 30, 30, 0.7)';
+        closeButton.style.color = 'white';
+        closeButton.style.border = 'none';
+        closeButton.style.borderRadius = '50%';
+        closeButton.style.cursor = 'pointer';
+        closeButton.setAttribute('aria-label', '关闭视频');
+
+
+        const closeModalAndRevoke = () => {
+            video.pause();
+            URL.revokeObjectURL(src); // 关键：释放 Object URL
+            Utils.log(`Object URL ${src.substring(0, 50)}... 已释放 (showFullVideo)。`, Utils.logLevels.DEBUG);
+            modal.remove();
+        };
+
+        closeButton.addEventListener('click', (e) => {
+            e.stopPropagation(); // 阻止事件冒泡到 videoContainer 或 modal
+            closeModalAndRevoke();
+        });
+
+        // 点击 videoContainer 但非 video 元素或关闭按钮本身时关闭
+        videoContainer.addEventListener('click', (event) => {
+            if (event.target === videoContainer) { // 只有当直接点击 videoContainer 时
+                closeModalAndRevoke();
+            }
+        });
+
+        // 点击最外层 modal 背景（videoContainer之外）时关闭
+        modal.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                closeModalAndRevoke();
+            }
+        });
+
+
+        videoContainer.appendChild(video);
+        videoContainer.appendChild(closeButton);
+        modal.appendChild(videoContainer);
+        document.body.appendChild(modal);
+
+        video.focus();
+    },
+
+    /**
+     * 发起一个流式 API 请求并处理响应。
+     * @param {string} url - API 端点 URL。
+     * @param {object} requestBody - 请求体对象。
+     * @param {object} headers - 请求头对象。
+     * @param {function} onChunkReceived - 处理接收到的每个数据块的回调函数。它接收 (jsonChunk, isSummaryMode) 作为参数。
+     * @param {function} onStreamEnd - 流结束时调用的回调函数。它接收 (fullResponseContent, isSummaryMode, summaryContent) 作为参数。
+     * @param {function} onSummaryStart - (可选) 当检测到摘要模式开始时调用的回调函数。
+     * @returns {Promise<void>}
+     * @throws {Error} 如果请求失败或响应无效。
+     */
+    fetchApiStream: async function(url, requestBody, headers, onChunkReceived, onStreamEnd, onSummaryStart) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            Utils.log(`API 错误 (${response.status}): ${errorData}`, Utils.logLevels.ERROR);
+            throw new Error(`API 请求失败，状态码 ${response.status}。`);
+        }
+
+        let fullResponseContent = "";
+        let isSummaryMode = false;
+        let summaryContent = "";
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { value, done: readerDone } = await reader.read();
+            if (readerDone) {
+                buffer += decoder.decode(); // 解码最后一部分
+                break;
+            }
+            buffer += decoder.decode(value, { stream: true });
+
+            let stopStreaming = (buffer.trim() === "[DONE]" || buffer.includes("[DONE]"));
+            if (stopStreaming) {
+                buffer = buffer.substring(0, buffer.indexOf("[DONE]"));
+            }
+
+            let boundary = 0;
+            while (boundary < buffer.length) {
+                const startIdx = buffer.indexOf('{', boundary);
+                if (startIdx === -1) {
+                    buffer = buffer.substring(boundary);
+                    break;
+                }
+                let openBraces = 0;
+                let endIdx = -1;
+                for (let i = startIdx; i < buffer.length; i++) {
+                    if (buffer[i] === '{') openBraces++;
+                    else if (buffer[i] === '}') {
+                        openBraces--;
+                        if (openBraces === 0) {
+                            endIdx = i;
+                            break;
+                        }
+                    }
+                }
+
+                if (endIdx !== -1) {
+                    const jsonString = buffer.substring(startIdx, endIdx + 1);
+                    try {
+                        const jsonChunk = JSON.parse(jsonString);
+                        if (jsonChunk.status === 'summary') {
+                            if (!isSummaryMode) { // 仅在首次进入摘要模式时触发
+                                isSummaryMode = true;
+                                if (typeof onSummaryStart === 'function') {
+                                    onSummaryStart();
+                                }
+                            }
+                        } else if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
+                            const chunkContent = jsonChunk.choices[0].delta.content;
+                            if (isSummaryMode) {
+                                summaryContent += chunkContent;
+                            } else {
+                                fullResponseContent += chunkContent;
+                            }
+                            if (typeof onChunkReceived === 'function') {
+                                onChunkReceived(jsonChunk, isSummaryMode);
+                            }
+                        }
+                    } catch (e) {
+                        Utils.log(`解析 API 流 JSON 出错: ${e}. 缓冲区: ${buffer.substring(0, 100)}`, Utils.logLevels.WARN);
+                    }
+                    boundary = endIdx + 1;
+                    if (boundary >= buffer.length) buffer = "";
+                } else {
+                    buffer = buffer.substring(startIdx);
+                    break;
+                }
+            }
+            if (stopStreaming) break;
+        }
+
+        if (typeof onStreamEnd === 'function') {
+            onStreamEnd(fullResponseContent, isSummaryMode, summaryContent);
+        }
+    },
+
+    /**
+     * 检查浏览器是否支持 WebRTC (RTCPeerConnection)。
+     * 如果不支持，会更新全局状态指示器并返回 false。
+     * @returns {boolean} - true 表示支持，false 表示不支持。
+     */
+    checkWebRTCSupport: function () {
+        if (typeof RTCPeerConnection === 'undefined') { // 检查 RTCPeerConnection 是否定义
+            if (typeof LayoutUIManager !== 'undefined' && LayoutUIManager.updateConnectionStatusIndicator) {
+                LayoutUIManager.updateConnectionStatusIndicator('浏览器不支持 WebRTC。', 'error'); // 更新状态指示
+            } else {
+                Utils.log("LayoutUIManager 未定义，无法更新 WebRTC 支持状态指示。", Utils.logLevels.WARN);
+            }
+            return false;
+        }
+        return true;
+    },
 };

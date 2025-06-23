@@ -151,41 +151,6 @@ const ScreenshotEditorUIManager = {
     },
 
     /**
-     * 辅助函数，用于将一个矩形裁剪到指定的区域内。
-     * 返回一个新的、位于全局坐标系下的裁剪后矩形 {x, y, w, h}，
-     * 如果两个矩形没有重叠部分，则返回 null。
-     * @private
-     * @param {object} rect - 需要被裁剪的矩形，格式为 {x, y, w, h}。
-     * @param {object} clipArea - 用于裁剪的区域，格式为 {x, y, w, h}。
-     * @returns {object|null} 裁剪后的矩形对象，或在无重叠时返回 null。
-     */
-    _clipRectToArea: function(rect, clipArea) {
-        if (!rect || !clipArea) return null; // 防御性检查
-
-        // 计算重叠区域的左上角坐标
-        const finalX = Math.max(rect.x, clipArea.x);
-        const finalY = Math.max(rect.y, clipArea.y);
-
-        // 计算重叠区域的右下角坐标
-        const rectRight = rect.x + rect.w;
-        const rectBottom = rect.y + rect.h;
-        const clipAreaRight = clipArea.x + clipArea.w;
-        const clipAreaBottom = clipArea.y + clipArea.h;
-        const finalRight = Math.min(rectRight, clipAreaRight);
-        const finalBottom = Math.min(rectBottom, clipAreaBottom);
-
-        // 计算重叠区域的宽度和高度
-        const finalW = finalRight - finalX;
-        const finalH = finalBottom - finalY;
-
-        if (finalW <= 0 || finalH <= 0) { // 如果没有重叠
-            return null;
-        }
-        // 返回裁剪后的矩形
-        return { x: finalX, y: finalY, w: finalW, h: finalH };
-    },
-
-    /**
      * 处理从 MediaManager (通过 EventEmitter) 接收到的原始截图数据。
      * @private
      * @param {object} detail - 事件传递的数据对象。
@@ -315,7 +280,7 @@ const ScreenshotEditorUIManager = {
             if (normalizedPreview.h < 0) { normalizedPreview.y += normalizedPreview.h; normalizedPreview.h *= -1; }
 
             if (this.cropRect) { // 如果裁剪预览区域激活，将绘制中的标记预览裁剪到该区域。
-                const clippedLivePreview = this._clipRectToArea(normalizedPreview, this.cropRect);
+                const clippedLivePreview = Utils.clipRectToArea(normalizedPreview, this.cropRect);
                 if (clippedLivePreview) {
                     rectToDrawPreview = clippedLivePreview;
                 } else {
@@ -565,7 +530,7 @@ const ScreenshotEditorUIManager = {
                 this.isResizingCrop = true;
                 this.isCropping = false; this.isMovingCrop = false;
                 this.canvasEl.style.cursor = this._getResizeCursor(this.activeCropHandle);
-            } else if (this.cropRect && this._isPointInRect(x, y, this.cropRect)) { // 点在裁剪框内部，开始移动
+            } else if (this.cropRect && Utils.isPointInRect(x, y, this.cropRect)) { // 点在裁剪框内部，开始移动
                 this.isMovingCrop = true;
                 this.isCropping = false; this.isResizingCrop = false;
                 this.canvasEl.style.cursor = 'grabbing';
@@ -660,7 +625,7 @@ const ScreenshotEditorUIManager = {
             if (this.cropRect) {
                 const handle = this._getHandleAt(mouseX, mouseY);
                 if (handle) this.canvasEl.style.cursor = this._getResizeCursor(handle);
-                else if (this._isPointInRect(mouseX, mouseY, this.cropRect)) this.canvasEl.style.cursor = 'grab';
+                else if (Utils.isPointInRect(mouseX, mouseY, this.cropRect)) this.canvasEl.style.cursor = 'grab';
                 else this.canvasEl.style.cursor = 'crosshair';
             } else this.canvasEl.style.cursor = 'crosshair';
         } else if (this.currentTool === 'drawRect') this.canvasEl.style.cursor = 'crosshair';
@@ -698,7 +663,7 @@ const ScreenshotEditorUIManager = {
             if (this.currentMarkRect.h < 0) { this.currentMarkRect.y += this.currentMarkRect.h; this.currentMarkRect.h *= -1; }
             let markToAdd = { ...this.currentMarkRect, color: this.currentMarkColor, lineWidth: this.DEFAULT_MARK_LINE_WIDTH, type: 'rect' };
             if (this.cropRect) { // 如果有裁剪区，将标记裁剪到区域内
-                const clippedMark = this._clipRectToArea(markToAdd, this.cropRect);
+                const clippedMark = Utils.clipRectToArea(markToAdd, this.cropRect);
                 markToAdd = clippedMark ? { ...clippedMark, color: markToAdd.color, lineWidth: markToAdd.lineWidth, type: 'rect' } : null;
             }
             if (markToAdd && markToAdd.w > 5 && markToAdd.h > 5) this.marks.push(markToAdd); // 添加有效标记
@@ -818,17 +783,7 @@ const ScreenshotEditorUIManager = {
         }
         return null;
     },
-    /**
-     * 检查一个点是否位于一个矩形内部。
-     * @private
-     * @param {number} px - 点的X坐标。
-     * @param {number} py - 点的Y坐标。
-     * @param {object} rect - 矩形对象 {x, y, w, h}。
-     * @returns {boolean} 是否在内部。
-     */
-    _isPointInRect: function(px, py, rect) {
-        return rect && px >= rect.x && px <= rect.x + rect.w && py >= rect.y && py <= rect.y + rect.h;
-    },
+
     /**
      * 根据活动的裁剪控制点ID，返回对应的CSS光标样式。
      * @private

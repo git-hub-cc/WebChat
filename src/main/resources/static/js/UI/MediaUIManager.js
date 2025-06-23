@@ -4,14 +4,16 @@
  *              它将 UI 展示逻辑与 MediaManager 的核心功能逻辑分离。
  *              文件名过长时，在预览和消息中会进行截断显示。
  *              修改: displayFilePreview 现在使用 fileObj.previewUrl (一个Object URL) 来显示预览。
+ *              新增: renderMediaThumbnail 用于在指定占位符中渲染图片或视频的缩略图。
  * @module MediaUIManager
  * @exports {object} MediaUIManager - 对外暴露的单例对象，包含管理媒体 UI 的方法。
  * @property {function} init - 初始化模块，获取 DOM 元素。
  * @property {function} displayAudioPreview - 显示录制完成的音频预览。
  * @property {function} displayFilePreview - 显示用户选择的文件的预览。
  * @property {function} setRecordingButtonActive - 设置录音按钮的激活（录制中）状态和 UI。
- * @dependencies Utils, MessageManager, MediaManager, NotificationUIManager, EventEmitter
- * @dependents AppInitializer (进行初始化), MediaManager (调用以更新 UI), EventEmitter (监听截图事件)
+ * @property {function} renderMediaThumbnail - (新增) 通用方法，在提供的占位符中渲染图片或视频缩略图。
+ * @dependencies Utils, MessageManager, MediaManager, NotificationUIManager, EventEmitter, DBManager
+ * @dependents AppInitializer (进行初始化), MediaManager (调用以更新 UI), EventEmitter (监听截图事件), MessageManager, ResourcePreviewUIManager (使用 renderMediaThumbnail)
  */
 const MediaUIManager = {
     audioPreviewContainerEl: null, // 音频预览容器元素
@@ -207,6 +209,105 @@ const MediaUIManager = {
             } else { // 如果非激活
                 this.resetRecordingButtonUI(); // 重置按钮UI
             }
+        }
+    },
+
+    /**
+     * @description (新增) 通用方法，在提供的占位符中渲染图片或视频缩略图。
+     *              它会尝试从 IndexedDB (DBManager) 获取文件 Blob，然后创建对象URL并设置到 img/video 元素。
+     * @param {HTMLElement} placeholderDiv - 用于显示缩略图或加载状态的占位符元素。
+     * @param {string} fileHash - 文件哈希，用作缓存键。
+     * @param {string} fileType - 文件MIME类型。
+     * @param {string} [altText='媒体预览'] - 图片或视频的 alt 文本。
+     * @param {boolean} [isForResourceGrid=false] - 指示此缩略图是否用于资源预览网格，会应用不同样式。
+     * @returns {Promise<void>}
+     */
+    renderMediaThumbnail: async function(placeholderDiv, fileHash, fileType, altText = '媒体预览', isForResourceGrid = false) {
+        if (!placeholderDiv || !fileHash || !fileType) {
+            Utils.log("MediaUIManager.renderMediaThumbnail: 参数不足。", Utils.logLevels.WARN);
+            if(placeholderDiv) placeholderDiv.innerHTML = '⚠️';
+            return;
+        }
+
+        try {
+            const cachedItem = await DBManager.getItem('fileCache', fileHash);
+            if (!cachedItem || !cachedItem.fileBlob) {
+                placeholderDiv.innerHTML = '⚠️';
+                placeholderDiv.title = '无法加载预览：文件缓存未找到。';
+                Utils.log(`MediaUIManager.renderMediaThumbnail: 文件缓存未找到 (hash: ${fileHash})`, Utils.logLevels.WARN);
+                return;
+            }
+
+            const blob = cachedItem.fileBlob;
+            const objectURL = URL.createObjectURL(blob);
+
+            let mediaElement;
+            let loadEventName;
+
+            if (fileType.startsWith('image/')) {
+                mediaElement = document.createElement('img');
+                mediaElement.alt = altText;
+                loadEventName = 'load';
+            } else if (fileType.startsWith('video/')) {
+                mediaElement = document.createElement('video');
+                mediaElement.muted = true;
+                mediaElement.preload = "metadata";
+                mediaElement.alt = altText;
+                loadEventName = 'loadedmetadata';
+            } else {
+                URL.revokeObjectURL(objectURL);
+                Utils.log(`MediaUIManager.renderMediaThumbnail: 不支持的类型 ${fileType} (hash: ${fileHash})`, Utils.logLevels.WARN);
+                placeholderDiv.innerHTML = '❔'; // 未知类型图标
+                return;
+            }
+
+            mediaElement.classList.add(isForResourceGrid ? 'message-thumbnail-resource' : 'message-thumbnail');
+
+            const loadPromise = new Promise((resolve, reject) => {
+                mediaElement.addEventListener(loadEventName, () => {
+                    const dimensions = fileType.startsWith('image/') ?
+                        { width: mediaElement.naturalWidth, height: mediaElement.naturalHeight } :
+                        { width: mediaElement.videoWidth, height: mediaElement.videoHeight };
+                    resolve(dimensions);
+                }, { once: true });
+                mediaElement.addEventListener('error', () => reject(new Error(`${fileType.startsWith('image/') ? 'Image' : 'Video'} load error for thumbnail`)), { once: true });
+            });
+
+            mediaElement.src = objectURL;
+            if (fileType.startsWith('video/')) {
+                mediaElement.load();
+            }
+
+            try {
+                const dimensions = await loadPromise;
+                if (!isForResourceGrid) { // 仅为聊天消息中的缩略图设置尺寸
+                    let { width, height } = dimensions;
+                    if (width === 0 || height === 0) {
+                        Utils.log(`renderMediaThumbnail: 无法获取媒体尺寸 (hash: ${fileHash})`, Utils.logLevels.WARN);
+                        width = 150; height = 100; // Default fallback
+                    }
+                    const aspectRatio = width / height;
+                    const MAX_WIDTH = 150; const MAX_HEIGHT = 150;
+                    if (aspectRatio > 1) { mediaElement.style.width = `${MAX_WIDTH}px`; mediaElement.style.height = 'auto'; }
+                    else { mediaElement.style.height = `${MAX_HEIGHT}px`; mediaElement.style.width = 'auto'; }
+                    mediaElement.style.maxWidth = `${MAX_WIDTH}px`; mediaElement.style.maxHeight = `${MAX_HEIGHT}px`;
+                }
+
+                placeholderDiv.innerHTML = '';
+                placeholderDiv.appendChild(mediaElement);
+                // 存储 Object URL 以便后续由 MessageManager (deleteMessageLocally) 或 ResourcePreviewUIManager (清理时) 释放
+                placeholderDiv.dataset.objectUrlForRevoke = objectURL;
+
+            } catch (loadError) {
+                Utils.log(`加载媒体缩略图尺寸失败 (hash: ${fileHash}): ${loadError.message}`, Utils.logLevels.ERROR);
+                placeholderDiv.innerHTML = '⚠️';
+                placeholderDiv.title = '预览加载失败。';
+                URL.revokeObjectURL(objectURL); // 释放 URL
+            }
+        } catch (dbError) {
+            Utils.log(`从DB获取媒体用于缩略图失败 (hash: ${fileHash}): ${dbError.message}`, Utils.logLevels.ERROR);
+            placeholderDiv.innerHTML = '⚠️';
+            placeholderDiv.title = '无法获取资源。';
         }
     }
 };
