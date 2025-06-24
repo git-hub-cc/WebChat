@@ -63,13 +63,13 @@
     --special-contact-color: var(--ts-luofeng-primary-light);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family);
     background-color: var(--ts-dawn-sky-bg); /* 最底层背景 */
     color: var(--text-color);
-    line-height: 1.6;
+
     overflow: hidden;
     display: flex;
     justify-content: center;

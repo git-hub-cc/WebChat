@@ -65,13 +65,13 @@
     --monospace-font: "Share Tech Mono", "Courier New", monospace;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family);
     background-color: var(--hsr-clear-sky-bg);
     color: var(--text-color);
-    line-height: 1.65;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -128,7 +128,7 @@ body {
     background-color: rgba(var(--hsr-express-cabin-panel-rgb), 0.9);
 }
 .nav-tabs { border-bottom: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.9); } /* Stronger border */
-.nav-tab { color: var(--text-color-light); position: relative; padding-bottom: 10px; font-weight: 500; letter-spacing: 0.5px;}
+.nav-tab { color: var(--text-color-light); position: relative;  font-weight: 500; letter-spacing: 0.5px;}
 .nav-tab:hover { color: var(--hsr-nav-compass-blue); }
 .nav-tab.active { color: var(--hsr-nav-compass-blue); font-weight: 700; }
 .nav-tab.active::after {
@@ -137,8 +137,8 @@ body {
     bottom: -1px;
     left: 50%;
     transform: translateX(-50%);
-    width: 60%;
-    height: 3px;
+
+
     background-color: var(--hsr-nav-compass-blue);
     box-shadow: 0 0 7px rgba(var(--hsr-nav-compass-blue-rgb), 0.7); /* Stronger glow for light theme */
     border-radius: 1px;
@@ -151,7 +151,7 @@ body {
     background-color: var(--active-bg-color);
     box-shadow: 0 0 8px rgba(var(--hsr-nav-compass-blue-rgb), 0.2) inset; /* Enhanced inset shadow */
     border-left: 4px solid var(--hsr-nav-compass-blue); /* Thicker active marker */
-    padding-left: 8px;
+
 }
 .chat-list-item.active .chat-list-name { color: var(--hsr-nav-compass-blue); font-weight: 700; }
 .chat-list-avatar {
@@ -167,7 +167,7 @@ body {
 .chat-list-item.active[class*="AI_"][class*="_HSR"] {
     border-left-width: 4px;
     border-left-style: solid;
-    padding-left: 8px;
+
 }
 .message.received[data-sender-id*="AI_"][data-sender-id*="_HSR"] {
     border-left-width: 3px;
@@ -301,7 +301,7 @@ body {
     box-shadow: 0 0 5px var(--hsr-system-warning-red), 0 0 7px var(--hsr-system-warning-red) inset; /* Enhanced glow */
     border-radius: 3px;
     font-size: 0.75em;
-    padding: 3px 6px;
+
     font-weight: 600;
 }
 .new-chat-fab {
@@ -328,7 +328,7 @@ body {
 .header-action-btn { color: var(--text-color-light); font-size: 1.2rem; }
 .header-action-btn:hover { color: var(--hsr-nav-compass-blue); text-shadow: 0 0 6px rgba(var(--hsr-nav-compass-blue-rgb),0.4); transform: scale(1.1); }
 
-.no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; user-select: none;}
+.no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; user-select: none;}
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family);
     content: "폼폼!";
@@ -346,7 +346,7 @@ body {
     border: 1px solid var(--border-color);
     color: var(--hsr-nav-compass-blue);
     border-radius: var(--border-radius);
-    padding: 6px;
+
     font-size: 0.88em;
     box-shadow: 0 0 5px rgba(var(--hsr-nav-compass-blue-rgb), 0.1);
 }
@@ -356,19 +356,19 @@ body {
     border: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.8); /* Slightly stronger border */
     box-shadow: 0 2px 4px rgba(var(--hsr-polished-rail-border-rgb),0.4), 0 0 10px rgba(var(--hsr-nav-compass-blue-rgb),0.04) inset; /* Refined shadow for light */
     border-radius: var(--border-radius);
-    padding: 8px;
+
 }
 .message.sent {
     background-color: var(--sent-bg-color);
     border-left-width: 3px;
     border-left-style: solid;
     border-left-color: var(--hsr-sunlit-gold);
-    margin-left: auto;
+
 }
 .message.received {
     background-color: var(--received-bg-color);
     border-right: 3px solid var(--hsr-data-stream-teal); /* Using teal for non-AI received messages */
-    margin-right: auto;
+
 }
 .message.system {
     background-color: transparent;
@@ -377,7 +377,7 @@ body {
     border: none;
     border-top: 1px dashed rgba(var(--hsr-nav-compass-blue-rgb), 0.45);
     border-bottom: 1px dashed rgba(var(--hsr-nav-compass-blue-rgb), 0.45);
-    padding: 10px 0; margin: 12px auto;
+
     font-size: 0.9em;
     font-family: var(--monospace-font);
     opacity: 0.9;
@@ -385,11 +385,11 @@ body {
 .message-sender {
     color: var(--text-color-light);
     font-weight: 500;
-    margin-bottom: 4px;
+
     font-size: 0.9em;
     display: block;
 }
-.message .timestamp { color: var(--text-color-light); opacity: 0.65; font-size: 0.7rem; display: block; margin-top: 4px; }
+.message .timestamp { color: var(--text-color-light); opacity: 0.65; font-size: 0.7rem; display: block;  }
 .message.sent .timestamp { text-align: right; }
 .message.received .timestamp { text-align: left; }
 
@@ -410,7 +410,7 @@ body {
     box-shadow: 0 0 0 2px rgba(var(--hsr-nav-compass-blue-rgb),0.2), 0 0 10px rgba(var(--hsr-nav-compass-blue-rgb),0.06) inset;
     background-color: var(--hsr-express-cabin-panel);
 }
-.icon-btn { color: var(--text-color-light); font-size: 1.2rem;  padding: 8px; border-radius: 50%; }
+.icon-btn { color: var(--text-color-light); font-size: 1.2rem;   border-radius: 50%; }
 .icon-btn:hover { color: var(--hsr-nav-compass-blue); background-color: rgba(var(--hsr-nav-compass-blue-rgb),0.07); transform: scale(1.1); }
 #sendButtonMain { color: var(--hsr-nav-compass-blue); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 #sendButtonMain:hover { text-shadow: 0 0 6px rgba(var(--hsr-nav-compass-blue-rgb),0.5); filter: brightness(0.95); }
@@ -443,9 +443,9 @@ body {
     border-radius: var(--border-radius);
     box-shadow: 0 0 8px rgba(var(--hsr-polished-rail-border-rgb), 0.3) inset;
 }
-#aiContactDetailsContent p strong { color: var(--hsr-nav-compass-blue); border-bottom: 1px solid rgba(var(--hsr-nav-compass-blue-rgb), 0.45); padding-bottom: 2px;}
-#aiContactBasicInfoList li { border-bottom: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.85); padding: 8px 0; font-size: 0.92em;}
-#aiContactAboutText { color: var(--text-color-light); line-height: 1.8; font-size: 0.92em; opacity: 0.95; }
+#aiContactDetailsContent p strong { color: var(--hsr-nav-compass-blue); border-bottom: 1px solid rgba(var(--hsr-nav-compass-blue-rgb), 0.45); }
+#aiContactBasicInfoList li { border-bottom: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.85);  font-size: 0.92em;}
+#aiContactAboutText { color: var(--text-color-light); font-size: 0.92em; opacity: 0.95; }
 
 /* 通用按钮样式 */
 .btn {
@@ -491,7 +491,7 @@ body {
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: 3px;
-    padding: 10px;
+
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus {
     border-color: var(--hsr-nav-compass-blue);
@@ -501,7 +501,7 @@ body {
     background: var(--hsr-clear-sky-bg);
     color: var(--hsr-nav-compass-blue);
     border: 1px dashed rgba(var(--hsr-nav-compass-blue-rgb), 0.7);
-    padding: 10px;
+
     border-radius: 3px;
     font-family: var(--monospace-font);
     letter-spacing: 1px;

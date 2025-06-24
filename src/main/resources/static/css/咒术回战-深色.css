@@ -112,13 +112,13 @@
     --special-contact-color: var(--jjk-gojo-primary-dark);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family);
     background-color: var(--jjk-bg-void);
     color: var(--text-color);
-    line-height: 1.6;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -146,8 +146,8 @@ body {
 .app-container::before, .app-container::after {
     content: '';
     position: absolute;
-    width: 10px;
-    height: 10px;
+
+
     background-color: var(--jjk-border-stronger);
     z-index: 1;
 }
@@ -185,7 +185,7 @@ body {
     box-shadow: 0 0 0 2.5px var(--jjk-accent-primary-glow), inset 0 0 3px rgba(var(--jjk-accent-primary-rgb),0.1);
 }
 .nav-tabs { border-bottom: 1px solid var(--jjk-border-stronger); }
-.nav-tab { color: var(--jjk-text-secondary); padding: 10px 0; }
+.nav-tab { color: var(--jjk-text-secondary);  }
 .nav-tab:hover { color: var(--jjk-accent-primary); }
 .nav-tab.active {
     color: var(--jjk-accent-primary);
@@ -348,8 +348,8 @@ body {
 .chat-avatar-main.AI_两面宿傩::before {
     content: '';
     position: absolute;
-    width: 60%;
-    height: 3px;
+
+
     background: var(--jjk-sukuna-avatar-text);
     top: 35%;
     left: 20%;
@@ -409,7 +409,7 @@ body {
     background-color: var(--jjk-accent-danger);
     color: var(--jjk-text-primary);
     box-shadow: 0 0 8px var(--jjk-accent-danger-glow), 0 0 0 1px rgba(0,0,0,0.3); /* More prominent */
-    padding: 3px 8px; /* Slightly more padding */
+     /* Slightly more padding */
     font-weight: 600;
     border-radius: 10px; /* Pill shape */
 }
@@ -444,7 +444,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100%;
+
     user-select: none;
 }
 .no-chat-selected .logo-placeholder {
@@ -485,8 +485,8 @@ body {
     content: '';
     position: absolute;
     bottom: 0px;
-    width: 0;
-    height: 0;
+
+
     border: 8px solid transparent;
 }
 .message.sent::after { right: -10px; border-left-color: var(--sent-bg-color); border-right: 0; border-bottom:0; }
@@ -512,7 +512,7 @@ body {
     text-align: center;
     font-style: italic;
 }
-.message-sender { color: var(--jjk-text-secondary); font-weight: 500; margin-bottom: 4px; display: block; }
+.message-sender { color: var(--jjk-text-secondary); font-weight: 500;  display: block; }
 .message .timestamp { color: var(--jjk-text-tertiary); opacity: 0.75; }
 
 .chat-input-container {
@@ -531,7 +531,7 @@ body {
     border-color: var(--jjk-accent-primary);
     box-shadow: 0 0 0 3px var(--jjk-accent-primary-glow), inset 0 0 8px rgba(var(--jjk-accent-primary-rgb),0.1);
 }
-.icon-btn { color: var(--jjk-text-secondary); padding: 8px; border-radius: 50%; }
+.icon-btn { color: var(--jjk-text-secondary);  border-radius: 50%; }
 .icon-btn:hover { color: var(--jjk-accent-primary); background-color: var(--jjk-hover-bg); transform: scale(1.1); }
 #sendButtonMain { color: var(--jjk-accent-primary); font-weight: 600; font-size: 1.5em; /* Larger send icon */ }
 #sendButtonMain:hover { text-shadow: 0 0 8px var(--jjk-accent-primary-glow); transform: translateX(2px); }
@@ -558,7 +558,7 @@ body {
 .details-avatar {
     border: 2px solid var(--jjk-border);
 }
-#detailsName { text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.2em; font-weight: 600; margin-top: 8px;}
+#detailsName { text-shadow: 0 1px 3px rgba(0,0,0,0.4); font-size: 1.2em; font-weight: 600; }
 #aiContactDetailsContent {
     background-color: var(--jjk-bg-panel-translucent);
     backdrop-filter: blur(6px);
@@ -569,14 +569,14 @@ body {
 #aiContactDetailsContent p strong {
     color: var(--jjk-accent-secondary);
     border-bottom: 1.5px solid rgba(var(--jjk-accent-secondary-rgb), 0.4);
-    padding-bottom: 2px;
+
     font-weight: 500;
 }
 #aiContactBasicInfoList li {
     border-bottom: 1px solid rgba(var(--jjk-border-rgb), 0.6);
-    padding: 8px 0; /* More spacing */
+     /* More spacing */
 }
-#aiContactAboutText { color: var(--jjk-text-secondary); font-size: 0.9em; line-height: 1.7; }
+#aiContactAboutText { color: var(--jjk-text-secondary); font-size: 0.9em; }
 
 /* Buttons (Refined) */
 .btn {
@@ -621,7 +621,7 @@ body {
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0,0,0,0.3), 0 0 5px var(--jjk-accent-primary-glow);
     border-bottom: 1px solid var(--jjk-border-cursed);
-    padding-bottom: 10px;
+
 }
 .close-modal-btn { font-size: 1.5em; }
 .close-modal-btn:hover { color: var(--jjk-accent-danger); transform: rotate(90deg) scale(1.1); }
@@ -639,7 +639,7 @@ body {
     background: rgba(var(--jjk-bg-void-rgb),0.85);
     color: var(--jjk-accent-primary);
     border: 1.5px dashed var(--jjk-accent-primary);
-    padding: 10px;
+
     font-size: 1em;
     font-weight: 500;
     box-shadow: 0 0 5px var(--jjk-accent-primary-glow) inset;

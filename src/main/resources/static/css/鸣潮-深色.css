@@ -69,13 +69,13 @@
     --special-contact-color: var(--ww-rover-primary-dark);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; outline-color: var(--ww-tacet-glow-cyan); }
+* { box-sizing: border-box;   outline-color: var(--ww-tacet-glow-cyan); }
 
 body {
     font-family: var(--font-family);
     background-color: var(--ww-nightfall-gray-bg);
     color: var(--text-color);
-    line-height: 1.6;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -105,7 +105,7 @@ body {
     content: '';
     position: absolute;
     top: -2px; left: 20%;
-    height: 3px;
+
     background: var(--ww-tacet-glow-cyan);
     opacity: 0.5;
     filter: blur(1px);
@@ -132,7 +132,7 @@ body {
 .sidebar-nav {
     background-color: transparent; /* Rely on app-container background */
     border-right: var(--ww-panel-border);
-    width: var(--sidebar-width);
+
     flex-shrink: 0;
     position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
@@ -162,8 +162,8 @@ body {
     position: absolute;
     bottom: -1px; /* Align with border */
     left: 0;
-    width: 100%;
-    height: 2px;
+
+
     background-color: var(--ww-tacet-glow-cyan);
     box-shadow: var(--ww-data-stream-shadow);
 }
@@ -315,9 +315,9 @@ body {
     box-shadow: 0 0 5px var(--ww-lament-crimson), 0 0 8px var(--ww-lament-crimson) inset;
     border-radius: 50%;
     font-size: 0.7rem;
-    padding: 2px 6px;
-    height: 20px;
-    line-height: 16px;
+
+
+
 }
 .new-chat-fab {
     background: linear-gradient(145deg, var(--ww-tacet-glow-cyan), var(--primary-color-dark));
@@ -350,7 +350,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100%;
+
     user-select: none;
 }
 .no-chat-selected .logo-placeholder { /* "汐" - Tide/Evening, very Wuthering Waves */
@@ -417,7 +417,7 @@ body {
 .message-sender {
     color: var(--text-color-light);
     font-weight: 500;
-    margin-bottom: 3px;
+
     font-size: 0.85em;
     opacity: 0.9;
 }
@@ -425,7 +425,7 @@ body {
     color: var(--text-color-light);
     opacity: 0.6;
     font-size: 0.7em;
-    margin-top: 4px;
+
 }
 
 .chat-input-container {
@@ -443,7 +443,7 @@ body {
     background-color: var(--ww-nightfall-gray-bg);
     box-shadow: 0 0 0 2px rgba(var(--ww-tacet-glow-cyan-rgb),0.25), var(--ww-data-stream-shadow) inset;
 }
-.icon-btn { color: var(--ww-echo-gray); padding: 8px; border-radius: 50%; }
+.icon-btn { color: var(--ww-echo-gray);  border-radius: 50%; }
 .icon-btn:hover {
     color: var(--ww-tacet-glow-cyan);
     background-color: rgba(var(--ww-tacet-glow-cyan-rgb),0.1);
@@ -461,32 +461,32 @@ body {
 .details-panel {
     background-color: transparent; /* Rely on app-container */
     border-left: var(--ww-panel-border);
-    width: var(--sidebar-width); flex-shrink: 0;
+    flex-shrink: 0;
 }
 .details-header {
     background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.5); /* Slight distinction */
     border-bottom: var(--ww-panel-border);
 }
-#detailsName { font-size: 1.4em; text-shadow: 0 0 8px rgba(var(--ww-beacon-white-rgb), 0.2); margin-top: 8px; }
+#detailsName { font-size: 1.4em; text-shadow: 0 0 8px rgba(var(--ww-beacon-white-rgb), 0.2);  }
 #aiContactDetailsContent {
     background-color: rgba(var(--ww-data-void-panel-rgb), 0.6);
     border: var(--ww-panel-border);
     border-radius: var(--border-radius);
-    margin: 15px;
+
     box-shadow: 0 0 10px rgba(0,0,0,0.2) inset;
 }
 #aiContactDetailsContent p strong {
     color: var(--ww-rover-gold);
     border-bottom: 1px solid rgba(var(--ww-rover-gold-rgb), 0.3);
-    padding-bottom: 2px;
+
     font-weight: 600;
 }
 #aiContactBasicInfoList li {
     border-bottom: 1px dotted rgba(var(--ww-beacon-white-rgb), 0.2);
-    padding: 8px 0;
+
     font-size: 0.9em;
 }
-#aiContactAboutText { color: var(--ww-echo-gray); line-height: 1.75; font-size: 0.9em; }
+#aiContactAboutText { color: var(--ww-echo-gray); font-size: 0.9em; }
 
 /* 通用按钮样式 */
 .btn {
@@ -503,7 +503,7 @@ body {
     content: '';
     position: absolute;
     top: 0; left: -100%;
-    width: 100%; height: 100%;
+
     background: linear-gradient(90deg, transparent, rgba(var(--ww-beacon-white-rgb),0.15), transparent);
 }
 .btn:hover::before { left: 100%; }
@@ -572,7 +572,7 @@ body {
     background-color: var(--ww-data-void-panel); /* Consistent panel color */
     border: var(--ww-panel-border);
     border-radius: calc(var(--border-radius) + 2px);
-    width: 90%;
+
 }
 .modal-header h2 { color: var(--ww-tacet-glow-cyan); text-shadow: 0 0 8px var(--ww-tacet-glow-cyan); font-weight: 500; letter-spacing: 0.5px; }
 .close-modal-btn:hover { color: var(--ww-tacet-glow-cyan); transform: scale(1.2) rotate(90deg); }
@@ -604,7 +604,7 @@ body {
 .video-call-button.active:hover { background: var(--ww-tacet-glow-cyan); }
 
 /* Toggle Switch */
-.switch input { opacity: 0; width: 0; height: 0; }
+.switch input { opacity: 0; }
 .slider {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
     background-color: var(--ww-fractured-steel-border);

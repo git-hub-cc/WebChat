@@ -127,13 +127,13 @@
     --special-contact-color: var(--dq-xiaoyan-primary-light); /* 默认萧炎黑 */
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family), serif;
     background-color: var(--dq-light-misty-scroll-bg); /* 最底层背景 */
     color: var(--text-color);
-    line-height: 1.6;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -193,7 +193,7 @@ body {
     border: 1px solid var(--border-color);
     color: var(--text-color);
     border-radius: var(--border-radius);
-    padding: 8px 12px 8px 30px; /* Space for pseudo icon */
+     /* Space for pseudo icon */
     position: relative;
 }
 .search-bar::before { /* 炼药符印/搜索图标意境 */
@@ -307,8 +307,8 @@ body {
     bottom: -1px; /* Overlap border */
     left: 50%;
     transform: translateX(-50%);
-    width: 30%;
-    height: 2px;
+
+
     background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
     opacity: 0.7;
 }
@@ -326,7 +326,7 @@ body {
     text-shadow: 0 0 5px rgba(var(--dq-light-qinglian-flame-rgb), 0.5);
 }
 
-.chat-messages-container { padding: 15px; }
+.chat-messages-container {  }
 
 /* Placeholder: 🔥、🌌 或“炎”字 Logo -> 用“鼎”字，代表炼药/初始 */
 .no-chat-selected .logo-placeholder {
@@ -353,7 +353,7 @@ body {
     box-shadow: var(--box-shadow);
     border-radius: var(--border-radius) var(--border-radius) var(--border-radius) var(--border-radius); /* Default */
     position: relative;
-    padding: 10px 15px;
+
 }
 /* 青莲火、紫焰纹包围 */
 .message.sent {
@@ -368,7 +368,7 @@ body {
     top: 0;
     left: -1px;
     bottom: 0;
-    width: 5px;
+
     background: linear-gradient(to bottom, rgba(var(--dq-light-qinglian-flame-rgb),0.3) 0%, rgba(var(--dq-light-luminous-gold-rgb),0.2) 70%, transparent 100%);
     border-radius: 3px 0 0 3px;
     opacity: 0.6;
@@ -393,7 +393,7 @@ body {
 .message-sender {
     color: var(--text-color-light);
     font-weight: 600; /* Bolder sender name */
-    margin-bottom: 4px;
+
     display: block;
 }
 .message .timestamp { color: var(--text-color-light); opacity: 0.75; font-size: 0.8em; }
@@ -409,7 +409,7 @@ body {
     border: 1px solid var(--dq-light-xuan-iron-border);
     color: var(--text-color);
     border-radius: var(--border-radius);
-    padding: 10px;
+
     box-shadow: inset 0 1px 3px rgba(var(--dq-light-text-ink-black-rgb),0.05);
 }
 #messageInput::placeholder { color: var(--text-color-light); }
@@ -478,19 +478,19 @@ body {
     background-color: rgba(var(--dq-light-ancient-jade-panel-rgb), 0.5);
     border: 1px solid rgba(var(--dq-light-xuan-iron-border-rgb), 0.3);
     border-radius: var(--border-radius);
-    padding: 15px;
-    margin: 10px;
+
+
 }
 #aiContactDetailsContent p strong {
     color: var(--primary-color);
     border-bottom: 1px solid rgba(var(--primary-color-rgb), 0.25); /* Uses --primary-color-rgb */
-    padding-bottom: 1px;
+
 }
 #aiContactBasicInfoList li {
     border-bottom: 1px dotted rgba(var(--dq-light-text-ink-black-rgb), 0.15);
-    padding: 8px 0;
+
 }
-#aiContactAboutText { color: var(--text-color-light); font-size: 0.9em; line-height: 1.7; }
+#aiContactAboutText { color: var(--text-color-light); font-size: 0.9em; }
 
 
 /* --- 角色特定样式 (浅色 - 炎动青莲) --- */
@@ -798,7 +798,7 @@ body {
     inset 0 -2px 0px rgba(var(--dq-light-text-ink-black-rgb),0.1); /* Subtle 3D effect */
     border: 1px solid transparent;
     transition: all 0.2s ease-in-out;
-    padding: 8px 18px;
+
     position: relative;
     overflow: hidden;
 }
@@ -873,8 +873,8 @@ body {
 /* --- Modals (空间破碎或火焰凝结纹) --- */
 .loading-overlay { background-color: rgba(var(--dq-light-misty-scroll-bg-rgb), 0.9); backdrop-filter: blur(3px); }
 .loading-spinner {
-    width: 60px;
-    height: 60px;
+
+
     border-width: 5px;
     border-top-color: var(--primary-color);
     border-left-color: var(--primary-color);
@@ -906,7 +906,7 @@ body {
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 10px;
+
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus {
     border-color: var(--primary-color);
@@ -916,7 +916,7 @@ body {
     background: rgba(var(--dq-light-misty-scroll-bg-rgb),0.8);
     color: var(--primary-color);
     border: 1px dashed var(--primary-color);
-    padding: 8px 12px;
+
     border-radius: var(--border-radius);
     font-weight: 500;
 }
@@ -970,7 +970,7 @@ input:checked + .slider:before { transform: translateX(20px); } /* Adjust based 
     color: var(--text-color);
     box-shadow: 0 2px 8px rgba(var(--dq-light-text-ink-black-rgb),0.15);
     border-radius: var(--border-radius);
-    padding: 12px 18px;
+
 }
 .notification.error {
     border-left-color: var(--danger-color);

@@ -162,14 +162,14 @@
 *::before,
 *::after {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+
+
 }
 
 body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
-    line-height: var(--line-height-base);
+
     color: var(--color-text-primary);
     background-color: var(--color-background-body);
     background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23E4DAC8' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
@@ -192,7 +192,7 @@ a:hover {
 
 img {
     max-width: 100%;
-    height: auto;
+
     display: block;
 }
 
@@ -217,8 +217,8 @@ img {
 /* ------------------------- 🏛️ 页面结构与容器 ------------------------ */
 .app-container {
     display: flex;
-    height: 100vh; /* Full viewport height */
-    margin: 0 auto;
+    /* Full viewport height */
+
     background-color: var(--color-background-container);
     box-shadow: 0 0 30px rgba(var(--gi-brown-dark-rgb), 0.15);
     overflow: hidden; /* Important for containing elements */
@@ -231,7 +231,7 @@ img {
     border-right: 1px solid var(--color-border-secondary);
     display: flex;
     flex-direction: column;
-    padding: 15px;
+
     position: relative; /* For potential absolute positioned elements inside */
     overflow-y: auto;
 }
@@ -242,17 +242,17 @@ img {
     top: 0;
     left: 0;
     right: 0;
-    height: 3px;
+
     background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
     opacity: 0.7;
 }
 
 .search-bar {
-    margin-bottom: 15px;
+
     position: relative;
 }
 .search-bar input[type="text"] {
-    width: 100%;
+
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-elevated);
@@ -287,8 +287,8 @@ img {
 .chat-list-item {
     display: flex;
     align-items: center;
-    padding: 12px 10px;
-    margin-bottom: 5px;
+
+
     border-radius: var(--border-radius-medium);
     cursor: pointer;
     transition: var(--transition-fast);
@@ -311,7 +311,7 @@ img {
 
 .chat-list-avatar {
     border-radius: 50%;
-    margin-right: 12px;
+
     object-fit: cover;
     background-color: var(--color-border-secondary); /* Placeholder */
     border: 2px solid transparent;
@@ -329,7 +329,7 @@ img {
     font-weight: 600;
     font-size: var(--font-size-base);
     color: var(--color-text-primary);
-    margin-bottom: 2px;
+
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -346,8 +346,8 @@ img {
     color: white;
     font-size: 11px;
     font-weight: bold;
-    padding: 2px 6px;
-    margin-left: auto; /* Pushes to the right */
+
+     /* Pushes to the right */
     min-width: 20px;
     text-align: center;
 }
@@ -363,7 +363,7 @@ img {
 }
 
 .chat-header-main {
-    padding: 15px 20px;
+
     border-bottom: 1px solid var(--color-border-secondary);
     background: linear-gradient(to bottom, rgba(var(--gi-parchment-medium-rgb),0.8), rgba(var(--gi-parchment-light-rgb),0.8));
     display: flex;
@@ -372,7 +372,7 @@ img {
 }
 .chat-avatar-main {
     border-radius: 50%;
-    margin-right: 15px;
+
     object-fit: cover;
     background-color: var(--color-border-secondary); /* Placeholder */
     border: 2px solid var(--color-border-primary);
@@ -386,18 +386,18 @@ img {
 .chat-status-main {
     font-size: var(--font-size-small);
     color: var(--color-text-secondary);
-    margin-left: 8px; /* Space from title */
+     /* Space from title */
     display: flex;
     align-items: center;
 }
 .chat-status-main::before { /* Online indicator dot */
     content: '';
     display: inline-block;
-    width: 8px;
-    height: 8px;
+
+
     border-radius: 50%;
     background-color: var(--color-status-online);
-    margin-right: 5px;
+
     animation: pulse 2s infinite;
 }
 @keyframes pulse {
@@ -408,7 +408,7 @@ img {
 
 .chat-messages {
     flex-grow: 1;
-    padding: 20px;
+
     overflow-y: auto;
     display: flex;
     flex-direction: column-reverse; /* New messages at bottom, auto-scroll */
@@ -432,13 +432,12 @@ img {
     color: var(--color-text-secondary);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cdefs%3E%3Cpattern id='paimon-pattern' width='50' height='50' patternUnits='userSpaceOnUse'%3E%3Cpath d='M25 5 L20 15 L10 15 L5 25 L10 35 L20 35 L25 45 L30 35 L40 35 L45 25 L40 15 L30 15 Z' fill='%23DEB26F' fill-opacity='0.1'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23paimon-pattern)'/%3E%3C/svg%3E");
     background-repeat: repeat;
-    width: 100%;
 }
 .no-chat-selected .logo-placeholder {
-    margin-bottom: 20px;
+
     /* Example: Use Paimon's crown as a placeholder with text or SVG */
     /* For an actual image:
-       width: 100px; height: 100px; background-image: url('/path/to/paimon-icon.svg'); background-size: contain;
+       background-image: url('/path/to/paimon-icon.svg'); background-size: contain;
     */
     filter: drop-shadow(0 2px 3px var(--color-shadow-soft));
 }
@@ -449,11 +448,11 @@ img {
 /* 💬 消息气泡 .message */
 .message {
     max-width: 75%;
-    padding: 10px 15px;
+
     border-radius: var(--border-radius-large);
     box-shadow: var(--shadow-elevation-1);
     word-wrap: break-word;
-    line-height: 1.5;
+
     position: relative;
     /* Adding "tails" to bubbles for a more chat-like feel */
 }
@@ -461,8 +460,8 @@ img {
     content: "";
     position: absolute;
     bottom: 0px;
-    width: 0;
-    height: 0;
+
+
     border: 10px solid transparent;
 }
 
@@ -500,13 +499,13 @@ img {
 .message-sender {
     font-size: var(--font-size-small);
     font-weight: 600;
-    margin-bottom: 5px;
+
     color: var(--color-text-secondary); /* Default sender color */
 }
 .message-timestamp {
     font-size: 11px;
     color: rgba(var(--gi-brown-medium-rgb), 0.7);
-    margin-top: 5px;
+
     text-align: right;
 }
 .message.received .message-timestamp { text-align: left; }
@@ -516,7 +515,7 @@ img {
     background-color: var(--color-message-system-bg);
     color: var(--color-message-system-text);
     font-size: var(--font-size-small);
-    padding: 8px 12px;
+
     border-radius: var(--border-radius-medium);
     border: 1px dashed var(--color-message-system-border);
     max-width: 90%;
@@ -528,7 +527,7 @@ img {
 
 /* ⌨️ 输入区 .chat-input-container */
 .chat-input-container {
-    padding: 15px 20px;
+
     border-top: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-container); /* Matches sidebar header */
     display: flex;
@@ -536,7 +535,7 @@ img {
 }
 .chat-input-container textarea {
     flex-grow: 1;
-    padding: 12px 15px;
+
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-elevated);
@@ -557,7 +556,7 @@ img {
 }
 
 #sendButtonMain {
-    padding: 10px 15px;
+
     border-radius: var(--border-radius-medium);
     background-color: var(--color-primary);
     color: var(--color-text-on-accent);
@@ -569,7 +568,7 @@ img {
     box-shadow: var(--shadow-ornate);
     /* Using a text symbol for send, replace with SVG/Icon font for better visuals */
     font-size: 18px; /* For the paper plane icon */
-    line-height: 1; /* Ensure icon is centered */
+    /* Ensure icon is centered */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -597,11 +596,11 @@ img {
 }
 .details-panel .details-header {
     text-align: center;
-    margin-bottom: 20px;
+
 }
 .details-panel .details-avatar {
     border-radius: 50%;
-    margin: 0 auto 15px auto;
+
     object-fit: cover;
     border: 3px solid var(--color-primary);
     box-shadow: 0 0 10px rgba(var(--gi-gold-primary-rgb), 0.5);
@@ -609,22 +608,22 @@ img {
 .details-panel .details-name {
     font-weight: 600;
     color: var(--color-text-primary);
-    margin-bottom: 5px;
+
 }
 .details-panel .details-title { /* e.g., "岩王帝君" */
     font-size: var(--font-size-small);
     color: var(--color-text-secondary);
-    margin-bottom: 20px;
+
 }
 .details-section {
-    margin-bottom: 20px;
+
 }
 .details-section-title {
     font-size: var(--font-size-base);
     font-weight: 600;
     color: var(--color-text-primary);
-    padding-bottom: 5px;
-    margin-bottom: 10px;
+
+
     border-bottom: 1px solid var(--color-border-secondary);
     position: relative;
 }
@@ -633,12 +632,12 @@ img {
     position: absolute;
     left: 0;
     bottom: -1px; /* Align with border */
-    height: 2px;
+
     background-color: var(--color-primary);
 }
 .details-info-item {
     display: flex;
-    margin-bottom: 8px;
+
     font-size: var(--font-size-small);
 }
 .details-info-label {
@@ -652,7 +651,7 @@ img {
 }
 .details-about-text {
     font-size: var(--font-size-small);
-    line-height: 1.7;
+
     color: var(--color-text-secondary);
     white-space: pre-wrap; /* Preserve newlines from JSON */
 }
@@ -661,7 +660,7 @@ img {
 /* 🔘 按钮 .btn, .btn-primary etc. */
 .btn {
     display: inline-block;
-    padding: 10px 20px;
+
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     font-weight: 600;
@@ -716,8 +715,8 @@ img {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+
+
     background-color: rgba(var(--gi-brown-dark-rgb), 0.5);
     display: flex;
     align-items: center;
@@ -726,18 +725,18 @@ img {
 }
 .modal-content {
     background-color: var(--color-background-container);
-    padding: 25px;
+
     border-radius: var(--border-radius-large);
     box-shadow: var(--shadow-elevation-3), 0 0 0 1px var(--color-border-primary); /* Gold outline */
-    width: 90%;
+
     border: 1px solid var(--color-border-secondary);
     position: relative; /* For close button */
 }
 .modal-header {
     font-weight: 600;
     color: var(--color-text-primary);
-    margin-bottom: 15px;
-    padding-bottom: 10px;
+
+
     border-bottom: 1px solid var(--color-border-secondary);
     position: relative;
 }
@@ -746,11 +745,11 @@ img {
     position: absolute;
     left: 0;
     bottom: -1px;
-    height: 2px;
+
     background-color: var(--color-primary);
 }
 .modal-body {
-    margin-bottom: 20px;
+
 }
 .modal-footer {
     display: flex;
@@ -1021,5 +1020,5 @@ img {
     color: rgb(var(--gi-char-kazuha-primary-rgb));
 }
 .input-row{
-    width: 100%;
+
 }

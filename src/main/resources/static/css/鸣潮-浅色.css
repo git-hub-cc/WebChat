@@ -67,13 +67,13 @@
     --special-contact-color: var(--ww-rover-primary-light);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; outline-color: var(--ww-skywake-blue); }
+* { box-sizing: border-box;   outline-color: var(--ww-skywake-blue); }
 
 body {
     font-family: var(--font-family);
     background-color: var(--ww-dawn-sky-bg);
     color: var(--text-color);
-    line-height: 1.6;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -101,7 +101,7 @@ body {
     content: '';
     position: absolute;
     bottom: -2px; right: 15%;
-    height: 2px;
+
     background: var(--ww-skywake-blue);
     opacity: 0.4;
     filter: blur(0.5px);
@@ -125,7 +125,7 @@ body {
 .sidebar-nav {
     background-color: transparent;
     border-right: var(--ww-light-panel-border);
-    width: var(--sidebar-width);
+
     flex-shrink: 0;
     position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
@@ -155,8 +155,8 @@ body {
     position: absolute;
     bottom: -1px;
     left: 0;
-    width: 100%;
-    height: 2px;
+
+
     background-color: var(--ww-skywake-blue);
     box-shadow: var(--ww-light-data-stream-shadow);
 }
@@ -306,8 +306,8 @@ body {
     box-shadow: 0 0 4px var(--ww-system-alert-red), 0 0 6px var(--ww-system-alert-red) inset;
     border-radius: 50%;
     font-size: 0.7rem;
-    height: 20px;
-    line-height: 16px;
+
+
 }
 .new-chat-fab {
     background: linear-gradient(145deg, var(--ww-skywake-blue), var(--primary-color-dark));
@@ -336,7 +336,7 @@ body {
 .header-action-btn:hover { color: var(--ww-skywake-blue); text-shadow: var(--ww-light-data-stream-shadow); transform: scale(1.1); }
 
 .no-chat-selected {
-    display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; user-select: none;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; user-select: none;
 }
 .no-chat-selected .logo-placeholder {
     font-family: 'Times New Roman', 'LXGW WenKai TC', serif;
@@ -389,9 +389,9 @@ body {
     box-shadow: 0 0 6px rgba(var(--ww-sunbeam-yellow-rgb),0.1) inset;
 }
 .message-sender {
-    color: var(--text-color-light); font-weight: 500; margin-bottom: 3px; font-size: 0.85em; opacity: 0.9;
+    color: var(--text-color-light); font-weight: 500;  font-size: 0.85em; opacity: 0.9;
 }
-.message .timestamp { color: var(--text-color-light); opacity: 0.65; font-size: 0.7em; margin-top: 4px; }
+.message .timestamp { color: var(--text-color-light); opacity: 0.65; font-size: 0.7em;  }
 
 .chat-input-container {
     background-color: rgba(var(--ww-dawn-sky-bg-rgb), 0.8);
@@ -408,7 +408,7 @@ body {
     background-color: var(--ww-clear-data-panel);
     box-shadow: 0 0 0 2px rgba(var(--ww-skywake-blue-rgb),0.2), var(--ww-light-data-stream-shadow) inset;
 }
-.icon-btn { color: var(--ww-cloud-shadow-text); padding: 8px; border-radius: 50%; }
+.icon-btn { color: var(--ww-cloud-shadow-text);  border-radius: 50%; }
 .icon-btn:hover {
     color: var(--ww-skywake-blue);
     background-color: rgba(var(--ww-skywake-blue-rgb),0.08);
@@ -427,30 +427,30 @@ body {
 .details-panel {
     background-color: transparent;
     border-left: var(--ww-light-panel-border);
-    width: var(--sidebar-width); flex-shrink: 0;
+    flex-shrink: 0;
 }
 .details-header {
     background-color: rgba(var(--ww-dawn-sky-bg-rgb), 0.7);
     border-bottom: var(--ww-light-panel-border);
 }
-#detailsName { font-size: 1.4em; text-shadow: 0 0 6px rgba(var(--ww-carbon-ink-text-rgb), 0.1); margin-top: 8px; }
+#detailsName { font-size: 1.4em; text-shadow: 0 0 6px rgba(var(--ww-carbon-ink-text-rgb), 0.1);  }
 #aiContactDetailsContent {
     background-color: rgba(var(--ww-clear-data-panel-rgb), 0.7);
     border: var(--ww-light-panel-border);
     border-radius: var(--border-radius);
-    margin: 15px;
+
     box-shadow: 0 0 8px rgba(var(--ww-carbon-ink-text-rgb),0.05) inset;
 }
 #aiContactDetailsContent p strong {
     color: var(--ww-sunbeam-yellow);
     border-bottom: 1px solid rgba(var(--ww-sunbeam-yellow-rgb), 0.4);
-    padding-bottom: 2px; font-weight: 600;
+     font-weight: 600;
 }
 #aiContactBasicInfoList li {
     border-bottom: 1px dotted rgba(var(--ww-carbon-ink-text-rgb), 0.25);
-    padding: 8px 0; font-size: 0.9em;
+     font-size: 0.9em;
 }
-#aiContactAboutText { color: var(--ww-cloud-shadow-text); line-height: 1.75; font-size: 0.9em; }
+#aiContactAboutText { color: var(--ww-cloud-shadow-text); font-size: 0.9em; }
 
 /* 通用按钮样式 */
 .btn {
@@ -461,7 +461,7 @@ body {
     overflow: hidden;
 }
 .btn::before {
-    content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+    content: ''; position: absolute; top: 0; left: -100%;
     background: linear-gradient(90deg, transparent, rgba(var(--ww-carbon-ink-text-rgb),0.06), transparent);
 }
 .btn:hover::before { left: 100%; }
@@ -523,7 +523,7 @@ body {
     border: var(--ww-light-panel-border);
     box-shadow: 0 8px 40px rgba(var(--ww-carbon-ink-text-rgb),0.15), var(--ww-light-data-stream-shadow), 0 0 0 1px rgba(var(--ww-skywake-blue-rgb),0.1);
     border-radius: calc(var(--border-radius) + 2px);
-    width: 90%;
+
 }
 .modal-header h2 { color: var(--ww-skywake-blue); text-shadow: 0 0 7px var(--ww-skywake-blue); font-weight: 500; letter-spacing: 0.5px; }
 .close-modal-btn:hover { color: var(--ww-skywake-blue); transform: scale(1.2) rotate(90deg); }
@@ -551,7 +551,7 @@ body {
 .video-call-button.active:hover { background: var(--ww-skywake-blue) }
 
 /* Toggle Switch */
-.switch input { opacity: 0; width: 0; height: 0; }
+.switch input { opacity: 0; }
 .slider {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
     background-color: var(--ww-polished-alloy-border);

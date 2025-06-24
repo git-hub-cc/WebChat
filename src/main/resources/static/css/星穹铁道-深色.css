@@ -65,13 +65,13 @@
     --monospace-font: "Share Tech Mono", "Courier New", monospace; /* For system logs */
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family);
     background-color: var(--hsr-deep-cosmos-bg);
     color: var(--text-color);
-    line-height: 1.65;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -126,7 +126,7 @@ body {
     background-color: rgba(var(--hsr-nebula-cluster-panel-rgb), 0.8);
 }
 .nav-tabs { border-bottom: 1px solid rgba(var(--hsr-meteorite-iron-border-rgb), 0.8); } /* Stronger border */
-.nav-tab { color: var(--text-color-light); position: relative; padding-bottom: 10px; font-weight: 500; letter-spacing: 0.5px;} /* Increased padding and style */
+.nav-tab { color: var(--text-color-light); position: relative;  font-weight: 500; letter-spacing: 0.5px;} /* Increased padding and style */
 .nav-tab:hover { color: var(--hsr-trailblaze-cyan); }
 .nav-tab.active { color: var(--hsr-trailblaze-cyan); font-weight: 700; }
 .nav-tab.active::after {
@@ -135,8 +135,8 @@ body {
     bottom: -1px;
     left: 50%;
     transform: translateX(-50%);
-    width: 60%; /* Slightly narrower for focus */
-    height: 3px; /* Thicker line */
+    /* Slightly narrower for focus */
+    /* Thicker line */
     background-color: var(--hsr-trailblaze-cyan);
     box-shadow: 0 0 8px var(--hsr-trailblaze-cyan); /* Stronger glow */
     border-radius: 1px;
@@ -149,7 +149,7 @@ body {
     background-color: var(--active-bg-color);
     box-shadow: 0 0 10px rgba(var(--hsr-astral-express-gold-rgb), 0.25) inset; /* Enhanced inset shadow */
     border-left: 4px solid var(--hsr-astral-express-gold); /* Thicker active marker */
-    padding-left: 8px; /* Adjusted padding */
+     /* Adjusted padding */
 }
 .chat-list-item.active .chat-list-name { color: var(--hsr-astral-express-gold); font-weight: 700; }
 .chat-list-avatar {
@@ -165,7 +165,7 @@ body {
 .chat-list-item.active[class*="AI_"][class*="_HSR"] {
     border-left-width: 4px; /* Consistent thickness */
     border-left-style: solid;
-    padding-left: 8px; /* Consistent padding */
+     /* Consistent padding */
 }
 .message.received[data-sender-id*="AI_"][data-sender-id*="_HSR"] {
     border-left-width: 3px;
@@ -298,7 +298,7 @@ body {
     box-shadow: 0 0 6px var(--hsr-stellaron-magenta), 0 0 8px var(--hsr-stellaron-magenta) inset; /* Enhanced glow */
     border-radius: 3px;
     font-size: 0.75em; /* Slightly larger */
-    padding: 3px 6px;
+
     font-weight: 600;
 }
 .new-chat-fab {
@@ -325,7 +325,7 @@ body {
 .header-action-btn { color: var(--text-color-light); font-size: 1.2rem;  }
 .header-action-btn:hover { color: var(--hsr-trailblaze-cyan); text-shadow: 0 0 8px var(--hsr-trailblaze-cyan); transform: scale(1.1); }
 
-.no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; user-select: none;}
+.no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; user-select: none;}
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family);
     content: "폼폼!";
@@ -343,7 +343,7 @@ body {
     border: 1px solid var(--border-color);
     color: var(--hsr-trailblaze-cyan);
     border-radius: var(--border-radius);
-    padding: 6px;
+
     font-size: 0.88em;
     box-shadow: 0 0 5px rgba(var(--hsr-trailblaze-cyan-rgb), 0.2);
 }
@@ -353,19 +353,19 @@ body {
     border: 1px solid rgba(var(--hsr-meteorite-iron-border-rgb), 0.7); /* Slightly stronger border */
     box-shadow: 0 2px 4px rgba(0,0,0,0.6), 0 0 12px rgba(var(--hsr-trailblaze-cyan-rgb),0.05) inset; /* Refined shadow */
     border-radius: var(--border-radius);
-    padding: 8px;
+
 }
 .message.sent {
     background-color: var(--sent-bg-color);
     border-left-width: 3px;
     border-left-style: solid;
     border-left-color: var(--hsr-astral-express-gold);
-    margin-left: auto; /* Align sent messages to the right */
+     /* Align sent messages to the right */
 }
 .message.received { /* Default received, not from AI */
     background-color: var(--received-bg-color);
     border-right: 3px solid var(--hsr-void-archive-purple); /* Using a different accent for non-AI received */
-    margin-right: auto; /* Align received messages to the left */
+     /* Align received messages to the left */
 }
 .message.system {
     background-color: transparent;
@@ -375,7 +375,7 @@ body {
     border: none;
     border-top: 1px dashed rgba(var(--hsr-trailblaze-cyan-rgb), 0.35);
     border-bottom: 1px dashed rgba(var(--hsr-trailblaze-cyan-rgb), 0.35);
-    padding: 10px 0; margin: 12px auto; /* Centered with auto margin */
+      /* Centered with auto margin */
     font-size: 0.9em;
     font-family: var(--monospace-font); /* Monospace for system log feel */
     opacity: 0.85;
@@ -383,11 +383,11 @@ body {
 .message-sender {
     color: var(--text-color-light);
     font-weight: 500;
-    margin-bottom: 4px;
+
     font-size: 0.9em;
     display: block; /* Ensure it takes its own line */
 }
-.message .timestamp { color: var(--text-color-light); opacity: 0.55; font-size: 0.7rem; display: block; margin-top: 4px; } /* Improved visibility and spacing */
+.message .timestamp { color: var(--text-color-light); opacity: 0.55; font-size: 0.7rem; display: block;  } /* Improved visibility and spacing */
 .message.sent .timestamp { text-align: right; }
 .message.received .timestamp { text-align: left; }
 
@@ -410,7 +410,7 @@ body {
     box-shadow: 0 0 0 2px rgba(var(--hsr-astral-express-gold-rgb),0.3), 0 0 12px rgba(var(--hsr-trailblaze-cyan-rgb),0.15) inset;
     background-color: rgba(var(--hsr-nebula-cluster-panel-rgb),0.8);
 }
-.icon-btn { color: var(--text-color-light); font-size: 1.2rem; padding: 8px; border-radius: 50%;} /* Round buttons */
+.icon-btn { color: var(--text-color-light); font-size: 1.2rem;  border-radius: 50%;} /* Round buttons */
 .icon-btn:hover { color: var(--hsr-trailblaze-cyan); background-color: rgba(var(--hsr-trailblaze-cyan-rgb),0.1); transform: scale(1.1); }
 #sendButtonMain { color: var(--hsr-trailblaze-cyan); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 #sendButtonMain:hover { text-shadow: 0 0 7px var(--hsr-trailblaze-cyan); filter: brightness(1.25); }
@@ -443,9 +443,9 @@ body {
     border-radius: var(--border-radius);
     box-shadow: 0 0 10px rgba(var(--hsr-deep-cosmos-bg-rgb), 0.3) inset;
 }
-#aiContactDetailsContent p strong { color: var(--hsr-trailblaze-cyan); border-bottom: 1px solid rgba(var(--hsr-trailblaze-cyan-rgb), 0.35); padding-bottom: 2px;}
-#aiContactBasicInfoList li { border-bottom: 1px solid rgba(var(--hsr-meteorite-iron-border-rgb), 0.75); padding: 8px 0; font-size: 0.92em;}
-#aiContactAboutText { color: var(--text-color-light); line-height: 1.8; font-size: 0.92em; opacity: 0.9; }
+#aiContactDetailsContent p strong { color: var(--hsr-trailblaze-cyan); border-bottom: 1px solid rgba(var(--hsr-trailblaze-cyan-rgb), 0.35); }
+#aiContactBasicInfoList li { border-bottom: 1px solid rgba(var(--hsr-meteorite-iron-border-rgb), 0.75);  font-size: 0.92em;}
+#aiContactAboutText { color: var(--text-color-light); font-size: 0.92em; opacity: 0.9; }
 
 /* 通用按钮样式 */
 .btn {
@@ -493,7 +493,7 @@ body {
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: 3px;
-    padding: 10px;
+
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus {
     border-color: var(--hsr-trailblaze-cyan);
@@ -503,7 +503,7 @@ body {
     background: rgba(var(--hsr-deep-cosmos-bg-rgb),0.9);
     color: var(--hsr-trailblaze-cyan);
     border: 1px dashed rgba(var(--hsr-trailblaze-cyan-rgb), 0.7); /* More prominent dashed border */
-    padding: 10px;
+
     border-radius: 3px;
     font-family: var(--monospace-font); /* Monospace font */
     letter-spacing: 1px;

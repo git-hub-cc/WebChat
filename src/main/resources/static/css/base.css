@@ -591,6 +591,7 @@ body {
     align-items: center;
     justify-content: center;
     height: 100%;
+    width: 100%;
     margin: auto;
     color: var(--text-color-light);
     text-align: center;
@@ -2880,6 +2881,7 @@ input:checked + .slider::before {
 .resource-preview-item.text-message-preview {
     display: flex; /* 改为flex，允许内部元素按消息布局 */
     flex-direction: column; /* 内容垂直排列 */
+    justify-content: start;
     align-items: flex-start; /* 左对齐 */
     padding: var(--spacing-2);
     border: 1px solid var(--border-color);

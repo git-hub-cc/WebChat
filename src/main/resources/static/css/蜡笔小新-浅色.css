@@ -51,15 +51,15 @@
 
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+
+
 }
 
 body {
     font-family: var(--font-family), serif;
     background-color: var(--cs-shinchan-yellow); /* 最底层用小新黄 */
     color: var(--text-color);
-    line-height: 1.5;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -116,7 +116,7 @@ body {
 .chat-list-badge {
     background-color: var(--cs-accent-green); /* 动感超人绿 */
     border-radius: 10px;
-    padding: 3px 7px;
+
     font-size: 10px;
 }
 .new-chat-fab {

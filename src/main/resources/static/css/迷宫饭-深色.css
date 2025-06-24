@@ -58,13 +58,13 @@
     --special-contact-color: var(--mgf-laios-primary-dark);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family), serif;
     background-color: var(--mgf-deep-cave-bg); /* 最底层背景 */
     color: var(--text-color);
-    line-height: 1.6;
+
     overflow: hidden;
     display: flex;
     justify-content: center;

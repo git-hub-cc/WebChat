@@ -69,14 +69,15 @@ const Config = {
      * 这些是默认值，UI 管理器将从 localStorage 加载用户配置的值来覆盖它们。
      */
     server: {
-        // signalingServerUrl: 'wss://175.178.216.24/signaling', // 信令服务器 URL
-        // apiEndpoint: 'https://175.178.216.24/v1/chat/completions', // AI聊天 API 端点
-        // lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids', // 人员大厅 API 端点
-        signalingServerUrl: 'ws://localhost:8080/signaling', // 本地开发示例
-        apiEndpoint: 'http://localhost:8080/v1/chat/completions', // 本地开发示例
-        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids', // 本地开发示例
+        // TODO
+        signalingServerUrl: 'wss://175.178.216.24/signaling', // 信令服务器 URL
+        apiEndpoint: 'https://175.178.216.24/v1/chat/completions', // AI聊天 API 端点
+        lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids', // 人员大厅 API 端点
+        // signalingServerUrl: 'ws://localhost:8080/signaling', // 本地开发示例
+        // apiEndpoint: 'http://localhost:8080/v1/chat/completions', // 本地开发示例
+        // lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids', // 本地开发示例
         api_key: "Bearer sk-xxxx", // API 密钥
-        model: "qwen-turbo-2025-04-28", // 默认 AI 模型
+        model: "THUDM/GLM-4-32B-0414", // 默认 AI 模型
         max_tokens: 2048, // AI 回复最大令牌数
         ttsApiEndpoint: 'https://gsv2p.acgnai.top', // TTS API 端点
     },

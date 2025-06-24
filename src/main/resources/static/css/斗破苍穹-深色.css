@@ -132,13 +132,13 @@
     --special-contact-color: var(--dq-xiaoyan-primary-dark); /* 默认萧炎黑 */
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family), serif;
     background-color: var(--dq-dark-nightsky-black); /* 最底层背景 */
     color: var(--text-color);
-    line-height: 1.6;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -200,7 +200,7 @@ body {
     border: 1px solid var(--border-color);
     color: var(--text-color);
     border-radius: var(--border-radius);
-    padding: 8px 12px 8px 30px; /* Space for pseudo icon */
+     /* Space for pseudo icon */
     position: relative;
 }
 .search-bar::before { /* 魂力探知/搜索图标意境 */
@@ -314,8 +314,8 @@ body {
     bottom: -1px;
     left: 50%;
     transform: translateX(-50%);
-    width: 35%;
-    height: 2px;
+
+
     background: linear-gradient(90deg, transparent, var(--primary-color), var(--dq-dark-soul-purple), transparent);
     opacity: 0.8;
     filter: blur(0.5px);
@@ -334,7 +334,7 @@ body {
     text-shadow: 0 0 6px rgba(var(--primary-color-rgb), 0.6);
 }
 
-.chat-messages-container { padding: 15px; }
+.chat-messages-container {  }
 
 /* Placeholder: 用“炎”字 */
 .no-chat-selected .logo-placeholder {
@@ -361,7 +361,7 @@ body {
     box-shadow: var(--box-shadow);
     border-radius: var(--border-radius);
     position: relative;
-    padding: 10px 15px;
+
 }
 /* 焚天异火包裹 */
 .message.sent {
@@ -376,7 +376,7 @@ body {
     top: 0;
     left: -1px;
     bottom: 0;
-    width: 5px;
+
     background: linear-gradient(to bottom, rgba(var(--dq-dark-heavenly-flame-red-rgb),0.4) 0%, rgba(var(--dq-dark-soul-purple-rgb),0.3) 70%, transparent 100%);
     border-radius: 3px 0 0 3px;
     opacity: 0.7;
@@ -402,7 +402,7 @@ body {
 .message-sender {
     color: var(--text-color-light);
     font-weight: 600;
-    margin-bottom: 4px;
+
     display: block;
 }
 .message .timestamp { color: var(--text-color-light); opacity: 0.65; font-size: 0.8em; }
@@ -418,7 +418,7 @@ body {
     border: 1px solid var(--dq-dark-volcanic-border);
     color: var(--text-color);
     border-radius: var(--border-radius);
-    padding: 10px;
+
     box-shadow: inset 0 1px 4px rgba(0,0,0,0.3);
 }
 #messageInput::placeholder { color: var(--text-color-light); }
@@ -492,19 +492,19 @@ body {
     background-color: rgba(var(--dq-dark-obsidian-panel-rgb), 0.55);
     border: 1px solid rgba(var(--dq-dark-volcanic-border-rgb), 0.4);
     border-radius: var(--border-radius);
-    padding: 15px;
-    margin: 10px;
+
+
 }
 #aiContactDetailsContent p strong {
     color: var(--primary-color);
     border-bottom: 1px solid rgba(var(--primary-color-rgb), 0.3);
-    padding-bottom: 1px;
+
 }
 #aiContactBasicInfoList li {
     border-bottom: 1px dotted rgba(var(--dq-dark-text-ash-white-rgb), 0.12);
-    padding: 8px 0;
+
 }
-#aiContactAboutText { color: var(--text-color-light); font-size: 0.9em; line-height: 1.7; }
+#aiContactAboutText { color: var(--text-color-light); font-size: 0.9em; }
 
 
 /* --- 角色特定样式 (深色 - 魔焰夜行) --- */
@@ -822,7 +822,7 @@ body {
     inset 0 -2px 0px rgba(0,0,0,0.3); /* Deeper 3D effect */
     border: 1px solid transparent;
     transition: all 0.2s ease-in-out;
-    padding: 8px 18px;
+
     position: relative;
     overflow: hidden;
 }
@@ -896,8 +896,8 @@ body {
 /* --- Modals (魂域裂缝或魔晶凝结) --- */
 .loading-overlay { background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.92); backdrop-filter: blur(4px); }
 .loading-spinner {
-    width: 60px;
-    height: 60px;
+
+
     border-width: 5px;
     border-top-color: var(--primary-color);
     border-left-color: var(--primary-color);
@@ -929,7 +929,7 @@ body {
     color: var(--text-color);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: 10px;
+
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus {
     border-color: var(--primary-color);
@@ -939,7 +939,7 @@ body {
     background: rgba(var(--dq-dark-nightsky-black-rgb),0.85);
     color: var(--primary-color);
     border: 1px dashed var(--primary-color);
-    padding: 8px 12px;
+
     border-radius: var(--border-radius);
     font-weight: 500;
 }
@@ -993,7 +993,7 @@ input:checked + .slider:before { transform: translateX(20px); }
     color: var(--text-color);
     box-shadow: 0 3px 10px rgba(0,0,0,0.4);
     border-radius: var(--border-radius);
-    padding: 12px 18px;
+
 }
 .notification.error {
     border-left-color: var(--danger-color);

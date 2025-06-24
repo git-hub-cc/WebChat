@@ -71,13 +71,13 @@
     --special-contact-color: var(--jjk-gojo-primary-light);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family), sans-serif;
     background-color: var(--jjk-tokyo-sky-panel); /* Overall page bg */
     color: var(--text-color);
-    line-height: 1.6;
+
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -126,7 +126,7 @@ body {
     box-shadow: 0 0 0 2.5px rgba(var(--jjk-cursed-energy-blue-rgb),0.25), 0 0 5px rgba(var(--jjk-cursed-energy-blue-rgb),0.05) inset;
 }
 .nav-tabs { border-bottom: 1px solid var(--border-color); }
-.nav-tab { color: var(--text-color-light); padding: 10px 0;}
+.nav-tab { color: var(--text-color-light); }
 .nav-tab:hover { color: var(--jjk-cursed-energy-blue); }
 .nav-tab.active {
     color: var(--jjk-cursed-energy-blue);
@@ -258,7 +258,7 @@ body {
     background-color: var(--jjk-blood-oath-red);
     color: var(--jjk-cursed-seal-white);
     box-shadow: 0 1px 3px rgba(var(--jjk-blood-oath-red-rgb),0.5), 0 0 0 1px rgba(var(--jjk-ink-black-rgb),0.1);
-    padding: 3px 8px; font-weight: 600; border-radius: 10px;
+     font-weight: 600; border-radius: 10px;
 }
 .new-chat-fab {
     background-color: var(--jjk-cursed-energy-blue);
@@ -292,7 +292,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100%;
+
     user-select: none;
 }
 .no-chat-selected .logo-placeholder {
@@ -343,7 +343,7 @@ body {
     box-shadow: 0 0 5px rgba(var(--jjk-cursed-energy-blue-rgb),0.1) inset;
     text-align: center;
 }
-.message-sender { color: var(--text-color-light); font-weight: 500; margin-bottom: 4px; display: block;}
+.message-sender { color: var(--text-color-light); font-weight: 500;  display: block;}
 .message .timestamp { color: var(--text-color-light); opacity: 0.8; }
 
 .chat-input-container {
@@ -361,7 +361,7 @@ body {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.25), 0 0 8px rgba(var(--jjk-cursed-energy-blue-rgb),0.05) inset;
 }
-.icon-btn { color: var(--text-color-light); padding: 8px; border-radius: 50%; }
+.icon-btn { color: var(--text-color-light);  border-radius: 50%; }
 .icon-btn:hover { color: var(--jjk-cursed-energy-blue); background-color: rgba(var(--jjk-cursed-energy-blue-rgb),0.08); transform: scale(1.1); }
 #sendButtonMain { color: var(--jjk-cursed-energy-blue); font-weight: 600; font-size: 1.5em; }
 #sendButtonMain:hover { transform: translateX(2px) scale(1.05); filter: brightness(0.9); }
@@ -385,7 +385,7 @@ body {
     border: 2px solid var(--jjk-steel-frame);
     box-shadow: 0 0 8px rgba(var(--jjk-ink-black-rgb), 0.1), 0 0 0 2px var(--secondary-color);
 }
-#detailsName { text-shadow: 0 0 2px rgba(var(--jjk-ink-black-rgb), 0.05); font-size: 1.2em; font-weight: 600; margin-top: 8px;}
+#detailsName { text-shadow: 0 0 2px rgba(var(--jjk-ink-black-rgb), 0.05); font-size: 1.2em; font-weight: 600; }
 #aiContactDetailsContent {
     background-color: rgba(var(--jjk-cursed-seal-white-rgb), 0.8);
     backdrop-filter: blur(4px);
@@ -396,14 +396,14 @@ body {
 #aiContactDetailsContent p strong {
     color: var(--jjk-cursed-energy-blue);
     border-bottom: 1.5px solid rgba(var(--jjk-cursed-energy-blue-rgb), 0.25);
-    padding-bottom: 2px;
+
     font-weight: 500;
 }
 #aiContactBasicInfoList li {
     border-bottom: 1px solid rgba(var(--jjk-steel-frame-rgb), 0.4);
-    padding: 8px 0;
+
 }
-#aiContactAboutText { color: var(--jjk-shadow-gray); font-size: 0.9em; line-height: 1.7; }
+#aiContactAboutText { color: var(--jjk-shadow-gray); font-size: 0.9em; }
 
 /* 通用按钮样式 */
 .btn {
@@ -446,7 +446,7 @@ body {
     font-size: 1.35em; font-weight: 600;
     text-shadow: 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.15);
     border-bottom: 1px solid rgba(var(--jjk-cursed-energy-blue-rgb), 0.2);
-    padding-bottom: 10px;
+
 }
 .close-modal-btn { font-size: 1.5em; }
 .close-modal-btn:hover { color: var(--jjk-blood-oath-red); transform: rotate(90deg) scale(1.1); }
@@ -465,7 +465,7 @@ body {
     background: rgba(var(--jjk-tokyo-sky-panel-rgb),0.8);
     color: var(--jjk-cursed-energy-blue);
     border: 1.5px dashed var(--jjk-cursed-energy-blue);
-    padding: 10px;
+
     font-size: 1em; font-weight: 500;
     word-break: break-all;
 }

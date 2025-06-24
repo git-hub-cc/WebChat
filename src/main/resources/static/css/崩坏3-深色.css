@@ -87,13 +87,13 @@
     --special-contact-color: var(--hi3-himeko-primary-dark); /* Default, will be overridden */
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing: border-box;   }
 
 body {
     font-family: var(--font-family);
     background-color: var(--hi3-deep-space-bg);
     color: var(--text-color);
-    line-height: 1.5; /* Slightly tighter */
+    /* Slightly tighter */
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -124,8 +124,8 @@ body {
 .app-container::before, .app-container::after {
     content: '';
     position: absolute;
-    width: 10px; /* Define size */
-    height: 10px; /* Define size */
+    /* Define size */
+    /* Define size */
     border-color: var(--hi3-energy-stream-cyan);
     opacity: 0.6;
     pointer-events: none;
@@ -154,12 +154,12 @@ body {
 .sidebar-nav {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.5); /* More transparent */
     border-right: 1px solid var(--border-color);
-    padding-top: 5px; /* Space for top accent */
+     /* Space for top accent */
     position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
     background-color: transparent; /* Cleaner */
-    /* height: var(--header-height); */ /* Uses removed variable */
+    /* */ /* Uses removed variable */
 }
 .menu-btn { color: var(--hi3-interface-gray); }
 .menu-btn:hover { color: var(--hi3-energy-stream-cyan); text-shadow: 0 0 5px var(--hi3-energy-stream-cyan); }
@@ -177,7 +177,7 @@ body {
     box-shadow: 0 0 0 1px var(--hi3-energy-stream-cyan), var(--box-shadow-strong-glow);
 }
 .nav-tabs { border-bottom: 1px solid var(--border-color); }
-.nav-tab { color: var(--hi3-interface-gray); padding: 8px 10px; font-size: 0.9em; letter-spacing: 0.5px; }
+.nav-tab { color: var(--hi3-interface-gray);  font-size: 0.9em; letter-spacing: 0.5px; }
 .nav-tab:hover { color: var(--hi3-energy-stream-cyan); }
 .nav-tab.active {
     color: var(--hi3-energy-stream-cyan);
@@ -253,7 +253,7 @@ body {
 .AI_FischlOz_崩坏3 { --special-contact-color: var(--hi3-fischloz-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-fischloz-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-fischloz-primary-dark-rgb), 0.6); }
 .chat-list-item.AI_FischlOz_崩坏3 .chat-list-avatar,
 .chat-avatar-main.AI_FischlOz_崩坏3, .details-avatar.AI_FischlOz_崩坏3, #callingModalAvatar.AI_FischlOz_崩坏3 { background-color: var(--hi3-fischloz-primary-dark); color: var(--hi3-fischloz-oz-text); border-color: var(--hi3-fischloz-glow); }
-.chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-deep-space-bg); opacity: 0.7; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-dark-rgb),0.5); padding: 0 2px; border-radius: 2px;}
+.chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-deep-space-bg); opacity: 0.7; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-dark-rgb),0.5);  border-radius: 2px;}
 
 /* 始源之律者 */
 .AI_HerrscherOfOrigin_崩坏3 { --special-contact-color: var(--hi3-origin-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-origin-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-origin-primary-dark-rgb), 0.6); }
@@ -284,7 +284,7 @@ body {
     color: var(--hi3-data-glow-white);
     box-shadow: 0 0 5px var(--hi3-warning-red), 0 0 8px var(--hi3-warning-red);
     border-radius: var(--border-radius);
-    padding: 2px 5px;
+
     font-weight: bold;
     animation: hi3-badge-pulse 1.5s infinite alternate;
 }
@@ -309,7 +309,7 @@ body {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.4); /* More transparent */
     backdrop-filter: blur(5px); /* Frosted glass effect if supported */
     border-bottom: 1px solid var(--border-color);
-    /* height: var(--header-height); */ /* Uses removed variable */
+    /* */ /* Uses removed variable */
 }
 .chat-avatar-main { border: 1px solid var(--hi3-tech-border); border-radius: 25%;}
 .chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 0 8px rgba(var(--hi3-data-glow-white-rgb), 0.2); }
@@ -322,7 +322,7 @@ body {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100%;
+
 }
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family); /* Use the theme font */
@@ -333,7 +333,7 @@ body {
     0 0 20px rgba(var(--hi3-energy-stream-cyan-rgb), 0.3);
     animation: hi3-placeholder-beam 4s infinite ease-in-out;
     position: relative;
-    padding: 10px 0;
+
 }
 .no-chat-selected .logo-placeholder::before,
 .no-chat-selected .logo-placeholder::after { /* Scanlines over text */
@@ -341,7 +341,7 @@ body {
     position: absolute;
     left: 0;
     right: 0;
-    height: 2px;
+
     background: var(--hi3-energy-stream-cyan);
     opacity: 0.5;
     animation: hi3-scanline-move 2s infinite linear;
@@ -368,7 +368,7 @@ body {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.6);
     border: 1px solid var(--border-color);
     color: var(--hi3-energy-stream-cyan);
-    padding: 5px 10px;
+
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow-glow);
 }
@@ -379,15 +379,15 @@ body {
     box-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 0 5px rgba(var(--hi3-tech-border-rgb),0.1) inset;
     border-radius: var(--border-radius); /* Use consistent radius */
     position: relative;
-    padding: 8px;
+
 }
 /* Message bubble tail - sharper, more techy */
 .message:before {
     content: "";
     position: absolute;
     top: 10px; /* Consistent position */
-    width: 0;
-    height: 0;
+
+
     border-style: solid;
     border-width: 6px; /* Slightly smaller */
     filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); /* Shadow for tail */
@@ -419,7 +419,7 @@ body {
 }
 .message.system:before { display: none; }
 
-.message-sender { color: var(--hi3-interface-gray); font-weight: 500; font-size: 0.9em; margin-bottom: 2px;}
+.message-sender { color: var(--hi3-interface-gray); font-weight: 500; font-size: 0.9em; }
 .message .timestamp { color: var(--hi3-interface-gray); opacity: 0.6; font-size: 0.7em; }
 
 .chat-input-container {
@@ -459,7 +459,7 @@ body {
 .details-header {
     background-color: transparent;
     border-bottom: 1px solid var(--border-color);
-    /* height: var(--header-height); */ /* Uses removed variable */
+    /* */ /* Uses removed variable */
 }
 .details-avatar {
     border: 2px solid var(--hi3-tech-border);
@@ -473,9 +473,9 @@ body {
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow-glow);
 }
-#aiContactDetailsContent p strong { color: var(--hi3-energy-stream-cyan); border-bottom: 1px solid rgba(var(--hi3-energy-stream-cyan-rgb), 0.3); padding-bottom: 1px; }
+#aiContactDetailsContent p strong { color: var(--hi3-energy-stream-cyan); border-bottom: 1px solid rgba(var(--hi3-energy-stream-cyan-rgb), 0.3);  }
 #aiContactBasicInfoList li { border-bottom: 1px dotted rgba(var(--hi3-interface-gray-rgb), 0.2); }
-#aiContactAboutText { color: var(--hi3-interface-gray); font-size: 0.95em; line-height: 1.6; }
+#aiContactAboutText { color: var(--hi3-interface-gray); font-size: 0.95em; }
 
 /* 通用按钮样式 - More techy */
 .btn {
@@ -485,7 +485,7 @@ body {
     font-weight: 600; /* Bold */
     box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 0 3px rgba(255,255,255,0.03);
     border: 1px solid var(--hi3-tech-border); /* Default border */
-    padding: 8px;
+
     position: relative;
     overflow: hidden; /* For pseudo-element effects */
 }
@@ -493,7 +493,7 @@ body {
     content: '';
     position: absolute;
     top: 0; left: -100%;
-    width: 100%; height: 100%;
+
     background: linear-gradient(90deg, transparent, rgba(var(--hi3-data-glow-white-rgb),0.2), transparent);
 }
 .btn:hover::before { left: 100%; }
@@ -534,7 +534,7 @@ body {
     color: var(--text-color);
     border: 1px solid var(--hi3-tech-border);
     border-radius: var(--border-radius);
-    padding: 10px;
+
     box-shadow: var(--box-shadow-glow);
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus {
@@ -557,8 +557,8 @@ body {
 .video-call-button.active { background: var(--hi3-energy-stream-cyan); color: var(--hi3-deep-space-bg); box-shadow: 0 0 10px var(--hi3-energy-stream-cyan);}
 
 /* Toggle Switch - Honkai Style */
-.switch { position: relative; display: inline-block; width: 34px; height: 14px;} /* Smaller */
-.switch input { opacity: 0; width: 0; height: 0; }
+.switch { position: relative; display: inline-block;} /* Smaller */
+.switch input { opacity: 0; }
 .slider {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
     background-color: var(--hi3-tech-border);
@@ -567,7 +567,7 @@ body {
     transition: .4s;
 }
 .slider:before { /* The knob */
-    position: absolute; content: ""; height: 10px; width: 10px; left: 2px; bottom: 1px; /* Adjusted for new size */
+    position: absolute; content: ""; left: 2px; bottom: 1px; /* Adjusted for new size */
     background-color: var(--hi3-deep-space-bg);
     border: 1px solid var(--hi3-energy-stream-cyan);
     border-radius: 2px; /* Sharp square knob */

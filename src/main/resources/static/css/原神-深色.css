@@ -165,14 +165,14 @@
 *::before,
 *::after {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+
+
 }
 
 body {
     font-family: var(--font-family);
     font-size: var(--font-size-base);
-    line-height: var(--line-height-base);
+
     color: var(--color-text-primary);
     background-color: var(--color-background-body);
     /* Starry night SVG pattern */
@@ -196,7 +196,7 @@ a:hover {
 
 img {
     max-width: 100%;
-    height: auto;
+
     display: block;
 }
 
@@ -221,9 +221,9 @@ img {
 /* ------------------------- 🏛️ 页面结构与容器 ------------------------ */
 .app-container {
     display: flex;
-    height: 100vh;
+
     /* max-width: 1600px; -- Removed as value > 20px */
-    margin: 0 auto;
+
     background-color: var(--color-background-container);
     box-shadow: 0 0 40px rgba(0,0,0, 0.3), 0 0 0 1px rgba(var(--gi-gold-primary-rgb), 0.1); /* Subtle gold edge glow */
     overflow: hidden;
@@ -232,13 +232,13 @@ img {
 
 /* ------------------------- 🧭 侧边栏 .sidebar-nav -------------------- */
 .sidebar-nav {
-    /* width: 320px; -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
     /* min-width: 280px; -- Removed as value > 20px */
     background-color: rgba(var(--gi-night-deep-rgb), 0.6); /* Translucent dark */
     border-right: 1px solid var(--color-border-secondary);
     display: flex;
     flex-direction: column;
-    padding: 15px;
+
     position: relative;
     overflow-y: auto;
 }
@@ -248,18 +248,18 @@ img {
     top: 0;
     left: 0;
     right: 0;
-    height: 3px;
+
     background: linear-gradient(90deg, transparent, var(--color-primary), transparent);
     opacity: 0.5; /* Slightly more subtle in dark mode */
 }
 
 .search-bar {
-    margin-bottom: 15px;
+
     position: relative;
 }
 .search-bar input[type="text"] {
-    width: 100%;
-    /* padding: 10px 15px 10px 40px; -- Removed as 40px > 20px */
+
+    /*  -- Removed as 40px > 20px */
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-elevated);
@@ -294,8 +294,8 @@ img {
 .chat-list-item {
     display: flex;
     align-items: center;
-    padding: 12px 10px;
-    margin-bottom: 5px;
+
+
     border-radius: var(--border-radius-medium);
     cursor: pointer;
     transition: var(--transition-fast);
@@ -317,10 +317,10 @@ img {
 }
 
 .chat-list-avatar {
-    /* width: 48px; -- Removed as value > 20px */
-    /* height: 48px; -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
     border-radius: 50%;
-    margin-right: 12px;
+
     object-fit: cover;
     background-color: var(--color-border-secondary);
     border: 2px solid transparent;
@@ -338,7 +338,7 @@ img {
     font-weight: 600;
     font-size: var(--font-size-base);
     color: var(--color-text-primary);
-    margin-bottom: 2px;
+
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -355,8 +355,8 @@ img {
     color: white;
     font-size: 11px;
     font-weight: bold;
-    padding: 2px 6px;
-    margin-left: auto;
+
+
     min-width: 20px;
     text-align: center;
 }
@@ -372,7 +372,7 @@ img {
 }
 
 .chat-header-main {
-    padding: 15px 20px;
+
     border-bottom: 1px solid var(--color-border-secondary);
     background: linear-gradient(to bottom, rgba(var(--gi-night-medium-rgb),0.9), rgba(var(--gi-night-elevated-rgb),0.9));
     display: flex;
@@ -381,10 +381,10 @@ img {
     /* min-height: 70px; -- Removed as value > 20px */
 }
 .chat-avatar-main {
-    /* width: 44px; -- Removed as value > 20px */
-    /* height: 44px; -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
     border-radius: 50%;
-    margin-right: 15px;
+
     object-fit: cover;
     background-color: var(--color-border-secondary);
     border: 2px solid var(--color-border-primary);
@@ -398,18 +398,18 @@ img {
 .chat-status-main {
     font-size: var(--font-size-small);
     color: var(--color-text-secondary);
-    margin-left: 8px;
+
     display: flex;
     align-items: center;
 }
 .chat-status-main::before {
     content: '';
     display: inline-block;
-    width: 8px;
-    height: 8px;
+
+
     border-radius: 50%;
     background-color: var(--color-status-online);
-    margin-right: 5px;
+
     animation: pulse-dark 2s infinite;
 }
 @keyframes pulse-dark { /* Adjusted pulse for dark theme */
@@ -420,7 +420,7 @@ img {
 
 .chat-messages {
     flex-grow: 1;
-    padding: 20px;
+
     overflow-y: auto;
     display: flex;
     flex-direction: column-reverse;
@@ -442,11 +442,10 @@ img {
     /* Dark Paimon-themed pattern */
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cdefs%3E%3Cpattern id='paimon-pattern-dark' width='50' height='50' patternUnits='userSpaceOnUse'%3E%3Cpath d='M25 5 L20 15 L10 15 L5 25 L10 35 L20 35 L25 45 L30 35 L40 35 L45 25 L40 15 L30 15 Z' fill='%23DEB26F' fill-opacity='0.05'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23paimon-pattern-dark)'/%3E%3C/svg%3E");
     background-repeat: repeat;
-    width: 100%;
 }
 .no-chat-selected .logo-placeholder {
     /* font-size: 80px; -- Removed as value > 20px */
-    margin-bottom: 20px;
+
     filter: drop-shadow(0 2px 3px rgba(var(--gi-gold-primary-rgb),0.1));
 }
 .no-chat-selected p {
@@ -456,19 +455,19 @@ img {
 /* 💬 消息气泡 .message */
 .message {
     max-width: 75%;
-    padding: 10px 15px;
+
     border-radius: var(--border-radius-large);
     box-shadow: var(--shadow-elevation-1);
     word-wrap: break-word;
-    line-height: 1.5;
+
     position: relative;
 }
 .message::before {
     content: "";
     position: absolute;
     bottom: 0px;
-    width: 0;
-    height: 0;
+
+
     border: 10px solid transparent;
 }
 
@@ -504,13 +503,13 @@ img {
 .message-sender {
     font-size: var(--font-size-small);
     font-weight: 600;
-    margin-bottom: 5px;
+
     color: var(--color-text-secondary);
 }
 .message-timestamp {
     font-size: 11px;
     color: rgba(var(--gi-text-light-grey-rgb), 0.7);
-    margin-top: 5px;
+
     text-align: right;
 }
 .message.received .message-timestamp { text-align: left; }
@@ -520,7 +519,7 @@ img {
     background-color: var(--color-message-system-bg);
     color: var(--color-message-system-text);
     font-size: var(--font-size-small);
-    padding: 8px 12px;
+
     border-radius: var(--border-radius-medium);
     border: 1px dashed var(--color-message-system-border);
     max-width: 90%;
@@ -532,7 +531,7 @@ img {
 
 /* ⌨️ 输入区 .chat-input-container */
 .chat-input-container {
-    padding: 15px 20px;
+
     border-top: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-container);
     display: flex;
@@ -540,7 +539,7 @@ img {
 }
 .chat-input-container textarea {
     flex-grow: 1;
-    padding: 12px 15px;
+
     border-radius: var(--border-radius-medium);
     border: 1px solid var(--color-border-secondary);
     background-color: var(--color-background-elevated);
@@ -563,7 +562,7 @@ img {
 }
 
 #sendButtonMain {
-    padding: 10px 15px;
+
     border-radius: var(--border-radius-medium);
     background-color: var(--color-primary);
     color: var(--color-text-on-accent);
@@ -574,7 +573,7 @@ img {
     transition: var(--transition-fast);
     box-shadow: var(--shadow-ornate);
     font-size: 18px;
-    line-height: 1;
+
     /* min-width: 48px; -- Removed as value > 20px */
     /* min-height: 48px; -- Removed as value > 20px */
     display: flex;
@@ -595,7 +594,7 @@ img {
 
 /* ℹ️ 详情面板 .details-panel */
 .details-panel {
-    /* width: 300px; -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
     /* min-width: 260px; -- Removed as value > 20px */
     background-color: rgba(var(--gi-night-deep-rgb), 0.9);
     border-left: 1px solid var(--color-border-secondary);
@@ -604,13 +603,13 @@ img {
 }
 .details-panel .details-header {
     text-align: center;
-    margin-bottom: 20px;
+
 }
 .details-panel .details-avatar {
-    /* width: 100px; -- Removed as value > 20px */
-    /* height: 100px; -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
     border-radius: 50%;
-    margin: 0 auto 15px auto;
+
     object-fit: cover;
     border: 3px solid var(--color-primary);
     box-shadow: 0 0 10px var(--color-shadow-glow); /* Gold glow */
@@ -618,22 +617,22 @@ img {
 .details-panel .details-name {
     font-weight: 600;
     color: var(--color-text-primary);
-    margin-bottom: 5px;
+
 }
 .details-panel .details-title {
     font-size: var(--font-size-small);
     color: var(--color-text-secondary);
-    margin-bottom: 20px;
+
 }
 .details-section {
-    margin-bottom: 20px;
+
 }
 .details-section-title {
     font-size: var(--font-size-base);
     font-weight: 600;
     color: var(--color-text-primary);
-    padding-bottom: 5px;
-    margin-bottom: 10px;
+
+
     border-bottom: 1px solid var(--color-border-secondary);
     position: relative;
 }
@@ -642,19 +641,19 @@ img {
     position: absolute;
     left: 0;
     bottom: -1px;
-    /* width: 40px; -- Removed as value > 20px */
-    height: 2px;
+    /* -- Removed as value > 20px */
+
     background-color: var(--color-primary);
 }
 .details-info-item {
     display: flex;
-    margin-bottom: 8px;
+
     font-size: var(--font-size-small);
 }
 .details-info-label {
     font-weight: 600;
     color: var(--color-text-primary);
-    /* width: 80px; -- Removed as value > 20px */
+    /* -- Removed as value > 20px */
     flex-shrink: 0;
 }
 .details-info-value {
@@ -663,7 +662,7 @@ img {
 }
 .details-about-text {
     font-size: var(--font-size-small);
-    line-height: 1.7;
+
     color: var(--color-text-secondary);
     white-space: pre-wrap;
 }
@@ -672,7 +671,7 @@ img {
 /* 🔘 按钮 .btn, .btn-primary etc. */
 .btn {
     display: inline-block;
-    padding: 10px 20px;
+
     font-family: var(--font-family);
     font-size: var(--font-size-base);
     font-weight: 600;
@@ -727,8 +726,8 @@ img {
     position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
+
+
     background-color: rgba(var(--gi-night-deep-rgb), 0.7); /* Darker overlay */
     display: flex;
     align-items: center;
@@ -737,10 +736,10 @@ img {
 }
 .modal-content {
     background-color: var(--color-background-container);
-    /* padding: 25px; -- Removed as value > 20px */
+    /*  -- Removed as value > 20px */
     border-radius: var(--border-radius-large);
     box-shadow: var(--shadow-elevation-3), 0 0 0 1px rgba(var(--gi-gold-primary-rgb),0.3);
-    width: 90%;
+
     /* max-width: 500px; -- Removed as value > 20px */
     border: 1px solid var(--color-border-secondary);
     position: relative;
@@ -748,8 +747,8 @@ img {
 .modal-header {
     font-weight: 600;
     color: var(--color-text-primary);
-    margin-bottom: 15px;
-    padding-bottom: 10px;
+
+
     border-bottom: 1px solid var(--color-border-secondary);
     position: relative;
 }
@@ -758,12 +757,12 @@ img {
     position: absolute;
     left: 0;
     bottom: -1px;
-    /* width: 50px; -- Removed as value > 20px */
-    height: 2px;
+    /* -- Removed as value > 20px */
+
     background-color: var(--color-primary);
 }
 .modal-body {
-    margin-bottom: 20px;
+
 }
 .modal-footer {
     display: flex;
@@ -969,7 +968,7 @@ img {
     box-shadow: 0 0 10px var(--color-shadow-glow), 0 0 5px rgba(255,255,255,0.1); /* Add a subtle white inner glow for pop */
 }
 .input-row{
-    width: 100%;
+
 }
 #messageInput,.notification-message{
     color: black;
