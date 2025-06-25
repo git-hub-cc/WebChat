@@ -5,6 +5,7 @@
  *              更新：在群聊中处理对 AI 的提及，提示词获取逻辑调整为支持非当前主题定义的AI角色。
  *              修复：在 sendGroupAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
  *              重构：通用 API 请求逻辑已移至 Utils.fetchApiStream。
+ *              新增：在向AI发送消息时，会检查并应用用户为该AI选择的词汇篇章特定提示词。
  * @module AiApiHandler
  * @exports {object} AiApiHandler - 对外暴露的单例对象，包含与 AI 交互的方法。
  * @property {object} activeSummaries - 内部缓存，用于存储每个 AI 联系人的当前活动对话摘要。键为联系人 ID，值为摘要字符串。
@@ -17,25 +18,14 @@
  */
 const AiApiHandler = {
 
-    /**
-     * @description 内部缓存，用于存储每个 AI 联系人的当前活动对话摘要。
-     *              键为联系人 ID (targetId)，值为摘要字符串。
-     * @type {Object<string, string>}
-     */
     activeSummaries: {},
 
-    /**
-     * @private
-     * @description 获取当前有效的 AI 配置，优先从 localStorage 读取，然后回退到全局 Config，最后到 SettingsUIManager 中的备用默认值。
-     * @returns {object} 包含 apiEndpoint, apiKey, model, maxTokens, ttsApiEndpoint 的配置对象。
-     */
     _getEffectiveAiConfig: function() {
         const config = {};
         const serverConfig = (typeof Config !== 'undefined' && Config && typeof Config.server === 'object' && Config.server !== null)
             ? Config.server
             : {};
         const fallbackDefaults = { apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: '' };
-
 
         config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint') || serverConfig.apiEndpoint || fallbackDefaults.apiEndpoint;
         config.apiKey = localStorage.getItem('aiSetting_api_key') || serverConfig.api_key || fallbackDefaults.api_key;
@@ -57,16 +47,6 @@ const AiApiHandler = {
         return config;
     },
 
-    /**
-     * 向 AI 联系人发送消息并处理流式响应。
-     * 此函数会构建必要的上下文历史（可能包括已存储的摘要），发送到配置的 AI API 端点，并实时处理返回的数据流，
-     * 将 AI 的回复渲染到聊天窗口中。它还能处理需要生成内容摘要的场景。
-     *
-     * @param {string} targetId - 目标 AI 联系人的 ID。
-     * @param {object} contact - 目标 AI 联系人对象，包含其配置信息。
-     * @param {string} messageText - 用户发送的文本消息。
-     * @returns {Promise<void>}
-     */
     sendAiMessage: async function(targetId, contact, messageText) {
         const chatBox = document.getElementById('chatBox');
 
@@ -78,14 +58,13 @@ const AiApiHandler = {
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
-                // 这个错误现在会在 checkAiServiceHealth 中首先被捕获和记录
                 Utils.log("AiApiHandler.sendAiMessage: AI API 端点未配置。请在设置中配置。", Utils.logLevels.ERROR);
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
             const contextWindow = (typeof Config !== 'undefined' && Config.ai && Config.ai.sessionTime !== undefined)
                 ? Config.ai.sessionTime
-                : (10 * 60 * 1000); // 回退到10分钟
+                : (10 * 60 * 1000);
             const timeThreshold = new Date().getTime() - contextWindow;
 
             const chatHistory = ChatManager.chats[targetId] || [];
@@ -93,8 +72,29 @@ const AiApiHandler = {
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
 
             const messagesForRequestBody = [];
-            const systemPromptBase = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
-            messagesForRequestBody.push({role: "system", content: systemPromptBase + Config.ai.baseSystemPrompt});
+            let baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
+
+            // 新增：获取并应用词汇篇章提示词
+            const selectedChapterId = UserManager.getSelectedChapterForAI(targetId);
+            let chapterPromptModifier = "";
+            if (selectedChapterId && contact.chapters && contact.chapters.length > 0) {
+                const chapter = contact.chapters.find(ch => ch.id === selectedChapterId);
+                if (chapter && chapter.promptModifier) {
+                    chapterPromptModifier = chapter.promptModifier;
+                    Utils.log(`AiApiHandler: 为 AI ${targetId} 应用篇章 "${chapter.name}" 的提示词修正。`, Utils.logLevels.INFO);
+                }
+            }
+
+            // 合并提示词：基础提示词 + 篇章提示词修正 + 全局基础提示词
+            let finalSystemPrompt = baseSystemPrompt;
+            if (chapterPromptModifier) {
+                // 简单的追加方式，您可以根据需要调整合并逻辑
+                // 例如，如果篇章提示词是完整的，可能需要替换部分基础提示词，或者有特定占位符
+                finalSystemPrompt += `\n\n[Chapter Focus: ${contact.chapters.find(ch => ch.id === selectedChapterId)?.name || selectedChapterId}]\n${chapterPromptModifier}`;
+            }
+            finalSystemPrompt += contact.aiConfig.promptSuffix?contact.aiConfig.promptSuffix:Config.ai.promptSuffix; // 全局基础提示词总是附加在最后
+
+            messagesForRequestBody.push({role: "system", content: finalSystemPrompt});
 
 
             if (this.activeSummaries[targetId]) {
@@ -124,7 +124,7 @@ const AiApiHandler = {
             };
             Utils.log(`正在发送到 AI (${contact.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
-            if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove(); // 响应前移除思考消息
+            if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
 
             const aiMessageId = `ai_stream_${Date.now()}`;
             let fullAiResponseContent = "";
@@ -132,13 +132,13 @@ const AiApiHandler = {
             MessageManager.displayMessage(initialAiMessage, false);
             let aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
             let initialMessageAddedToCache = false;
-            let summaryMsgId = null; // 用于存储“正在回忆”消息的ID
+            let summaryMsgId = null;
 
             await Utils.fetchApiStream(
                 effectiveConfig.apiEndpoint,
                 requestBody,
                 { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-                (jsonChunk, isSummaryModeChunk) => { // onChunkReceived
+                (jsonChunk, isSummaryModeChunk) => {
                     if (isSummaryModeChunk) {
                         if (aiMessageElement) { aiMessageElement.closest('.message')?.remove(); }
                     } else {
@@ -154,7 +154,7 @@ const AiApiHandler = {
                         }
                     }
                 },
-                async (finalContent, isSummaryModeEnd, summaryContentEnd) => { // onStreamEnd
+                async (finalContent, isSummaryModeEnd, summaryContentEnd) => {
                     if (isSummaryModeEnd) {
                         await this._handleSummaryResponse(targetId, contact, messageText, summaryContentEnd, summaryMsgId, chatBox);
                     } else {
@@ -163,7 +163,7 @@ const AiApiHandler = {
                         ChatManager.addMessage(targetId, finalAiMessage);
                     }
                 },
-                () => { // onSummaryStart
+                () => {
                     summaryMsgId = `summary_status_${Date.now()}`;
                     MessageManager.displayMessage({ id: summaryMsgId, type: 'system', content: `${contact.name} 正在回忆过去的事件...`, timestamp: new Date().toISOString(), sender: targetId }, false);
                 }
@@ -177,20 +177,6 @@ const AiApiHandler = {
         }
     },
 
-    /**
-     * @private
-     * 在收到摘要后，处理后续的 AI 请求，并将摘要存储起来供将来使用。
-     * 此函数使用收到的摘要作为新的上下文，重新向 AI API 发送用户的原始消息。
-     * 同时，它会将这个摘要保存到 `this.activeSummaries` 中，以便后续的 `sendAiMessage` 调用可以利用它。
-     *
-     * @param {string} targetId - 目标 AI 联系人的 ID。
-     * @param {object} contact - 目标 AI 联系人对象。
-     * @param {string} originalMessageText - 用户最初发送的文本消息。
-     * @param {string} summaryContent - 从 API 收到的上下文摘要。
-     * @param {string} summaryMsgId - “正在回忆...”系统消息的 ID，用于移除。
-     * @param {HTMLElement} chatBox - 聊天框的 DOM 元素。
-     * @returns {Promise<void>}
-     */
     _handleSummaryResponse: async function(targetId, contact, originalMessageText, summaryContent, summaryMsgId, chatBox) {
         Utils.log(`--- 收到关于 [${contact.name}] 的摘要 ---\n${summaryContent}`, Utils.logLevels.INFO);
         this.activeSummaries[targetId] = summaryContent;
@@ -201,14 +187,28 @@ const AiApiHandler = {
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
-                // 这个错误现在会在 checkAiServiceHealth 中首先被捕获和记录
                 Utils.log("AiApiHandler._handleSummaryResponse: AI API 端点未配置。", Utils.logLevels.ERROR);
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
-            const systemPromptBase = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
+            let baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
+            const selectedChapterId = UserManager.getSelectedChapterForAI(targetId); // 再次获取，以防万一有变化
+            let chapterPromptModifier = "";
+            if (selectedChapterId && contact.chapters && contact.chapters.length > 0) {
+                const chapter = contact.chapters.find(ch => ch.id === selectedChapterId);
+                if (chapter && chapter.promptModifier) {
+                    chapterPromptModifier = chapter.promptModifier;
+                }
+            }
+            let finalSystemPrompt = baseSystemPrompt;
+            if (chapterPromptModifier) {
+                finalSystemPrompt += `\n\n[Chapter Focus: ${contact.chapters.find(ch => ch.id === selectedChapterId)?.name || selectedChapterId}]\n${chapterPromptModifier}`;
+            }
+            finalSystemPrompt += contact.aiConfig.promptSuffix?contact.aiConfig.promptSuffix:Config.ai.promptSuffix;
+
+
             const newAiApiMessages = [
-                { role: "system", content: systemPromptBase + Config.ai.baseSystemPrompt },
+                { role: "system", content: finalSystemPrompt },
                 { role: "system", content: `上下文摘要:\n${summaryContent}` },
                 { role: "user", content: `${originalMessageText} [发送于: ${new Date().toLocaleString()}]` }
             ];
@@ -230,7 +230,7 @@ const AiApiHandler = {
                 effectiveConfig.apiEndpoint,
                 newRequestBody,
                 { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-                (jsonChunk) => { // onChunkReceived (摘要后不应再有摘要模式)
+                (jsonChunk) => {
                     const chunkContent = jsonChunk.choices[0].delta.content;
                     newFullAiResponseContent += chunkContent;
                     if (newAiMessageElement) {
@@ -238,7 +238,7 @@ const AiApiHandler = {
                         chatBox.scrollTop = chatBox.scrollHeight;
                     }
                 },
-                () => { // onStreamEnd
+                () => {
                     if (newAiMessageElement) newAiMessageElement.innerHTML = Utils.formatMessageText(newFullAiResponseContent);
                     const finalAiMessage = { id: newAiMessageId, type: 'text', content: newFullAiResponseContent, timestamp: newInitialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
@@ -252,17 +252,6 @@ const AiApiHandler = {
         }
     },
 
-    /**
-     * @description 在群组聊天中处理对 AI 的提及，并获取 AI 的回复。
-     *              提示词获取逻辑调整为：群组特定提示词 > AI角色在UserManager中的当前配置 > 默认空提示词。
-     * @param {string} groupId - 群组 ID。
-     * @param {object} group - 群组对象 (来自 GroupManager.groups[groupId])。
-     * @param {string} aiContactId - 被提及的 AI 的 ID。
-     * @param {string} mentionedMessageText - 包含提及的完整消息文本。
-     * @param {string} originalSenderId - 发送提及消息的用户 ID。
-     * @param {string|null} [triggeringMessageId=null] - 触发此AI调用的用户消息的ID，用于从上下文中排除此消息。
-     * @returns {Promise<void>}
-     */
     sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId, triggeringMessageId = null) {
         const aiContact = UserManager.contacts[aiContactId];
         if (!aiContact || !aiContact.isAI) {
@@ -285,7 +274,6 @@ const AiApiHandler = {
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
-                // 这个错误现在会在 checkAiServiceHealth 中首先被捕获和记录
                 Utils.log("AiApiHandler.sendGroupAiMessage: AI API 端点未配置。", Utils.logLevels.ERROR);
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
@@ -302,7 +290,7 @@ const AiApiHandler = {
             else {
                 Utils.log(`AiApiHandler.sendGroupAiMessage: AI ${aiContactId} 在群组 ${groupId} 中无特定提示词，也无默认提示词。将仅使用基础群聊提示词。`, Utils.logLevels.WARN);
             }
-            const finalSystemPrompt = systemPromptBase + Config.ai.baseGroupSystemPrompt;
+            const finalSystemPrompt = systemPromptBase + Config.ai.groupPromptSuffix;
 
 
             const groupContextWindow = (typeof Config !== 'undefined' && Config.ai && Config.ai.groupAiSessionTime !== undefined)
@@ -343,7 +331,6 @@ const AiApiHandler = {
             };
             messagesForRequestBody.push(userTriggerMessage);
 
-
             Utils.log(`AiApiHandler.sendGroupAiMessage: 为 ${aiContact.name} (群组 ${group.name}) 发送 AI 请求。上下文窗口: ${groupContextWindow / 60000} 分钟。`, Utils.logLevels.DEBUG);
 
             const requestBody = {
@@ -359,7 +346,6 @@ const AiApiHandler = {
 
             const thinkingElementToRemove = document.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
             if (thinkingElementToRemove && thinkingElementToRemove.parentNode) thinkingElementToRemove.remove();
-
 
             const aiResponseMessageId = `group_ai_msg_${aiContactId}_${Date.now()}`;
             let fullAiResponseContent = "";
@@ -380,7 +366,7 @@ const AiApiHandler = {
                 effectiveConfig.apiEndpoint,
                 requestBody,
                 { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-                (jsonChunk) => { // onChunkReceived
+                (jsonChunk) => {
                     const chunkContent = jsonChunk.choices[0].delta.content;
                     fullAiResponseContent += chunkContent;
                     if (aiMessageElement) {
@@ -389,11 +375,11 @@ const AiApiHandler = {
                     }
                     ChatManager.addMessage(groupId, {
                         ...initialAiResponseMessage,
-                        content: fullAiResponseContent + "▍", // Keep cursor until stream ends
+                        content: fullAiResponseContent + "▍",
                         isStreaming: true
                     });
                 },
-                () => { // onStreamEnd
+                () => {
                     const finalAiResponseMessage = {
                         id: aiResponseMessageId, type: 'text', content: fullAiResponseContent,
                         timestamp: initialAiResponseMessage.timestamp, sender: aiContactId,
@@ -433,19 +419,11 @@ const AiApiHandler = {
         }
     },
 
-
-    /**
-     * @description 执行针对配置的 AI 服务的健康检查。
-     * @returns {Promise<boolean>} 如果服务健康则返回 true，否则返回 false。
-     */
     checkAiServiceHealth: async function() {
         const effectiveConfig = this._getEffectiveAiConfig();
 
         if (!effectiveConfig.apiEndpoint) {
             Utils.log("AiApiHandler: AI API 端点未配置，无法进行健康检查。", Utils.logLevels.ERROR);
-            // No NotificationUIManager here, as AppInitializer will update UserManager,
-            // which in turn will trigger an EventEmitter event, and ChatAreaUIManager
-            // will update the header if an AI chat is active.
             return false;
         }
 
@@ -465,12 +443,12 @@ const AiApiHandler = {
                 effectiveConfig.apiEndpoint,
                 healthCheckPayload,
                 { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey || "" },
-                (jsonChunk) => { // onChunkReceived
+                (jsonChunk) => {
                     if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
                         fullStreamedContent += jsonChunk.choices[0].delta.content;
                     }
                 },
-                () => { // onStreamEnd
+                () => {
                     const trimmedContent = fullStreamedContent.trim();
                     Utils.log(`AI 健康检查流式响应内容: "${trimmedContent}" (长度: ${trimmedContent.length})`, Utils.logLevels.DEBUG);
                     if (trimmedContent.toLowerCase().includes("ok") && trimmedContent.length < 10) {
@@ -489,11 +467,6 @@ const AiApiHandler = {
         }
     },
 
-    /**
-     * @description 处理 AI 配置变更事件，重新检查 AI 服务健康状况。
-     *              此方法由 AppInitializer 通过 EventEmitter 调用。
-     * @returns {Promise<void>}
-     */
     handleAiConfigChange: async function() {
         Utils.log("AiApiHandler: AI 配置已更改，正在重新检查服务健康状况...", Utils.logLevels.INFO);
         try {

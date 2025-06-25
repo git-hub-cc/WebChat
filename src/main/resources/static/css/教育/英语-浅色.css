@@ -99,6 +99,12 @@
     --ll-char-cody-accent-rgb: 236, 72, 153;    /* #EC4899 (Pink) */
     --ll-char-cody-msg-bg: linear-gradient(135deg, #f5f3ff, #ede9fe);
 
+    /* 刘彬老师 - Scholarly, Wise, Teal/Gold Tones */
+    --ll-char-liubin-primary-rgb: 10, 126, 140;   /* #0A7E8C (Deep Teal) */
+    --ll-char-liubin-secondary-rgb: 162, 213, 218; /* #A2D5DA (Light Teal) */
+    --ll-char-liubin-accent-rgb: 230, 184, 92;    /* #E6B85C (Gold-ish Yellow) */
+    --ll-char-liubin-msg-bg: linear-gradient(135deg, #e0f7fa, #b2ebf2); /* Light Cyan gradient */
+
     /* ------------------------- ✒️ 字体排版 -------------------------- */
     --font-family: "Nunito Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-size-base: 15px;
@@ -602,92 +608,32 @@ img {
 /* ------------------------- 👤 Character Specific Styles -------------------------- */
 
 /* Helper function:
-   For each character (Lex, Origin, Penny, Cody):
+   For each character (Lex, Origin, Penny, Cody, LiuBin):
    - Active chat list item: border-left-color, avatar border, name color
    - Chat header avatar: border-color, title color (optional)
    - Received message: border-left-color, sender name color, special background
    - Details panel avatar: box-shadow color, name color
 */
 
-/* 👨‍🏫 Professor Lex */
-.chat-list-item.active.AI_ProfessorLex_LexiLearn { border-left-color: rgb(var(--ll-char-lex-primary-rgb)); }
-.chat-list-item.active.AI_ProfessorLex_LexiLearn .chat-list-name { color: rgb(var(--ll-char-lex-primary-rgb)); }
-.chat-list-item.active.AI_ProfessorLex_LexiLearn .chat-list-avatar,
-.chat-avatar-main.AI_ProfessorLex_LexiLearn {
-    border-color: rgb(var(--ll-char-lex-primary-rgb));
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-lex-primary-rgb));
+/* 👨‍🏫 刘彬老师 (Liu Bin) */
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi { border-left-color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi .chat-list-name { color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi .chat-list-avatar,
+.chat-avatar-main.AI_LiuBin_CiHuiDaShi {
+    border-color: rgb(var(--ll-char-liubin-primary-rgb));
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-liubin-primary-rgb));
 }
-.chat-header-main.current-chat-AI_ProfessorLex_LexiLearn .chat-title-main { color: rgb(var(--ll-char-lex-primary-rgb)); }
-.message.received[data-sender-id="AI_ProfessorLex_LexiLearn"] {
-    border-left: 4px solid rgb(var(--ll-char-lex-primary-rgb));
-    background: var(--ll-char-lex-msg-bg);
+.chat-header-main.current-chat-AI_LiuBin_CiHuiDaShi .chat-title-main { color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.message.received[data-sender-id="AI_LiuBin_CiHuiDaShi"] {
+    border-left: 4px solid rgb(var(--ll-char-liubin-primary-rgb));
+    background: var(--ll-char-liubin-msg-bg);
 }
-.message.received[data-sender-id="AI_ProfessorLex_LexiLearn"] .message-sender { color: rgb(var(--ll-char-lex-primary-rgb)); }
-.details-panel.AI_ProfessorLex_LexiLearn .details-avatar {
-    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-lex-primary-rgb),0.4);
+.message.received[data-sender-id="AI_LiuBin_CiHuiDaShi"] .message-sender { color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.details-panel.AI_LiuBin_CiHuiDaShi .details-avatar {
+    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-liubin-primary-rgb),0.4);
 }
-.details-panel.AI_ProfessorLex_LexiLearn .details-name { color: rgb(var(--ll-char-lex-primary-rgb)); }
-.details-panel.AI_ProfessorLex_LexiLearn .details-section-title { border-bottom-color: rgb(var(--ll-char-lex-primary-rgb)); }
-
-/* 📜 Dr. Origin */
-.chat-list-item.active.AI_DrOrigin_LexiLearn { border-left-color: rgb(var(--ll-char-origin-primary-rgb)); }
-.chat-list-item.active.AI_DrOrigin_LexiLearn .chat-list-name { color: rgb(var(--ll-char-origin-primary-rgb)); }
-.chat-list-item.active.AI_DrOrigin_LexiLearn .chat-list-avatar,
-.chat-avatar-main.AI_DrOrigin_LexiLearn {
-    border-color: rgb(var(--ll-char-origin-primary-rgb));
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-origin-primary-rgb));
-}
-.chat-header-main.current-chat-AI_DrOrigin_LexiLearn .chat-title-main { color: rgb(var(--ll-char-origin-primary-rgb)); }
-.message.received[data-sender-id="AI_DrOrigin_LexiLearn"] {
-    border-left: 4px solid rgb(var(--ll-char-origin-primary-rgb));
-    background: var(--ll-char-origin-msg-bg);
-}
-.message.received[data-sender-id="AI_DrOrigin_LexiLearn"] .message-sender { color: rgb(var(--ll-char-origin-primary-rgb)); }
-.details-panel.AI_DrOrigin_LexiLearn .details-avatar {
-    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-origin-primary-rgb),0.4);
-}
-.details-panel.AI_DrOrigin_LexiLearn .details-name { color: rgb(var(--ll-char-origin-primary-rgb)); }
-.details-panel.AI_DrOrigin_LexiLearn .details-section-title { border-bottom-color: rgb(var(--ll-char-origin-primary-rgb)); }
-
-/* 🧩 Pattern Penny */
-.chat-list-item.active.AI_PatternPenny_LexiLearn { border-left-color: rgb(var(--ll-char-penny-primary-rgb)); }
-.chat-list-item.active.AI_PatternPenny_LexiLearn .chat-list-name { color: rgb(var(--ll-char-penny-primary-rgb)); }
-.chat-list-item.active.AI_PatternPenny_LexiLearn .chat-list-avatar,
-.chat-avatar-main.AI_PatternPenny_LexiLearn {
-    border-color: rgb(var(--ll-char-penny-primary-rgb));
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-penny-primary-rgb));
-}
-.chat-header-main.current-chat-AI_PatternPenny_LexiLearn .chat-title-main { color: rgb(var(--ll-char-penny-primary-rgb)); }
-.message.received[data-sender-id="AI_PatternPenny_LexiLearn"] {
-    border-left: 4px solid rgb(var(--ll-char-penny-primary-rgb));
-    background: var(--ll-char-penny-msg-bg);
-}
-.message.received[data-sender-id="AI_PatternPenny_LexiLearn"] .message-sender { color: rgb(var(--ll-char-penny-primary-rgb)); }
-.details-panel.AI_PatternPenny_LexiLearn .details-avatar {
-    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-penny-primary-rgb),0.4);
-}
-.details-panel.AI_PatternPenny_LexiLearn .details-name { color: rgb(var(--ll-char-penny-primary-rgb)); }
-.details-panel.AI_PatternPenny_LexiLearn .details-section-title { border-bottom-color: rgb(var(--ll-char-penny-primary-rgb)); }
-
-/* 🗣️ Context Cody */
-.chat-list-item.active.AI_ContextCody_LexiLearn { border-left-color: rgb(var(--ll-char-cody-primary-rgb)); }
-.chat-list-item.active.AI_ContextCody_LexiLearn .chat-list-name { color: rgb(var(--ll-char-cody-primary-rgb)); }
-.chat-list-item.active.AI_ContextCody_LexiLearn .chat-list-avatar,
-.chat-avatar-main.AI_ContextCody_LexiLearn {
-    border-color: rgb(var(--ll-char-cody-primary-rgb));
-    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-cody-primary-rgb));
-}
-.chat-header-main.current-chat-AI_ContextCody_LexiLearn .chat-title-main { color: rgb(var(--ll-char-cody-primary-rgb)); }
-.message.received[data-sender-id="AI_ContextCody_LexiLearn"] {
-    border-left: 4px solid rgb(var(--ll-char-cody-primary-rgb));
-    background: var(--ll-char-cody-msg-bg);
-}
-.message.received[data-sender-id="AI_ContextCody_LexiLearn"] .message-sender { color: rgb(var(--ll-char-cody-primary-rgb)); }
-.details-panel.AI_ContextCody_LexiLearn .details-avatar {
-    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-cody-primary-rgb),0.4);
-}
-.details-panel.AI_ContextCody_LexiLearn .details-name { color: rgb(var(--ll-char-cody-primary-rgb)); }
-.details-panel.AI_ContextCody_LexiLearn .details-section-title { border-bottom-color: rgb(var(--ll-char-cody-primary-rgb)); }
+.details-panel.AI_LiuBin_CiHuiDaShi .details-name { color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.details-panel.AI_LiuBin_CiHuiDaShi .details-section-title { border-bottom-color: rgb(var(--ll-char-liubin-primary-rgb)); }
 
 
 /* Ensure input fields and specific text areas like notifications have contrasting text color if global is too light */

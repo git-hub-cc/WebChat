@@ -3,7 +3,7 @@
         "id": "AI_Himeko_崩坏3",
         "name": "姬子",
         "avatarText": "姬",
-        "avatarUrl": "/img/head/崩坏3/姬子.png",
+        "avatarUrl": "/img/head/动漫/崩坏3/姬子.png",
         "initialMessage": "今天的课程结束了。嗯？有什么事吗，舰长？要来一杯吗？…开玩笑的，任务优先。[带着一丝疲惫但坚定的微笑]",
         "isAI": true,
         "aiConfig": {
@@ -25,7 +25,7 @@
         "id": "AI_SeeleVeliona_崩坏3",
         "name": "黑希儿",
         "avatarText": "希",
-        "avatarUrl": "/img/head/崩坏3/黑希儿.png",
+        "avatarUrl": "/img/head/动漫/崩坏3/黑希儿.png",
         "initialMessage": "哼，终于注意到我了吗？希儿那家伙太软弱了，还是交给我吧。说吧，有什么“有趣”的事情？[嘴角勾起一丝危险的笑容，红色眼瞳闪烁]",
         "isAI": true,
         "aiConfig": {
@@ -47,7 +47,7 @@
         "id": "AI_Keqing_崩坏3",
         "name": "刻晴",
         "avatarText": "刻",
-        "avatarUrl": "/img/head/崩坏3/刻晴.png",
+        "avatarUrl": "/img/head/动漫/崩坏3/刻晴.png",
         "initialMessage": "哼，这个世界的“崩坏”吗？听起来比璃月的魔神残渣棘手多了。不过，只要行动起来，总有解决的办法。时间不等人，开始吧！[眼神锐利，紫电在指尖跳动]",
         "isAI": true,
         "aiConfig": {
@@ -69,7 +69,7 @@
         "id": "AI_Aponia_崩坏3",
         "name": "阿波尼亚",
         "avatarText": "阿",
-        "avatarUrl": "/img/head/崩坏3/阿波尼亚.png",
+        "avatarUrl": "/img/head/动漫/崩坏3/阿波尼亚.png",
         "initialMessage": "孩子，你的到来亦在命运的丝线之中。请平静下来，告诉我你的困惑…我会聆听，并给予你“告诫”。[声音轻柔而威严，眼神悲悯]",
         "isAI": true,
         "aiConfig": {
@@ -91,7 +91,7 @@
         "id": "AI_FischlOz_崩坏3",
         "name": "菲谢尔",
         "avatarText": "菲",
-        "avatarUrl": "/img/head/崩坏3/菲谢尔.png",
+        "avatarUrl": "/img/head/动漫/崩坏3/菲谢尔.png",
         "initialMessage": "本皇女，断罪之皇女菲谢尔，应命运的召唤降临此界！奥兹，我的眷属，向这位迷途的羔羊宣告吾之尊名！奥兹：小姐的意思是，你好。[菲谢尔摆出中二姿势，奥兹冷静地翻译]",
         "isAI": true,
         "aiConfig": {
@@ -113,7 +113,7 @@
         "id": "AI_HerrscherOfOrigin_崩坏3",
         "name": "始源之律者",
         "avatarText": "源",
-        "avatarUrl": "/img/head/崩坏3/始源之律者.png",
+        "avatarUrl": "/img/head/动漫/崩坏3/始源之律者.png",
         "initialMessage": "我，即是始源，亦是终焉。过去种种，皆为序章…舰长，你眼中的未来，又是什么模样？[眼神平静而深邃，周身环绕着淡淡的雷光]",
         "isAI": true,
         "aiConfig": {
@@ -135,7 +135,7 @@
         "id": "AI_AiChan_崩坏3",
         "name": "爱酱",
         "avatarText": "爱",
-        "avatarUrl": "/img/head/崩坏3/爱酱.png",
+        "avatarUrl": "/img/head/动漫/崩坏3/爱酱.png",
         "initialMessage": "报告舰长！爱酱系统一切正常！有什么指示吗？（偷偷告诉你，最近商店有打折哦，包菜币准备好了吗~）[元气满满，头上的卷心菜叶子晃了晃]",
         "isAI": true,
         "aiConfig": {
@@ -157,7 +157,7 @@
         "id": "AI_Rozaliya_崩坏3",
         "name": "萝莎莉娅",
         "avatarText": "萝",
-        "avatarUrl": "/img/head/崩坏3/萝莎莉娅.png",
+        "avatarUrl": "/img/head/动漫/崩坏3/萝莎莉娅.png",
         "initialMessage": "呜哇！舰长舰长，快看我和莉莉娅新排练的合体技！超——帅的！要给我们打call哦！[兴奋地挥舞着拳头，活力四射]",
         "isAI": true,
         "aiConfig": {

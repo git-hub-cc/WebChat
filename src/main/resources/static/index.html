@@ -15,22 +15,26 @@
     <meta property="og:url" content="https://175.178.216.24/">
     <meta property="og:title" content="PPMC - AI Character Chat Platform">
     <meta property="og:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="og:image" content="https://175.178.216.24/img/desktop/img.png"> <!-- Assuming this image is accessible at this URL -->
+    <meta property="og:image" content="https://175.178.216.24/img/desktop/img.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
     <meta property="twitter:url" content="https://175.178.216.24/">
     <meta property="twitter:title" content="PPMC - AI Character Chat Platform">
     <meta property="twitter:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="twitter:image" content="https://175.178.216.24/img/desktop/img.png"> <!-- Assuming this image is accessible at this URL -->
+    <meta property="twitter:image" content="https://175.178.216.24/img/desktop/img.png">
     <!-- End of SEO Meta Tags -->
 
-    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/基础/core.css">
+    <link rel="stylesheet" href="css/基础/sidebar.css">
+    <link rel="stylesheet" href="css/基础/chat-area.css">
+    <link rel="stylesheet" href="css/基础/details-panel.css">
     <!-- 主题特定 CSS 占位符, href 会被 ThemeLoader.init 动态填充 -->
-    <link id="theme-stylesheet" rel="stylesheet" href="css/原神-浅色.css">
+    <link id="theme-stylesheet" rel="stylesheet" href="css/动漫/原神-浅色.css">
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
+<!-- ... rest of your body content remains the same ... -->
 <div class="app-container">
     <!-- 左侧边栏 (导航) -->
     <aside class="sidebar-nav" id="sidebarNav">
@@ -67,7 +71,6 @@
                     <button class="header-action-btn" id="videoCallButtonMain" title="视频通话" disabled>📹</button>
                     <button class="header-action-btn" id="audioCallButtonMain" title="语音通话" disabled>🎤</button>
                     <button class="header-action-btn" id="screenShareButtonMain" title="屏幕共享" disabled>🖥️</button>
-                    <button class="header-action-btn" id="chatDetailsBtnMain" title="聊天信息" disabled>ℹ️</button>
                     <button class="header-action-btn" id="peopleLobbyButtonMain" title="人员大厅">👥</button>
                 </div>
             </header>
@@ -125,12 +128,20 @@
                 </div>
             </div>
             <!-- AI 联系人“关于”部分结束 -->
-            <!-- AI 互动操作部分 -->
-            <div class="details-section" id="aiContactSpecificActions" style="display: none;">
-                <h4>与AI互动</h4>
-                <button id="createGroupWithAiBtnDetails" class="btn btn-secondary" style="width: 100%; margin-top: 5px;">和TA群聊</button>
+
+            <!-- 新增：AI 记忆选择部分 -->
+            <div class="details-section" id="aiChapterSection" style="display: none;">
+                <h4 id="aiChapterHeader">记忆配置</h4>
+                <div class="settings-item">
+                    <label for="aiChapterSelectContainer">选择关卡:</label> <!-- Changed for attribute -->
+                    <!-- Container for the custom searchable select, to be populated by JS -->
+                    <div id="aiChapterSelectContainer" style="flex-grow: 1;">
+                        <!-- Searchable select will be built here by JS -->
+                    </div>
+                </div>
             </div>
-            <!-- AI 互动操作部分结束 -->
+            <!-- AI 记忆选择部分结束 -->
+
             <!-- AI TTS 配置部分 -->
             <div class="details-section" id="aiTtsConfigSection" style="display: none;">
                 <h4 class="collapsible-header" id="aiTtsConfigHeader">
@@ -459,7 +470,7 @@
             <p>
                 如有紧急事宜，您可以通过微信联系我们：
             </p>
-            <img src="/img/wechat/wechat.png" alt="微信二维码" style="max-width: 150px; margin: 10px auto; display: block; border: 1px solid var(--border-color);">
+            <img src="/img/wechat/contact.png" alt="微信二维码" style="max-width: 150px; margin: 10px auto; display: block; border: 1px solid var(--border-color);">
             <p style="font-size: 0.9em; color: var(--text-color-light);">
                 此消息将在 <span id="openSourceModalTimer">8</span> 秒后自动关闭。
             </p>
@@ -522,7 +533,7 @@
 
 <!-- UI组件管理器 -->
 <script src="js/UI/TtsUIManager.js"></script>
-<script src="js/UI/ScreenshotEditorUIManager.js"></script> <!-- 新增 -->
+<script src="js/UI/ScreenshotEditorUIManager.js"></script>
 <script src="js/UI/ModalUIManager.js"></script>
 <script src="js/UI/NotificationUIManager.js"></script>
 <script src="js/UI/SettingsUIManager.js"></script>

@@ -4,7 +4,7 @@
             "id": "AI_Sushang_HSR",
             "name": "素裳",
             "avatarText": "裳",
-            "avatarUrl": "/img/head/星穹铁道/素裳.png",
+            "avatarUrl": "/img/head/动漫/星穹铁道/素裳.png",
             "initialMessage": "嘿！有什么需要本姑娘帮忙的吗？是打抱不平还是抓偷鸡贼？包在我身上！[元气满满地拍了拍胸脯，身后似乎有小鸡的幻影]",
             "isAI": true,
             "aiConfig": {
@@ -26,7 +26,7 @@
             "id": "AI_Misha_HSR",
             "name": "米沙",
             "avatarText": "米",
-            "avatarUrl": "/img/head/星穹铁道/米沙.png",
+            "avatarUrl": "/img/head/动漫/星穹铁道/米沙.png",
             "initialMessage": "您…您好！有什么可以为您服务的吗？如果需要引路或者…修理东西，我很乐意帮忙！[微微有些紧张，但努力露出友善的笑容]",
             "isAI": true,
             "aiConfig": {
@@ -48,7 +48,7 @@
             "id": "AI_DanHeng_HSR",
             "name": "丹恒",
             "avatarText": "丹",
-            "avatarUrl": "/img/head/星穹铁道/丹恒.png",
+            "avatarUrl": "/img/head/动漫/星穹铁道/丹恒.png",
             "initialMessage": "冷静。资料库的记录是客观的。如果你有疑问，我会尽力解答。[眼神平静，语气沉稳]",
             "isAI": true,
             "aiConfig": {
@@ -70,7 +70,7 @@
             "id": "AI_Sampo_HSR",
             "name": "桑博",
             "avatarText": "桑",
-            "avatarUrl": "/img/head/星穹铁道/桑博.png",
+            "avatarUrl": "/img/head/动漫/星穹铁道/桑博.png",
             "initialMessage": "哎呀呀，这不是我尊贵的朋友吗！有什么生意要照顾我桑博·科斯基吗？保证物美价廉，童叟无欺……大概吧！[笑容可掬，眼中闪过一丝狡黠的光芒]",
             "isAI": true,
             "aiConfig": {
@@ -92,7 +92,7 @@
             "id": "AI_Bailu_HSR",
             "name": "白露",
             "avatarText": "白",
-            "avatarUrl": "/img/head/星穹铁道/白露.png",
+            "avatarUrl": "/img/head/动漫/星穹铁道/白露.png",
             "initialMessage": "呜…又头晕了…你找我？是要看病吗？白露的药，效果很好的！只要你不怕苦。[揉着眼睛，努力打起精神]",
             "isAI": true,
             "aiConfig": {
@@ -114,7 +114,7 @@
             "id": "AI_Aglaia_HSR",
             "name": "阿格莱雅",
             "avatarText": "雅",
-            "avatarUrl": "/img/head/星穹铁道/阿格莱雅.png",
+            "avatarUrl": "/img/head/动漫/星穹铁道/阿格莱雅.png",
             "initialMessage": "星辰之美，瞬息万变，却又在每个刹那臻于完美。旅者，你是否也为这宇宙的华彩而驻足？[轻拢秀发，眼中闪烁着对美的沉醉]",
             "isAI": true,
             "aiConfig": {
@@ -136,7 +136,7 @@
             "id": "AI_Yanqing_HSR",
             "name": "彦卿",
             "avatarText": "彦",
-            "avatarUrl": "/img/head/星穹铁道/彦卿.png",
+            "avatarUrl": "/img/head/动漫/星穹铁道/彦卿.png",
             "initialMessage": "哼，本剑首在此，谁敢造次！你找我？莫非是想领教一下我的「智剑」吗？[手按剑柄，眼神锐利，充满少年英气]",
             "isAI": true,
             "aiConfig": {
@@ -158,7 +158,7 @@
             "id": "AI_XiaDie_HSR",
             "name": "遐蝶",
             "avatarText": "蝶",
-            "avatarUrl": "/img/head/星穹铁道/遐蝶.png",
+            "avatarUrl": "/img/head/动漫/星穹铁道/遐蝶.png",
             "initialMessage": "嘘…星辰的记忆如蝶翼般脆弱，却也承载着最深沉的秘密。你想知道什么？或许…我恰好听闻了一些有趣的低语。[身影若隐若现，声音如同梦呓]",
             "isAI": true,
             "aiConfig": {

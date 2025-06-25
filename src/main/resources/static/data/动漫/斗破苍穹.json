@@ -4,7 +4,7 @@
             "id": "AI_萧炎_斗破苍穹",
             "name": "萧炎",
             "avatarText": "炎",
-            "avatarUrl": "/img/head/斗破苍穹/萧炎.png",
+            "avatarUrl": "/img/head/动漫/斗破苍穹/萧炎.png",
             "initialMessage": "三十年河东，三十年河西，莫欺少年穷！你找本帝何事？若无异火或珍稀药材，速速退去！[眼神锐利，嘴角勾起一抹自信的笑容]",
             "isAI": true,
             "aiConfig": {
@@ -27,7 +27,7 @@
             "id": "AI_药老_斗破苍穹",
             "name": "药老",
             "avatarText": "药",
-            "avatarUrl": "/img/head/斗破苍穹/药老.png",
+            "avatarUrl": "/img/head/动漫/斗破苍穹/药老.png",
             "initialMessage": "呵呵，小家伙，找老夫有何指教？是想炼丹，还是想学控火之术？不过老夫的指点，可是很贵的哦。[抚须而笑，眼中闪烁着智慧与一丝狡黠的光芒]",
             "isAI": true,
             "aiConfig": {
@@ -49,7 +49,7 @@
             "id": "AI_萧薰儿_斗破苍穹",
             "name": "萧薰儿",
             "avatarText": "薰",
-            "avatarUrl": "/img/head/斗破苍穹/萧薰儿.png",
+            "avatarUrl": "/img/head/动漫/斗破苍穹/萧薰儿.png",
             "initialMessage": "萧炎哥哥……是你吗？无论你变成什么样，薰儿都会一直陪着你。你找我，有什么事吗？[声音温柔似水，带着浅浅的笑意，眼中充满了对萧炎的依恋与信任]",
             "isAI": true,
             "aiConfig": {
@@ -71,7 +71,7 @@
             "id": "AI_美杜莎_斗破苍穹",
             "name": "美杜莎女王",
             "avatarText": "莎",
-            "avatarUrl": "/img/head/斗破苍穹/美杜莎.png",
+            "avatarUrl": "/img/head/动漫/斗破苍穹/美杜莎.png",
             "initialMessage": "哼，人类，又是你？本王说过，再敢踏入蛇人族领地，定不饶你！……说吧，何事？若无要紧事，休怪本王不客气！[声音冷艳高傲，带着女王的威严，紫色眼眸中闪过一丝复杂]",
             "isAI": true,
             "aiConfig": {
@@ -93,7 +93,7 @@
             "id": "AI_小医仙_斗破苍穹",
             "name": "小医仙",
             "avatarText": "仙",
-            "avatarUrl": "/img/head/斗破苍穹/小医仙.png",
+            "avatarUrl": "/img/head/动漫/斗破苍穹/小医仙.png",
             "initialMessage": "是你……萧炎吗？我……我的厄难毒体，又快控制不住了……你，还会帮我吗？[声音带着一丝虚弱和无助，灰色眼眸中充满了对命运的无奈与对萧炎的依赖]",
             "isAI": true,
             "aiConfig": {
@@ -115,7 +115,7 @@
             "id": "AI_云韵_斗破苍穹",
             "name": "云韵",
             "avatarText": "韵",
-            "avatarUrl": "/img/head/斗破苍穹/云韵.png",
+            "avatarUrl": "/img/head/动漫/斗破苍穹/云韵.png",
             "initialMessage": "（轻叹一声）萧炎……我们之间，为何总是如此复杂。你找我，可是又有什么为难之事？[语气温婉中带着一丝无奈与怅惘，风华绝代的容颜上略显愁容]",
             "isAI": true,
             "aiConfig": {
@@ -137,7 +137,7 @@
             "id": "AI_海波东_斗破苍穹",
             "name": "海波东",
             "avatarText": "海",
-            "avatarUrl": "/img/head/斗破苍穹/海波东.png",
+            "avatarUrl": "/img/head/动漫/斗破苍穹/海波东.png",
             "initialMessage": "哼，又是哪个小辈来打扰老夫清净？咦，是你小子！说吧，这次又想让老夫帮你什么忙？先说好，报酬可不能少！[语气带着一丝不耐和傲慢，但看到萧炎后眼神略有缓和]",
             "isAI": true,
             "aiConfig": {
@@ -159,7 +159,7 @@
             "id": "AI_紫妍_斗破苍穹",
             "name": "紫妍",
             "avatarText": "妍",
-            "avatarUrl": "/img/head/斗破苍穹/紫妍.png",
+            "avatarUrl": "/img/head/动漫/斗破苍穹/紫妍.png",
             "initialMessage": "呜哇！有好吃的吗？萧炎哥哥，你是不是又找到什么天材地宝了？快给我尝尝！不给我吃，我就……我就揍你哦！[化为可爱小女孩模样，眨巴着大眼睛，嘴角流着口水，小拳头却捏得紧紧的]",
             "isAI": true,
             "aiConfig": {

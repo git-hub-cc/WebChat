@@ -1,0 +1,846 @@
+/* ========================================================================== */
+/* 右侧详情面板 (Details Panel) */
+/* ========================================================================== */
+
+.details-header {
+    background-color: #f0f2f5; /* Specific background for details panel header */
+    justify-content: space-between; /* Align title left, close button right */
+}
+
+/* .icon-btn.close-details-btn base style in core.css */
+
+.details-content {
+    flex-grow: 1;
+    padding: var(--spacing-4);
+    overflow-y: auto;
+}
+
+.details-section {
+    margin-bottom: 25px;
+    padding-inline: 5px;
+}
+
+.details-section h4 { /* Common style for section headers in details panel */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* --- 联系人/群组基本信息 --- */
+/* .details-avatar base style in core.css */
+.details-avatar {
+    width: 80px;
+    height: 80px;
+    margin: 10px auto 15px;
+    box-shadow: var(--box-shadow);
+    font-size: 36px;
+}
+
+#detailsName {
+    margin-bottom: 5px;
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+}
+
+#detailsId,
+#detailsStatus {
+    margin-bottom: 2px;
+    color: var(--text-color-light);
+    font-size: 13px;
+    text-align: center;
+}
+
+#detailsStatus {
+    margin-bottom: 15px;
+}
+
+/* --- AI 联系人 "关于" 部分 --- */
+#aiContactAboutSection h4 { /* Can reuse .details-section h4 if structure is same */
+    color: var(--text-color-light); /* Example: different color for this header */
+}
+#aiContactDetailsContent ul {
+    list-style-position: inside;
+    padding-left: 0; /* Or var(--spacing-2) if you want some indent */
+    margin-bottom: var(--spacing-3);
+}
+#aiContactDetailsContent ul li {
+    margin-bottom: var(--spacing-1);
+}
+#aiContactDetailsContent p {
+    margin-bottom: var(--spacing-2);
+    line-height: 1.5;
+}
+
+
+/* --- AI 篇章选择部分 --- */
+#aiChapterSection { /* Section specific styles */
+    /* margin-bottom is handled by .details-section */
+}
+#aiChapterSection h4 {
+    /* Uses .details-section h4 styles */
+}
+#aiChapterSection .settings-item {
+    /* Uses .modal-body .settings-item from core.css or define similar structure */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin-bottom: 0; /* If it's the only item */
+}
+#aiChapterSection .settings-item label {
+    flex-shrink: 0;
+    width: 80px;
+    text-align: end;
+    font-weight: 500;
+    font-size: 14px; /* Consistent with modal labels */
+}
+#aiChapterSection .settings-item #aiChapterSelectContainer {
+    flex-grow: 1; /* Ensure select container takes available space */
+}
+
+/* Native select styled like custom */
+select.custom-select-native {
+    flex-grow: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    color: var(--text-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right var(--spacing-2) center;
+    background-repeat: no-repeat;
+    padding-right: calc(var(--spacing-2) + 20px + 5px); /* Space for arrow + buffer */
+    cursor: pointer;
+}
+select.custom-select-native:disabled {
+    background-color: var(--hover-bg-color);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+/* Focus style for select.custom-select-native handled by common rule in core.css */
+
+/* Searchable Select for Details Panel (e.g., AI Vocabulary Chapter) */
+.details-searchable-select {
+    position: relative;
+    flex-grow: 1;
+}
+
+.details-searchable-select-input {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    color: var(--text-color);
+    box-sizing: border-box;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right var(--spacing-2) center;
+    background-repeat: no-repeat;
+    padding-right: calc(var(--spacing-2) + 20px + 5px);
+}
+.details-searchable-select-input:focus { /* Specific focus due to background-image change */
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%230088CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>');
+}
+.details-searchable-select-input:disabled {
+    background-color: var(--hover-bg-color, #f0f0f0);
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23AAAAAA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+}
+
+.details-searchable-select-options-container {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.details-searchable-select-option {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-color);
+}
+.details-searchable-select-option:hover,
+.details-searchable-select-option.highlighted {
+    background-color: var(--hover-bg-color);
+    color: var(--primary-color);
+}
+.details-searchable-select-option.no-results {
+    color: var(--text-color-light);
+    cursor: default;
+    font-style: italic;
+}
+
+
+/* --- AI TTS 配置部分 (Details Panel Specifics) --- */
+#aiTtsConfigSection h4.collapsible-header { /* If different from base .collapsible-header */
+    color: var(--text-color-light);
+}
+
+.tts-config-content-details { /* Wrapper for TTS config items */
+    /* padding, margin, border if needed for this specific content block */
+}
+
+#ttsConfigFormContainer .tts-config-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-3);
+}
+
+#ttsConfigFormContainer .tts-config-item label {
+    flex-shrink: 0;
+    width: 85px; /* Fixed width for labels in this form */
+    margin-inline-end: 10px;
+    color: var(--text-color);
+    font-size: 0.88em;
+    font-weight: 500;
+    text-align: end;
+}
+
+#ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]),
+#ttsConfigFormContainer .tts-config-item select,
+.searchable-select-input-tts { /* Includes the searchable select input */
+    flex-grow: 1;
+    min-width: 50px; /* Or 0 if flex handles it well */
+    padding: 7px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    box-sizing: border-box;
+}
+#ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]):focus,
+#ttsConfigFormContainer .tts-config-item select:focus,
+.searchable-select-input-tts:focus { /* Focus for these specific inputs */
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+#ttsConfigFormContainer .tts-config-item select { /* Native select styling */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding-inline-end: 30px; /* Space for arrow */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+#ttsConfigFormContainer .tts-config-item select:disabled,
+.searchable-select-input-tts:disabled {
+    background-color: var(--hover-bg-color, #f0f0f0);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+
+#ttsConfigFormContainer .tts-config-item input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-inline-end: auto; /* Pushes checkbox to the left if label is on right or something */
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+/* TTS Searchable Select (Voice, Model, Emotion) specific styles */
+.searchable-select-tts { /* Container for searchable select in TTS config */
+    position: relative;
+    flex-grow: 1;
+}
+/* .searchable-select-input-tts styled with other inputs above */
+
+.searchable-select-options-container-tts {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 1050; /* Above other modal/panel content */
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    background-color: var(--received-bg-color);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.searchable-select-option-tts {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.searchable-select-option-tts:hover {
+    background-color: var(--hover-bg-color);
+    color: var(--primary-color);
+}
+.searchable-select-option-tts.no-results {
+    color: var(--text-color-light);
+    cursor: default;
+    font-style: italic;
+}
+
+
+/* --- 详情面板: TTS 署名信息 --- */
+.tts-attribution-section {
+    /* Specific margins/padding if needed */
+}
+.tts-attribution-section .attribution-sub-header { /* Collapsible sub-header */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 6px;
+    margin-top: 15px;
+    margin-bottom: 0;
+    border-bottom: 1px dashed var(--border-color);
+    cursor: pointer;
+    color: var(--text-color-light);
+    font-size: 1em;
+    font-weight: 500;
+}
+.tts-attribution-section .attribution-sub-header.active {
+    border-bottom-style: solid;
+    border-bottom-color: var(--primary-color);
+    color: var(--primary-color);
+}
+.tts-attribution-section .attribution-sub-content {
+    padding-inline-start: 12px;
+    margin-top: 8px;
+    font-size: 0.85em;
+}
+.tts-attribution-section a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+.tts-attribution-section a:hover {
+    text-decoration: underline;
+}
+
+
+/* --- 详情面板: 群组管理特定样式 --- */
+#detailsGroupManagement #addGroupMemberArea {
+    margin-top: var(--spacing-4);
+    padding-top: var(--spacing-3);
+    border-top: 1px solid var(--border-color);
+}
+#detailsGroupManagement #addGroupMemberArea h5 {
+    margin-bottom: var(--spacing-2);
+    font-size: 1.1em;
+    font-weight: 500;
+    color: var(--text-color);
+}
+#detailsGroupManagement #addGroupMemberArea select#contactsDropdownDetails {
+    width: 100%;
+    padding: var(--spacing-2) var(--spacing-3);
+    margin-bottom: var(--spacing-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--received-bg-color);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    color: var(--text-color);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding-inline-end: 30px; /* Space for arrow */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right var(--spacing-2) center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+#detailsGroupManagement #addGroupMemberArea select#contactsDropdownDetails:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+#detailsGroupManagement #addGroupMemberArea button#addMemberBtnDetails {
+    width: 100%;
+}
+
+/* 群组成员列表项状态 */
+.member-item-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+.member-item-detail:last-child {
+    border-bottom: none;
+}
+.member-item-detail .member-name {
+    flex-grow: 1;
+    margin-right: var(--spacing-2);
+}
+.member-item-detail .member-status {
+    font-size: 0.85em;
+    color: var(--text-color-light);
+    margin-right: var(--spacing-2);
+    white-space: nowrap;
+}
+.member-item-detail .member-status.connected { color: var(--accent-color); }
+.member-item-detail .member-status.online-not-connected { color: var(--warning-color); }
+.member-item-detail .member-status.offline { color: #aaa; }
+
+.member-item-detail .member-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+.member-item-detail .remove-member-btn-detail,
+.member-item-detail .reconnect-member-btn-detail {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+.member-item-detail .remove-member-btn-detail {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--danger-color);
+}
+.member-item-detail .remove-member-btn-detail:hover {
+    background-color: rgba(244, 67, 54, 0.2);
+    border-color: var(--danger-color);
+}
+.member-item-detail .reconnect-member-btn-detail {
+    background-color: rgba(0, 136, 204, 0.1);
+    color: var(--primary-color);
+}
+.member-item-detail .reconnect-member-btn-detail:hover {
+    background-color: rgba(0, 136, 204, 0.2);
+    border-color: var(--primary-color);
+}
+
+/* --- 群组内 AI 提示词管理部分 --- */
+#groupAiPromptsSection h4 { /* Uses .details-section h4 styling */
+    cursor: pointer; /* To indicate collapsible */
+}
+#groupAiPromptsListContainer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-4);
+}
+.ai-prompt-editor-item {
+    padding: var(--spacing-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background-color: var(--secondary-color);
+}
+.ai-prompt-editor-item h5 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-2);
+    font-size: 1.05em;
+    font-weight: 500;
+}
+.ai-prompt-editor-item textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: var(--spacing-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    font-family: var(--font-family);
+    font-size: 0.9em;
+    resize: vertical;
+    margin-bottom: var(--spacing-2);
+}
+.ai-prompt-editor-item .btn-sm {
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: 0.85em;
+}
+.ai-prompt-editor-item > div:last-child { /* Button container */
+    display: flex;
+    gap: 10px;
+}
+
+/* --- 资源预览面板 (Resource Preview Panel) --- */
+#resourcePreviewSection h4 { /* Uses .details-section h4 styling */
+    /* any specific overrides for this title */
+}
+.resource-preview-panel-content {
+    /* JS sets display:flex, flex-direction:column */
+}
+
+/* Resource search (within details panel) */
+.resource-search-container {
+    margin-bottom: var(--spacing-3);
+    order: -1; /* Placed above tabs */
+}
+#resourceSearchInputDetailsPanel { /* Uses .search-bar styles from core.css */
+    width: 100%;
+}
+#resourceSearchInputDetailsPanel:focus { /* Specific focus for this search bar */
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+
+.resource-category-tabs {
+    display: flex;
+    justify-content: space-around;
+    padding: var(--spacing-2) var(--spacing-1);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    background-color: #f8f9fa; /* Consistent with details panel bg */
+}
+
+.resource-category-tab {
+    padding: var(--spacing-2) var(--spacing-3);
+    border: none;
+    background-color: transparent;
+    color: var(--text-color-light);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+}
+.resource-category-tab:hover {
+    color: var(--primary-color);
+}
+.resource-category-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.resource-grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Default 2 columns */
+    gap: 5px;
+    padding: var(--spacing-2);
+    overflow-y: auto;
+    flex-grow: 1;
+    position: relative; /* For loading indicator */
+}
+
+.resource-preview-item { /* Grid item for image/video/other files */
+    position: relative;
+    aspect-ratio: 1 / 1; /* Square items */
+    background-color: var(--hover-bg-color);
+    border-radius: var(--border-radius-small);
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    border: 1px solid var(--border-color);
+}
+.resource-preview-item:hover {
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+
+.resource-preview-item .thumbnail-placeholder-resource { /* Placeholder for grid items */
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    color: var(--text-color-light);
+    background-color: var(--secondary-color);
+    position: relative;
+}
+
+.resource-preview-item .message-thumbnail-resource { /* Actual thumbnail in grid */
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.resource-preview-item .thumbnail-placeholder-resource .play-overlay-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5em;
+    color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 50%;
+    padding: 8px;
+    display: none;
+    pointer-events: none;
+}
+.resource-preview-item:hover .thumbnail-placeholder-resource .play-overlay-icon {
+    display: block;
+}
+
+.resource-preview-item .file-icon-resource { /* Icon for non-media files in grid */
+    font-size: 2em;
+    color: var(--text-color-light);
+    margin-bottom: var(--spacing-1);
+}
+
+.resource-preview-item .resource-name { /* Name label in grid item */
+    font-size: 0.8em;
+    color: var(--text-color);
+    padding: 0 var(--spacing-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 90%;
+}
+.resource-preview-item .resource-timestamp { /* Timestamp overlay in grid item */
+    font-size: 0.7em;
+    color: var(--text-color-light);
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    background-color: rgba(0,0,0,0.3);
+    color: white;
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+/* Text message preview in resource grid */
+.resource-preview-item.text-message-preview {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: flex-start;
+    padding: var(--spacing-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background-color: var(--received-bg-color);
+    cursor: pointer;
+    margin-bottom: var(--spacing-1); /* If they are in a list-like layout */
+    height: auto;
+    aspect-ratio: unset; /* Not square */
+}
+.resource-preview-item.text-message-preview:hover {
+    background-color: var(--hover-bg-color);
+}
+.resource-text-sender-preview {
+    font-size: 0.8em;
+    font-weight: bold;
+    color: var(--primary-color);
+    margin-bottom: 3px;
+}
+.resource-text-content-preview {
+    font-size: 0.9em;
+    color: var(--text-color);
+    word-break: break-word;
+    max-height: 60px; /* Approx 3 lines */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+.resource-preview-item.text-message-preview .resource-timestamp {
+    /* Reuse .resource-timestamp but adjust position if needed */
+    position: static; /* Override absolute positioning */
+    align-self: flex-end;
+    margin-top: 4px;
+    background-color: transparent; /* No dark overlay */
+    color: var(--text-color-light); /* Standard timestamp color */
+    padding: 0;
+}
+
+
+/* Text snippet preview for non-message text files in grid */
+.resource-text-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--spacing-2);
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-size: 0.8em;
+    line-height: 1.3;
+    text-align: left;
+}
+.resource-text-icon {
+    font-size: 1.5em;
+    margin-bottom: var(--spacing-1);
+    align-self: center;
+}
+.resource-text-snippet {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-all;
+    color: var(--text-color);
+}
+
+
+.loading-indicator-grid { /* Spinner for resource grid */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-3);
+    width: 100%;
+    flex-shrink: 0;
+}
+.loading-indicator-grid .spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--hover-bg-color);
+    border-top-color: var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite; /* Uses spin from core.css */
+}
+
+.resource-grid-empty-message {
+    grid-column: 1 / -1; /* Span all columns if grid is empty */
+    text-align: center;
+    padding: var(--spacing-4);
+    color: var(--text-color-light);
+}
+
+/* Calendar in Resource Preview */
+.calendar-container-rps {
+    padding: var(--spacing-3);
+    background-color: var(--received-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    margin-top: var(--spacing-2);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.calendar-loading, .calendar-error {
+    text-align: center;
+    padding: var(--spacing-4);
+    color: var(--text-color-light);
+}
+.calendar-header-rps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-3);
+    width: 100%;
+    max-width: 300px;
+}
+.calendar-nav-btn-rps {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: var(--primary-color);
+    cursor: pointer;
+    padding: 0 var(--spacing-2);
+}
+.calendar-nav-btn-rps:hover {
+    color: var(--primary-color-dark);
+}
+.calendar-monthyear-rps {
+    font-weight: 600;
+    font-size: 1.1em;
+}
+.calendar-grid-rps {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    width: 100%;
+    max-width: 300px;
+}
+.calendar-day-header-rps,
+.calendar-day-rps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-1);
+    text-align: center;
+    font-size: 0.85em;
+    border-radius: var(--border-radius-small);
+}
+.calendar-day-header-rps {
+    font-weight: bold;
+    color: var(--text-color-light);
+}
+.calendar-day-rps {
+    height: 30px;
+    border: 1px solid transparent;
+}
+.calendar-day-rps.empty {
+    visibility: hidden;
+}
+.calendar-day-rps.has-messages-rps {
+    background-color: var(--sent-bg-color);
+    color: var(--text-color);
+    font-weight: bold;
+    cursor: pointer;
+    border: 1px solid var(--accent-color);
+}
+.calendar-day-rps.has-messages-rps:hover {
+    background-color: var(--primary-color);
+    color: var(--text-color-inverted);
+}
+.calendar-day-rps.no-messages-rps {
+    color: var(--text-color-light);
+    opacity: 0.7;
+}
+
+
+/* --- 人员大厅 (When shown in details panel) --- */
+/* Styles for #peopleLobbyContent, .lobby-header, #peopleLobbyRefreshBtn, #peopleLobbyList */
+/* when displayed within the details panel. */
+/* Often, these can reuse chat list styles if visually similar. */
+#detailsPanel .lobby-header { /* Example if lobby header needs specific styling in details panel */
+    padding: var(--spacing-3) var(--spacing-4); /* Match other panel headers */
+    border-bottom: 1px solid var(--border-color);
+}
+#detailsPanel #peopleLobbyList { /* If lobby list items need specific padding/margins in details */
+    padding: var(--spacing-2);
+}
+
+
+/* --- 角色主题修饰符 (Details Panel Specific) --- */
+.details-panel.character-active .details-avatar {
+    background-color: var(--character-avatar-bg);
+    color: var(--character-avatar-text-color);
+}
+.details-panel.character-active #detailsName,
+.details-panel.character-active #aiContactAboutSection h4 span { /* Target specific elements for name coloring */
+    color: var(--character-details-name-color);
+}
+/* This implies that #callingModalAvatar is part of details panel or styled by it, check usage */
+/* If #callingModalAvatar is part of a modal, its themed style should be in core.css or with modal styles */
+#callingModalAvatar.character-active { /* This seems like it belongs with modal styles in core.css */
+    background-color: var(--character-avatar-bg);
+    color: var(--character-avatar-text-color);
+}
+
+/* --- 响应式设计 (Details Panel Specific) --- */
+/* Media queries specific to elements within the details panel, if any. */
+/* Major hiding/showing of the panel itself is in core.css */

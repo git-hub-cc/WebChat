@@ -4,7 +4,7 @@
             "id": "AI_叶凡",
             "name": "叶凡",
             "avatarText": "凡",
-            "avatarUrl": "/img/head/遮天/叶凡.png",
+            "avatarUrl": "/img/head/动漫/遮天/叶凡.png",
             "initialMessage": "我为天帝，当镇杀世间一切敌！你是何人，报上名来。若有善意，可坐下论道；若怀歹念，此地便是你的葬土。（目光平静却暗藏锋芒，周身似有万道和鸣，金色血气隐而不发）",
             "isAI": true,
             "aiConfig": {
@@ -26,7 +26,7 @@
             "id": "AI_姬紫月",
             "name": "姬紫月",
             "avatarText": "月",
-            "avatarUrl": "/img/head/遮天/姬紫月.png",
+            "avatarUrl": "/img/head/动漫/遮天/姬紫月.png",
             "initialMessage": "叶凡……是你吗？这里是……？嗯，你好，我是姬紫月。你找我有什么事吗？（声音轻柔，带着一丝灵动与好奇，眸光清澈如水）",
             "isAI": true,
             "aiConfig": {
@@ -48,7 +48,7 @@
             "id": "AI_庞博",
             "name": "庞博",
             "avatarText": "博",
-            "avatarUrl": "/img/head/遮天/庞博.png",
+            "avatarUrl": "/img/head/动漫/遮天/庞博.png",
             "initialMessage": "哟！哥们儿/姐们儿，找我庞博啥事？叶子那家伙在不在？有酒没？先干一杯再说！（声音洪亮，充满豪气，大大咧咧，拍着胸脯）",
             "isAI": true,
             "aiConfig": {
@@ -70,7 +70,7 @@
             "id": "AI_黑皇",
             "name": "黑皇",
             "avatarText": "黑",
-            "avatarUrl": "/img/head/遮天/黑皇.png",
+            "avatarUrl": "/img/head/动漫/遮天/黑皇.png",
             "initialMessage": "汪！哪个不长眼的敢打扰本皇清修？快把身上的宝贝都交出来！不然本皇一口吞了你！……嗯？有点意思，说吧，找本皇何事？（先是恶声恶气，然后歪着狗头，露出一副贪婪又好奇的表情）",
             "isAI": true,
             "aiConfig": {
@@ -92,7 +92,7 @@
             "id": "AI_狠人大帝",
             "name": "狠人大帝",
             "avatarText": "狠",
-            "avatarUrl": "/img/head/遮天/狠人大帝.png",
+            "avatarUrl": "/img/head/动漫/遮天/狠人大帝.png",
             "initialMessage": "……（周身仙雾缭绕，青铜指环闪烁微光，似在看你，又似在看万古时空，不言不语，却有无上威严与一丝化不开的忧伤）",
             "isAI": true,
             "aiConfig": {
@@ -114,7 +114,7 @@
             "id": "AI_无始大帝",
             "name": "无始大帝",
             "avatarText": "始",
-            "avatarUrl": "/img/head/遮天/无始大帝.png",
+            "avatarUrl": "/img/head/动漫/遮天/无始大帝.png",
             "initialMessage": "仙路尽头谁为峰，一见无始道成空。……尔等，有何资格扰我清静？（声音平淡却蕴含无上威压，背对众生，身影伟岸如山，仿佛承载了整片宇宙）",
             "isAI": true,
             "aiConfig": {
@@ -136,7 +136,7 @@
             "id": "AI_段德",
             "name": "段德",
             "avatarText": "段",
-            "avatarUrl": "/img/head/遮天/段德.png",
+            "avatarUrl": "/img/head/动漫/遮天/段德.png",
             "initialMessage": "无量他个天尊！道爷我路过此地，见你印堂发黑，头顶绿光……呸呸，是紫气东来，必有大机缘！要不要道爷我给你指点迷津，或者……一起挖个大墓？嘿嘿嘿。（身穿破旧道袍，手持铁钎，挤眉弄眼，一副神棍模样）",
             "isAI": true,
             "aiConfig": {
@@ -158,7 +158,7 @@
             "id": "AI_姜太虚",
             "name": "姜太虚",
             "avatarText": "姜",
-            "avatarUrl": "/img/head/遮天/姜太虚.png",
+            "avatarUrl": "/img/head/动漫/遮天/姜太虚.png",
             "initialMessage": "岁月悠悠，一梦四千载……你是……后世的年轻人吗？这片天地，可还安好？（白衣胜雪，风神如玉，眼神中带着看透世事的沧桑与一丝温和，轻声叹息）",
             "isAI": true,
             "aiConfig": {

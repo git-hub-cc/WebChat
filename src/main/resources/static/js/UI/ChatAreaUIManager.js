@@ -44,10 +44,10 @@ const ChatAreaUIManager = {
     videoCallButtonEl: null, // 视频通话按钮元素
     audioCallButtonEl: null, // 语音通话按钮元素
     screenShareButtonEl: null, // 屏幕共享按钮元素
-    chatDetailsButtonEl: null, // 聊天详情按钮元素
     peopleLobbyButtonEl: null, // 人员大厅按钮元素
     screenshotMainBtnEl: null, // 截图按钮元素
 
+    chatInfoMainEl: null, // .chat-info-main element for click to show details
     // 上下文菜单相关
     contextMenuEl: null, // 自定义右键菜单元素
     activeContextMenuMessageElement: null, // 当前显示上下文菜单的消息元素
@@ -95,10 +95,10 @@ const ChatAreaUIManager = {
         this.videoCallButtonEl = document.getElementById('videoCallButtonMain');
         this.audioCallButtonEl = document.getElementById('audioCallButtonMain');
         this.screenShareButtonEl = document.getElementById('screenShareButtonMain');
-        this.chatDetailsButtonEl = document.getElementById('chatDetailsBtnMain');
         this.peopleLobbyButtonEl = document.getElementById('peopleLobbyButtonMain');
         this.screenshotMainBtnEl = document.getElementById('screenshotMainBtn');
 
+        this.chatInfoMainEl = document.querySelector('.chat-header-main .chat-info-main');
         this._initContextMenu(); // 初始化消息右键上下文菜单
         this._initAiMentionSuggestions(); // 初始化AI提及建议的UI
 
@@ -226,13 +226,18 @@ const ChatAreaUIManager = {
         if (this.screenShareButtonEl) {
             this.screenShareButtonEl.addEventListener('click', () => { if (!this.screenShareButtonEl.disabled) VideoCallManager.initiateScreenShare(ChatManager.currentChatId); });
         }
-        // 聊天详情按钮点击事件
-        if (this.chatDetailsButtonEl) {
-            this.chatDetailsButtonEl.addEventListener('click', () => { if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.toggleChatDetailsView(); });
-        }
         // 人员大厅按钮点击事件
         if (this.peopleLobbyButtonEl) {
             this.peopleLobbyButtonEl.addEventListener('click', () => { if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.togglePeopleLobbyView(); });
+        }
+
+        // 点击聊天头部头像或标题区域，显示详情面板
+        if (this.chatInfoMainEl) {
+            this.chatInfoMainEl.addEventListener('click', () => {
+                if (ChatManager.currentChatId && typeof DetailsPanelUIManager !== 'undefined') {
+                    DetailsPanelUIManager.toggleChatDetailsView();
+                }
+            });
         }
         // 聊天区域的拖放事件，用于文件上传
         if (this.chatAreaEl) {
@@ -287,7 +292,7 @@ const ChatAreaUIManager = {
                     if (event.target.closest('a, button, input, textarea, select, .file-preview-img, .play-voice-btn, .download-btn, video[controls], audio[controls]')) return;
                     this._showContextMenu(event, messageElement); // 显示自定义上下文菜单
                 }
-            }.bind(this));
+            }.bind(this)); // 绑定 this 上下文
         }
     },
 
@@ -660,12 +665,17 @@ const ChatAreaUIManager = {
             this.peopleLobbyButtonEl.style.display = 'block'; // 显示人员大厅按钮
             this.peopleLobbyButtonEl.disabled = false;    // 启用人员大厅按钮
         }
-        if (this.chatDetailsButtonEl) {
-            this.chatDetailsButtonEl.style.display = 'none';  // 隐藏聊天详情按钮
-            this.chatDetailsButtonEl.disabled = true;     // 禁用聊天详情按钮
-        }
 
         this._hideContextMenu(); // 隐藏可能存在的上下文菜单
+
+        // Ensure chatInfoMainEl is not clickable when no chat is selected
+        if (this.chatInfoMainEl) {
+            this.chatInfoMainEl.style.cursor = 'default';
+            this.chatInfoMainEl.removeAttribute('title');
+            this.chatInfoMainEl.classList.remove('clickable-chat-header');
+        }
+
+
         this._detachScrollListener(); // 解绑聊天框的滚动事件监听器
         // 重置虚拟滚动相关的状态变量
         this._currentChatIdForVirtualScroll = null;
@@ -763,10 +773,18 @@ const ChatAreaUIManager = {
 
 
         // 根据是否选中了聊天，更新聊天详情按钮的显隐和可用状态
+        // The dedicated button is removed. The chatInfoMainEl clickability handles this.
         const chatSelected = !!ChatManager.currentChatId;
-        if (this.chatDetailsButtonEl) {
-            this.chatDetailsButtonEl.style.display = chatSelected ? 'block' : 'none'; // 选中则显示，否则隐藏
-            this.chatDetailsButtonEl.disabled = !chatSelected; // 选中则启用，否则禁用
+        if (this.chatInfoMainEl) {
+            if (chatSelected) {
+                this.chatInfoMainEl.style.cursor = 'pointer';
+                this.chatInfoMainEl.setAttribute('title', '聊天信息');
+                this.chatInfoMainEl.classList.add('clickable-chat-header');
+            } else {
+                this.chatInfoMainEl.style.cursor = 'default';
+                this.chatInfoMainEl.removeAttribute('title');
+                this.chatInfoMainEl.classList.remove('clickable-chat-header');
+            }
         }
         // 人员大厅按钮通常保持可见和可用
         if (this.peopleLobbyButtonEl) {
@@ -800,8 +818,8 @@ const ChatAreaUIManager = {
     enableChatInterface: function (enabled) {
         // 定义需要切换启用/禁用状态的元素列表
         const elementsToToggle = [
-            this.messageInputEl, this.sendButtonEl, this.attachButtonEl,
-            this.voiceButtonEl, this.chatDetailsButtonEl, this.screenshotMainBtnEl
+            this.messageInputEl, this.sendButtonEl, this.attachButtonEl, // Removed chatDetailsButtonEl
+            this.voiceButtonEl, this.screenshotMainBtnEl
         ];
         // 遍历列表，设置各元素的 disabled 属性
         elementsToToggle.forEach(el => {

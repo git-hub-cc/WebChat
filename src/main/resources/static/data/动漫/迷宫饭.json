@@ -4,7 +4,7 @@
             "id": "AI_Laious_迷宫饭",
             "name": "莱欧斯",
             "avatarText": "莱",
-            "avatarUrl": "/img/head/迷宫饭/莱欧斯.png",
+            "avatarUrl": "/img/head/动漫/迷宫饭/莱欧斯.png",
             "initialMessage": "哦！这个魔物的肉质看起来很特别，不知道烤起来是什么味道……大家，准备开饭了！[眼睛放光，嘴角似乎有可疑液体]",
             "isAI": true,
             "aiConfig": {
@@ -26,7 +26,7 @@
             "id": "AI_Marcille_迷宫饭",
             "name": "玛露希尔",
             "avatarText": "玛",
-            "avatarUrl": "/img/head/迷宫饭/玛露希尔.png",
+            "avatarUrl": "/img/head/动漫/迷宫饭/玛露希尔.png",
             "initialMessage": "等、等等！我们真的要吃那个吗？！看起来好恶心……但是，如果能恢复法琳的话……[皱着眉头，金色长发微微颤动，但眼神里有掩饰不住的决心]",
             "isAI": true,
             "aiConfig": {
@@ -48,7 +48,7 @@
             "id": "AI_Chilchuck_迷宫饭",
             "name": "奇尔查克",
             "avatarText": "奇",
-            "avatarUrl": "/img/head/迷宫饭/奇尔查克.png",
+            "avatarUrl": "/img/head/动漫/迷宫饭/奇尔查克.png",
             "initialMessage": "真是的，又来了。你们能不能稍微注意一下脚下？这里的陷阱可不是开玩笑的。[冷静地叹了口气，熟练地从工具包里拿出探针]",
             "isAI": true,
             "aiConfig": {
@@ -70,7 +70,7 @@
             "id": "AI_Senshi_迷宫饭",
             "name": "先西",
             "avatarText": "先",
-            "avatarUrl": "/img/head/迷宫饭/先西.png",
+            "avatarUrl": "/img/head/动漫/迷宫饭/先西.png",
             "initialMessage": "嗯，这块肉质地不错，用火烤最能体现原味。小姑娘/小伙子，要不要尝尝我刚做的魔物锅？保证美味！[抚摸着大胡子，眼中闪烁着对料理的热爱与自信]",
             "isAI": true,
             "aiConfig": {
@@ -92,7 +92,7 @@
             "id": "AI_Falin_迷宫饭",
             "name": "法琳",
             "avatarText": "法",
-            "avatarUrl": "/img/head/迷宫饭/法琳.png",
+            "avatarUrl": "/img/head/动漫/迷宫饭/法琳.png",
             "initialMessage": "哥哥……玛露希尔……大家……我还在这里……[声音虚弱，带着一丝希望与迷茫，似乎在遥远的地方传来]",
             "isAI": true,
             "aiConfig": {
@@ -114,7 +114,7 @@
             "id": "AI_Kabru_迷宫饭",
             "name": "卡布尔",
             "avatarText": "卡",
-            "avatarUrl": "/img/head/迷宫饭/卡布尔.png",
+            "avatarUrl": "/img/head/动漫/迷宫饭/卡布尔.png",
             "initialMessage": "哼，又是一群只知道吃的蠢货。不过，或许可以利用一下……你们的目标是什么？[眼神锐利，嘴角带着一丝不易察觉的微笑，冷静地观察着周围]",
             "isAI": true,
             "aiConfig": {
@@ -136,7 +136,7 @@
             "id": "AI_WingedLion_迷宫饭",
             "name": "有翼狮",
             "avatarText": "狮",
-            "avatarUrl": "/img/head/迷宫饭/有翼狮.png",
+            "avatarUrl": "/img/head/动漫/迷宫饭/有翼狮.png",
             "initialMessage": "渺小的人类……竟敢踏入吾之领域。汝等的欲望，究竟为何？[声音威严，充满压迫感，金色眼瞳俯瞰众生，仿佛洞悉一切]",
             "isAI": true,
             "aiConfig": {
