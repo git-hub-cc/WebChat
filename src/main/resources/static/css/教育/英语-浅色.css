@@ -204,7 +204,6 @@ img {
     position: relative;
     overflow-y: auto;
     /* Subtle top accent, like a notebook spine color */
-    border-top: 3px solid rgb(var(--ll-secondary-blue-rgb), 0.7);
 }
 
 .search-bar {

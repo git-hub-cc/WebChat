@@ -1,3 +1,4 @@
+
 /* ========================================================================== */
 /* 基础配置与全局样式 (Base & Global Styles) */
 /* ========================================================================== */
@@ -72,7 +73,7 @@
     box-sizing: border-box;
     margin: 0;
     padding: 0;
-    transition: all 0.3s;
+    /* Global transition removed for performance and specificity. Transitions added to individual components. */
 }
 
 html {
@@ -104,13 +105,14 @@ body {
     display: flex;
     width: 100%;
     height: 90vh;
-    height: 90dvh;
-    max-width: 1400px;
-    max-height: 90dvh;
-    overflow: hidden;
+    height: 90dvh; /* Use dvh for dynamic viewport height */
+    max-width: 1400px; /* Optional: max width for the app */
+    max-height: 90dvh; /* Optional: max height for the app */
+    overflow: hidden; /* Important for containing absolutely positioned children if needed */
     background-color: var(--received-bg-color);
     border-radius: var(--border-radius);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    position: relative; /* Make app-container the positioning context */
 }
 
 /* Basic structure for main layout panels - specific content styling in respective files */
@@ -123,6 +125,7 @@ body {
     /* 使用逻辑属性 border-inline-end，自动适应从左到右 (LTR) 和从右到左 (RTL) 的布局 */
     border-inline-end: 1px solid var(--border-color);
     position: relative;
+    transition: width 0.3s ease-in-out; /* Added for potential responsive adjustments */
 }
 
 .chat-area {
@@ -141,6 +144,7 @@ body {
     min-width: var(--details-panel-width);
     background-color: #f8f9fa;
     border-inline-start: 1px solid var(--border-color);
+    /* Transition for sliding is handled in details-panel.css */
 }
 
 
@@ -173,6 +177,7 @@ body {
     font-size: 14px;
     font-weight: 500;
     margin: 4px;
+    transition: background-color 0.2s ease-out, color 0.2s ease-out, box-shadow 0.2s ease-out, opacity 0.2s ease-out;
 }
 
 .btn-primary,
@@ -206,6 +211,7 @@ body {
     background: none;
     cursor: pointer;
     color: var(--text-color-light);
+    transition: color 0.2s ease-out, background-color 0.2s ease-out;
 }
 
 .menu-btn { /* Specifics for main menu button */
@@ -234,6 +240,7 @@ body {
     cursor: pointer;
     color: var(--text-color-light);
     font-size: 22px;
+    transition: background-color 0.2s ease-out, color 0.2s ease-out;
 }
 
 /* --- 输入框与表单 (Common input styles) --- */
@@ -245,6 +252,7 @@ body {
     flex-grow: 1;
     padding: var(--spacing-2) var(--spacing-3);
     font-size: 14px;
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
 #fileInput { /* This is a utility input, keep hidden style in core */
@@ -262,6 +270,7 @@ body {
     color: var(--text-color);
     font-family: var(--font-family), serif;
     user-select: none; /* 防止用户选择文本 */
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
 .custom-select .selected {
@@ -278,6 +287,7 @@ body {
     color: var(--text-color-light);
     content: '▼';
     font-size: 0.8em;
+    transition: transform 0.25s ease-in-out;
 }
 
 .custom-select.open .selected::after {
@@ -298,6 +308,7 @@ body {
     border-radius: var(--border-radius);
     background-color: var(--received-bg-color); /* 背景应为白色以承载选项 */
     box-shadow: var(--box-shadow);
+    /* Transition for display: block/none is tricky; usually done with opacity/transform if animated appearance needed */
 }
 
 .custom-select.open .options {
@@ -308,6 +319,7 @@ body {
 .custom-select .option {
     padding: var(--spacing-2) var(--spacing-3);
     cursor: pointer;
+    transition: background-color 0.2s ease-out, color 0.2s ease-out;
 }
 
 .custom-select .option:hover {
@@ -334,6 +346,7 @@ body {
     background-color: var(--primary-color); /* Default, can be overridden by character themes */
     color: var(--text-color-inverted);
     font-weight: bold;
+    transition: background-color 0.3s ease-out, color 0.3s ease-out; /* For theme changes */
 }
 
 .avatar-image { /* Common for all avatar containers if an image is used */
@@ -353,6 +366,18 @@ body {
     justify-content: center;
     padding: var(--spacing-5);
     background-color: rgba(0, 0, 0, 0.5);
+    /* For fade-in/out of the modal backdrop and content */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0s linear 0.3s;
+}
+.modal-like:target, /* If using :target for display */
+.modal-like[style*="display: flex"], /* If JS uses display: flex */
+.modal-like[style*="display: block"]  /* If JS uses display: block */
+{
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease-in-out, visibility 0s linear 0s;
 }
 
 .modal-content {
@@ -365,7 +390,14 @@ body {
     background-color: var(--received-bg-color);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     overflow-y: auto;
+    transform: scale(0.95);
+    transition: transform 0.3s ease-out; /* For a slight scale-up effect */
 }
+.modal-like[style*="display: flex"] .modal-content,
+.modal-like[style*="display: block"] .modal-content {
+    transform: scale(1);
+}
+
 
 .modal-header {
     display: flex;
@@ -387,6 +419,7 @@ body {
     cursor: pointer;
     color: var(--text-color-light);
     font-size: 24px;
+    transition: color 0.2s ease-out; /* Already covered by .menu-btn base if using shared class */
 }
 
 .modal-footer {
@@ -447,6 +480,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     background-color: var(--received-bg-color); /* 使用白色背景以提高可读性 */
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
 .modal-body textarea {
@@ -490,7 +524,16 @@ body {
     justify-content: center;
     background-color: rgba(0, 0, 0, 0.7);
     color: var(--text-color-inverted);
+    opacity: 0; /* For fade-in */
+    visibility: hidden;
+    transition: opacity 0.3s ease-in-out, visibility 0s linear 0.3s;
 }
+.loading-overlay[style*="display: flex"] { /* Assuming JS controls display */
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s, 0s;
+}
+
 
 .loading-spinner { /* General loading spinner, also used in chat messages */
     width: 50px;
@@ -541,6 +584,11 @@ body {
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.9);
+    /* Transition for PiP mode changes */
+    transition: width 0.3s ease-in-out, height 0.3s ease-in-out,
+    left 0.3s ease-in-out, top 0.3s ease-in-out,
+    border-radius 0.3s ease-in-out, box-shadow 0.3s ease-in-out,
+    border-color 0.3s ease-in-out;
 }
 
 .video-call-container-main .video-streams {
@@ -568,6 +616,9 @@ body {
     border-radius: var(--border-radius);
     background-color: #2c2c2c;
     object-fit: cover;
+    transition: width 0.3s ease-in-out, height 0.3s ease-in-out,
+    inset-block-end 0.3s ease-in-out, inset-inline-end 0.3s ease-in-out,
+    opacity 0.3s ease-in-out;
 }
 
 .video-call-container-main .video-call-controls {
@@ -578,6 +629,7 @@ body {
     padding: 10px;
     border-radius: 25px;
     background-color: rgba(0, 0, 0, 0.3);
+    transition: bottom 0.3s ease-in-out, padding 0.3s ease-in-out, gap 0.3s ease-in-out;
 }
 
 .video-call-button {
@@ -591,6 +643,8 @@ body {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     cursor: pointer;
     font-size: 20px;
+    transition: background-color 0.2s ease-out, color 0.2s ease-out,
+    width 0.3s ease-in-out, height 0.3s ease-in-out, font-size 0.3s ease-in-out;
 }
 
 .video-call-button.end-call {
@@ -648,7 +702,9 @@ body {
     border-inline-start: 4px solid var(--primary-color);
     background: var(--received-bg-color);
     box-shadow: var(--box-shadow);
-    animation: notification-in 0.3s ease-out;
+    animation: notification-in 0.3s ease-out; /* Entry animation */
+    /* Transition for exit animation (when .notification-hide is added) */
+    transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
 .notification-icon {
@@ -669,7 +725,12 @@ body {
     cursor: pointer;
     color: #999;
     font-size: 20px;
+    transition: color 0.2s ease-out;
 }
+.notification-close:hover {
+    color: var(--danger-color);
+}
+
 
 /* --- 开关切换 (Toggle Switch) --- */
 .switch {
@@ -691,6 +752,7 @@ body {
     border-radius: 24px;
     background-color: #ccc;
     cursor: pointer;
+    transition: background-color 0.2s ease-out;
 }
 
 .slider::before {
@@ -702,6 +764,7 @@ body {
     border-radius: 50%;
     background-color: white;
     content: "";
+    transition: transform 0.2s ease-out;
 }
 
 /* --- 可折叠区域 --- */
@@ -714,17 +777,31 @@ body {
     border-bottom: 1px solid var(--border-color);
     cursor: pointer;
     font-weight: 600;
+    transition: color 0.2s ease-out, border-color 0.2s ease-out;
 }
 
 .collapsible-header .collapse-icon {
     margin-inline-start: 5px;
     font-size: 0.9em;
+    transition: transform 0.25s ease-in-out;
 }
 
 .collapsible-content {
     /* Styles for content area of collapsible sections */
     /* display: none; is typically handled by JS */
+    /* If animated collapse is needed, it would require max-height transition */
+    overflow: hidden;
+    max-height: 0; /* Initially collapsed for CSS-only animation if preferred */
+    transition: max-height 0.3s ease-in-out, padding-top 0.3s ease-in-out, padding-bottom 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    opacity: 0;
 }
+.collapsible-header.active + .collapsible-content { /* JS should also set display: block or manage max-height */
+    max-height: 1000px; /* Large enough value, or calculate with JS */
+    opacity: 1;
+    /* padding-top: var(--spacing-2); /* Example padding when open */
+    /* padding-bottom: var(--spacing-2); */
+}
+
 
 /* --- 截图编辑器模态框样式 (Core, as it's a modal-like overlay) --- */
 .screenshot-editor-modal {
@@ -754,6 +831,7 @@ body {
     margin-right: var(--spacing-2);
     border-radius: var(--border-radius);
     cursor: pointer;
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, opacity 0.2s ease-out;
 }
 
 .screenshot-tool-btn:hover:not(.active) {
@@ -800,6 +878,7 @@ body {
 #cancelScreenshotEditBtn { /* In screenshot editor */
     padding: var(--spacing-2) var(--spacing-3); /* 调整按钮大小 */
     margin-left: var(--spacing-2);
+    /* .btn class already provides transition */
 }
 
 .screenshot-canvas-container {
@@ -829,7 +908,16 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     padding: var(--spacing-1, 4px) 0;
     min-width: 120px;
+    /* For fade-in effect */
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out;
 }
+.custom-context-menu[style*="display: block"] { /* When JS shows it */
+    opacity: 1;
+    transform: translateY(0);
+}
+
 
 .context-menu-button {
     display: block;
@@ -841,6 +929,7 @@ body {
     text-align: left;
     cursor: pointer;
     font-size: 14px;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
 }
 
 .context-menu-button:hover {
@@ -1009,8 +1098,11 @@ input:checked + .slider::before {
 
 .video-call-container-main.audio-only-mode #localVideo,
 .video-call-container-main.screen-sharing-mode #localVideo {
-    display: none !important;
+    /* display: none !important; -- This can be handled by JS setting srcObject to null and style.display */
+    opacity: 0;
+    pointer-events: none;
 }
+
 
 /* 画中画 (PiP) 模式 */
 .video-call-container-main.pip-mode {
@@ -1037,7 +1129,9 @@ input:checked + .slider::before {
 .video-call-container-main.pip-mode #localVideo {
     inset-block-end: 8px;
     inset-inline-end: 8px;
-    display: block !important;
+    display: block !important; /* Ensure it's block for PiP */
+    opacity: 1; /* Ensure visible */
+    pointer-events: auto; /* Ensure interactive */
     width: 30%;
     height: auto;
     border: 1px solid rgba(255, 255, 255, 0.5);
@@ -1083,7 +1177,7 @@ input:checked + .slider::before {
     text-align: center;
     cursor: pointer;
     z-index: 1003; /* 确保在视频控件之上 */
-    transition: background-color 0.2s;
+    transition: background-color 0.2s ease-out;
     font-weight: bold;
 }
 .modal-close-button.top-right:hover {
@@ -1146,15 +1240,15 @@ input:checked + .slider::before {
 @media screen and (max-width: 900px) {
     /* Hides details panel by default, JS shows it as overlay */
     .details-panel {
-        display: none;
+        /* display: none; -- Handled by transition/transform in details-panel.css for sliding */
     }
 
     .app-container.show-details .details-panel {
-        position: absolute;
+        position: absolute; /* This might be overridden by details-panel.css if it uses absolute for sliding */
         z-index: 20;
         inset-block-start: 0;
         inset-inline-end: 0;
-        display: flex;
+        display: flex; /* Ensure flex when shown by class */
         height: 100%;
         box-shadow: -2px 0 10px rgba(0, 0, 0, 0.15);
     }
@@ -1191,18 +1285,22 @@ input:checked + .slider::before {
 
     /* Details panel overlay behavior on small screens (already partly handled by 900px breakpoint) */
     .details-panel {
+        /*
         position: fixed;
         z-index: 20;
         inset-block-start: 0;
-        inset-inline-end: -300px; /* Initial hide off-screen (for sliding animation if any) */
+        inset-inline-end: -300px; /* Initial hide off-screen (for sliding animation if any)
         width: 100%;
-        max-width: 300px; /* Limit width on mobile */
+        max-width: 300px; /* Limit width on mobile
         height: 100%;
+        */
         /* display: flex; is set by .app-container.show-details */
+        /* Most of this is now controlled by details-panel.css and its transform based animation */
+        max-width: 300px; /* Still useful to limit width on mobile when it slides in */
     }
 
     .app-container.show-details .details-panel {
-        inset-inline-end: 0; /* Slide in */
+        /* inset-inline-end: 0; /* Slide in - Handled by transform in details-panel.css */
         display: flex; /* Ensure it's flex when shown */
     }
 

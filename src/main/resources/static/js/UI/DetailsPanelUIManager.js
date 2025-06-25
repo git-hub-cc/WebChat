@@ -191,9 +191,11 @@ const DetailsPanelUIManager = {
         const appContainer = document.querySelector('.app-container');
         this.isPanelAreaVisible = show;
 
+        // Content visibility within the panel (remains the same)
         if (this.detailsPanelContentEl) this.detailsPanelContentEl.style.display = 'none';
         if (this.peopleLobbyContentEl) this.peopleLobbyContentEl.style.display = 'none';
 
+        // Timer logic (remains the same)
         if (!show || (show && viewType === 'details' && !(ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_'))) || (show && viewType === 'lobby') ) {
             if (typeof TimerManager !== 'undefined') {
                 TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
@@ -201,9 +203,10 @@ const DetailsPanelUIManager = {
         }
 
         if (show) {
-            if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'flex';
-            if (appContainer) appContainer.classList.add('show-details');
+            // REMOVED: if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'flex';
+            if (appContainer) appContainer.classList.add('show-details'); // This will trigger the animation
 
+            // Content setup logic (remains the same)
             if (viewType === 'details' && this.detailsPanelContentEl) {
                 this.detailsPanelContentEl.style.display = 'block';
                 if (this.resourcePreviewSectionEl && ChatManager.currentChatId) {
@@ -219,8 +222,8 @@ const DetailsPanelUIManager = {
             }
             this.currentView = viewType;
         } else {
-            if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'none';
-            if (appContainer) appContainer.classList.remove('show-details');
+            // REMOVED: if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'none';
+            if (appContainer) appContainer.classList.remove('show-details'); // This will trigger the animation
             this.currentView = null;
             ResourcePreviewUIManager.hide();
         }

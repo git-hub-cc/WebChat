@@ -93,7 +93,6 @@ body {
     font-family: var(--font-family);
     background-color: var(--hi3-control-deck-panel); /* Base background */
     color: var(--text-color);
-
     overflow: hidden;
     display: flex;
     justify-content: center;
@@ -120,6 +119,7 @@ body {
     /* Define size */
     border-color: var(--hi3-tech-blue);
     opacity: 0.5;
+    pointer-events: none;
 }
 .app-container::before { top: 5px; left: 5px; border-top: 1px solid; border-left: 1px solid; border-top-left-radius: var(--border-radius-large); }
 .app-container::after { bottom: 5px; right: 5px; border-bottom: 1px solid; border-right: 1px solid; border-bottom-right-radius: var(--border-radius-large); }
@@ -135,7 +135,6 @@ body {
 .sidebar-nav {
     background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.7);
     border-right: 1px solid var(--border-color);
-
     position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
 }
 .sidebar-header {
@@ -185,6 +184,7 @@ body {
     color: var(--hi3-interface-dark-text);
     border-radius: 25%;
     box-shadow: var(--box-shadow-soft);
+    will-change: transform;
 }
 .chat-list-item:hover .chat-list-avatar { transform: scale(1.05); }
 
@@ -255,9 +255,9 @@ body {
     color: var(--hi3-hyperion-hull-bg);
     box-shadow: 0 0 4px var(--hi3-status-critical-red), 0 0 6px var(--hi3-status-critical-red);
     border-radius: var(--border-radius);
-
     font-weight: bold;
     animation: hi3-badge-pulse-light 1.5s infinite alternate;
+    will-change: opacity, transform;
 }
 @keyframes hi3-badge-pulse-light {
     from { opacity: 0.8; transform: scale(1); }
@@ -268,6 +268,7 @@ body {
     color: var(--hi3-hyperion-hull-bg);
     box-shadow: 0 2px 8px rgba(var(--hi3-interface-dark-text-rgb),0.3), 0 0 8px var(--hi3-tech-blue), 0 0 12px var(--hi3-valkyrie-orange);
     border-radius: 50%;
+    will-change: transform;
 }
 .new-chat-fab:hover {
     transform: scale(1.1) rotate(45deg);
@@ -282,21 +283,24 @@ body {
 }
 .chat-avatar-main { border: 1px solid var(--hi3-light-divider-line); border-radius: 25%;}
 .chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 0 5px rgba(var(--hi3-tech-blue-rgb), 0.1); }
-.header-action-btn { color: var(--hi3-secondary-data-text); }
+.header-action-btn {
+    color: var(--hi3-secondary-data-text);
+    will-change: transform;
+}
 .header-action-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); transform: scale(1.1); }
 
 .chat-messages-container { }
 .no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center;}
 .no-chat-selected .logo-placeholder {
     font-family: var(--font-family);
-    content: "HI3"; /* From original CSS, good for light */
+    /* content: "HI3"; */ /* From original CSS, good for light. This was a CSS content property, which is unusual for a class like this. Assuming the text 'HI3' will be in HTML. */
     font-size: 5rem;
     font-weight: bold;
     color: rgba(var(--hi3-tech-blue-rgb), 0.5);
     text-shadow: 0 0 8px rgba(var(--hi3-tech-blue-rgb), 0.3), 1px 1px 0px var(--hi3-hyperion-hull-bg);
     animation: hi3-placeholder-float-light 3s infinite ease-in-out;
     position: relative;
-
+    will-change: transform, opacity;
 }
 .no-chat-selected .logo-placeholder::before { /* Subtle highlight */
     content: '';
@@ -306,6 +310,7 @@ body {
     opacity: 0.5;
     animation: hi3-placeholder-highlight 3s infinite ease-in-out;
     animation-delay: -0.5s;
+    will-change: transform, opacity;
 }
 @keyframes hi3-placeholder-float-light {
     0%, 100% { transform: translateY(0px); opacity: 0.6; }
@@ -315,14 +320,13 @@ body {
     0%, 100% { transform: scale(0.8); opacity: 0.3; }
     50% { transform: scale(1.2); opacity: 0.7; }
 }
-.no-chat-selected .placeholder-text { font-size: 1.1em; }
+.no-chat-selected .placeholder-text { font-size: 1.1em; color: var(--hi3-secondary-data-text); }
 
 
 .status-indicator.global {
     background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.8);
     border: 1px solid var(--border-color);
     color: var(--hi3-tech-blue);
-
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow-soft);
 }
@@ -333,14 +337,11 @@ body {
     box-shadow: var(--box-shadow-soft);
     border-radius: var(--border-radius);
     position: relative;
-
 }
 .message:before {
     content: "";
     position: absolute;
     top: 10px;
-
-
     border-style: solid;
     border-width: 6px;
 }
@@ -393,11 +394,18 @@ body {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 1px var(--primary-color), var(--box-shadow-strong-glow-light);
 }
-.icon-btn { color: var(--text-color-light); }
+.icon-btn {
+    color: var(--text-color-light);
+    will-change: transform; /* For hover scale */
+}
 .icon-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); transform: scale(1.15); background-color: transparent;}
 #sendButtonMain { color: var(--hi3-tech-blue); font-weight: 600; letter-spacing: 1px; }
 #sendButtonMain:hover { text-shadow: 0 0 6px var(--hi3-tech-blue); }
-#voiceButtonMain.recording { color: var(--danger-color); animation: hi3-light-pulse-btn 1.2s infinite; }
+#voiceButtonMain.recording {
+    color: var(--danger-color);
+    animation: hi3-light-pulse-btn 1.2s infinite;
+    will-change: text-shadow, transform;
+}
 @keyframes hi3-light-pulse-btn {
     0% { text-shadow: 0 0 0 rgba(var(--hi3-status-critical-red-rgb), 0.5); transform: scale(1); }
     50% { text-shadow: 0 0 8px rgba(var(--hi3-status-critical-red-rgb), 0.8); transform: scale(1.2); }
@@ -438,18 +446,25 @@ body {
     font-weight: 600;
     box-shadow: 0 1px 2px rgba(var(--hi3-interface-dark-text-rgb),0.2), inset 0 0 2px rgba(0,0,0,0.02);
     border: 1px solid var(--hi3-light-divider-line);
-
     position: relative;
     overflow: hidden;
 }
 .btn::before {
     content: '';
     position: absolute;
-    top: 0; left: -100%;
-
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background: linear-gradient(90deg, transparent, rgba(var(--hi3-hyperion-hull-bg-rgb),0.6), transparent);
+    transform: translateX(-100%);
+    pointer-events: none;
+    will-change: transform;
+    /* Add transition here if smooth scanline is desired, e.g., transition: transform 0.3s ease-out; */
 }
-.btn:hover::before { left: 100%; }
+.btn:hover::before {
+    transform: translateX(100%);
+}
 
 .btn-primary { background-color: var(--hi3-tech-blue); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-tech-blue); }
 .btn-primary:hover { background-color: var(--primary-color-dark); box-shadow: 0 2px 5px rgba(var(--hi3-tech-blue-rgb),0.3), 0 0 8px var(--hi3-tech-blue); }
@@ -479,13 +494,15 @@ body {
 .modal-content::after { bottom: -2px; right: -2px; border-bottom: 2px solid; border-right: 2px solid; border-bottom-right-radius: var(--border-radius-large); }
 
 .modal-header h2 { color: var(--hi3-tech-blue); text-shadow: 0 0 6px rgba(var(--hi3-tech-blue-rgb),0.4); letter-spacing: 1px; }
+.close-modal-btn {
+    will-change: transform; /* For hover rotate/scale */
+}
 .close-modal-btn:hover { color: var(--hi3-status-critical-red); text-shadow: 0 0 4px var(--hi3-status-critical-red); transform: rotate(90deg) scale(1.2); }
 .modal-body input[type="text"], .modal-body textarea {
     background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.95);
     color: var(--text-color);
     border: 1px solid var(--hi3-light-divider-line);
     border-radius: var(--border-radius);
-
     box-shadow: var(--box-shadow-soft);
 }
 .modal-body input[type="text"]:focus, .modal-body textarea:focus {
@@ -496,7 +513,6 @@ body {
     background: rgba(var(--hi3-hyperion-hull-bg-rgb),0.95);
     color: var(--hi3-tech-blue);
     border: 1px dashed var(--hi3-tech-blue);
-
     border-radius: var(--border-radius);
     box-shadow: 0 0 4px rgba(var(--hi3-tech-blue-rgb),0.15) inset;
     letter-spacing: 1px;
@@ -504,6 +520,7 @@ body {
 
 /* Video Call */
 .video-call-avatar { background-color: var(--hi3-light-divider-line); border: 1px solid var(--border-color); border-radius: 25%;}
+.video-call-button { will-change: transform; } /* For potential hover effects like end-call */
 .video-call-button.end-call { background: var(--danger-color); box-shadow: 0 0 8px var(--danger-color); }
 .video-call-button.end-call:hover { transform: scale(1.1); }
 .video-call-button.active { background: var(--hi3-tech-blue); color: var(--hi3-hyperion-hull-bg); box-shadow: 0 0 8px var(--hi3-tech-blue);}
@@ -515,17 +532,17 @@ body {
     position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
     background-color: var(--hi3-light-divider-line);
     border: 1px solid rgba(var(--hi3-light-divider-line-rgb),0.8);
-
     border-radius: var(--border-radius);
     transition: .4s;
+    will-change: background-color, box-shadow, border-color;
 }
 .slider:before {
     position: absolute; content: ""; left: 2px; bottom: 1px;
     background-color: var(--hi3-hyperion-hull-bg);
     border: 1px solid var(--hi3-tech-blue);
-
     border-radius: 2px;
     transition: .4s;
+    will-change: transform, background-color, border-color;
 }
 input:checked + .slider { background-color: var(--hi3-tech-blue); box-shadow: 0 0 5px var(--hi3-tech-blue); border-color: var(--hi3-tech-blue); }
 input:checked + .slider:before {

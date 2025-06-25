@@ -12,6 +12,7 @@
 /* --- 聊天区头部 --- */
 .chat-header-main {
     background-color: #f0f2f5; /* Specific background for chat header */
+    /* .sidebar-header in core.css provides base flex, align, height, padding, border */
 }
 
 .back-to-list-btn { /* Specific for chat header, shown on mobile */
@@ -19,6 +20,7 @@
     margin-inline-end: var(--spacing-3);
     padding: var(--spacing-2);
     font-size: 24px;
+    /* transition: color 0.2s ease-out; from core.css .menu-btn base */
 }
 
 .chat-info-main {
@@ -33,6 +35,7 @@
     height: 40px;
     margin-inline-end: var(--spacing-3);
     font-size: 18px;
+    transition: background-color 0.3s ease-out, color 0.3s ease-out, filter 0.2s ease-out; /* Added filter transition */
 }
 
 .chat-details-main-header {
@@ -43,6 +46,7 @@
 .chat-title-main {
     font-size: 16px;
     font-weight: 600;
+    transition: color 0.3s ease-out; /* For character theme color changes */
 }
 
 /* Status indicator dot styles in chat header */
@@ -64,6 +68,7 @@
     height: 8px;
     border-radius: 50%;
     display: none; /* Hidden by default, shown by status classes */
+    transition: background-color 0.3s ease-out, box-shadow 0.3s ease-out;
 }
 
 .chat-status-main.status-indicator-active::before {
@@ -87,7 +92,7 @@
     display: flex;
     gap: var(--spacing-2);
 }
-/* .header-action-btn base style in core.css */
+/* .header-action-btn base style in core.css, provides transition for color */
 
 
 /* --- 聊天消息容器 --- */
@@ -138,6 +143,7 @@
     display: none; /* Initially hidden, JS controls display */
     align-items: center;
     justify-content: center;
+    transition: background-color 0.2s ease-out, opacity 0.2s ease-out, transform 0.2s ease-out;
 }
 .scroll-to-latest-btn:hover {
     background-color: var(--primary-color-dark);
@@ -174,6 +180,7 @@
     line-height: 1.4;
     overflow-wrap: break-word;
     word-wrap: break-word;
+    transition: background-color 0.3s ease-out, border-color 0.3s ease-out, color 0.3s ease-out;
 }
 
 .message.sent {
@@ -219,6 +226,7 @@
     color: var(--primary-color); /* Default sender color */
     font-size: 13px;
     font-weight: 600;
+    transition: color 0.3s ease-out; /* For character theme color changes */
 }
 
 .message .timestamp {
@@ -251,6 +259,7 @@
     font-weight: 500;
     font-size: 1em;
     line-height: 1.3;
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
 .message-inline-action-button:hover {
@@ -294,6 +303,7 @@
     padding: var(--spacing-2);
     border-radius: var(--border-radius);
     background-color: rgba(0, 0, 0, 0.03);
+    transition: background-color 0.2s ease-out; /* For potential hover effects */
 }
 
 .message .thumbnail-placeholder { /* For image/video/general file icons in messages */
@@ -330,9 +340,11 @@
     padding: 10px;
     display: none; /* Hidden by default */
     pointer-events: none;
+    transition: opacity 0.2s ease-out; /* Transition for hover effect */
 }
 .message .file-info:hover .play-overlay-icon {
     display: block;
+    opacity: 1; /* Ensure visible on hover */
 }
 
 .message .file-name {
@@ -355,6 +367,7 @@
     border-radius: var(--border-radius-small);
     border: 1px solid var(--border-color);
     cursor: pointer;
+    transition: background-color 0.2s ease-out;
 }
 .message .download-btn:hover,
 .message .play-media-btn:hover {
@@ -369,7 +382,7 @@
     cursor: pointer;
     padding: 8px; /* Slightly different from .file-info if these are separate structures */
     border-radius: var(--border-radius-small);
-    transition: background-color 0.2s;
+    transition: background-color 0.2s ease-out;
     position: relative;
 }
 .video-preview-container:hover,
@@ -427,7 +440,7 @@
 .image-preview-container .thumbnail-placeholder .play-overlay-icon {
     /* Similar to .message .file-info .play-overlay-icon but potentially different styling */
     opacity: 0.8;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s ease-out;
     position: absolute;
     top: 50%;
     left: 50%;
@@ -465,7 +478,12 @@
     cursor: pointer;
     color: var(--text-color-inverted);
     font-size: 14px;
+    transition: background-color 0.2s ease-out;
 }
+.message .voice-message button.play-voice-btn:hover {
+    background-color: var(--primary-color-dark);
+}
+
 
 .message .voice-duration {
     color: var(--text-color-light);
@@ -504,6 +522,7 @@
     cursor: pointer;
     line-height: 1;
     font-size: 1.1em;
+    transition: color 0.2s ease-out, filter 0.2s ease-out;
 }
 
 .tts-play-button {
@@ -541,7 +560,14 @@
     background-color: rgba(0, 136, 204, 0.7); /* --primary-color with alpha */
     color: var(--text-color-inverted);
     pointer-events: none; /* Allows drop event on underlying element */
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, opacity 0.2s ease-out;
 }
+/* When .drag-over is added to .chat-area */
+.chat-area.drag-over .drop-overlay {
+    display: flex; /* Show overlay on drag over chat area */
+    /* opacity: 1; /* Ensure visible */
+}
+
 
 .drop-overlay-text {
     font-size: 24px;
@@ -579,6 +605,7 @@
     font-size: 15px;
     line-height: 1.4;
     resize: none;
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 #messageInput:hover {
     border-color: #a0a0a0;
@@ -592,6 +619,7 @@
 
 #sendButtonMain { /* Send button in chat input */
     color: var(--primary-color);
+    /* .icon-btn base in core.css provides transition for color and background */
 }
 
 /* File/Audio Previews in Input Area */
@@ -613,7 +641,13 @@
     cursor: pointer;
     color: var(--text-color-inverted);
     font-size: 12px;
+    transition: background-color 0.2s ease-out;
 }
+.file-preview-item button:hover,
+.voice-message-preview button:hover {
+    background-color: #c82333; /* Darker red */
+}
+
 
 .file-preview-item,
 .voice-message-preview {
@@ -625,6 +659,10 @@
 .voice-message-preview .btn-play-preview { /* Play button in audio preview */
     background: var(--accent-color);
 }
+.voice-message-preview .btn-play-preview:hover {
+    background: #3e8e41; /* Darker green */
+}
+
 
 #voiceButtonMain .audio-timer-indicator { /* Timer for voice recording */
     position: absolute;
@@ -641,14 +679,14 @@
 
 /* --- 截图按钮 (in input area) --- */
 .screenshot-main-btn {
-    /* Uses .icon-btn base styles from core.css */
+    /* Uses .icon-btn base styles from core.css, which includes transition */
 }
 
 .screenshot-options { /* Dropdown for screenshot options */
     position: absolute;
     bottom: calc(100% + 5px); /* Above the main button row */
     right: 0; /* Or left, depending on attachment point */
-    display: flex;
+    display: flex; /* JS will toggle this with opacity/transform for animation */
     flex-direction: column;
     gap: var(--spacing-1);
     padding: var(--spacing-2);
@@ -657,7 +695,18 @@
     background-color: var(--received-bg-color);
     box-shadow: var(--box-shadow);
     z-index: 10;
+    opacity: 0;
+    transform: translateY(10px);
+    visibility: hidden;
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0s linear 0.2s;
 }
+.screenshot-options.show { /* Add this class via JS */
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    transition-delay: 0s, 0s, 0s;
+}
+
 
 .screenshot-option-btn { /* Individual option button in screenshot dropdown */
     display: flex;
@@ -672,6 +721,7 @@
     font-size: 14px;
     cursor: pointer;
     white-space: nowrap;
+    transition: background-color 0.2s ease-out;
 }
 
 .screenshot-option-btn:hover {
@@ -694,13 +744,25 @@
     border-radius: var(--border-radius-small) var(--border-radius-small) 0 0;
     box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
     z-index: 100;
+    opacity: 0;
+    transform: translateY(10px);
+    visibility: hidden;
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out, visibility 0s linear 0.2s;
 }
+.ai-mention-suggestions[style*="display: block"] { /* When JS shows it */
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+    transition-delay: 0s, 0s, 0s;
+}
+
 
 .mention-suggestion-item {
     padding: var(--spacing-2) var(--spacing-3);
     cursor: pointer;
     font-size: 0.9em;
     border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.15s ease-out;
 }
 
 .mention-suggestion-item:last-child {
@@ -726,9 +788,7 @@
 }
 
 /* --- 功能状态修饰符 (Chat Area Specific) --- */
-.chat-area.drag-over .drop-overlay { /* Show overlay on drag over chat area */
-    display: flex;
-}
+/* .chat-area.drag-over .drop-overlay already handled above */
 
 .message.system.thinking .message-content { /* "Thinking..." system message */
     color: var(--text-color-light);

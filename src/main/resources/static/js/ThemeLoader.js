@@ -4,6 +4,7 @@
  *              负责根据用户的本地存储偏好和系统设置（浅色/深色模式）来决定并应用正确的主题。
  *              它会加载相应的主题 CSS 文件和与主题相关的数据 JSON 文件（如特殊联系人定义，包括词汇篇章）。
  *              现在支持无刷新切换主题和动态加载数据。
+ *              更新：AI 联系人的词汇篇章数据现在可以从其定义中的 `chaptersFilePath` 指定的单独 JSON 文件加载。
  * @module ThemeLoader
  * @exports {object} ThemeLoader - 主要通过其 `applyTheme` 方法和几个 getter 与其他模块交互。
  * @property {function} init - 初始化主题加载器，加载初始主题和数据。
@@ -54,6 +55,7 @@ const ThemeLoader = {
 
     /**
      * @private 异步加载并解析 data JSON 文件内容。
+     *          现在会处理 `chaptersFilePath` 来动态加载词汇篇章数据。
      * @param {string|null} dataJsonUrl - data JSON 文件的 URL。
      * @returns {Promise<Array<object>>} - 解析后的特殊联系人定义数组。
      */
@@ -66,24 +68,47 @@ const ThemeLoader = {
                 return [];
             }
             const definitions = await response.json();
-            if (Array.isArray(definitions)) {
-                return definitions.map(def => {
-                    // 确保每个定义都有 chapters 数组，即使是空的
-                    if (!def.chapters || !Array.isArray(def.chapters)) {
-                        def.chapters = [];
-                    }
-                    // 对每个 chapter 进行校验和标准化 (可选，但推荐)
-                    def.chapters = def.chapters.map(chapter => ({
-                        id: chapter.id || `chapter_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`, // 提供回退ID
-                        name: chapter.name || "未命名篇章",
-                        promptModifier: chapter.promptModifier || ""
-                    }));
-                    return def;
-                });
-            } else {
+
+            if (!Array.isArray(definitions)) {
                 (Utils?.log || console.log)(`ThemeLoader: 从 ${dataJsonUrl} 解析的内容不是数组。`, Utils?.logLevels?.WARN || 2);
                 return [];
             }
+
+            // 为每个定义处理词汇篇章
+            for (const def of definitions) {
+                if (def.isAI && def.chaptersFilePath) {
+                    try {
+                        const chaptersResponse = await fetch(def.chaptersFilePath);
+                        if (chaptersResponse.ok) {
+                            def.chapters = await chaptersResponse.json();
+                            if (!Array.isArray(def.chapters)) {
+                                (Utils?.log || console.log)(`ThemeLoader: 从 ${def.chaptersFilePath} 解析的词汇篇章不是数组。`, Utils?.logLevels?.WARN || 2);
+                                def.chapters = [];
+                            }
+                        } else {
+                            (Utils?.log || console.log)(`ThemeLoader: 获取词汇篇章文件 ${def.chaptersFilePath} 失败: ${chaptersResponse.statusText}`, Utils?.logLevels?.WARN || 2);
+                            def.chapters = [];
+                        }
+                    } catch (chapError) {
+                        (Utils?.log || console.log)(`ThemeLoader: 加载或解析词汇篇章文件 ${def.chaptersFilePath} 时出错: ${chapError}`, Utils?.logLevels?.ERROR || 3);
+                        def.chapters = [];
+                    }
+                    delete def.chaptersFilePath; // 移除路径属性，因为它已被处理
+                }
+
+                // 确保每个定义都有 chapters 数组，即使是空的
+                if (!def.chapters || !Array.isArray(def.chapters)) {
+                    def.chapters = [];
+                }
+                // 对每个 chapter 进行校验和标准化
+                def.chapters = def.chapters.map(chapter => ({
+                    id: chapter.id || `chapter_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`, // 提供回退ID
+                    name: chapter.name || "未命名篇章",
+                    promptModifier: chapter.promptModifier || ""
+                }));
+            }
+            return definitions;
+
         } catch (error) {
             (Utils?.log || console.log)(`ThemeLoader: 加载或解析 data JSON ${dataJsonUrl} 时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
             return [];
@@ -244,11 +269,18 @@ const ThemeLoader = {
     _getEffectiveColorScheme: function(preferredScheme) {
         if (preferredScheme === 'light') return 'light';
         if (preferredScheme === 'dark') return 'dark';
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            return 'dark';
+        // Check if window and matchMedia are available (they should be in a browser context)
+        if (typeof window !== 'undefined' && window.matchMedia) {
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'dark';
+            }
+        } else {
+            // Fallback for non-browser environments or very old browsers
+            (Utils?.log || console.log)("ThemeLoader: window.matchMedia not available. Defaulting color scheme.", Utils?.logLevels?.WARN || 2);
         }
-        return 'light';
+        return 'light'; // Default to light if 'auto' and system is light or detection fails
     },
+
 
     /**
      * @private 为给定的配色方案查找一个备用主题。
@@ -266,6 +298,8 @@ const ThemeLoader = {
             return firstKey;
         }
         console.error("ThemeLoader: 严重错误 - ThemeLoader.themes 中未定义任何主题。");
+        // Provide a hardcoded ultimate fallback if absolutely no themes are defined,
+        // though this state indicates a severe configuration issue.
         return '原神-浅色';
     },
 
@@ -274,6 +308,11 @@ const ThemeLoader = {
      * @param {string} preferredScheme - 用户的偏好设置。
      */
     _setupSystemColorSchemeListener: function(preferredScheme) {
+        if (typeof window === 'undefined' || !window.matchMedia) {
+            (Utils?.log || console.log)("ThemeLoader: window.matchMedia not available. Skipping system color scheme listener.", Utils?.logLevels?.WARN || 2);
+            return;
+        }
+
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         if (this._systemColorSchemeListener) {
             mediaQuery.removeEventListener('change', this._systemColorSchemeListener);

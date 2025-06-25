@@ -1,13 +1,54 @@
+/* details-panel.css */
+
 /* ========================================================================== */
 /* 右侧详情面板 (Details Panel) */
 /* ========================================================================== */
+.details-panel {
+    display: flex; /* Ensures panel can lay out its children */
+    flex-direction: column; /* As it was structured */
+    width: var(--details-panel-width); /* Retain its defined width */
+    min-width: var(--details-panel-width); /* Retain its min-width */
+    flex-shrink: 0; /* Should not shrink */
+    background-color: #f8f9fa;
+    border-inline-start: 1px solid var(--border-color);
+
+    /* --- Key changes for positioning and layout --- */
+    position: absolute; /* Take the panel out of the normal document flow */
+    top: 0;             /* Align to the top of its positioning context (app-container) */
+    right: 0;           /* Align to the right of its positioning context */
+    height: 100%;       /* Take the full height of its positioning context */
+    z-index: 15;        /* Ensure it's above chat-area but below modals (adjust as needed) */
+
+    /* Animation properties for showing/hiding */
+    transform: translateX(100%); /* Initial state: off-screen to the right */
+    visibility: hidden;
+    /*
+      Transition for transform: duration, timing-function, delay
+      Transition for visibility: duration, timing-function (when hiding, delay until transform is done)
+    */
+    transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1) 0s, /* MODIFIED or kept as is */
+    visibility 0s linear 0.3s; /* Delay visibility change to match transform duration when hiding */
+}
+
+/* When the app-container has .show-details, the panel slides in */
+.app-container.show-details .details-panel {
+    transform: translateX(0); /* Final state: on-screen */
+    visibility: visible;
+    /*
+      For showing: visibility changes immediately, transform animates
+    */
+    transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1) 0s, /* MODIFIED or kept as is */
+    visibility 0s linear 0s;
+}
+
 
 .details-header {
     background-color: #f0f2f5; /* Specific background for details panel header */
     justify-content: space-between; /* Align title left, close button right */
+    /* .sidebar-header in core.css provides base flex, align, height, padding, border */
 }
 
-/* .icon-btn.close-details-btn base style in core.css */
+/* .icon-btn.close-details-btn base style in core.css, includes transition */
 
 .details-content {
     flex-grow: 1;
@@ -29,10 +70,11 @@
     border-bottom: 1px solid var(--border-color);
     font-size: 14px;
     font-weight: 600;
+    transition: color 0.2s ease-out, border-color 0.2s ease-out; /* For collapsible headers */
 }
 
 /* --- 联系人/群组基本信息 --- */
-/* .details-avatar base style in core.css */
+/* .details-avatar base style in core.css, includes theme transition */
 .details-avatar {
     width: 80px;
     height: 80px;
@@ -46,6 +88,7 @@
     font-size: 18px;
     font-weight: 600;
     text-align: center;
+    transition: color 0.3s ease-out; /* For character theme name color */
 }
 
 #detailsId,
@@ -63,6 +106,7 @@
 /* --- AI 联系人 "关于" 部分 --- */
 #aiContactAboutSection h4 { /* Can reuse .details-section h4 if structure is same */
     color: var(--text-color-light); /* Example: different color for this header */
+    /* Inherits transition from .details-section h4 */
 }
 #aiContactDetailsContent ul {
     list-style-position: inside;
@@ -83,7 +127,7 @@
     /* margin-bottom is handled by .details-section */
 }
 #aiChapterSection h4 {
-    /* Uses .details-section h4 styles */
+    /* Uses .details-section h4 styles, inherits transition */
 }
 #aiChapterSection .settings-item {
     /* Uses .modal-body .settings-item from core.css or define similar structure */
@@ -122,13 +166,14 @@ select.custom-select-native {
     background-repeat: no-repeat;
     padding-right: calc(var(--spacing-2) + 20px + 5px); /* Space for arrow + buffer */
     cursor: pointer;
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out, opacity 0.2s ease-out;
 }
 select.custom-select-native:disabled {
     background-color: var(--hover-bg-color);
     opacity: 0.7;
     cursor: not-allowed;
 }
-/* Focus style for select.custom-select-native handled by common rule in core.css */
+/* Focus style for select.custom-select-native handled by common rule in core.css, includes transition */
 
 /* Searchable Select for Details Panel (e.g., AI Vocabulary Chapter) */
 .details-searchable-select {
@@ -150,6 +195,7 @@ select.custom-select-native:disabled {
     background-position: right var(--spacing-2) center;
     background-repeat: no-repeat;
     padding-right: calc(var(--spacing-2) + 20px + 5px);
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out, background-image 0.2s ease-out, opacity 0.2s ease-out;
 }
 .details-searchable-select-input:focus { /* Specific focus due to background-image change */
     outline: none;
@@ -176,6 +222,7 @@ select.custom-select-native:disabled {
     border-radius: var(--border-radius);
     background-color: var(--received-bg-color);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    /* JS will handle display for animation if needed (opacity/transform) */
 }
 
 .details-searchable-select-option {
@@ -186,6 +233,7 @@ select.custom-select-native:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--text-color);
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
 }
 .details-searchable-select-option:hover,
 .details-searchable-select-option.highlighted {
@@ -202,10 +250,12 @@ select.custom-select-native:disabled {
 /* --- AI TTS 配置部分 (Details Panel Specifics) --- */
 #aiTtsConfigSection h4.collapsible-header { /* If different from base .collapsible-header */
     color: var(--text-color-light);
+    /* Inherits transition from .details-section h4 */
 }
 
 .tts-config-content-details { /* Wrapper for TTS config items */
     /* padding, margin, border if needed for this specific content block */
+    /* Max-height transition for collapse can be added here if not handled by core .collapsible-content */
 }
 
 #ttsConfigFormContainer .tts-config-item {
@@ -236,6 +286,7 @@ select.custom-select-native:disabled {
     font-family: var(--font-family), serif;
     font-size: 0.9em;
     box-sizing: border-box;
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out, opacity 0.2s ease-out;
 }
 #ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]):focus,
 #ttsConfigFormContainer .tts-config-item select:focus,
@@ -254,6 +305,7 @@ select.custom-select-native:disabled {
     background-position: right 8px center;
     background-repeat: no-repeat;
     cursor: pointer;
+    /* Inherits transition from the group rule above */
 }
 #ttsConfigFormContainer .tts-config-item select:disabled,
 .searchable-select-input-tts:disabled {
@@ -277,7 +329,7 @@ select.custom-select-native:disabled {
     position: relative;
     flex-grow: 1;
 }
-/* .searchable-select-input-tts styled with other inputs above */
+/* .searchable-select-input-tts styled with other inputs above, inherits transition */
 
 .searchable-select-options-container-tts {
     position: absolute;
@@ -292,6 +344,7 @@ select.custom-select-native:disabled {
     border-radius: 0 0 var(--border-radius) var(--border-radius);
     background-color: var(--received-bg-color);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    /* JS will handle display for animation if needed (opacity/transform) */
 }
 
 .searchable-select-option-tts {
@@ -301,6 +354,7 @@ select.custom-select-native:disabled {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: background-color 0.15s ease-out, color 0.15s ease-out;
 }
 .searchable-select-option-tts:hover {
     background-color: var(--hover-bg-color);
@@ -329,6 +383,7 @@ select.custom-select-native:disabled {
     color: var(--text-color-light);
     font-size: 1em;
     font-weight: 500;
+    transition: color 0.2s ease-out, border-color 0.2s ease-out; /* From core.css .collapsible-header */
 }
 .tts-attribution-section .attribution-sub-header.active {
     border-bottom-style: solid;
@@ -339,10 +394,21 @@ select.custom-select-native:disabled {
     padding-inline-start: 12px;
     margin-top: 8px;
     font-size: 0.85em;
+    /* Max-height transition for collapse can be added here */
+    overflow: hidden;
+    max-height: 0; /* Initially collapsed for CSS-only animation */
+    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    opacity: 0;
 }
+.tts-attribution-section .attribution-sub-header.active + .attribution-sub-content {
+    max-height: 500px; /* Adjust as needed */
+    opacity: 1;
+}
+
 .tts-attribution-section a {
     color: var(--primary-color);
     text-decoration: none;
+    transition: text-decoration 0.2s ease-out;
 }
 .tts-attribution-section a:hover {
     text-decoration: underline;
@@ -379,6 +445,7 @@ select.custom-select-native:disabled {
     background-position: right var(--spacing-2) center;
     background-repeat: no-repeat;
     cursor: pointer;
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 #detailsGroupManagement #addGroupMemberArea select#contactsDropdownDetails:focus {
     outline: none;
@@ -387,6 +454,7 @@ select.custom-select-native:disabled {
 }
 #detailsGroupManagement #addGroupMemberArea button#addMemberBtnDetails {
     width: 100%;
+    /* Inherits .btn transition from core.css */
 }
 
 /* 群组成员列表项状态 */
@@ -409,6 +477,7 @@ select.custom-select-native:disabled {
     color: var(--text-color-light);
     margin-right: var(--spacing-2);
     white-space: nowrap;
+    transition: color 0.3s ease-out; /* For status color changes */
 }
 .member-item-detail .member-status.connected { color: var(--accent-color); }
 .member-item-detail .member-status.online-not-connected { color: var(--warning-color); }
@@ -426,6 +495,7 @@ select.custom-select-native:disabled {
     border-radius: var(--border-radius-small);
     cursor: pointer;
     border: 1px solid transparent;
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, color 0.2s ease-out;
 }
 .member-item-detail .remove-member-btn-detail {
     background-color: rgba(244, 67, 54, 0.1);
@@ -447,11 +517,13 @@ select.custom-select-native:disabled {
 /* --- 群组内 AI 提示词管理部分 --- */
 #groupAiPromptsSection h4 { /* Uses .details-section h4 styling */
     cursor: pointer; /* To indicate collapsible */
+    /* Inherits transition from .details-section h4 */
 }
 #groupAiPromptsListContainer {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-4);
+    /* Max-height transition for collapse can be added here if not handled by core .collapsible-content */
 }
 .ai-prompt-editor-item {
     padding: var(--spacing-3);
@@ -475,10 +547,18 @@ select.custom-select-native:disabled {
     font-size: 0.9em;
     resize: vertical;
     margin-bottom: var(--spacing-2);
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
+.ai-prompt-editor-item textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
 .ai-prompt-editor-item .btn-sm {
     padding: var(--spacing-1) var(--spacing-2);
     font-size: 0.85em;
+    /* Inherits .btn transition from core.css */
 }
 .ai-prompt-editor-item > div:last-child { /* Button container */
     display: flex;
@@ -498,7 +578,7 @@ select.custom-select-native:disabled {
     margin-bottom: var(--spacing-3);
     order: -1; /* Placed above tabs */
 }
-#resourceSearchInputDetailsPanel { /* Uses .search-bar styles from core.css */
+#resourceSearchInputDetailsPanel { /* Uses .search-bar styles from core.css, includes transition */
     width: 100%;
 }
 #resourceSearchInputDetailsPanel:focus { /* Specific focus for this search bar */
@@ -526,7 +606,7 @@ select.custom-select-native:disabled {
     font-weight: 500;
     cursor: pointer;
     border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
+    transition: color 0.2s ease-out, border-color 0.2s ease-out;
 }
 .resource-category-tab:hover {
     color: var(--primary-color);
@@ -559,6 +639,7 @@ select.custom-select-native:disabled {
     flex-direction: column;
     text-align: center;
     border: 1px solid var(--border-color);
+    transition: box-shadow 0.2s ease-out, background-color 0.2s ease-out;
 }
 .resource-preview-item:hover {
     box-shadow: 0 0 5px rgba(0,0,0,0.2);
@@ -595,9 +676,11 @@ select.custom-select-native:disabled {
     padding: 8px;
     display: none;
     pointer-events: none;
+    transition: opacity 0.2s ease-out;
 }
 .resource-preview-item:hover .thumbnail-placeholder-resource .play-overlay-icon {
     display: block;
+    opacity: 1;
 }
 
 .resource-preview-item .file-icon-resource { /* Icon for non-media files in grid */
@@ -641,6 +724,7 @@ select.custom-select-native:disabled {
     margin-bottom: var(--spacing-1); /* If they are in a list-like layout */
     height: auto;
     aspect-ratio: unset; /* Not square */
+    /* Inherits transition from .resource-preview-item */
 }
 .resource-preview-item.text-message-preview:hover {
     background-color: var(--hover-bg-color);
@@ -759,6 +843,7 @@ select.custom-select-native:disabled {
     color: var(--primary-color);
     cursor: pointer;
     padding: 0 var(--spacing-2);
+    transition: color 0.2s ease-out;
 }
 .calendar-nav-btn-rps:hover {
     color: var(--primary-color-dark);
@@ -791,6 +876,7 @@ select.custom-select-native:disabled {
 .calendar-day-rps {
     height: 30px;
     border: 1px solid transparent;
+    transition: background-color 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
 }
 .calendar-day-rps.empty {
     visibility: hidden;
@@ -839,8 +925,8 @@ select.custom-select-native:disabled {
 #callingModalAvatar.character-active { /* This seems like it belongs with modal styles in core.css */
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
+    /* Transition already on .video-call-avatar base in core.css */
 }
 
 /* --- 响应式设计 (Details Panel Specific) --- */
 /* Media queries specific to elements within the details panel, if any. */
-/* Major hiding/showing of the panel itself is in core.css */

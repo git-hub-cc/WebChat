@@ -4,10 +4,11 @@
 
 .sidebar-header {
     padding-block: var(--spacing-2); /* Specific padding for sidebar header */
+    /* .sidebar-header in core.css provides base flex, align, height, padding, border */
 }
 
 /* .search-bar base style in core.css, specifics for placement/flex here if needed */
-/* .menu-btn base style in core.css */
+/* .menu-btn base style in core.css, includes transition */
 
 /* --- 导航与标签页 --- */
 .nav-tabs {
@@ -26,6 +27,7 @@
     color: var(--text-color-light);
     font-size: 14px;
     font-weight: 500;
+    transition: color 0.2s ease-out, border-bottom-color 0.2s ease-out;
 }
 
 .nav-tab:hover { /* Hover state for nav-tabs in sidebar */
@@ -54,6 +56,7 @@
     padding: var(--spacing-3) var(--spacing-4);
     border-bottom: 1px solid var(--border-color);
     cursor: pointer;
+    transition: background-color 0.15s ease-out;
 }
 
 .chat-list-item:hover {
@@ -67,7 +70,7 @@
 
 /* Only bold name for active non-special contacts */
 .chat-list-item.active .chat-list-name:not(.special-contact .chat-list-name) {
-    font-weight: bold;
+    font-weight: bold; /* This change is usually instant, transition not typically applied to font-weight directly for performance */
 }
 
 .chat-list-info {
@@ -84,6 +87,7 @@
     text-overflow: ellipsis;
     font-size: 15px;
     font-weight: 600;
+    transition: color 0.3s ease-out; /* For special contact active name color */
 }
 
 .chat-list-preview {
@@ -124,7 +128,7 @@
 }
 
 /* --- 头像 (Sidebar Specific Sizes/Margins) --- */
-/* .chat-list-avatar base styles in core.css */
+/* .chat-list-avatar base styles in core.css, includes theme transition */
 .chat-list-avatar {
     width: 40px;
     height: 40px;
@@ -150,10 +154,12 @@
     cursor: pointer;
     color: var(--text-color-inverted);
     font-size: 24px;
+    transition: background-color 0.2s ease-out, transform 0.2s ease-out;
 }
 
 .new-chat-fab:hover {
     background-color: var(--primary-color-dark);
+    transform: scale(1.05);
 }
 
 /* --- 人员大厅 (When shown in sidebar/styled like chat list) --- */
@@ -169,7 +175,7 @@
 }
 /* Refresh button style if it's part of a header within sidebar */
 #peopleLobbyRefreshBtn.loading {
-    animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite; /* Uses spin from core.css */
     pointer-events: none;
     opacity: 0.7;
 }
@@ -188,6 +194,7 @@
 .chat-list-item.special-contact .chat-list-avatar { /* Special contact avatar style */
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
+    /* Transition already on .chat-list-avatar base */
 }
 
 /* --- 响应式设计 (Sidebar Specific) --- */
