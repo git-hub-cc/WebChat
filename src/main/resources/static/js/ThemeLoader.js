@@ -20,6 +20,8 @@ const ThemeLoader = {
     themes: {
         "原神-浅色": { name: "原神", css: "css/原神-浅色.css", dataJs: "data/原神.json", defaultSpecialContacts: true  },
         "原神-深色": { name: "原神", css: "css/原神-深色.css", dataJs: "data/原神.json" },
+        "词汇001-深色": { name: "词汇001", css: "css/词汇-深色.css", dataJs: "data/词汇001.json" },
+        "词汇001-浅色": { name: "词汇001", css: "css/词汇-浅色.css", dataJs: "data/词汇001.json" },
         "迷宫饭-浅色": { name: "迷宫饭", css: "css/迷宫饭-浅色.css", dataJs: "data/迷宫饭.json" },
         "迷宫饭-深色": { name: "迷宫饭", css: "css/迷宫饭-深色.css", dataJs: "data/迷宫饭.json" },
         "斗破苍穹-浅色": { name: "斗破苍穹", css: "css/斗破苍穹-浅色.css", dataJs: "data/斗破苍穹.json" },
