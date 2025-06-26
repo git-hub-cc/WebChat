@@ -634,6 +634,174 @@ img {
 .details-panel.AI_LiuBin_CiHuiDaShi .details-name { color: rgb(var(--ll-char-liubin-primary-rgb)); }
 .details-panel.AI_LiuBin_CiHuiDaShi .details-section-title { border-bottom-color: rgb(var(--ll-char-liubin-primary-rgb)); }
 
+/*
+================================================================================
+|                    👤 Additional Character Styles (Light)                      |
+================================================================================
+*/
+
+/* ------------------------- 👩‍🏫 王菲老师 (语法) - 清晰、逻辑 (深蓝+淡紫) -------------------------- */
+/* Color Variables */
+:root {
+    --ll-char-wangfei-primary-rgb: 30, 64, 175;   /* #1E40AF - Deep Indigo Blue */
+    --ll-char-wangfei-accent-rgb: 167, 139, 250; /* #A78BFA - Soft Lavender */
+    --ll-char-wangfei-msg-bg: linear-gradient(135deg, #f0f5ff, #eef2ff); /* Very Light Indigo/Blue */
+}
+
+/* Style Application */
+.chat-list-item.active.AI_WangFei_YuFaDaShi { border-left-color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.chat-list-item.active.AI_WangFei_YuFaDaShi .chat-list-name { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.chat-list-item.active.AI_WangFei_YuFaDaShi .chat-list-avatar,
+.chat-avatar-main.AI_WangFei_YuFaDaShi {
+    border-color: rgb(var(--ll-char-wangfei-primary-rgb));
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-wangfei-primary-rgb));
+}
+.chat-header-main.current-chat-AI_WangFei_YuFaDaShi .chat-title-main { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.message.received[data-sender-id="AI_WangFei_YuFaDaShi"] {
+    border-left: 4px solid rgb(var(--ll-char-wangfei-primary-rgb));
+    background: var(--ll-char-wangfei-msg-bg);
+}
+.message.received[data-sender-id="AI_WangFei_YuFaDaShi"] .message-sender { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.details-panel.AI_WangFei_YuFaDaShi .details-avatar {
+    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-wangfei-primary-rgb),0.3);
+}
+.details-panel.AI_WangFei_YuFaDaShi .details-name { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.details-panel.AI_WangFei_YuFaDaShi .details-section-title { border-bottom-color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+
+
+/* ------------------------- 👨‍🎤 Kevin老师 (口语) - 活力、潮流 (亮橙+黄色) -------------------------- */
+:root {
+    --ll-char-kevin-primary-rgb: 249, 115, 22;  /* #F97316 - Vibrant Orange */
+    --ll-char-kevin-accent-rgb: 252, 211, 77;   /* #FCD34D - Sun Yellow */
+    --ll-char-kevin-msg-bg: linear-gradient(135deg, #fff7ed, #fffbeb); /* Light Orange/Yellow */
+}
+
+.chat-list-item.active.AI_Kevin_KouYuTingLi { border-left-color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.chat-list-item.active.AI_Kevin_KouYuTingLi .chat-list-name { color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.chat-list-item.active.AI_Kevin_KouYuTingLi .chat-list-avatar,
+.chat-avatar-main.AI_Kevin_KouYuTingLi {
+    border-color: rgb(var(--ll-char-kevin-primary-rgb));
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-kevin-primary-rgb));
+}
+.chat-header-main.current-chat-AI_Kevin_KouYuTingLi .chat-title-main { color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.message.received[data-sender-id="AI_Kevin_KouYuTingLi"] {
+    border-left: 4px solid rgb(var(--ll-char-kevin-primary-rgb));
+    background: var(--ll-char-kevin-msg-bg);
+}
+.message.received[data-sender-id="AI_Kevin_KouYuTingLi"] .message-sender { color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.details-panel.AI_Kevin_KouYuTingLi .details-avatar {
+    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-kevin-primary-rgb),0.4);
+}
+.details-panel.AI_Kevin_KouYuTingLi .details-name { color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.details-panel.AI_Kevin_KouYuTingLi .details-section-title { border-bottom-color: rgb(var(--ll-char-kevin-primary-rgb)); }
+
+
+/* ------------------------- 👨‍🎓 休斯博士 (阅读) - 学术、深刻 (牛津蓝+米色) -------------------------- */
+:root {
+    --ll-char-hughes-primary-rgb: 0, 33, 71;    /* #002147 - Oxford Blue */
+    --ll-char-hughes-accent-rgb: 221, 199, 168; /* #DDC7A8 - Parchment/Beige */
+    --ll-char-hughes-msg-bg: linear-gradient(135deg, #f5f5f5, #faf3e0); /* Almost white to beige */
+}
+
+.chat-list-item.active.AI_DrHughes_YueDuLiJie { border-left-color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.chat-list-item.active.AI_DrHughes_YueDuLiJie .chat-list-name { color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.chat-list-item.active.AI_DrHughes_YueDuLiJie .chat-list-avatar,
+.chat-avatar-main.AI_DrHughes_YueDuLiJie {
+    border-color: rgb(var(--ll-char-hughes-primary-rgb));
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-hughes-primary-rgb));
+}
+.chat-header-main.current-chat-AI_DrHughes_YueDuLiJie .chat-title-main { color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.message.received[data-sender-id="AI_DrHughes_YueDuLiJie"] {
+    border-left: 4px solid rgb(var(--ll-char-hughes-primary-rgb));
+    background: var(--ll-char-hughes-msg-bg);
+}
+.message.received[data-sender-id="AI_DrHughes_YueDuLiJie"] .message-sender { color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.details-panel.AI_DrHughes_YueDuLiJie .details-avatar {
+    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-hughes-primary-rgb),0.3);
+}
+.details-panel.AI_DrHughes_YueDuLiJie .details-name { color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.details-panel.AI_DrHughes_YueDuLiJie .details-section-title { border-bottom-color: rgb(var(--ll-char-hughes-primary-rgb)); }
+
+
+/* ------------------------- 👩‍🎨 Sarah老师 (写作) - 温和、鼓励 (柔和粉+薄荷绿) -------------------------- */
+:root {
+    --ll-char-sarah-primary-rgb: 219, 39, 119;   /* #DB2777 - Fuchsia Pink */
+    --ll-char-sarah-accent-rgb: 107, 235, 187;  /* #6BEBBB - Mint Green */
+    --ll-char-sarah-msg-bg: linear-gradient(135deg, #fdf2f8, #f0fdfa); /* Pink to Mint */
+}
+
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao { border-left-color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao .chat-list-name { color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao .chat-list-avatar,
+.chat-avatar-main.AI_Sarah_XieZuoZhiDao {
+    border-color: rgb(var(--ll-char-sarah-primary-rgb));
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-sarah-primary-rgb));
+}
+.chat-header-main.current-chat-AI_Sarah_XieZuoZhiDao .chat-title-main { color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.message.received[data-sender-id="AI_Sarah_XieZuoZhiDao"] {
+    border-left: 4px solid rgb(var(--ll-char-sarah-primary-rgb));
+    background: var(--ll-char-sarah-msg-bg);
+}
+.message.received[data-sender-id="AI_Sarah_XieZuoZhiDao"] .message-sender { color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.details-panel.AI_Sarah_XieZuoZhiDao .details-avatar {
+    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-sarah-primary-rgb),0.3);
+}
+.details-panel.AI_Sarah_XieZuoZhiDao .details-name { color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.details-panel.AI_Sarah_XieZuoZhiDao .details-section-title { border-bottom-color: rgb(var(--ll-char-sarah-primary-rgb)); }
+
+
+/* ------------------------- 👩‍💼 李静老师 (应试) - 高效、锐利 (深红+石墨灰) -------------------------- */
+:root {
+    --ll-char-lijing-primary-rgb: 185, 28, 28;    /* #B91C1C - Strong Red */
+    --ll-char-lijing-accent-rgb: 55, 65, 81;      /* #374151 - Graphite Grey */
+    --ll-char-lijing-msg-bg: linear-gradient(135deg, #fef2f2, #f3f4f6); /* Light Red to Grey */
+}
+
+.chat-list-item.active.AI_LiJing_KaoShiTingGao { border-left-color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.chat-list-item.active.AI_LiJing_KaoShiTingGao .chat-list-name { color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.chat-list-item.active.AI_LiJing_KaoShiTingGao .chat-list-avatar,
+.chat-avatar-main.AI_LiJing_KaoShiTingGao {
+    border-color: rgb(var(--ll-char-lijing-primary-rgb));
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-lijing-primary-rgb));
+}
+.chat-header-main.current-chat-AI_LiJing_KaoShiTingGao .chat-title-main { color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.message.received[data-sender-id="AI_LiJing_KaoShiTingGao"] {
+    border-left: 4px solid rgb(var(--ll-char-lijing-primary-rgb));
+    background: var(--ll-char-lijing-msg-bg);
+}
+.message.received[data-sender-id="AI_LiJing_KaoShiTingGao"] .message-sender { color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.details-panel.AI_LiJing_KaoShiTingGao .details-avatar {
+    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-lijing-primary-rgb),0.3);
+}
+.details-panel.AI_LiJing_KaoShiTingGao .details-name { color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.details-panel.AI_LiJing_KaoShiTingGao .details-section-title { border-bottom-color: rgb(var(--ll-char-lijing-primary-rgb)); }
+
+
+/* ------------------------- 👨‍💼 David Chen (商务) - 专业、沉稳 (商务蓝+银灰) -------------------------- */
+:root {
+    --ll-char-david-primary-rgb: 25, 118, 210;   /* #1976D2 - Corporate Blue */
+    --ll-char-david-accent-rgb: 176, 190, 197;  /* #B0BEC5 - Silver Grey */
+    --ll-char-david-msg-bg: linear-gradient(135deg, #e3f2fd, #eceff1); /* Light Blue to Silver Grey */
+}
+
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu { border-left-color: rgb(var(--ll-char-david-primary-rgb)); }
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu .chat-list-name { color: rgb(var(--ll-char-david-primary-rgb)); }
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu .chat-list-avatar,
+.chat-avatar-main.AI_DavidChen_ShangWuYingYu {
+    border-color: rgb(var(--ll-char-david-primary-rgb));
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(var(--ll-char-david-primary-rgb));
+}
+.chat-header-main.current-chat-AI_DavidChen_ShangWuYingYu .chat-title-main { color: rgb(var(--ll-char-david-primary-rgb)); }
+.message.received[data-sender-id="AI_DavidChen_ShangWuYingYu"] {
+    border-left: 4px solid rgb(var(--ll-char-david-primary-rgb));
+    background: var(--ll-char-david-msg-bg);
+}
+.message.received[data-sender-id="AI_DavidChen_ShangWuYingYu"] .message-sender { color: rgb(var(--ll-char-david-primary-rgb)); }
+.details-panel.AI_DavidChen_ShangWuYingYu .details-avatar {
+    box-shadow: 0 0 0 4px white, 0 0 15px 2px rgba(var(--ll-char-david-primary-rgb),0.3);
+}
+.details-panel.AI_DavidChen_ShangWuYingYu .details-name { color: rgb(var(--ll-char-david-primary-rgb)); }
+.details-panel.AI_DavidChen_ShangWuYingYu .details-section-title { border-bottom-color: rgb(var(--ll-char-david-primary-rgb)); }
 
 /* Ensure input fields and specific text areas like notifications have contrasting text color if global is too light */
 #messageInput, .notification-message {

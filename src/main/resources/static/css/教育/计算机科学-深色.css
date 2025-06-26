@@ -1,0 +1,439 @@
+/*
+================================================================================
+|                                                                              |
+|                    💻 CS - 赛博终端 (CyberTerm) 💻                         |
+|                               (完整最终版)                                   |
+================================================================================
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "CS - CyberTerm";
+    --theme-mode: "dark";
+
+    /* ------------------------- 🎨 核心配色方案 (暗色) ----------------------- */
+
+    /* Base Palette */
+    --cs-bg-main-rgb: 24, 24, 27;
+    --cs-bg-container-rgb: 30, 30, 34;
+    --cs-bg-sidebar-rgb: 37, 37, 42;
+    --cs-bg-elevated-rgb: 45, 45, 50;
+    --cs-bg-subtle-accent-rgb: 51, 51, 55;
+
+    --cs-text-primary-rgb: 112, 112, 112;
+    --cs-text-secondary-rgb: 150, 150, 150;
+    --cs-text-placeholder-rgb: 100, 100, 100;
+
+    /* Accent & Syntax Colors */
+    --cs-accent-blue-rgb: 0, 122, 204;
+    --cs-accent-cyan-rgb: 156, 220, 254;
+
+    /* [定义] 边框颜色RGB值 */
+    --cs-border-strong-rgb: 60, 60, 60;
+    --cs-border-light-rgb: 43, 43, 43; /* #2B2B2B - Subtle Dark Border */
+    --cs-border-interactive-rgb: var(--cs-accent-blue-rgb);
+
+    /* Status & Feedback */
+    --cs-status-online-rgb: 77, 183, 119;
+    --cs-status-notification-rgb: 244, 121, 93;
+
+    /* ... Shadows etc. ... */
+    --cs-shadow-focus-ring: 0 0 0 2px rgba(var(--cs-accent-blue-rgb), 0.6);
+
+    /* 通用 UI 配色 */
+    --color-primary: rgb(var(--cs-accent-blue-rgb));
+    --color-accent: rgb(var(--cs-accent-cyan-rgb));
+    --color-background-body: rgb(var(--cs-bg-main-rgb));
+    --color-background-container: rgb(var(--cs-bg-container-rgb));
+    --color-background-elevated: rgb(var(--cs-bg-elevated-rgb));
+
+    --color-text-primary: rgb(var(--cs-text-primary-rgb));
+    --color-text-secondary: rgb(var(--cs-text-secondary-rgb));
+    --color-text-placeholder: rgb(var(--cs-text-placeholder-rgb));
+    --color-text-on-accent: white;
+    --color-text-link: rgb(var(--cs-accent-blue-rgb));
+
+    /* [使用] 将RGB值转换为可用的颜色变量 */
+    --color-border-primary: rgb(var(--cs-accent-blue-rgb));
+    --color-border-light: rgb(var(--cs-border-light-rgb));
+    --color-border-strong: rgb(var(--cs-border-strong-rgb));
+    --color-border-secondary: var(--color-border-light); /* 使用别名，更清晰 */
+    --color-border-interactive: rgb(var(--cs-border-interactive-rgb));
+
+    /* ... (其余部分与上一版相同) ... */
+
+    /* 消息气泡 (Code/Terminal Style) */
+    --color-message-sent-bg: rgba(var(--cs-accent-blue-rgb), 0.2);
+    --color-message-sent-text: rgb(var(--cs-text-primary-rgb));
+    --color-message-received-bg: rgb(var(--cs-bg-elevated-rgb));
+    --color-message-received-text: rgb(var(--cs-text-primary-rgb));
+    --color-message-system-bg: transparent;
+    --color-message-system-text: rgb(var(--cs-text-secondary-rgb));
+    --color-message-system-border: rgba(var(--cs-border-strong-rgb), 0.5);
+
+    /* Character Palettes (from prompt) */
+    --cs-char-ada-primary-rgb: 97, 175, 239;
+    --cs-char-geek-primary-rgb: 229, 192, 123;
+    --cs-char-wendy-primary-rgb: 198, 120, 221;
+    --cs-char-ligou-primary-rgb: 86, 182, 194;
+    --cs-char-phantom-primary-rgb: 46, 204, 113;
+
+    /* 字体排版 */
+    --font-family-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", "Source Code Pro", Consolas, monospace;
+    --font-size-base: 14px;
+    --font-size-small: 12px;
+    --font-size-large: 16px;
+    --line-height-base: 1.6;
+
+    /* 整体风格参数 */
+    --border-radius-small: 3px;
+    --border-radius-medium: 5px;
+    --border-radius-large: 8px;
+    --transition-fast: all 0.15s ease-out;
+    --transition-medium: all 0.25s ease-out;
+
+    --scrollbar-track-color: rgba(var(--cs-bg-main-rgb), 0.5);
+    --scrollbar-thumb-color: rgba(var(--cs-bg-subtle-accent-rgb), 0.8);
+    --scrollbar-thumb-hover-color: rgba(var(--cs-accent-blue-rgb), 0.7);
+    --scrollbar-size: 8px;
+}
+
+/* --- 全局与基础样式 (与上一版相同) --- */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-base);
+    color: var(--color-text-primary);
+    background-color: var(--color-background-body);
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXWBgYGHh4d5eXlzc3OLi4ubm5uVlZWPj4+NjY19fX2JiYl/f39sbGxra2uBgYFzc3N1dXWGhoZugIWiAAAAI3RSTlMABwoPy4h7SRcv5v1lQEtNQjU4C2s0R2o2S0hxdnZ1d6kYvlojAAAAAWJLRQQLHLwW2AAAAIZJREFUeNrt0ksOwyAMRFG0QfDEI/7/l4xYUCvE6WuyFh27L4fJAgBSpK3naqZVUwJApQv14pQoWqg4QYIwCKiG2jVHYiJ92hZ9gS0g1JfsUGI/ILfHr2i9H2hZqdxgqf5ATgn2kHcb3KxYbb1Q5p11yI03G1hS/Y2jL6CPgFWKMEo/P35TAAAAAElFTkSuQmCC");
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
+}
+
+::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color);
+    border-radius: var(--border-radius-medium);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover-color);
+}
+
+.app-container {
+    display: flex;
+    background-color: var(--color-background-container);
+    border: 1px solid var(--color-border-secondary);
+    border-radius: var(--border-radius-large);
+    overflow: hidden;
+}
+
+.sidebar-nav {
+    background-color: rgb(var(--cs-bg-sidebar-rgb));
+    border-right: 1px solid var(--color-border-secondary);
+    display: flex;
+    flex-direction: column;
+}
+
+.search-bar input[type="text"] {
+    border-radius: var(--border-radius-medium);
+    border: 1px solid var(--color-border-secondary);
+    background-color: rgb(var(--cs-bg-main-rgb));
+    color: var(--color-text-primary);
+    font-family: var(--font-family-sans);
+    transition: var(--transition-medium);
+}
+
+.search-bar input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-border-interactive);
+    box-shadow: var(--cs-shadow-focus-ring);
+}
+
+.chat-list-item {
+    border-radius: var(--border-radius-medium);
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    border: 1px solid transparent;
+    border-left: 3px solid transparent;
+}
+
+.chat-list-item:hover {
+    background-color: rgb(var(--cs-bg-subtle-accent-rgb));
+}
+
+.chat-list-item.active {
+    background-color: rgba(var(--cs-accent-blue-rgb), 0.15);
+    border-left-color: var(--color-primary);
+}
+
+.chat-list-item.active .chat-list-name {
+    color: var(--color-text-primary);
+    font-weight: 500;
+}
+
+.chat-list-avatar {
+    border-radius: 50%;
+    background-color: rgb(var(--cs-bg-elevated-rgb));
+    border: 2px solid rgb(var(--cs-bg-sidebar-rgb));
+}
+
+.chat-list-badge {
+    background-color: var(--color-status-notification);
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+    border-radius: 9px;
+    border: 1px solid rgb(var(--cs-bg-sidebar-rgb));
+}
+
+.chat-area {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--color-background-container);
+    overflow: hidden;
+}
+
+.chat-header-main {
+    border-bottom: 1px solid var(--color-border-secondary);
+    background: rgb(var(--cs-bg-sidebar-rgb));
+    z-index: 10;
+}
+
+.chat-avatar-main {
+    border-radius: 50%;
+    border: 2px solid rgb(var(--cs-bg-sidebar-rgb));
+    box-shadow: 0 0 8px rgba(var(--cs-accent-cyan-rgb), 0.3);
+}
+
+.chat-title-main {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.chat-status-main::before {
+    content: '';
+    background-color: var(--color-status-online);
+    animation: pulse-cs 2s infinite;
+    box-shadow: 0 0 0 0 rgba(var(--cs-status-online-rgb), 0.7);
+}
+
+@keyframes pulse-cs {
+    0% {
+        box-shadow: 0 0 0 0 rgba(var(--cs-status-online-rgb), 0.6);
+    }
+    70% {
+        box-shadow: 0 0 0 5px rgba(var(--cs-status-online-rgb), 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(var(--cs-status-online-rgb), 0);
+    }
+}
+
+.chat-messages {
+    flex-grow: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.no-chat-selected .logo-placeholder {
+    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23333337' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='8 6 2 12 8 18'%3E%3C/polyline%3E%3Cpolyline points='16 18 22 12 16 6'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.message {
+    max-width: 85%;
+    border-radius: var(--border-radius-medium);
+    font-family: var(--font-family-mono);
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    word-wrap: break-word;
+    border: 1px solid transparent;
+}
+
+.message p {
+    margin: 0;
+}
+
+.message.sent {
+    background-color: var(--color-message-sent-bg);
+    border-color: rgba(var(--cs-accent-blue-rgb), 0.3);
+    align-self: flex-end;
+}
+
+.message.received {
+    background-color: var(--color-message-received-bg);
+    border-color: var(--color-border-secondary);
+    align-self: flex-start;
+}
+
+.message-sender {
+    font-size: var(--font-size-small);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    font-family: var(--font-family-sans);
+}
+
+.message-timestamp {
+    display: none;
+}
+
+.message.system {
+    align-self: center;
+    background: none;
+    color: var(--color-text-placeholder);
+    font-size: var(--font-size-small);
+    border-radius: var(--border-radius-medium);
+    border: 1px solid var(--color-message-system-border);
+    max-width: 90%;
+    text-align: center;
+    font-family: var(--font-family-mono);
+}
+
+.chat-input-container {
+    border-top: 1px solid var(--color-border-secondary);
+    background-color: rgb(var(--cs-bg-container-rgb));
+}
+
+.chat-input-container textarea {
+    border: 1px solid transparent;
+    background-color: transparent;
+    font-family: var(--font-family-mono);
+    color: var(--color-text-primary);
+    resize: none;
+}
+
+.chat-input-container textarea:focus {
+    outline: none;
+    background-color: rgb(var(--cs-bg-elevated-rgb));
+}
+
+#sendButtonMain {
+    border-radius: var(--border-radius-medium);
+    background-color: var(--color-primary);
+    color: var(--color-text-on-accent);
+    transition: var(--transition-fast);
+}
+
+#sendButtonMain:hover {
+    background-color: rgb(var(--cs-accent-blue-rgb), 0.85);
+}
+
+#sendButtonMain::after {
+}
+
+.details-panel {
+    background-color: rgb(var(--cs-bg-sidebar-rgb));
+    border-left: 1px solid var(--color-border-secondary);
+}
+
+.details-panel .details-avatar {
+    border: 4px solid rgb(var(--cs-bg-sidebar-rgb));
+}
+
+.details-section-title {
+    font-family: var(--font-family-mono);
+    text-transform: uppercase;
+    font-size: var(--font-size-small);
+    letter-spacing: 0.5px;
+    color: var(--color-text-secondary);
+    border-bottom: 1px solid var(--color-border-strong);
+}
+
+.details-info-label {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.details-about-text {
+    font-family: var(--font-family-sans);
+    background-color: rgb(var(--cs-bg-container-rgb));
+    border: 1px solid var(--color-border-secondary);
+}
+
+.chat-list-item.active.AI_Ada_Foundations, .message.received[data-sender-id="AI_Ada_Foundations"] {
+    border-left-color: rgb(var(--cs-char-ada-primary-rgb));
+}
+
+.chat-list-item.active.AI_Ada_Foundations .chat-list-name, .chat-header-main.current-chat-AI_Ada_Foundations .chat-title-main, .message.received[data-sender-id="AI_Ada_Foundations"] .message-sender, .details-panel.AI_Ada_Foundations .details-name {
+    color: rgb(var(--cs-char-ada-primary-rgb));
+}
+
+.chat-avatar-main.AI_Ada_Foundations, .details-panel.AI_Ada_Foundations .details-avatar {
+    box-shadow: 0 0 10px rgba(var(--cs-char-ada-primary-rgb), 0.5);
+}
+
+.chat-list-item.active.AI_GaoJike_PracticalPython, .message.received[data-sender-id="AI_GaoJike_PracticalPython"] {
+    border-left-color: rgb(var(--cs-char-geek-primary-rgb));
+}
+
+.chat-list-item.active.AI_GaoJike_PracticalPython .chat-list-name, .chat-header-main.current-chat-AI_GaoJike_PracticalPython .chat-title-main, .message.received[data-sender-id="AI_GaoJike_PracticalPython"] .message-sender, .details-panel.AI_GaoJike_PracticalPython .details-name {
+    color: rgb(var(--cs-char-geek-primary-rgb));
+}
+
+.chat-avatar-main.AI_GaoJike_PracticalPython, .details-panel.AI_GaoJike_PracticalPython .details-avatar {
+    box-shadow: 0 0 10px rgba(var(--cs-char-geek-primary-rgb), 0.5);
+}
+
+.chat-list-item.active.AI_Wendy_FrontendWizard, .message.received[data-sender-id="AI_Wendy_FrontendWizard"] {
+    border-left-color: rgb(var(--cs-char-wendy-primary-rgb));
+}
+
+.chat-list-item.active.AI_Wendy_FrontendWizard .chat-list-name, .chat-header-main.current-chat-AI_Wendy_FrontendWizard .chat-title-main, .message.received[data-sender-id="AI_Wendy_FrontendWizard"] .message-sender, .details-panel.AI_Wendy_FrontendWizard .details-name {
+    color: rgb(var(--cs-char-wendy-primary-rgb));
+}
+
+.chat-avatar-main.AI_Wendy_FrontendWizard, .details-panel.AI_Wendy_FrontendWizard .details-avatar {
+    box-shadow: 0 0 10px rgba(var(--cs-char-wendy-primary-rgb), 0.5);
+}
+
+.chat-list-item.active.AI_LiGou_SystemDesign, .message.received[data-sender-id="AI_LiGou_SystemDesign"] {
+    border-left-color: rgb(var(--cs-char-ligou-primary-rgb));
+}
+
+.chat-list-item.active.AI_LiGou_SystemDesign .chat-list-name, .chat-header-main.current-chat-AI_LiGou_SystemDesign .chat-title-main, .message.received[data-sender-id="AI_LiGou_SystemDesign"] .message-sender, .details-panel.AI_LiGou_SystemDesign .details-name {
+    color: rgb(var(--cs-char-ligou-primary-rgb));
+}
+
+.chat-avatar-main.AI_LiGou_SystemDesign, .details-panel.AI_LiGou_SystemDesign .details-avatar {
+    box-shadow: 0 0 10px rgba(var(--cs-char-ligou-primary-rgb), 0.5);
+}
+
+.chat-list-item.active.AI_Phantom_CyberSecurity, .message.received[data-sender-id="AI_Phantom_CyberSecurity"] {
+    border-left-color: rgb(var(--cs-char-phantom-primary-rgb));
+}
+
+.chat-list-item.active.AI_Phantom_CyberSecurity .chat-list-name, .chat-header-main.current-chat-AI_Phantom_CyberSecurity .chat-title-main, .message.received[data-sender-id="AI_Phantom_CyberSecurity"] .message-sender, .details-panel.AI_Phantom_CyberSecurity .details-name {
+    color: rgb(var(--cs-char-phantom-primary-rgb));
+}
+
+.chat-avatar-main.AI_Phantom_CyberSecurity, .details-panel.AI_Phantom_CyberSecurity .details-avatar {
+    box-shadow: 0 0 10px rgba(var(--cs-char-phantom-primary-rgb), 0.5);
+}
+
+.message.received[data-sender-id="AI_Phantom_CyberSecurity"] {
+    background-color: #0c0c0c;
+    border-color: #1a1a1a;
+    color: rgb(var(--cs-char-phantom-primary-rgb));
+}
+
+.message.received[data-sender-id="AI_Phantom_CyberSecurity"] p {
+    color: rgb(var(--cs-char-phantom-primary-rgb));
+}

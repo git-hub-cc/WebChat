@@ -308,7 +308,6 @@ body {
 .chat-area { background-color: transparent; position: relative;}
 .chat-header-main {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.4); /* More transparent */
-    backdrop-filter: blur(5px); /* Frosted glass effect if supported */
     border-bottom: 1px solid var(--border-color);
 }
 .chat-avatar-main { border: 1px solid var(--hi3-tech-border); border-radius: 25%;}
@@ -422,7 +421,6 @@ body {
 
 .chat-input-container {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.6);
-    backdrop-filter: blur(5px);
     border-top: 1px solid var(--border-color);
 }
 #messageInput {
@@ -458,7 +456,6 @@ body {
 /* --- Details Panel --- */
 .details-panel {
     background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.9); /* More transparent */
-    backdrop-filter: blur(3px);
     border-left: 1px solid var(--border-color);
 }
 .details-header {
@@ -520,7 +517,7 @@ body {
 
 
 /* --- Modals --- */
-.loading-overlay { background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.95); backdrop-filter: blur(3px); }
+.loading-overlay { background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.95);  }
 .loading-spinner {
     border-top-color: var(--hi3-energy-stream-cyan);
     border-left-color: var(--hi3-energy-stream-cyan);

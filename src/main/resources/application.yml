@@ -46,8 +46,8 @@ allowed:
 openai:
   api:
     # TODO
-    base_url: "https://api.openai.com/v1/chat/completions"
-    model: "gpt-4o"
+    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    model: "qwen-turbo"
     # !!! 安全警告 !!!
     # 将API密钥硬编码在配置文件中存在安全风险。
     # 推荐使用环境变量、Spring Cloud Config或Vault等方式来管理密钥。
