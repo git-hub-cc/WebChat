@@ -1,12 +1,13 @@
 /**
- * @file Config.js
+ * @file AppSettings.js
  * @description 全局配置文件。该文件定义了整个应用程序中使用的常量和默认设置，
  *              包括重连策略、超时时间、媒体约束、UI行为、日志级别以及服务器和 WebRTC 的默认配置。
  *              用户在设置中修改的某些值（如 AI API 配置）会覆盖此处的默认值。
+ *              注意：大模型提供商的配置已移至独立的 LLMProviders.js 文件。
  * @module Config
- * @exports {object} Config - 包含所有配置项的全局对象。
+ * @exports {object} AppSettings - 包含所有配置项的全局对象。
  */
-const Config = {
+const AppSettings = {
     /**
      * 日志级别配置
      * 可选值: 'DEBUG', 'INFO', 'WARN', 'ERROR'
@@ -67,17 +68,13 @@ const Config = {
     /**
      * 服务器相关配置。
      * 这些是默认值，UI 管理器将从 localStorage 加载用户配置的值来覆盖它们。
+     * 注意：AI 的 apiEndpoint 和 model 的默认值现在由 LLMProviders.js 管理。
+     *      此处仅保留 AI 和 TTS 的非提供商特定配置作为最终回退。
      */
     server: {
-        // TODO
-        // signalingServerUrl: 'wss://175.178.216.24/signaling', // 信令服务器 URL
-        // apiEndpoint: 'https://175.178.216.24/v1/chat/completions', // AI聊天 API 端点
-        // lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids', // 人员大厅 API 端点
         signalingServerUrl: 'ws://localhost:8080/signaling', // 本地开发示例
-        apiEndpoint: 'http://localhost:8080/v1/chat/completions', // 本地开发示例
         lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids', // 本地开发示例
         api_key: "Bearer sk-xxxx", // API 密钥
-        model: "qwen-turbo", // 默认 AI 模型
         max_tokens: 2048, // AI 回复最大令牌数
         ttsApiEndpoint: 'https://gsv2p.acgnai.top', // TTS API 端点
     },

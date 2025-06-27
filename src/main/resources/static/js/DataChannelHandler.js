@@ -3,7 +3,7 @@
  * @description 处理 RTCDataChannel 的消息收发、分片和重组逻辑。
  * @module DataChannelHandler
  * @exports {object} DataChannelHandler
- * @dependencies Utils, Config, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager (临时的，用于分片状态)
+ * @dependencies Utils, AppSettings, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager (临时的，用于分片状态)
  */
 const DataChannelHandler = {
     // 注意：pendingSentChunks 和 pendingReceivedChunks 状态理论上应属于此模块，
@@ -277,7 +277,7 @@ const DataChannelHandler = {
                 messageObject.timestamp = messageObject.timestamp || new Date().toISOString();
                 const messageString = JSON.stringify(messageObject);
 
-                if (messageString.length > Config.media.chunkSize) {
+                if (messageString.length > AppSettings.media.chunkSize) {
                     Utils.sendInChunks(
                         messageString,
                         conn.dataChannel,

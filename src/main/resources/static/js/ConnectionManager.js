@@ -10,7 +10,7 @@
  * @property {function} close - 关闭与指定对等端的连接。
  * @property {boolean} isWebSocketConnected - WebSocket 连接状态。
  * @property {function} isConnectedTo - 检查与指定对等方的数据通道是否已连接。
- * @dependencies UserManager, WebSocketManager, WebRTCManager, DataChannelHandler, Utils, Config, LayoutUIManager, NotificationUIManager, ChatManager, ChatAreaUIManager, GroupManager, PeopleLobbyManager, ModalUIManager, EventEmitter
+ * @dependencies UserManager, WebSocketManager, WebRTCManager, DataChannelHandler, Utils, AppSettings, LayoutUIManager, NotificationUIManager, ChatManager, ChatAreaUIManager, GroupManager, PeopleLobbyManager, ModalUIManager, EventEmitter
  */
 const ConnectionManager = {
     // 状态 pendingSentChunks 和 pendingReceivedChunks 仍然保留在这里，因为 Utils.sendInChunks/reassembleChunk 依赖它们。
@@ -31,21 +31,17 @@ const ConnectionManager = {
      * @returns {Promise<void>}
      */
     _ensureContactExistsForPeer: async function (peerId, isManualContextOrPlaceholderOrigin = false) {
-        // 如果 peerId 是占位符，但调用上下文并非源自手动连接或占位符解析，则不应创建联系人。
-        if (!isManualContextOrPlaceholderOrigin && peerId === this.MANUAL_PLACEHOLDER_PEER_ID) {
-            Utils.log(`ConnectionManager._ensureContactExistsForPeer: 跳过为占位符ID ${peerId} 创建联系人 (非手动/占位符起源上下文)。`, Utils.logLevels.DEBUG);
+        // FIX: A user contact should never be created for the internal placeholder ID.
+        // This check prevents it from happening, regardless of the calling context.
+        if (peerId === this.MANUAL_PLACEHOLDER_PEER_ID) {
+            Utils.log(`ConnectionManager._ensureContactExistsForPeer: 跳过为内部占位符ID ${peerId} 创建联系人。`, Utils.logLevels.DEBUG);
             return;
         }
 
-        // 检查 peerId 是否有效、不是当前用户、且（不是占位符ID 或 源自手动/占位符上下文）
-        // 并且在 UserManager.contacts 中不存在
-        if (peerId && peerId !== UserManager.userId &&
-            (peerId !== this.MANUAL_PLACEHOLDER_PEER_ID || isManualContextOrPlaceholderOrigin) &&
-            !UserManager.contacts[peerId]) {
+        // For any other (real) peerId, check if it's a new contact and add it.
+        if (peerId && peerId !== UserManager.userId && !UserManager.contacts[peerId]) {
             try {
-                // 尝试添加联系人。如果 UserManager.addContact 内部有更复杂的逻辑（如API调用），
-                // 这里的行为可能需要调整。目前假设它主要是本地操作。
-                await UserManager.addContact(peerId, `用户 ${peerId.substring(0, 4)}`, false); // establishConnection=false 避免循环调用
+                await UserManager.addContact(peerId, `用户 ${peerId.substring(0, 4)}`, false); // establishConnection=false to avoid loops
                 Utils.log(`ConnectionManager: 自动为新的连接对方 ${peerId} 创建了联系人记录。`, Utils.logLevels.INFO);
             } catch (error) {
                 Utils.log(`ConnectionManager: 自动为 ${peerId} 创建联系人时出错: ${error}`, Utils.logLevels.ERROR);

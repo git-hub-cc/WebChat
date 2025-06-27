@@ -14,7 +14,7 @@
  * @property {function} rejectCall - 拒绝来电。
  * @property {function} hangUpMedia - 挂断当前通话的媒体流（不关闭连接）。
  * @property {function} handleMessage - 处理与通话相关的  消息。
- * @dependencies Config, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter, TimerManager
+ * @dependencies AppSettings, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter, TimerManager
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定通话按钮事件)
  */
 const VideoCallManager = {
@@ -63,7 +63,7 @@ const VideoCallManager = {
      */
     init: function () {
         try {
-            this.musicPlayer = new Audio(Config.media.music);
+            this.musicPlayer = new Audio(AppSettings.media.music);
             this.musicPlayer.loop = true;
             this.musicPlayer.addEventListener('ended', () => {
                 if (this.isMusicPlaying) this.musicPlayer.play().catch(e => Utils.log(`音乐循环播放错误: ${e}`, Utils.logLevels.WARN));
@@ -561,9 +561,9 @@ const VideoCallManager = {
         let targetSdpFmtpLine;
         const profileIndex = (peerId && this._currentAudioProfileIndex[peerId] !== undefined)
             ? this._currentAudioProfileIndex[peerId]
-            : Config.adaptiveAudioQuality.initialProfileIndex;
+            : AppSettings.adaptiveAudioQuality.initialProfileIndex;
 
-        const audioProfile = Config.adaptiveAudioQuality.audioQualityProfiles[profileIndex];
+        const audioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[profileIndex];
 
         if (audioProfile && audioProfile.sdpFmtpLine) {
             targetSdpFmtpLine = audioProfile.sdpFmtpLine;
@@ -617,7 +617,7 @@ const VideoCallManager = {
             this._applyAudioProfileToSender(this.currentPeerId,
                 this._currentAudioProfileIndex[this.currentPeerId] !== undefined
                     ? this._currentAudioProfileIndex[this.currentPeerId]
-                    : Config.adaptiveAudioQuality.initialProfileIndex);
+                    : AppSettings.adaptiveAudioQuality.initialProfileIndex);
 
             const offerOptions = {
                 offerToReceiveAudio: true,
@@ -632,8 +632,8 @@ const VideoCallManager = {
 
             const offerProfileIndex = (this._currentAudioProfileIndex[this.currentPeerId] !== undefined)
                 ? this._currentAudioProfileIndex[this.currentPeerId]
-                : Config.adaptiveAudioQuality.initialProfileIndex;
-            const offerAudioProfile = Config.adaptiveAudioQuality.audioQualityProfiles[offerProfileIndex];
+                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
+            const offerAudioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[offerProfileIndex];
             if (offerAudioProfile && offerAudioProfile.sdpFmtpLine) {
                 this._lastNegotiatedSdpFmtpLine[this.currentPeerId] = offerAudioProfile.sdpFmtpLine;
             } else {
@@ -686,7 +686,7 @@ const VideoCallManager = {
             this._applyAudioProfileToSender(peerId,
                 this._currentAudioProfileIndex[peerId] !== undefined
                     ? this._currentAudioProfileIndex[peerId]
-                    : Config.adaptiveAudioQuality.initialProfileIndex);
+                    : AppSettings.adaptiveAudioQuality.initialProfileIndex);
 
             const answer = await conn.peerConnection.createAnswer();
             const modifiedAnswer = new RTCSessionDescription({type: 'answer', sdp: this.modifySdpForOpus(answer.sdp, peerId)});
@@ -694,8 +694,8 @@ const VideoCallManager = {
 
             const answerProfileIndex = (this._currentAudioProfileIndex[peerId] !== undefined)
                 ? this._currentAudioProfileIndex[peerId]
-                : Config.adaptiveAudioQuality.initialProfileIndex;
-            const answerAudioProfile = Config.adaptiveAudioQuality.audioQualityProfiles[answerProfileIndex];
+                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
+            const answerAudioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[answerProfileIndex];
             if (answerAudioProfile && answerAudioProfile.sdpFmtpLine) {
                 this._lastNegotiatedSdpFmtpLine[peerId] = answerAudioProfile.sdpFmtpLine;
             } else {
@@ -1069,22 +1069,22 @@ const VideoCallManager = {
             return;
         }
 
-        this._currentAudioProfileIndex[peerId] = Config.adaptiveAudioQuality.initialProfileIndex;
+        this._currentAudioProfileIndex[peerId] = AppSettings.adaptiveAudioQuality.initialProfileIndex;
         this._lastProfileSwitchTime[peerId] = 0;
         this._consecutiveGoodChecks[peerId] = 0;
         this._consecutiveBadChecks[peerId] = 0;
         // _lastNegotiatedSdpFmtpLine[peerId] is set during offer/answer, not here.
 
         // Apply initial bitrate, sdpFmtpLine will be handled by initial negotiation
-        this._applyAudioProfileToSender(peerId, Config.adaptiveAudioQuality.initialProfileIndex);
+        this._applyAudioProfileToSender(peerId, AppSettings.adaptiveAudioQuality.initialProfileIndex);
 
         if (typeof TimerManager !== 'undefined') {
             TimerManager.addPeriodicTask(
                 taskName,
                 () => this._checkAndAdaptAudioQuality(peerId),
-                Config.adaptiveAudioQuality.interval
+                AppSettings.adaptiveAudioQuality.interval
             );
-            Utils.log(`已为 ${peerId} 启动自适应音频质量检测 (via TimerManager)，初始等级: ${Config.adaptiveAudioQuality.audioQualityProfiles[Config.adaptiveAudioQuality.initialProfileIndex].levelName} (isCaller: ${this.isCaller})。`, Utils.logLevels.INFO);
+            Utils.log(`已为 ${peerId} 启动自适应音频质量检测 (via TimerManager)，初始等级: ${AppSettings.adaptiveAudioQuality.audioQualityProfiles[AppSettings.adaptiveAudioQuality.initialProfileIndex].levelName} (isCaller: ${this.isCaller})。`, Utils.logLevels.INFO);
         } else {
             Utils.log("VideoCallManager: TimerManager 未定义，无法启动自适应音频检测。", Utils.logLevels.ERROR);
         }
@@ -1127,12 +1127,12 @@ const VideoCallManager = {
      * @returns {number} - 目标音质等级的索引。
      */
     _determineOptimalQualityLevel: function(peerId, currentStats) {
-        const profiles = Config.adaptiveAudioQuality.audioQualityProfiles;
+        const profiles = AppSettings.adaptiveAudioQuality.audioQualityProfiles;
         const currentLevelIndex = this._currentAudioProfileIndex[peerId] !== undefined
             ? this._currentAudioProfileIndex[peerId]
-            : Config.adaptiveAudioQuality.initialProfileIndex;
+            : AppSettings.adaptiveAudioQuality.initialProfileIndex;
 
-        const { baseGoodConnectionThresholds, stabilityCountForUpgrade, badQualityDowngradeThreshold } = Config.adaptiveAudioQuality;
+        const { baseGoodConnectionThresholds, stabilityCountForUpgrade, badQualityDowngradeThreshold } = AppSettings.adaptiveAudioQuality;
         let targetLevelIndex = currentLevelIndex;
 
         const significantlyBetterFactor = 0.7;
@@ -1237,30 +1237,30 @@ const VideoCallManager = {
                 Utils.log(`AdaptiveAudioCheck for ${peerId}: 未能获取有效的网络统计数据。跳过调整。`, Utils.logLevels.WARN);
                 return;
             }
-            if (!isFinite(currentRtt)) currentRtt = Config.adaptiveAudioQuality.baseGoodConnectionThresholds.rtt * 3;
-            if (currentPacketLoss === 1 && isFinite(stats.size)) currentPacketLoss = Config.adaptiveAudioQuality.baseGoodConnectionThresholds.packetLoss + 0.1;
+            if (!isFinite(currentRtt)) currentRtt = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.rtt * 3;
+            if (currentPacketLoss === 1 && isFinite(stats.size)) currentPacketLoss = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.packetLoss + 0.1;
             else if (currentPacketLoss === 1) currentPacketLoss = 0.5;
-            if (!isFinite(currentJitter)) currentJitter = Config.adaptiveAudioQuality.baseGoodConnectionThresholds.jitter * 3;
+            if (!isFinite(currentJitter)) currentJitter = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.jitter * 3;
 
 
             const currentStats = { rtt: currentRtt, packetLoss: currentPacketLoss, jitter: currentJitter };
             const currentProfileIndex = this._currentAudioProfileIndex[peerId] !== undefined
                 ? this._currentAudioProfileIndex[peerId]
-                : Config.adaptiveAudioQuality.initialProfileIndex;
+                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
 
             const optimalLevelIndex = this._determineOptimalQualityLevel(peerId, currentStats);
 
-            const currentProfile = Config.adaptiveAudioQuality.audioQualityProfiles[currentProfileIndex];
-            const optimalProfile = Config.adaptiveAudioQuality.audioQualityProfiles[optimalLevelIndex];
+            const currentProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[currentProfileIndex];
+            const optimalProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[optimalLevelIndex];
             const currentProfileName = currentProfile ? currentProfile.levelName : `索引 ${currentProfileIndex}`;
             const optimalProfileName = optimalProfile ? optimalProfile.levelName : `索引 ${optimalLevelIndex}`;
 
 
-            if (Config.adaptiveAudioQuality.logStatsToConsole) {
+            if (AppSettings.adaptiveAudioQuality.logStatsToConsole) {
                 Utils.log(`[AudioQualityEval for ${peerId} (Caller: ${this.isCaller})]: Stats(RTT: ${currentRtt.toFixed(0)}ms, Loss: ${(currentPacketLoss*100).toFixed(2)}%, Jitter: ${currentJitter.toFixed(0)}ms) -> 当前: Lvl ${currentProfileIndex} ('${currentProfileName}'), 目标: Lvl ${optimalLevelIndex} ('${optimalProfileName}')`, Utils.logLevels.INFO);
             }
 
-            const { switchToHigherCooldown, switchToLowerCooldown } = Config.adaptiveAudioQuality;
+            const { switchToHigherCooldown, switchToLowerCooldown } = AppSettings.adaptiveAudioQuality;
             const lastSwitchTime = this._lastProfileSwitchTime[peerId] || 0;
             const now = Date.now();
 
@@ -1302,11 +1302,11 @@ const VideoCallManager = {
         this._consecutiveGoodChecks[peerId] = 0;
         this._consecutiveBadChecks[peerId] = 0;
 
-        const newProfile = Config.adaptiveAudioQuality.audioQualityProfiles[newLevelIndex];
+        const newProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[newLevelIndex];
         const newSdpFmtpLine = newProfile ? newProfile.sdpFmtpLine : null;
 
         const oldProfileFallbackSdpLine = this.codecPreferences.audio.find(p => p.mimeType.toLowerCase() === 'audio/opus')?.sdpFmtpLine || 'minptime=10;useinbandfec=1;stereo=0';
-        const oldProfile = Config.adaptiveAudioQuality.audioQualityProfiles[oldLevelIndex];
+        const oldProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[oldLevelIndex];
         const currentNegotiatedSdpLine = this._lastNegotiatedSdpFmtpLine[peerId] || (oldProfile ? oldProfile.sdpFmtpLine : oldProfileFallbackSdpLine);
 
         if (this.isCallActive && newSdpFmtpLine && newSdpFmtpLine !== currentNegotiatedSdpLine) {
@@ -1347,7 +1347,7 @@ const VideoCallManager = {
             return;
         }
 
-        const audioProfile = Config.adaptiveAudioQuality.audioQualityProfiles[levelIndex];
+        const audioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[levelIndex];
         if (!audioProfile) {
             Utils.log(`_applyAudioProfileToSender: 未找到等级 ${levelIndex} 的音频配置。跳过。`, Utils.logLevels.WARN);
             return;

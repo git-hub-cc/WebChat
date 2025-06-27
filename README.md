@@ -61,7 +61,7 @@ A feature-rich, modern web chat application built with vanilla JavaScript, HTML,
     *   Automatic WebRTC reconnection attempts between users.
     *   Reliable transfer of large messages/files via DataChannel chunking.
 *   **Configuration:**
-    *   Frontend `Config.js` file for easy setup of signaling server URL, TURN servers, timeouts, etc.
+    *   Frontend `AppSettings.js` file for easy setup of signaling server URL, TURN servers, timeouts, etc.
     *   Backend Spring Boot `application.properties` (or `.yml`) file for configuring AI API keys, URLs, TTS endpoints, prompts, etc.
     *   User-configurable settings (e.g., auto-connect to contacts).
 *   **Error Handling:**
@@ -128,7 +128,7 @@ Here are some screenshots of the application in action, showcasing different fea
 
 ### 1. Configure the Application
 
-*   **Frontend Configuration (`js/Config.js`):**
+*   **Frontend Configuration (`js/AppSettings.js`):**
     *   `signalingServerUrl`: Your WebSocket signaling server URL. Should point to your Spring Boot backend (e.g., `ws://localhost:8080/signaling` or `wss://your-domain.com/signaling`).
     *   `iceServers`: Configure your STUN/TURN server details for NAT traversal. **It is highly recommended to deploy your own TURN server (e.g., Coturn) for best connection success rates.**
     *   `apiEndpoint` (for AI): Should point to the `/v1/chat/completions` proxy endpoint provided by your Spring Boot backend.
@@ -154,7 +154,7 @@ For reliable WebRTC connections across complex network environments (like symmet
     ```bash
     docker-compose up -d
     ```
-3.  Configure your TURN server details (URL, username, password) in the `iceServers` array in the frontend's `js/Config.js`.
+3.  Configure your TURN server details (URL, username, password) in the `iceServers` array in the frontend's `js/AppSettings.js`.
 
 ### 3. Run the Backend Server
 
@@ -175,7 +175,7 @@ For reliable WebRTC connections across complex network environments (like symmet
 
 *   Deploy the frontend static files (HTML, CSS, JS, images, data, music) to any HTTP server (e.g., Nginx, Apache, or use Node.js's `http-server`).
 *   Alternatively, if Spring Boot is configured to serve static content, you might be able to access it directly via `http://localhost:8080`.
-*   **Important:** Ensure the `signalingServerUrl` and `apiEndpoint` (and potentially `ttsApiEndpoint`) in the frontend's `js/Config.js` point to the correct address and port of your running Spring Boot backend server.
+*   **Important:** Ensure the `signalingServerUrl` and `apiEndpoint` (and potentially `ttsApiEndpoint`) in the frontend's `js/AppSettings.js` point to the correct address and port of your running Spring Boot backend server.
 *   Open the application in two different browser windows or on two different devices to test communication features.
 
 ## 🚀 How to Use
@@ -185,7 +185,7 @@ For reliable WebRTC connections across complex network environments (like symmet
     *   **User ID:** View and copy your User ID.
     *   **Network Status:** Check WebRTC capabilities and signaling server connection status.
     *   **Preferences:** Toggle auto-connect to contacts.
-    *   **AI Server Config (Primarily Backend Controlled):** Frontend might display or use for specific overrides, but main AI and TTS configuration is backend-side.
+    *   **AI Server AppSettings (Primarily Backend Controlled):** Frontend might display or use for specific overrides, but main AI and TTS configuration is backend-side.
     *   **Theme & Color Scheme:** Select your preferred application theme and color mode (light, dark, auto).
     *   **Manual Connection:** Initiate or respond to a manual WebRTC connection by exchanging SDP (Session Description Protocol) information.
     *   **Danger Zone:** Reset connections, clear contacts, or clear all chat history.
@@ -243,7 +243,7 @@ The application supports a flexible theming system:
     *   `VideoCallManager.js`: (Video Call Manager) Manages one-on-one video/audio calls, screen sharing, stream handling, and UI.
     *   `MessageTtsHandler.js`: (Message TTS Handler) Manages TTS playback for messages.
     *   `ThemeLoader.js`: (Theme Loader) Handles loading themes and associated data.
-    *   `Config.js`: (Configuration) Stores application-wide frontend configuration.
+    *   `AppSettings.js`: (Configuration) Stores application-wide frontend configuration.
     *   `Utils.js`: (Utilities) Provides utility functions (logging, formatting, ID generation).
     *   `EventEmitter.js`: (Event Emitter) A simple event emitter for decoupled inter-module communication.
 *   **UI Management:**
@@ -342,7 +342,7 @@ This project utilizes and is inspired by several concepts and resources. We exte
     *   Character themes (CSS and JavaScript data files) are custom-created and **inspired by the visual styles and characters of the aforementioned IPs**. They are intended for illustrative purposes and to showcase the application's **theming** capabilities.
     *   The project's repository **does not directly include** any copyrighted assets (e.g., original images, audio files from the games/anime themselves) from these IPs. Avatar images are illustrative representations.
 *   **Signaling & TURN Server:**
-    *   The frontend `Config.js` file and backend configurations contain placeholder configurations for signaling and TURN servers. Users must deploy or configure their own reliable signaling and TURN servers for WebRTC communication, especially across different networks and behind NATs.
+    *   The frontend `AppSettings.js` file and backend configurations contain placeholder configurations for signaling and TURN servers. Users must deploy or configure their own reliable signaling and TURN servers for WebRTC communication, especially across different networks and behind NATs.
 *   **Music:**
     *   Call waiting music `/music/call.mp3` is from Doraemon.
 *   **General Web Technologies, Inspiration & Other Thanks:**

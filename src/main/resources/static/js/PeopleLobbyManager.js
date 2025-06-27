@@ -9,7 +9,7 @@
  * @property {function} hide - 隐藏人员大厅。
  * @property {function} isVisible - 检查人员大厅是否可见。
  * @property {function} fetchOnlineUsers - 从服务器获取在线用户ID列表。
- * @dependencies UserManager, Utils, NotificationUIManager, ModalUIManager, Config, EventEmitter, TimerManager
+ * @dependencies UserManager, Utils, NotificationUIManager, ModalUIManager, AppSettings, EventEmitter, TimerManager
  */
 const PeopleLobbyManager = {
     onlineUserIds: [], // 存储在线用户ID的数组
@@ -68,7 +68,7 @@ const PeopleLobbyManager = {
 
         Utils.log('PeopleLobbyManager: 开始获取在线用户...', Utils.logLevels.INFO);
         try {
-            const lobbyApiUrl = Config.server.lobbyApiEndpoint;
+            const lobbyApiUrl = AppSettings.server.lobbyApiEndpoint;
             if (!lobbyApiUrl) {
                 throw new Error("人员大厅API端点未配置。");
             }

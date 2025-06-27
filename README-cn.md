@@ -61,7 +61,7 @@
     *   用户间自动 WebRTC 连接尝试。
     *   大消息/文件通过 DataChannel 分块进行可靠传输。
 *   **配置：**
-    *   前端 `Config.js` 文件，方便设置信令服务器URL、TURN服务器、超时等。
+    *   前端 `AppSettings.js` 文件，方便设置信令服务器URL、TURN服务器、超时等。
     *   后端 Spring Boot `application.properties` (或 `.yml`) 文件，用于配置AI API密钥、URL、TTS端点、提示词等。
     *   用户可配置的设置（例如，自动连接到联系人）。
 *   **错误处理：**
@@ -128,7 +128,7 @@
 
 ### 1. 配置应用程序
 
-*   **前端配置 (`js/Config.js`)：**
+*   **前端配置 (`js/AppSettings.js`)：**
     *   `signalingServerUrl`: 您的 WebSocket 信令服务器 URL。应指向您的 Spring Boot 后端 (例如, `ws://localhost:8080/signaling` 或 `wss://your-domain.com/signaling`)。
     *   `iceServers`: 配置您的 STUN/TURN 服务器详细信息以进行 NAT 穿透。**强烈建议部署自己的 TURN 服务器 (例如 Coturn) 以获得最佳连接成功率。**
     *   `apiEndpoint` (用于 AI): 应指向您的 Spring Boot 后端提供的 `/v1/chat/completions` 代理端点。
@@ -154,7 +154,7 @@
     ```bash
     docker-compose up -d
     ```
-3.  在前端 `js/Config.js` 的 `iceServers` 中配置您的 TURN 服务器信息 (URL, 用户名, 密码)。
+3.  在前端 `js/AppSettings.js` 的 `iceServers` 中配置您的 TURN 服务器信息 (URL, 用户名, 密码)。
 
 ### 3. 运行后端服务器
 
@@ -175,7 +175,7 @@
 
 *   将前端静态文件 (HTML, CSS, JS, images, data, music) 部署到任何 HTTP 服务器 (例如 Nginx, Apache, 或使用 Node.js 的 `http-server`)。
 *   或者，如果 Spring Boot 配置为服务静态内容，您可以直接通过 `http://localhost:8080` 访问。
-*   **重要：**确保前端 `js/Config.js` 中的 `signalingServerUrl` 和 `apiEndpoint` (以及可能的 `ttsApiEndpoint`) 指向您正在运行的 Spring Boot 后端服务器的正确地址和端口。
+*   **重要：**确保前端 `js/AppSettings.js` 中的 `signalingServerUrl` 和 `apiEndpoint` (以及可能的 `ttsApiEndpoint`) 指向您正在运行的 Spring Boot 后端服务器的正确地址和端口。
 *   在两个不同的浏览器窗口或两个不同的设备上打开应用程序以测试通信功能。
 
 ## 🚀 使用方法
@@ -243,7 +243,7 @@
     *   `VideoCallManager.js`: (视频通话管理器) 管理一对一视频/音频通话、屏幕共享、流处理和 UI。
     *   `MessageTtsHandler.js`: (消息TTS处理器) 管理消息的 TTS 播放。
     *   `ThemeLoader.js`: (主题加载器) 处理加载主题和相关数据。
-    *   `Config.js`: (配置) 存储应用范围的前端配置。
+    *   `AppSettings.js`: (配置) 存储应用范围的前端配置。
     *   `Utils.js`: (工具函数) 提供实用功能 (日志记录, 格式化, ID 生成)。
     *   `EventEmitter.js`: (事件发射器) 一个简单的事件发射器，用于模块间的解耦通信。
 *   **UI 管理：**
@@ -343,7 +343,7 @@
     *   角色主题 (CSS 和 JavaScript 数据文件) 是定制创建的，**灵感来源于上述 IP 的视觉风格和角色**。它们旨在用于说明目的并展示应用程序的**主题化**能力。
     *   本项目的仓库**不直接包含**这些 IP 的任何受版权保护的资产 (例如，游戏/动漫本身的原始图像、音频文件)。头像图像是说明性的表示。
 *   **信令与 TURN 服务器：**
-    *   前端 `Config.js` 文件和后端配置包含信令和 TURN 服务器的占位符配置。用户必须部署或配置自己可靠的信令 和 TURN 服务器以进行 WebRTC 通信，尤其是在不同网络和 NAT 之后。
+    *   前端 `AppSettings.js` 文件和后端配置包含信令和 TURN 服务器的占位符配置。用户必须部署或配置自己可靠的信令 和 TURN 服务器以进行 WebRTC 通信，尤其是在不同网络和 NAT 之后。
 *   **音乐：**
     *   呼叫等待音乐 `/music/call.mp3` 来自哆啦A梦。
 *   **通用 Web 技术、灵感与其他感谢：**

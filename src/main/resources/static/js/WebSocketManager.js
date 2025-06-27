@@ -4,12 +4,12 @@
  *              负责连接、断开、重连、心跳以及原始信令消息的发送和接收。
  * @module WebSocketManager
  * @exports {object} WebSocketManager
- * @dependencies Utils, Config, LayoutUIManager, EventEmitter, TimerManager
+ * @dependencies Utils, AppSettings, LayoutUIManager, EventEmitter, TimerManager
  */
 const WebSocketManager = {
     websocket: null, // WebSocket 实例
     isWebSocketConnected: false, // WebSocket 是否已连接
-    signalingServerUrl: Config.server.signalingServerUrl, // 信令服务器 URL
+    signalingServerUrl: AppSettings.server.signalingServerUrl, // 信令服务器 URL
     wsReconnectAttempts: 0, // WebSocket 重连尝试次数
     // heartbeatInterval: null, // Moved to TimerManager
     _HEARTBEAT_TASK_NAME: 'webSocketHeartbeat', // Unique name for heartbeat task

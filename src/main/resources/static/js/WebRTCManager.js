@@ -4,7 +4,7 @@
  *              负责创建 Offer/Answer, 处理 ICE 候选者, 管理连接状态, 和数据通道的初始创建。
  * @module WebRTCManager
  * @exports {object} WebRTCManager
- * @dependencies Utils, Config, NotificationUIManager, UserManager, ChatManager, VideoCallManager, EventEmitter
+ * @dependencies Utils, AppSettings, NotificationUIManager, UserManager, ChatManager, VideoCallManager, EventEmitter
  */
 const WebRTCManager = {
     connections: {}, // { peerId: { peerConnection, dataChannel, isVideoCall, wasInitiatedSilently, ... } }
@@ -66,7 +66,7 @@ const WebRTCManager = {
 
         Utils.log(`WebRTCManager: 为 ${peerId} 初始化新的 RTCPeerConnection。视频通话: ${isVideoCall}`, Utils.logLevels.INFO);
         try {
-            const rtcConfig = Config.peerConnectionConfig;
+            const rtcConfig = AppSettings.peerConnectionConfig;
             Utils.log(`WebRTCManager: 使用配置为 ${peerId} 初始化 RTCPeerConnection: ${JSON.stringify(rtcConfig)}`, Utils.logLevels.DEBUG);
             const newPc = new RTCPeerConnection(rtcConfig);
 
@@ -415,7 +415,7 @@ const WebRTCManager = {
             this.iceTimers[peerId] = setTimeout(() => {
                 Utils.log(`WebRTCManager: 为 ${peerId} 的 ICE 收集超时。继续执行。状态: ${pc.iceGatheringState}`, Utils.logLevels.WARN);
                 onDone();
-            }, Config.timeouts.iceGathering);
+            }, AppSettings.timeouts.iceGathering);
 
             checkInterval = setInterval(() => {
                 if (!this.connections[peerId]?.peerConnection) {
@@ -507,8 +507,8 @@ const WebRTCManager = {
         const conn = this.connections[peerId];
         if (!conn || conn.isVideoCall || this.isConnectedTo(peerId) || conn.peerConnection?.connectionState === 'connecting') return;
         this.reconnectAttempts[peerId] = (this.reconnectAttempts[peerId] || 0) + 1;
-        if (this.reconnectAttempts[peerId] <= Config.reconnect.maxAttempts) {
-            const delay = Config.reconnect.delay * Math.pow(Config.reconnect.backoffFactor, this.reconnectAttempts[peerId] - 1);
+        if (this.reconnectAttempts[peerId] <= AppSettings.reconnect.maxAttempts) {
+            const delay = AppSettings.reconnect.delay * Math.pow(AppSettings.reconnect.backoffFactor, this.reconnectAttempts[peerId] - 1);
             if (this.connectionTimeouts[peerId]) clearTimeout(this.connectionTimeouts[peerId]);
             this.connectionTimeouts[peerId] = setTimeout(async () => {
                 delete this.connectionTimeouts[peerId];

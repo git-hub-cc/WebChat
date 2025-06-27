@@ -1,17 +1,17 @@
 # WebRTC STUN/TURN 服务器使用指南
 
-本文档指导您如何配置项目中的 `Config.js` 文件，以使用不同的 STUN/TURN 服务器来优化 WebRTC 通信。
+本文档指导您如何配置项目中的 `AppSettings.js` 文件，以使用不同的 STUN/TURN 服务器来优化 WebRTC 通信。
 
-## 如何修改 `Config.js`
+## 如何修改 `AppSettings.js`
 
-核心步骤是编辑 `Config.js` 文件中的 `peerConnectionConfig.iceServers` 数组。
+核心步骤是编辑 `AppSettings.js` 文件中的 `peerConnectionConfig.iceServers` 数组。
 
-文件路径: `Config.js` (/src/main/resources/static/js)
+文件路径: `AppSettings.js` (/src/main/resources/static/js)
 
 找到以下部分：
 
 ```javascript
-// Config.js
+// AppSettings.js
 const ConfigObj = {
     // ... 其他配置 ...
 
@@ -37,7 +37,7 @@ const ConfigObj = {
     // ... 其他配置 ...
 };
 
-window.Config = ConfigObj;
+window.AppSettings = ConfigObj;
 ```
 
 ## 配置选项
@@ -115,16 +115,16 @@ window.Config = ConfigObj;
     *   `5349/udp` (如果启用了 DTLS)
     *   `50000-50100/udp` (或您在 `turnserver.conf` 中配置的 UDP 中继端口范围)
 
-4.  **在 `Config.js` 中配置**:
+4.  **在 `AppSettings.js` 中配置**:
     获取您在 `turnserver.conf` 中设置的服务器信息：
     *   **服务器地址**: `YOUR_SERVER_PUBLIC_IP_OR_DOMAIN` (您在 `realm` 或 `relay-ip` 中指定的)
     *   **端口**: `3478` (或 `5349` 如果使用 `turns:`)
     *   **用户名**: `test` (或您在 `user` 中设置的用户名)
     *   **密码**: `123456` (或您在 `user` 中设置的密码)
 
-    将这些信息添加到 `Config.js` 的 `iceServers` 数组中：
+    将这些信息添加到 `AppSettings.js` 的 `iceServers` 数组中：
     ```javascript
-    // Config.js -> peerConnectionConfig -> iceServers:
+    // AppSettings.js -> peerConnectionConfig -> iceServers:
     [
         {
             urls: [
@@ -142,11 +142,11 @@ window.Config = ConfigObj;
 
 ### 选项 2：使用公共 STUN 服务器
 
-您可以直接在 `Config.js` 中添加已知的公共 STUN 服务器。
+您可以直接在 `AppSettings.js` 中添加已知的公共 STUN 服务器。
 
 **示例:**
 ```javascript
-// Config.js -> peerConnectionConfig -> iceServers:
+// AppSettings.js -> peerConnectionConfig -> iceServers:
 [
     {
         urls: ["stun:stun.l.google.com:19302"] // Google STUN 服务器
@@ -160,7 +160,7 @@ window.Config = ConfigObj;
 
 ### 选项 3：使用 Python 脚本查找并添加 STUN 服务器
 
-您可以使用提供的 Python 脚本 (`stun_tester.py`) 来测试并找到可用的 STUN 服务器，然后将它们添加到 `Config.js`。
+您可以使用提供的 Python 脚本 (`stun_tester.py`) 来测试并找到可用的 STUN 服务器，然后将它们添加到 `AppSettings.js`。
 
 1.  **准备服务器列表**:
     创建一个名为 `stun_servers.txt` 的文件，每行包含一个 `host:port` 格式的 STUN 服务器地址。
@@ -177,11 +177,11 @@ window.Config = ConfigObj;
     python stun_tester.py
     ```
 
-3.  **获取结果并更新 `Config.js`**:
-    脚本会输出测试结果。选择表现良好的服务器，并按以下格式添加到 `Config.js` 的 `iceServers` 数组中：
+3.  **获取结果并更新 `AppSettings.js`**:
+    脚本会输出测试结果。选择表现良好的服务器，并按以下格式添加到 `AppSettings.js` 的 `iceServers` 数组中：
 
     ```javascript
-    // Config.js -> peerConnectionConfig -> iceServers:
+    // AppSettings.js -> peerConnectionConfig -> iceServers:
     [
         // ... 可能已有的其他服务器配置 ...
         {
@@ -193,12 +193,12 @@ window.Config = ConfigObj;
     ]
     ```
 
-## 最终 `Config.js` 示例
+## 最终 `AppSettings.js` 示例
 
 修改后的 `iceServers` 数组可能如下所示，优先使用自建的 TURN 服务器，并辅以公共 STUN 服务器：
 
 ```javascript
-// Config.js -> peerConnectionConfig
+// AppSettings.js -> peerConnectionConfig
 peerConnectionConfig: {
     iceServers: [
         // 自建的 TURN 服务器 (通过 Docker 部署)
@@ -226,4 +226,4 @@ peerConnectionConfig: {
 **重要提示:**
 *   **自建 TURN 服务器是保证连接可靠性的最佳选择。**
 *   公共 STUN 服务器可以作为辅助，但不应完全依赖它们进行生产环境的 TURN 中继。
-*   修改 `Config.js` 后，通常需要重新加载或重新构建您的应用程序才能使更改生效。
+*   修改 `AppSettings.js` 后，通常需要重新加载或重新构建您的应用程序才能使更改生效。

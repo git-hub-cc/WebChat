@@ -2,6 +2,7 @@
  * @file DBManager.js
  * @description 数据库管理器，封装了对 IndexedDB 的所有操作，提供了一个简单的 Promise-based API 来进行数据持久化。
  *              新增: fileCache 对象存储用于缓存文件Blob数据。
+ *              新增: appStateCache 对象存储用于缓存应用级别的状态，如背景图。
  * @module DBManager
  * @exports {object} DBManager - 对外暴露的单例对象，包含数据库操作方法。
  * @property {function} init - 初始化并打开数据库连接。
@@ -12,12 +13,12 @@
  * @property {function} clearStore - 清空指定的对象存储。
  * @property {function} clearAllData - 清空数据库中所有对象存储的数据。
  * @dependencies Utils
- * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写), MessageTtsHandler (TTS 缓存)
+ * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写), MessageTtsHandler (TTS 缓存), ThemeLoader (背景图缓存)
  */
 const DBManager = {
     db: null,
     dbName: 'ModernChatDB',
-    dbVersion: 4, // 数据库版本号 (为 fileCache 增加版本)
+    dbVersion: 5, // 数据库版本号 (为 appStateCache 增加版本)
 
     /**
      * 初始化并打开 IndexedDB 数据库。如果数据库不存在或版本较低，会触发 onupgradeneeded 来创建或升级表结构。
@@ -66,6 +67,11 @@ const DBManager = {
                 if (!db.objectStoreNames.contains('fileCache')) {
                     db.createObjectStore('fileCache', { keyPath: 'id' }); // 'id' 将存储文件内容的哈希值
                     Utils.log('对象存储 fileCache 已创建。', Utils.logLevels.INFO);
+                }
+                // 新增：应用状态缓存表 (用于背景图等)
+                if (!db.objectStoreNames.contains('appStateCache')) {
+                    db.createObjectStore('appStateCache', { keyPath: 'id' }); // id: 'background_image'
+                    Utils.log('对象存储 appStateCache 已创建。', Utils.logLevels.INFO);
                 }
                 Utils.log('数据库架构已升级/创建。', Utils.logLevels.INFO);
             };

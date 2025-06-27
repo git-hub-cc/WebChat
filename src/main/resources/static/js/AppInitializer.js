@@ -286,7 +286,7 @@ const AppInitializer = {
     smartBackToChatList: function (){
         // Check if current URL is the base URL (no userId in path)
         // This logic assumes that URLs without a userId are the "base" state before a user context is established.
-        if (location.pathname === '/' || location.pathname === '/index.html' || location.pathname === (Config.ui.baseUrl || '/')) {
+        if (location.pathname === '/' || location.pathname === '/index.html' || location.pathname === (AppSettings.ui.baseUrl || '/')) {
             // If it's the base URL, replace the state so that the first "meaningful" URL (e.g., with userId)
             // becomes the one the user would return to if they leave and come back,
             // or if they manually change the URL and hit back.

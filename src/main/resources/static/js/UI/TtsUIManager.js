@@ -10,7 +10,7 @@
  * @exports {object} TtsUIManager - 对外暴露的单例对象，包含管理 TTS 配置 UI 的方法。
  * @property {function} populateAiTtsConfigurationForm - 根据联系人配置动态生成 TTS 设置表单。
  * @property {function} handleSaveAiTtsSettings - 处理保存 TTS 设置的逻辑。
- * @dependencies Utils, UserManager, NotificationUIManager, Config, AiApiHandler, DetailsPanelUIManager
+ * @dependencies Utils, UserManager, NotificationUIManager, AppSettings, AiApiHandler, DetailsPanelUIManager
  * @dependents DetailsPanelUIManager (在更新详情面板时调用)
  */
 const TtsUIManager = {

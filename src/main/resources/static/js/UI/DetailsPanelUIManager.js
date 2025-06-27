@@ -20,7 +20,7 @@
  * @property {function} updateDetailsPanel - 根据当前聊天ID和类型更新聊天详情面板的内容。
  * @property {function} updateDetailsPanelMembers - 更新群组详情中的成员列表和添加成员下拉框。
  * @property {function} handleAddMemberToGroupDetails - 处理从详情面板添加成员到当前群组的逻辑。
- * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationUIManager, Utils, ConnectionManager, PeopleLobbyManager, Config, LayoutUIManager, EventEmitter, DBManager, ResourcePreviewUIManager, TimerManager
+ * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationUIManager, Utils, ConnectionManager, PeopleLobbyManager, AppSettings, LayoutUIManager, EventEmitter, DBManager, ResourcePreviewUIManager, TimerManager
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (通过按钮点击调用以切换面板显隐)
  */
 const DetailsPanelUIManager = {

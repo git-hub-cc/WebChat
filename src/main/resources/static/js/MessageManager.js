@@ -20,7 +20,7 @@
  * @property {function} deleteMessageLocally - 本地删除一条消息。
  * @property {function} requestRetractMessage - 请求撤回一条消息。
  * @dependencies ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler,
- *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, Config, DBManager, PeopleLobbyManager
+ *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, AppSettings, DBManager, PeopleLobbyManager
  * @dependents ChatAreaUIManager (绑定发送按钮事件), ChatManager (调用以显示历史消息)
  */
 const MessageManager = {
@@ -699,8 +699,8 @@ ${fileDetailsHtml}
         if (!message) { NotificationUIManager.showNotification("无法找到要撤回的消息。", "warning"); return; }
         if (message.sender !== UserManager.userId) { NotificationUIManager.showNotification("只能撤回自己发送的消息。", "error"); return; }
         const messageTime = new Date(message.timestamp).getTime();
-        if (Date.now() - messageTime > Config.ui.messageRetractionWindow) {
-            NotificationUIManager.showNotification(`消息已超过${Config.ui.messageRetractionWindow / (60 * 1000)}分钟，无法撤回。`, "warning");
+        if (Date.now() - messageTime > AppSettings.ui.messageRetractionWindow) {
+            NotificationUIManager.showNotification(`消息已超过${AppSettings.ui.messageRetractionWindow / (60 * 1000)}分钟，无法撤回。`, "warning");
             return;
         }
         const myName = UserManager.contacts[UserManager.userId]?.name || UserManager.userName;

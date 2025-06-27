@@ -5,16 +5,19 @@
  *              它会加载相应的主题 CSS 文件和与主题相关的数据 JSON 文件（如特殊联系人定义，包括词汇篇章）。
  *              现在支持无刷新切换主题和动态加载数据。
  *              更新：AI 联系人的词汇篇章数据现在可以从其定义中的 `chaptersFilePath` 指定的单独 JSON 文件加载。
+ *              新增：支持从缓存加载和应用自定义背景图片。
  * @module ThemeLoader
  * @exports {object} ThemeLoader - 主要通过其 `applyTheme` 方法和几个 getter 与其他模块交互。
- * @property {function} init - 初始化主题加载器，加载初始主题和数据。
+ * @property {function} init - 初始化主题加载器，加载初始主题和数据，并应用缓存的背景图。
  * @property {function} applyTheme - 应用一个新主题，动态切换CSS并加载新数据，然后触发事件。
+ * @property {function} setBackgroundImage - 设置并缓存一个新的背景图片。
+ * @property {function} removeBackgroundImage - 移除并清除缓存的背景图片。
  * @property {function} updateColorSchemePreference - 当用户在设置中更改配色方案时调用。
  * @property {function} getCurrentEffectiveColorScheme - 获取当前生效的配色方案 ('light' 或 'dark')。
  * @property {function} getCurrentThemeKey - 获取当前应用的主题键名。
  * @property {function} getCurrentSpecialContactsDefinitions - 获取当前主题的特殊联系人定义。
- * @dependencies Utils, EventEmitter (如果 Utils 或 EventEmitter 在此之前未加载，则需要确保它们可用或处理潜在的未定义情况)
- * @dependents AppInitializer (确保其早期执行), SettingsUIManager (用于主题切换), UserManager (依赖其加载的数据)
+ * @dependencies Utils, EventEmitter, DBManager
+ * @dependents AppInitializer (确保其早期执行), SettingsUIManager (用于主题切换和背景设置), UserManager (依赖其加载的数据)
  */
 const ThemeLoader = {
     // 定义所有可用的主题及其配置
@@ -56,6 +59,39 @@ const ThemeLoader = {
     _currentThemeKey: null, // 当前应用的主题键名
     _systemColorSchemeListener: null, // 系统配色方案变化监听器
     _currentSpecialContactsDefinitions: [], // 存储当前主题的特殊联系人定义
+    _currentBackgroundUrl: null, // 存储当前背景图的 Object URL
+
+    /**
+     * @private
+     * 应用背景图片。通过注入一个 style 标签来实现，以支持 !important。
+     * @param {Blob} imageBlob - 要应用的图片 Blob。
+     */
+    _applyBackgroundImage(imageBlob) {
+        if (this._currentBackgroundUrl) {
+            URL.revokeObjectURL(this._currentBackgroundUrl); // 释放旧的 URL
+        }
+        this._currentBackgroundUrl = URL.createObjectURL(imageBlob);
+
+        const styleId = 'custom-background-style';
+        let styleTag = document.getElementById(styleId);
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = styleId;
+            document.head.appendChild(styleTag);
+        }
+
+        // 注入 CSS 规则
+        styleTag.textContent = `
+            body {
+                background-image: url(${this._currentBackgroundUrl}) !important;
+                backdrop-filter: blur(10px) !important;
+                background-repeat: no-repeat !important;
+                background-size: cover !important;
+                background-attachment: fixed !important;
+                background-position-x: center !important;
+            }
+        `;
+    },
 
     /**
      * @private 异步加载并解析 data JSON 文件内容。
@@ -151,6 +187,7 @@ const ThemeLoader = {
      * @returns {Promise<void>}
      */
     async init() {
+        // --- 主题和配色方案初始化 ---
         const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
         this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
 
@@ -176,6 +213,18 @@ const ThemeLoader = {
         }
         await this._loadThemeCore(themeToLoadKey);
         this._setupSystemColorSchemeListener(preferredColorScheme);
+
+        // --- 背景图片初始化 ---
+        try {
+            const backgroundItem = await DBManager.getItem('appStateCache', 'background_image');
+            if (backgroundItem && backgroundItem.imageBlob instanceof Blob) {
+                this._applyBackgroundImage(backgroundItem.imageBlob);
+                (Utils?.log || console.log)("ThemeLoader: 已从缓存加载并应用背景图片。", Utils?.logLevels?.INFO || 1);
+            }
+        } catch(error) {
+            (Utils?.log || console.log)(`ThemeLoader: 从缓存加载背景图片失败: ${error}`, Utils?.logLevels?.ERROR || 3);
+        }
+
         (Utils?.log || console.log)("ThemeLoader: 初始化完成。", Utils?.logLevels?.INFO || 1);
     },
 
@@ -200,6 +249,53 @@ const ThemeLoader = {
             (Utils?.log || console.log)(`ThemeLoader: 已为 ${themeKey} 触发 themeChanged 事件。`, Utils?.logLevels?.INFO || 1);
         } else {
             console.warn("ThemeLoader: EventEmitter 未定义，无法触发 themeChanged 事件。");
+        }
+    },
+
+    /**
+     * 设置并缓存一个新的背景图片。
+     * @param {Blob} imageBlob - 用户选择的图片 Blob 对象。
+     * @returns {Promise<void>}
+     */
+    async setBackgroundImage(imageBlob) {
+        if (!(imageBlob instanceof Blob)) {
+            (Utils?.log || console.log)("ThemeLoader.setBackgroundImage: 提供的不是 Blob 对象。", Utils?.logLevels?.ERROR || 3);
+            return;
+        }
+        try {
+            await DBManager.setItem('appStateCache', { id: 'background_image', imageBlob: imageBlob });
+            this._applyBackgroundImage(imageBlob);
+            (Utils?.log || console.log)("ThemeLoader: 新的背景图片已应用并缓存。", Utils?.logLevels?.INFO || 1);
+        } catch (error) {
+            (Utils?.log || console.log)(`ThemeLoader: 设置或缓存背景图片时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
+            if (typeof NotificationUIManager !== 'undefined') {
+                NotificationUIManager.showNotification('设置背景图片失败。', 'error');
+            }
+        }
+    },
+
+    /**
+     * 移除背景图片并从缓存中清除。
+     * @returns {Promise<void>}
+     */
+    async removeBackgroundImage() {
+        try {
+            await DBManager.removeItem('appStateCache', 'background_image');
+
+            const styleTag = document.getElementById('custom-background-style');
+            if (styleTag) {
+                styleTag.remove();
+            }
+            if (this._currentBackgroundUrl) {
+                URL.revokeObjectURL(this._currentBackgroundUrl);
+                this._currentBackgroundUrl = null;
+            }
+            (Utils?.log || console.log)("ThemeLoader: 背景图片已移除并从缓存中清除。", Utils?.logLevels?.INFO || 1);
+        } catch (error) {
+            (Utils?.log || console.log)(`ThemeLoader: 移除背景图片时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
+            if (typeof NotificationUIManager !== 'undefined') {
+                NotificationUIManager.showNotification('移除背景图片失败。', 'error');
+            }
         }
     },
 

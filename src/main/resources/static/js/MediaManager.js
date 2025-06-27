@@ -13,7 +13,7 @@
  * @property {function} processFile - 处理用户选择或拖放的文件，进行大小检查并读取数据。
  * @property {function} handleFileSelect - 处理文件输入框的 change 事件。
  * @property {function} captureScreen - 捕获屏幕或窗口内容作为截图。
- * @dependencies Config, Utils, NotificationUIManager, MessageManager, MediaUIManager, EventEmitter
+ * @dependencies AppSettings, Utils, NotificationUIManager, MessageManager, MediaUIManager, EventEmitter
  * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定录音和截图按钮事件), MessageManager (播放语音消息)
  */
 const MediaManager = {
@@ -79,7 +79,7 @@ const MediaManager = {
         this.releaseAudioResources(); // 先释放旧资源
         try {
             // 请求麦克风权限
-            this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: Config.media.audioConstraints || true });
+            this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: AppSettings.media.audioConstraints || true });
             // 设置 MediaRecorder 选项，优先使用 opus 编码的 webm
             const options = { mimeType: 'audio/webm;codecs=opus' };
             if (!MediaRecorder.isTypeSupported(options.mimeType)) { // 如果不支持，尝试 ogg
@@ -174,9 +174,9 @@ const MediaManager = {
             const elapsedSeconds = Math.floor((Date.now() - this.recordingStartTime) / 1000); // 计算已录制秒数
             this.recordingDuration = elapsedSeconds; // 更新时长
             // 更新UI显示计时器
-            if (typeof MediaUIManager !== 'undefined') MediaUIManager.updateRecordingButtonTimerUI(elapsedSeconds, Config.media.maxAudioDuration);
+            if (typeof MediaUIManager !== 'undefined') MediaUIManager.updateRecordingButtonTimerUI(elapsedSeconds, AppSettings.media.maxAudioDuration);
             // 如果达到最大时长，则停止录制
-            if (elapsedSeconds >= Config.media.maxAudioDuration) this.stopRecording();
+            if (elapsedSeconds >= AppSettings.media.maxAudioDuration) this.stopRecording();
         };
         updateUI(); // 立即执行一次
         this.recordingTimer = setInterval(updateUI, 1000); // 每秒执行一次
@@ -254,8 +254,8 @@ const MediaManager = {
     processFile: async function(file) {
         if (!file) return;
         // 检查文件大小
-        if (file.size > Config.media.maxFileSize) {
-            NotificationUIManager.showNotification(`文件过大。最大: ${this.formatFileSize(Config.media.maxFileSize)}。`, 'error');
+        if (file.size > AppSettings.media.maxFileSize) {
+            NotificationUIManager.showNotification(`文件过大。最大: ${this.formatFileSize(AppSettings.media.maxFileSize)}。`, 'error');
             return;
         }
         // 如果已有待发送音频，则提示用户

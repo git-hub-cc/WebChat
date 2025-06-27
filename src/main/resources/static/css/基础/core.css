@@ -67,9 +67,9 @@
 
 * {
     /*
-     * 使用 border-box 盒模型，使元素的 width 和 height 包含 padding 和 border。
-     * 这是现代 CSS 布局的基石，能极大简化尺寸计算。
-     */
+    * 使用 border-box 盒模型，使元素的 width 和 height 包含 padding 和 border。
+    * 这是现代 CSS 布局的基石，能极大简化尺寸计算。
+    */
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -98,8 +98,8 @@ body {
 /* 通用布局 (Layout) */
 /* ========================================================================== */
 /**
- * 此区域定义了应用的主要布局结构，包括应用容器、侧边栏、主聊天区和详情面板。
- */
+* 此区域定义了应用的主要布局结构，包括应用容器、侧边栏、主聊天区和详情面板。
+*/
 
 .app-container {
     display: flex;
@@ -487,7 +487,7 @@ body {
     min-height: 80px;
 }
 
-/* Styling for "Advanced Options" within AI & API Config in Main Menu Modal */
+/* Styling for "Advanced Options" within AI & API AppSettings in Main Menu Modal */
 #mainMenuModal .settings-section .collapsible-content .collapsible-content > p {
     margin-bottom: var(--spacing-3);
     font-size: 0.9em;
@@ -1230,6 +1230,88 @@ input:checked + .slider::before {
     50% {
         opacity: 0;
     }
+}
+
+/* ========================================================================== */
+/* 菜单标签页样式 (Menu Tab Styles) */
+/* ========================================================================== */
+
+.modal-body .menu-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-4);
+    flex-wrap: wrap; /* 允许换行 */
+    gap: var(--spacing-1);
+}
+
+.modal-body .menu-tab-item {
+    padding: var(--spacing-2) var(--spacing-3);
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-color-light);
+    transition: color 0.2s ease-out, border-color 0.2s ease-out;
+}
+
+.modal-body .menu-tab-item:hover {
+    color: var(--text-color);
+}
+
+.modal-body .menu-tab-item.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+
+.modal-body .menu-tab-content {
+    display: none; /* 默认隐藏所有内容面板 */
+}
+
+.modal-body .menu-tab-content.active {
+    display: block; /* 只显示激活的内容面板 */
+    animation: tab-fade-in 0.3s ease-out;
+}
+
+@keyframes tab-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+
+
+/* ========================================================================== */
+/* 新增: AI & API 配置特定样式 (New: AI & API AppSettings Specific Styles) */
+/* ========================================================================== */
+
+/* Container for dynamic model input/select */
+.api-model-input-container {
+    flex-grow: 1;
+    min-width: 0; /* Allow shrinking */
+    display: flex; /* Ensure it behaves correctly in a flex layout */
+}
+.api-model-input-container > select,
+.api-model-input-container > input {
+    width: 100%; /* Make the select/input take full width of the container */
+    padding: var(--spacing-2);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--received-bg-color);
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
+    margin-bottom: 0; /* Override generic margin from modal-body input styles */
+}
+.api-model-input-container > select:focus,
+.api-model-input-container > input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
 }
 
 

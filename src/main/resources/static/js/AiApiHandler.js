@@ -8,33 +8,50 @@
  *              新增：在向AI发送消息时，会检查并应用用户为该AI选择的词汇篇章特定提示词。
  *              修复：在 sendAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
  *              移除：删除了所有与对话摘要相关的功能，因为后端不再支持。
+ *              修改: _getEffectiveAiConfig 现在支持从多种大模型提供商配置中获取设置，并移除了对“覆盖”状态的检查。
+ * @dependencies UserManager, MessageManager, ChatManager, NotificationUIManager, Utils, AppSettings, ConnectionManager, LLMProviders
  */
 const AiApiHandler = {
 
     _getEffectiveAiConfig: function() {
         const config = {};
-        const serverConfig = (typeof Config !== 'undefined' && Config && typeof Config.server === 'object' && Config.server !== null)
-            ? Config.server
-            : {};
-        const fallbackDefaults = { apiEndpoint: '', api_key: '', model: 'default-model', max_tokens: 2048, ttsApiEndpoint: '' };
+        const fallbackConfig = (typeof AppSettings !== 'undefined' && AppSettings && AppSettings.server) ? AppSettings.server : {};
+        // **MODIFIED**: Use LLMProviders directly
+        const llmProviders = (typeof LLMProviders !== 'undefined') ? LLMProviders : {};
 
-        config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint') || serverConfig.apiEndpoint || fallbackDefaults.apiEndpoint;
-        config.apiKey = localStorage.getItem('aiSetting_api_key') || serverConfig.api_key || fallbackDefaults.api_key;
-        config.model = localStorage.getItem('aiSetting_model') || serverConfig.model || fallbackDefaults.model;
+        // 1. 确定提供商和其配置
+        // BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'，以匹配 AppSettings.js 中的全局回退设置。
+        const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
+        const providerConfig = llmProviders[providerKey] || llmProviders.ppmc || {};
+
+        // 2. 获取 API 端点: 优先使用 localStorage 中的用户设置，然后是提供商默认值，最后是全局回退值
+        config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint')
+            || providerConfig.defaultEndpoint
+            || fallbackConfig.apiEndpoint;
+
+        // 3. 获取模型: 逻辑同上
+        config.model = localStorage.getItem('aiSetting_model')
+            || providerConfig.defaultModel
+            || fallbackConfig.model;
+
+        // 4. 获取其他配置（API Key, Max Tokens, TTS Endpoint），这些配置不受提供商选择的直接影响，但同样遵循 "用户设置 > 全局回退" 的原则
+        config.apiKey = localStorage.getItem('aiSetting_api_key') || fallbackConfig.api_key || '';
 
         const maxTokensStored = localStorage.getItem('aiSetting_max_tokens');
         let parsedMaxTokens = parseInt(maxTokensStored, 10);
 
+        // COMMENT: 此处逻辑确保 max_tokens 的获取优先级为：用户在 localStorage 中的设置 > AppSettings.js 中的默认值 > 硬编码的最终回退值 (2048)。
         if (maxTokensStored !== null && !isNaN(parsedMaxTokens)) {
             config.maxTokens = parsedMaxTokens;
-        } else if (serverConfig.max_tokens !== undefined) {
-            config.maxTokens = serverConfig.max_tokens;
+        } else if (fallbackConfig.max_tokens !== undefined) {
+            config.maxTokens = fallbackConfig.max_tokens;
         } else {
-            config.maxTokens = fallbackDefaults.max_tokens;
+            config.maxTokens = 2048; // 最终回退值
         }
-        config.ttsApiEndpoint = localStorage.getItem('aiSetting_ttsApiEndpoint') || serverConfig.ttsApiEndpoint || fallbackDefaults.ttsApiEndpoint;
 
-        Utils.log(`_getEffectiveAiConfig: 生效的 AI 配置已使用。端点: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, 密钥存在: ${!!config.apiKey}, 模型: ${config.model}, TTS 端点: ${config.ttsApiEndpoint ? String(config.ttsApiEndpoint).substring(0,30) + '...' : 'N/A'}`, Utils.logLevels.DEBUG);
+        config.ttsApiEndpoint = localStorage.getItem('aiSetting_ttsApiEndpoint') || fallbackConfig.ttsApiEndpoint || '';
+
+        Utils.log(`_getEffectiveAiConfig: 生效的 AI 配置已使用。提供商: ${providerKey}, 端点: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, 密钥存在: ${!!config.apiKey}, 模型: ${config.model}, TTS 端点: ${config.ttsApiEndpoint ? String(config.ttsApiEndpoint).substring(0,30) + '...' : 'N/A'}`, Utils.logLevels.DEBUG);
         return config;
     },
     /**
@@ -144,8 +161,8 @@ const AiApiHandler = {
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
-            const contextWindow = (typeof Config !== 'undefined' && Config.ai && Config.ai.sessionTime !== undefined)
-                ? Config.ai.sessionTime
+            const contextWindow = (typeof AppSettings !== 'undefined' && AppSettings.ai && AppSettings.ai.sessionTime !== undefined)
+                ? AppSettings.ai.sessionTime
                 : (10 * 60 * 1000);
             const timeThreshold = new Date().getTime() - contextWindow;
             const chatHistory = (ChatManager.chats[targetId] || []).filter(msg => new Date(msg.timestamp).getTime() > timeThreshold && msg.type === 'text');
@@ -304,7 +321,7 @@ const AiApiHandler = {
             if (chapterPromptModifier) {
                 finalSystemPrompt += `\n\n[Chapter Focus: ${contact.chapters.find(ch => ch.id === selectedChapterId)?.name || selectedChapterId}]\n${chapterPromptModifier}`;
             }
-            finalSystemPrompt += contact.aiConfig.promptSuffix?contact.aiConfig.promptSuffix:Config.ai.promptSuffix;
+            finalSystemPrompt += contact.aiConfig.promptSuffix?contact.aiConfig.promptSuffix:AppSettings.ai.promptSuffix;
 
             messagesForRequestBody.push({role: "system", content: finalSystemPrompt});
 
@@ -352,7 +369,6 @@ const AiApiHandler = {
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
         }
     },
-
     sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId, triggeringMessageId = null) {
         const aiContact = UserManager.contacts[aiContactId];
         if (!aiContact || !aiContact.isAI) {
@@ -391,11 +407,11 @@ const AiApiHandler = {
             else {
                 Utils.log(`AiApiHandler.sendGroupAiMessage: AI ${aiContactId} 在群组 ${groupId} 中无特定提示词，也无默认提示词。将仅使用基础群聊提示词。`, Utils.logLevels.WARN);
             }
-            const finalSystemPrompt = systemPromptBase + Config.ai.groupPromptSuffix;
+            const finalSystemPrompt = systemPromptBase + AppSettings.ai.groupPromptSuffix;
 
 
-            const groupContextWindow = (typeof Config !== 'undefined' && Config.ai && Config.ai.groupAiSessionTime !== undefined)
-                ? Config.ai.groupAiSessionTime
+            const groupContextWindow = (typeof AppSettings !== 'undefined' && AppSettings.ai && AppSettings.ai.groupAiSessionTime !== undefined)
+                ? AppSettings.ai.groupAiSessionTime
                 : (3 * 60 * 1000);
             const timeThreshold = new Date().getTime() - groupContextWindow;
 
@@ -415,6 +431,8 @@ const AiApiHandler = {
                     role = 'assistant';
                 } else if (msg.sender) {
                     role = 'user';
+                    // COMMENT: 对于群聊，必须在用户消息前加上用户名，以便AI能区分不同发言者。
+                    // 这是让AI理解群聊上下文的关键步骤。
                     const senderName = UserManager.contacts[msg.sender]?.name || `用户 ${String(msg.sender).substring(0,4)}`;
                     content = `${senderName}: ${msg.content}`;
                 }
@@ -489,6 +507,8 @@ const AiApiHandler = {
                     };
                     ChatManager.addMessage(groupId, finalAiResponseMessage);
 
+                    // COMMENT: 当AI在群聊中完成回复后，需要将这条完整的消息通过WebRTC广播给群内的其他人类成员，
+                    // 以确保所有人的聊天记录保持同步。
                     const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
                     humanMembers.forEach(memberId => {
                         if (memberId !== originalSenderId && memberId !== UserManager.userId) {
@@ -519,7 +539,6 @@ const AiApiHandler = {
             });
         }
     },
-
     checkAiServiceHealth: async function() {
         const effectiveConfig = this._getEffectiveAiConfig();
 
@@ -567,7 +586,6 @@ const AiApiHandler = {
             return false;
         }
     },
-
     handleAiConfigChange: async function() {
         Utils.log("AiApiHandler: AI 配置已更改，正在重新检查服务健康状况...", Utils.logLevels.INFO);
         try {

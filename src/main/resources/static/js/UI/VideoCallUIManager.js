@@ -10,7 +10,7 @@
  * @property {function} showCallContainer - 显示或隐藏整个通话 UI 容器。
  * @property {function} updateUIForCallState - 根据通话状态更新所有相关的 UI 元素。
  * @property {function} togglePipMode - 切换画中画模式。
- * @dependencies Utils, VideoCallManager, EventEmitter, LayoutUIManager, Config
+ * @dependencies Utils, VideoCallManager, EventEmitter, LayoutUIManager, AppSettings
  * @dependents AppInitializer (进行初始化), VideoCallManager (调用以更新 UI)
  */
 const VideoCallUIManager = {
@@ -146,8 +146,8 @@ const VideoCallUIManager = {
             if (this.audioQualityIndicatorEl && VideoCallManager.currentPeerId) {
                 const currentProfileIndex = VideoCallManager._currentAudioProfileIndex[VideoCallManager.currentPeerId] !== undefined
                     ? VideoCallManager._currentAudioProfileIndex[VideoCallManager.currentPeerId]
-                    : Config.adaptiveAudioQuality.initialProfileIndex; // 获取当前配置档案索引
-                const profile = Config.adaptiveAudioQuality.audioQualityProfiles[currentProfileIndex]; // 获取配置档案
+                    : AppSettings.adaptiveAudioQuality.initialProfileIndex; // 获取当前配置档案索引
+                const profile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[currentProfileIndex]; // 获取配置档案
                 this._updateAudioQualityDisplay({ // 调用更新函数
                     peerId: VideoCallManager.currentPeerId,
                     profileName: profile ? profile.levelName : "未知",

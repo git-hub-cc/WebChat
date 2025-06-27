@@ -318,53 +318,99 @@
 <div id="mainMenuModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>菜单与设置</h2>
+            <h2>菜单</h2>
             <button class="icon-btn close-modal-btn" data-modal-id="mainMenuModal">✕</button>
         </div>
         <div class="modal-body">
-            <div class="settings-section">
-                <h3>您的用户 ID</h3>
-                <div class="user-id-display">
-                    <span id="modalUserIdValue">生成中...</span>
-                    <button id="modalCopyIdBtn" class="btn btn-secondary">复制 ID</button>
-                </div>
+            <!-- MODIFIED START: New Tab Structure -->
+            <div class="menu-tabs">
+                <button class="menu-tab-item active" data-tab="general">通用</button>
+                <button class="menu-tab-item" data-tab="appearance">外观</button>
+                <button class="menu-tab-item" data-tab="api">AI & API</button>
+                <button class="menu-tab-item" data-tab="advanced">高级</button>
             </div>
-            <div class="settings-section">
-                <h3>主题</h3>
-                <div class="settings-item">
-                    <label for="colorSchemeCustomSelectContainer">配色方案:</label>
-                    <div class="custom-select" id="colorSchemeCustomSelectContainer">
-                        <div class="selected" id="colorSchemeSelectedValue">自动 (浏览器)</div>
-                        <div class="options" id="colorSchemeOptionsContainer">
-                        </div>
+
+            <!-- Tab Content: General -->
+            <div id="menu-tab-content-general" class="menu-tab-content active">
+                <div class="settings-section">
+                    <h3>您的用户 ID</h3>
+                    <div class="user-id-display">
+                        <span id="modalUserIdValue">生成中...</span>
+                        <button id="modalCopyIdBtn" class="btn btn-secondary">复制 ID</button>
                     </div>
                 </div>
-                <div class="settings-item">
-                    <label for="themeCustomSelectContainer">选择主题:</label>
-                    <div class="custom-select" id="themeCustomSelectContainer">
-                        <div class="selected" id="themeSelectedValue">选择一个主题</div>
-                        <div class="options" id="themeOptionsContainer">
+                <div class="settings-section">
+                    <h3>网络状态</h3>
+                    <div id="modalNetworkInfo">检测中...</div>
+                    <div class="connection-quality">
+                        质量: <div class="quality-indicator" id="modalQualityIndicator"></div> <span id="modalQualityText">未知</span>
+                    </div>
+                    <button id="checkNetworkBtnModal" class="btn btn-secondary">重新检测网络</button>
+                </div>
+                <div class="settings-section">
+                    <h3>操作</h3>
+                    <button id="modalClearContactsBtn" class="btn btn-danger">清空联系人</button>
+                    <button id="modalClearAllChatsBtn" class="btn btn-danger">清空聊天记录</button>
+                    <button id="modalClearCacheBtn" class="btn btn-danger">重置页面</button>
+                </div>
+            </div>
+
+            <!-- Tab Content: Appearance -->
+            <div id="menu-tab-content-appearance" class="menu-tab-content">
+                <div class="settings-section">
+                    <h3>外观设置</h3>
+                    <div class="setting-item">
+                        <label for="colorSchemeCustomSelectContainer">配色方案:</label>
+                        <div class="custom-select" id="colorSchemeCustomSelectContainer">
+                            <div class="selected" id="colorSchemeSelectedValue">自动 (浏览器)</div>
+                            <div class="options" id="colorSchemeOptionsContainer"></div>
                         </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="themeCustomSelectContainer">选择主题:</label>
+                        <div class="custom-select" id="themeCustomSelectContainer">
+                            <div class="selected" id="themeSelectedValue">选择一个主题</div>
+                            <div class="options" id="themeOptionsContainer"></div>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="setBackgroundBtn">自定义背景</label>
+                        <div class="setting-control-group">
+                            <button id="setBackgroundBtn" class="btn btn-secondary btn-sm">选择图片</button>
+                            <button id="removeBackgroundBtn" class="btn btn-danger btn-sm">移除背景</button>
+                        </div>
+                        <input type="file" id="bgImageInput" accept="image/*" style="display: none;">
                     </div>
                 </div>
             </div>
 
-            <div class="settings-section">
-                <h3 class="collapsible-header">
-                    AI 与 API 配置 <span class="collapse-icon">▶</span>
-                </h3>
-                <div class="collapsible-content" style="display: none;"> <!-- 初始折叠 -->
+            <!-- Tab Content: AI & API -->
+            <div id="menu-tab-content-api" class="menu-tab-content">
+                <div class="settings-section">
+                    <h3>AI & API 配置</h3>
+                    <!-- LLM Provider Selector -->
+                    <div class="settings-item">
+                        <label for="llmProviderSelectContainer">大模型:</label>
+                        <div class="custom-select" id="llmProviderSelectContainer">
+                            <div class="selected" id="llmProviderSelectedValue">选择提供商</div>
+                            <div class="options" id="llmProviderOptionsContainer"></div>
+                        </div>
+                    </div>
+                    <!-- API Endpoint -->
                     <div class="settings-item">
                         <label for="apiEndpointInput">API 端点:</label>
-                        <input type="text" id="apiEndpointInput" placeholder="例如: http://api.siliconflow.cn/v1/chat/completions">
+                        <input type="text" id="apiEndpointInput" placeholder="由大模型选择自动填充">
+                    </div>
+                    <!-- Model Name (Container for dynamic input/select) -->
+                    <div class="settings-item">
+                        <label for="apiModelInputContainer">模型名称:</label>
+                        <div id="apiModelInputContainer" class="api-model-input-container">
+                            <!-- JS will create input or select here -->
+                        </div>
                     </div>
                     <div class="settings-item">
                         <label for="apiKeyInput">API 密钥:</label>
                         <input type="password" id="apiKeyInput" placeholder="例如: Bearer sk-xxxx">
-                    </div>
-                    <div class="settings-item">
-                        <label for="apiModelInput">模型名称:</label>
-                        <input type="text" id="apiModelInput" placeholder="例如: THUDM/GLM-4-32B-0414">
                     </div>
                     <div class="settings-item">
                         <label for="apiMaxTokensInput">最大令牌数:</label>
@@ -372,48 +418,33 @@
                     </div>
                     <div class="settings-item">
                         <label for="ttsApiEndpointInput">TTS API 端点:</label>
-                        <input type="text" id="ttsApiEndpointInput"
-                               placeholder="例如: http://localhost:8000">
-                    </div>
-                    <h4 class="collapsible-header">
-                        高级选项 <span class="collapse-icon">▶</span>
-                    </h4>
-                    <div class="collapsible-content" style="display: none;">
-                        <p>用于信令服务器故障或需要直接建立连接时。</p>
-                        <div class="manual-connect-step">
-                            <button id="modalCreateOfferBtn" class="btn btn-secondary">1. 创建连接提议</button>
-                        </div>
-                        <div class="manual-connect-step">
-                            <button id="modalCreateAnswerBtn" class="btn btn-secondary">2. 创建应答 (粘贴提议后)</button>
-                        </div>
-                        <div class="manual-connect-step">
-                            <button id="modalHandleAnswerBtn" class="btn btn-secondary">3. 接受应答 (粘贴应答后)</button>
-                        </div>
-                        <div class="manual-connect-step">
-                            <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="在此粘贴对方的连接信息..."></textarea>
-                            <button class="btn btn-secondary" id="modalCopySdpBtn">复制我的信息</button>
-                        </div>
+                        <input type="text" id="ttsApiEndpointInput" placeholder="例如: http://localhost:8000">
                     </div>
                 </div>
             </div>
-            <div class="settings-section">
-                <h3 class="collapsible-header"> <!-- MODIFIED: Added class -->
-                    网络状态 <span class="collapse-icon">▶</span> <!-- MODIFIED: Added icon -->
-                </h3>
-                <div class="collapsible-content" style="display: none;"> <!-- MODIFIED: Wrapped content, set display: none -->
-                    <div id="modalNetworkInfo">检测中...</div>
-                    <div class="connection-quality">
-                        质量: <div class="quality-indicator" id="modalQualityIndicator"></div> <span id="modalQualityText">未知</span>
+
+
+            <!-- Tab Content: Advanced -->
+            <div id="menu-tab-content-advanced" class="menu-tab-content">
+                <div class="settings-section">
+                    <h3>手动连接</h3>
+                    <p>用于信令服务器故障或需要直接建立连接时。</p>
+                    <div class="manual-connect-step">
+                        <button id="modalCreateOfferBtn" class="btn btn-secondary">1. 创建连接提议</button>
                     </div>
-                    <button id="checkNetworkBtnModal" class="btn btn-secondary">重新检测网络</button>
+                    <div class="manual-connect-step">
+                        <button id="modalCreateAnswerBtn" class="btn btn-secondary">2. 创建应答 (粘贴提议后)</button>
+                    </div>
+                    <div class="manual-connect-step">
+                        <button id="modalHandleAnswerBtn" class="btn btn-secondary">3. 接受应答 (粘贴应答后)</button>
+                    </div>
+                    <div class="manual-connect-step">
+                        <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="在此粘贴对方的连接信息..."></textarea>
+                        <button class="btn btn-secondary" id="modalCopySdpBtn">复制我的信息</button>
+                    </div>
                 </div>
             </div>
-            <div class="settings-section">
-                <h3>操作</h3>
-                <button id="modalClearContactsBtn" class="btn btn-danger">清空联系人</button>
-                <button id="modalClearAllChatsBtn" class="btn btn-danger">清空聊天记录</button>
-                <button id="modalClearCacheBtn" class="btn btn-danger">重置页面</button> <!-- 新增按钮 -->
-            </div>
+            <!-- MODIFIED END -->
         </div>
     </div>
 </div>
@@ -498,29 +529,32 @@
 </div>
 <!-- 截图编辑器模态框结束 -->
 
+<script src="js/config/LLMProviders.js"></script>
+<script src="js/config/McpTools.js"></script>
+<!-- AppSettings 依赖 LLMProviders -->
+<script src="js/config/AppSettings.js"></script>
 
 <!-- 脚本加载顺序调整 -->
 <!-- ThemeLoader.js 仍然较早加载，但其 init() 由 AppInitializer 调用 -->
 <script src="js/ThemeLoader.js"></script>
-<script src="js/Config.js"></script>
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>
 <script src="js/DBManager.js"></script>
-<!-- UserManager 依赖 ThemeLoader, Config, Utils, EventEmitter, DBManager -->
+<!-- UserManager 依赖 ThemeLoader, AppSettings, Utils, EventEmitter, DBManager -->
 <script src="js/UserManager.js"></script>
-<!-- ConnectionManager 依赖 Config, Utils, EventEmitter, UserManager -->
+<!-- ConnectionManager 依赖 AppSettings, Utils, EventEmitter, UserManager -->
 <script src="js/WebRTCManager.js"></script>
 <script src="js/TimerManager.js"></script>
 <script src="js/WebSocketManager.js"></script>
 <script src="js/DataChannelHandler.js"></script>
 <script src="js/ConnectionManager.js"></script>
-<!-- MediaManager 依赖 Config, Utils, NotificationUIManager, MessageManager, MediaUIManager, EventEmitter -->
+<!-- MediaManager 依赖 AppSettings, Utils, NotificationUIManager, MessageManager, MediaUIManager, EventEmitter -->
 <script src="js/MediaManager.js"></script>
-<!-- VideoCallManager 依赖 Config, Utils, NotificationUIManager, ConnectionManager, UserManager, VideoCallUIManager, ModalUIManager -->
+<!-- VideoCallManager 依赖 AppSettings, Utils, NotificationUIManager, ConnectionManager, UserManager, VideoCallUIManager, ModalUIManager -->
 <script src="js/VideoCallManager.js"></script>
-<!-- AiApiHandler 依赖 UserManager, ChatManager, MessageManager, Config, Utils, NotificationUIManager, EventEmitter, SettingsUIManager -->
+<!-- AiApiHandler 依赖 UserManager, ChatManager, MessageManager, AppSettings, Utils, NotificationUIManager, EventEmitter, SettingsUIManager -->
 <script src="js/AiApiHandler.js"></script>
-<!-- MessageManager 依赖 ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler, MediaManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, Config -->
+<!-- MessageManager 依赖 ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler, MediaManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, AppSettings -->
 <script src="js/MessageManager.js"></script>
 <!-- ChatManager 依赖 DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationUIManager, Utils, ModalUIManager -->
 <script src="js/ChatManager.js"></script>
@@ -529,8 +563,6 @@
 
 <!-- 专业处理器/管理器 -->
 <script src="js/MessageTtsHandler.js"></script>
-<script src="js/McpTools.js"></script>
-
 
 <!-- UI组件管理器 -->
 <script src="js/UI/TtsUIManager.js"></script>

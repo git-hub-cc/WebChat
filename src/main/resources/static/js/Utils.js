@@ -26,10 +26,10 @@
  * @property {function} showFullVideo - 在一个模态框中显示全屏视频。
  * @property {function} fetchApiStream - 发起一个流式 API 请求并处理响应。
  * @property {function} checkWebRTCSupport - 检查浏览器是否支持 WebRTC。
- * @dependencies Config, ConnectionManager (仅在 reassembleChunk 中间接引用), NotificationUIManager (用于 fetchApiStream 错误处理), LayoutUIManager (用于 checkWebRTCSupport)
+ * @dependencies AppSettings, ConnectionManager (仅在 reassembleChunk 中间接引用), NotificationUIManager (用于 fetchApiStream 错误处理), LayoutUIManager (用于 checkWebRTCSupport)
  * @dependents 几乎所有其他模块。
  */
-const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3, ALL: 4 }; // 定义日志级别
+const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3}; // 定义日志级别
 
 const Utils = {
     logLevels: _Utils_logLevels, // 暴露日志级别常量
@@ -40,11 +40,11 @@ const Utils = {
     BUFFER_CHECK_INTERVAL: 50, // 缓冲量检查间隔 (50ms)
 
     /**
-     * 从全局配置 `Config.logLevel` 中设置当前的日志级别。
+     * 从全局配置 `AppSettings.logLevel` 中设置当前的日志级别。
      */
     setLogLevelFromConfig: function() {
-        if (typeof Config !== 'undefined' && Config.logLevel && typeof Config.logLevel === 'string') {
-            this.currentLogLevel = this.logLevels[Config.logLevel.toUpperCase()] || this.logLevels.DEBUG;
+        if (typeof AppSettings !== 'undefined' && AppSettings.logLevel && typeof AppSettings.logLevel === 'string') {
+            this.currentLogLevel = this.logLevels[AppSettings.logLevel.toUpperCase()] || this.logLevels.DEBUG;
         }
     },
 
@@ -61,8 +61,7 @@ const Utils = {
             const logMessage = `[${timestamp}] ${prefix} ${message}`; // 构建日志消息
 
             // 根据级别选择合适的 console 方法
-            if (level === this.logLevels.ALL) console.log(logMessage);
-            else if (level === this.logLevels.ERROR) console.error(logMessage);
+            if (level === this.logLevels.ERROR) console.error(logMessage);
             else if (level === this.logLevels.DEBUG) console.debug(logMessage);
             else if (level === this.logLevels.WARN) console.warn(logMessage);
             else if (level === this.logLevels.INFO) console.info(logMessage);
@@ -138,9 +137,9 @@ const Utils = {
      * @param {RTCDataChannel} dataChannel - 用于发送数据的 RTCDataChannel 实例。
      * @param {string} peerId - 接收方的 ID。
      * @param {string|null} [fileId=null] - 文件的唯一 ID，用于标识分片所属。
-     * @param {number} [chunkSize=Config.chunkSize] - 每个分片的大小。
+     * @param {number} [chunkSize=AppSettings.chunkSize] - 每个分片的大小。
      */
-    sendInChunks: async function (dataString, dataChannel, peerId, fileId = null, chunkSize = Config.media.chunkSize || 64 * 1024) {
+    sendInChunks: async function (dataString, dataChannel, peerId, fileId = null, chunkSize = AppSettings.media.chunkSize || 64 * 1024) {
         // 如果数据不大，直接发送
         if (dataString.length <= chunkSize) {
             try {

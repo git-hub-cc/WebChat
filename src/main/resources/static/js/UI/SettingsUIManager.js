@@ -5,6 +5,10 @@
  *              修复了切换配色方案后，主题选择器点击事件处理不当的问题。
  *              新增“清除缓存”按钮，用于清除 localStorage 和 IndexedDB 数据。
  *              用户切换主题或配色方案后，自动隐藏菜单。
+ *              新增：支持设置和移除自定义背景图片。
+ *              重构：将折叠式菜单改为标签页式，以提高导航清晰度。
+ *              新增：支持多种大模型提供商选择，并自动填充配置，支持用户覆盖默认值。
+ *              修改：移除了 AI & API 配置的“覆盖”复选框，用户的输入将始终生效。
  * @module SettingsUIManager
  * @exports {object} SettingsUIManager - 对外暴露的单例对象，包含所有设置 UI 管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素、加载设置并绑定事件。
@@ -12,54 +16,70 @@
  * @property {function} saveAISetting - 保存单个 AI 设置到 localStorage 并触发事件。
  * @property {function} initThemeSelectors - 初始化主题和配色方案的自定义下拉选择器。
  * @property {function} updateNetworkInfoDisplay - 更新模态框中的网络状态信息。
- * @dependencies UserManager, ConnectionManager, ChatManager, ThemeLoader, NotificationUIManager, Utils, AppInitializer, ModalUIManager, EventEmitter, Config, DBManager
+ * @dependencies UserManager, ConnectionManager, ChatManager, ThemeLoader, NotificationUIManager, Utils, AppInitializer, ModalUIManager, EventEmitter, AppSettings, DBManager, LLMProviders
  * @dependents AppInitializer (进行初始化)
  */
 const SettingsUIManager = {
-    // 主题和配色方案选择器元素
+// 主题和配色方案选择器元素
     colorSchemeSelectedValueEl: null,
     colorSchemeOptionsContainerEl: null,
     themeSelectedValueEl: null,
     themeOptionsContainerEl: null,
 
-    // AI 设置输入元素
+// AI 设置输入元素
+    llmProviderSelectedValueEl: null,
+    llmProviderOptionsContainerEl: null,
     apiEndpointInput: null,
+    apiModelInputContainer: null,
     apiKeyInput: null,
-    apiModelInput: null,
     apiMaxTokensInput: null,
     ttsApiEndpointInput: null,
 
-    // 其他设置元素
+// 背景图片设置元素
+    setBackgroundBtn: null,
+    removeBackgroundBtn: null,
+    bgImageInput: null,
+
+// 其他设置元素
     autoConnectToggle: null,
     modalCopyIdBtn: null,
     checkNetworkBtnModal: null,
     modalUserIdValue: null,
     modalClearCacheBtn: null,
 
-    // 存储绑定的事件处理函数，以便正确移除
+// 存储绑定的事件处理函数，以便正确移除
     _boundHandleThemeSelectorClick: null,
     _boundHandleColorSchemeSelectorClick: null,
+    _boundHandleLlmProviderSelectorClick: null,
 
 
     /**
      * 初始化设置 UI 管理器，获取元素、加载设置并绑定事件。
      */
     init: function() {
-        // AI 和 TTS 配置输入元素
+// AI 和 TTS 配置输入元素
+        this.llmProviderSelectedValueEl = document.getElementById('llmProviderSelectedValue');
+        this.llmProviderOptionsContainerEl = document.getElementById('llmProviderOptionsContainer');
         this.apiEndpointInput = document.getElementById('apiEndpointInput');
+        this.apiModelInputContainer = document.getElementById('apiModelInputContainer');
         this.apiKeyInput = document.getElementById('apiKeyInput');
-        this.apiModelInput = document.getElementById('apiModelInput');
         this.apiMaxTokensInput = document.getElementById('apiMaxTokensInput');
         this.ttsApiEndpointInput = document.getElementById('ttsApiEndpointInput');
 
-        // 其他设置元素
+
+// 背景图片设置元素
+        this.setBackgroundBtn = document.getElementById('setBackgroundBtn');
+        this.removeBackgroundBtn = document.getElementById('removeBackgroundBtn');
+        this.bgImageInput = document.getElementById('bgImageInput');
+
+// 其他设置元素
         this.autoConnectToggle = document.getElementById('autoConnectToggle');
         this.modalCopyIdBtn = document.getElementById('modalCopyIdBtn');
         this.checkNetworkBtnModal = document.getElementById('checkNetworkBtnModal');
         this.modalUserIdValue = document.getElementById('modalUserIdValue');
         this.modalClearCacheBtn = document.getElementById('modalClearCacheBtn');
 
-        // 主题和配色方案选择器元素
+// 主题和配色方案选择器元素
         this.colorSchemeSelectedValueEl = document.getElementById('colorSchemeSelectedValue');
         this.colorSchemeOptionsContainerEl = document.getElementById('colorSchemeOptionsContainer');
         this.themeSelectedValueEl = document.getElementById('themeSelectedValue');
@@ -68,34 +88,48 @@ const SettingsUIManager = {
         this.loadAISettings(); // 加载AI设置
         this.bindEvents(); // 绑定事件
         this.initThemeSelectors(); // 初始化主题选择器
+        this._populateLlmProviderSelector(); // 初始化大模型提供商选择器
     },
 
     /**
      * 绑定设置模态框内的所有 UI 事件监听器。
      */
     bindEvents: function() {
-        // AI 设置输入框失去焦点时保存
+// ... [bindEvents implementation remains largely the same, no changes needed here] ...
+// AI 设置输入框失去焦点时保存
         if (this.apiEndpointInput) this.apiEndpointInput.addEventListener('blur', () => this.saveAISetting('apiEndpoint', this.apiEndpointInput.value));
         if (this.apiKeyInput) this.apiKeyInput.addEventListener('blur', () => this.saveAISetting('api_key', this.apiKeyInput.value));
-        if (this.apiModelInput) this.apiModelInput.addEventListener('blur', () => this.saveAISetting('model', this.apiModelInput.value));
         if (this.apiMaxTokensInput) this.apiMaxTokensInput.addEventListener('blur', () => {
             const val = parseInt(this.apiMaxTokensInput.value, 10);
-            // 获取服务器配置或默认值
-            const serverConfig = (typeof Config !== 'undefined' && Config && Config.server) ? Config.server : {};
+            const serverConfig = (typeof AppSettings !== 'undefined' && AppSettings && AppSettings.server) ? AppSettings.server : {};
             const configMaxTokens = serverConfig.max_tokens !== undefined ? serverConfig.max_tokens : 2048;
-            this.saveAISetting('max_tokens', isNaN(val) ? configMaxTokens : val); // 如果无效则使用配置/默认值
+            this.saveAISetting('max_tokens', isNaN(val) ? configMaxTokens : val);
         });
         if (this.ttsApiEndpointInput) this.ttsApiEndpointInput.addEventListener('blur', () => this.saveAISetting('ttsApiEndpoint', this.ttsApiEndpointInput.value));
 
-        // --- 网络状态 ---
+// 绑定模型输入/选择框的 blur 和 change 事件
+        this.apiModelInputContainer.addEventListener('blur', (e) => {
+            this.saveAISetting('model', e.target.value);
+        }, true); // 使用捕获来获取内部元素的 blur 事件
+        this.apiModelInputContainer.addEventListener('change', (e) => { // 适用于 select 元素
+            this.saveAISetting('model', e.target.value);
+        }, true);
+
+
+// --- 背景图片设置 ---
+        if (this.setBackgroundBtn) this.setBackgroundBtn.addEventListener('click', () => this.bgImageInput.click());
+        if (this.bgImageInput) this.bgImageInput.addEventListener('change', (e) => this.handleBackgroundChange(e));
+        if (this.removeBackgroundBtn) this.removeBackgroundBtn.addEventListener('click', () => this.handleRemoveBackground());
+
+// --- 网络状态 ---
         if (this.checkNetworkBtnModal) this.checkNetworkBtnModal.addEventListener('click', async () => {
-            if (this.checkNetworkBtnModal.disabled) { // 如果已连接，则不执行
+            if (this.checkNetworkBtnModal.disabled) {
                 NotificationUIManager.showNotification('当前已连接到信令服务器。', 'info');
                 return;
             }
             NotificationUIManager.showNotification('正在重新检查网络并尝试连接...', 'info');
-            await AppInitializer.refreshNetworkStatusUI(); // 刷新网络状态UI
-            if (!ConnectionManager.isWebSocketConnected) { // 如果未连接，则尝试连接
+            await AppInitializer.refreshNetworkStatusUI();
+            if (!ConnectionManager.isWebSocketConnected) {
                 WebSocketManager.connect().catch(err => {
                     NotificationUIManager.showNotification('重新建立信令连接失败。', 'error');
                     Utils.log(`手动重新检查网络: connectWebSocket 失败: ${err.message || err}`, Utils.logLevels.ERROR);
@@ -103,7 +137,7 @@ const SettingsUIManager = {
             }
         });
 
-        // --- 用户 ID 和 SDP 复制 ---
+// --- 用户 ID 和 SDP 复制 ---
         if (this.modalCopyIdBtn) this.modalCopyIdBtn.addEventListener('click', () => {
             if (this.modalCopyIdBtn.disabled) return;
             this.copyUserIdFromModal();
@@ -112,7 +146,7 @@ const SettingsUIManager = {
         const modalCopySdpBtn = document.getElementById('modalCopySdpBtn');
         if(modalCopySdpBtn) modalCopySdpBtn.addEventListener('click', () => this.copySdpTextFromModal());
 
-        // 手动连接按钮
+// 手动连接按钮
         const modalCreateOfferBtn = document.getElementById('modalCreateOfferBtn');
         if(modalCreateOfferBtn) modalCreateOfferBtn.addEventListener('click', () => ConnectionManager.createOffer(null, {isManual: true}));
         const modalCreateAnswerBtn = document.getElementById('modalCreateAnswerBtn');
@@ -121,24 +155,24 @@ const SettingsUIManager = {
         if(modalHandleAnswerBtn) modalHandleAnswerBtn.addEventListener('click', () => ConnectionManager.handleAnswer({isManual: true}));
 
 
-        // --- 操作区域 ---
+// --- 操作区域 ---
         const modalClearContactsBtn = document.getElementById('modalClearContactsBtn');
         if (modalClearContactsBtn) modalClearContactsBtn.addEventListener('click', () => UserManager.clearAllContacts());
         const modalClearAllChatsBtn = document.getElementById('modalClearAllChatsBtn');
         if (modalClearAllChatsBtn) modalClearAllChatsBtn.addEventListener('click', () => ChatManager.clearAllChats());
 
-        // 清除缓存按钮事件
+// 清除缓存按钮事件
         if (this.modalClearCacheBtn) {
             this.modalClearCacheBtn.addEventListener('click', () => {
-                ModalUIManager.showConfirmationModal( // 显示确认对话框
+                ModalUIManager.showConfirmationModal(
                     '您确定要清除所有本地缓存吗？这将删除所有 localStorage 数据和 IndexedDB 数据库中的所有内容。操作完成后，页面将自动刷新。',
-                    async () => { // 确认回调
+                    async () => {
                         try {
-                            localStorage.clear(); // 清除 localStorage
+                            localStorage.clear();
                             Utils.log('LocalStorage 已清除。', Utils.logLevels.INFO);
-                            await DBManager.clearAllData(); // 清除 IndexedDB
+                            await DBManager.clearAllData();
                             NotificationUIManager.showNotification('所有缓存已成功清除。页面即将刷新...', 'success');
-                            setTimeout(() => { // 延迟刷新，给用户看通知
+                            setTimeout(() => {
                                 window.location.reload();
                             }, 2000);
                         } catch (error) {
@@ -146,92 +180,180 @@ const SettingsUIManager = {
                             NotificationUIManager.showNotification('清除缓存时发生错误。请查看控制台。', 'error');
                         }
                     },
-                    null, // 取消回调
-                    { title: '警告：清除缓存', confirmText: '确定清除', cancelText: '取消' } // 对话框选项
+                    null,
+                    { title: '警告：清除缓存', confirmText: '确定清除', cancelText: '取消' }
                 );
             });
         }
 
-        // --- 可折叠部分 (统一逻辑) ---
-        const collapsibleHeaders = document.querySelectorAll('#mainMenuModal .settings-section .collapsible-header');
-        collapsibleHeaders.forEach(header => {
-            // 确保每个header都有一个 .collapse-icon
-            let icon = header.querySelector('.collapse-icon');
-            if (!icon) {
-                icon = document.createElement('span');
-                icon.className = 'collapse-icon';
-                // 尝试智能插入图标
-                const textNode = Array.from(header.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '');
-                if (textNode && textNode.nextSibling) {
-                    header.insertBefore(icon, textNode.nextSibling);
-                } else {
-                    header.appendChild(icon);
-                }
-            }
+// --- 标签页切换逻辑 ---
+        const menuTabs = document.querySelectorAll('#mainMenuModal .menu-tab-item');
+        const menuTabContents = document.querySelectorAll('#mainMenuModal .menu-tab-content');
 
-            const content = header.nextElementSibling;
-            // 设置初始图标和active类
-            if (content && content.classList.contains('collapsible-content')) {
-                if (content.style.display === 'none' || getComputedStyle(content).display === 'none') {
-                    icon.textContent = '▶';
-                    header.classList.remove('active');
-                } else {
-                    icon.textContent = '▼';
-                    header.classList.add('active');
-                }
-            }
-
-            header.addEventListener('click', function() {
-                this.classList.toggle('active'); // 切换active类
-                const currentContent = this.nextElementSibling; // 获取紧邻的内容元素
-                const currentIcon = this.querySelector('.collapse-icon'); // 获取图标
-                if (currentContent && currentContent.classList.contains('collapsible-content')) {
-                    if (currentContent.style.display === 'block' || currentContent.style.display === '') {
-                        currentContent.style.display = 'none'; // 折叠
-                        if (currentIcon) currentIcon.textContent = '▶';
-                    } else {
-                        currentContent.style.display = 'block'; // 展开
-                        if (currentIcon) currentIcon.textContent = '▼';
-                    }
+        menuTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTabId = tab.dataset.tab;
+                menuTabs.forEach(t => t.classList.remove('active'));
+                menuTabContents.forEach(c => c.classList.remove('active'));
+                tab.classList.add('active');
+                const targetContent = document.getElementById(`menu-tab-content-${targetTabId}`);
+                if (targetContent) {
+                    targetContent.classList.add('active');
                 }
             });
         });
 
-
-        // --- 全局点击监听器，用于关闭自定义下拉菜单 ---
+// --- 全局点击监听器，用于关闭自定义下拉菜单 ---
         document.addEventListener('click', (e) => {
-            const themeCustomSelect = document.getElementById('themeCustomSelectContainer');
-            if (this.themeOptionsContainerEl && themeCustomSelect && !themeCustomSelect.contains(e.target)) {
-                this.themeOptionsContainerEl.style.display = 'none'; // 如果点击外部，则关闭主题下拉
+            const isClickInside = (containerId, target) => {
+                const container = document.getElementById(containerId);
+                return container && container.contains(target);
+            };
+
+            if (!isClickInside('themeCustomSelectContainer', e.target) && this.themeOptionsContainerEl) {
+                this.themeOptionsContainerEl.style.display = 'none';
             }
-            const colorSchemeCustomSelect = document.getElementById('colorSchemeCustomSelectContainer');
-            if (this.colorSchemeOptionsContainerEl && colorSchemeCustomSelect && !colorSchemeCustomSelect.contains(e.target)) {
-                this.colorSchemeOptionsContainerEl.style.display = 'none'; // 关闭配色方案下拉
+            if (!isClickInside('colorSchemeCustomSelectContainer', e.target) && this.colorSchemeOptionsContainerEl) {
+                this.colorSchemeOptionsContainerEl.style.display = 'none';
+            }
+            if (!isClickInside('llmProviderSelectContainer', e.target) && this.llmProviderOptionsContainerEl) {
+                this.llmProviderOptionsContainerEl.style.display = 'none';
             }
         });
     },
+    // ... [handleBackgroundChange, handleRemoveBackground, _handleLlmProviderSelectorClick remain the same] ...
+    async handleBackgroundChange(event) {
+        const file = event.target.files[0];
+        if (!file) return;
 
-    /**
-     * @private
-     * 处理主题选择器触发元素的点击事件，用于展开/折叠选项。
-     * @param {Event} event - 点击事件对象。
-     */
+        // 验证文件类型，确保是图片
+        if (!file.type.startsWith('image/')) {
+            NotificationUIManager.showNotification('请选择一个图片文件。', 'error');
+            return;
+        }
+        // 验证文件大小，限制为 5MB
+        if (file.size > 5 * 1024 * 1024) {
+            NotificationUIManager.showNotification('图片文件过大，请选择小于 5MB 的图片。', 'warning');
+            return;
+        }
+
+        if (typeof ThemeLoader !== 'undefined' && ThemeLoader.setBackgroundImage) {
+            await ThemeLoader.setBackgroundImage(file);
+            NotificationUIManager.showNotification('背景图片已设置。', 'success');
+        } else {
+            Utils.log("SettingsUIManager: ThemeLoader 或其 setBackgroundImage 方法未定义。", Utils.logLevels.ERROR);
+        }
+        event.target.value = '';
+    },
+    async handleRemoveBackground() {
+        if (typeof ThemeLoader !== 'undefined' && ThemeLoader.removeBackgroundImage) {
+            await ThemeLoader.removeBackgroundImage();
+            NotificationUIManager.showNotification('背景图片已移除。', 'success');
+        } else {
+            Utils.log("SettingsUIManager: ThemeLoader 或其 removeBackgroundImage 方法未定义。", Utils.logLevels.ERROR);
+        }
+    },
+    _handleLlmProviderSelectorClick: function(event) {
+        event.stopPropagation();
+        const currentDisplayState = this.llmProviderOptionsContainerEl.style.display;
+        document.querySelectorAll('.custom-select .options').forEach(opt => opt.style.display = 'none');
+        this.llmProviderOptionsContainerEl.style.display = currentDisplayState === 'block' ? 'none' : 'block';
+    },
+
+    _populateLlmProviderSelector: function() {
+        if (!this.llmProviderSelectedValueEl || !this.llmProviderOptionsContainerEl || typeof LLMProviders === 'undefined') return;
+
+        // **MODIFIED**: Use LLMProviders directly
+        const providers = LLMProviders;
+        // BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'，以确保 UI 与后端逻辑一致。
+        const currentProviderKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
+
+        this.llmProviderSelectedValueEl.textContent = providers[currentProviderKey]?.label || '选择提供商';
+        this.llmProviderOptionsContainerEl.innerHTML = '';
+
+        for (const key in providers) {
+            const optionDiv = document.createElement('div');
+            optionDiv.classList.add('option');
+            optionDiv.textContent = providers[key].label;
+            optionDiv.dataset.providerKey = key;
+
+            optionDiv.addEventListener('click', () => {
+                const selectedProviderKey = optionDiv.dataset.providerKey;
+                localStorage.setItem('aiSetting_llmProvider', selectedProviderKey);
+                this.llmProviderSelectedValueEl.textContent = providers[selectedProviderKey].label;
+                this.llmProviderOptionsContainerEl.style.display = 'none';
+                this._handleLlmProviderChange(selectedProviderKey);
+            });
+            this.llmProviderOptionsContainerEl.appendChild(optionDiv);
+        }
+
+        if (this._boundHandleLlmProviderSelectorClick) {
+            this.llmProviderSelectedValueEl.removeEventListener('click', this._boundHandleLlmProviderSelectorClick);
+        }
+        this._boundHandleLlmProviderSelectorClick = this._handleLlmProviderSelectorClick.bind(this);
+        this.llmProviderSelectedValueEl.addEventListener('click', this._boundHandleLlmProviderSelectorClick);
+    },
+
+    _handleLlmProviderChange: function(providerKey) {
+        // **MODIFIED**: Use LLMProviders directly
+        const providerConfig = (typeof LLMProviders !== 'undefined') ? LLMProviders[providerKey] : null;
+        if (!providerConfig) return;
+
+        // 切换提供商时，自动填充并保存新的默认值
+        this.apiEndpointInput.value = providerConfig.defaultEndpoint;
+        this.saveAISetting('apiEndpoint', providerConfig.defaultEndpoint);
+
+        // --- BUG FIX START ---
+        // BUG: 原本 _updateModelInput 在 saveAISetting('model', ...) 之前调用，
+        //      导致 UI 更新时读取的是旧的 localStorage 值。
+        // FIX: 调整顺序，先保存新的默认模型，再更新 UI。
+
+        // 1. 先保存新的默认模型到 localStorage
+        this.saveAISetting('model', providerConfig.defaultModel);
+
+        // 2. 然后更新模型输入的 UI，此时它会从 localStorage 读取到正确的新值
+        this._updateModelInput(providerConfig);
+        // --- BUG FIX END ---
+    },
+    // ... [_updateModelInput and theme-related methods remain the same] ...
+    _updateModelInput: function(providerConfig) {
+        this.apiModelInputContainer.innerHTML = ''; // 清除之前的输入/选择框
+        let modelElement;
+
+// 如果没有预设模型列表（例如“自定义”提供商），则创建文本输入框
+        if (!providerConfig.models || providerConfig.models.length === 0) {
+            modelElement = document.createElement('input');
+            modelElement.type = 'text';
+            modelElement.id = 'apiModelInput';
+            modelElement.placeholder = '输入自定义模型名称';
+// 加载用户可能已为该提供商保存的自定义模型
+            const storedModel = localStorage.getItem('aiSetting_model');
+            modelElement.value = storedModel || providerConfig.defaultModel;
+        } else {
+// 否则，创建下拉选择框
+            modelElement = document.createElement('select');
+            modelElement.id = 'apiModelSelect';
+            providerConfig.models.forEach(model => {
+                const option = document.createElement('option');
+                option.value = model.key;
+                option.textContent = model.label;
+                modelElement.appendChild(option);
+            });
+// 加载用户保存的模型，如果不存在则使用提供商的默认模型
+            const storedModel = localStorage.getItem('aiSetting_model');
+            modelElement.value = storedModel || providerConfig.defaultModel;
+        }
+
+        this.apiModelInputContainer.appendChild(modelElement);
+    },
     _handleThemeSelectorClick: function(event) {
-        event.stopPropagation(); // 阻止事件冒泡到全局点击监听器
+        event.stopPropagation();
         const currentDisplayState = this.themeOptionsContainerEl.style.display;
-        // 关闭其他所有自定义下拉框
         document.querySelectorAll('.custom-select .options').forEach(opt => {
             if (opt !== this.themeOptionsContainerEl) opt.style.display = 'none';
         });
-        // 切换当前下拉框的显示状态
         this.themeOptionsContainerEl.style.display = currentDisplayState === 'block' ? 'none' : 'block';
     },
-
-    /**
-     * @private
-     * 处理配色方案选择器触发元素的点击事件，用于展开/折叠选项。
-     * @param {Event} event - 点击事件对象。
-     */
     _handleColorSchemeSelectorClick: function(event) {
         event.stopPropagation();
         const currentDisplayState = this.colorSchemeOptionsContainerEl.style.display;
@@ -240,49 +362,34 @@ const SettingsUIManager = {
         });
         this.colorSchemeOptionsContainerEl.style.display = currentDisplayState === 'block' ? 'none' : 'block';
     },
-
-
-    /**
-     * 初始化主题和配色方案的自定义下拉选择器。
-     */
     initThemeSelectors: function() {
-        this._populateColorSchemeSelector(); // 填充配色方案选项
-        this._populateThemeSelectorWithOptions(); // 填充主题选项
+        this._populateColorSchemeSelector();
+        this._populateThemeSelectorWithOptions();
     },
-
-    /**
-     * @private 填充配色方案选择器的选项。
-     *          修改为调用 ThemeLoader.applyTheme() 无刷新切换。
-     *          切换后自动隐藏菜单。
-     */
     _populateColorSchemeSelector: function() {
         if (!this.colorSchemeSelectedValueEl || !this.colorSchemeOptionsContainerEl || typeof ThemeLoader === 'undefined') return;
 
-        const schemes = { 'auto': '自动 (浏览器)', 'light': '浅色模式', 'dark': '深色模式' }; // 可选配色方案
-        // 获取当前偏好或默认值
+        const schemes = { 'auto': '自动 (浏览器)', 'light': '浅色模式', 'dark': '深色模式' };
         const currentPreferredScheme = localStorage.getItem(ThemeLoader.COLOR_SCHEME_KEY) || ThemeLoader.DEFAULT_COLOR_SCHEME;
 
-        this.colorSchemeSelectedValueEl.textContent = schemes[currentPreferredScheme]; // 更新显示文本
-        this.colorSchemeOptionsContainerEl.innerHTML = ''; // 清空旧选项
+        this.colorSchemeSelectedValueEl.textContent = schemes[currentPreferredScheme];
+        this.colorSchemeOptionsContainerEl.innerHTML = '';
 
-        // 创建并添加选项
         for (const key in schemes) {
             const optionDiv = document.createElement('div');
             optionDiv.classList.add('option');
             optionDiv.textContent = schemes[key];
-            optionDiv.dataset.schemeKey = key; // 存储键值
+            optionDiv.dataset.schemeKey = key;
 
             optionDiv.addEventListener('click', async () => {
                 const selectedSchemeKey = optionDiv.dataset.schemeKey;
 
-                // 调用 ThemeLoader 处理配色方案更新和主题应用
                 await ThemeLoader.updateColorSchemePreference(selectedSchemeKey);
 
-                this.colorSchemeSelectedValueEl.textContent = schemes[selectedSchemeKey]; // 更新显示文本
-                this._populateThemeSelectorWithOptions(); // 配色方案更改后，重新填充主题选项
+                this.colorSchemeSelectedValueEl.textContent = schemes[selectedSchemeKey];
+                this._populateThemeSelectorWithOptions();
 
-                this.colorSchemeOptionsContainerEl.style.display = 'none'; // 关闭下拉框
-                // 切换配色方案后隐藏主菜单模态框
+                this.colorSchemeOptionsContainerEl.style.display = 'none';
                 if (typeof ModalUIManager !== 'undefined') {
                     ModalUIManager.toggleModal('mainMenuModal', false);
                 }
@@ -290,55 +397,44 @@ const SettingsUIManager = {
             this.colorSchemeOptionsContainerEl.appendChild(optionDiv);
         }
 
-        // 绑定选择器头部点击事件 (展开/折叠选项)
-        // 移除旧的监听器（如果存在），然后绑定新的，以防止重复绑定
         if (this._boundHandleColorSchemeSelectorClick) {
             this.colorSchemeSelectedValueEl.removeEventListener('click', this._boundHandleColorSchemeSelectorClick);
         }
         this._boundHandleColorSchemeSelectorClick = this._handleColorSchemeSelectorClick.bind(this);
         this.colorSchemeSelectedValueEl.addEventListener('click', this._boundHandleColorSchemeSelectorClick);
     },
-
-    /**
-     * @private 根据当前生效的配色方案，填充主题选择器的选项。
-     *          修改为调用 ThemeLoader.applyTheme() 无刷新切换。
-     *          切换后自动隐藏菜单。
-     */
     _populateThemeSelectorWithOptions: function() {
         if (!this.themeSelectedValueEl || !this.themeOptionsContainerEl || typeof ThemeLoader === 'undefined') return;
 
-        this.themeOptionsContainerEl.innerHTML = ''; // 清空旧选项
-        const currentEffectiveColorScheme = ThemeLoader.getCurrentEffectiveColorScheme(); // 获取当前生效的配色方案
-        const filteredThemes = {}; // 存储兼容的主题
+        this.themeOptionsContainerEl.innerHTML = '';
+        const currentEffectiveColorScheme = ThemeLoader.getCurrentEffectiveColorScheme();
+        const filteredThemes = {};
 
-        // 筛选出与当前配色方案兼容的主题
         for (const key in ThemeLoader.themes) {
             if (ThemeLoader._isThemeCompatible(key, currentEffectiveColorScheme)) {
                 filteredThemes[key] = ThemeLoader.themes[key];
             }
         }
 
-        let themeKeyForDisplay = ThemeLoader.getCurrentThemeKey(); // 获取当前主题键
-        // 如果当前主题不兼容新配色方案，或未设置，则查找备用主题
+        let themeKeyForDisplay = ThemeLoader.getCurrentThemeKey();
         if (!themeKeyForDisplay || !filteredThemes[themeKeyForDisplay]) {
             themeKeyForDisplay = ThemeLoader._findFallbackThemeKeyForScheme(currentEffectiveColorScheme);
         }
 
-        const themeForDisplayObject = ThemeLoader.themes[themeKeyForDisplay]; // 获取主题对象
-        // 更新显示文本和数据属性
+        const themeForDisplayObject = ThemeLoader.themes[themeKeyForDisplay];
         this.themeSelectedValueEl.textContent = themeForDisplayObject?.name ?? '选择主题';
         this.themeSelectedValueEl.dataset.currentThemeKey = themeKeyForDisplay || '';
 
 
-        if (Object.keys(filteredThemes).length === 0) { // 如果没有兼容主题
+        if (Object.keys(filteredThemes).length === 0) {
             this.themeSelectedValueEl.textContent = "无可用主题";
             const optionDiv = document.createElement('div');
             optionDiv.classList.add('option');
             optionDiv.textContent = `没有可用的 ${currentEffectiveColorScheme === 'light' ? '浅色' : '深色'} 主题`;
-            optionDiv.style.pointerEvents = "none"; // 不可点击
+            optionDiv.style.pointerEvents = "none";
             optionDiv.style.opacity = "0.7";
             this.themeOptionsContainerEl.appendChild(optionDiv);
-        } else { // 填充兼容的主题选项
+        } else {
             for (const key in filteredThemes) {
                 const theme = filteredThemes[key];
                 const optionDiv = document.createElement('div');
@@ -347,13 +443,13 @@ const SettingsUIManager = {
                 optionDiv.dataset.themeKey = key;
                 optionDiv.addEventListener('click', async () => {
                     const selectedKey = optionDiv.dataset.themeKey;
-                    if (selectedKey !== ThemeLoader.getCurrentThemeKey()) { // 如果选择的主题与当前不同
-                        await ThemeLoader.applyTheme(selectedKey); // 应用新主题
-                        this.themeSelectedValueEl.textContent = ThemeLoader.themes[selectedKey]?.name; // 更新显示文本
+                    if (selectedKey !== ThemeLoader.getCurrentThemeKey()) {
+                        await ThemeLoader.applyTheme(selectedKey);
+                        this.themeSelectedValueEl.textContent = ThemeLoader.themes[selectedKey]?.name;
                         this.themeSelectedValueEl.dataset.currentThemeKey = selectedKey;
                     }
-                    this.themeOptionsContainerEl.style.display = 'none'; // 关闭下拉框
-                    if (typeof ModalUIManager !== 'undefined') { // 关闭主菜单
+                    this.themeOptionsContainerEl.style.display = 'none';
+                    if (typeof ModalUIManager !== 'undefined') {
                         ModalUIManager.toggleModal('mainMenuModal', false);
                     }
                 });
@@ -361,7 +457,6 @@ const SettingsUIManager = {
             }
         }
 
-        // 绑定选择器头部点击事件
         if (this._boundHandleThemeSelectorClick) {
             this.themeSelectedValueEl.removeEventListener('click', this._boundHandleThemeSelectorClick);
         }
@@ -370,95 +465,84 @@ const SettingsUIManager = {
     },
 
     /**
-     * 从 localStorage 加载 AI 相关设置，如果不存在则使用 Config.js 的默认值，并填充到输入框。
-     * 此函数不再修改 Config.server。
+     * 从 localStorage 加载 AI 相关设置，如果不存在则使用 AppSettings.js 的默认值，并填充到输入框。
+     * 此函数现在处理新的提供商逻辑，不再有“覆盖”概念。
      */
     loadAISettings: function() {
-        const serverConfig = (typeof Config !== 'undefined' && Config && typeof Config.server === 'object' && Config.server !== null)
-            ? Config.server
-            : {}; // 默认服务器配置
+        // BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'。
+        const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
+        // **MODIFIED**: Use LLMProviders directly
+        const safeLLMProviders = (typeof LLMProviders !== 'undefined') ? LLMProviders : {};
+        // BUG FIX: 确保在 providerKey 对应的配置不存在时，也回退到 'ppmc' 的配置。
+        const providerConfig = safeLLMProviders[providerKey] || safeLLMProviders.ppmc || {};
 
-        // 定义要加载的设置项及其属性
-        const settingsToLoad = [
-            { storageKey: 'apiEndpoint', input: this.apiEndpointInput, configKey: 'apiEndpoint', ultimateDefault: serverConfig.apiEndpoint },
-            { storageKey: 'api_key', input: this.apiKeyInput, configKey: 'api_key', ultimateDefault: serverConfig.api_key },
-            { storageKey: 'model', input: this.apiModelInput, configKey: 'model', ultimateDefault: serverConfig.model },
-            { storageKey: 'max_tokens', input: this.apiMaxTokensInput, configKey: 'max_tokens', isNumber: true, ultimateDefault: serverConfig.max_tokens },
-            { storageKey: 'ttsApiEndpoint', input: this.ttsApiEndpointInput, configKey: 'ttsApiEndpoint', ultimateDefault: serverConfig.ttsApiEndpoint }
+        // 加载 API 端点: 优先使用 localStorage 的值，否则使用提供商的默认值
+        this.apiEndpointInput.value = localStorage.getItem('aiSetting_apiEndpoint') || providerConfig.defaultEndpoint;
+
+        // 加载模型 (并设置输入/选择框)
+        this._updateModelInput(providerConfig);
+        const modelElement = this.apiModelInputContainer.querySelector('select, input');
+        if (modelElement) {
+            // 优先使用 localStorage 的值，否则使用提供商的默认值
+            modelElement.value = localStorage.getItem('aiSetting_model') || providerConfig.defaultModel;
+        }
+
+        // 加载其他设置
+        const otherSettings = [
+            { key: 'api_key', input: this.apiKeyInput },
+            { key: 'max_tokens', input: this.apiMaxTokensInput },
+            { key: 'ttsApiEndpoint', input: this.ttsApiEndpointInput }
         ];
 
-        settingsToLoad.forEach(setting => {
-            const savedValue = localStorage.getItem(`aiSetting_${setting.storageKey}`); // 从 localStorage 获取
-            let valueToSet;
-
-            if (savedValue !== null) { // 优先使用 localStorage 的值
-                valueToSet = savedValue;
-            } else { // 否则使用服务器配置
-                valueToSet = serverConfig[setting.configKey];
-            }
-
-            if (setting.isNumber) { // 如果是数字类型
-                let numVal = parseInt(String(valueToSet), 10);
-                if (isNaN(numVal)) { // 如果无效，则使用配置或最终默认值
-                    numVal = serverConfig[setting.configKey] !== undefined && !isNaN(parseInt(String(serverConfig[setting.configKey]), 10))
-                        ? parseInt(String(serverConfig[setting.configKey]), 10)
-                        : setting.ultimateDefault;
-                }
-                valueToSet = numVal;
-            } else { // 字符串类型
-                if (valueToSet === undefined) { // 如果未定义，则使用配置或空字符串
-                    valueToSet = serverConfig[setting.configKey] ?? "";
-                }
-            }
-
-            if (setting.input) { // 填充到输入框
-                setting.input.value = String(valueToSet);
+        otherSettings.forEach(setting => {
+            if (setting.input) {
+                // 优先使用 localStorage 的值，否则使用 AppSettings.server 中的回退值
+                setting.input.value = localStorage.getItem(`aiSetting_${setting.key}`) || AppSettings.server[setting.key] || '';
             }
         });
     },
 
+
     /**
      * 保存单个 AI 设置到 localStorage，并触发 'aiConfigChanged' 事件。
-     * 不再修改 Config.server。
      * @param {string} storageKey - 在 localStorage 中使用的键名 (例如 'apiEndpoint', 'api_key')。
      * @param {string|number} value - 要保存的值。
      */
     saveAISetting: function(storageKey, value) {
-        const serverConfig = (typeof Config !== 'undefined' && Config && typeof Config.server === 'object' && Config.server !== null)
-            ? Config.server
-            : {};
+        const serverConfig = (typeof AppSettings !== 'undefined' && AppSettings && AppSettings.server) ? AppSettings.server : {};
 
         // URL 校验
         if ((storageKey === 'apiEndpoint' || storageKey === 'ttsApiEndpoint') && value) {
-            try { new URL(value); } // 尝试创建URL对象以校验
-            catch (_) { // 如果无效
+            try {
+                // 尝试将值解析为 URL，如果失败则说明格式无效
+                new URL(value);
+            }
+            catch (_) {
                 NotificationUIManager.showNotification(`${storageKey.replace(/_/g, ' ')} 的 URL 无效。未保存。`, 'error');
                 const inputEl = storageKey === 'apiEndpoint' ? this.apiEndpointInput : this.ttsApiEndpointInput;
-                const storedVal = localStorage.getItem(`aiSetting_${storageKey}`);
-                const configVal = serverConfig[storageKey] ?? "";
-                if (inputEl) inputEl.value = storedVal ?? configVal; // 恢复旧值
+                if (inputEl) inputEl.value = localStorage.getItem(`aiSetting_${storageKey}`) || serverConfig[storageKey] || '';
                 return;
             }
         }
         // 数字校验 (max_tokens)
         if (storageKey === 'max_tokens') {
+            // 将输入值安全地转换为数字
             const numValue = parseInt(String(value), 10);
             const configMaxTokens = serverConfig.max_tokens !== undefined ? serverConfig.max_tokens : 2048;
-            if (isNaN(numValue) || numValue <= 0) { // 必须为正数
+            // 验证是否为有效的正整数
+            if (isNaN(numValue) || numValue <= 0) {
                 NotificationUIManager.showNotification('最大令牌数必须为正数。未保存。', 'error');
-                const storedVal = localStorage.getItem('aiSetting_max_tokens');
-                if (this.apiMaxTokensInput) this.apiMaxTokensInput.value = storedVal ?? configMaxTokens; // 恢复旧值
+                if (this.apiMaxTokensInput) this.apiMaxTokensInput.value = localStorage.getItem('aiSetting_max_tokens') || configMaxTokens;
                 return;
             }
-            value = numValue; // 保存数字类型
+            value = numValue;
         }
 
-        localStorage.setItem(`aiSetting_${storageKey}`, String(value)); // 保存到 localStorage
+        localStorage.setItem(`aiSetting_${storageKey}`, String(value));
 
         const friendlyName = storageKey.charAt(0).toUpperCase() + storageKey.slice(1).replace(/_/g, ' ');
-        NotificationUIManager.showNotification(`${friendlyName} 设置已保存。`, 'success');
+        // NotificationUIManager.showNotification(`${friendlyName} 设置已保存。`, 'success');
 
-        // 触发配置变更事件
         if (typeof EventEmitter !== 'undefined') {
             EventEmitter.emit('aiConfigChanged');
         } else {
@@ -466,24 +550,20 @@ const SettingsUIManager = {
         }
     },
 
-    /**
-     * 从模态框中复制用户 ID 到剪贴板。
-     */
+// ... [rest of the methods remain the same] ...
     copyUserIdFromModal: function () {
         const userId = this.modalUserIdValue?.textContent;
-        if (userId && userId !== "生成中...") { // 确保ID已生成
+        // 确保用户 ID 已有效生成且不为空
+        if (userId && userId !== "生成中...") {
             navigator.clipboard.writeText(userId)
                 .then(() => NotificationUIManager.showNotification('用户 ID 已复制！', 'success'))
                 .catch(() => NotificationUIManager.showNotification('复制 ID 失败。', 'error'));
         }
     },
-
-    /**
-     * 从模态框中复制 SDP 连接信息到剪贴板。
-     */
     copySdpTextFromModal: function () {
         const sdpTextEl = document.getElementById('modalSdpText');
-        if (sdpTextEl && sdpTextEl.value) { // 确保有内容可复制
+        // 确保 SDP 文本框存在且有内容可复制
+        if (sdpTextEl && sdpTextEl.value) {
             navigator.clipboard.writeText(sdpTextEl.value)
                 .then(() => NotificationUIManager.showNotification('连接信息已复制！', 'success'))
                 .catch(() => NotificationUIManager.showNotification('复制信息失败。', 'error'));
@@ -491,83 +571,59 @@ const SettingsUIManager = {
             NotificationUIManager.showNotification('没有可复制的连接信息。', 'warning');
         }
     },
-
-    /**
-     * 更新“复制 ID”按钮的启用/禁用状态。
-     */
     updateCopyIdButtonState: function() {
         if (!this.modalUserIdValue || !this.modalCopyIdBtn) return;
-        const userIdReady = this.modalUserIdValue.textContent !== '生成中...' && UserManager.userId; // ID是否已准备好
-        this.modalCopyIdBtn.disabled = !userIdReady; // 设置禁用状态
+        const userIdReady = this.modalUserIdValue.textContent !== '生成中...' && UserManager.userId;
+        this.modalCopyIdBtn.disabled = !userIdReady;
         this.modalCopyIdBtn.title = userIdReady ? '复制用户 ID' : '用户 ID 尚未生成。';
-        // 切换按钮样式
         this.modalCopyIdBtn.classList.toggle('btn-action-themed', userIdReady);
         this.modalCopyIdBtn.classList.toggle('btn-secondary', !userIdReady);
     },
-
-    /**
-     * 更新“重新检查网络”按钮的启用/禁用状态。
-     */
     updateCheckNetworkButtonState: function() {
         if (!this.checkNetworkBtnModal) return;
-        const isConnected = ConnectionManager.isWebSocketConnected; // 是否已连接到WebSocket
-        this.checkNetworkBtnModal.disabled = isConnected; // 如果已连接则禁用
-        // 切换按钮样式
+        const isConnected = ConnectionManager.isWebSocketConnected;
+        this.checkNetworkBtnModal.disabled = isConnected;
         this.checkNetworkBtnModal.classList.toggle('btn-action-themed', !isConnected);
         this.checkNetworkBtnModal.classList.toggle('btn-secondary', isConnected);
     },
-
-    /**
-     * 更新主菜单/设置模态框中所有依赖于应用状态的控件。
-     */
     updateMainMenuControlsState: function() {
-        if (this.autoConnectToggle && UserManager.userSettings) { // 更新自动连接开关状态
+        if (this.autoConnectToggle && UserManager.userSettings) {
             this.autoConnectToggle.checked = UserManager.userSettings.autoConnectEnabled;
         }
-        this.updateCopyIdButtonState(); // 更新复制ID按钮状态
-        this.updateCheckNetworkButtonState(); // 更新检查网络按钮状态
+        this.updateCopyIdButtonState();
+        this.updateCheckNetworkButtonState();
     },
-
-    /**
-     * 更新模态框中的网络状态信息显示。
-     * @param {object} networkType - 从 Utils.checkNetworkType 返回的网络类型信息。
-     * @param {boolean} webSocketStatus - WebSocket 的连接状态。
-     */
     updateNetworkInfoDisplay: function (networkType, webSocketStatus) {
         const networkInfoEl = document.getElementById('modalNetworkInfo');
         const qualityIndicator = document.getElementById('modalQualityIndicator');
         const qualityText = document.getElementById('modalQualityText');
-        if (!networkInfoEl || !qualityIndicator || !qualityText) return; // 防御性检查
+        if (!networkInfoEl || !qualityIndicator || !qualityText) return;
 
-        let html = ''; // 用于构建网络信息HTML
-        let overallQuality; // 总体质量文本
-        let qualityClass; // 质量指示器CSS类
+        let html = '';
+        let overallQuality;
+        let qualityClass;
 
-        // 构建WebRTC检测信息
         if (networkType && networkType.error === null) {
             html += `IPv4: ${networkType.ipv4?'✓':'✗'} | IPv6: ${networkType.ipv6?'✓':'✗'} <br>`;
             html += `UDP: ${networkType.udp?'✓':'✗'} | TCP: ${networkType.tcp?'✓':'✗'} | 中继: ${networkType.relay?'✓':'?'} <br>`;
         } else {
             html += 'WebRTC 网络检测: ' + (networkType?.error || '失败/不支持') + '.<br>';
         }
-        // 添加信令服务器状态
         html += `信令服务器: ${webSocketStatus ? '<span style="color: green;">已连接</span>' : '<span style="color: var(--danger-color, red);">已断开</span>'}`;
         networkInfoEl.innerHTML = html;
 
-        // 判断总体连接质量
-        if (!webSocketStatus) { // 如果信令服务器离线
+        if (!webSocketStatus) {
             overallQuality = '信令离线';
             qualityClass = 'quality-poor';
-        } else if (networkType && networkType.error === null) { // 如果WebRTC检测成功
+        } else if (networkType && networkType.error === null) {
             if (networkType.udp) { overallQuality = '良好'; qualityClass = 'quality-good'; }
             else if (networkType.tcp) { overallQuality = '受限 (TCP 回退)'; qualityClass = 'quality-medium'; }
             else if (networkType.relay) { overallQuality = '仅中继'; qualityClass = 'quality-medium'; }
             else { overallQuality = '差 (WebRTC 失败)'; qualityClass = 'quality-poor'; }
-        } else { // WebRTC检测失败
+        } else {
             overallQuality = 'WebRTC 检查失败';
             qualityClass = 'quality-poor';
         }
-        // 更新质量指示器UI
         qualityIndicator.className = `quality-indicator ${qualityClass}`;
         qualityText.textContent = overallQuality;
     },

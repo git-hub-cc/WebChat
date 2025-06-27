@@ -10,7 +10,7 @@
  * @property {function} requestTtsForMessage - 为指定消息文本请求 TTS 音频。
  * @property {function} playTtsAudioFromControl - 处理播放/暂停 TTS 音调的点击事件。
  * @property {function} addTtsPlaceholder - 在消息中添加一个加载中的占位符。
- * @dependencies Config, Utils, UserManager, NotificationUIManager, AiApiHandler, DBManager
+ * @dependencies AppSettings, Utils, UserManager, NotificationUIManager, AiApiHandler, DBManager
  * @dependents MessageManager (当 AI 消息完成时调用)
  */
 const MessageTtsHandler = {

@@ -3,7 +3,7 @@
  * @description 管理主聊天区域的 UI 元素和交互，包括聊天头部、消息框、输入区以及通话和截图按钮。
  *              支持消息的右键/双击上下文菜单，用于删除或撤回消息。
  *              支持消息列表的虚拟滚动，以及从资源预览跳转到特定消息。
- *              加载更晚的消息现在使用与加载更早消息相同的阈值 (Config.ui.virtualScrollThreshold)，并实现滚动回弹。
+ *              加载更晚的消息现在使用与加载更早消息相同的阈值 (AppSettings.ui.virtualScrollThreshold)，并实现滚动回弹。
  *              新增逻辑以防止用户在还有更多未加载消息时将滚动条停留在绝对底部。
  *              新增：在群聊输入框中输入 @ 时，显示 AI 成员提及建议。
  *              优化：AI提及建议列表现在精确显示在输入框上方。
@@ -25,7 +25,7 @@
  * @property {function} handleNewMessageForCurrentChat - 处理当前聊天的新消息，将其添加到虚拟滚动列表。
  * @property {function} scrollToMessage - 滚动到指定的消息ID并加载其上下文。
  * @property {function} scrollToDate - 滚动到指定日期的第一条消息。
- * @dependencies LayoutUIManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationUIManager, Utils, MediaManager, PeopleLobbyManager, EventEmitter, UIManager, Config
+ * @dependencies LayoutUIManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationUIManager, Utils, MediaManager, PeopleLobbyManager, EventEmitter, UIManager, AppSettings
  * @dependents AppInitializer (进行初始化)
  */
 const ChatAreaUIManager = {
@@ -963,7 +963,7 @@ const ChatAreaUIManager = {
 
         // 检查是否滚动到顶部附近，需要加载更早的消息
         // 条件：滚动条位置小于阈值，当前没有正在加载旧消息，并且还有更早的消息未渲染
-        if (scrollTop < Config.ui.virtualScrollThreshold && !this._isLoadingOlderMessages && this._renderedOldestMessageArrayIndex > 0) {
+        if (scrollTop < AppSettings.ui.virtualScrollThreshold && !this._isLoadingOlderMessages && this._renderedOldestMessageArrayIndex > 0) {
             this._loadOlderMessages(); // 调用加载更早消息的函数
             // 如果加载了旧消息，且当前并非显示所有最新消息 (即用户向上滚动了)，则显示“滚动到最新消息”按钮
             if (this._allMessagesForCurrentChat.length > 0 && this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1) {
@@ -976,7 +976,7 @@ const ChatAreaUIManager = {
 
         // 检查是否滚动到底部附近，需要加载更新的消息
         // 条件：还有更新的消息未渲染，当前没有正在加载新消息，并且滚动条距离底部小于阈值
-        if (hasMoreNewerMessages && !this._isLoadingNewerMessages && distanceToBottom < Config.ui.virtualScrollThreshold) {
+        if (hasMoreNewerMessages && !this._isLoadingNewerMessages && distanceToBottom < AppSettings.ui.virtualScrollThreshold) {
             this._loadNewerMessages(); // 调用加载更新消息的函数
         }
 
@@ -1172,9 +1172,9 @@ const ChatAreaUIManager = {
         const currentDistanceToBottom = newScrollHeight - currentScrollTopAfterInitialAdjust - clientHeight;
         const stillHasMoreNewerMessagesAfterLoad = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
 
-        if (stillHasMoreNewerMessagesAfterLoad && currentDistanceToBottom < Config.ui.virtualScrollThreshold) {
+        if (stillHasMoreNewerMessagesAfterLoad && currentDistanceToBottom < AppSettings.ui.virtualScrollThreshold) {
             // 计算一个目标回弹位置，使其离开底部一段距离 (阈值 + 10px)
-            let targetReboundScrollTop = newScrollHeight - clientHeight - (Config.ui.virtualScrollThreshold + 10);
+            let targetReboundScrollTop = newScrollHeight - clientHeight - (AppSettings.ui.virtualScrollThreshold + 10);
             targetReboundScrollTop = Math.max(0, targetReboundScrollTop); // 确保不滚动到负值
             // 只有当目标回弹位置比当前位置更靠上 (即确实需要向上回弹)，或者加载前就在底部时，才执行回弹
             if (wasAtBottomBeforeLoad || targetReboundScrollTop > currentScrollTopAfterInitialAdjust) {

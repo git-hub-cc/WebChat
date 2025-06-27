@@ -13,7 +13,7 @@
  * @property {function} showCallRequest - 显示来电请求的模态框。
  * @property {function} showOpenSourceInfoModal - 显示开源信息提示模态框。
  * @property {function} showAddContactModalWithId - 显示添加联系人模态框并预填用户ID。
- * @dependencies Utils, NotificationUIManager, UserManager, GroupManager, AppInitializer, VideoCallManager, Config
+ * @dependencies Utils, NotificationUIManager, UserManager, GroupManager, AppInitializer, VideoCallManager, AppSettings
  * @dependents AppInitializer (进行初始化), 各个模块在需要显示模态框时调用。
  */
 const ModalUIManager = {
