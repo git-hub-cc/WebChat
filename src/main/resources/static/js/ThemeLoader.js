@@ -33,6 +33,8 @@ const ThemeLoader = {
         "英语-浅色": { name: "英语", css: "css/教育/英语-浅色.css", dataJs: "data/教育/英语.json" },
         "计算机科学-深色": { name: "计算机科学", css: "css/教育/计算机科学-深色.css", dataJs: "data/教育/计算机科学.json" },
         "计算机科学-浅色": { name: "计算机科学", css: "css/教育/计算机科学-浅色.css", dataJs: "data/教育/计算机科学.json" },
+        "MCP-深色": { name: "MCP", css: "css/系统/MCP-深色.css", dataJs: "data/系统/MCP.json" },
+        "MCP-浅色": { name: "MCP", css: "css/系统/MCP-浅色.css", dataJs: "data/系统/MCP.json" },
         // "鸣潮-浅色": { name: "鸣潮", css: "css/动漫/鸣潮-浅色.css", dataJs: "data/动漫/鸣潮.json" },
         // "鸣潮-深色": { name: "鸣潮", css: "css/动漫/鸣潮-深色.css", dataJs: "data/动漫/鸣潮.json" },
         // "星穹铁道-浅色": { name: "星穹铁道", css: "css/动漫/星穹铁道-浅色.css", dataJs: "data/动漫/星穹铁道.json" },

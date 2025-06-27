@@ -1,0 +1,83 @@
+/*
+================================================================================
+|                                                                              |
+|               🤖 MCP - 系统界面 (System Interface) 🤖                      |
+|                                (浅色主题)                                    |
+================================================================================
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "MCP - System Interface";
+    --theme-mode: "light";
+
+    /* --------------------- 🎨 MCP 助手专属配色 (浅色) -------------------- */
+
+    /* Base Palette - Clean & Technical */
+    --mcp-bg-main-rgb: 242, 245, 247;       /* #F2F5F7 - Off-white, slightly cool gray */
+    --mcp-bg-container-rgb: 255, 255, 255;   /* #FFFFFF - Pure white for panels */
+    --mcp-bg-elevated-rgb: 248, 250, 251;    /* Lighter elevation color */
+
+    --mcp-text-primary-rgb: 28, 32, 35;     /* #1C2023 - Dark charcoal for high contrast */
+    --mcp-text-secondary-rgb: 90, 102, 112; /* #5A6670 - Muted gray for secondary info */
+
+    /* Accent & Character Palette - Electric Teal */
+    --mcp-char-primary-rgb: 0, 150, 136;    /* #009688 - Main Teal, strong and clear */
+    --mcp-char-accent-rgb: 77, 182, 172;     /* #4DB6AC - Lighter, glowing Teal */
+    --mcp-char-msg-bg-rgb: 224, 247, 244;    /* #E0F7F4 - Very light Teal for message background */
+
+    /* Borders */
+    --mcp-border-light-rgb: 222, 226, 230;   /* #DEE2E6 - Standard border */
+    --mcp-border-strong-rgb: 206, 212, 218;  /* #CED4DA - Stronger border */
+
+    /* 字体排版 (更具科技感) */
+    --font-family-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", "Roboto Mono", monospace;
+
+    /* 风格参数 (棱角分明) */
+    --border-radius-small: 3px;
+    --border-radius-medium: 4px;
+    --border-radius-large: 6px;
+}
+
+
+/*
+--------------------------------------------------------------------------------
+|                          🤖 MCP 助手专属样式规则 🤖                         |
+--------------------------------------------------------------------------------
+*/
+
+/* --- 1. 聊天列表项激活状态 --- */
+.chat-list-item.active.AI_McpAssistant_System {
+    background: linear-gradient(90deg, rgba(var(--mcp-char-accent-rgb), 0.15), rgba(var(--mcp-char-accent-rgb), 0));
+    border-left: 3px solid rgb(var(--mcp-char-primary-rgb));
+}
+
+/* --- 2. 标题和名称颜色 --- */
+.chat-list-item.active.AI_McpAssistant_System .chat-list-name,
+.chat-header-main.current-chat-AI_McpAssistant_System .chat-title-main,
+.message.received[data-sender-id="AI_McpAssistant_System"] .message-sender,
+.details-panel.AI_McpAssistant_System .details-name {
+    color: rgb(var(--mcp-char-primary-rgb));
+    font-weight: 600;
+}
+
+/* --- 3. 接收到的消息气泡样式 --- */
+.message.received[data-sender-id="AI_McpAssistant_System"] {
+    background-color: rgb(var(--mcp-char-msg-bg-rgb));
+    border: 1px solid rgba(var(--mcp-char-primary-rgb), 0.4);
+    box-shadow: 0 2px 4px rgba(var(--mcp-char-primary-rgb), 0.08);
+}
+
+/* --- 4. 头像辉光效果 --- */
+.chat-avatar-main.AI_McpAssistant_System,
+.details-panel.AI_McpAssistant_System .details-avatar {
+    box-shadow: 0 0 0 3px white, 0 0 0 5px rgb(var(--mcp-char-accent-rgb)), 0 0 15px rgba(var(--mcp-char-accent-rgb), 0.5);
+}
+
+/* --- 5. 专属细节面板标题 --- */
+.details-panel.AI_McpAssistant_System .details-section-title {
+    color: rgb(var(--mcp-char-primary-rgb));
+    border-bottom-color: rgba(var(--mcp-char-primary-rgb), 0.5);
+    letter-spacing: 1px;
+}

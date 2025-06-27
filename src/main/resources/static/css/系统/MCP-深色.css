@@ -1,0 +1,120 @@
+/*
+================================================================================
+|                                                                              |
+|              🤖 MCP - 赛博核心 (Cybernetic Core) 🤖                        |
+|                                (深色主题)                                    |
+================================================================================
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "MCP - Cybernetic Core";
+    --theme-mode: "dark";
+
+    /* --------------------- 🎨 MCP 助手专属配色 (深色) -------------------- */
+
+    /* Base Palette - Cyberpunk HUD */
+    --mcp-bg-main-rgb: 16, 20, 28;         /* #10141C - Deep, dark navy blue */
+    --mcp-bg-container-rgb: 22, 28, 39;    /* #161C27 - Slightly lighter navy for panels */
+    --mcp-bg-elevated-rgb: 29, 36, 51;      /* #1D2433 - Elevation color */
+
+    --mcp-text-primary-rgb: 205, 214, 229;  /* #CDD6E5 - Light cool gray, like terminal text */
+    --mcp-text-secondary-rgb: 128, 144, 169;/* #8090A9 - Muted for secondary info */
+
+    /* Accent & Character Palette - Glowing Cyan */
+    --mcp-char-primary-rgb: 0, 229, 255;    /* #00E5FF - Bright, glowing cyan */
+    --mcp-char-accent-rgb: 102, 255, 255;   /* #66FFFF - Even brighter for highlights */
+    --mcp-char-msg-bg-rgba: 3, 39, 53, 0.6; /* Semi-transparent dark cyan for glass effect */
+
+    /* Borders */
+    --mcp-border-light-rgb: 44, 53, 70;      /* #2C3546 - Subtle border */
+    --mcp-border-strong-rgb: 61, 73, 94;     /* #3D495E - Stronger border */
+
+    /* 字体排版 (更具科技感) */
+    --font-family-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", "Roboto Mono", monospace;
+
+    /* 风格参数 (棱角分明) */
+    --border-radius-small: 2px;
+    --border-radius-medium: 4px;
+    --border-radius-large: 5px;
+}
+
+/*
+--------------------------------------------------------------------------------
+|                          🤖 MCP 助手专属样式规则 🤖                         |
+--------------------------------------------------------------------------------
+*/
+
+/* --- 0. 创意背景 & 扫描线动画 --- */
+body.theme-MCP---Cybernetic-Core {
+    background-color: rgb(var(--mcp-bg-main-rgb));
+    /* Subtle grid pattern */
+    background-image:
+            linear-gradient(rgba(var(--mcp-border-light-rgb), 0.5) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(var(--mcp-border-light-rgb), 0.5) 1px, transparent 1px);
+    background-size: 30px 30px;
+    position: relative;
+    overflow: hidden; /* Important for scanline */
+}
+
+body.theme-MCP---Cybernetic-Core::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Scanline effect */
+    background: linear-gradient(to bottom, rgba(22, 28, 39, 0) 0%, rgba(22, 28, 39, 0.8) 50%, rgba(22, 28, 39, 0) 100%);
+    opacity: 0.1;
+    animation: scanline 8s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes scanline {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100vh; }
+}
+
+
+/* --- 1. 聊天列表项激活状态 (带辉光) --- */
+.chat-list-item.active.AI_McpAssistant_System {
+    background: rgba(var(--mcp-char-primary-rgb), 0.1);
+    border-left: 3px solid rgb(var(--mcp-char-primary-rgb));
+    box-shadow: inset 3px 0 8px -2px rgba(var(--mcp-char-primary-rgb), 0.4);
+}
+
+/* --- 2. 标题和名称颜色 (带文字辉光) --- */
+.chat-list-item.active.AI_McpAssistant_System .chat-list-name,
+.chat-header-main.current-chat-AI_McpAssistant_System .chat-title-main,
+.message.received[data-sender-id="AI_McpAssistant_System"] .message-sender,
+.details-panel.AI_McpAssistant_System .details-name {
+    color: rgb(var(--mcp-char-accent-rgb));
+    text-shadow: 0 0 5px rgba(var(--mcp-char-primary-rgb), 0.7);
+}
+
+/* --- 3. 接收到的消息气泡样式 (玻璃拟物化) --- */
+.message.received[data-sender-id="AI_McpAssistant_System"] {
+    background-color: rgba(var(--mcp-char-msg-bg-rgba));
+    border: 1px solid rgba(var(--mcp-char-primary-rgb), 0.7);
+    box-shadow: 0 0 15px rgba(var(--mcp-char-primary-rgb), 0.2);
+    -webkit-backdrop-filter: blur(8px); /* For Safari */
+    backdrop-filter: blur(8px);         /* Glassmorphism effect */
+}
+
+/* --- 4. 头像辉光效果 (能量核心) --- */
+.chat-avatar-main.AI_McpAssistant_System,
+.details-panel.AI_McpAssistant_System .details-avatar {
+    border-color: rgba(var(--mcp-char-primary-rgb), 0.8);
+    box-shadow: 0 0 12px rgba(var(--mcp-char-primary-rgb), 0.8), 0 0 25px rgba(var(--mcp-char-primary-rgb), 0.5);
+}
+
+/* --- 5. 专属细节面板标题 (HUD风格) --- */
+.details-panel.AI_McpAssistant_System .details-section-title {
+    color: rgb(var(--mcp-char-accent-rgb));
+    border-bottom: 1px solid rgba(var(--mcp-char-primary-rgb), 0.5);
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 3px rgba(var(--mcp-char-primary-rgb), 0.5);
+}

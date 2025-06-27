@@ -652,13 +652,12 @@ const Utils = {
      * @param {string} url - API 端点 URL。
      * @param {object} requestBody - 请求体对象。
      * @param {object} headers - 请求头对象。
-     * @param {function} onChunkReceived - 处理接收到的每个数据块的回调函数。它接收 (jsonChunk, isSummaryMode) 作为参数。
-     * @param {function} onStreamEnd - 流结束时调用的回调函数。它接收 (fullResponseContent, isSummaryMode, summaryContent) 作为参数。
-     * @param {function} onSummaryStart - (可选) 当检测到摘要模式开始时调用的回调函数。
+     * @param {function} onChunkReceived - 处理接收到的每个数据块的回调函数。它接收 (jsonChunk) 作为参数。
+     * @param {function} onStreamEnd - 流结束时调用的回调函数。它接收 (fullResponseContent) 作为参数。
      * @returns {Promise<void>}
      * @throws {Error} 如果请求失败或响应无效。
      */
-    fetchApiStream: async function(url, requestBody, headers, onChunkReceived, onStreamEnd, onSummaryStart) {
+    fetchApiStream: async function(url, requestBody, headers, onChunkReceived, onStreamEnd) {
         const response = await fetch(url, {
             method: 'POST',
             headers: headers,
@@ -672,9 +671,6 @@ const Utils = {
         }
 
         let fullResponseContent = "";
-        let isSummaryMode = false;
-        let summaryContent = "";
-
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
@@ -716,22 +712,11 @@ const Utils = {
                     const jsonString = buffer.substring(startIdx, endIdx + 1);
                     try {
                         const jsonChunk = JSON.parse(jsonString);
-                        if (jsonChunk.status === 'summary') {
-                            if (!isSummaryMode) { // 仅在首次进入摘要模式时触发
-                                isSummaryMode = true;
-                                if (typeof onSummaryStart === 'function') {
-                                    onSummaryStart();
-                                }
-                            }
-                        } else if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
+                        if (jsonChunk.choices && jsonChunk.choices[0]?.delta?.content) {
                             const chunkContent = jsonChunk.choices[0].delta.content;
-                            if (isSummaryMode) {
-                                summaryContent += chunkContent;
-                            } else {
-                                fullResponseContent += chunkContent;
-                            }
+                            fullResponseContent += chunkContent;
                             if (typeof onChunkReceived === 'function') {
-                                onChunkReceived(jsonChunk, isSummaryMode);
+                                onChunkReceived(jsonChunk);
                             }
                         }
                     } catch (e) {
@@ -748,7 +733,7 @@ const Utils = {
         }
 
         if (typeof onStreamEnd === 'function') {
-            onStreamEnd(fullResponseContent, isSummaryMode, summaryContent);
+            onStreamEnd(fullResponseContent);
         }
     },
 

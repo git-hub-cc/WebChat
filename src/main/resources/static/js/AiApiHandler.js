@@ -1,24 +1,15 @@
 /**
  * @file AiApiHandler.js
- * @description 负责处理与后端 AI API 的所有通信，包括构建上下文、发送请求以及处理流式响应和对话摘要。
+ * @description 负责处理与后端 AI API 的所有通信，包括构建上下文、发送请求以及处理流式响应。
  *              现在会优先使用用户在设置中配置的 API 参数。
  *              更新：在群聊中处理对 AI 的提及，提示词获取逻辑调整为支持非当前主题定义的AI角色。
  *              修复：在 sendGroupAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
  *              重构：通用 API 请求逻辑已移至 Utils.fetchApiStream。
  *              新增：在向AI发送消息时，会检查并应用用户为该AI选择的词汇篇章特定提示词。
- * @module AiApiHandler
- * @exports {object} AiApiHandler - 对外暴露的单例对象，包含与 AI 交互的方法。
- * @property {object} activeSummaries - 内部缓存，用于存储每个 AI 联系人的当前活动对话摘要。键为联系人 ID，值为摘要字符串。
- * @property {function} sendAiMessage - 向 AI 联系人发送消息并处理流式响应。
- * @property {function} sendGroupAiMessage - 在群组聊天中处理对 AI 的提及，并获取 AI 的回复。
- * @property {function} checkAiServiceHealth - 执行 AI 服务健康检查。
- * @property {function} handleAiConfigChange - 处理 AI 配置变更，由 AppInitializer 调用。
- * @dependencies UserManager, ChatManager, MessageManager, Config, Utils, NotificationUIManager, EventEmitter, SettingsUIManager, GroupManager
- * @dependents MessageManager (当检测到消息目标是 AI 时调用), AppInitializer (初始化时及配置变更时调用)
+ *              修复：在 sendAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
+ *              移除：删除了所有与对话摘要相关的功能，因为后端不再支持。
  */
 const AiApiHandler = {
-
-    activeSummaries: {},
 
     _getEffectiveAiConfig: function() {
         const config = {};
@@ -46,6 +37,90 @@ const AiApiHandler = {
         Utils.log(`_getEffectiveAiConfig: 生效的 AI 配置已使用。端点: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, 密钥存在: ${!!config.apiKey}, 模型: ${config.model}, TTS 端点: ${config.ttsApiEndpoint ? String(config.ttsApiEndpoint).substring(0,30) + '...' : 'N/A'}`, Utils.logLevels.DEBUG);
         return config;
     },
+    /**
+     * @private
+     * @description 为MCP流程构建第一次请求的提示。包含工具定义和指示。
+     * @param {object} contact - AI联系人对象。
+     * @param {Array<object>} chatHistory - 聊天历史记录。
+     * @param {string} userMessage - 用户的当前消息。
+     * @returns {Array<object>} - 用于API请求的messages数组。
+     */
+    _buildMcpAnalysisPrompt: function(contact, chatHistory, userMessage) {
+        const messages = [];
+        // 1. 构建包含工具定义的系统提示
+        let mcpSystemPrompt = "你是一个能够理解并使用工具的智能助手。\n";
+        mcpSystemPrompt += "可用的工具列表如下 (JSON格式):\n```json\n" + JSON.stringify(MCP_TOOLS, null, 2) + "\n```\n";
+        mcpSystemPrompt += "根据用户的提问，如果可以使用工具，你必须只回复一个JSON对象，格式如下: {\"tool_call\": {\"name\": \"工具名称\", \"arguments\": {\"参数1\": \"值1\"}}}. 不要添加任何其他解释或文本。\n";
+        mcpSystemPrompt += "如果任何工具都不适用，或者你需要用户提供更多信息，请像平常一样自然地回复用户，不要提及工具。\n\n";
+        //mcpSystemPrompt += (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : ""; // 附加角色自身设定
+
+        messages.push({ role: "system", content: mcpSystemPrompt });
+
+        // 2. 添加聊天历史
+        const contextMessagesForAIHistory = chatHistory.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
+        messages.push(...contextMessagesForAIHistory);
+
+        // 3. 添加当前用户消息
+        messages.push({ role: "user", content: userMessage });
+
+        return messages;
+    },
+
+    /**
+     * @private
+     * @description 为MCP流程构建第二次请求的提示。包含工具调用结果。
+     * @param {object} contact - AI联系人对象。
+     * @param {string} originalUserMessage - 用户的原始消息。
+     * @param {object} toolCall - AI决定的工具调用对象。
+     * @param {string} toolResult - 工具的执行结果文本。
+     * @returns {Array<object>} - 用于API请求的messages数组。
+     */
+    _buildMcpFinalPrompt: function(contact, originalUserMessage, toolCall, toolResult) {
+        const messages = [];
+        const baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "你是一个乐于助人的助手。";
+        messages.push({ role: "system", content: baseSystemPrompt });
+
+        // 将原始问题和工具结果合并为一个新的用户问题，引导AI进行总结
+        const combinedPrompt = `${originalUserMessage}\n\n[系统提示：你已调用工具“${toolCall.name}”并获得以下结果，请基于此结果，用自然语言回复用户。]\n工具结果: ${toolResult}`;
+        messages.push({ role: "user", content: combinedPrompt });
+
+        return messages;
+    },
+
+    /**
+     * @private
+     * @description 执行MCP工具调用。
+     * @param {string} toolName - 要调用的工具名称。
+     * @param {object} args - 工具的参数。
+     * @returns {Promise<object>} - 返回一个包含 { data } 或 { error } 的对象。
+     */
+    _executeMcpTool: async function(toolName, args) {
+        // 确保MCP_TOOLS已定义
+        if (typeof MCP_TOOLS === 'undefined' || !MCP_TOOLS[toolName]) {
+            return { error: `未知的工具: ${toolName}` };
+        }
+        const toolDef = MCP_TOOLS[toolName];
+        let url = toolDef.url_template;
+
+        // 替换URL模板中的参数占位符
+        for (const key in args) {
+            if (Object.prototype.hasOwnProperty.call(args, key)) {
+                url = url.replace(`{${key}}`, encodeURIComponent(args[key]));
+            }
+        }
+        Utils.log(`MCP: 正在执行工具 "${toolName}"，请求URL: ${url}`, Utils.logLevels.INFO);
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                return { error: `工具API请求失败，状态码: ${response.status}` };
+            }
+            const data = await response.text();
+            return { data: data };
+        } catch (e) {
+            return { error: `网络请求失败: ${e.message}` };
+        }
+    },
 
     sendAiMessage: async function(targetId, contact, messageText) {
         const chatBox = document.getElementById('chatBox');
@@ -55,10 +130,17 @@ const AiApiHandler = {
         MessageManager.displayMessage(thinkingMessage, false);
         let thinkingElement = chatBox.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
 
+        // 辅助函数，用于移除“正在思考”消息
+        const removeThinkingMessage = () => {
+            if (thinkingElement && thinkingElement.parentNode) {
+                thinkingElement.remove();
+                thinkingElement = null; // 防止重复移除
+            }
+        };
+
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
-                Utils.log("AiApiHandler.sendAiMessage: AI API 端点未配置。请在设置中配置。", Utils.logLevels.ERROR);
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
@@ -66,15 +148,148 @@ const AiApiHandler = {
                 ? Config.ai.sessionTime
                 : (10 * 60 * 1000);
             const timeThreshold = new Date().getTime() - contextWindow;
+            const chatHistory = (ChatManager.chats[targetId] || []).filter(msg => new Date(msg.timestamp).getTime() > timeThreshold && msg.type === 'text');
 
-            const chatHistory = ChatManager.chats[targetId] || [];
-            const recentMessages = chatHistory.filter(msg => new Date(msg.timestamp).getTime() > timeThreshold && msg.type === 'text');
+            // FIX START: 在将历史记录发送给 AI 之前，从中删除当前正在发送的用户消息，以避免重复。
+            // 这个问题在 MCP 流程和标准流程中都存在。
+            // 我们通过检查历史记录中的最后一条消息是否与当前发送的消息匹配来做到这一点。
+            if (chatHistory.length > 0) {
+                const lastMessageInHistory = chatHistory[chatHistory.length - 1];
+                if (lastMessageInHistory.sender === UserManager.userId && lastMessageInHistory.content === messageText) {
+                    chatHistory.pop(); // 从历史记录中移除该消息
+                    Utils.log(`sendAiMessage: 从上下文中移除了重复的触发消息: "${messageText.substring(0, 30)}..."`, Utils.logLevels.DEBUG);
+                }
+            }
+            // FIX END
+
+            // ================== MCP 流程开始 ==================
+            if (contact.aiConfig?.mcp_enabled && typeof MCP_TOOLS !== 'undefined') {
+                // 1. 获取工具分析 (非流式)
+                const analysisMessages = this._buildMcpAnalysisPrompt(contact, chatHistory, messageText);
+                const analysisRequestBody = {
+                    model: effectiveConfig.model, messages: analysisMessages, stream: false,
+                    temperature: 0.0, // 低温以获得可预测的JSON输出
+                    max_tokens: 512 // 限制token，因为只需要JSON
+                };
+
+                const analysisResponse = await fetch(effectiveConfig.apiEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                    body: JSON.stringify(analysisRequestBody)
+                });
+
+                if (!analysisResponse.ok) throw new Error(`MCP分析请求失败: ${analysisResponse.status}`);
+
+                // 修复：处理服务器可能错误地以流格式返回非流请求的问题
+                const rawTextResult = await analysisResponse.text();
+                let jsonStringResult = rawTextResult.trim();
+                // 移除 SSE 的 "data: " 前缀
+                if (jsonStringResult.startsWith('data: ')) {
+                    jsonStringResult = jsonStringResult.substring('data: '.length).trim();
+                }
+                // 移除可能的 "[DONE]" 标记
+                if (jsonStringResult.endsWith('[DONE]')) {
+                    jsonStringResult = jsonStringResult.substring(0, jsonStringResult.lastIndexOf('[DONE]')).trim();
+                }
+                // 为确保健壮性，提取第一个 '{' 和最后一个 '}' 之间的内容
+                const firstBraceIndex = jsonStringResult.indexOf('{');
+                const lastBraceIndex = jsonStringResult.lastIndexOf('}');
+                if (firstBraceIndex !== -1 && lastBraceIndex > firstBraceIndex) {
+                    jsonStringResult = jsonStringResult.substring(firstBraceIndex, lastBraceIndex + 1);
+                }
+
+                const analysisResult = JSON.parse(jsonStringResult);
+                const aiContent = analysisResult.choices[0].message.content;
+
+                // 2. 解析AI响应以查找工具调用
+                let toolCall;
+                try {
+                    const parsedContent = JSON.parse(aiContent);
+                    if (parsedContent.tool_call) {
+                        toolCall = parsedContent.tool_call;
+                    }
+                } catch (e) {
+                    // AI回复不是JSON，或JSON格式不符 -> 作为普通消息处理
+                    removeThinkingMessage();
+                    const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
+                    ChatManager.addMessage(targetId, finalAiMessage);
+                    return; // MCP流程结束
+                }
+
+                // 3. 如果是工具调用，则执行
+                if (toolCall) {
+                    removeThinkingMessage();
+
+                    // 显示临时的“正在调用工具”消息
+                    const toolUseMsgId = `system_tool_${Date.now()}`;
+                    const toolUseMsg = { id: toolUseMsgId, type: 'system', content: `正在调用工具: ${toolCall.name}...`, timestamp: new Date().toISOString(), sender: targetId, isThinking: true }; // 标记为临时消息
+                    MessageManager.displayMessage(toolUseMsg, false);
+                    let toolUseMsgElement = chatBox.querySelector(`.message[data-message-id="${toolUseMsgId}"]`);
+
+                    const toolResult = await this._executeMcpTool(toolCall.name, toolCall.arguments);
+
+                    // 移除临时的“正在调用工具”消息
+                    if (toolUseMsgElement && toolUseMsgElement.parentNode) {
+                        toolUseMsgElement.remove();
+                    }
+
+                    if (toolResult.error) {
+                        throw new Error(`工具调用错误: ${toolResult.error}`);
+                    }
+
+                    // 4. 第二次调用获取最终答案 (流式)
+                    const finalMessages = this._buildMcpFinalPrompt(contact, messageText, toolCall, toolResult.data);
+                    const finalRequestBody = {
+                        model: effectiveConfig.model, messages: finalMessages, stream: true,
+                        temperature: 0.1, max_tokens: effectiveConfig.maxTokens || 2048,
+                        user: UserManager.userId, character_id: targetId
+                    };
+
+                    // 使用现有的流式处理逻辑
+                    const aiMessageId = `ai_stream_${Date.now()}`;
+                    let fullAiResponseContent = "";
+                    const initialAiMessage = { id: aiMessageId, type: 'text', content: "▍", timestamp: new Date().toISOString(), sender: targetId, isStreaming: true };
+                    MessageManager.displayMessage(initialAiMessage, false);
+                    let aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
+                    ChatManager.addMessage(targetId, initialAiMessage);
+
+                    await Utils.fetchApiStream(
+                        effectiveConfig.apiEndpoint, finalRequestBody,
+                        { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                        (jsonChunk) => {
+                            const chunkContent = jsonChunk.choices[0].delta.content;
+                            fullAiResponseContent += chunkContent;
+                            if (aiMessageElement) {
+                                aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent + "▍");
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
+                        },
+                        (finalContent) => {
+                            if (aiMessageElement) aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent);
+                            const finalAiMessage = { id: aiMessageId, type: 'text', content: fullAiResponseContent, timestamp: initialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
+                            ChatManager.addMessage(targetId, finalAiMessage);
+                        }
+                    );
+                    return; // MCP流程结束
+                } else {
+                    // 是合法JSON但不是工具调用，同样作为普通消息处理
+                    removeThinkingMessage();
+                    const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
+                    ChatManager.addMessage(targetId, finalAiMessage);
+                    return; // MCP流程结束
+                }
+            }
+            // ================== MCP 流程结束 ==================
+
+            // 如果不是MCP角色，执行原有逻辑
+            removeThinkingMessage(); // 先移除思考消息，流式处理会创建自己的消息
+
+            const recentMessages = chatHistory; // 使用已经修复过的 chatHistory
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
 
             const messagesForRequestBody = [];
             let baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
 
-            // 新增：获取并应用词汇篇章提示词
             const selectedChapterId = UserManager.getSelectedChapterForAI(targetId);
             let chapterPromptModifier = "";
             if (selectedChapterId && contact.chapters && contact.chapters.length > 0) {
@@ -85,170 +300,56 @@ const AiApiHandler = {
                 }
             }
 
-            // 合并提示词：基础提示词 + 篇章提示词修正 + 全局基础提示词
-            let finalSystemPrompt = baseSystemPrompt;
-            if (chapterPromptModifier) {
-                // 简单的追加方式，您可以根据需要调整合并逻辑
-                // 例如，如果篇章提示词是完整的，可能需要替换部分基础提示词，或者有特定占位符
-                finalSystemPrompt += `\n\n[Chapter Focus: ${contact.chapters.find(ch => ch.id === selectedChapterId)?.name || selectedChapterId}]\n${chapterPromptModifier}`;
-            }
-            finalSystemPrompt += contact.aiConfig.promptSuffix?contact.aiConfig.promptSuffix:Config.ai.promptSuffix; // 全局基础提示词总是附加在最后
-
-            messagesForRequestBody.push({role: "system", content: finalSystemPrompt});
-
-
-            if (this.activeSummaries[targetId]) {
-                Utils.log(`AiApiHandler: 在请求中包含已存储的摘要 (目标: ${targetId})。`, Utils.logLevels.DEBUG);
-                messagesForRequestBody.push({ role: "system", content: `上下文摘要:\n${this.activeSummaries[targetId]}` });
-            }
-
-            messagesForRequestBody.push(...contextMessagesForAIHistory);
-
-            for (let i = messagesForRequestBody.length - 1; i >= 0; i--) {
-                if (messagesForRequestBody[i].role === 'user') {
-                    messagesForRequestBody[i].content = (messagesForRequestBody[i].content || '') + ` [发送于: ${new Date().toLocaleString()}]`;
-                    break;
-                }
-            }
-
-            Utils.log(`AiApiHandler: 向 ${contact.name} 发送 AI 请求。配置: 端点='${effectiveConfig.apiEndpoint}', 密钥存在=${!!effectiveConfig.apiKey}, 模型='${effectiveConfig.model}'`, Utils.logLevels.DEBUG);
-
-            const requestBody = {
-                model: effectiveConfig.model,
-                messages: messagesForRequestBody,
-                stream: true,
-                temperature: 0.1,
-                max_tokens: effectiveConfig.maxTokens || 2048,
-                user: UserManager.userId,
-                character_id: targetId
-            };
-            Utils.log(`正在发送到 AI (${contact.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
-
-            if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
-
-            const aiMessageId = `ai_stream_${Date.now()}`;
-            let fullAiResponseContent = "";
-            const initialAiMessage = { id: aiMessageId, type: 'text', content: "▍", timestamp: new Date().toISOString(), sender: targetId, isStreaming: true };
-            MessageManager.displayMessage(initialAiMessage, false);
-            let aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
-            let initialMessageAddedToCache = false;
-            let summaryMsgId = null;
-
-            await Utils.fetchApiStream(
-                effectiveConfig.apiEndpoint,
-                requestBody,
-                { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-                (jsonChunk, isSummaryModeChunk) => {
-                    if (isSummaryModeChunk) {
-                        if (aiMessageElement) { aiMessageElement.closest('.message')?.remove(); }
-                    } else {
-                        if (!initialMessageAddedToCache) {
-                            ChatManager.addMessage(targetId, initialAiMessage);
-                            initialMessageAddedToCache = true;
-                        }
-                        const chunkContent = jsonChunk.choices[0].delta.content;
-                        fullAiResponseContent += chunkContent;
-                        if (aiMessageElement) {
-                            aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent + "▍");
-                            chatBox.scrollTop = chatBox.scrollHeight;
-                        }
-                    }
-                },
-                async (finalContent, isSummaryModeEnd, summaryContentEnd) => {
-                    if (isSummaryModeEnd) {
-                        await this._handleSummaryResponse(targetId, contact, messageText, summaryContentEnd, summaryMsgId, chatBox);
-                    } else {
-                        if (aiMessageElement) aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent);
-                        const finalAiMessage = { id: aiMessageId, type: 'text', content: fullAiResponseContent, timestamp: initialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
-                        ChatManager.addMessage(targetId, finalAiMessage);
-                    }
-                },
-                () => {
-                    summaryMsgId = `summary_status_${Date.now()}`;
-                    MessageManager.displayMessage({ id: summaryMsgId, type: 'system', content: `${contact.name} 正在回忆过去的事件...`, timestamp: new Date().toISOString(), sender: targetId }, false);
-                }
-            );
-
-        } catch (error) {
-            if (thinkingElement && thinkingElement.parentNode) thinkingElement.remove();
-            Utils.log(`与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
-            NotificationUIManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
-            ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
-        }
-    },
-
-    _handleSummaryResponse: async function(targetId, contact, originalMessageText, summaryContent, summaryMsgId, chatBox) {
-        Utils.log(`--- 收到关于 [${contact.name}] 的摘要 ---\n${summaryContent}`, Utils.logLevels.INFO);
-        this.activeSummaries[targetId] = summaryContent;
-        Utils.log(`AiApiHandler: 已为联系人 ${targetId} 存储摘要。它将在后续请求中使用。`, Utils.logLevels.DEBUG);
-
-        if (summaryMsgId) chatBox.querySelector(`.message[data-message-id="${summaryMsgId}"]`)?.remove();
-
-        try {
-            const effectiveConfig = this._getEffectiveAiConfig();
-            if (!effectiveConfig.apiEndpoint) {
-                Utils.log("AiApiHandler._handleSummaryResponse: AI API 端点未配置。", Utils.logLevels.ERROR);
-                throw new Error("AI API 端点未配置。请在设置中配置。");
-            }
-
-            let baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
-            const selectedChapterId = UserManager.getSelectedChapterForAI(targetId); // 再次获取，以防万一有变化
-            let chapterPromptModifier = "";
-            if (selectedChapterId && contact.chapters && contact.chapters.length > 0) {
-                const chapter = contact.chapters.find(ch => ch.id === selectedChapterId);
-                if (chapter && chapter.promptModifier) {
-                    chapterPromptModifier = chapter.promptModifier;
-                }
-            }
             let finalSystemPrompt = baseSystemPrompt;
             if (chapterPromptModifier) {
                 finalSystemPrompt += `\n\n[Chapter Focus: ${contact.chapters.find(ch => ch.id === selectedChapterId)?.name || selectedChapterId}]\n${chapterPromptModifier}`;
             }
             finalSystemPrompt += contact.aiConfig.promptSuffix?contact.aiConfig.promptSuffix:Config.ai.promptSuffix;
 
+            messagesForRequestBody.push({role: "system", content: finalSystemPrompt});
 
-            const newAiApiMessages = [
-                { role: "system", content: finalSystemPrompt },
-                { role: "system", content: `上下文摘要:\n${summaryContent}` },
-                { role: "user", content: `${originalMessageText} [发送于: ${new Date().toLocaleString()}]` }
-            ];
-            const newRequestBody = {
-                model: effectiveConfig.model, messages: newAiApiMessages, stream: true,
+            messagesForRequestBody.push(...contextMessagesForAIHistory);
+            messagesForRequestBody.push({ role: "user", content: `${messageText} [发送于: ${new Date().toLocaleString()}]` });
+
+            Utils.log(`AiApiHandler: 向 ${contact.name} 发送 AI 请求。配置: 端点='${effectiveConfig.apiEndpoint}', 密钥存在=${!!effectiveConfig.apiKey}, 模型='${effectiveConfig.model}'`, Utils.logLevels.DEBUG);
+
+            const requestBody = {
+                model: effectiveConfig.model, messages: messagesForRequestBody, stream: true,
                 temperature: 0.1, max_tokens: effectiveConfig.maxTokens || 2048,
                 user: UserManager.userId, character_id: targetId
             };
-            Utils.log(`正在使用摘要上下文重新发送到 AI (${contact.name}) (流式): ${JSON.stringify(newRequestBody.messages)}`, Utils.logLevels.DEBUG);
+            Utils.log(`正在发送到 AI (${contact.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
-            const newAiMessageId = `ai_stream_${Date.now()}`;
-            let newFullAiResponseContent = "";
-            const newInitialAiMessage = { id: newAiMessageId, type: 'text', content: "▍", timestamp: new Date().toISOString(), sender: targetId, isStreaming: true };
-            ChatManager.addMessage(targetId, newInitialAiMessage);
-            MessageManager.displayMessage(newInitialAiMessage, false);
-            let newAiMessageElement = chatBox.querySelector(`.message[data-message-id="${newAiMessageId}"] .message-content`);
+            const aiMessageId = `ai_stream_${Date.now()}`;
+            let fullAiResponseContent = "";
+            const initialAiMessage = { id: aiMessageId, type: 'text', content: "▍", timestamp: new Date().toISOString(), sender: targetId, isStreaming: true };
+            MessageManager.displayMessage(initialAiMessage, false);
+            ChatManager.addMessage(targetId, initialAiMessage);
+            let aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
 
             await Utils.fetchApiStream(
-                effectiveConfig.apiEndpoint,
-                newRequestBody,
+                effectiveConfig.apiEndpoint, requestBody,
                 { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
                 (jsonChunk) => {
                     const chunkContent = jsonChunk.choices[0].delta.content;
-                    newFullAiResponseContent += chunkContent;
-                    if (newAiMessageElement) {
-                        newAiMessageElement.innerHTML = Utils.formatMessageText(newFullAiResponseContent + "▍");
+                    fullAiResponseContent += chunkContent;
+                    if (aiMessageElement) {
+                        aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent + "▍");
                         chatBox.scrollTop = chatBox.scrollHeight;
                     }
                 },
-                () => {
-                    if (newAiMessageElement) newAiMessageElement.innerHTML = Utils.formatMessageText(newFullAiResponseContent);
-                    const finalAiMessage = { id: newAiMessageId, type: 'text', content: newFullAiResponseContent, timestamp: newInitialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
+                (finalContent) => {
+                    if (aiMessageElement) aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent);
+                    const finalAiMessage = { id: aiMessageId, type: 'text', content: fullAiResponseContent, timestamp: initialAiMessage.timestamp, sender: targetId, isStreaming: false, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
                 }
             );
 
         } catch (error) {
-            Utils.log(`在摘要后与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
-            NotificationUIManager.showNotification(`错误: 在摘要后无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
-            ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，在摘要后发生错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
+            removeThinkingMessage();
+            Utils.log(`与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
+            ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
         }
     },
 
