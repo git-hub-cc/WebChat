@@ -1,11 +1,10 @@
-
 /* ========================================================================== */
 /* 基础配置与全局样式 (Base & Global Styles) */
 /* ========================================================================== */
 /**
- * 此区域定义了应用的全局 CSS 自定义属性（变量）、基础重置和 body 默认样式。
- * CSS 变量统一管理颜色、尺寸、字体等，便于主题切换和维护。
- */
+* 此区域定义了应用的全局 CSS 自定义属性（变量）、基础重置和 body 默认样式。
+* CSS 变量统一管理颜色、尺寸、字体等，便于主题切换和维护。
+*/
 
 :root {
     /* --- 全局颜色与主题变量 --- */
@@ -67,9 +66,9 @@
 
 * {
     /*
-    * 使用 border-box 盒模型，使元素的 width 和 height 包含 padding 和 border。
-    * 这是现代 CSS 布局的基石，能极大简化尺寸计算。
-    */
+* 使用 border-box 盒模型，使元素的 width 和 height 包含 padding 和 border。
+* 这是现代 CSS 布局的基石，能极大简化尺寸计算。
+*/
     box-sizing: border-box;
     margin: 0;
     padding: 0;
@@ -125,7 +124,11 @@ body {
     /* 使用逻辑属性 border-inline-end，自动适应从左到右 (LTR) 和从右到左 (RTL) 的布局 */
     border-inline-end: 1px solid var(--border-color);
     position: relative;
-    transition: width 0.3s ease-in-out; /* Added for potential responsive adjustments */
+    /* --- REMOVED (Performance) ---
+    * 移除了 width 的过渡动画。改变 width 会导致整个页面布局在动画的每一帧都重新计算（重排），
+    * 是性能开销极大的操作。侧边栏的显示/隐藏应使用 transform 来实现，以获得流畅体验。
+    * transition: width 0.3s ease-in-out;
+    */
 }
 
 .chat-area {
@@ -255,7 +258,10 @@ body {
     transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
-#fileInput { /* This is a utility input, keep hidden style in core */
+#fileInput,
+#bgImageInput,
+#bgImageInputLight,
+#bgImageInputDark {
     display: none;
 }
 
@@ -366,6 +372,7 @@ body {
     justify-content: center;
     padding: var(--spacing-5);
     background-color: rgba(0, 0, 0, 0.5);
+    overflow-y: auto; /* BUG FIX: 允许背景遮罩在模态框内容过高时滚动 */
     /* For fade-in/out of the modal backdrop and content */
     opacity: 0;
     visibility: hidden;
@@ -389,7 +396,8 @@ body {
     border-radius: var(--border-radius);
     background-color: var(--received-bg-color);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-    overflow-y: auto;
+    /* BUG FIX: 移除内部滚动，将其转移到 .modal-like，以防止裁剪绝对定位的子元素（如下拉菜单） */
+    /* overflow-y: auto; */
     transform: scale(0.95);
     transition: transform 0.3s ease-out; /* For a slight scale-up effect */
 }
@@ -451,6 +459,12 @@ body {
     font-size: 14px;
 }
 
+/* MODIFIED: 增加设置项中控制按钮组的样式 */
+.modal-body .settings-item .setting-control-group {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
 .modal-body .settings-item label {
     flex-shrink: 0;
     font-weight: 500;
@@ -458,7 +472,7 @@ body {
 
 /* 特别为设置模态框中的标签设置对齐 */
 #mainMenuModal .settings-item label { /* Specific to main menu modal */
-    width: 80px;
+    width: 110px; /* MODIFIED: 增加了宽度以容纳更长的标签文本 */
     text-align: end;
 }
 
@@ -499,7 +513,7 @@ body {
     margin-bottom: var(--spacing-3);
 }
 
-#mainMenuModal .settings-section .collapsible-content .collapsible-content > .manual-connect-step .btn {
+#mainMenuMdal .settings-section .collapsible-content .collapsible-content > .manual-connect-step .btn {
     width: 100%; /* Make buttons full width */
     margin-bottom: var(--spacing-2); /* Space below each button if they stack or before next element */
 }
@@ -584,11 +598,12 @@ body {
     align-items: center;
     justify-content: center;
     background: rgba(0, 0, 0, 0.9);
-    /* Transition for PiP mode changes */
-    transition: width 0.3s ease-in-out, height 0.3s ease-in-out,
-    left 0.3s ease-in-out, top 0.3s ease-in-out,
-    border-radius 0.3s ease-in-out, box-shadow 0.3s ease-in-out,
-    border-color 0.3s ease-in-out;
+    /* --- OPTIMIZED (Performance) ---
+* 移除了 width, height, left, top 的过渡动画。这些属性会触发重排，性能开销极大。
+* 画中画模式的切换由 .pip-mode 类独立控制，而窗口拖拽由 JS 实现，无需 CSS 过渡。
+* 保留了对非布局属性的过渡。
+*/
+    transition: border-radius 0.3s ease-in-out, box-shadow 0.3s ease-in-out, border-color 0.3s ease-in-out;
 }
 
 .video-call-container-main .video-streams {
@@ -768,6 +783,25 @@ body {
 }
 
 /* --- 可折叠区域 --- */
+/* --- OPTIMIZED (Performance) ---
+* 使用 display: grid 和 grid-template-rows 来实现高性能的折叠动画。
+* 这避免了使用 max-height 进行动画，从而消除了重排（reflow）。
+* 使用此方法需要确保 .collapsible-header 和 .collapsible-content 是直接的兄弟节点。
+* 它们的父容器（未在CSS中明确选择，但为隐式存在）将成为网格容器。
+* 如果HTML结构不同，可能需要添加一个wrapper div。
+*/
+.collapsible-container { /* 假设 .collapsible-header 和 .collapsible-content 在这个容器内 */
+    display: grid;
+    grid-template-rows: auto 0fr; /* 标题高度自适应，内容高度初始为0 */
+}
+.collapsible-header.active + .collapsible-content {
+    /* 不再需要 .active + .collapsible-content 选择器来设置高度 */
+}
+.collapsible-container.active { /* JS需要将 .active 类添加到这个父容器上 */
+    grid-template-rows: auto 1fr; /* 动画地将内容行扩展到其完整高度 */
+}
+
+
 .collapsible-header {
     display: flex;
     align-items: center;
@@ -778,6 +812,8 @@ body {
     cursor: pointer;
     font-weight: 600;
     transition: color 0.2s ease-out, border-color 0.2s ease-out;
+    grid-row: 1; /* 始终在第一行 */
+    grid-column: 1; /* 始终在第一列 */
 }
 
 .collapsible-header .collapse-icon {
@@ -787,19 +823,21 @@ body {
 }
 
 .collapsible-content {
-    /* Styles for content area of collapsible sections */
-    /* display: none; is typically handled by JS */
-    /* If animated collapse is needed, it would require max-height transition */
     overflow: hidden;
-    max-height: 0; /* Initially collapsed for CSS-only animation if preferred */
-    transition: max-height 0.3s ease-in-out, padding-top 0.3s ease-in-out, padding-bottom 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    /* --- REMOVED (Performance) ---
+* 移除了 max-height 和相关过渡，因为动画现在由父容器的 grid-template-rows 处理。
+* max-height: 0;
+* transition: max-height ...
+*/
+    transition: opacity 0.3s ease-in-out; /* 可以保留 opacity 过渡以实现淡入淡出效果 */
     opacity: 0;
+    grid-row: 2; /* 始终在第二行 */
+    grid-column: 1; /* 始终在第一列 */
+    min-height: 0; /* BUG FIX: 确保元素可以完全收缩到零高度 */
 }
-.collapsible-header.active + .collapsible-content { /* JS should also set display: block or manage max-height */
-    max-height: 1000px; /* Large enough value, or calculate with JS */
+
+.collapsible-container.active .collapsible-content {
     opacity: 1;
-    /* padding-top: var(--spacing-2); /* Example padding when open */
-    /* padding-bottom: var(--spacing-2); */
 }
 
 
@@ -1203,15 +1241,23 @@ input:checked + .slider::before {
     }
 }
 
-@keyframes pulse { /* Used by voice recording button */
+/* --- OPTIMIZED (Performance) ---
+* 将昂贵的 box-shadow 动画替换为对 transform 和 opacity 的动画。
+* 这个动画现在应用于一个伪元素（::after），而不是按钮本身，从而利用 GPU 加速。
+* 这将使脉冲效果极其流畅，几乎零 CPU 消耗。
+*/
+@keyframes pulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+        transform: scale(0.95);
+        opacity: 0.7;
     }
     70% {
-        box-shadow: 0 0 0 8px rgba(220, 53, 69, 0);
+        transform: scale(1.6);
+        opacity: 0;
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+        transform: scale(0.95);
+        opacity: 0;
     }
 }
 
@@ -1285,6 +1331,19 @@ input:checked + .slider::before {
     }
 }
 
+/* ========================================================================== */
+/* MODIFIED: 优化设置模态框大小 (Optimize Settings Modal Size) */
+/* ========================================================================== */
+
+/* 允许主菜单模态框本身可以更高，以容纳展开的选项列表 */
+#mainMenuModal .modal-content {
+    max-height: 95vh;
+}
+
+/* 专门针对主题选择器的选项列表，增大其最大高度 */
+#mainMenuModal #themeOptionsContainer {
+    max-height: 50vh; /* 使用视口高度单位，更具响应性 */
+}
 
 
 /* ========================================================================== */
@@ -1297,9 +1356,9 @@ input:checked + .slider::before {
     min-width: 0; /* Allow shrinking */
     display: flex; /* Ensure it behaves correctly in a flex layout */
 }
-.api-model-input-container > select,
+/* MODIFIED: Removed 'select' styling, as it's replaced by custom-select. Kept 'input' styling. */
 .api-model-input-container > input {
-    width: 100%; /* Make the select/input take full width of the container */
+    width: 100%; /* Make the input take full width of the container */
     padding: var(--spacing-2);
     border: 1px solid var(--border-color);
     border-radius: 4px;
@@ -1307,11 +1366,48 @@ input:checked + .slider::before {
     transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
     margin-bottom: 0; /* Override generic margin from modal-body input styles */
 }
-.api-model-input-container > select:focus,
+/* MODIFIED: Removed 'select:focus' styling. Kept 'input:focus'. */
 .api-model-input-container > input:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+
+/* ========================================================================== */
+/* --- ADDED: Styles Moved From Inline --- */
+/* ========================================================================== */
+
+.video-call-container-main #audioQualityIndicator {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 3;
+    display: none; /* JS will toggle display */
+}
+
+#newContactGroupModal #newGroupIdInput {
+    margin-top: 10px;
+}
+
+#openSourceInfoModal .modal-body {
+    text-align: center;
+}
+
+#openSourceInfoModal img[src$="/contact.png"] {
+    max-width: 150px;
+    margin: 10px auto;
+    display: block;
+    border: 1px solid var(--border-color);
+}
+
+#openSourceInfoModal .modal-body p:has(> #openSourceModalTimer) {
+    font-size: 0.9em;
+    color: var(--text-color-light);
+}
+
+.screenshot-editor-toolbar #markColorPicker {
+    display: none; /* Initially hidden, shown when draw tool is active */
 }
 
 
@@ -1368,14 +1464,14 @@ input:checked + .slider::before {
     /* Details panel overlay behavior on small screens (already partly handled by 900px breakpoint) */
     .details-panel {
         /*
-        position: fixed;
-        z-index: 20;
-        inset-block-start: 0;
-        inset-inline-end: -300px; /* Initial hide off-screen (for sliding animation if any)
-        width: 100%;
-        max-width: 300px; /* Limit width on mobile
-        height: 100%;
-        */
+    position: fixed;
+    z-index: 20;
+    inset-block-start: 0;
+    inset-inline-end: -300px; /* Initial hide off-screen (for sliding animation if any)
+    width: 100%;
+    max-width: 300px; /* Limit width on mobile
+    height: 100%;
+    */
         /* display: flex; is set by .app-container.show-details */
         /* Most of this is now controlled by details-panel.css and its transform based animation */
         max-width: 300px; /* Still useful to limit width on mobile when it slides in */

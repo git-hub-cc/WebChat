@@ -1,19 +1,19 @@
 /**
- * @file MessageTtsHandler.js
+ * @file TtsApiHandler.js
  * @description 文本转语音 (TTS) 处理器，负责处理 AI 消息的语音合成功能。
  *              包括清理文本、向 TTS API 发送请求、处理响应以及管理消息中的播放控件 UI。
  *              现在实现了 TTS 音频的 IndexedDB 缓存。
  *              更新：cleanTextForTts 现在仅保留中日韩字符、拉丁字母、数字、中英文逗号句号，其他标点替换为英文逗号。
  *              修复：TTS 音频现在缓存于 IndexedDB，播放时通过 Object URL 加载，以优化性能和管理。
  * @module MessageTtsHandler
- * @exports {object} MessageTtsHandler - 对外暴露的单例对象，包含所有 TTS 相关处理方法。
+ * @exports {object} TtsApiHandler - 对外暴露的单例对象，包含所有 TTS 相关处理方法。
  * @property {function} requestTtsForMessage - 为指定消息文本请求 TTS 音频。
  * @property {function} playTtsAudioFromControl - 处理播放/暂停 TTS 音调的点击事件。
  * @property {function} addTtsPlaceholder - 在消息中添加一个加载中的占位符。
  * @dependencies AppSettings, Utils, UserManager, NotificationUIManager, AiApiHandler, DBManager
  * @dependents MessageManager (当 AI 消息完成时调用)
  */
-const MessageTtsHandler = {
+const TtsApiHandler = {
     _currentlyPlayingTtsAudio: null, // 当前正在播放的 Audio 对象
     _currentlyPlayingTtsButton: null, // 当前正在播放的音频对应的播放按钮
     _TTS_CACHE_STORE_NAME: 'ttsCache', // IndexedDB 缓存表名

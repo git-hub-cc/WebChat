@@ -9,6 +9,8 @@
  *              重构：将折叠式菜单改为标签页式，以提高导航清晰度。
  *              新增：支持多种大模型提供商选择，并自动填充配置，支持用户覆盖默认值。
  *              修改：移除了 AI & API 配置的“覆盖”复选框，用户的输入将始终生效。
+ *              重构：将模型名称选择器从原生 select 改为自定义 div 组件。
+ *              MODIFIED: 支持为浅色和深色模式分别设置和移除背景图片。
  * @module SettingsUIManager
  * @exports {object} SettingsUIManager - 对外暴露的单例对象，包含所有设置 UI 管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素、加载设置并绑定事件。
@@ -29,16 +31,21 @@ const SettingsUIManager = {
 // AI 设置输入元素
     llmProviderSelectedValueEl: null,
     llmProviderOptionsContainerEl: null,
+    modelSelectedValueEl: null, // MODIFIED: 新增，用于模型选择器
+    modelOptionsContainerEl: null, // MODIFIED: 新增，用于模型选择器
     apiEndpointInput: null,
     apiModelInputContainer: null,
     apiKeyInput: null,
     apiMaxTokensInput: null,
     ttsApiEndpointInput: null,
 
-// 背景图片设置元素
-    setBackgroundBtn: null,
-    removeBackgroundBtn: null,
-    bgImageInput: null,
+// MODIFIED: 背景图片设置元素，分为浅色和深色
+    setBackgroundBtnLight: null,
+    removeBackgroundBtnLight: null,
+    bgImageInputLight: null,
+    setBackgroundBtnDark: null,
+    removeBackgroundBtnDark: null,
+    bgImageInputDark: null,
 
 // 其他设置元素
     autoConnectToggle: null,
@@ -51,6 +58,7 @@ const SettingsUIManager = {
     _boundHandleThemeSelectorClick: null,
     _boundHandleColorSchemeSelectorClick: null,
     _boundHandleLlmProviderSelectorClick: null,
+    _boundHandleModelSelectorClick: null, // MODIFIED: 新增
 
 
     /**
@@ -67,10 +75,14 @@ const SettingsUIManager = {
         this.ttsApiEndpointInput = document.getElementById('ttsApiEndpointInput');
 
 
-// 背景图片设置元素
-        this.setBackgroundBtn = document.getElementById('setBackgroundBtn');
-        this.removeBackgroundBtn = document.getElementById('removeBackgroundBtn');
-        this.bgImageInput = document.getElementById('bgImageInput');
+// MODIFIED: 背景图片设置元素（浅色和深色）
+        this.setBackgroundBtnLight = document.getElementById('setBackgroundBtnLight');
+        this.removeBackgroundBtnLight = document.getElementById('removeBackgroundBtnLight');
+        this.bgImageInputLight = document.getElementById('bgImageInputLight');
+        this.setBackgroundBtnDark = document.getElementById('setBackgroundBtnDark');
+        this.removeBackgroundBtnDark = document.getElementById('removeBackgroundBtnDark');
+        this.bgImageInputDark = document.getElementById('bgImageInputDark');
+
 
 // 其他设置元素
         this.autoConnectToggle = document.getElementById('autoConnectToggle');
@@ -109,17 +121,25 @@ const SettingsUIManager = {
 
 // 绑定模型输入/选择框的 blur 和 change 事件
         this.apiModelInputContainer.addEventListener('blur', (e) => {
-            this.saveAISetting('model', e.target.value);
+// 只处理 input 元素的 blur
+            if (e.target.tagName === 'INPUT') {
+                this.saveAISetting('model', e.target.value);
+            }
         }, true); // 使用捕获来获取内部元素的 blur 事件
         this.apiModelInputContainer.addEventListener('change', (e) => { // 适用于 select 元素
             this.saveAISetting('model', e.target.value);
         }, true);
 
 
-// --- 背景图片设置 ---
-        if (this.setBackgroundBtn) this.setBackgroundBtn.addEventListener('click', () => this.bgImageInput.click());
-        if (this.bgImageInput) this.bgImageInput.addEventListener('change', (e) => this.handleBackgroundChange(e));
-        if (this.removeBackgroundBtn) this.removeBackgroundBtn.addEventListener('click', () => this.handleRemoveBackground());
+// --- MODIFIED: 背景图片设置 (浅色和深色) ---
+        if (this.setBackgroundBtnLight) this.setBackgroundBtnLight.addEventListener('click', () => this.bgImageInputLight.click());
+        if (this.bgImageInputLight) this.bgImageInputLight.addEventListener('change', (e) => this.handleBackgroundChange(e, 'light'));
+        if (this.removeBackgroundBtnLight) this.removeBackgroundBtnLight.addEventListener('click', () => this.handleRemoveBackground('light'));
+
+        if (this.setBackgroundBtnDark) this.setBackgroundBtnDark.addEventListener('click', () => this.bgImageInputDark.click());
+        if (this.bgImageInputDark) this.bgImageInputDark.addEventListener('change', (e) => this.handleBackgroundChange(e, 'dark'));
+        if (this.removeBackgroundBtnDark) this.removeBackgroundBtnDark.addEventListener('click', () => this.handleRemoveBackground('dark'));
+
 
 // --- 网络状态 ---
         if (this.checkNetworkBtnModal) this.checkNetworkBtnModal.addEventListener('click', async () => {
@@ -219,36 +239,41 @@ const SettingsUIManager = {
             if (!isClickInside('llmProviderSelectContainer', e.target) && this.llmProviderOptionsContainerEl) {
                 this.llmProviderOptionsContainerEl.style.display = 'none';
             }
+// MODIFIED: 新增，处理模型选择器
+            if (!isClickInside('modelCustomSelectContainer', e.target) && this.modelOptionsContainerEl) {
+                this.modelOptionsContainerEl.style.display = 'none';
+            }
         });
     },
-    // ... [handleBackgroundChange, handleRemoveBackground, _handleLlmProviderSelectorClick remain the same] ...
-    async handleBackgroundChange(event) {
+    async handleBackgroundChange(event, colorSchemeType) {
         const file = event.target.files[0];
         if (!file) return;
 
-        // 验证文件类型，确保是图片
+// 验证文件类型，确保是图片
         if (!file.type.startsWith('image/')) {
             NotificationUIManager.showNotification('请选择一个图片文件。', 'error');
             return;
         }
-        // 验证文件大小，限制为 5MB
+// 验证文件大小，限制为 5MB
         if (file.size > 5 * 1024 * 1024) {
             NotificationUIManager.showNotification('图片文件过大，请选择小于 5MB 的图片。', 'warning');
             return;
         }
 
         if (typeof ThemeLoader !== 'undefined' && ThemeLoader.setBackgroundImage) {
-            await ThemeLoader.setBackgroundImage(file);
-            NotificationUIManager.showNotification('背景图片已设置。', 'success');
+            await ThemeLoader.setBackgroundImage(file, colorSchemeType);
+            const schemeName = colorSchemeType === 'light' ? '浅色' : '深色';
+            NotificationUIManager.showNotification(`${schemeName}模式背景图片已设置。`, 'success');
         } else {
             Utils.log("SettingsUIManager: ThemeLoader 或其 setBackgroundImage 方法未定义。", Utils.logLevels.ERROR);
         }
         event.target.value = '';
     },
-    async handleRemoveBackground() {
+    async handleRemoveBackground(colorSchemeType) {
         if (typeof ThemeLoader !== 'undefined' && ThemeLoader.removeBackgroundImage) {
-            await ThemeLoader.removeBackgroundImage();
-            NotificationUIManager.showNotification('背景图片已移除。', 'success');
+            await ThemeLoader.removeBackgroundImage(colorSchemeType);
+            const schemeName = colorSchemeType === 'light' ? '浅色' : '深色';
+            NotificationUIManager.showNotification(`${schemeName}模式背景图片已移除。`, 'success');
         } else {
             Utils.log("SettingsUIManager: ThemeLoader 或其 removeBackgroundImage 方法未定义。", Utils.logLevels.ERROR);
         }
@@ -260,12 +285,24 @@ const SettingsUIManager = {
         this.llmProviderOptionsContainerEl.style.display = currentDisplayState === 'block' ? 'none' : 'block';
     },
 
+// MODIFIED: 新增，处理模型选择器的点击事件
+    _handleModelSelectorClick: function(event) {
+        event.stopPropagation();
+        if (!this.modelOptionsContainerEl) return;
+        const currentDisplayState = this.modelOptionsContainerEl.style.display;
+// 关闭其他下拉框
+        document.querySelectorAll('.custom-select .options').forEach(opt => {
+            if (opt !== this.modelOptionsContainerEl) opt.style.display = 'none';
+        });
+        this.modelOptionsContainerEl.style.display = currentDisplayState === 'block' ? 'none' : 'block';
+    },
+
     _populateLlmProviderSelector: function() {
         if (!this.llmProviderSelectedValueEl || !this.llmProviderOptionsContainerEl || typeof LLMProviders === 'undefined') return;
 
-        // **MODIFIED**: Use LLMProviders directly
+// **MODIFIED**: Use LLMProviders directly
         const providers = LLMProviders;
-        // BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'，以确保 UI 与后端逻辑一致。
+// BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'，以确保 UI 与后端逻辑一致。
         const currentProviderKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
 
         this.llmProviderSelectedValueEl.textContent = providers[currentProviderKey]?.label || '选择提供商';
@@ -295,56 +332,97 @@ const SettingsUIManager = {
     },
 
     _handleLlmProviderChange: function(providerKey) {
-        // **MODIFIED**: Use LLMProviders directly
+// **MODIFIED**: Use LLMProviders directly
         const providerConfig = (typeof LLMProviders !== 'undefined') ? LLMProviders[providerKey] : null;
         if (!providerConfig) return;
 
-        // 切换提供商时，自动填充并保存新的默认值
+// 切换提供商时，自动填充并保存新的默认值
         this.apiEndpointInput.value = providerConfig.defaultEndpoint;
         this.saveAISetting('apiEndpoint', providerConfig.defaultEndpoint);
 
-        // --- BUG FIX START ---
-        // BUG: 原本 _updateModelInput 在 saveAISetting('model', ...) 之前调用，
-        //      导致 UI 更新时读取的是旧的 localStorage 值。
-        // FIX: 调整顺序，先保存新的默认模型，再更新 UI。
+// --- BUG FIX START ---
+// BUG: 原本 _updateModelInput 在 saveAISetting('model', ...) 之前调用，
+//      导致 UI 更新时读取的是旧的 localStorage 值。
+// FIX: 调整顺序，先保存新的默认模型，再更新 UI。
 
-        // 1. 先保存新的默认模型到 localStorage
+// 1. 先保存新的默认模型到 localStorage
         this.saveAISetting('model', providerConfig.defaultModel);
 
-        // 2. 然后更新模型输入的 UI，此时它会从 localStorage 读取到正确的新值
+// 2. 然后更新模型输入的 UI，此时它会从 localStorage 读取到正确的新值
         this._updateModelInput(providerConfig);
-        // --- BUG FIX END ---
+// --- BUG FIX END ---
     },
-    // ... [_updateModelInput and theme-related methods remain the same] ...
+// ... [_updateModelInput and theme-related methods remain the same] ...
     _updateModelInput: function(providerConfig) {
         this.apiModelInputContainer.innerHTML = ''; // 清除之前的输入/选择框
-        let modelElement;
 
 // 如果没有预设模型列表（例如“自定义”提供商），则创建文本输入框
         if (!providerConfig.models || providerConfig.models.length === 0) {
-            modelElement = document.createElement('input');
+            const modelElement = document.createElement('input');
             modelElement.type = 'text';
             modelElement.id = 'apiModelInput';
             modelElement.placeholder = '输入自定义模型名称';
 // 加载用户可能已为该提供商保存的自定义模型
             const storedModel = localStorage.getItem('aiSetting_model');
             modelElement.value = storedModel || providerConfig.defaultModel;
-        } else {
-// 否则，创建下拉选择框
-            modelElement = document.createElement('select');
-            modelElement.id = 'apiModelSelect';
-            providerConfig.models.forEach(model => {
-                const option = document.createElement('option');
-                option.value = model.key;
-                option.textContent = model.label;
-                modelElement.appendChild(option);
-            });
-// 加载用户保存的模型，如果不存在则使用提供商的默认模型
-            const storedModel = localStorage.getItem('aiSetting_model');
-            modelElement.value = storedModel || providerConfig.defaultModel;
-        }
+            this.apiModelInputContainer.appendChild(modelElement);
 
-        this.apiModelInputContainer.appendChild(modelElement);
+// 重置自定义下拉框的元素引用，因为它们不存在
+            this.modelSelectedValueEl = null;
+            this.modelOptionsContainerEl = null;
+            this._boundHandleModelSelectorClick = null;
+
+        } else {
+            // 否则，创建基于 div 的自定义下拉选择框
+            const customSelectContainer = document.createElement('div');
+            customSelectContainer.className = 'custom-select';
+            customSelectContainer.id = 'modelCustomSelectContainer'; // 用于全局点击监听器
+
+            this.modelSelectedValueEl = document.createElement('div');
+            this.modelSelectedValueEl.className = 'selected';
+            this.modelSelectedValueEl.id = 'modelSelectedValue';
+
+            this.modelOptionsContainerEl = document.createElement('div');
+            this.modelOptionsContainerEl.className = 'options';
+            this.modelOptionsContainerEl.id = 'modelOptionsContainer';
+
+            // 加载用户保存的模型，如果不存在则使用提供商的默认模型
+            const storedModelKey = localStorage.getItem('aiSetting_model') || providerConfig.defaultModel;
+            let selectedModelLabel = '选择模型'; // 如果找不到匹配项，则为回退标签
+
+            providerConfig.models.forEach(model => {
+                const optionDiv = document.createElement('div');
+                optionDiv.classList.add('option');
+                optionDiv.textContent = model.label;
+                optionDiv.dataset.modelKey = model.key;
+
+                if (model.key === storedModelKey) {
+                    selectedModelLabel = model.label;
+                }
+
+                optionDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const selectedKey = optionDiv.dataset.modelKey;
+                    this.modelSelectedValueEl.textContent = optionDiv.textContent;
+                    this.saveAISetting('model', selectedKey);
+                    this.modelOptionsContainerEl.style.display = 'none';
+                });
+                this.modelOptionsContainerEl.appendChild(optionDiv);
+            });
+
+            this.modelSelectedValueEl.textContent = selectedModelLabel;
+
+            customSelectContainer.appendChild(this.modelSelectedValueEl);
+            customSelectContainer.appendChild(this.modelOptionsContainerEl);
+            this.apiModelInputContainer.appendChild(customSelectContainer);
+
+            // 绑定点击事件以切换选项
+            if (this._boundHandleModelSelectorClick) {
+                this.modelSelectedValueEl.removeEventListener('click', this._boundHandleModelSelectorClick);
+            }
+            this._boundHandleModelSelectorClick = this._handleModelSelectorClick.bind(this);
+            this.modelSelectedValueEl.addEventListener('click', this._boundHandleModelSelectorClick);
+        }
     },
     _handleThemeSelectorClick: function(event) {
         event.stopPropagation();
@@ -469,25 +547,20 @@ const SettingsUIManager = {
      * 此函数现在处理新的提供商逻辑，不再有“覆盖”概念。
      */
     loadAISettings: function() {
-        // BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'。
+// BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'。
         const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
-        // **MODIFIED**: Use LLMProviders directly
+// **MODIFIED**: Use LLMProviders directly
         const safeLLMProviders = (typeof LLMProviders !== 'undefined') ? LLMProviders : {};
-        // BUG FIX: 确保在 providerKey 对应的配置不存在时，也回退到 'ppmc' 的配置。
+// BUG FIX: 确保在 providerKey 对应的配置不存在时，也回退到 'ppmc' 的配置。
         const providerConfig = safeLLMProviders[providerKey] || safeLLMProviders.ppmc || {};
 
-        // 加载 API 端点: 优先使用 localStorage 的值，否则使用提供商的默认值
+// 加载 API 端点: 优先使用 localStorage 的值，否则使用提供商的默认值
         this.apiEndpointInput.value = localStorage.getItem('aiSetting_apiEndpoint') || providerConfig.defaultEndpoint;
 
-        // 加载模型 (并设置输入/选择框)
+// 加载模型 (并设置输入/选择框 UI 和初始值)
         this._updateModelInput(providerConfig);
-        const modelElement = this.apiModelInputContainer.querySelector('select, input');
-        if (modelElement) {
-            // 优先使用 localStorage 的值，否则使用提供商的默认值
-            modelElement.value = localStorage.getItem('aiSetting_model') || providerConfig.defaultModel;
-        }
 
-        // 加载其他设置
+// 加载其他设置
         const otherSettings = [
             { key: 'api_key', input: this.apiKeyInput },
             { key: 'max_tokens', input: this.apiMaxTokensInput },
@@ -496,7 +569,7 @@ const SettingsUIManager = {
 
         otherSettings.forEach(setting => {
             if (setting.input) {
-                // 优先使用 localStorage 的值，否则使用 AppSettings.server 中的回退值
+// 优先使用 localStorage 的值，否则使用 AppSettings.server 中的回退值
                 setting.input.value = localStorage.getItem(`aiSetting_${setting.key}`) || AppSettings.server[setting.key] || '';
             }
         });
@@ -511,10 +584,10 @@ const SettingsUIManager = {
     saveAISetting: function(storageKey, value) {
         const serverConfig = (typeof AppSettings !== 'undefined' && AppSettings && AppSettings.server) ? AppSettings.server : {};
 
-        // URL 校验
+// URL 校验
         if ((storageKey === 'apiEndpoint' || storageKey === 'ttsApiEndpoint') && value) {
             try {
-                // 尝试将值解析为 URL，如果失败则说明格式无效
+// 尝试将值解析为 URL，如果失败则说明格式无效
                 new URL(value);
             }
             catch (_) {
@@ -524,12 +597,12 @@ const SettingsUIManager = {
                 return;
             }
         }
-        // 数字校验 (max_tokens)
+// 数字校验 (max_tokens)
         if (storageKey === 'max_tokens') {
-            // 将输入值安全地转换为数字
+// 将输入值安全地转换为数字
             const numValue = parseInt(String(value), 10);
             const configMaxTokens = serverConfig.max_tokens !== undefined ? serverConfig.max_tokens : 2048;
-            // 验证是否为有效的正整数
+// 验证是否为有效的正整数
             if (isNaN(numValue) || numValue <= 0) {
                 NotificationUIManager.showNotification('最大令牌数必须为正数。未保存。', 'error');
                 if (this.apiMaxTokensInput) this.apiMaxTokensInput.value = localStorage.getItem('aiSetting_max_tokens') || configMaxTokens;
@@ -541,7 +614,7 @@ const SettingsUIManager = {
         localStorage.setItem(`aiSetting_${storageKey}`, String(value));
 
         const friendlyName = storageKey.charAt(0).toUpperCase() + storageKey.slice(1).replace(/_/g, ' ');
-        // NotificationUIManager.showNotification(`${friendlyName} 设置已保存。`, 'success');
+// NotificationUIManager.showNotification(`${friendlyName} 设置已保存。`, 'success');
 
         if (typeof EventEmitter !== 'undefined') {
             EventEmitter.emit('aiConfigChanged');
@@ -553,7 +626,7 @@ const SettingsUIManager = {
 // ... [rest of the methods remain the same] ...
     copyUserIdFromModal: function () {
         const userId = this.modalUserIdValue?.textContent;
-        // 确保用户 ID 已有效生成且不为空
+// 确保用户 ID 已有效生成且不为空
         if (userId && userId !== "生成中...") {
             navigator.clipboard.writeText(userId)
                 .then(() => NotificationUIManager.showNotification('用户 ID 已复制！', 'success'))
@@ -562,7 +635,7 @@ const SettingsUIManager = {
     },
     copySdpTextFromModal: function () {
         const sdpTextEl = document.getElementById('modalSdpText');
-        // 确保 SDP 文本框存在且有内容可复制
+// 确保 SDP 文本框存在且有内容可复制
         if (sdpTextEl && sdpTextEl.value) {
             navigator.clipboard.writeText(sdpTextEl.value)
                 .then(() => NotificationUIManager.showNotification('连接信息已复制！', 'success'))

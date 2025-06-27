@@ -795,10 +795,33 @@
     font-style: italic;
 }
 
-#voiceButtonMain.recording { /* Voice recording button pulsing */
-    animation: pulse 1.5s infinite; /* Uses pulse from core.css */
-    color: var(--danger-color);
+/* --- OPTIMIZED (Performance) ---
+ * 将录音按钮的动画效果与 `core.css` 中优化的 `pulse` 动画对齐。
+ * 1. 移除直接在按钮上的动画。
+ * 2. 添加一个伪元素 `::after` 来承载高性能的脉冲动画。
+ * 3. 确保按钮是 `position: relative` 以便伪元素可以正确定位。
+ */
+#voiceButtonMain {
+    position: relative; /* 必需，为伪元素提供定位上下文 */
 }
+
+#voiceButtonMain.recording {
+    color: var(--danger-color); /* 保持图标颜色变化 */
+    /* 移除 animation 属性, 动画效果由伪元素处理 */
+}
+
+#voiceButtonMain.recording::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    /* border: 2px solid var(--danger-color); /* 可选：如果你想要一个实心边框 */
+    box-shadow: 0 0 0 0 var(--danger-color); /* 初始状态，或者直接用 border */
+    animation: pulse 1.5s infinite; /* 使用 core.css 中优化的 pulse 动画 */
+    z-index: -1; /* 确保在按钮图标下方 */
+    pointer-events: none; /* 确保不干扰点击 */
+}
+
 
 .tts-play-button.playing::after { /* Play/pause icon for in-message TTS */
     content: "❚❚";

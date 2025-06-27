@@ -302,6 +302,9 @@ const VideoCallUIManager = {
             // 重置位置样式，由CSS控制全屏显示
             this.callContainer.style.left = ''; this.callContainer.style.top = '';
             this.callContainer.style.right = ''; this.callContainer.style.bottom = '';
+            // --- OPTIMIZATION ---
+            // 退出 PiP 模式时，清除可能存在的 transform 样式
+            this.callContainer.style.transform = '';
         }
         // 更新UI状态，包括音频质量显示等
         this.updateUIForCallState({
@@ -351,11 +354,16 @@ const VideoCallUIManager = {
         e.preventDefault(); // 阻止默认行为（如文本选择）
 
         this.dragInfo.draggedElement = this.callContainer; // 设置被拖动元素
+        // --- OPTIMIZATION START ---
+        // 记录拖动开始时的初始位置和鼠标偏移
+        this.dragInfo.xOffset = this.dragInfo.draggedElement.offsetLeft;
+        this.dragInfo.yOffset = this.dragInfo.draggedElement.offsetTop;
+        // --- OPTIMIZATION END ---
+
         this.dragInfo.active = true; // 标记拖动激活
         this.dragInfo.originalTransition = this.dragInfo.draggedElement.style.transition; // 保存原始transition
         this.dragInfo.draggedElement.style.transition = 'none'; // 拖动时禁用transition，避免延迟
         this.dragInfo.draggedElement.style.cursor = 'grabbing'; // 设置抓取光标
-        const rect = this.dragInfo.draggedElement.getBoundingClientRect(); // 获取元素位置
 
         // 禁用页面文本选择，提升拖动体验
         document.body.style.userSelect = 'none';
@@ -365,13 +373,13 @@ const VideoCallUIManager = {
 
         // 根据事件类型（鼠标或触摸）获取初始坐标
         if (e.type === "touchstart") {
-            this.dragInfo.initialX = e.touches[0].clientX - rect.left;
-            this.dragInfo.initialY = e.touches[0].clientY - rect.top;
+            this.dragInfo.initialX = e.touches[0].clientX - this.dragInfo.xOffset;
+            this.dragInfo.initialY = e.touches[0].clientY - this.dragInfo.yOffset;
             document.addEventListener("touchmove", this._boundDragTouch, {passive: false});
             document.addEventListener("touchend", this._boundDragEndTouch);
         } else {
-            this.dragInfo.initialX = e.clientX - rect.left;
-            this.dragInfo.initialY = e.clientY - rect.top;
+            this.dragInfo.initialX = e.clientX - this.dragInfo.xOffset;
+            this.dragInfo.initialY = e.clientY - this.dragInfo.yOffset;
             document.addEventListener("mousemove", this._boundDrag);
             document.addEventListener("mouseup", this._boundDragEnd);
         }
@@ -394,15 +402,20 @@ const VideoCallUIManager = {
             currentX = e.clientX - this.dragInfo.initialX;
             currentY = e.clientY - this.dragInfo.initialY;
         }
+
+        this.dragInfo.currentX = currentX;
+        this.dragInfo.currentY = currentY;
+
         // 限制在视口范围内
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         currentX = Math.max(0, Math.min(currentX, viewportWidth - this.dragInfo.draggedElement.offsetWidth));
         currentY = Math.max(0, Math.min(currentY, viewportHeight - this.dragInfo.draggedElement.offsetHeight));
 
-        // 直接更新样式以获得最佳响应
-        this.dragInfo.draggedElement.style.left = currentX + "px";
-        this.dragInfo.draggedElement.style.top = currentY + "px";
+        // --- OPTIMIZATION START ---
+        // 使用 transform 进行位移，以获得GPU加速的流畅动画
+        this.dragInfo.draggedElement.style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        // --- OPTIMIZATION END ---
     },
 
     /**
@@ -410,6 +423,28 @@ const VideoCallUIManager = {
      */
     dragEnd: function () {
         if (!this.dragInfo.active) return; // 如果未激活，则返回
+
+        // --- OPTIMIZATION START ---
+        // "烘焙" transform 到 left/top，并重置 transform
+        if (this.dragInfo.draggedElement) {
+            // 获取当前经过 transform 后的位置
+            let finalX = this.dragInfo.currentX;
+            let finalY = this.dragInfo.currentY;
+
+            // 再次限制在视口范围内，确保最终位置有效
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            finalX = Math.max(0, Math.min(finalX, viewportWidth - this.dragInfo.draggedElement.offsetWidth));
+            finalY = Math.max(0, Math.min(finalY, viewportHeight - this.dragInfo.draggedElement.offsetHeight));
+
+            // 将最终位置应用到 left/top
+            this.dragInfo.draggedElement.style.left = `${finalX}px`;
+            this.dragInfo.draggedElement.style.top = `${finalY}px`;
+            // 清除 transform 属性，为下一次拖动或模式切换做准备
+            this.dragInfo.draggedElement.style.transform = '';
+        }
+        // --- OPTIMIZATION END ---
+
         this.dragInfo.active = false; // 标记拖动结束
 
         // 恢复页面文本选择
@@ -444,6 +479,9 @@ const VideoCallUIManager = {
             this.callContainer.style.left = ''; this.callContainer.style.top = '';
             this.callContainer.style.right = ''; this.callContainer.style.bottom = '';
             this.callContainer.style.transition = '';
+            // --- OPTIMIZATION ---
+            // 确保 transform 也被清除
+            this.callContainer.style.transform = '';
         }
     }
 };

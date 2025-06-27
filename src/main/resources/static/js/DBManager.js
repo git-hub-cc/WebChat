@@ -13,7 +13,7 @@
  * @property {function} clearStore - 清空指定的对象存储。
  * @property {function} clearAllData - 清空数据库中所有对象存储的数据。
  * @dependencies Utils
- * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写), MessageTtsHandler (TTS 缓存), ThemeLoader (背景图缓存)
+ * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写), TtsApiHandler (TTS 缓存), ThemeLoader (背景图缓存)
  */
 const DBManager = {
     db: null,

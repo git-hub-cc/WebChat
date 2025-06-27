@@ -7,6 +7,7 @@
  * @dependents SettingsUIManager, AiApiHandler
  */
 const LLMProviders = {
+    // TODO
     "ppmc": {
         "label": "PPMC",
         "defaultEndpoint": "http://localhost:8080/v1/chat/completions",

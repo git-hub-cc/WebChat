@@ -20,7 +20,7 @@
  * @property {function} deleteMessageLocally - 本地删除一条消息。
  * @property {function} requestRetractMessage - 请求撤回一条消息。
  * @dependencies ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler,
- *               MediaManager, MediaUIManager, MessageTtsHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, AppSettings, DBManager, PeopleLobbyManager
+ *               MediaManager, MediaUIManager, TtsApiHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, AppSettings, DBManager, PeopleLobbyManager
  * @dependents ChatAreaUIManager (绑定发送按钮事件), ChatManager (调用以显示历史消息)
  */
 const MessageManager = {
@@ -417,15 +417,15 @@ ${fileDetailsHtml}
         }
 
         if (message.type === 'text' && isAIMessage && ttsConfig?.enabled && !message.isStreaming && message.isNewlyCompletedAIResponse && !message.isRetracted) {
-            const textForTts = MessageTtsHandler.cleanTextForTts(message.content);
+            const textForTts = TtsApiHandler.cleanTextForTts(message.content);
             mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
             if (textForTts && textForTts.trim() !== "" && mainContentWrapper) {
                 const ttsId = message.id || `tts_${Date.now()}`;
                 const oldTtsContainer = mainContentWrapper.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
                 if(oldTtsContainer) oldTtsContainer.remove();
 
-                MessageTtsHandler.addTtsPlaceholder(mainContentWrapper, ttsId);
-                MessageTtsHandler.requestTtsForMessage(textForTts, ttsConfig, mainContentWrapper, ttsId);
+                TtsApiHandler.addTtsPlaceholder(mainContentWrapper, ttsId);
+                TtsApiHandler.requestTtsForMessage(textForTts, ttsConfig, mainContentWrapper, ttsId);
             } else {
                 Utils.log(`TTS 未为消息 ID ${message.id} 触发: 清理后的文本为空或没有包装器。原文: "${message.content?.substring(0, 50)}..."`, Utils.logLevels.INFO);
             }

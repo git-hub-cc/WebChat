@@ -76,7 +76,8 @@ const TtsUIManager = {
         const basicFieldsContainer = document.createElement('div');
         const advancedFieldsContainer = document.createElement('div');
         advancedFieldsContainer.className = 'collapsible-content tts-advanced-fields-container';
-        advancedFieldsContainer.style.display = 'none'; // 高级选项默认折叠
+        // MODIFIED: 移除 style.display 设置，因为折叠现在由CSS grid控制
+        // advancedFieldsContainer.style.display = 'none'; // 高级选项默认折叠
 
         // 遍历字段定义，创建表单元素
         this.TTS_CONFIG_FIELDS.forEach(field => {
@@ -89,15 +90,14 @@ const TtsUIManager = {
         // 如果有高级选项，则创建可折叠区域
         if (advancedFieldsContainer.childElementCount > 0) {
             const advancedSectionDiv = document.createElement('div');
-            advancedSectionDiv.className = 'tts-config-section advanced-tts-section';
+            // MODIFIED: 添加 collapsible-container 类
+            advancedSectionDiv.className = 'tts-config-section advanced-tts-section collapsible-container';
 
             const advancedHeader = document.createElement('div');
-            // collapsible-header 类由 _makeElementCollapsible 添加
-            advancedHeader.innerHTML = `<h5>高级选项</h5>`; // 图标会由辅助函数添加
-            let iconSpan = document.createElement('span'); // 手动添加图标span
-            iconSpan.className = 'collapse-icon';
-            iconSpan.textContent = '▶';
-            advancedHeader.appendChild(iconSpan);
+            // MODIFIED: 添加 collapsible-header 类和图标span
+            advancedHeader.className = 'collapsible-header';
+            advancedHeader.innerHTML = `高级选项 <span class="collapse-icon">▶</span>`;
+            advancedHeader.style.cursor = 'pointer';
 
             advancedSectionDiv.appendChild(advancedHeader);
             advancedSectionDiv.appendChild(advancedFieldsContainer);
@@ -105,7 +105,8 @@ const TtsUIManager = {
 
             // 使用 DetailsPanelUIManager 的辅助函数使其可折叠
             if (typeof DetailsPanelUIManager !== 'undefined' && typeof DetailsPanelUIManager._makeElementCollapsible === 'function') {
-                DetailsPanelUIManager._makeElementCollapsible(advancedHeader, advancedFieldsContainer);
+                // MODIFIED: 修正函数调用，只传递一个参数
+                DetailsPanelUIManager._makeElementCollapsible(advancedHeader);
             } else {
                 Utils.log("TtsUIManager: DetailsPanelUIManager 或其 _makeElementCollapsible 方法未找到。高级TTS选项可能无法折叠。", Utils.logLevels.WARN);
             }

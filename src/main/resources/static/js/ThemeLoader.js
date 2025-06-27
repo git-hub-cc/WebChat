@@ -6,6 +6,7 @@
  *              现在支持无刷新切换主题和动态加载数据。
  *              更新：AI 联系人的词汇篇章数据现在可以从其定义中的 `chaptersFilePath` 指定的单独 JSON 文件加载。
  *              新增：支持从缓存加载和应用自定义背景图片。
+ *              MODIFIED: 支持为浅色和深色模式分别设置、缓存和应用自定义背景图片。
  * @module ThemeLoader
  * @exports {object} ThemeLoader - 主要通过其 `applyTheme` 方法和几个 getter 与其他模块交互。
  * @property {function} init - 初始化主题加载器，加载初始主题和数据，并应用缓存的背景图。
@@ -59,18 +60,18 @@ const ThemeLoader = {
     _currentThemeKey: null, // 当前应用的主题键名
     _systemColorSchemeListener: null, // 系统配色方案变化监听器
     _currentSpecialContactsDefinitions: [], // 存储当前主题的特殊联系人定义
-    _currentBackgroundUrl: null, // 存储当前背景图的 Object URL
+    _currentInjectedBackgroundUrl: null, // MODIFIED: 存储当前注入背景的 Object URL，以便释放
 
     /**
      * @private
-     * 应用背景图片。通过注入一个 style 标签来实现，以支持 !important。
-     * @param {Blob} imageBlob - 要应用的图片 Blob。
+     * @description 将背景图样式注入到页面中。
+     * @param {string} imageUrl - 要应用的图片的 URL (通常是 Object URL)。
      */
-    _applyBackgroundImage(imageBlob) {
-        if (this._currentBackgroundUrl) {
-            URL.revokeObjectURL(this._currentBackgroundUrl); // 释放旧的 URL
+    _injectBackgroundStyle(imageUrl) {
+        if (this._currentInjectedBackgroundUrl) {
+            URL.revokeObjectURL(this._currentInjectedBackgroundUrl); // 释放旧的 URL
         }
-        this._currentBackgroundUrl = URL.createObjectURL(imageBlob);
+        this._currentInjectedBackgroundUrl = imageUrl; // 存储新的 URL
 
         const styleId = 'custom-background-style';
         let styleTag = document.getElementById(styleId);
@@ -83,7 +84,7 @@ const ThemeLoader = {
         // 注入 CSS 规则
         styleTag.textContent = `
             body {
-                background-image: url(${this._currentBackgroundUrl}) !important;
+                background-image: url(${imageUrl}) !important;
                 backdrop-filter: blur(10px) !important;
                 background-repeat: no-repeat !important;
                 background-size: cover !important;
@@ -92,6 +93,44 @@ const ThemeLoader = {
             }
         `;
     },
+
+    /**
+     * @private
+     * @description 移除自定义背景图样式。
+     */
+    _removeBackgroundStyle() {
+        if (this._currentInjectedBackgroundUrl) {
+            URL.revokeObjectURL(this._currentInjectedBackgroundUrl);
+            this._currentInjectedBackgroundUrl = null;
+        }
+        const styleTag = document.getElementById('custom-background-style');
+        if (styleTag) {
+            styleTag.remove();
+        }
+    },
+
+    /**
+     * @private
+     * @description 根据当前生效的配色方案，从 IndexedDB 加载并应用对应的背景图。
+     */
+    async _updateCustomBackground() {
+        const scheme = this.getCurrentEffectiveColorScheme();
+        const dbKey = `background_image_${scheme}`;
+        try {
+            const backgroundItem = await DBManager.getItem('appStateCache', dbKey);
+            if (backgroundItem && backgroundItem.imageBlob instanceof Blob) {
+                const imageUrl = URL.createObjectURL(backgroundItem.imageBlob);
+                this._injectBackgroundStyle(imageUrl);
+                (Utils?.log || console.log)(`ThemeLoader: 已为 ${scheme} 模式应用自定义背景。`, Utils?.logLevels?.INFO || 1);
+            } else {
+                this._removeBackgroundStyle(); // 如果没有找到对应模式的背景，则移除
+            }
+        } catch (error) {
+            (Utils?.log || console.log)(`ThemeLoader: 从缓存加载 ${scheme} 背景图片失败: ${error}`, Utils?.logLevels?.ERROR || 3);
+            this._removeBackgroundStyle();
+        }
+    },
+
 
     /**
      * @private 异步加载并解析 data JSON 文件内容。
@@ -214,16 +253,8 @@ const ThemeLoader = {
         await this._loadThemeCore(themeToLoadKey);
         this._setupSystemColorSchemeListener(preferredColorScheme);
 
-        // --- 背景图片初始化 ---
-        try {
-            const backgroundItem = await DBManager.getItem('appStateCache', 'background_image');
-            if (backgroundItem && backgroundItem.imageBlob instanceof Blob) {
-                this._applyBackgroundImage(backgroundItem.imageBlob);
-                (Utils?.log || console.log)("ThemeLoader: 已从缓存加载并应用背景图片。", Utils?.logLevels?.INFO || 1);
-            }
-        } catch(error) {
-            (Utils?.log || console.log)(`ThemeLoader: 从缓存加载背景图片失败: ${error}`, Utils?.logLevels?.ERROR || 3);
-        }
+        // --- MODIFIED: 背景图片初始化 ---
+        await this._updateCustomBackground();
 
         (Utils?.log || console.log)("ThemeLoader: 初始化完成。", Utils?.logLevels?.INFO || 1);
     },
@@ -253,19 +284,31 @@ const ThemeLoader = {
     },
 
     /**
-     * 设置并缓存一个新的背景图片。
+     * MODIFIED: 设置并缓存一个新的背景图片（区分浅色/深色）。
      * @param {Blob} imageBlob - 用户选择的图片 Blob 对象。
+     * @param {'light'|'dark'} colorSchemeType - 该背景图适用的配色方案。
      * @returns {Promise<void>}
      */
-    async setBackgroundImage(imageBlob) {
+    async setBackgroundImage(imageBlob, colorSchemeType) {
         if (!(imageBlob instanceof Blob)) {
             (Utils?.log || console.log)("ThemeLoader.setBackgroundImage: 提供的不是 Blob 对象。", Utils?.logLevels?.ERROR || 3);
             return;
         }
+        if (colorSchemeType !== 'light' && colorSchemeType !== 'dark') {
+            (Utils?.log || console.log)(`ThemeLoader.setBackgroundImage: 无效的 colorSchemeType: ${colorSchemeType}`, Utils?.logLevels?.ERROR || 3);
+            return;
+        }
+
         try {
-            await DBManager.setItem('appStateCache', { id: 'background_image', imageBlob: imageBlob });
-            this._applyBackgroundImage(imageBlob);
-            (Utils?.log || console.log)("ThemeLoader: 新的背景图片已应用并缓存。", Utils?.logLevels?.INFO || 1);
+            const dbKey = `background_image_${colorSchemeType}`;
+            await DBManager.setItem('appStateCache', { id: dbKey, imageBlob: imageBlob });
+
+            // 如果设置的背景与当前模式匹配，则立即更新
+            if (colorSchemeType === this.getCurrentEffectiveColorScheme()) {
+                await this._updateCustomBackground();
+            }
+
+            (Utils?.log || console.log)(`ThemeLoader: 新的 ${colorSchemeType} 模式背景图片已应用并缓存。`, Utils?.logLevels?.INFO || 1);
         } catch (error) {
             (Utils?.log || console.log)(`ThemeLoader: 设置或缓存背景图片时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
             if (typeof NotificationUIManager !== 'undefined') {
@@ -275,22 +318,25 @@ const ThemeLoader = {
     },
 
     /**
-     * 移除背景图片并从缓存中清除。
+     * MODIFIED: 移除背景图片并从缓存中清除（区分浅色/深色）。
+     * @param {'light'|'dark'} colorSchemeType - 要移除背景图的配色方案。
      * @returns {Promise<void>}
      */
-    async removeBackgroundImage() {
+    async removeBackgroundImage(colorSchemeType) {
+        if (colorSchemeType !== 'light' && colorSchemeType !== 'dark') {
+            (Utils?.log || console.log)(`ThemeLoader.removeBackgroundImage: 无效的 colorSchemeType: ${colorSchemeType}`, Utils?.logLevels?.ERROR || 3);
+            return;
+        }
         try {
-            await DBManager.removeItem('appStateCache', 'background_image');
+            const dbKey = `background_image_${colorSchemeType}`;
+            await DBManager.removeItem('appStateCache', dbKey);
 
-            const styleTag = document.getElementById('custom-background-style');
-            if (styleTag) {
-                styleTag.remove();
+            // 如果移除的背景与当前模式匹配，则立即更新（移除）
+            if (colorSchemeType === this.getCurrentEffectiveColorScheme()) {
+                await this._updateCustomBackground();
             }
-            if (this._currentBackgroundUrl) {
-                URL.revokeObjectURL(this._currentBackgroundUrl);
-                this._currentBackgroundUrl = null;
-            }
-            (Utils?.log || console.log)("ThemeLoader: 背景图片已移除并从缓存中清除。", Utils?.logLevels?.INFO || 1);
+
+            (Utils?.log || console.log)(`ThemeLoader: ${colorSchemeType} 模式的背景图片已移除并从缓存中清除。`, Utils?.logLevels?.INFO || 1);
         } catch (error) {
             (Utils?.log || console.log)(`ThemeLoader: 移除背景图片时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
             if (typeof NotificationUIManager !== 'undefined') {
@@ -301,7 +347,7 @@ const ThemeLoader = {
 
     /**
      * @description 当用户在设置中更改配色方案时调用。
-     *              此方法会更新内部的有效配色方案，并应用一个兼容的主题。
+     *              此方法会更新内部的有效配色方案，应用兼容的主题，并更新背景图。
      * @param {string} newSchemeKeyFromUser - 用户选择的配色方案键 ('auto', 'light', 'dark')。
      * @returns {Promise<void>}
      */
@@ -326,6 +372,7 @@ const ThemeLoader = {
             }
 
             await this.applyTheme(themeToApplyKey);
+            await this._updateCustomBackground(); // MODIFIED: 更新背景
             this._setupSystemColorSchemeListener(newSchemeKeyFromUser);
         }
     },
@@ -434,6 +481,7 @@ const ThemeLoader = {
                         newThemeToApplyKey = this._findFallbackThemeKeyForScheme(newSystemEffectiveColorScheme);
                     }
                     await this.applyTheme(newThemeToApplyKey);
+                    await this._updateCustomBackground(); // MODIFIED: 更新背景
                 }
             };
             mediaQuery.addEventListener('change', this._systemColorSchemeListener);

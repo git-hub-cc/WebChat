@@ -82,6 +82,7 @@ const AppSettings = {
      * WebRTC RTCPeerConnection 的详细配置
      */
     peerConnectionConfig: {
+        // TODO
         iceServers: [
             {
                 urls: [

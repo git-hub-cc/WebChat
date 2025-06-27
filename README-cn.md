@@ -241,7 +241,7 @@
     *   `GroupManager.js`: (群组管理器) 管理群组创建、成员资格和群组消息广播。
     *   `MediaManager.js`: (媒体管理器) 处理文件附件、语音录制和预览。
     *   `VideoCallManager.js`: (视频通话管理器) 管理一对一视频/音频通话、屏幕共享、流处理和 UI。
-    *   `MessageTtsHandler.js`: (消息TTS处理器) 管理消息的 TTS 播放。
+    *   `TtsApiHandler.js`: (消息TTS处理器) 管理消息的 TTS 播放。
     *   `ThemeLoader.js`: (主题加载器) 处理加载主题和相关数据。
     *   `AppSettings.js`: (配置) 存储应用范围的前端配置。
     *   `Utils.js`: (工具函数) 提供实用功能 (日志记录, 格式化, ID 生成)。

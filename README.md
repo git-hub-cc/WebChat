@@ -241,7 +241,7 @@ The application supports a flexible theming system:
     *   `GroupManager.js`: (Group Manager) Manages group creation, membership, and group message broadcasting.
     *   `MediaManager.js`: (Media Manager) Handles file attachments, voice recording, and previews.
     *   `VideoCallManager.js`: (Video Call Manager) Manages one-on-one video/audio calls, screen sharing, stream handling, and UI.
-    *   `MessageTtsHandler.js`: (Message TTS Handler) Manages TTS playback for messages.
+    *   `TtsApiHandler.js`: (Message TTS Handler) Manages TTS playback for messages.
     *   `ThemeLoader.js`: (Theme Loader) Handles loading themes and associated data.
     *   `AppSettings.js`: (Configuration) Stores application-wide frontend configuration.
     *   `Utils.js`: (Utilities) Provides utility functions (logging, formatting, ID generation).

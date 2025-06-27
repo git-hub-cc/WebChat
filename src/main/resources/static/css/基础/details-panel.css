@@ -248,14 +248,16 @@ select.custom-select-native:disabled {
 
 
 /* --- AI TTS 配置部分 (Details Panel Specifics) --- */
-#aiTtsConfigSection h4.collapsible-header { /* If different from base .collapsible-header */
-    color: var(--text-color-light);
+/* OPTIMIZED: Applied high-performance collapsible pattern */
+/*
+ * HTML 结构应为:
+ * <div id="aiTtsConfigSection" class="details-section collapsible-container">
+ *   <h4 class="collapsible-header">...</h4>
+ *   <div id="aiTtsConfigContent" class="collapsible-content">...</div>
+ * </div>
+ */
+#aiTtsConfigSection h4.collapsible-header {
     /* Inherits transition from .details-section h4 */
-}
-
-.tts-config-content-details { /* Wrapper for TTS config items */
-    /* padding, margin, border if needed for this specific content block */
-    /* Max-height transition for collapse can be added here if not handled by core .collapsible-content */
 }
 
 #ttsConfigFormContainer .tts-config-item {
@@ -368,9 +370,6 @@ select.custom-select-native:disabled {
 
 
 /* --- 详情面板: TTS 署名信息 --- */
-.tts-attribution-section {
-    /* Specific margins/padding if needed */
-}
 .tts-attribution-section .attribution-sub-header { /* Collapsible sub-header */
     display: flex;
     align-items: center;
@@ -380,9 +379,8 @@ select.custom-select-native:disabled {
     margin-bottom: 0;
     border-bottom: 1px dashed var(--border-color);
     cursor: pointer;
-    color: var(--text-color-light);
-    font-size: 1em;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     transition: color 0.2s ease-out, border-color 0.2s ease-out; /* From core.css .collapsible-header */
 }
 .tts-attribution-section .attribution-sub-header.active {
@@ -390,19 +388,13 @@ select.custom-select-native:disabled {
     border-bottom-color: var(--primary-color);
     color: var(--primary-color);
 }
+/* OPTIMIZED: Replaced max-height animation with opacity transition, height is handled by grid parent */
 .tts-attribution-section .attribution-sub-content {
     padding-inline-start: 12px;
     margin-top: 8px;
     font-size: 0.85em;
-    /* Max-height transition for collapse can be added here */
     overflow: hidden;
-    max-height: 0; /* Initially collapsed for CSS-only animation */
-    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    opacity: 0;
-}
-.tts-attribution-section .attribution-sub-header.active + .attribution-sub-content {
-    max-height: 500px; /* Adjust as needed */
-    opacity: 1;
+    /* max-height and its transition are removed for performance */
 }
 
 .tts-attribution-section a {
@@ -515,6 +507,7 @@ select.custom-select-native:disabled {
 }
 
 /* --- 群组内 AI 提示词管理部分 --- */
+/* OPTIMIZED: Applied high-performance collapsible pattern */
 #groupAiPromptsSection h4 { /* Uses .details-section h4 styling */
     cursor: pointer; /* To indicate collapsible */
     /* Inherits transition from .details-section h4 */
@@ -523,7 +516,7 @@ select.custom-select-native:disabled {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-4);
-    /* Max-height transition for collapse can be added here if not handled by core .collapsible-content */
+    /* Performance: height animation handled by parent grid */
 }
 .ai-prompt-editor-item {
     padding: var(--spacing-3);
@@ -899,9 +892,6 @@ select.custom-select-native:disabled {
 
 
 /* --- 人员大厅 (When shown in details panel) --- */
-/* Styles for #peopleLobbyContent, .lobby-header, #peopleLobbyRefreshBtn, #peopleLobbyList */
-/* when displayed within the details panel. */
-/* Often, these can reuse chat list styles if visually similar. */
 #detailsPanel .lobby-header { /* Example if lobby header needs specific styling in details panel */
     padding: var(--spacing-3) var(--spacing-4); /* Match other panel headers */
     border-bottom: 1px solid var(--border-color);
@@ -920,13 +910,108 @@ select.custom-select-native:disabled {
 .details-panel.character-active #aiContactAboutSection h4 span { /* Target specific elements for name coloring */
     color: var(--character-details-name-color);
 }
-/* This implies that #callingModalAvatar is part of details panel or styled by it, check usage */
-/* If #callingModalAvatar is part of a modal, its themed style should be in core.css or with modal styles */
 #callingModalAvatar.character-active { /* This seems like it belongs with modal styles in core.css */
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
     /* Transition already on .video-call-avatar base in core.css */
 }
+
+/* --- ADDED: Styles Moved From Inline --- */
+
+/* Initially hidden sections/containers, shown by JS */
+/* MODIFIED: Removed collapsible content elements from this rule to allow grid animation */
+#aiContactAboutSection,
+#aiChapterSection,
+#aiTtsConfigSection,
+#detailsGroupManagement,
+#groupAiPromptsSection,
+#currentChatActionsDetails,
+#groupActionsDetails,
+#contactActionsDetails,
+#resourcePreviewSection,
+#peopleLobbyContent,
+#addGroupMemberArea,
+#leftMembersArea,
+#calendarContainerDetailsPanel,
+#resourceGridLoadingIndicator {
+    display: none;
+}
+
+#aiChapterSelectContainer {
+    flex-grow: 1;
+}
+
+#saveAiTtsSettingsBtnDetails {
+    margin-top: 15px;
+    width: 100%;
+}
+
+/* Donation/Sponsor section within TTS attribution */
+#ttsAttributionCollapsibleContent > div:last-child {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+}
+#ttsAttributionCollapsibleContent > div:last-child p:first-of-type {
+    margin-bottom: 10px;
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+#ttsAttributionCollapsibleContent > div:last-child > .wechat-pay + p {
+    font-size: 0.9em;
+    color: var(--text-color-light);
+}
+
+/* Resource Panel Content Layout */
+#resourcePreviewPanelContent {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: hidden;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+.resource-search-container {
+    margin-bottom: 10px;
+}
+#resourceGridContainer {
+    display: grid;
+}
+
+/* People Lobby Styles when in Details Panel */
+.lobby-content {
+    display: none; /* Initially hidden */
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+.lobby-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2) var(--spacing-3);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+.lobby-header h4 {
+    margin: 0;
+    font-size: 1em;
+}
+.lobby-header #peopleLobbyRefreshBtn {
+    font-size: 1.1em;
+}
+.lobby-content #peopleLobbyList {
+    padding: var(--spacing-2);
+    flex-grow: 1;
+    overflow-y: auto;
+}
+#newContactGroupModal .modal-body p {
+    font-size: 0.85em;
+    color: var(--text-color-light);
+    margin-bottom: 8px;
+}
+
 
 /* --- 响应式设计 (Details Panel Specific) --- */
 /* Media queries specific to elements within the details panel, if any. */

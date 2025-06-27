@@ -415,52 +415,69 @@ const ChatAreaUIManager = {
      * @param {number} lengthOfAtAndQuery - `@` 符号加上查询词的长度，用于在选择建议后替换输入框中的文本。
      */
     _populateAiMentionSuggestions: function(aiContacts, lengthOfAtAndQuery) {
-        // 确保提及建议列表元素和消息输入框元素都存在
+        // --- OPTIMIZATION START ---
+        // 优化点：将 DOM 读操作（获取高度）和写操作（修改样式、innerHTML）分离
         if (!this.aiMentionSuggestionsEl || !this.messageInputEl) return;
 
+        // 1. **读操作**: 在所有写操作之前，先计算好需要的位置信息。
+        const inputRow = this.messageInputEl.closest('.input-row');
+        let bottomPosition = '100%'; // CSS 默认值，作为回退
+        let useCssPositioning = true; // 默认尝试使用纯CSS定位
+
+        if (inputRow) {
+            bottomPosition = inputRow.offsetHeight + 'px';
+            useCssPositioning = false; // 如果找到了 inputRow，则使用 JS 计算的位置
+        } else {
+            // 如果找不到 .input-row，CSS 的 bottom: 100% (相对于.chat-input-container) 是一个很好的回退方案
+            // 此时无需JS计算高度
+        }
+
+        // 2. **写操作**: 现在集中进行所有 DOM 修改。
         this.aiMentionSuggestionsEl.innerHTML = ''; // 清空之前的建议项
-        // 遍历匹配到的AI联系人，为每个联系人创建一个建议项
+
+        // 创建一个文档片段（DocumentFragment）来批量添加元素，减少重排次数
+        const fragment = document.createDocumentFragment();
+
         aiContacts.forEach(contact => {
             const itemEl = document.createElement('div');
-            itemEl.className = 'mention-suggestion-item'; // 设置CSS类名以便样式化
-            itemEl.textContent = contact.name; // 显示AI联系人的名称
-            // 为建议项添加点击事件监听器
+            itemEl.className = 'mention-suggestion-item';
+            itemEl.textContent = contact.name;
             itemEl.addEventListener('click', () => {
-                const currentText = this.messageInputEl.value; // 获取当前输入框的完整文本
-                const cursorPos = this.messageInputEl.selectionStart; // 获取当前光标位置
-                // 构造新的输入框文本：
-                // 1. 光标位置之前、但在 `@查询词` 之前的部分
+                const currentText = this.messageInputEl.value;
+                const cursorPos = this.messageInputEl.selectionStart;
                 const textBefore = currentText.substring(0, cursorPos - lengthOfAtAndQuery);
-                // 2. 光标位置之后的部分
                 const textAfter = currentText.substring(cursorPos);
 
-                // 将 `@查询词` 替换为 `@AI名称 ` (注意末尾的空格，方便用户继续输入)
                 this.messageInputEl.value = textBefore + '@' + contact.name + ' ' + textAfter;
-                this.messageInputEl.focus(); // 重新聚焦到输入框
-                // 计算新的光标位置：在插入的 `@AI名称 ` 之后
-                const newCursorPos = textBefore.length + 1 + contact.name.length + 1; // +1 for '@', +1 for space
-                this.messageInputEl.setSelectionRange(newCursorPos, newCursorPos); // 设置新的光标位置
-                this.aiMentionSuggestionsEl.style.display = 'none'; // 隐藏建议列表
+                this.messageInputEl.focus();
+                const newCursorPos = textBefore.length + 1 + contact.name.length + 1;
+                this.messageInputEl.setSelectionRange(newCursorPos, newCursorPos);
+                this.aiMentionSuggestionsEl.style.display = 'none';
             });
-            this.aiMentionSuggestionsEl.appendChild(itemEl); // 将创建的建议项添加到列表中
+            fragment.appendChild(itemEl); // 先添加到文档片段
         });
 
-        // 定位建议列表在输入框的上方
-        // 优先尝试相对于 .input-row (输入框及其按钮所在的行) 定位
-        const inputRow = this.messageInputEl.closest('.input-row');
-        if (inputRow) {
-            // 设置建议列表的底部边缘紧贴 .input-row 的顶部
-            this.aiMentionSuggestionsEl.style.bottom = inputRow.offsetHeight + 'px';
-            this.aiMentionSuggestionsEl.style.left = '0px'; // 左侧与 .input-row 对齐
-            this.aiMentionSuggestionsEl.style.right = '0px';// 右侧与 .input-row 对齐 (如果父容器宽度固定，这会导致宽度自动撑满)
-            this.aiMentionSuggestionsEl.style.width = 'auto'; // 宽度自动，由内容或左右约束决定
+        this.aiMentionSuggestionsEl.appendChild(fragment); // 一次性添加到 DOM
+
+        // 3. **应用位置**: 最后应用之前计算好的位置样式。
+        if (useCssPositioning) {
+            // 在 chat-area.css 中，ai-mention-suggestions 的 bottom 属性是注释掉的，
+            // 可以在 JS 中设置它，或者直接在 CSS 中取消注释并设置为 `bottom: 100%`。
+            // 这里我们用JS设置，以保持逻辑集中。
+            // CSS 中 `.chat-input-container` 已是 `position: relative`
+            const inputContainer = this.messageInputEl.closest('.chat-input-container');
+            this.aiMentionSuggestionsEl.style.bottom = inputContainer.querySelector('.input-row').offsetHeight + 'px';
         } else {
-            // 如果找不到 .input-row，则相对于输入框本身定位
-            this.aiMentionSuggestionsEl.style.bottom = this.messageInputEl.offsetHeight + 5 + 'px'; // 在输入框上方，留5px间距
-            this.aiMentionSuggestionsEl.style.left = this.messageInputEl.offsetLeft + 'px'; // 左侧与输入框对齐
-            this.aiMentionSuggestionsEl.style.width = this.messageInputEl.offsetWidth + 'px'; // 宽度与输入框相同
+            // 使用我们之前计算好的 bottomPosition
+            this.aiMentionSuggestionsEl.style.bottom = bottomPosition;
         }
-        this.aiMentionSuggestionsEl.style.display = 'block'; // 显示填充好的建议列表
+
+        // 其他定位样式保持不变
+        this.aiMentionSuggestionsEl.style.left = '0px';
+        this.aiMentionSuggestionsEl.style.right = '0px';
+        this.aiMentionSuggestionsEl.style.width = 'auto';
+        this.aiMentionSuggestionsEl.style.display = 'block';
+        // --- OPTIMIZATION END ---
     },
 
     /**

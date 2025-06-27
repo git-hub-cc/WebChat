@@ -107,22 +107,16 @@ const TimerManager = {
                 console.info(message);
             }
         };
-        const logWarn = (message) => {
-            if (typeof Utils !== 'undefined' && Utils.log) {
-                Utils.log(message, Utils.logLevels.WARN);
-            } else {
-                console.warn(message);
-            }
-        };
 
         const task = this._tasks[name];
         if (task && task.intervalId) {
             clearInterval(task.intervalId);
             delete this._tasks[name];
             logInfo(`定时器管理器：周期性任务 "${name}" 已移除并停止。`);
-        } else {
-            logWarn(`定时器管理器：尝试移除不存在或已停止的任务：${name}`);
         }
+        // BUG FIX: The warning for trying to remove a non-existent task has been removed.
+        // This is a valid cleanup operation and should not produce a warning.
+        // It makes the function idempotent, similar to how clearInterval works.
     },
 
     /**
