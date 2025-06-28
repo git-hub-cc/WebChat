@@ -92,6 +92,28 @@ const ModalUIManager = {
                     this.toggleModal('newContactGroupModal', false);
                 }
             });
+
+            // MODIFICATION START: Add tab switching logic for the new modal structure
+            const contactGroupTabs = this.newContactGroupModal.querySelectorAll('.menu-tab-item');
+            contactGroupTabs.forEach(tab => {
+                tab.addEventListener('click', (event) => {
+                    event.preventDefault();
+
+                    const targetSelector = tab.dataset.tabTarget;
+                    const targetContent = this.newContactGroupModal.querySelector(targetSelector);
+
+                    if (!targetContent) return;
+
+                    // Deactivate all tabs and content panels within this specific modal
+                    this.newContactGroupModal.querySelectorAll('.menu-tab-item').forEach(t => t.classList.remove('active'));
+                    this.newContactGroupModal.querySelectorAll('.menu-tab-content').forEach(c => c.classList.remove('active'));
+
+                    // Activate the clicked tab and its corresponding content panel
+                    tab.classList.add('active');
+                    targetContent.classList.add('active');
+                });
+            });
+            // MODIFICATION END
         }
 
         // 新建聊天悬浮按钮
