@@ -10,6 +10,7 @@
  *              图片和视频文件消息现在显示缩略图预览。
  *              新增：在群聊中发送消息时，会检查并提醒用户是否有在线但未连接的群成员。
  *              私聊时，如果对方不在线，则提示用户消息无法发送，并阻止消息发送。
+ *              新增：支持发送贴图消息。
  * @module MessageManager
  * @exports {object} MessageManager - 对外暴露的单例对象，包含消息处理的所有核心方法。
  */
@@ -119,9 +120,10 @@ const MessageManager = {
             messageSent = true; MessageManager.cancelAudioData();
         }
 
+        // --- REFACTORED AND FIXED FILE SENDING LOGIC ---
         if (currentSelectedFile) {
             try {
-                // 1. 将文件 Blob 存入本地缓存
+                // 1. Cache the file locally
                 await DBManager.setItem('fileCache', {
                     id: currentSelectedFile.hash,
                     fileBlob: currentSelectedFile.blob,
@@ -129,10 +131,10 @@ const MessageManager = {
                 });
                 Utils.log(`文件 ${currentSelectedFile.name} (hash: ${currentSelectedFile.hash.substring(0,8)}...) 已存入本地 fileCache。`, Utils.logLevels.INFO);
 
-                // 2. 创建本地聊天消息 (用于立即显示在UI上)
-                const messagePayloadForLocalChat = {
+                // 2. Create the file message object
+                const fileMessageObject = {
                     id: `${messageIdBase}_file`,
-                    type: 'file',
+                    type: 'file', // This remains 'file' for regular files/images
                     fileId: currentSelectedFile.hash,
                     fileName: currentSelectedFile.name,
                     fileType: currentSelectedFile.type,
@@ -141,25 +143,36 @@ const MessageManager = {
                     timestamp: nowTimestamp,
                     sender: UserManager.userId
                 };
-                await ChatManager.addMessage(targetId, messagePayloadForLocalChat);
 
-                // 3. 通过二进制分片发送文件
-                const sendFileFunction = (peerId) => {
+                // 3. Add the message to the local chat UI immediately
+                await ChatManager.addMessage(targetId, fileMessageObject);
+
+                // 4. Send the JSON instruction message AND the binary data
+                const sendFunction = (peerId) => {
                     const conn = WebRTCManager.connections[peerId];
                     if (conn?.dataChannel?.readyState === 'open') {
+                        // Send the JSON "instruction" message first
+                        ConnectionManager.sendTo(peerId, fileMessageObject);
+                        // Then send the binary data chunks
                         Utils.sendInChunks(currentSelectedFile.blob, currentSelectedFile.name, conn.dataChannel, peerId, currentSelectedFile.hash);
                     } else {
                         Utils.log(`无法向 ${peerId} 发送文件，数据通道未打开。`, Utils.logLevels.WARN);
                     }
                 };
+
                 if (isGroup) {
+                    // For groups, broadcast the JSON instruction, then send binary to each member
+                    GroupManager.broadcastToGroup(targetId, fileMessageObject);
                     group.members.forEach(memberId => {
                         if (memberId !== UserManager.userId && !UserManager.contacts[memberId]?.isAI) {
-                            sendFileFunction(memberId);
+                            const conn = WebRTCManager.connections[memberId];
+                            if (conn?.dataChannel?.readyState === 'open') {
+                                Utils.sendInChunks(currentSelectedFile.blob, currentSelectedFile.name, conn.dataChannel, memberId, currentSelectedFile.hash);
+                            }
                         }
                     });
                 } else {
-                    sendFileFunction(targetId);
+                    sendFunction(targetId);
                 }
 
                 messageSent = true;
@@ -172,7 +185,7 @@ const MessageManager = {
                 return;
             }
         }
-
+        // --- END OF REFACTORED LOGIC ---
 
         if (userTextMessageForChat) {
             if (isGroup) GroupManager.broadcastToGroup(targetId, userTextMessageForChat);
@@ -189,6 +202,87 @@ const MessageManager = {
             input.focus();
         }
     },
+
+    /**
+     * 发送贴图消息。
+     * @param {object} stickerData - 包含贴图信息的对象 { id, name, blob }。
+     */
+    sendSticker: async function (stickerData) {
+        if (!ChatManager.currentChatId) {
+            NotificationUIManager.showNotification('请选择一个聊天以发送贴图。', 'warning');
+            return;
+        }
+        const targetId = ChatManager.currentChatId;
+        const isGroup = targetId.startsWith('group_');
+        const group = isGroup ? GroupManager.groups[targetId] : null;
+
+        if (!isGroup && !ConnectionManager.isConnectedTo(targetId)) {
+            const contactName = UserManager.contacts[targetId]?.name || `用户 ${targetId.substring(0, 4)}`;
+            NotificationUIManager.showNotification(`${contactName} 不在线，贴图将无法发送。`, 'warning');
+            return;
+        }
+
+        try {
+            // 1. Cache sticker blob in fileCache for unified access
+            await DBManager.setItem('fileCache', {
+                id: stickerData.id, // stickerData.id is the hash
+                fileBlob: stickerData.blob,
+                metadata: { name: stickerData.name, type: stickerData.blob.type, size: stickerData.blob.size }
+            });
+
+            const nowTimestamp = new Date().toISOString();
+            const messageId = `msg_${Date.now()}_${Utils.generateId(4)}`;
+
+            // 2. Create the sticker message object
+            const stickerMessage = {
+                id: messageId,
+                type: 'sticker', // The special type
+                fileId: stickerData.id,
+                fileName: stickerData.name,
+                fileType: stickerData.blob.type,
+                size: stickerData.blob.size,
+                fileHash: stickerData.id,
+                timestamp: nowTimestamp,
+                sender: UserManager.userId
+            };
+
+            // 3. Add to local UI
+            await ChatManager.addMessage(targetId, stickerMessage);
+
+            // 4. Send JSON and binary data to peer(s)
+            const sendStickerFunction = (peerId) => {
+                const conn = WebRTCManager.connections[peerId];
+                if (conn?.dataChannel?.readyState === 'open') {
+                    // Send the JSON "instruction"
+                    ConnectionManager.sendTo(peerId, stickerMessage);
+                    // Send the binary data
+                    Utils.sendInChunks(stickerData.blob, stickerData.name, conn.dataChannel, peerId, stickerData.id);
+                } else {
+                    Utils.log(`无法向 ${peerId} 发送贴图，数据通道未打开。`, Utils.logLevels.WARN);
+                }
+            };
+
+            if (isGroup) {
+                // Broadcast the JSON "instruction"
+                GroupManager.broadcastToGroup(targetId, stickerMessage);
+                // Send binary data to each connected member
+                group.members.forEach(memberId => {
+                    if (memberId !== UserManager.userId && !UserManager.contacts[memberId]?.isAI) {
+                        const conn = WebRTCManager.connections[memberId];
+                        if (conn?.dataChannel?.readyState === 'open') {
+                            Utils.sendInChunks(stickerData.blob, stickerData.name, conn.dataChannel, memberId, stickerData.id);
+                        }
+                    }
+                });
+            } else {
+                sendStickerFunction(targetId);
+            }
+        } catch (error) {
+            Utils.log(`发送贴图时出错: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification('发送贴图失败。', 'error');
+        }
+    },
+
 
     /**
      * 在聊天窗口中显示或更新一条消息。
@@ -230,6 +324,9 @@ const MessageManager = {
         } else {
             msgDiv.classList.remove('system');
         }
+        if (message.type === 'sticker') { // ADDED: Add sticker class
+            msgDiv.classList.add('sticker');
+        }
         if (message.isThinking) msgDiv.classList.add('thinking'); else msgDiv.classList.remove('thinking');
         if (message.isRetracted) msgDiv.classList.add('retracted'); else msgDiv.classList.remove('retracted');
         if (isAIMessage && senderContact?.id) {
@@ -270,6 +367,7 @@ const MessageManager = {
                     case 'audio':
                         messageBodyHtml = `<div class="message-content-wrapper"><div class="voice-message"><button class="play-voice-btn" data-audio="${message.data}" onclick="MediaManager.playAudio(this)">▶</button><span class="voice-duration">${Utils.formatTime(message.duration)}</span></div></div>`;
                         break;
+                    case 'sticker': // ADDED: Sticker case
                     case 'file':
                         const originalFileName = message.fileName || '文件';
                         const escapedOriginalFileName = Utils.escapeHtml(originalFileName);
@@ -279,7 +377,7 @@ const MessageManager = {
                         let fileSpecificContainerClass = "";
                         let initialIconContent = "📄";
 
-                        if (message.fileType?.startsWith('image/')) {
+                        if (message.fileType?.startsWith('image/') || message.type === 'sticker') { // MODIFIED: Include sticker here
                             fileSpecificContainerClass = "image-preview-container";
                             initialIconContent = "🖼️";
                         } else if (message.fileType?.startsWith('video/')) {
@@ -294,24 +392,26 @@ const MessageManager = {
     ${initialIconContent}
 ${ (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? `<span class="play-overlay-icon">${message.fileType.startsWith('image/') ? '👁️' : '▶'}</span>` : '' }
 </div>`;
-                        const fileDetailsHtml = `
+                        // For stickers, we only want the thumbnail, not the details.
+                        const fileDetailsHtml = message.type !== 'sticker' ? `
 <div class="file-details">
     <div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div>
 <div class="file-meta">${MediaManager.formatFileSize(fileSizeForDisplay)}</div>
-</div>`;
+</div>` : '';
+
                         messageBodyHtml = `
 <div class="message-content-wrapper">
     <div class="file-info ${fileSpecificContainerClass}"
 data-hash="${fileHash}"
 data-filename="${escapedOriginalFileName}"
 data-filetype="${message.fileType}"
-${(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? 'style="cursor:pointer;"' : ''}>
+${(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/') || message.type === 'sticker') ? 'style="cursor:pointer;"' : ''}>
 ${thumbnailPlaceholderHtml}
 ${fileDetailsHtml}
 </div>`;
                         if (message.fileType?.startsWith('audio/')) {
                             messageBodyHtml += `<button class="play-media-btn" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}" data-filetype="${message.fileType}">播放</button>`;
-                        } else if (!(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {
+                        } else if (message.type !== 'sticker' && !(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {
                             messageBodyHtml += `<button class="download-file-btn" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}">下载</button>`;
                         }
                         messageBodyHtml += `</div>`;
@@ -329,9 +429,9 @@ ${fileDetailsHtml}
             mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
             contentElement = mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
 
-            if (!message.isRetracted && message.type === 'file') {
+            if (!message.isRetracted && (message.type === 'file' || message.type === 'sticker')) { // MODIFIED
                 const fileInfoContainer = msgDiv.querySelector('.file-info');
-                if (fileInfoContainer && (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {
+                if (fileInfoContainer && (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) && message.type !== 'sticker') { // MODIFIED: Exclude sticker
                     fileInfoContainer.addEventListener('click', (e) => {
                         const target = e.currentTarget;
                         if (target.classList.contains('image-preview-container')) {
@@ -371,7 +471,7 @@ ${fileDetailsHtml}
             msgDiv.style.cursor = 'default';
         }
 
-        if (!message.isRetracted && message.type === 'file' && (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {
+        if (!message.isRetracted && (message.type === 'file' || message.type === 'sticker') && (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) { // MODIFIED
             const placeholderDiv = msgDiv.querySelector('.thumbnail-placeholder');
             if (placeholderDiv && typeof MediaUIManager !== 'undefined' && MediaUIManager.renderMediaThumbnail) {
                 MediaUIManager.renderMediaThumbnail(placeholderDiv, message.fileHash, message.fileType, message.fileName, false);

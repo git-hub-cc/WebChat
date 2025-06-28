@@ -280,6 +280,9 @@ const ResourcePreviewUIManager = {
         let contentSpecificHtml = '';
         let initialIcon = '';
         let overlayIcon = '';
+        if (this._currentResourceType === 'sticker') {
+            return null;
+        }
 
         if (this._currentResourceType === 'imagery') {
             itemEl.classList.remove('text-message-preview');

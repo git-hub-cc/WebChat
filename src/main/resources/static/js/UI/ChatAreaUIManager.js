@@ -46,6 +46,7 @@ const ChatAreaUIManager = {
     screenShareButtonEl: null, // 屏幕共享按钮元素
     peopleLobbyButtonEl: null, // 人员大厅按钮元素
     screenshotMainBtnEl: null, // 截图按钮元素
+    emojiStickerBtnEl: null, // ADDED: 表情/贴图按钮元素
 
     chatInfoMainEl: null, // .chat-info-main element for click to show details
     // 上下文菜单相关
@@ -97,6 +98,7 @@ const ChatAreaUIManager = {
         this.screenShareButtonEl = document.getElementById('screenShareButtonMain');
         this.peopleLobbyButtonEl = document.getElementById('peopleLobbyButtonMain');
         this.screenshotMainBtnEl = document.getElementById('screenshotMainBtn');
+        this.emojiStickerBtnEl = document.getElementById('emojiStickerBtn'); // ADDED
 
         this.chatInfoMainEl = document.querySelector('.chat-header-main .chat-info-main');
         this._initContextMenu(); // 初始化消息右键上下文菜单
@@ -411,73 +413,86 @@ const ChatAreaUIManager = {
     /**
      * @private
      * 填充 AI @ 提及建议列表，并正确定位在输入框上方。
+     * (已优化，增加头像显示)
      * @param {Array<object>} aiContacts - 匹配的 AI 联系人对象数组。
      * @param {number} lengthOfAtAndQuery - `@` 符号加上查询词的长度，用于在选择建议后替换输入框中的文本。
      */
     _populateAiMentionSuggestions: function(aiContacts, lengthOfAtAndQuery) {
-        // --- OPTIMIZATION START ---
-        // 优化点：将 DOM 读操作（获取高度）和写操作（修改样式、innerHTML）分离
         if (!this.aiMentionSuggestionsEl || !this.messageInputEl) return;
 
-        // 1. **读操作**: 在所有写操作之前，先计算好需要的位置信息。
-        const inputRow = this.messageInputEl.closest('.input-row');
-        let bottomPosition = '100%'; // CSS 默认值，作为回退
-        let useCssPositioning = true; // 默认尝试使用纯CSS定位
-
-        if (inputRow) {
-            bottomPosition = inputRow.offsetHeight + 'px';
-            useCssPositioning = false; // 如果找到了 inputRow，则使用 JS 计算的位置
-        } else {
-            // 如果找不到 .input-row，CSS 的 bottom: 100% (相对于.chat-input-container) 是一个很好的回退方案
-            // 此时无需JS计算高度
-        }
-
-        // 2. **写操作**: 现在集中进行所有 DOM 修改。
+        // 1. 清空并准备 DOM 更新
         this.aiMentionSuggestionsEl.innerHTML = ''; // 清空之前的建议项
+        const fragment = document.createDocumentFragment(); // 使用文档片段以提高性能
 
-        // 创建一个文档片段（DocumentFragment）来批量添加元素，减少重排次数
-        const fragment = document.createDocumentFragment();
-
+        // 2. 填充建议项
         aiContacts.forEach(contact => {
             const itemEl = document.createElement('div');
             itemEl.className = 'mention-suggestion-item';
-            itemEl.textContent = contact.name;
+
+            // 创建头像元素
+            const avatarEl = document.createElement('div');
+            avatarEl.className = 'mention-suggestion-avatar';
+            if (contact.avatarUrl) {
+                avatarEl.innerHTML = `<img src="${contact.avatarUrl}" alt="${contact.name.charAt(0)}">`;
+            } else {
+                avatarEl.textContent = contact.name.charAt(0).toUpperCase();
+                // 如果有特定颜色，可以应用
+                // avatarEl.style.backgroundColor = contact.color || '#ccc';
+            }
+
+            // 创建名称元素
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mention-suggestion-name';
+            nameEl.textContent = contact.name;
+
+            // 组装建议项
+            itemEl.appendChild(avatarEl);
+            itemEl.appendChild(nameEl);
+
+            // 绑定点击事件
             itemEl.addEventListener('click', () => {
                 const currentText = this.messageInputEl.value;
                 const cursorPos = this.messageInputEl.selectionStart;
+
+                // 精确替换 @query 部分
                 const textBefore = currentText.substring(0, cursorPos - lengthOfAtAndQuery);
                 const textAfter = currentText.substring(cursorPos);
 
-                this.messageInputEl.value = textBefore + '@' + contact.name + ' ' + textAfter;
+                const mentionText = '@' + contact.name + ' '; // 在末尾加一个空格，方便用户继续输入
+                this.messageInputEl.value = textBefore + mentionText + textAfter;
+
+                // 恢复焦点并设置光标位置
                 this.messageInputEl.focus();
-                const newCursorPos = textBefore.length + 1 + contact.name.length + 1;
+                const newCursorPos = textBefore.length + mentionText.length;
                 this.messageInputEl.setSelectionRange(newCursorPos, newCursorPos);
+
+                // 隐藏建议列表
                 this.aiMentionSuggestionsEl.style.display = 'none';
             });
+
             fragment.appendChild(itemEl); // 先添加到文档片段
         });
 
         this.aiMentionSuggestionsEl.appendChild(fragment); // 一次性添加到 DOM
 
-        // 3. **应用位置**: 最后应用之前计算好的位置样式。
-        if (useCssPositioning) {
-            // 在 chat-area.css 中，ai-mention-suggestions 的 bottom 属性是注释掉的，
-            // 可以在 JS 中设置它，或者直接在 CSS 中取消注释并设置为 `bottom: 100%`。
-            // 这里我们用JS设置，以保持逻辑集中。
-            // CSS 中 `.chat-input-container` 已是 `position: relative`
-            const inputContainer = this.messageInputEl.closest('.chat-input-container');
-            this.aiMentionSuggestionsEl.style.bottom = inputContainer.querySelector('.input-row').offsetHeight + 'px';
+        // 3. 定位建议列表
+        // 关键：将列表的 bottom 设置为输入行的高度，使其精确地显示在输入框上方。
+        const inputRow = this.messageInputEl.closest('.input-row');
+        if (inputRow) {
+            // 动态计算输入区域的高度，这样即使输入框因多行文本而变高，列表位置也能自适应
+            const inputRowHeight = inputRow.offsetHeight;
+            this.aiMentionSuggestionsEl.style.bottom = `${inputRowHeight}px`;
         } else {
-            // 使用我们之前计算好的 bottomPosition
-            this.aiMentionSuggestionsEl.style.bottom = bottomPosition;
+            // 如果找不到 .input-row，提供一个合理的备选方案
+            this.aiMentionSuggestionsEl.style.bottom = '100%';
         }
 
-        // 其他定位样式保持不变
-        this.aiMentionSuggestionsEl.style.left = '0px';
-        this.aiMentionSuggestionsEl.style.right = '0px';
-        this.aiMentionSuggestionsEl.style.width = 'auto';
+        // 4. 显示列表
+        // 其他定位样式保持不变（假设父容器 .chat-input-container 是 position: relative）
+        this.aiMentionSuggestionsEl.style.left = '0';
+        this.aiMentionSuggestionsEl.style.right = '0';
+        this.aiMentionSuggestionsEl.style.width = '300px'; // 宽度由 left 和 right 决定，自动拉伸
         this.aiMentionSuggestionsEl.style.display = 'block';
-        // --- OPTIMIZATION END ---
     },
 
     /**
@@ -835,8 +850,8 @@ const ChatAreaUIManager = {
     enableChatInterface: function (enabled) {
         // 定义需要切换启用/禁用状态的元素列表
         const elementsToToggle = [
-            this.messageInputEl, this.sendButtonEl, this.attachButtonEl, // Removed chatDetailsButtonEl
-            this.voiceButtonEl, this.screenshotMainBtnEl
+            this.messageInputEl, this.sendButtonEl, this.attachButtonEl,
+            this.voiceButtonEl, this.screenshotMainBtnEl, this.emojiStickerBtnEl // ADDED
         ];
         // 遍历列表，设置各元素的 disabled 属性
         elementsToToggle.forEach(el => {

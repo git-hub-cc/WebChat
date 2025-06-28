@@ -159,33 +159,21 @@ const DataChannelHandler = {
                         assembly.chunks[assembly.received] = rawData;
                         assembly.received++;
 
+                        // Check if reassembly is complete
                         if (assembly.received === assembly.total) {
-                            // Reassembly complete
                             const fileBlob = new Blob(assembly.chunks, { type: meta.fileType });
                             delete ConnectionManager.pendingReceivedChunks[finalPeerId][meta.chunkId];
                             delete this._chunkMetaBuffer[finalPeerId];
 
                             Utils.log(`文件 "${meta.fileName}" (ID: ${meta.chunkId}) 从 ${finalPeerId} 接收完毕。`, Utils.logLevels.INFO);
 
-                            // Process the reassembled file
+                            // Reassembly is complete, now cache the file.
+                            // The corresponding JSON message (file, sticker, etc.) will trigger the display.
                             await DBManager.setItem('fileCache', {
                                 id: meta.chunkId,
                                 fileBlob: fileBlob,
                                 metadata: { name: meta.fileName, type: meta.fileType, size: meta.fileSize }
                             });
-
-                            const fileMessage = {
-                                id: `file_${meta.chunkId}`,
-                                type: 'file',
-                                fileId: meta.chunkId,
-                                fileName: meta.fileName,
-                                fileType: meta.fileType,
-                                size: meta.fileSize,
-                                fileHash: meta.chunkId,
-                                timestamp: new Date().toISOString(),
-                                sender: finalPeerId
-                            };
-                            ChatManager.addMessage(finalPeerId, fileMessage);
                         }
                     }
                 } else if (typeof rawData === 'string') {
@@ -220,6 +208,7 @@ const DataChannelHandler = {
                     } else if (messageObject.type === 'retract-message-confirm') {
                         // Log or handle confirmation if needed
                     } else {
+                        // This now handles text, audio, file, and the new sticker type
                         ChatManager.addMessage(finalPeerId, messageObject);
                     }
                 }

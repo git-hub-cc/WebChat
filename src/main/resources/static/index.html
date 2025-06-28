@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -91,10 +92,31 @@
                 <div class="input-row">
                     <button class="icon-btn attach-btn" id="attachBtnMain" title="附加文件" disabled>📎</button>
                     <button class="icon-btn screenshot-main-btn" id="screenshotMainBtn" title="截图" disabled>📸</button>
+                    <!-- ADDED: Emoji/Sticker button -->
+                    <button class="icon-btn emoji-sticker-btn" id="emojiStickerBtn" title="表情/贴图" disabled>😀</button>
                     <input type="file" id="fileInput">
                     <label for="messageInput"></label><textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
                     <button class="icon-btn send-btn" id="sendButtonMain" title="发送" disabled>➤</button>
                     <button class="icon-btn record-btn" id="voiceButtonMain" title="录制语音" disabled>🎙️</button>
+                </div>
+                <!-- ADDED: Emoji/Sticker Panel -->
+                <div id="emojiStickerPanel" class="emoji-sticker-panel">
+                    <div class="menu-tabs">
+                        <button class="menu-tab-item active" data-tab="emoji">Emoji</button>
+                        <button class="menu-tab-item" data-tab="sticker">贴图</button>
+                    </div>
+                    <div id="emojiTabContent" class="menu-tab-content active">
+                        <div id="emojiGrid" class="emoji-grid">
+                            <!-- Emojis will be populated by JS -->
+                        </div>
+                    </div>
+                    <div id="stickerTabContent" class="menu-tab-content">
+                        <div id="stickerGrid" class="sticker-grid">
+                            <!-- Stickers will be populated by JS -->
+                        </div>
+                        <button id="addStickerBtn" class="btn btn-secondary">添加贴图</button>
+                        <input type="file" id="stickerInput" accept="image/png, image/jpeg, image/gif, image/webp" style="display: none;">
+                    </div>
                 </div>
             </footer>
         </div>
@@ -468,7 +490,7 @@
 <div id="newContactGroupModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>新增聊天</h2>
+            <h2>管理联系人与群组</h2>
             <button class="icon-btn close-modal-btn" data-modal-id="newContactGroupModal">✕</button>
         </div>
         <div class="modal-body">
@@ -481,6 +503,7 @@
             <!-- Contact Tab Content -->
             <div id="newContactTabContent" class="menu-tab-content active">
                 <div class="settings-section">
+                    <h3>联系人操作</h3>
                     <p>输入对方ID。若ID已存在，可修改其昵称。若ID不存在，则添加新联系人。</p>
                     <label for="newPeerIdInput"></label><input type="text" id="newPeerIdInput" placeholder="输入对方 ID (必填)">
                     <label for="newPeerNameInput"></label><input type="text" id="newPeerNameInput" placeholder="输入对方昵称 (修改或新建时可选)">
@@ -491,6 +514,7 @@
             <!-- Group Tab Content -->
             <div id="newGroupTabContent" class="menu-tab-content">
                 <div class="settings-section">
+                    <h3>创建或修改群组</h3>
                     <p>输入群组名称。如果提供已存在的群组ID且您是群主，则将修改其名称；否则将创建新群组 (群组人数上限20人)。</p>
                     <label for="newGroupNameInput"></label><input type="text" id="newGroupNameInput" placeholder="输入群组名称 (必填)">
                     <label for="newGroupIdInput"></label><input type="text" id="newGroupIdInput" placeholder="群组 ID (可选, 留空则自动生成)">
@@ -580,6 +604,8 @@
 <script src="js/ChatManager.js"></script>
 <!-- GroupManager 依赖 DBManager, UserManager, ChatManager, ConnectionManager, NotificationUIManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager -->
 <script src="js/GroupManager.js"></script>
+<!-- ADDED SCRIPT: EmojiStickerUIManager must be loaded before AppInitializer -->
+<script src="js/UI/EmojiStickerUIManager.js"></script>
 
 <!-- 专业处理器/管理器 -->
 <script src="js/handler/DataChannelHandler.js"></script><!-- AiApiHandler 依赖 UserManager, ChatManager, MessageManager, AppSettings, Utils, NotificationUIManager, EventEmitter, SettingsUIManager -->

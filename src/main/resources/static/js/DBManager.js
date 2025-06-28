@@ -18,7 +18,7 @@
 const DBManager = {
     db: null,
     dbName: 'ModernChatDB',
-    dbVersion: 5, // 数据库版本号 (为 appStateCache 增加版本)
+    dbVersion: 6, // MODIFIED: 数据库版本号 (为 stickers 增加版本)
 
     /**
      * 初始化并打开 IndexedDB 数据库。如果数据库不存在或版本较低，会触发 onupgradeneeded 来创建或升级表结构。
@@ -72,6 +72,11 @@ const DBManager = {
                 if (!db.objectStoreNames.contains('appStateCache')) {
                     db.createObjectStore('appStateCache', { keyPath: 'id' }); // id: 'background_image'
                     Utils.log('对象存储 appStateCache 已创建。', Utils.logLevels.INFO);
+                }
+                // ADDED: 贴图缓存表
+                if (!db.objectStoreNames.contains('stickers')) {
+                    db.createObjectStore('stickers', { keyPath: 'id' }); // 'id' is the file hash
+                    Utils.log('对象存储 stickers 已创建。', Utils.logLevels.INFO);
                 }
                 Utils.log('数据库架构已升级/创建。', Utils.logLevels.INFO);
             };

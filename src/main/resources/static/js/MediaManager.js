@@ -11,6 +11,7 @@
  * @property {function} startRecording - 开始录制语音。
  * @property {function} stopRecording - 停止录制语音。
  * @property {function} processFile - 处理用户选择或拖放的文件，进行大小检查并读取数据。
+ * @property {function} processStickerFile - (新增) 处理用户上传的贴图文件。
  * @property {function} handleFileSelect - 处理文件输入框的 change 事件。
  * @property {function} captureScreen - 捕获屏幕或窗口内容作为截图。
  * @dependencies AppSettings, Utils, NotificationUIManager, MessageManager, MediaUIManager, EventEmitter
@@ -283,6 +284,43 @@ const MediaManager = {
             NotificationUIManager.showNotification('处理文件时出错。', 'error');
         }
     },
+
+    /**
+     * (新增) 处理用户上传的贴图文件。
+     * @param {File} file - 要处理的贴图文件对象。
+     * @returns {Promise<void>}
+     */
+    processStickerFile: async function(file) {
+        if (!file) return;
+
+        // 检查文件大小
+        if (file.size > AppSettings.media.maxStickerSize) {
+            NotificationUIManager.showNotification(`贴图文件过大。最大: ${this.formatFileSize(AppSettings.media.maxStickerSize)}。`, 'error');
+            return;
+        }
+
+        // 检查文件类型
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            NotificationUIManager.showNotification('不支持的贴图文件类型。请使用 PNG, JPG, GIF 或 WEBP。', 'error');
+            return;
+        }
+
+        try {
+            const fileHash = await Utils.generateFileHash(file);
+            const stickerFileObject = {
+                id: fileHash, // 使用哈希作为ID
+                name: file.name,
+                blob: file
+            };
+            // 触发事件，将处理好的贴图对象传递给 EmojiStickerUIManager
+            EventEmitter.emit('stickerFileProcessed', stickerFileObject);
+        } catch (error) {
+            Utils.log(`处理贴图文件时出错: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification('处理贴图文件时出错。', 'error');
+        }
+    },
+
 
     /**
      * 处理文件输入框的 change 事件。

@@ -74,9 +74,10 @@ const AppInitializer = {
             } else {
                 Utils.log('ResourcePreviewUIManager 或其 init 方法未定义。资源预览功能可能无法使用。', Utils.logLevels.WARN);
             }
-            VideoCallUIManager.init();      // 视频通话UI
-            MediaUIManager.init();          // 媒体UI (文件/音频预览)
-            PeopleLobbyManager.init();    // 人员大厅UI
+            VideoCallUIManager.init();          // 视频通话UI
+            MediaUIManager.init();              // 媒体UI (文件/音频预览)
+            PeopleLobbyManager.init();          // 人员大厅UI
+            EmojiStickerUIManager.init();         // 表情包初始化
             // 初始化截图编辑器UI (如果存在)
             if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
                 ScreenshotEditorUIManager.init();
@@ -88,10 +89,10 @@ const AppInitializer = {
 
             // --- 阶段 4: 其他同步设置 ---
             this.startNetworkMonitoring();      // 启动网络状态监控 (同步监听器设置)
-            MediaManager.initVoiceRecording(); // 初始化语音录制 (可能依赖DOM)
-            VideoCallManager.init();           // 初始化视频通话核心逻辑
+            MediaManager.initVoiceRecording();  // 初始化语音录制 (可能依赖DOM)
+            VideoCallManager.init();            // 初始化视频通话核心逻辑
             this.setupCoreEventListeners();     // 设置核心事件监听器 (依赖各管理器对象存在)
-            this.smartBackToChatList();       // 处理移动端返回按钮
+            this.smartBackToChatList();         // 处理移动端返回按钮
 
             // --- 阶段 5: 并行执行的初始异步操作 ---
             const initialAsyncOperations = []; // 用于收集并行异步任务的Promise

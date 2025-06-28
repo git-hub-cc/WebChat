@@ -1411,6 +1411,135 @@ input:checked + .slider::before {
 }
 
 
+.emoji-sticker-panel {
+    position: absolute;
+    bottom: calc(100% - var(--spacing-2)); /* Position above the input container */
+    left: 0;
+    width: 320px;
+    max-height: 300px;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    background-color: var(--received-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    z-index: 101; /* Above input, below modals */
+    overflow: hidden; /* Prevent content from spilling */
+}
+
+.emoji-sticker-panel .menu-tabs {
+    flex-shrink: 0; /* Prevent tabs from shrinking */
+}
+
+.emoji-sticker-panel .menu-tab-content {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: var(--spacing-2);
+}
+
+.emoji-grid, .sticker-grid {
+    display: grid;
+    gap: var(--spacing-1);
+}
+
+.emoji-grid {
+    grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+}
+
+.sticker-grid {
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+}
+
+.emoji-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-1);
+    font-size: 22px;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    transition: background-color 0.2s ease-out;
+}
+.emoji-item:hover {
+    background-color: var(--hover-bg-color);
+}
+
+.sticker-item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-1);
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    background-color: var(--secondary-color);
+    transition: background-color 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+.sticker-item:hover {
+    background-color: var(--hover-bg-color);
+    box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+.sticker-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    -webkit-user-drag: none; /* Prevent image drag */
+    user-select: none; /* Prevent image selection */
+}
+
+#stickerTabContent {
+    display: flex;
+    flex-direction: column;
+}
+#stickerTabContent .sticker-grid {
+    flex-grow: 1;
+}
+#stickerTabContent #addStickerBtn {
+    flex-shrink: 0;
+    margin-top: var(--spacing-2);
+    width: 100%;
+}
+
+#emojiStickerPanel .menu-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: var(--spacing-4);
+    flex-wrap: wrap; /* 允许换行 */
+    gap: var(--spacing-1);
+}
+
+#emojiStickerPanel .menu-tab-item {
+    padding: var(--spacing-2) var(--spacing-3);
+    border: none;
+    border-bottom: 3px solid transparent;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-color-light);
+    transition: color 0.2s ease-out, border-color 0.2s ease-out;
+}
+
+#emojiStickerPanel .menu-tab-item:hover {
+    color: var(--text-color);
+}
+
+#emojiStickerPanel .menu-tab-item.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+
+#emojiStickerPanel .menu-tab-content {
+    display: none; /* 默认隐藏所有内容面板 */
+}
+
+#emojiStickerPanel .menu-tab-content.active {
+    display: block; /* 只显示激活的内容面板 */
+    animation: tab-fade-in 0.3s ease-out;
+}
+
+
 /* ========================================================================== */
 /* 响应式设计 (Responsive Design) - Global Layout Changes */
 /* ========================================================================== */
