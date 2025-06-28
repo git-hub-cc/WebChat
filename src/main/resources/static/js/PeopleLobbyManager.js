@@ -1,7 +1,9 @@
 /**
  * @file PeopleLobbyManager.js
  * @description 管理人员大厅的 UI 和逻辑，包括获取在线用户、渲染列表及处理用户交互。
- *              新增：通过 TimerManager 实现定期自动刷新在线用户列表。
+ *              新增功能：
+ *              1. 通过 TimerManager 实现定期自动刷新在线用户列表。
+ *              2. 实现自动连接逻辑：当某个离线联系人连续两次被检测到在线时，尝试自动与其建立连接。
  * @module PeopleLobbyManager
  * @exports {object} PeopleLobbyManager - 对外暴露的单例对象。
  * @property {function} init - 初始化模块，并启动定期刷新任务。
@@ -9,7 +11,7 @@
  * @property {function} hide - 隐藏人员大厅。
  * @property {function} isVisible - 检查人员大厅是否可见。
  * @property {function} fetchOnlineUsers - 从服务器获取在线用户ID列表。
- * @dependencies UserManager, Utils, NotificationUIManager, ModalUIManager, AppSettings, EventEmitter, TimerManager
+ * @dependencies UserManager, Utils, NotificationUIManager, ModalUIManager, AppSettings, EventEmitter, TimerManager, ConnectionManager
  */
 const PeopleLobbyManager = {
     onlineUserIds: [], // 存储在线用户ID的数组
@@ -17,8 +19,12 @@ const PeopleLobbyManager = {
     peopleLobbyListEl: null,   // 显示用户列表的 ul 元素 (#peopleLobbyList)
     refreshButtonEl: null,     // 刷新按钮的引用
     isLoading: false,          // 标记是否正在加载数据
-    _AUTO_REFRESH_INTERVAL: 2 * 60 * 1000, // 自动刷新间隔：2分钟 (毫秒)
+    _AUTO_REFRESH_INTERVAL: 5 * 1000, // 自动刷新间隔：5秒 (毫秒)
     _AUTO_REFRESH_TASK_NAME: 'peopleLobbyAutoRefresh', // 定时任务名称
+
+    // 新增：用于自动连接逻辑的属性
+    _autoConnectCounters: new Map(), // 存储联系人连续在线检测次数, key: userId, value: count
+    _AUTO_CONNECT_THRESHOLD: 2, // 连续检测到2次后触发自动连接
 
     /**
      * 初始化人员大厅管理器，并启动定期刷新在线用户列表的任务。
@@ -36,7 +42,7 @@ const PeopleLobbyManager = {
             TimerManager.addPeriodicTask(
                 this._AUTO_REFRESH_TASK_NAME,
                 async () => {
-                    Utils.log('PeopleLobbyManager: 自动刷新在线用户列表...', Utils.logLevels.DEBUG);
+                    // Utils.log('PeopleLobbyManager: 自动刷新在线用户列表...', Utils.logLevels.DEBUG);
                     // 调用 fetchOnlineUsers 但不直接在 UI 上显示加载状态，除非大厅本身可见
                     const success = await this.fetchOnlineUsers(true); // true表示是静默刷新
                     if (success && this.isVisible()) { // 如果获取成功且大厅可见，则重新渲染
@@ -44,7 +50,7 @@ const PeopleLobbyManager = {
                     }
                 },
                 this._AUTO_REFRESH_INTERVAL,
-                false //不在添加时立即执行，等待第一个周期
+                false
             );
             Utils.log(`PeopleLobbyManager: 已启动在线用户列表自动刷新任务，间隔 ${this._AUTO_REFRESH_INTERVAL / 1000} 秒。`, Utils.logLevels.INFO);
         } else {
@@ -53,20 +59,21 @@ const PeopleLobbyManager = {
     },
 
     /**
-     * @description 从服务器获取在线用户ID列表。
+     * @description 从服务器获取在线用户ID列表，并处理自动连接逻辑。
      * @param {boolean} [isSilent=false] - 如果为 true，则表示这是一个后台静默刷新，不应在 UI 上显示显式的加载指示（除非大厅面板已打开）。
      * @returns {Promise<boolean>} - 是否成功获取数据。
      */
     fetchOnlineUsers: async function(isSilent = false) {
-        if (!isSilent && this.refreshButtonEl && this.isVisible()) { // 仅当非静默且大厅可见时，才在刷新按钮上显示加载
+        if (!isSilent && this.refreshButtonEl && this.isVisible()) {
             this.refreshButtonEl.classList.add('loading');
         }
-        if (!isSilent) { // 非静默时，总是标记为正在加载 (会影响renderLobby的显示)
+        if (!isSilent) {
             this.isLoading = true;
-            if (this.isVisible()) this.renderLobby(); // 如果可见，渲染加载状态
+            if (this.isVisible()) this.renderLobby();
         }
 
-        Utils.log('PeopleLobbyManager: 开始获取在线用户...', Utils.logLevels.INFO);
+        // 不再打印此条日志，因为它会每5秒出现一次，过于频繁
+        // Utils.log('PeopleLobbyManager: 开始获取在线用户...', Utils.logLevels.INFO);
         try {
             const lobbyApiUrl = AppSettings.server.lobbyApiEndpoint;
             if (!lobbyApiUrl) {
@@ -83,7 +90,7 @@ const PeopleLobbyManager = {
             this.onlineUserIds = Array.isArray(userIds) ? userIds.filter(id => id !== UserManager.userId) : [];
             const newOnlineUserIds = new Set(this.onlineUserIds);
 
-            Utils.log(`PeopleLobbyManager: 成功获取在线用户: ${this.onlineUserIds.length} 个`, Utils.logLevels.INFO);
+            // Utils.log(`PeopleLobbyManager: 成功获取在线用户: ${this.onlineUserIds.length} 个`, Utils.logLevels.DEBUG);
 
             // 检查在线用户列表是否有实际变化，只有变化时才触发事件
             let changed = false;
@@ -100,27 +107,72 @@ const PeopleLobbyManager = {
 
             if (changed && typeof EventEmitter !== 'undefined') {
                 EventEmitter.emit('onlineUsersUpdated', [...this.onlineUserIds]);
-                Utils.log('PeopleLobbyManager: onlineUsersUpdated 事件已触发，因为列表发生变化。', Utils.logLevels.DEBUG);
-            } else if (typeof EventEmitter !== 'undefined') {
-                Utils.log('PeopleLobbyManager: 在线用户列表未发生变化，不触发 onlineUsersUpdated 事件。', Utils.logLevels.DEBUG);
             }
+
+            // --- 新增：自动连接逻辑 ---
+            this.handleAutoConnectLogic(newOnlineUserIds);
 
             return true;
         } catch (error) {
             Utils.log('PeopleLobbyManager: 获取在线用户时出错: ' + error, Utils.logLevels.ERROR);
-            if (!isSilent) NotificationUIManager.showNotification('无法加载在线用户列表。', 'error'); // 静默模式不显示通知
-            // 出错时不改变现有列表，除非是首次加载
-            if (this.onlineUserIds.length === 0 && !isSilent) { // 避免在静默刷新失败时清空已有数据
+            if (!isSilent) NotificationUIManager.showNotification('无法加载在线用户列表。', 'error');
+            if (this.onlineUserIds.length === 0 && !isSilent) {
                 this.onlineUserIds = [];
                 if (typeof EventEmitter !== 'undefined') {
-                    EventEmitter.emit('onlineUsersUpdated', []); // 确保UI可以更新到空状态
+                    EventEmitter.emit('onlineUsersUpdated', []);
                 }
             }
             return false;
         } finally {
-            this.isLoading = false; // 重置加载状态
+            this.isLoading = false;
             if (!isSilent && this.refreshButtonEl && this.isVisible()) {
                 this.refreshButtonEl.classList.remove('loading');
+            }
+        }
+    },
+
+    /**
+     * @description 处理自动连接逻辑。
+     * @param {Set<string>} onlineUserIdsSet - 当前在线的用户ID集合。
+     * @private
+     */
+    handleAutoConnectLogic: function(onlineUserIdsSet) {
+        if (typeof UserManager === 'undefined' || typeof ConnectionManager === 'undefined' || !UserManager.contacts) {
+            return; // 依赖项未准备好，跳过
+        }
+
+        const contactsToConnect = [];
+        const allContactIds = Object.keys(UserManager.contacts);
+
+        for (const contactId of allContactIds) {
+            const isContactOnline = onlineUserIdsSet.has(contactId);
+            const isContactConnected = ConnectionManager.isConnectedTo(contactId);
+
+            // 条件：联系人在线，但我们与他/她当前没有建立连接
+            if (isContactOnline && !isContactConnected) {
+                const currentCount = (this._autoConnectCounters.get(contactId) || 0) + 1;
+                this._autoConnectCounters.set(contactId, currentCount);
+
+                // Utils.log(`PeopleLobbyManager: 检测到离线联系人 ${contactId} 在线，计数: ${currentCount}`, Utils.logLevels.DEBUG);
+
+                if (currentCount >= this._AUTO_CONNECT_THRESHOLD) {
+                    contactsToConnect.push(contactId);
+                    this._autoConnectCounters.delete(contactId); // 重置计数器，防止重复触发
+                }
+            } else {
+                // 如果用户不在线或已连接，则清零计数器
+                if (this._autoConnectCounters.has(contactId)) {
+                    this._autoConnectCounters.delete(contactId);
+                }
+            }
+        }
+
+        if (contactsToConnect.length > 0) {
+            Utils.log(`PeopleLobbyManager: 自动连接条件触发，尝试连接: ${contactsToConnect.join(', ')}`, Utils.logLevels.INFO);
+            if (typeof ConnectionManager.autoConnectToContacts === 'function') {
+                ConnectionManager.autoConnectToContacts(contactsToConnect);
+            } else {
+                Utils.log('PeopleLobbyManager: ConnectionManager.autoConnectToContacts 方法未定义。', Utils.logLevels.WARN);
             }
         }
     },
@@ -133,9 +185,9 @@ const PeopleLobbyManager = {
             Utils.log('PeopleLobbyManager: 未找到人员大厅列表元素。', Utils.logLevels.ERROR);
             return;
         }
-        this.peopleLobbyListEl.innerHTML = ''; // 清空现有列表
+        this.peopleLobbyListEl.innerHTML = '';
 
-        if (this.isLoading && this.isVisible()) { // 仅当大厅可见时显示加载状态
+        if (this.isLoading && this.isVisible()) {
             const loadingLi = document.createElement('li');
             loadingLi.className = 'chat-list-item-empty';
             loadingLi.textContent = '正在加载在线用户...';
@@ -201,13 +253,11 @@ const PeopleLobbyManager = {
 
         this.lobbyContainerEl.style.display = 'flex';
         this.isLoading = true;
-        this.renderLobby(); // 先渲染加载状态
+        this.renderLobby();
         const success = await this.fetchOnlineUsers();
-        // fetchOnlineUsers 内部已重置 isLoading
         if (success) {
-            this.renderLobby(); // 获取数据后重新渲染
+            this.renderLobby();
         } else {
-            // 如果获取失败，renderLobby 也会处理空状态或错误（如果 fetchOnlineUsers 更新了 onlineUserIds 为空）
             this.renderLobby();
         }
         Utils.log('PeopleLobbyManager: 人员大厅已显示。', Utils.logLevels.INFO);

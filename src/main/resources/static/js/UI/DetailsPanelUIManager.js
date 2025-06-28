@@ -123,15 +123,18 @@ const DetailsPanelUIManager = {
         this.ttsAttributionContentEl = document.getElementById('ttsAttributionCollapsibleContent');
         this.peopleLobbyContentEl = document.getElementById('peopleLobbyContent');
         this.resourcePreviewSectionEl = document.getElementById('resourcePreviewSection');
-
-        // 新增: 获取AI词汇篇章选择相关DOM元素
         this.aiChapterSectionEl = document.getElementById('aiChapterSection');
 
         this.bindEvents();
 
+        // 核心逻辑: 监听由 ConnectionManager 发出的连接状态变化事件
+        // 当连接建立、关闭或失败时，会调用 _tryRefreshGroupMembersView 来更新UI。
+        // 这确保了群成员的连接状态能够实时反映在详情面板上。
         EventEmitter.on('connectionEstablished', (peerId) => this._tryRefreshGroupMembersView(peerId));
         EventEmitter.on('connectionClosed', (peerId) => this._tryRefreshGroupMembersView(peerId));
         EventEmitter.on('connectionFailed', (peerId) => this._tryRefreshGroupMembersView(peerId));
+
+        // 当在线用户列表更新时，如果当前正在查看群组，也刷新成员列表以更新其在线状态
         EventEmitter.on('onlineUsersUpdated', () => {
             if (this.currentView === 'details' && ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
                 this.updateDetailsPanelMembers(ChatManager.currentChatId);
@@ -149,14 +152,9 @@ const DetailsPanelUIManager = {
         if (!headerEl) {
             return;
         }
-
-        // 使用 parentElement 来确保我们总是获取直接的父容器。
-        // 这对于处理嵌套的 .collapsible-container 至关重要。
         const containerEl = headerEl.parentElement;
-
         if (!containerEl || !containerEl.classList.contains('collapsible-container')) {
             console.warn('Collapsible header is not a direct child of a .collapsible-container. Animation may not work.', headerEl);
-            // 提供一个简单的回退，尽管这会失去高性能的 grid 动画
             headerEl.addEventListener('click', function(e) {
                 e.stopPropagation();
                 this.classList.toggle('active');
@@ -167,10 +165,7 @@ const DetailsPanelUIManager = {
             });
             return;
         }
-
-        // 为高性能的 grid 动画绑定事件
         headerEl.addEventListener('click', function(event) {
-            // 停止事件冒泡，防止外部容器的监听器被触发
             event.stopPropagation();
             containerEl.classList.toggle('active');
             headerEl.classList.toggle('active');
@@ -178,7 +173,7 @@ const DetailsPanelUIManager = {
     },
 
     /**
-     * 绑定事件监听器。
+     * 绑定UI元素的基础事件监听器。
      */
     bindEvents: function() {
         if (this.closeDetailsBtnMainEl) {
@@ -195,12 +190,14 @@ const DetailsPanelUIManager = {
 
     /**
      * @private
-     * 尝试刷新群成员视图。
+     * 尝试刷新群成员视图。仅当详情面板显示的是相关群组信息时才进行刷新。
+     * @param {string} peerId - 状态发生变化的对端ID。
      */
     _tryRefreshGroupMembersView: function(peerId) {
         if (this.currentView === 'details' && ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
             const group = GroupManager.groups[ChatManager.currentChatId];
             if (group && group.members.includes(peerId)) {
+                Utils.log(`DetailsPanelUIManager: 检测到群成员 ${peerId} 连接状态变化，刷新成员列表。`, Utils.logLevels.DEBUG);
                 this.updateDetailsPanelMembers(ChatManager.currentChatId);
             }
         }
@@ -213,23 +210,15 @@ const DetailsPanelUIManager = {
     _setPanelVisibility: function(show, viewType = null) {
         const appContainer = document.querySelector('.app-container');
         this.isPanelAreaVisible = show;
-
-        // Content visibility within the panel (remains the same)
         if (this.detailsPanelContentEl) this.detailsPanelContentEl.style.display = 'none';
         if (this.peopleLobbyContentEl) this.peopleLobbyContentEl.style.display = 'none';
-
-        // Timer logic (remains the same)
         if (!show || (show && viewType === 'details' && !(ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_'))) || (show && viewType === 'lobby') ) {
             if (typeof TimerManager !== 'undefined') {
                 TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
             }
         }
-
         if (show) {
-            // REMOVED: if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'flex';
-            if (appContainer) appContainer.classList.add('show-details'); // This will trigger the animation
-
-            // Content setup logic (remains the same)
+            if (appContainer) appContainer.classList.add('show-details');
             if (viewType === 'details' && this.detailsPanelContentEl) {
                 this.detailsPanelContentEl.style.display = 'block';
                 if (this.resourcePreviewSectionEl && ChatManager.currentChatId) {
@@ -245,8 +234,7 @@ const DetailsPanelUIManager = {
             }
             this.currentView = viewType;
         } else {
-            // REMOVED: if (this.detailsPanelEl) this.detailsPanelEl.style.display = 'none';
-            if (appContainer) appContainer.classList.remove('show-details'); // This will trigger the animation
+            if (appContainer) appContainer.classList.remove('show-details');
             this.currentView = null;
             ResourcePreviewUIManager.hide();
         }
@@ -403,7 +391,7 @@ const DetailsPanelUIManager = {
             }
             if (contact.isAI && this.aiTtsConfigSectionEl) {
                 this._setupAiTtsConfigSection(contact);
-                this.aiTtsConfigSectionEl.style.display = 'grid'; // BUG FIX: Use 'grid' for collapsible container
+                this.aiTtsConfigSectionEl.style.display = 'grid';
             }
             if (contact.isAI && this.aiChapterSectionEl) {
                 this._renderChapterSelector(contactId, contact);
@@ -430,36 +418,27 @@ const DetailsPanelUIManager = {
     /**
      * @private
      * 创建并管理可搜索的AI词汇篇章选择下拉框。
-     * @param {string} contactId - AI联系人的ID。
-     * @param {object} contactData - AI联系人的数据对象。
-     * @param {HTMLElement} targetDiv - 将要注入可搜索选择框的父容器。
      */
     _createSearchableChapterSelect: function(contactId, contactData, targetDiv) {
-        targetDiv.innerHTML = ''; // Clear previous content
-
+        targetDiv.innerHTML = '';
         const container = document.createElement('div');
         container.className = 'details-searchable-select';
-
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'details-searchable-select-input';
         input.placeholder = '搜索或选择关卡...';
-        input.id = 'aiChapterSelectInput'; // For label association
-
+        input.id = 'aiChapterSelectInput';
         const optionsContainer = document.createElement('div');
         optionsContainer.className = 'details-searchable-select-options-container';
         optionsContainer.style.display = 'none';
-
         container.appendChild(input);
         container.appendChild(optionsContainer);
         targetDiv.appendChild(container);
-
         const chapters = [{ id: "", name: "默认行为" }, ...contactData.chapters];
         let highlightedOptionIndex = -1;
-
         const updateSelected = (chapter) => {
             input.value = chapter.name;
-            input.dataset.selectedValue = chapter.id; // Store actual value
+            input.dataset.selectedValue = chapter.id;
             optionsContainer.style.display = 'none';
             UserManager.setSelectedChapterForAI(contactId, chapter.id === "" ? null : chapter.id);
             if (typeof EventEmitter !== 'undefined') {
@@ -469,21 +448,17 @@ const DetailsPanelUIManager = {
                 });
             }
             input.style.backgroundImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>')`;
-
         };
-
         const scrollOptionIntoView = (optionElement) => {
             if (optionElement) {
                 optionElement.scrollIntoView({ block: 'nearest', inline: 'nearest' });
             }
         };
-
         const populateOptions = (filter = "") => {
             optionsContainer.innerHTML = '';
             highlightedOptionIndex = -1;
             const lowerFilter = filter.toLowerCase();
             const filteredChapters = chapters.filter(ch => ch.name.toLowerCase().includes(lowerFilter));
-
             if (filteredChapters.length === 0) {
                 const noResultsOption = document.createElement('div');
                 noResultsOption.className = 'details-searchable-select-option no-results';
@@ -491,13 +466,11 @@ const DetailsPanelUIManager = {
                 optionsContainer.appendChild(noResultsOption);
                 return;
             }
-
             filteredChapters.forEach((chapter) => {
                 const optionDiv = document.createElement('div');
                 optionDiv.className = 'details-searchable-select-option';
                 optionDiv.textContent = chapter.name;
                 optionDiv.dataset.value = chapter.id;
-
                 optionDiv.addEventListener('mousedown', (e) => {
                     e.preventDefault();
                     updateSelected(chapter);
@@ -505,7 +478,6 @@ const DetailsPanelUIManager = {
                 optionsContainer.appendChild(optionDiv);
             });
         };
-
         const currentChapterId = UserManager.getSelectedChapterForAI(contactId);
         const currentChapter = chapters.find(ch => ch.id === (currentChapterId || ""));
         if (currentChapter) {
@@ -515,7 +487,6 @@ const DetailsPanelUIManager = {
             input.value = "默认行为";
             input.dataset.selectedValue = "";
         }
-
         input.addEventListener('focus', () => {
             const preSelectedChapter = chapters.find(ch => ch.id === input.dataset.selectedValue);
             if (input.value === "" || (preSelectedChapter && input.value === preSelectedChapter.name)) {
@@ -526,16 +497,13 @@ const DetailsPanelUIManager = {
             optionsContainer.style.display = 'block';
             input.style.backgroundImage = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%230088CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>')`;
         });
-
         input.addEventListener('input', () => {
             populateOptions(input.value);
             optionsContainer.style.display = 'block';
         });
-
         input.addEventListener('keydown', (e) => {
             const options = Array.from(optionsContainer.querySelectorAll('.details-searchable-select-option:not(.no-results)'));
             if (!options.length) return;
-
             if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 if (highlightedOptionIndex < options.length - 1) highlightedOptionIndex++;
@@ -562,13 +530,11 @@ const DetailsPanelUIManager = {
             } else {
                 return;
             }
-
             options.forEach((opt, i) => opt.classList.toggle('highlighted', i === highlightedOptionIndex));
             if (options[highlightedOptionIndex]) {
                 scrollOptionIntoView(options[highlightedOptionIndex]);
             }
         });
-
         input.addEventListener('blur', () => {
             setTimeout(() => {
                 if (optionsContainer.style.display !== 'none' && !container.contains(document.activeElement)) {
@@ -596,15 +562,12 @@ const DetailsPanelUIManager = {
             Utils.log("DetailsPanelUIManager: aiChapterSectionEl 未找到。", Utils.logLevels.ERROR);
             return;
         }
-
         const selectContainer = this.aiChapterSectionEl.querySelector('#aiChapterSelectContainer');
-
         if (!selectContainer) {
             Utils.log("DetailsPanelUIManager: aiChapterSelectContainer 未找到。", Utils.logLevels.ERROR);
             this.aiChapterSectionEl.style.display = 'none';
             return;
         }
-
         if (contactData.isAI && contactData.chapters && contactData.chapters.length > 0) {
             this._createSearchableChapterSelect(contactId, contactData, selectContainer);
             this.aiChapterSectionEl.style.display = 'block';
@@ -613,7 +576,6 @@ const DetailsPanelUIManager = {
             this.aiChapterSectionEl.style.display = 'none';
         }
     },
-
 
     /**
      * @private
@@ -636,22 +598,10 @@ const DetailsPanelUIManager = {
     /**
      * @private
      * 设置 AI 联系人的 TTS (Text-to-Speech) 配置部分。
-     * BUG修复: 此函数现在也初始化了由 TtsUIManager 动态创建的嵌套折叠项 (如高级选项)。
      */
     _setupAiTtsConfigSection: function(contact) {
         const formContainerId = 'ttsConfigFormContainer';
         TtsUIManager.populateAiTtsConfigurationForm(contact, formContainerId);
-
-        // MODIFIED: 移除多余的、错误的事件绑定逻辑。
-        // TtsUIManager 已经负责处理其创建的元素的事件绑定。
-        // const formContainer = document.getElementById(formContainerId);
-        // if (formContainer) {
-        //     const newCollapsibleHeaders = formContainer.querySelectorAll('.collapsible-header');
-        //     newCollapsibleHeaders.forEach(header => {
-        //         this._makeElementCollapsible(header);
-        //     });
-        // }
-
         if (this.saveAiTtsSettingsBtnDetailsEl) {
             if (TtsUIManager._boundSaveTtsListener) {
                 this.saveAiTtsSettingsBtnDetailsEl.removeEventListener('click', TtsUIManager._boundSaveTtsListener);
@@ -687,7 +637,7 @@ const DetailsPanelUIManager = {
         if (this.detailsStatusEl) this.detailsStatusEl.textContent = `${group.members.length} 名成员 (上限 ${GroupManager.MAX_GROUP_MEMBERS})`;
 
         if (this.detailsGroupManagementEl) {
-            this.detailsGroupManagementEl.style.display = 'grid'; // BUG FIX: Use 'grid' for collapsible container
+            this.detailsGroupManagementEl.style.display = 'grid';
         }
         if (this.groupActionsDetailsEl) this.groupActionsDetailsEl.style.display = 'block';
 
@@ -718,7 +668,7 @@ const DetailsPanelUIManager = {
         if (this.groupAiPromptsSectionEl && isOwner) {
             const aiMembersInGroup = group.members.filter(memberId => UserManager.contacts[memberId]?.isAI);
             if (aiMembersInGroup.length > 0) {
-                this.groupAiPromptsSectionEl.style.display = 'grid'; // BUG FIX: Use 'grid' for collapsible container
+                this.groupAiPromptsSectionEl.style.display = 'grid';
                 if(this.groupAiPromptsHeaderEl) this.groupAiPromptsHeaderEl.style.display = 'flex';
                 this._populateGroupAiPromptsEditor(groupId, group, aiMembersInGroup);
             } else {
@@ -986,7 +936,7 @@ const DetailsPanelUIManager = {
                 this._GROUP_MEMBER_REFRESH_TASK_NAME,
                 this._refreshGroupMembersAndAutoConnect.bind(this),
                 this.GROUP_MEMBER_REFRESH_INTERVAL_MS,
-                true
+                false
             );
         } else {
             Utils.log("DetailsPanelUIManager: TimerManager 未定义，无法启动群成员刷新定时器。", Utils.logLevels.ERROR);
@@ -1000,22 +950,16 @@ const DetailsPanelUIManager = {
     _refreshGroupMembersAndAutoConnect: async function() {
         const groupId = ChatManager.currentChatId;
         if (!groupId || !groupId.startsWith('group_')) {
-            if (typeof TimerManager !== 'undefined') {
-                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            }
+            if (typeof TimerManager !== 'undefined') TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
             return;
         }
         const group = GroupManager.groups[groupId];
         if (!group) {
-            if (typeof TimerManager !== 'undefined') {
-                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            }
+            if (typeof TimerManager !== 'undefined') TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
             return;
         }
         if (!this.isPanelAreaVisible || this.currentView !== 'details') {
-            if (typeof TimerManager !== 'undefined') {
-                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            }
+            if (typeof TimerManager !== 'undefined') TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
             return;
         }
 

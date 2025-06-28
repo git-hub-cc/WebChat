@@ -363,6 +363,7 @@ const WebRTCManager = {
             this.closeConnection(fromUserId);
         }
     },
+
     addRemoteIceCandidate: async function (fromUserId, candidate) {
         const conn = this.connections[fromUserId];
         if (conn?.peerConnection?.remoteDescription && conn.peerConnection.signalingState !== 'closed') {
@@ -375,6 +376,7 @@ const WebRTCManager = {
             }
         }
     },
+
     handleLocalIceCandidate: function (event, peerId) {
         if (event.candidate) {
             if (!this.iceCandidates[peerId]) this.iceCandidates[peerId] = [];
@@ -387,6 +389,7 @@ const WebRTCManager = {
             }
         }
     },
+
     waitForIceGatheringComplete: function (peerId, callback) {
         const pc = this.connections[peerId]?.peerConnection;
         if (!pc) {
@@ -425,6 +428,7 @@ const WebRTCManager = {
             }, 200);
         }
     },
+
     handleIceConnectionStateChange: function (peerId) {
         const conn = this.connections[peerId];
         if (!conn?.peerConnection) return;
@@ -449,6 +453,7 @@ const WebRTCManager = {
                 break;
         }
     },
+
     handleRtcConnectionStateChange: function (peerId) {
         const conn = this.connections[peerId];
         if (!conn?.peerConnection) return;
@@ -482,6 +487,7 @@ const WebRTCManager = {
                 break;
         }
     },
+
     attemptReconnect: function (peerId) {
         const conn = this.connections[peerId];
         if (!conn || conn.isVideoCall || this.isConnectedTo(peerId) || conn.peerConnection?.connectionState === 'connecting') return;
@@ -508,6 +514,7 @@ const WebRTCManager = {
             this.closeConnection(peerId, false);
         }
     },
+
     isConnectedTo: function (peerId) {
         const conn = this.connections[peerId];
         if (!conn?.peerConnection) return false;
@@ -517,6 +524,7 @@ const WebRTCManager = {
         }
         return false;
     },
+
     closeConnection: function (peerId, notifyPeer = true) {
         const conn = this.connections[peerId];
         if (conn) {
@@ -557,6 +565,7 @@ const WebRTCManager = {
             EventEmitter.emit('connectionClosed', peerId);
         }
     },
+
     closePeerConnectionMedia: function(peerId) {
         const conn = this.connections[peerId];
         if (conn && conn.peerConnection && conn.peerConnection.signalingState !== 'closed') {
@@ -566,6 +575,7 @@ const WebRTCManager = {
             } catch (e) { /* ... */ }
         }
     },
+
     handleIceGatheringStateChange: function (peerId) {
         const pc = this.connections[peerId]?.peerConnection;
         if (!pc) return;

@@ -408,17 +408,6 @@ const ConnectionManager = {
     },
 
     /**
-     * 设置数据通道。此方法现在完全委托给 DataChannelHandler。
-     * @param {RTCDataChannel} channel - 数据通道实例。
-     * @param {string} peerIdArg - 与此通道关联的对方 ID。
-     * @param {boolean} [isManualPlaceholderOrigin=false] - 指示此通道是否源自手动连接的占位符。
-     */
-    setupDataChannel: function (channel, peerIdArg, isManualPlaceholderOrigin = false) {
-        const connectionEntry = WebRTCManager.connections[peerIdArg]; // 获取 WebRTCManager 中的连接条目
-        DataChannelHandler.setupChannel(channel, peerIdArg, isManualPlaceholderOrigin, connectionEntry);
-    },
-
-    /**
      * 通过数据通道向指定对等端发送消息。
      * 委托给 DataChannelHandler。
      * @param {string} peerId - 接收方的 ID。
@@ -455,14 +444,6 @@ const ConnectionManager = {
             ChatAreaUIManager.updateChatHeaderStatus(`已与 ${UserManager.contacts[peerId]?.name || peerId.substring(0, 8)}... 断开连接`);
             ChatAreaUIManager.setCallButtonsState(false); // 更新通话按钮状态
         }
-    },
-
-    /**
-     * 关闭与指定对等端的 PeerConnection 的媒体流部分（通常由 VideoCallManager 调用）。
-     * @param {string} peerId - 目标对方ID。
-     */
-    closePeerConnectionMedia: function (peerId) {
-        WebRTCManager.closePeerConnectionMedia(peerId); // 委托给 WebRTCManager
     },
 
     /**
