@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -34,7 +35,6 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
-<!-- ... rest of your body content remains the same ... -->
 <div class="app-container">
     <!-- 左侧边栏 (导航) -->
     <aside class="sidebar-nav" id="sidebarNav">
@@ -150,9 +150,9 @@
             </div>
             <!-- AI 联系人“关于”部分结束 -->
 
-            <!-- 新增：AI 记忆选择部分 -->
+            <!-- AI 记忆选择部分 -->
             <div class="details-section" id="aiChapterSection">
-                <h4 id="aiChapterHeader">记忆配置</h4>
+                <h4 id="aiChapterHeader">关卡</h4>
                 <div class="settings-item">
                     <label for="aiChapterSelectContainer">选择关卡:</label> <!-- Changed for attribute -->
                     <!-- Container for the custom searchable select, to be populated by JS -->
@@ -162,6 +162,20 @@
                 </div>
             </div>
             <!-- AI 记忆选择部分结束 -->
+            <!-- Memory Book Section -->
+            <div class="details-section" id="memoryBookSection" style="display: none;">
+                <h4>记忆书</h4>
+                <div id="memoryBookList">
+                    <!-- Memory sets will be populated here by JS -->
+                </div>
+                <div id="newMemorySetForm" style="display: none; margin-top: 15px;">
+                    <label for="newMemorySetNameInput"></label><input type="text" id="newMemorySetNameInput" placeholder="新要素集名称...">
+                    <label for="newMemorySetElementsInput"></label><input type="text" id="newMemorySetElementsInput" placeholder="关键要素, 用逗号分隔...">
+                    <button id="confirmAddMemorySetBtn" class="btn btn-secondary btn-sm">确认添加</button>
+                </div>
+                <button id="addMemorySetBtn" class="btn btn-primary btn-sm" style="width: 100%; margin-top: 10px;">+ 添加要素集</button>
+            </div>
+            <!-- Memory Book Section End -->
 
             <!-- AI TTS 配置部分 (MODIFIED STRUCTURE) -->
             <div class="details-section" id="aiTtsConfigSection">
@@ -622,9 +636,10 @@
 
 <!-- ADDED SCRIPT: EmojiStickerUIManager must be loaded before AppInitializer -->
 <script src="js/UI/EmojiStickerUIManager.js"></script>
+<script src="js/MemoryBookManager.js"></script>
 
 <!-- 专业处理器/管理器 -->
-<script src="js/handler/DataChannelHandler.js"></script><!-- AiApiHandler 依赖 UserManager, ChatManager, MessageManager, AppSettings, Utils, NotificationUIManager, EventEmitter, SettingsUIManager -->
+<script src="js/handler/DataChannelHandler.js"></script>
 <script src="js/handler/AiApiHandler.js"></script>
 <script src="js/handler/TtsApiHandler.js"></script>
 

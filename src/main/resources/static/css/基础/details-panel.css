@@ -4,51 +4,33 @@
 /* 右侧详情面板 (Details Panel) */
 /* ========================================================================== */
 .details-panel {
-    display: flex; /* Ensures panel can lay out its children */
-    flex-direction: column; /* As it was structured */
-    width: var(--details-panel-width); /* Retain its defined width */
-    min-width: var(--details-panel-width); /* Retain its min-width */
-    flex-shrink: 0; /* Should not shrink */
+    display: flex;
+    flex-direction: column;
+    width: var(--details-panel-width);
+    min-width: var(--details-panel-width);
+    flex-shrink: 0;
     background-color: #f8f9fa;
     border-inline-start: 1px solid var(--border-color);
-
-    /* --- Key changes for positioning and layout --- */
-    position: absolute; /* Take the panel out of the normal document flow */
-    top: 0;             /* Align to the top of its positioning context (app-container) */
-    right: 0;           /* Align to the right of its positioning context */
-    height: 100%;       /* Take the full height of its positioning context */
-    z-index: 15;        /* Ensure it's above chat-area but below modals (adjust as needed) */
-
-    /* Animation properties for showing/hiding */
-    transform: translateX(100%); /* Initial state: off-screen to the right */
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    z-index: 15;
+    transform: translateX(100%);
     visibility: hidden;
-    /*
-      Transition for transform: duration, timing-function, delay
-      Transition for visibility: duration, timing-function (when hiding, delay until transform is done)
-    */
-    transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1) 0s, /* MODIFIED or kept as is */
-    visibility 0s linear 0.3s; /* Delay visibility change to match transform duration when hiding */
+    transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1) 0s, visibility 0s linear 0.3s;
 }
 
-/* When the app-container has .show-details, the panel slides in */
 .app-container.show-details .details-panel {
-    transform: translateX(0); /* Final state: on-screen */
+    transform: translateX(0);
     visibility: visible;
-    /*
-      For showing: visibility changes immediately, transform animates
-    */
-    transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1) 0s, /* MODIFIED or kept as is */
-    visibility 0s linear 0s;
+    transition: transform 0.3s cubic-bezier(0.215, 0.610, 0.355, 1) 0s, visibility 0s linear 0s;
 }
-
 
 .details-header {
-    background-color: #f0f2f5; /* Specific background for details panel header */
-    justify-content: space-between; /* Align title left, close button right */
-    /* .sidebar-header in core.css provides base flex, align, height, padding, border */
+    background-color: #f0f2f5;
+    justify-content: space-between;
 }
-
-/* .icon-btn.close-details-btn base style in core.css, includes transition */
 
 .details-content {
     flex-grow: 1;
@@ -61,7 +43,7 @@
     padding-inline: 5px;
 }
 
-.details-section h4 { /* Common style for section headers in details panel */
+.details-section h4 {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -70,11 +52,9 @@
     border-bottom: 1px solid var(--border-color);
     font-size: 14px;
     font-weight: 600;
-    transition: color 0.2s ease-out, border-color 0.2s ease-out; /* For collapsible headers */
+    transition: color 0.2s ease-out, border-color 0.2s ease-out;
 }
 
-/* --- 联系人/群组基本信息 --- */
-/* .details-avatar base style in core.css, includes theme transition */
 .details-avatar {
     width: 80px;
     height: 80px;
@@ -88,7 +68,7 @@
     font-size: 18px;
     font-weight: 600;
     text-align: center;
-    transition: color 0.3s ease-out; /* For character theme name color */
+    transition: color 0.3s ease-out;
 }
 
 #detailsId,
@@ -103,14 +83,12 @@
     margin-bottom: 15px;
 }
 
-/* --- AI 联系人 "关于" 部分 --- */
-#aiContactAboutSection h4 { /* Can reuse .details-section h4 if structure is same */
-    color: var(--text-color-light); /* Example: different color for this header */
-    /* Inherits transition from .details-section h4 */
+#aiContactAboutSection h4 {
+    color: var(--text-color-light);
 }
 #aiContactDetailsContent ul {
     list-style-position: inside;
-    padding-left: 0; /* Or var(--spacing-2) if you want some indent */
+    padding-left: 0;
     margin-bottom: var(--spacing-3);
 }
 #aiContactDetailsContent ul li {
@@ -121,34 +99,24 @@
     line-height: 1.5;
 }
 
-
-/* --- AI 篇章选择部分 --- */
-#aiChapterSection { /* Section specific styles */
-    /* margin-bottom is handled by .details-section */
-}
-#aiChapterSection h4 {
-    /* Uses .details-section h4 styles, inherits transition */
-}
 #aiChapterSection .settings-item {
-    /* Uses .modal-body .settings-item from core.css or define similar structure */
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--spacing-3);
-    margin-bottom: 0; /* If it's the only item */
+    margin-bottom: 0;
 }
 #aiChapterSection .settings-item label {
     flex-shrink: 0;
     width: 80px;
     text-align: end;
     font-weight: 500;
-    font-size: 14px; /* Consistent with modal labels */
+    font-size: 14px;
 }
 #aiChapterSection .settings-item #aiChapterSelectContainer {
-    flex-grow: 1; /* Ensure select container takes available space */
+    flex-grow: 1;
 }
 
-/* Native select styled like custom */
 select.custom-select-native {
     flex-grow: 1;
     padding: 7px 10px;
@@ -164,7 +132,7 @@ select.custom-select-native {
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
     background-position: right var(--spacing-2) center;
     background-repeat: no-repeat;
-    padding-right: calc(var(--spacing-2) + 20px + 5px); /* Space for arrow + buffer */
+    padding-right: calc(var(--spacing-2) + 20px + 5px);
     cursor: pointer;
     transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out, opacity 0.2s ease-out;
 }
@@ -173,9 +141,7 @@ select.custom-select-native:disabled {
     opacity: 0.7;
     cursor: not-allowed;
 }
-/* Focus style for select.custom-select-native handled by common rule in core.css, includes transition */
 
-/* Searchable Select for Details Panel (e.g., AI Vocabulary Chapter) */
 .details-searchable-select {
     position: relative;
     flex-grow: 1;
@@ -197,7 +163,7 @@ select.custom-select-native:disabled {
     padding-right: calc(var(--spacing-2) + 20px + 5px);
     transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out, background-image 0.2s ease-out, opacity 0.2s ease-out;
 }
-.details-searchable-select-input:focus { /* Specific focus due to background-image change */
+.details-searchable-select-input:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
@@ -222,7 +188,6 @@ select.custom-select-native:disabled {
     border-radius: var(--border-radius);
     background-color: var(--received-bg-color);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    /* JS will handle display for animation if needed (opacity/transform) */
 }
 
 .details-searchable-select-option {
@@ -246,20 +211,6 @@ select.custom-select-native:disabled {
     font-style: italic;
 }
 
-
-/* --- AI TTS 配置部分 (Details Panel Specifics) --- */
-/* OPTIMIZED: Applied high-performance collapsible pattern */
-/*
- * HTML 结构应为:
- * <div id="aiTtsConfigSection" class="details-section collapsible-container">
- *   <h4 class="collapsible-header">...</h4>
- *   <div id="aiTtsConfigContent" class="collapsible-content">...</div>
- * </div>
- */
-#aiTtsConfigSection h4.collapsible-header {
-    /* Inherits transition from .details-section h4 */
-}
-
 #ttsConfigFormContainer .tts-config-item {
     display: flex;
     align-items: center;
@@ -268,7 +219,7 @@ select.custom-select-native:disabled {
 
 #ttsConfigFormContainer .tts-config-item label {
     flex-shrink: 0;
-    width: 85px; /* Fixed width for labels in this form */
+    width: 85px;
     margin-inline-end: 10px;
     color: var(--text-color);
     font-size: 0.88em;
@@ -278,9 +229,9 @@ select.custom-select-native:disabled {
 
 #ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]),
 #ttsConfigFormContainer .tts-config-item select,
-.searchable-select-input-tts { /* Includes the searchable select input */
+.searchable-select-input-tts {
     flex-grow: 1;
-    min-width: 50px; /* Or 0 if flex handles it well */
+    min-width: 50px;
     padding: 7px 10px;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
@@ -292,22 +243,21 @@ select.custom-select-native:disabled {
 }
 #ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]):focus,
 #ttsConfigFormContainer .tts-config-item select:focus,
-.searchable-select-input-tts:focus { /* Focus for these specific inputs */
+.searchable-select-input-tts:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
 }
 
-#ttsConfigFormContainer .tts-config-item select { /* Native select styling */
+#ttsConfigFormContainer .tts-config-item select {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    padding-inline-end: 30px; /* Space for arrow */
+    padding-inline-end: 30px;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
     background-position: right 8px center;
     background-repeat: no-repeat;
     cursor: pointer;
-    /* Inherits transition from the group rule above */
 }
 #ttsConfigFormContainer .tts-config-item select:disabled,
 .searchable-select-input-tts:disabled {
@@ -316,29 +266,26 @@ select.custom-select-native:disabled {
     cursor: not-allowed;
 }
 
-
 #ttsConfigFormContainer .tts-config-item input[type="checkbox"] {
     flex-shrink: 0;
     width: 18px;
     height: 18px;
-    margin-inline-end: auto; /* Pushes checkbox to the left if label is on right or something */
+    margin-inline-end: auto;
     accent-color: var(--primary-color);
     cursor: pointer;
 }
 
-/* TTS Searchable Select (Voice, Model, Emotion) specific styles */
-.searchable-select-tts { /* Container for searchable select in TTS config */
+.searchable-select-tts {
     position: relative;
     flex-grow: 1;
 }
-/* .searchable-select-input-tts styled with other inputs above, inherits transition */
 
 .searchable-select-options-container-tts {
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 1050; /* Above other modal/panel content */
+    z-index: 1050;
     max-height: 150px;
     overflow-y: auto;
     border: 1px solid var(--border-color);
@@ -346,7 +293,6 @@ select.custom-select-native:disabled {
     border-radius: 0 0 var(--border-radius) var(--border-radius);
     background-color: var(--received-bg-color);
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    /* JS will handle display for animation if needed (opacity/transform) */
 }
 
 .searchable-select-option-tts {
@@ -368,9 +314,7 @@ select.custom-select-native:disabled {
     font-style: italic;
 }
 
-
-/* --- 详情面板: TTS 署名信息 --- */
-.tts-attribution-section .attribution-sub-header { /* Collapsible sub-header */
+.tts-attribution-section .attribution-sub-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -381,20 +325,18 @@ select.custom-select-native:disabled {
     cursor: pointer;
     font-size: 14px;
     font-weight: 600;
-    transition: color 0.2s ease-out, border-color 0.2s ease-out; /* From core.css .collapsible-header */
+    transition: color 0.2s ease-out, border-color 0.2s ease-out;
 }
 .tts-attribution-section .attribution-sub-header.active {
     border-bottom-style: solid;
     border-bottom-color: var(--primary-color);
     color: var(--primary-color);
 }
-/* OPTIMIZED: Replaced max-height animation with opacity transition, height is handled by grid parent */
 .tts-attribution-section .attribution-sub-content {
     padding-inline-start: 12px;
     margin-top: 8px;
     font-size: 0.85em;
     overflow: hidden;
-    /* max-height and its transition are removed for performance */
 }
 
 .tts-attribution-section a {
@@ -406,8 +348,6 @@ select.custom-select-native:disabled {
     text-decoration: underline;
 }
 
-
-/* --- 详情面板: 群组管理特定样式 --- */
 #detailsGroupManagement #addGroupMemberArea {
     margin-top: var(--spacing-4);
     padding-top: var(--spacing-3);
@@ -432,7 +372,7 @@ select.custom-select-native:disabled {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
-    padding-inline-end: 30px; /* Space for arrow */
+    padding-inline-end: 30px;
     background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
     background-position: right var(--spacing-2) center;
     background-repeat: no-repeat;
@@ -446,10 +386,8 @@ select.custom-select-native:disabled {
 }
 #detailsGroupManagement #addGroupMemberArea button#addMemberBtnDetails {
     width: 100%;
-    /* Inherits .btn transition from core.css */
 }
 
-/* 群组成员列表项状态 */
 .member-item-detail {
     display: flex;
     justify-content: space-between;
@@ -469,7 +407,7 @@ select.custom-select-native:disabled {
     color: var(--text-color-light);
     margin-right: var(--spacing-2);
     white-space: nowrap;
-    transition: color 0.3s ease-out; /* For status color changes */
+    transition: color 0.3s ease-out;
 }
 .member-item-detail .member-status.connected { color: var(--accent-color); }
 .member-item-detail .member-status.online-not-connected { color: var(--warning-color); }
@@ -506,17 +444,13 @@ select.custom-select-native:disabled {
     border-color: var(--primary-color);
 }
 
-/* --- 群组内 AI 提示词管理部分 --- */
-/* OPTIMIZED: Applied high-performance collapsible pattern */
-#groupAiPromptsSection h4 { /* Uses .details-section h4 styling */
-    cursor: pointer; /* To indicate collapsible */
-    /* Inherits transition from .details-section h4 */
+#groupAiPromptsSection h4 {
+    cursor: pointer;
 }
 #groupAiPromptsListContainer {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-4);
-    /* Performance: height animation handled by parent grid */
 }
 .ai-prompt-editor-item {
     padding: var(--spacing-3);
@@ -551,35 +485,24 @@ select.custom-select-native:disabled {
 .ai-prompt-editor-item .btn-sm {
     padding: var(--spacing-1) var(--spacing-2);
     font-size: 0.85em;
-    /* Inherits .btn transition from core.css */
 }
-.ai-prompt-editor-item > div:last-child { /* Button container */
+.ai-prompt-editor-item > div:last-child {
     display: flex;
     gap: 10px;
 }
 
-/* --- 资源预览面板 (Resource Preview Panel) --- */
-#resourcePreviewSection h4 { /* Uses .details-section h4 styling */
-    /* any specific overrides for this title */
-}
-.resource-preview-panel-content {
-    /* JS sets display:flex, flex-direction:column */
-}
-
-/* Resource search (within details panel) */
 .resource-search-container {
     margin-bottom: var(--spacing-3);
-    order: -1; /* Placed above tabs */
+    order: -1;
 }
-#resourceSearchInputDetailsPanel { /* Uses .search-bar styles from core.css, includes transition */
+#resourceSearchInputDetailsPanel {
     width: 100%;
 }
-#resourceSearchInputDetailsPanel:focus { /* Specific focus for this search bar */
+#resourceSearchInputDetailsPanel:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
 }
-
 
 .resource-category-tabs {
     display: flex;
@@ -587,7 +510,7 @@ select.custom-select-native:disabled {
     padding: var(--spacing-2) var(--spacing-1);
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
-    background-color: #f8f9fa; /* Consistent with details panel bg */
+    background-color: #f8f9fa;
 }
 
 .resource-category-tab {
@@ -611,17 +534,17 @@ select.custom-select-native:disabled {
 
 .resource-grid-container {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); /* Default 2 columns */
+    grid-template-columns: repeat(2, 1fr);
     gap: 5px;
     padding: var(--spacing-2);
     overflow-y: auto;
     flex-grow: 1;
-    position: relative; /* For loading indicator */
+    position: relative;
 }
 
-.resource-preview-item { /* Grid item for image/video/other files */
+.resource-preview-item {
     position: relative;
-    aspect-ratio: 1 / 1; /* Square items */
+    aspect-ratio: 1 / 1;
     background-color: var(--hover-bg-color);
     border-radius: var(--border-radius-small);
     overflow: hidden;
@@ -638,7 +561,7 @@ select.custom-select-native:disabled {
     box-shadow: 0 0 5px rgba(0,0,0,0.2);
 }
 
-.resource-preview-item .thumbnail-placeholder-resource { /* Placeholder for grid items */
+.resource-preview-item .thumbnail-placeholder-resource {
     width: 100%;
     height: 100%;
     display: flex;
@@ -650,7 +573,7 @@ select.custom-select-native:disabled {
     position: relative;
 }
 
-.resource-preview-item .message-thumbnail-resource { /* Actual thumbnail in grid */
+.resource-preview-item .message-thumbnail-resource {
     display: block;
     width: 100%;
     height: 100%;
@@ -676,13 +599,13 @@ select.custom-select-native:disabled {
     opacity: 1;
 }
 
-.resource-preview-item .file-icon-resource { /* Icon for non-media files in grid */
+.resource-preview-item .file-icon-resource {
     font-size: 2em;
     color: var(--text-color-light);
     margin-bottom: var(--spacing-1);
 }
 
-.resource-preview-item .resource-name { /* Name label in grid item */
+.resource-preview-item .resource-name {
     font-size: 0.8em;
     color: var(--text-color);
     padding: 0 var(--spacing-1);
@@ -691,7 +614,7 @@ select.custom-select-native:disabled {
     white-space: nowrap;
     max-width: 90%;
 }
-.resource-preview-item .resource-timestamp { /* Timestamp overlay in grid item */
+.resource-preview-item .resource-timestamp {
     font-size: 0.7em;
     color: var(--text-color-light);
     position: absolute;
@@ -703,7 +626,6 @@ select.custom-select-native:disabled {
     border-radius: 2px;
 }
 
-/* Text message preview in resource grid */
 .resource-preview-item.text-message-preview {
     display: flex;
     flex-direction: column;
@@ -714,10 +636,9 @@ select.custom-select-native:disabled {
     border-radius: var(--border-radius-small);
     background-color: var(--received-bg-color);
     cursor: pointer;
-    margin-bottom: var(--spacing-1); /* If they are in a list-like layout */
+    margin-bottom: var(--spacing-1);
     height: auto;
-    aspect-ratio: unset; /* Not square */
-    /* Inherits transition from .resource-preview-item */
+    aspect-ratio: unset;
 }
 .resource-preview-item.text-message-preview:hover {
     background-color: var(--hover-bg-color);
@@ -732,7 +653,7 @@ select.custom-select-native:disabled {
     font-size: 0.9em;
     color: var(--text-color);
     word-break: break-word;
-    max-height: 60px; /* Approx 3 lines */
+    max-height: 60px;
     overflow: hidden;
     text-overflow: ellipsis;
     display: -webkit-box;
@@ -740,17 +661,14 @@ select.custom-select-native:disabled {
     -webkit-box-orient: vertical;
 }
 .resource-preview-item.text-message-preview .resource-timestamp {
-    /* Reuse .resource-timestamp but adjust position if needed */
-    position: static; /* Override absolute positioning */
+    position: static;
     align-self: flex-end;
     margin-top: 4px;
-    background-color: transparent; /* No dark overlay */
-    color: var(--text-color-light); /* Standard timestamp color */
+    background-color: transparent;
+    color: var(--text-color-light);
     padding: 0;
 }
 
-
-/* Text snippet preview for non-message text files in grid */
 .resource-text-preview {
     display: flex;
     flex-direction: column;
@@ -778,8 +696,7 @@ select.custom-select-native:disabled {
     color: var(--text-color);
 }
 
-
-.loading-indicator-grid { /* Spinner for resource grid */
+.loading-indicator-grid {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -794,17 +711,16 @@ select.custom-select-native:disabled {
     border: 3px solid var(--hover-bg-color);
     border-top-color: var(--primary-color);
     border-radius: 50%;
-    animation: spin 1s linear infinite; /* Uses spin from core.css */
+    animation: spin 1s linear infinite;
 }
 
 .resource-grid-empty-message {
-    grid-column: 1 / -1; /* Span all columns if grid is empty */
+    grid-column: 1 / -1;
     text-align: center;
     padding: var(--spacing-4);
     color: var(--text-color-light);
 }
 
-/* Calendar in Resource Preview */
 .calendar-container-rps {
     padding: var(--spacing-3);
     background-color: var(--received-bg-color);
@@ -890,36 +806,27 @@ select.custom-select-native:disabled {
     opacity: 0.7;
 }
 
-
-/* --- 人员大厅 (When shown in details panel) --- */
-#detailsPanel .lobby-header { /* Example if lobby header needs specific styling in details panel */
-    padding: var(--spacing-3) var(--spacing-4); /* Match other panel headers */
+#detailsPanel .lobby-header {
+    padding: var(--spacing-3) var(--spacing-4);
     border-bottom: 1px solid var(--border-color);
 }
-#detailsPanel #peopleLobbyList { /* If lobby list items need specific padding/margins in details */
+#detailsPanel #peopleLobbyList {
     padding: var(--spacing-2);
 }
 
-
-/* --- 角色主题修饰符 (Details Panel Specific) --- */
 .details-panel.character-active .details-avatar {
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
 }
 .details-panel.character-active #detailsName,
-.details-panel.character-active #aiContactAboutSection h4 span { /* Target specific elements for name coloring */
+.details-panel.character-active #aiContactAboutSection h4 span {
     color: var(--character-details-name-color);
 }
-#callingModalAvatar.character-active { /* This seems like it belongs with modal styles in core.css */
+#callingModalAvatar.character-active {
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
-    /* Transition already on .video-call-avatar base in core.css */
 }
 
-/* --- ADDED: Styles Moved From Inline --- */
-
-/* Initially hidden sections/containers, shown by JS */
-/* MODIFIED: Removed collapsible content elements from this rule to allow grid animation */
 #aiContactAboutSection,
 #aiChapterSection,
 #aiTtsConfigSection,
@@ -946,7 +853,6 @@ select.custom-select-native:disabled {
     width: 100%;
 }
 
-/* Donation/Sponsor section within TTS attribution */
 #ttsAttributionCollapsibleContent > div:last-child {
     margin-top: 20px;
     padding-top: 15px;
@@ -963,7 +869,6 @@ select.custom-select-native:disabled {
     color: var(--text-color-light);
 }
 
-/* Resource Panel Content Layout */
 #resourcePreviewPanelContent {
     display: flex;
     flex-direction: column;
@@ -979,9 +884,8 @@ select.custom-select-native:disabled {
     display: grid;
 }
 
-/* People Lobby Styles when in Details Panel */
 .lobby-content {
-    display: none; /* Initially hidden */
+    display: none;
     flex-direction: column;
     flex-grow: 1;
     overflow: hidden;
@@ -1012,6 +916,179 @@ select.custom-select-native:disabled {
     margin-bottom: 8px;
 }
 
+/* --- 详情面板: 记忆书 (Memory Book) - 优化样式 --- */
+#memoryBookSection h4 {
+    /* 使用通用的 .details-section h4 样式 */
+}
 
-/* --- 响应式设计 (Details Panel Specific) --- */
-/* Media queries specific to elements within the details panel, if any. */
+#memoryBookList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+}
+
+.memory-set-item {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    background-color: var(--received-bg-color); /* 使用与接收消息相似的背景色 */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: box-shadow 0.2s ease-in-out;
+}
+.memory-set-item:hover {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+}
+
+.memory-set-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2) var(--spacing-3);
+    background-color: var(--secondary-color); /* 一个非常浅的背景色 */
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.memory-set-actions {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+.memory-set-actions .record-btn,
+.memory-set-actions .delete-set-btn {
+    padding: 3px 8px;
+    font-size: 0.85em;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, color 0.2s ease-out;
+}
+.memory-set-actions .record-btn {
+    background-color: rgba(0, 136, 204, 0.1);
+    color: var(--primary-color);
+}
+.memory-set-actions .record-btn:hover:not(:disabled) {
+    background-color: rgba(0, 136, 204, 0.2);
+    border-color: var(--primary-color);
+}
+.memory-set-actions .delete-set-btn {
+    background-color: rgba(244, 67, 54, 0.1);
+    color: var(--danger-color);
+}
+.memory-set-actions .delete-set-btn:hover {
+    background-color: rgba(244, 67, 54, 0.2);
+    border-color: var(--danger-color);
+}
+.memory-set-actions .record-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.memory-set-actions .edit-set-btn {
+    background-color: rgba(255, 152, 0, 0.1); /* Amber/Orange color for edit */
+    color: #f57c00; /* A darker shade of amber */
+    padding: 3px 8px;
+    font-size: 0.85em;
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out, color 0.2s ease-out;
+}
+.memory-set-actions .edit-set-btn:hover {
+    background-color: rgba(255, 152, 0, 0.2);
+    border-color: #f57c00;
+}
+
+.memory-book-container {
+    padding: var(--spacing-3);
+}
+
+.memory-book-textarea {
+    width: 100%;
+    padding: var(--spacing-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    resize: vertical;
+    margin-bottom: var(--spacing-2);
+    background-color: #fff; /* 在深色模式下确保输入框背景为白色 */
+    color: var(--text-color);
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.memory-book-textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+.memory-book-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.memory-book-controls label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9em;
+    cursor: pointer;
+    color: var(--text-color-light);
+    transition: color 0.2s ease-out;
+}
+.memory-book-controls label:hover {
+    color: var(--text-color);
+}
+
+.memory-book-controls .enable-memory-book-toggle {
+    accent-color: var(--primary-color);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.memory-book-controls .save-memory-book-btn {
+    padding: 4px 10px;
+    font-size: 0.85em;
+    background-color: var(--hover-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s ease-out, border-color 0.2s ease-out;
+}
+.memory-book-controls .save-memory-book-btn:hover {
+    background-color: var(--active-bg-color);
+    border-color: #bbb;
+}
+
+/* "添加要素集" 表单样式 */
+#newMemorySetForm {
+    padding: var(--spacing-3);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius-small);
+    background-color: var(--secondary-color);
+}
+#newMemorySetForm input[type="text"] {
+    width: 100%;
+    padding: var(--spacing-2);
+    margin-bottom: var(--spacing-2);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    font-family: var(--font-family), serif;
+    font-size: 0.9em;
+    background-color: #fff;
+    transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+#newMemorySetForm input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
+#addMemorySetBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}

@@ -9,44 +9,39 @@
  *              修复：在 sendAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
  *              移除：删除了所有与对话摘要相关的功能，因为后端不再支持。
  *              修改: _getEffectiveAiConfig 现在支持从多种大模型提供商配置中获取设置，并移除了对“覆盖”状态的检查。
- * @dependencies UserManager, MessageManager, ChatManager, NotificationUIManager, Utils, AppSettings, ConnectionManager, LLMProviders
+ *              FIXED: 增加了 extractMemoryElements 方法以支持记忆书功能。
+ *              FIXED: sendAiMessage 现在会注入已启用的记忆书内容。
+ * @dependencies UserManager, MessageManager, ChatManager, NotificationUIManager, Utils, AppSettings, ConnectionManager, LLMProviders, MemoryBookManager
  */
 const AiApiHandler = {
 
     _getEffectiveAiConfig: function() {
         const config = {};
         const fallbackConfig = (typeof AppSettings !== 'undefined' && AppSettings && AppSettings.server) ? AppSettings.server : {};
-        // **MODIFIED**: Use LLMProviders directly
         const llmProviders = (typeof LLMProviders !== 'undefined') ? LLMProviders : {};
 
-        // 1. 确定提供商和其配置
-        // BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'，以匹配 AppSettings.js 中的全局回退设置。
         const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
         const providerConfig = llmProviders[providerKey] || llmProviders.ppmc || {};
 
-        // 2. 获取 API 端点: 优先使用 localStorage 中的用户设置，然后是提供商默认值，最后是全局回退值
         config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint')
             || providerConfig.defaultEndpoint
             || fallbackConfig.apiEndpoint;
 
-        // 3. 获取模型: 逻辑同上
         config.model = localStorage.getItem('aiSetting_model')
             || providerConfig.defaultModel
             || fallbackConfig.model;
 
-        // 4. 获取其他配置（API Key, Max Tokens, TTS Endpoint），这些配置不受提供商选择的直接影响，但同样遵循 "用户设置 > 全局回退" 的原则
         config.apiKey = localStorage.getItem('aiSetting_api_key') || fallbackConfig.api_key || '';
 
         const maxTokensStored = localStorage.getItem('aiSetting_max_tokens');
         let parsedMaxTokens = parseInt(maxTokensStored, 10);
 
-        // COMMENT: 此处逻辑确保 max_tokens 的获取优先级为：用户在 localStorage 中的设置 > AppSettings.js 中的默认值 > 硬编码的最终回退值 (2048)。
         if (maxTokensStored !== null && !isNaN(parsedMaxTokens)) {
             config.maxTokens = parsedMaxTokens;
         } else if (fallbackConfig.max_tokens !== undefined) {
             config.maxTokens = fallbackConfig.max_tokens;
         } else {
-            config.maxTokens = 2048; // 最终回退值
+            config.maxTokens = 2048;
         }
 
         config.ttsApiEndpoint = localStorage.getItem('aiSetting_ttsApiEndpoint') || fallbackConfig.ttsApiEndpoint || '';
@@ -54,30 +49,23 @@ const AiApiHandler = {
         Utils.log(`_getEffectiveAiConfig: 生效的 AI 配置已使用。提供商: ${providerKey}, 端点: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, 密钥存在: ${!!config.apiKey}, 模型: ${config.model}, TTS 端点: ${config.ttsApiEndpoint ? String(config.ttsApiEndpoint).substring(0,30) + '...' : 'N/A'}`, Utils.logLevels.DEBUG);
         return config;
     },
+
     /**
      * @private
      * @description 为MCP流程构建第一次请求的提示。包含工具定义和指示。
-     * @param {object} contact - AI联系人对象。
-     * @param {Array<object>} chatHistory - 聊天历史记录。
-     * @param {string} userMessage - 用户的当前消息。
-     * @returns {Array<object>} - 用于API请求的messages数组。
+     * ... (this method remains the same as your provided code) ...
      */
     _buildMcpAnalysisPrompt: function(contact, chatHistory, userMessage) {
         const messages = [];
-        // 1. 构建包含工具定义的系统提示
         let mcpSystemPrompt = "你是一个能够理解并使用工具的智能助手。\n";
         mcpSystemPrompt += "可用的工具列表如下 (JSON格式):\n```json\n" + JSON.stringify(MCP_TOOLS, null, 2) + "\n```\n";
         mcpSystemPrompt += "根据用户的提问，如果可以使用工具，你必须只回复一个JSON对象，格式如下: {\"tool_call\": {\"name\": \"工具名称\", \"arguments\": {\"参数1\": \"值1\"}}}. 不要添加任何其他解释或文本。\n";
         mcpSystemPrompt += "如果任何工具都不适用，或者你需要用户提供更多信息，请像平常一样自然地回复用户，不要提及工具。\n\n";
-        //mcpSystemPrompt += (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : ""; // 附加角色自身设定
 
         messages.push({ role: "system", content: mcpSystemPrompt });
 
-        // 2. 添加聊天历史
         const contextMessagesForAIHistory = chatHistory.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
         messages.push(...contextMessagesForAIHistory);
-
-        // 3. 添加当前用户消息
         messages.push({ role: "user", content: userMessage });
 
         return messages;
@@ -86,18 +74,13 @@ const AiApiHandler = {
     /**
      * @private
      * @description 为MCP流程构建第二次请求的提示。包含工具调用结果。
-     * @param {object} contact - AI联系人对象。
-     * @param {string} originalUserMessage - 用户的原始消息。
-     * @param {object} toolCall - AI决定的工具调用对象。
-     * @param {string} toolResult - 工具的执行结果文本。
-     * @returns {Array<object>} - 用于API请求的messages数组。
+     * ... (this method remains the same as your provided code) ...
      */
     _buildMcpFinalPrompt: function(contact, originalUserMessage, toolCall, toolResult) {
         const messages = [];
         const baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "你是一个乐于助人的助手。";
         messages.push({ role: "system", content: baseSystemPrompt });
 
-        // 将原始问题和工具结果合并为一个新的用户问题，引导AI进行总结
         const combinedPrompt = `${originalUserMessage}\n\n[系统提示：你已调用工具“${toolCall.name}”并获得以下结果，请基于此结果，用自然语言回复用户。]\n工具结果: ${toolResult}`;
         messages.push({ role: "user", content: combinedPrompt });
 
@@ -107,19 +90,15 @@ const AiApiHandler = {
     /**
      * @private
      * @description 执行MCP工具调用。
-     * @param {string} toolName - 要调用的工具名称。
-     * @param {object} args - 工具的参数。
-     * @returns {Promise<object>} - 返回一个包含 { data } 或 { error } 的对象。
+     * ... (this method remains the same as your provided code) ...
      */
     _executeMcpTool: async function(toolName, args) {
-        // 确保MCP_TOOLS已定义
         if (typeof MCP_TOOLS === 'undefined' || !MCP_TOOLS[toolName]) {
             return { error: `未知的工具: ${toolName}` };
         }
         const toolDef = MCP_TOOLS[toolName];
         let url = toolDef.url_template;
 
-        // 替换URL模板中的参数占位符
         for (const key in args) {
             if (Object.prototype.hasOwnProperty.call(args, key)) {
                 url = url.replace(`{${key}}`, encodeURIComponent(args[key]));
@@ -139,6 +118,55 @@ const AiApiHandler = {
         }
     },
 
+    // --- ADDED: THE MISSING FUNCTION ---
+    /**
+     * NEW: Sends a conversation transcript to the AI to extract key elements.
+     * @param {Array<string>} elements - The list of key elements to extract.
+     * @param {string} conversationTranscript - The full conversation text.
+     * @returns {Promise<string>} - The AI-generated summary/extraction.
+     */
+    extractMemoryElements: async function(elements, conversationTranscript) {
+        Utils.log(`AiApiHandler: 请求提取记忆要素: ${elements.join(', ')}`, Utils.logLevels.INFO);
+        const effectiveConfig = this._getEffectiveAiConfig();
+        if (!effectiveConfig.apiEndpoint) {
+            throw new Error("AI API 端点未配置。");
+        }
+
+        const prompt = `你是一个对话分析和信息提取专家。请仔细阅读以下对话记录，并根据预设的关键要素列表，简洁、清晰地总结出相关信息。
+
+关键要素列表:
+${elements.map(e => `- ${e}`).join('\n')}
+
+对话记录:
+---
+${conversationTranscript}
+---
+
+请根据以上对话，生成一份“记忆书”，清晰地列出每个关键要素对应的内容。如果对话中没有某个要素的信息，请注明“未提及”。`;
+
+        const requestBody = {
+            model: effectiveConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            stream: false, // This is a single, non-streaming request
+            temperature: 0.1,
+            max_tokens: 1024
+        };
+
+        const response = await fetch(effectiveConfig.apiEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`记忆提取请求失败: ${response.status} - ${errorText.substring(0, 100)}`);
+        }
+        const result = await response.json();
+        return result.choices[0].message.content;
+    },
+    // --- END OF ADDED FUNCTION ---
+
     sendAiMessage: async function(targetId, contact, messageText) {
         const chatBox = document.getElementById('chatBox');
 
@@ -147,11 +175,10 @@ const AiApiHandler = {
         MessageManager.displayMessage(thinkingMessage, false);
         let thinkingElement = chatBox.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
 
-        // 辅助函数，用于移除“正在思考”消息
         const removeThinkingMessage = () => {
             if (thinkingElement && thinkingElement.parentNode) {
                 thinkingElement.remove();
-                thinkingElement = null; // 防止重复移除
+                thinkingElement = null;
             }
         };
 
@@ -167,58 +194,42 @@ const AiApiHandler = {
             const timeThreshold = new Date().getTime() - contextWindow;
             const chatHistory = (ChatManager.chats[targetId] || []).filter(msg => new Date(msg.timestamp).getTime() > timeThreshold && msg.type === 'text');
 
-            // FIX START: 在将历史记录发送给 AI 之前，从中删除当前正在发送的用户消息，以避免重复。
-            // 这个问题在 MCP 流程和标准流程中都存在。
-            // 我们通过检查历史记录中的最后一条消息是否与当前发送的消息匹配来做到这一点。
             if (chatHistory.length > 0) {
                 const lastMessageInHistory = chatHistory[chatHistory.length - 1];
                 if (lastMessageInHistory.sender === UserManager.userId && lastMessageInHistory.content === messageText) {
-                    chatHistory.pop(); // 从历史记录中移除该消息
+                    chatHistory.pop();
                     Utils.log(`sendAiMessage: 从上下文中移除了重复的触发消息: "${messageText.substring(0, 30)}..."`, Utils.logLevels.DEBUG);
                 }
             }
-            // FIX END
 
-            // ================== MCP 流程开始 ==================
+            // ... (MCP logic remains the same) ...
             if (contact.aiConfig?.mcp_enabled && typeof MCP_TOOLS !== 'undefined') {
-                // 1. 获取工具分析 (非流式)
+                // MCP logic here...
                 const analysisMessages = this._buildMcpAnalysisPrompt(contact, chatHistory, messageText);
                 const analysisRequestBody = {
                     model: effectiveConfig.model, messages: analysisMessages, stream: false,
-                    temperature: 0.0, // 低温以获得可预测的JSON输出
-                    max_tokens: 512 // 限制token，因为只需要JSON
+                    temperature: 0.0, max_tokens: 512
                 };
-
                 const analysisResponse = await fetch(effectiveConfig.apiEndpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
                     body: JSON.stringify(analysisRequestBody)
                 });
-
                 if (!analysisResponse.ok) throw new Error(`MCP分析请求失败: ${analysisResponse.status}`);
-
-                // 修复：处理服务器可能错误地以流格式返回非流请求的问题
                 const rawTextResult = await analysisResponse.text();
                 let jsonStringResult = rawTextResult.trim();
-                // 移除 SSE 的 "data: " 前缀
                 if (jsonStringResult.startsWith('data: ')) {
                     jsonStringResult = jsonStringResult.substring('data: '.length).trim();
                 }
-                // 移除可能的 "[DONE]" 标记
                 if (jsonStringResult.endsWith('[DONE]')) {
                     jsonStringResult = jsonStringResult.substring(0, jsonStringResult.lastIndexOf('[DONE]')).trim();
                 }
-                // 为确保健壮性，提取第一个 '{' 和最后一个 '}' 之间的内容
                 const firstBraceIndex = jsonStringResult.indexOf('{');
                 const lastBraceIndex = jsonStringResult.lastIndexOf('}');
                 if (firstBraceIndex !== -1 && lastBraceIndex > firstBraceIndex) {
                     jsonStringResult = jsonStringResult.substring(firstBraceIndex, lastBraceIndex + 1);
                 }
-
                 const analysisResult = JSON.parse(jsonStringResult);
                 const aiContent = analysisResult.choices[0].message.content;
-
-                // 2. 解析AI响应以查找工具调用
                 let toolCall;
                 try {
                     const parsedContent = JSON.parse(aiContent);
@@ -226,50 +237,36 @@ const AiApiHandler = {
                         toolCall = parsedContent.tool_call;
                     }
                 } catch (e) {
-                    // AI回复不是JSON，或JSON格式不符 -> 作为普通消息处理
                     removeThinkingMessage();
                     const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
-                    return; // MCP流程结束
+                    return;
                 }
-
-                // 3. 如果是工具调用，则执行
                 if (toolCall) {
                     removeThinkingMessage();
-
-                    // 显示临时的“正在调用工具”消息
                     const toolUseMsgId = `system_tool_${Date.now()}`;
-                    const toolUseMsg = { id: toolUseMsgId, type: 'system', content: `正在调用工具: ${toolCall.name}...`, timestamp: new Date().toISOString(), sender: targetId, isThinking: true }; // 标记为临时消息
+                    const toolUseMsg = { id: toolUseMsgId, type: 'system', content: `正在调用工具: ${toolCall.name}...`, timestamp: new Date().toISOString(), sender: targetId, isThinking: true };
                     MessageManager.displayMessage(toolUseMsg, false);
                     let toolUseMsgElement = chatBox.querySelector(`.message[data-message-id="${toolUseMsgId}"]`);
-
                     const toolResult = await this._executeMcpTool(toolCall.name, toolCall.arguments);
-
-                    // 移除临时的“正在调用工具”消息
                     if (toolUseMsgElement && toolUseMsgElement.parentNode) {
                         toolUseMsgElement.remove();
                     }
-
                     if (toolResult.error) {
                         throw new Error(`工具调用错误: ${toolResult.error}`);
                     }
-
-                    // 4. 第二次调用获取最终答案 (流式)
                     const finalMessages = this._buildMcpFinalPrompt(contact, messageText, toolCall, toolResult.data);
                     const finalRequestBody = {
                         model: effectiveConfig.model, messages: finalMessages, stream: true,
                         temperature: 0.1, max_tokens: effectiveConfig.maxTokens || 2048,
                         user: UserManager.userId, character_id: targetId
                     };
-
-                    // 使用现有的流式处理逻辑
                     const aiMessageId = `ai_stream_${Date.now()}`;
                     let fullAiResponseContent = "";
                     const initialAiMessage = { id: aiMessageId, type: 'text', content: "▍", timestamp: new Date().toISOString(), sender: targetId, isStreaming: true };
                     MessageManager.displayMessage(initialAiMessage, false);
-                    let aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
                     ChatManager.addMessage(targetId, initialAiMessage);
-
+                    let aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiMessageId}"] .message-content`);
                     await Utils.fetchApiStream(
                         effectiveConfig.apiEndpoint, finalRequestBody,
                         { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
@@ -287,25 +284,30 @@ const AiApiHandler = {
                             ChatManager.addMessage(targetId, finalAiMessage);
                         }
                     );
-                    return; // MCP流程结束
+                    return;
                 } else {
-                    // 是合法JSON但不是工具调用，同样作为普通消息处理
                     removeThinkingMessage();
                     const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
-                    return; // MCP流程结束
+                    return;
                 }
             }
-            // ================== MCP 流程结束 ==================
 
-            // 如果不是MCP角色，执行原有逻辑
-            removeThinkingMessage(); // 先移除思考消息，流式处理会创建自己的消息
+            removeThinkingMessage();
 
-            const recentMessages = chatHistory; // 使用已经修复过的 chatHistory
+            const recentMessages = chatHistory;
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
 
             const messagesForRequestBody = [];
             let baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
+
+            // --- FIXED: INJECT MEMORY BOOK CONTENT ---
+            const memoryBookContent = (typeof MemoryBookManager !== 'undefined') ? MemoryBookManager.getEnabledMemoryBookContentForChat(targetId) : "";
+            if (memoryBookContent) {
+                baseSystemPrompt = `[背景记忆]\n${memoryBookContent}\n\n[角色设定]\n${baseSystemPrompt}`;
+                Utils.log(`AiApiHandler: 为 AI ${targetId} 注入了记忆书内容。`, Utils.logLevels.INFO);
+            }
+            // --- END OF FIX ---
 
             const selectedChapterId = UserManager.getSelectedChapterForAI(targetId);
             let chapterPromptModifier = "";
@@ -324,7 +326,6 @@ const AiApiHandler = {
             finalSystemPrompt += contact.aiConfig.promptSuffix?contact.aiConfig.promptSuffix:AppSettings.ai.promptSuffix;
 
             messagesForRequestBody.push({role: "system", content: finalSystemPrompt});
-
             messagesForRequestBody.push(...contextMessagesForAIHistory);
             messagesForRequestBody.push({ role: "user", content: `${messageText} [发送于: ${new Date().toLocaleString()}]` });
 
@@ -369,6 +370,11 @@ const AiApiHandler = {
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
         }
     },
+
+    /**
+     * The following methods remain unchanged from your provided code...
+     * sendGroupAiMessage, checkAiServiceHealth, handleAiConfigChange
+     */
     sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId, triggeringMessageId = null) {
         const aiContact = UserManager.contacts[aiContactId];
         if (!aiContact || !aiContact.isAI) {
@@ -431,8 +437,6 @@ const AiApiHandler = {
                     role = 'assistant';
                 } else if (msg.sender) {
                     role = 'user';
-                    // COMMENT: 对于群聊，必须在用户消息前加上用户名，以便AI能区分不同发言者。
-                    // 这是让AI理解群聊上下文的关键步骤。
                     const senderName = UserManager.contacts[msg.sender]?.name || `用户 ${String(msg.sender).substring(0,4)}`;
                     content = `${senderName}: ${msg.content}`;
                 }
@@ -507,8 +511,6 @@ const AiApiHandler = {
                     };
                     ChatManager.addMessage(groupId, finalAiResponseMessage);
 
-                    // COMMENT: 当AI在群聊中完成回复后，需要将这条完整的消息通过WebRTC广播给群内的其他人类成员，
-                    // 以确保所有人的聊天记录保持同步。
                     const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
                     humanMembers.forEach(memberId => {
                         if (memberId !== originalSenderId && memberId !== UserManager.userId) {

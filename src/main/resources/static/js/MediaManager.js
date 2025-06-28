@@ -1,3 +1,4 @@
+
 /**
  * @file MediaManager.js
  * @description 核心媒体管理器，负责处理媒体相关的核心逻辑，如麦克风权限、语音录制、文件处理和屏幕截图。

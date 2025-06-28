@@ -1,3 +1,4 @@
+
 /**
  * @file SidebarUIManager.js
  * @description 侧边栏 UI 管理器，负责管理应用左侧边栏内的所有 UI 元素和交互。
