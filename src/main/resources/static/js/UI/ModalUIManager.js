@@ -4,6 +4,7 @@
  *              包括设置、新建联系人/群组、通话、确认对话框以及开源信息提示等。
  *              新建群组模态框现在支持通过提供群组ID来修改现有群组名称。
  *              更新：在群组描述中提及人数上限。
+ *              MODIFIED: 增加了对角色卡导入/导出标签页的支持。
  * @module ModalManager
  * @exports {object} ModalUIManager - 对外暴露的单例对象，包含所有模态框管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
@@ -13,7 +14,7 @@
  * @property {function} showCallRequest - 显示来电请求的模态框。
  * @property {function} showOpenSourceInfoModal - 显示开源信息提示模态框。
  * @property {function} showAddContactModalWithId - 显示添加联系人模态框并预填用户ID。
- * @dependencies Utils, NotificationUIManager, UserManager, GroupManager, AppInitializer, VideoCallManager, AppSettings
+ * @dependencies Utils, NotificationUIManager, UserManager, GroupManager, AppInitializer, VideoCallManager, AppSettings, CharacterCardManager
  * @dependents AppInitializer (进行初始化), 各个模块在需要显示模态框时调用。
  */
 const ModalUIManager = {
@@ -78,7 +79,7 @@ const ModalUIManager = {
         }
 
 
-        // --- 新建联系人/群组模态框 ---
+        // --- 新建联系人/群组/角色模态框 ---
         this.newContactGroupModal = document.getElementById('newContactGroupModal');
         if (this.newContactGroupModal) {
             // 关闭按钮
@@ -93,7 +94,7 @@ const ModalUIManager = {
                 }
             });
 
-            // MODIFICATION START: Add tab switching logic for the new modal structure
+            // Tab switching logic for the new modal structure
             const contactGroupTabs = this.newContactGroupModal.querySelectorAll('.menu-tab-item');
             contactGroupTabs.forEach(tab => {
                 tab.addEventListener('click', (event) => {
@@ -113,7 +114,6 @@ const ModalUIManager = {
                     targetContent.classList.add('active');
                 });
             });
-            // MODIFICATION END
         }
 
         // 新建聊天悬浮按钮
@@ -165,6 +165,11 @@ const ModalUIManager = {
             });
         }
 
+        // MODIFIED: 初始化角色卡管理器 (如果存在)
+        // 这一步从 AppInitializer 移到这里，因为它与这个模态框紧密相关
+        // 但为了保持 AppInitializer 的中心化初始化，我们保留在 AppInitializer 中，
+        // 这里只是为了确保所有逻辑都考虑到了。
+        // CharacterCardManager 的 init 应该由 AppInitializer 调用。
 
         // --- 通话相关模态框 ---
         this.callingModal = document.getElementById('callingModal');
@@ -173,9 +178,6 @@ const ModalUIManager = {
         this.callingModalAvatar = document.getElementById('callingModalAvatar');
         this.callingModalCancelBtn = document.getElementById('callingModalCancelBtn');
         this.videoCallRequestModal = document.getElementById('videoCallRequest');
-
-        // 对于 videoCallRequestModal 和 callingModal，通常不希望点击外部关闭
-        // 所以不为它们添加外部点击关闭的逻辑
     },
 
     /**

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -189,6 +188,7 @@
                             <strong>GPT-SoVITS开发者：</strong><a href="https://space.bilibili.com/5760446" target="_blank" rel="noopener noreferrer" >@花儿不哭</a><br>
                             <strong>TTS模型训练者：</strong><a href="https://space.bilibili.com/6589795" target="_blank" rel="noopener noreferrer" >@红血球AE3803</a>  <br><a href="https://space.bilibili.com/518098961" target="_blank" rel="noopener noreferrer" >@白菜工厂1145号员工</a><br>
                             <strong>TTS推理特化包适配者：</strong><a href="https://space.bilibili.com/1918820" target="_blank" rel="noopener noreferrer" >@AI-Hobbyist</a><br>
+                            <strong>角色卡：</strong><a href="https://github.com/SillyTavern/SillyTavern" target="_blank" rel="noopener noreferrer" >SillyTavern</a><br>
                             <strong>提示词工程：</strong><a href="https://space.bilibili.com/326625155" target="_blank" rel="noopener noreferrer" >君尘陌</a><br>
                             <strong>主题概念：</strong><a href="https://space.bilibili.com/1290496974" target="_blank" rel="noopener noreferrer" >卤v</a><br>
                             <strong>素材资源：</strong><a href="#" target="_blank" rel="noopener noreferrer" >网络</a><br>
@@ -498,9 +498,11 @@
             <div class="menu-tabs">
                 <button class="menu-tab-item active" data-tab-target="#newContactTabContent">联系人</button>
                 <button class="menu-tab-item" data-tab-target="#newGroupTabContent">群组</button>
+                <!-- ADDED: Character Card Tab -->
+                <button class="menu-tab-item" data-tab-target="#newCharacterTabContent">角色</button>
             </div>
 
-            <!-- Contact Tab Content -->
+            <!-- Contact Tab Content (Existing) -->
             <div id="newContactTabContent" class="menu-tab-content active">
                 <div class="settings-section">
                     <h3>联系人操作</h3>
@@ -511,7 +513,7 @@
                 </div>
             </div>
 
-            <!-- Group Tab Content -->
+            <!-- Group Tab Content (Existing) -->
             <div id="newGroupTabContent" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>创建或修改群组</h3>
@@ -519,6 +521,17 @@
                     <label for="newGroupNameInput"></label><input type="text" id="newGroupNameInput" placeholder="输入群组名称 (必填)">
                     <label for="newGroupIdInput"></label><input type="text" id="newGroupIdInput" placeholder="群组 ID (可选, 留空则自动生成)">
                     <button id="confirmNewGroupBtnModal" class="btn btn-primary">创建 / 修改群组</button>
+                </div>
+            </div>
+            <!-- ADDED: Character Card Tab Content -->
+            <div id="newCharacterTabContent" class="menu-tab-content">
+                <div class="settings-section">
+                    <h3>角色卡管理</h3>
+                    <p>导入和导出角色定义文件 (.json)。导入的角色将持久存在，不受主题切换影响。</p>
+                    <button id="importCharacterCardBtn" class="btn btn-primary">导入角色卡</button>
+                    <button id="exportThemeCharactersBtn" class="btn btn-secondary">导出当前主题角色</button>
+                    <!-- Hidden file input for import -->
+                    <input type="file" id="characterCardInput" accept=".json" style="display: none;">
                 </div>
             </div>
             <!-- MODIFICATION END -->
@@ -604,6 +617,9 @@
 <script src="js/ChatManager.js"></script>
 <!-- GroupManager 依赖 DBManager, UserManager, ChatManager, ConnectionManager, NotificationUIManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager -->
 <script src="js/GroupManager.js"></script>
+<!-- 新增的角色卡管理器脚本 -->
+<script src="js/CharacterCardManager.js"></script>
+
 <!-- ADDED SCRIPT: EmojiStickerUIManager must be loaded before AppInitializer -->
 <script src="js/UI/EmojiStickerUIManager.js"></script>
 

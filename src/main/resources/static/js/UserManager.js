@@ -4,6 +4,7 @@
  *              它与数据库交互以持久化用户和联系人数据。AI联系人在主题切换后会被保留，其配置会根据当前主题定义或历史数据进行更新。
  *              在处理群组添加成员事件时，会确保根据收到的详情正确创建新联系人。
  *              新增：支持AI联系人选择不同的词汇篇章，并持久化用户的选择。
+ *              MODIFIED: 增加了对 isImported 标志的支持，以确保导入的角色在主题切换时不会被移除。addContact 方法现在能更好地处理完整的联系人数据对象。
  * @module UserManager
  * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
  * @property {string|null} userId - 当前用户的唯一 ID。
@@ -276,7 +277,8 @@ const UserManager = {
         for (const contactId in this.contacts) {
             if (!processedContactIds.has(contactId)) {
                 const contact = this.contacts[contactId];
-                if (contact.isSpecial) {
+                // 增加 !contact.isImported 条件，防止导入的角色在主题切换时被错误地标记为非特殊
+                if (contact.isSpecial && !contact.isImported) {
                     contact.isSpecial = false;
                     contact.chapters = []; // 非特殊联系人理论上不应有篇章
                     // selectedChapterId 保持，除非逻辑要求清除
@@ -362,21 +364,21 @@ const UserManager = {
     },
 
     /**
-     * 添加一个新联系人，或根据提供的数据创建联系人（用于从群消息中添加）。
+     * 添加一个新联系人，或根据提供的数据创建联系人（用于从群消息或角色卡导入）。
      * @param {string|object} idOrData - 新联系人的 ID (string)，或包含联系人完整数据的对象 (object)。
      * @param {string} [name] - 新联系人的名称 (如果 idOrData 是 string)。
      * @param {boolean} [establishConnection=true] - 是否在添加后尝试建立连接 (仅当 idOrData 是 string 时有效)。
      * @returns {Promise<boolean>} - 操作是否成功。
      */
     addContact: async function(idOrData, name, establishConnection = true) {
-        let id, contactData, isFromGroupMessage = false;
+        let id, contactData, isFromObject = false;
 
         if (typeof idOrData === 'object' && idOrData !== null) {
             id = idOrData.id;
             contactData = idOrData;
-            isFromGroupMessage = true;
-            establishConnection = false;
-            Utils.log(`UserManager.addContact: 正在尝试根据群组消息详情添加联系人 ${id}`, Utils.logLevels.DEBUG);
+            isFromObject = true;
+            establishConnection = false; // From object, assume connection is not needed or handled elsewhere
+            Utils.log(`UserManager.addContact: 正在尝试根据对象详情添加联系人 ${id}`, Utils.logLevels.DEBUG);
         } else if (typeof idOrData === 'string') {
             id = idOrData;
         } else {
@@ -398,23 +400,26 @@ const UserManager = {
             const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
             const specialContactName = currentDefinitions.find(sc => sc.id === id)?.name || "这个特殊联系人";
-            if (!isFromGroupMessage) NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
+            if (!isFromObject) NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
 
-            if (!isFromGroupMessage && establishConnection && this.contacts[id] && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
+            if (!isFromObject && establishConnection && this.contacts[id] && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
                 ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
         }
 
         if (this.contacts[id]) {
-            if (!isFromGroupMessage) NotificationUIManager.showNotification("该联系人已在您的列表中。", "info");
+            if (!isFromObject) NotificationUIManager.showNotification("该联系人已在您的列表中。", "info");
             let contactChanged = false;
 
-            if (isFromGroupMessage && contactData) {
+            if (isFromObject && contactData) {
                 if (contactData.name && this.contacts[id].name !== contactData.name) { this.contacts[id].name = contactData.name; contactChanged = true; }
                 if (contactData.avatarText && this.contacts[id].avatarText !== contactData.avatarText) { this.contacts[id].avatarText = contactData.avatarText; contactChanged = true; }
                 if (contactData.avatarUrl !== undefined && this.contacts[id].avatarUrl !== contactData.avatarUrl) { this.contacts[id].avatarUrl = contactData.avatarUrl; contactChanged = true; }
                 if (contactData.isAI !== undefined && this.contacts[id].isAI !== contactData.isAI) { this.contacts[id].isAI = contactData.isAI; contactChanged = true; }
+                if (contactData.isImported !== undefined && this.contacts[id].isImported !== contactData.isImported) { this.contacts[id].isImported = contactData.isImported; contactChanged = true; }
+                if (contactData.isSpecial !== undefined && this.contacts[id].isSpecial !== contactData.isSpecial) { this.contacts[id].isSpecial = contactData.isSpecial; contactChanged = true; }
+
                 if (contactData.aiConfig) {
                     if (!this.contacts[id].aiConfig) this.contacts[id].aiConfig = {};
                     Object.assign(this.contacts[id].aiConfig, contactData.aiConfig);
@@ -424,7 +429,6 @@ const UserManager = {
                     }
                     contactChanged = true;
                 }
-                // 从群组添加时，不应覆盖词汇篇章或已选篇章，除非有特定逻辑
                 if (contactData.isAI && contactData.chapters && Array.isArray(contactData.chapters)) {
                     if (JSON.stringify(this.contacts[id].chapters) !== JSON.stringify(contactData.chapters)) {
                         this.contacts[id].chapters = JSON.parse(JSON.stringify(contactData.chapters));
@@ -442,14 +446,14 @@ const UserManager = {
                 contactChanged = true;
             }
 
-            if (this.contacts[id].isSpecial) {
+            if (this.contacts[id].isSpecial && !this.isSpecialContactInCurrentTheme(id) && !this.contacts[id].isImported) {
                 this.contacts[id].isSpecial = false;
                 contactChanged = true;
             }
             if(contactChanged) await this.saveContact(id);
-            if (typeof ChatManager !== 'undefined' && !isFromGroupMessage) ChatManager.renderChatList(ChatManager.currentFilter);
+            if (typeof ChatManager !== 'undefined' && !isFromObject) ChatManager.renderChatList(ChatManager.currentFilter);
 
-            if (!isFromGroupMessage && establishConnection && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
+            if (!isFromObject && establishConnection && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
                 ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
@@ -457,21 +461,22 @@ const UserManager = {
 
         const newContact = {
             id: id,
-            name: isFromGroupMessage ? (contactData.name || `用户 ${id.substring(0, 4)}`) : (name || `用户 ${id.substring(0, 4)}`),
-            lastMessage: '',
+            name: isFromObject ? (contactData.name || `用户 ${id.substring(0, 4)}`) : (name || `用户 ${id.substring(0, 4)}`),
+            lastMessage: isFromObject ? (contactData.lastMessage || '') : '',
             lastTime: new Date().toISOString(),
             unread: 0,
-            isSpecial: false,
-            avatarText: isFromGroupMessage
+            isSpecial: isFromObject ? (contactData.isSpecial || false) : false,
+            isImported: isFromObject ? (contactData.isImported || false) : false,
+            avatarText: isFromObject
                 ? (contactData.avatarText || (contactData.name ? contactData.name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase()))
                 : (name ? name.charAt(0).toUpperCase() : id.charAt(0).toUpperCase()),
-            avatarUrl: isFromGroupMessage ? (contactData.avatarUrl || null) : null,
+            avatarUrl: isFromObject ? (contactData.avatarUrl || null) : null,
             type: 'contact',
-            isAI: isFromGroupMessage ? (contactData.isAI || false) : false,
-            aiConfig: isFromGroupMessage ? (contactData.aiConfig || { tts: { tts_mode: 'Preset', version: 'v4' } }) : { tts: { tts_mode: 'Preset', version: 'v4' } },
-            aboutDetails: isFromGroupMessage ? (contactData.aboutDetails || null) : null,
-            chapters: (isFromGroupMessage && contactData.isAI && Array.isArray(contactData.chapters)) ? JSON.parse(JSON.stringify(contactData.chapters)) : [],
-            selectedChapterId: (isFromGroupMessage && contactData.isAI && contactData.selectedChapterId !== undefined) ? contactData.selectedChapterId : null
+            isAI: isFromObject ? (contactData.isAI || false) : false,
+            aiConfig: isFromObject ? (contactData.aiConfig || { tts: { tts_mode: 'Preset', version: 'v4' } }) : { tts: { tts_mode: 'Preset', version: 'v4' } },
+            aboutDetails: isFromObject ? (contactData.aboutDetails || null) : null,
+            chapters: (isFromObject && contactData.isAI && Array.isArray(contactData.chapters)) ? JSON.parse(JSON.stringify(contactData.chapters)) : [],
+            selectedChapterId: (isFromObject && contactData.isAI && contactData.selectedChapterId !== undefined) ? contactData.selectedChapterId : null
         };
         if (!newContact.aiConfig) newContact.aiConfig = {};
         if (!newContact.aiConfig.tts) newContact.aiConfig.tts = {};
@@ -481,10 +486,10 @@ const UserManager = {
         this.contacts[id] = newContact;
         await this.saveContact(id);
 
-        if (typeof ChatManager !== 'undefined' && !isFromGroupMessage) ChatManager.renderChatList(ChatManager.currentFilter);
-        if (!isFromGroupMessage) NotificationUIManager.showNotification(`联系人 "${newContact.name}" 已添加。`, 'success');
+        if (typeof ChatManager !== 'undefined' && !isFromObject) ChatManager.renderChatList(ChatManager.currentFilter);
+        if (!isFromObject) NotificationUIManager.showNotification(`联系人 "${newContact.name}" 已添加。`, 'success');
 
-        if (!isFromGroupMessage && typeof DetailsPanelUIManager !== 'undefined' &&
+        if (!isFromObject && typeof DetailsPanelUIManager !== 'undefined' &&
             DetailsPanelUIManager.currentView === 'details' &&
             ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
             const currentGroup = GroupManager.groups[ChatManager.currentChatId];
@@ -493,7 +498,7 @@ const UserManager = {
             }
         }
 
-        if (!isFromGroupMessage && establishConnection) {
+        if (!isFromObject && establishConnection) {
             ConnectionManager.createOffer(id, { isSilent: true });
         }
         return true;
@@ -506,7 +511,7 @@ const UserManager = {
      * @returns {Promise<boolean>} - 操作是否成功。
      */
     async removeContact(id) {
-        if (this.isSpecialContactInCurrentTheme(id)) {
+        if (this.isSpecialContactInCurrentTheme(id) && !this.contacts[id]?.isImported) {
             const currentDefinitions = (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.getCurrentSpecialContactsDefinitions === 'function')
                 ? ThemeLoader.getCurrentSpecialContactsDefinitions() : [];
             const specialContactName = currentDefinitions.find(sc => sc.id === id)?.name || "这个特殊联系人";
@@ -626,15 +631,26 @@ const UserManager = {
                         const removedContactDetails = tempContactsSnapshot[contactId];
                         await DBManager.removeItem('contacts', contactId);
                         localStorage.removeItem(`ttsConfig_${contactId}`);
-                        localStorage.removeItem(`ai_chapter_${contactId}`); // 新增：移除篇章选择记录
+                        localStorage.removeItem(`ai_chapter_${contactId}`);
 
                         if (typeof ChatManager !== 'undefined') await ChatManager.clearChat(contactId);
-                        if (typeof ConnectionManager !== 'undefined' && ConnectionManager.connections[contactId]) {
+
+                        // --- MODIFIED: START of BUG FIX ---
+                        // Added a check for `ConnectionManager.connections` to prevent crash if it's undefined.
+                        if (typeof ConnectionManager !== 'undefined' && ConnectionManager.connections && ConnectionManager.connections[contactId]) {
                             ConnectionManager.close(contactId);
                         }
+                        // --- MODIFIED: END of BUG FIX ---
+
                         if (removedContactDetails && removedContactDetails.isAI && typeof GroupManager !== 'undefined' && GroupManager.groups) {
                             for (const groupId in GroupManager.groups) {
                                 const group = GroupManager.groups[groupId];
+
+                                if (!group || !Array.isArray(group.members)) {
+                                    Utils.log(`[UserManager.clearAllContacts] Skipping malformed or incomplete group data for groupId: ${groupId}`, Utils.logLevels.WARN);
+                                    continue;
+                                }
+
                                 const memberIndex = group.members.indexOf(contactId);
                                 if (memberIndex !== -1) {
                                     group.members.splice(memberIndex, 1);

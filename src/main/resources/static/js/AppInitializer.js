@@ -15,7 +15,7 @@
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
  *               LayoutUIManager, ModalUIManager, SettingsUIManager, ChatAreaUIManager, SidebarUIManager,
  *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationUIManager, Utils, EventEmitter,
- *               PeopleLobbyManager, AiApiHandler, ThemeLoader, ScreenshotEditorUIManager, ResourcePreviewUIManager, WebSocketManager, TimerManager
+ *               PeopleLobbyManager, AiApiHandler, ThemeLoader, ScreenshotEditorUIManager, ResourcePreviewUIManager, WebSocketManager, TimerManager, CharacterCardManager
  * @dependents DOMContentLoaded (在 index.html 中通过新的方式调用)
  */
 const AppInitializer = {
@@ -84,6 +84,11 @@ const AppInitializer = {
                 Utils.log('ScreenshotEditorUIManager 初始化完成。', Utils.logLevels.INFO);
             } else {
                 Utils.log('ScreenshotEditorUIManager 或其 init 方法未定义。截图编辑功能可能无法使用。', Utils.logLevels.WARN);
+            }
+            // ADDED: 初始化角色卡管理器
+            if (typeof CharacterCardManager !== 'undefined' && CharacterCardManager.init) {
+                CharacterCardManager.init();
+                Utils.log('CharacterCardManager 初始化完成。', Utils.logLevels.INFO);
             }
 
 
@@ -156,6 +161,8 @@ const AppInitializer = {
             if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
                 ScreenshotEditorUIManager.init();
             }
+            if (typeof CharacterCardManager !== 'undefined' && CharacterCardManager.init) CharacterCardManager.init();
+
 
             // 回退模式下的其他初始化
             if (typeof this.refreshNetworkStatusUI === 'function') await this.refreshNetworkStatusUI();
