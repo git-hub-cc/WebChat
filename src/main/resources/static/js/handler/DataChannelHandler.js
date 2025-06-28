@@ -1,28 +1,24 @@
 /**
  * @file DataChannelHandler.js
  * @description 处理 RTCDataChannel 的消息收发、分片和重组逻辑。
+ *              现在原生支持二进制文件传输的分片和重组。
  * @module DataChannelHandler
  * @exports {object} DataChannelHandler
- * @dependencies Utils, AppSettings, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager (临时的，用于分片状态)
+ * @dependencies Utils, AppSettings, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager
  */
 const DataChannelHandler = {
-    // 注意：pendingSentChunks 和 pendingReceivedChunks 状态理论上应属于此模块，
-    // 但由于最小侵入原则和 Utils.sendInChunks/reassembleChunk 对 ConnectionManager 的依赖，
-    // 暂时让 ConnectionManager 保持这些状态。理想情况下，这些状态和函数应完全内聚在此模块。
-    // 为了简化当前步骤，我们假设这些状态仍由 ConnectionManager 间接管理或通过回调访问。
+    _chunkMetaBuffer: {}, // { peerId: metadataObject }
 
     /**
      * 为给定的 RTCDataChannel 设置事件处理器。
      * @param {RTCDataChannel} channel - 数据通道实例。
      * @param {string} peerId - 与此通道关联的对方 ID。
      * @param {boolean} isManualPlaceholderOrigin - 指示此通道是否源自手动连接的占位符。
-     * @param {object} connectionEntry - WebRTCManager 中对应的连接条目，用于更新 dataChannel 状态。
+     * @param {object} connectionEntry - WebRTCManager 中对应的连接条目。
      */
     setupChannel: function(channel, peerId, isManualPlaceholderOrigin, connectionEntry) {
-        let currentContextPeerId = peerId; // 用于回调内部，避免闭包问题
-        if (isManualPlaceholderOrigin) {
-            Object.defineProperty(channel, '_isManualPlaceholderOrigin', { value: true, writable: false, configurable: true });
-        }
+        let currentContextPeerId = peerId;
+        if (isManualPlaceholderOrigin) Object.defineProperty(channel, '_isManualPlaceholderOrigin', { value: true, writable: false, configurable: true });
 
         if (!connectionEntry) {
             Utils.log(`DataChannelHandler.setupChannel: 未找到 ${currentContextPeerId} 的连接条目。通道 ${channel.label} 设置中止。`, Utils.logLevels.WARN);
@@ -30,7 +26,7 @@ const DataChannelHandler = {
             return;
         }
 
-        if (channel._dchListenersAttached) { // _dchListenersAttached 防止重复绑定
+        if (channel._dchListenersAttached) {
             Utils.log(`DataChannelHandler.setupChannel: 通道 ${channel.label} (for ${currentContextPeerId}) 的监听器已设置。跳过。`, Utils.logLevels.DEBUG);
             return;
         }
@@ -41,13 +37,16 @@ const DataChannelHandler = {
             return;
         }
 
+        // NEW: Set binaryType to 'arraybuffer' for efficient binary transfer
+        channel.binaryType = 'arraybuffer';
+
         connectionEntry.dataChannel = channel;
         Object.defineProperty(channel, '_dchListenersAttached', { value: true, writable: true, configurable: true });
         Object.defineProperty(channel, '_dchHasOpened', { value: false, writable: true, configurable: true });
 
         Utils.log(`DataChannelHandler.setupChannel: 正在为通道 ${channel.label} (for ${currentContextPeerId}) 设置事件监听器。`, Utils.logLevels.DEBUG);
 
-        channel.onopen = async () => {
+        channel.onopen = async () => { /* ... onopen logic remains the same ... */
             if (channel._dchHasOpened) {
                 Utils.log(`DataChannelHandler.setupChannel: 通道 ${channel.label} (for ${currentContextPeerId}) onopen 已处理。忽略。`, Utils.logLevels.DEBUG);
                 return;
@@ -94,7 +93,7 @@ const DataChannelHandler = {
             }
         };
 
-        channel.onclose = () => {
+        channel.onclose = () => { /* ... onclose logic remains the same ... */
             let finalPeerId = currentContextPeerId;
             const isPlaceholderOriginChan = !!channel._isManualPlaceholderOrigin;
             if (isPlaceholderOriginChan) {
@@ -120,7 +119,7 @@ const DataChannelHandler = {
             }
         };
 
-        channel.onerror = (errorEvent) => {
+        channel.onerror = (errorEvent) => { /* ... onerror logic remains the same ... */
             let finalPeerId = currentContextPeerId;
             if (channel._isManualPlaceholderOrigin) {
                 const resolvedId = ConnectionManager.resolvePeerIdForChannel(channel);
@@ -129,134 +128,102 @@ const DataChannelHandler = {
             Utils.log(`DataChannelHandler.setupChannel: 通道 ${channel.label} (for ${finalPeerId}) onerror 触发。Error: ${JSON.stringify(errorEvent, Object.getOwnPropertyNames(errorEvent))}. State: ${channel.readyState}`, Utils.logLevels.ERROR);
         };
 
-        channel.onmessage = async (event) => { // Made async to handle await for blob conversion
+        channel.onmessage = async (event) => { // MODIFIED to be async
             let finalPeerId = currentContextPeerId;
-            if (channel._isManualPlaceholderOrigin) {
+            if (channel._isManualPlaceholderOrigin) { /* ... placeholder resolution logic remains the same ... */
                 const resolvedId = ConnectionManager.resolvePeerIdForChannel(channel);
                 if (!resolvedId) { Utils.log(`DataChannelHandler.onmessage (通道源 ${currentContextPeerId}): 无法解析真实 peerId。忽略。`, Utils.logLevels.WARN); return; }
                 finalPeerId = resolvedId;
             }
-            if (channel.readyState !== 'open') { Utils.log(`DataChannelHandler.onmessage: 通道 ${channel.label} (for ${finalPeerId}) 收到消息，但状态为 ${channel.readyState}。忽略。`, Utils.logLevels.WARN); return; }
+            if (channel.readyState !== 'open') { /* ... state check remains the same ... */
+                Utils.log(`DataChannelHandler.onmessage: 通道 ${channel.label} (for ${finalPeerId}) 收到消息，但状态为 ${channel.readyState}。忽略。`, Utils.logLevels.WARN); return;
+            }
 
             try {
-                const rawMessage = event.data;
-                let messageObjectToProcess; let parsedJson;
-                if (typeof rawMessage === 'string') {
-                    try { parsedJson = JSON.parse(rawMessage); }
-                    catch (e) {
-                        // If not JSON, assume it's a simple text message (though this path should be rare with current design)
-                        messageObjectToProcess = { type: 'text', content: rawMessage, sender: finalPeerId, timestamp: new Date().toISOString(), id: `text_${Date.now()}_${Utils.generateId(3)}`};
+                const rawData = event.data;
+
+                // --- MODIFICATION START: Handle binary and string data separately ---
+                if (rawData instanceof ArrayBuffer) {
+                    // This is a binary chunk (part of a file)
+                    const meta = this._chunkMetaBuffer[finalPeerId];
+                    if (!meta) {
+                        Utils.log(`收到来自 ${finalPeerId} 的二进制块，但没有元数据。忽略。`, Utils.logLevels.WARN);
+                        return;
                     }
-                } else {
-                    Utils.log(`DataChannelHandler: 收到来自 ${finalPeerId} 的非字符串数据类型，当前不支持。`, Utils.logLevels.WARN);
-                    return;
-                }
+                    if (!ConnectionManager.pendingReceivedChunks) ConnectionManager.pendingReceivedChunks = {};
+                    if (!ConnectionManager.pendingReceivedChunks[finalPeerId]) ConnectionManager.pendingReceivedChunks[finalPeerId] = {};
 
-                if (parsedJson) {
-                    if (parsedJson.type === 'chunk-meta' || parsedJson.type === 'chunk-data') {
-                        const reassembledData = Utils.reassembleChunk(parsedJson, finalPeerId);
-                        if (reassembledData) { // If reassembly is complete
-                            messageObjectToProcess = reassembledData; // This might be a 'file-transfer' or other type
-                            // Now, check if the reassembled message is a file-transfer
-                            if (messageObjectToProcess.type === 'file-transfer') {
-                                Utils.log(`DataChannelHandler: (重组后) 收到来自 ${finalPeerId} 的文件传输: ${messageObjectToProcess.fileName}`, Utils.logLevels.INFO);
-                                try {
-                                    const base64ToBlob = async (base64, type = 'application/octet-stream') => {
-                                        const res = await fetch(base64); // fetch can handle data URLs
-                                        return await res.blob();
-                                    };
-                                    const receivedBlob = await base64ToBlob(messageObjectToProcess.fileData, messageObjectToProcess.fileType);
-                                    await DBManager.setItem('fileCache', {
-                                        id: messageObjectToProcess.fileHash,
-                                        fileBlob: receivedBlob,
-                                        metadata: { name: messageObjectToProcess.fileName, type: messageObjectToProcess.fileType, size: messageObjectToProcess.size }
-                                    });
-                                    Utils.log(`DataChannelHandler: (重组后) 文件 ${messageObjectToProcess.fileName} 已存入接收方的 fileCache。`, Utils.logLevels.INFO);
-                                    // Transform to a 'file' message for ChatManager
-                                    messageObjectToProcess = {
-                                        id: messageObjectToProcess.id || `file_${Date.now()}_${Utils.generateId(3)}`,
-                                        type: 'file',
-                                        fileId: messageObjectToProcess.fileHash,
-                                        fileName: messageObjectToProcess.fileName,
-                                        fileType: messageObjectToProcess.fileType,
-                                        size: messageObjectToProcess.size,
-                                        fileHash: messageObjectToProcess.fileHash,
-                                        timestamp: messageObjectToProcess.timestamp || new Date().toISOString(),
-                                        sender: finalPeerId,
-                                        originalSender: messageObjectToProcess.sender,
-                                        originalSenderName: messageObjectToProcess.senderName || UserManager.contacts[messageObjectToProcess.sender]?.name || `用户 ${String(messageObjectToProcess.sender).substring(0,4)}`,
-                                        groupId: messageObjectToProcess.groupId
-                                    };
-                                } catch (fileProcessingError) {
-                                    Utils.log(`DataChannelHandler: (重组后) 处理接收到的文件 ${messageObjectToProcess.fileName} 时出错: ${fileProcessingError}`, Utils.logLevels.ERROR);
-                                    NotificationUIManager.showNotification(`接收文件 ${messageObjectToProcess.fileName} 失败。`, 'error');
-                                    return;
-                                }
-                            } else if (messageObjectToProcess.type === 'retract-message-request') {
-                                Utils.log(`DataChannelHandler: (重组后) 收到来自 ${finalPeerId} 的消息撤回请求: ${JSON.stringify(messageObjectToProcess)}`, Utils.logLevels.INFO);
-                                const senderName = messageObjectToProcess.senderName || UserManager.contacts[messageObjectToProcess.sender]?.name || `用户 ${String(messageObjectToProcess.sender).substring(0, 4)}`;
-                                MessageManager._updateMessageToRetractedState(messageObjectToProcess.originalMessageId, messageObjectToProcess.sender, false, senderName);
-                                ConnectionManager.sendTo(messageObjectToProcess.sender, { type: 'retract-message-confirm', originalMessageId: messageObjectToProcess.originalMessageId, sender: UserManager.userId });
-                                return;
-                            }
-                            // Other reassembled types will be processed below
-                        } else { return; } // Chunk not complete yet
-                    } else if (parsedJson.type === 'file-transfer') { // Direct (non-chunked) file transfer
-                        Utils.log(`DataChannelHandler: 收到来自 ${finalPeerId} 的直接文件传输: ${parsedJson.fileName}`, Utils.logLevels.INFO);
-                        try {
-                            const base64ToBlob = async (base64, type = 'application/octet-stream') => {
-                                const res = await fetch(base64);
-                                return await res.blob();
-                            };
-                            const receivedBlob = await base64ToBlob(parsedJson.fileData, parsedJson.fileType);
+                    const assembly = ConnectionManager.pendingReceivedChunks[finalPeerId][meta.chunkId];
+                    if (assembly) {
+                        // Store the received ArrayBuffer
+                        assembly.chunks[assembly.received] = rawData;
+                        assembly.received++;
+
+                        if (assembly.received === assembly.total) {
+                            // Reassembly complete
+                            const fileBlob = new Blob(assembly.chunks, { type: meta.fileType });
+                            delete ConnectionManager.pendingReceivedChunks[finalPeerId][meta.chunkId];
+                            delete this._chunkMetaBuffer[finalPeerId];
+
+                            Utils.log(`文件 "${meta.fileName}" (ID: ${meta.chunkId}) 从 ${finalPeerId} 接收完毕。`, Utils.logLevels.INFO);
+
+                            // Process the reassembled file
                             await DBManager.setItem('fileCache', {
-                                id: parsedJson.fileHash,
-                                fileBlob: receivedBlob,
-                                metadata: { name: parsedJson.fileName, type: parsedJson.fileType, size: parsedJson.size }
+                                id: meta.chunkId,
+                                fileBlob: fileBlob,
+                                metadata: { name: meta.fileName, type: meta.fileType, size: meta.fileSize }
                             });
-                            Utils.log(`DataChannelHandler: 直接文件 ${parsedJson.fileName} 已存入接收方的 fileCache。`, Utils.logLevels.INFO);
-                            messageObjectToProcess = {
-                                id: parsedJson.id || `file_${Date.now()}_${Utils.generateId(3)}`,
+
+                            const fileMessage = {
+                                id: `file_${meta.chunkId}`,
                                 type: 'file',
-                                fileId: parsedJson.fileHash,
-                                fileName: parsedJson.fileName,
-                                fileType: parsedJson.fileType,
-                                size: parsedJson.size,
-                                fileHash: parsedJson.fileHash,
-                                timestamp: parsedJson.timestamp || new Date().toISOString(),
-                                sender: finalPeerId,
-                                originalSender: parsedJson.sender,
-                                originalSenderName: parsedJson.senderName || UserManager.contacts[parsedJson.sender]?.name || `用户 ${String(parsedJson.sender).substring(0,4)}`,
-                                groupId: parsedJson.groupId
+                                fileId: meta.chunkId,
+                                fileName: meta.fileName,
+                                fileType: meta.fileType,
+                                size: meta.fileSize,
+                                fileHash: meta.chunkId,
+                                timestamp: new Date().toISOString(),
+                                sender: finalPeerId
                             };
-                        } catch (fileProcessingError) {
-                            Utils.log(`DataChannelHandler: 处理直接接收的文件 ${parsedJson.fileName} 时出错: ${fileProcessingError}`, Utils.logLevels.ERROR);
-                            NotificationUIManager.showNotification(`接收文件 ${parsedJson.fileName} 失败。`, 'error');
-                            return;
+                            ChatManager.addMessage(finalPeerId, fileMessage);
                         }
-                    } else if (parsedJson.type === 'retract-message-request') {
-                        Utils.log(`DataChannelHandler: 收到来自 ${finalPeerId} 的消息撤回请求: ${JSON.stringify(parsedJson)}`, Utils.logLevels.INFO);
-                        const senderName = parsedJson.senderName || UserManager.contacts[parsedJson.sender]?.name || `用户 ${String(parsedJson.sender).substring(0, 4)}`;
-                        MessageManager._updateMessageToRetractedState(parsedJson.originalMessageId, parsedJson.sender, false, senderName); // Pass sender as chatId for direct messages
-                        ConnectionManager.sendTo(parsedJson.sender, { type: 'retract-message-confirm', originalMessageId: parsedJson.originalMessageId, sender: UserManager.userId });
-                        return;
-                    } else if (parsedJson.type === 'retract-message-confirm') {
-                        Utils.log(`DataChannelHandler: 收到来自 ${finalPeerId} 的消息撤回确认 (ID: ${parsedJson.originalMessageId})。`, Utils.logLevels.INFO);
-                        return;
-                    } else { messageObjectToProcess = parsedJson; }
+                    }
+                } else if (typeof rawData === 'string') {
+                    // This is a JSON message
+                    const messageObject = JSON.parse(rawData);
+
+                    if (messageObject.type === 'chunk-meta') {
+                        // This is metadata for an incoming file. Store it.
+                        this._chunkMetaBuffer[finalPeerId] = messageObject;
+                        if (!ConnectionManager.pendingReceivedChunks) ConnectionManager.pendingReceivedChunks = {};
+                        if (!ConnectionManager.pendingReceivedChunks[finalPeerId]) ConnectionManager.pendingReceivedChunks[finalPeerId] = {};
+                        ConnectionManager.pendingReceivedChunks[finalPeerId][messageObject.chunkId] = {
+                            id: messageObject.chunkId,
+                            total: messageObject.totalChunks,
+                            received: 0,
+                            chunks: new Array(messageObject.totalChunks)
+                        };
+                        Utils.log(`收到来自 ${finalPeerId} 的文件元数据: "${messageObject.fileName}" (ID: ${messageObject.chunkId})`, Utils.logLevels.INFO);
+                        return; // Wait for binary chunks
+                    }
+
+                    // Handle other non-chunked JSON messages
+                    messageObject.sender = messageObject.sender || finalPeerId;
+                    if (!messageObject.id) messageObject.id = `msg_${Date.now()}_${Utils.generateId(4)}`;
+
+                    if (messageObject.type?.startsWith('video-call-')) VideoCallManager.handleMessage(messageObject, finalPeerId);
+                    else if (messageObject.groupId || messageObject.type?.startsWith('group-')) GroupManager.handleGroupMessage(messageObject);
+                    else if (messageObject.type === 'retract-message-request') {
+                        const senderName = messageObject.senderName || UserManager.contacts[messageObject.sender]?.name || `用户 ${String(messageObject.sender).substring(0, 4)}`;
+                        MessageManager._updateMessageToRetractedState(messageObject.originalMessageId, messageObject.sender, false, senderName);
+                        ConnectionManager.sendTo(messageObject.sender, { type: 'retract-message-confirm', originalMessageId: messageObject.originalMessageId, sender: UserManager.userId });
+                    } else if (messageObject.type === 'retract-message-confirm') {
+                        // Log or handle confirmation if needed
+                    } else {
+                        ChatManager.addMessage(finalPeerId, messageObject);
+                    }
                 }
-
-                if (!messageObjectToProcess) {
-                    Utils.log(`DataChannelHandler: 来自 ${finalPeerId} 的 onmessage：无法确定消息对象。`, Utils.logLevels.DEBUG);
-                    return;
-                }
-
-                messageObjectToProcess.sender = messageObjectToProcess.sender || finalPeerId;
-                if (!messageObjectToProcess.id) messageObjectToProcess.id = `msg_${Date.now()}_${Utils.generateId(4)}`;
-
-                if (messageObjectToProcess.type?.startsWith('video-call-')) VideoCallManager.handleMessage(messageObjectToProcess, finalPeerId);
-                else if (messageObjectToProcess.groupId || messageObjectToProcess.type?.startsWith('group-')) GroupManager.handleGroupMessage(messageObjectToProcess);
-                else ChatManager.addMessage(finalPeerId, messageObjectToProcess);
+                // --- MODIFICATION END ---
             } catch (e) {
                 Utils.log(`DataChannelHandler: 来自 ${finalPeerId} 的 onmessage 严重错误: ${e.message}. 数据: ${String(event.data).substring(0, 100)} 堆栈: ${e.stack}`, Utils.logLevels.ERROR);
             }
@@ -264,9 +231,9 @@ const DataChannelHandler = {
     },
 
     /**
-     * 通过数据通道向指定对等端发送消息，处理分片。
+     * 通过数据通道向指定对等端发送消息。现在只处理字符串消息。
      * @param {string} peerId - 接收方的 ID。
-     * @param {object} messageObject - 要发送的消息对象。
+     * @param {object} messageObject - 要发送的 JSON 消息对象。
      * @returns {boolean} - 消息是否成功（排入）发送。
      */
     sendData: function (peerId, messageObject) {
@@ -276,25 +243,10 @@ const DataChannelHandler = {
                 messageObject.sender = messageObject.sender || UserManager.userId;
                 messageObject.timestamp = messageObject.timestamp || new Date().toISOString();
                 const messageString = JSON.stringify(messageObject);
-
-                if (messageString.length > AppSettings.media.chunkSize) {
-                    Utils.sendInChunks(
-                        messageString,
-                        conn.dataChannel,
-                        peerId,
-                        // For file-transfer, the fileId could be its hash or a generated ID.
-                        // If it's a large non-file message, a generic ID is fine.
-                        (messageObject.type === 'file-transfer' ? messageObject.fileHash : null) || `msg-chunks-${Date.now()}`
-                    );
-                } else {
-                    conn.dataChannel.send(messageString);
-                }
+                conn.dataChannel.send(messageString);
                 return true;
             } catch (error) {
                 Utils.log(`DataChannelHandler: 通过数据通道向 ${peerId} 发送时出错: ${error.message}`, Utils.logLevels.ERROR);
-                if (error.name === 'OperationError' && error.message.includes('send queue is full')) {
-                    Utils.log(`DataChannelHandler: RTCDataChannel send queue is full for ${peerId}. Size: ${messageString.length}. Buffered: ${conn.dataChannel.bufferedAmount}`, Utils.logLevels.WARN);
-                }
                 return false;
             }
         } else {

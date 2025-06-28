@@ -2,9 +2,10 @@
  * @file WebRTCManager.js
  * @description 管理 WebRTC RTCPeerConnection 的生命周期和协商过程。
  *              负责创建 Offer/Answer, 处理 ICE 候选者, 管理连接状态, 和数据通道的初始创建。
+ *              FIX: 修复了 handleRemoteOffer 逻辑，使其能正确处理重新协商，而不是销毁重建连接。
+ *              新增了对 "glare" (冲突) 情况的基本处理。
  * @module WebRTCManager
  * @exports {object} WebRTCManager
- * @dependencies Utils, AppSettings, NotificationUIManager, UserManager, ChatManager, VideoCallManager, EventEmitter
  */
 const WebRTCManager = {
     connections: {}, // { peerId: { peerConnection, dataChannel, isVideoCall, wasInitiatedSilently, ... } }
@@ -15,13 +16,13 @@ const WebRTCManager = {
     iceGatheringStartTimes: {}, // { peerId: timestamp }
     MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_', // 与 ConnectionManager 保持一致
 
-    _signalingSender: null, // 用于发送信令消息的回调 (由 ConnectionManager 设置)
-    _onDataChannelReadyHandler: null, // 数据通道就绪时的回调 (由 ConnectionManager 设置)
+    _signalingSender: null, // 用于发送信令消息的回调
+    _onDataChannelReadyHandler: null, // 数据通道就绪时的回调
 
     /**
      * 初始化 WebRTCManager。
-     * @param {function} signalingSender - 一个函数，用于发送信令消息，例如 (信令类型, peerId, payload) => void。
-     * @param {function} onDataChannelReady - 一个函数，当数据通道准备好时调用, 例如 (channel, peerId, isManualPlaceholderOrigin) => void。
+     * @param {function} signalingSender - 发送信令消息的回调。
+     * @param {function} onDataChannelReady - 数据通道就绪时的回调。
      */
     init: function(signalingSender, onDataChannelReady) {
         this._signalingSender = signalingSender;
@@ -32,8 +33,8 @@ const WebRTCManager = {
     /**
      * 初始化或重新初始化与指定对等端的 RTCPeerConnection。
      * @param {string} peerId - 对方的 ID。
-     * @param {boolean} [isVideoCall=false] - 这是否是一个视频通话连接。
-     * @returns {RTCPeerConnection|null} - 新创建的或 null（如果失败）。
+     * @param {boolean} [isVideoCall=false] - 是否为视频通话连接。
+     * @returns {RTCPeerConnection|null} - 新创建的或 null。
      */
     initConnection: function (peerId, isVideoCall = false) {
         Utils.log(`WebRTCManager: 尝试初始化与 ${peerId} 的连接。视频通话: ${isVideoCall}`, Utils.logLevels.DEBUG);
@@ -56,14 +57,12 @@ const WebRTCManager = {
             Utils.log(`WebRTCManager: 在新的手动初始化之前，明确关闭 ${this.MANUAL_PLACEHOLDER_PEER_ID} 的现有 PC。`, Utils.logLevels.WARN);
             this.closeConnection(this.MANUAL_PLACEHOLDER_PEER_ID, false);
         }
-
         delete this.connections[peerId];
         delete this.iceCandidates[peerId];
         delete this.reconnectAttempts[peerId];
         if (this.iceTimers[peerId]) clearTimeout(this.iceTimers[peerId]);
         delete this.iceTimers[peerId];
         delete this.iceGatheringStartTimes[peerId];
-
         Utils.log(`WebRTCManager: 为 ${peerId} 初始化新的 RTCPeerConnection。视频通话: ${isVideoCall}`, Utils.logLevels.INFO);
         try {
             const rtcConfig = AppSettings.peerConnectionConfig;
@@ -72,7 +71,7 @@ const WebRTCManager = {
 
             this.connections[peerId] = {
                 peerConnection: newPc,
-                dataChannel: null, // 将由 DataChannelHandler 或 ConnectionManager 填充
+                dataChannel: null, // Will be populated by DataChannelHandler or ConnectionManager
                 isVideoCall: isVideoCall,
                 isAudioOnly: false,
                 isScreenShare: false,
@@ -111,42 +110,49 @@ const WebRTCManager = {
         const {isVideoCall = false, isAudioOnly = false, isScreenShare = false, isSilent = false, isManual = false} = options;
         Utils.log(`WebRTCManager: 正在为 ${targetPeerId} 创建提议，视频: ${isVideoCall}, 纯音频: ${isAudioOnly}, 屏幕共享: ${isScreenShare}, 手动: ${isManual}`, Utils.logLevels.DEBUG);
 
-        const pc = this.initConnection(targetPeerId, isVideoCall);
+        let pc = this.connections[targetPeerId]?.peerConnection;
+        if (!pc || pc.signalingState === 'closed' || pc.signalingState === 'failed') {
+            pc = this.initConnection(targetPeerId, isVideoCall);
+        }
+
         if (!pc) {
             if (!isSilent || isManual) NotificationUIManager.showNotification("初始化连接以创建提议失败。", "error");
             Utils.log(`WebRTCManager: createOffer: initConnection 为 ${targetPeerId} 返回 null。正在中止。`, Utils.logLevels.ERROR);
             return;
         }
+
         if (pc.signalingState === 'have-local-offer') {
             if (!isSilent) NotificationUIManager.showNotification(`已向 ${UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0, 6)} 发送过提议。`, "info");
             return;
         }
         if (pc.signalingState === 'have-remote-offer') {
-            if (!isSilent) NotificationUIManager.showNotification(`已收到对方的提议。无法创建新提议。`, "info");
-            return;
+            // Glare condition. Let's decide who backs off. Simple rule: higher ID proceeds.
+            if (UserManager.userId > targetPeerId) {
+                Utils.log(`WebRTCManager: Glare detected with ${targetPeerId}. We are proceeding with our offer.`, Utils.logLevels.WARN);
+            } else {
+                Utils.log(`WebRTCManager: Glare detected with ${targetPeerId}. We are polite and will handle their offer instead. Aborting our offer.`, Utils.logLevels.WARN);
+                // The incoming offer will be handled by handleRemoteOffer.
+                return;
+            }
         }
 
         const connEntry = this.connections[targetPeerId];
-        if (connEntry) {
+        if (connEntry) { /* ... connEntry update logic remains the same ... */
             connEntry.isVideoCall = isVideoCall;
             connEntry.isAudioOnly = isAudioOnly;
             connEntry.isScreenShare = isScreenShare;
             connEntry.wasInitiatedSilently = isSilent && !isManual;
         }
 
-
         if (pc.signalingState === 'stable' || pc.signalingState === 'new') {
             if (!isVideoCall) {
-                // 数据通道的创建和设置现在由 _onDataChannelReadyHandler 外部处理，或者在 setupDataChannel 中处理
-                // 这里我们只确保在需要时能触发 ondatachannel
                 if (connEntry && (!connEntry.dataChannel || connEntry.dataChannel.readyState === 'closed')) {
                     const dataChannel = pc.createDataChannel('chatChannel', {reliable: true});
-                    // setupDataChannel 将由 ConnectionManager 在其 onDataChannelReady 回调中调用
                     if (typeof this._onDataChannelReadyHandler === 'function') {
                         this._onDataChannelReadyHandler(dataChannel, targetPeerId, targetPeerId === this.MANUAL_PLACEHOLDER_PEER_ID);
                     }
                 }
-            } else { // 视频通话逻辑 (添加媒体轨道)
+            } else {
                 if (VideoCallManager.localStream) {
                     pc.getSenders().forEach(sender => { if (sender.track) try { pc.removeTrack(sender); } catch (e) { Utils.log(`WebRTCManager: 移除旧轨道时出错: ${e}`, Utils.logLevels.WARN); }});
                     VideoCallManager.localStream.getTracks().forEach(track => {
@@ -178,7 +184,6 @@ const WebRTCManager = {
 
             if (isManual) {
                 this.waitForIceGatheringComplete(targetPeerId, () => {
-                    // 在手动模式下，ConnectionManager 会负责更新UI
                     if (typeof this._signalingSender === 'function') {
                         this._signalingSender('manual_offer_ready', targetPeerId, sdpPayload, this.iceCandidates[targetPeerId] || []);
                     }
@@ -189,7 +194,7 @@ const WebRTCManager = {
                     ChatAreaUIManager.updateChatHeaderStatus(`正在连接到 ${UserManager.contacts[targetPeerId]?.name || targetPeerId.substring(0, 8)}...`);
                 }
                 if (typeof this._signalingSender === 'function') {
-                    this._signalingSender('OFFER', targetPeerId, sdpPayload, null, isSilent); // 自动模式下 ICE 会单独发送
+                    this._signalingSender('OFFER', targetPeerId, sdpPayload, null, isSilent);
                 }
             }
         } catch (error) {
@@ -200,7 +205,7 @@ const WebRTCManager = {
     },
 
     /**
-     * 处理远程提议 (offer)。
+     * MODIFIED: 处理远程提议 (offer)，能正确处理重新协商。
      * @param {string} fromUserId - 发送方的 ID。
      * @param {string} sdpString - SDP 字符串。
      * @param {RTCIceCandidateInit[]} [candidates] - 对方的 ICE 候选者 (可选)。
@@ -212,9 +217,29 @@ const WebRTCManager = {
      * @returns {Promise<void>}
      */
     handleRemoteOffer: async function (fromUserId, sdpString, candidates, isVideoCall, isAudioOnly, isScreenShare, sdpType, isManualFlow = false) {
-        // _ensureContactExistsForPeer 逻辑由 ConnectionManager 处理
         let pc = this.connections[fromUserId]?.peerConnection;
-        if (!pc || (!isManualFlow && pc.signalingState !== 'stable' && pc.signalingState !== 'new')) {
+        let isReNegotiation = false;
+
+        // --- FIX START: Logic to handle re-negotiation without destroying the connection ---
+        if (pc && pc.signalingState !== 'closed' && pc.signalingState !== 'failed') {
+            // Connection exists, check signaling state
+            if (pc.signalingState === 'have-local-offer') {
+                // Glare condition
+                if (UserManager.userId > fromUserId) {
+                    Utils.log(`WebRTCManager: Glare detected with ${fromUserId}. We are impolite and will ignore their offer.`, Utils.logLevels.WARN);
+                    return; // Ignore their offer, let them handle ours
+                }
+                // We are the "polite" peer, we will handle their offer.
+                // We must first rollback our local offer.
+                Utils.log(`WebRTCManager: Glare detected with ${fromUserId}. We are polite and will handle their offer. Rolling back local offer.`, Utils.logLevels.WARN);
+                await pc.setLocalDescription({ type: 'rollback' });
+                isReNegotiation = true;
+            } else if (pc.signalingState === 'stable') {
+                isReNegotiation = true;
+                Utils.log(`WebRTCManager: 收到来自 ${fromUserId} 的重新协商 offer。`, Utils.logLevels.INFO);
+            }
+        } else {
+            // No existing or usable connection, create a new one
             pc = this.initConnection(fromUserId, isVideoCall);
         }
         if (!pc) {
@@ -224,7 +249,8 @@ const WebRTCManager = {
 
         const connEntry = this.connections[fromUserId];
         if (connEntry) {
-            connEntry.wasInitiatedSilently = connEntry.wasInitiatedSilently && !isManualFlow;
+            // Update connection flags
+            connEntry.wasInitiatedSilently = isReNegotiation ? connEntry.wasInitiatedSilently : (connEntry.wasInitiatedSilently && !isManualFlow);
             connEntry.isVideoCall = isVideoCall;
             connEntry.isAudioOnly = isAudioOnly;
             connEntry.isScreenShare = isScreenShare;
@@ -245,7 +271,6 @@ const WebRTCManager = {
                     }
                 }
             }
-
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
             if (!pc.localDescription) {
@@ -265,7 +290,6 @@ const WebRTCManager = {
             if (isManualFlow) {
                 this.waitForIceGatheringComplete(fromUserId, () => {
                     if (typeof this._signalingSender === 'function') {
-                        // 在手动模式下，ConnectionManager 会负责更新UI
                         this._signalingSender('manual_answer_ready', fromUserId, sdpPayload, this.iceCandidates[fromUserId] || []);
                     }
                     NotificationUIManager.showNotification("应答已创建。请复制信息并发送。", "info");
@@ -278,7 +302,6 @@ const WebRTCManager = {
         } catch (error) {
             Utils.log(`WebRTCManager: 处理来自 ${fromUserId} 的远程提议失败: ${error.message}\n堆栈: ${error.stack}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`处理提议时出错: ${error.message}`, 'error');
-            // 音频通话，非正常挂断有可能走这里
             VideoCallManager.hangUpMedia(false);
             this.closeConnection(fromUserId);
         }
@@ -312,7 +335,7 @@ const WebRTCManager = {
         }
         if (pc.signalingState !== 'have-local-offer') {
             if (!wasSilentContext) {
-                if (pc.signalingState === 'stable' && this.isConnectedTo(fromUserId)) { // isConnectedTo 应该也由 WebRTCManager 提供
+                if (pc.signalingState === 'stable' && this.isConnectedTo(fromUserId)) {
                     Utils.log(`WebRTCManager: 与 ${fromUserId} 的连接已稳定。应答可能延迟到达。`, Utils.logLevels.INFO);
                 } else {
                     NotificationUIManager.showNotification(`处理 ${fromUserId} 的应答时连接状态错误。状态: ${pc.signalingState}。`, 'error');
@@ -320,7 +343,6 @@ const WebRTCManager = {
             }
             return;
         }
-
         try {
             if (typeof sdpString !== 'string') {
                 Utils.log(`WebRTCManager: handleRemoteAnswer - 无效的 SDP 字符串 for ${fromUserId}.`, Utils.logLevels.ERROR);
@@ -328,7 +350,6 @@ const WebRTCManager = {
                 return;
             }
             await pc.setRemoteDescription(new RTCSessionDescription({type: 'answer', sdp: sdpString}));
-
             if (candidates && Array.isArray(candidates)) {
                 for (const candidate of candidates) {
                     if (candidate && typeof candidate === 'object' && pc.remoteDescription && pc.signalingState !== 'closed') {
@@ -342,13 +363,6 @@ const WebRTCManager = {
             this.closeConnection(fromUserId);
         }
     },
-
-    /**
-     * 添加远程 ICE 候选者。
-     * @param {string} fromUserId - 发送方的 ID。
-     * @param {RTCIceCandidateInit} candidate - ICE 候选者对象。
-     * @returns {Promise<void>}
-     */
     addRemoteIceCandidate: async function (fromUserId, candidate) {
         const conn = this.connections[fromUserId];
         if (conn?.peerConnection?.remoteDescription && conn.peerConnection.signalingState !== 'closed') {
@@ -361,35 +375,18 @@ const WebRTCManager = {
             }
         }
     },
-
-    /**
-     * RTCPeerConnection 的 onicecandidate 事件处理器。
-     * @param {RTCPeerConnectionIceEvent} event - 事件对象。
-     * @param {string} peerId - 相关的对方 ID。
-     */
     handleLocalIceCandidate: function (event, peerId) {
         if (event.candidate) {
             if (!this.iceCandidates[peerId]) this.iceCandidates[peerId] = [];
             this.iceCandidates[peerId].push(event.candidate.toJSON());
-
             const connData = this.connections[peerId];
-            // 手动上下文的判断现在由 ConnectionManager 或更上层处理，WebRTCManager 只负责发送
             const isManualContext = peerId === this.MANUAL_PLACEHOLDER_PEER_ID;
-
-
             if (!isManualContext && typeof this._signalingSender === 'function') {
                 const sendSilently = connData?.wasInitiatedSilently || false;
                 this._signalingSender('ICE_CANDIDATE', peerId, event.candidate.toJSON(), null, sendSilently);
             }
         }
-        // onicegatheringstatechange 会处理收集完成
     },
-
-    /**
-     * 等待 ICE 收集完成或超时。
-     * @param {string} peerId - 相关的对方 ID。
-     * @param {function} callback - 完成或超时后执行的回调。
-     */
     waitForIceGatheringComplete: function (peerId, callback) {
         const pc = this.connections[peerId]?.peerConnection;
         if (!pc) {
@@ -398,7 +395,6 @@ const WebRTCManager = {
         }
         if (this.iceTimers[peerId]) clearTimeout(this.iceTimers[peerId]);
         delete this.iceTimers[peerId];
-
         if (pc.iceGatheringState === 'complete') {
             if (typeof callback === 'function') callback();
         } else {
@@ -416,7 +412,6 @@ const WebRTCManager = {
                 Utils.log(`WebRTCManager: 为 ${peerId} 的 ICE 收集超时。继续执行。状态: ${pc.iceGatheringState}`, Utils.logLevels.WARN);
                 onDone();
             }, AppSettings.timeouts.iceGathering);
-
             checkInterval = setInterval(() => {
                 if (!this.connections[peerId]?.peerConnection) {
                     if (checkInterval) clearInterval(checkInterval);
@@ -430,11 +425,6 @@ const WebRTCManager = {
             }, 200);
         }
     },
-
-    /**
-     * 处理 iceConnectionState 变化。
-     * @param {string} peerId - 相关的对方 ID。
-     */
     handleIceConnectionStateChange: function (peerId) {
         const conn = this.connections[peerId];
         if (!conn?.peerConnection) return;
@@ -459,11 +449,6 @@ const WebRTCManager = {
                 break;
         }
     },
-
-    /**
-     * 处理 connectionState 变化 (更新的 API)。
-     * @param {string} peerId - 相关的对方 ID。
-     */
     handleRtcConnectionStateChange: function (peerId) {
         const conn = this.connections[peerId];
         if (!conn?.peerConnection) return;
@@ -491,18 +476,12 @@ const WebRTCManager = {
                 break;
             case "closed":
                 if(conn) conn._emittedEstablished = false;
-                // closed 状态通常由 closeConnection 调用触发，这里主要是确保清理
                 if (this.connections[peerId]) {
                     Utils.log(`WebRTCManager: handleRtcConnectionStateChange - ${peerId} is 'closed', ensuring local state cleanup if not already done.`, Utils.logLevels.DEBUG);
                 }
                 break;
         }
     },
-
-    /**
-     * 尝试重新连接断开的对等端。
-     * @param {string} peerId - 要重连的对方 ID。
-     */
     attemptReconnect: function (peerId) {
         const conn = this.connections[peerId];
         if (!conn || conn.isVideoCall || this.isConnectedTo(peerId) || conn.peerConnection?.connectionState === 'connecting') return;
@@ -529,32 +508,16 @@ const WebRTCManager = {
             this.closeConnection(peerId, false);
         }
     },
-
-
-    /**
-     * 检查是否与指定对等端建立了有效连接。
-     * @param {string} peerId - 要检查的对方 ID。
-     * @returns {boolean} - 是否已连接。
-     */
     isConnectedTo: function (peerId) {
-        // AI 联系人逻辑由 ConnectionManager 或上层处理
         const conn = this.connections[peerId];
         if (!conn?.peerConnection) return false;
         const pcOverallState = conn.peerConnection.connectionState;
         if (pcOverallState === 'connected') {
-            // 对于视频通话，或数据通道已打开，则视为已连接
-            // 数据通道的状态现在不由 WebRTCManager 直接管理，这里可以简化或依赖上层
             if (conn.isVideoCall || (conn.dataChannel && conn.dataChannel.readyState === 'open')) return true;
         }
         return false;
     },
-
-    /**
-     * 关闭与指定对等端的连接。
-     * @param {string} peerId - 要关闭连接的对方 ID。
-     * @param {boolean} [notifyPeer=true] - 是否通知对方连接已关闭（此参数在此模块中不直接使用，由上层决定）。
-     */
-    closeConnection: function (peerId, notifyPeer = true) { // notifyPeer 实际上由 ConnectionManager 层面处理
+    closeConnection: function (peerId, notifyPeer = true) {
         const conn = this.connections[peerId];
         if (conn) {
             Utils.log(`WebRTCManager: 正在关闭与 ${peerId} 的连接。`, Utils.logLevels.INFO);
@@ -562,22 +525,19 @@ const WebRTCManager = {
             delete this.connectionTimeouts[peerId];
             if (this.iceTimers[peerId]) clearTimeout(this.iceTimers[peerId]);
             delete this.iceTimers[peerId];
-
-            if (conn.dataChannel) { // 数据通道关闭逻辑将由 DataChannelHandler 或 ConnectionManager 处理
-                // 但 WebRTCManager 可以清理其引用
+            if (conn.dataChannel) {
                 try {
-                    // 移除事件监听器，防止在此处再次触发 onclose
                     if (conn.dataChannel.onopen) conn.dataChannel.onopen = null;
                     if (conn.dataChannel.onmessage) conn.dataChannel.onmessage = null;
                     if (conn.dataChannel.onerror) conn.dataChannel.onerror = null;
                     const originalOnClose = conn.dataChannel.onclose;
                     conn.dataChannel.onclose = () => {
                         Utils.log(`WebRTCManager: DataChannel for ${peerId} explicitly closed as part of PC cleanup.`, Utils.logLevels.DEBUG);
-                        if (typeof originalOnClose === 'function') originalOnClose(); // Call original if exists
+                        if (typeof originalOnClose === 'function') originalOnClose();
                     };
                     if (conn.dataChannel.readyState !== 'closed') conn.dataChannel.close();
                 } catch (e) { /* 忽略 */ }
-                conn.dataChannel = null; // 清理引用
+                conn.dataChannel = null;
             }
             if (conn.peerConnection) {
                 try {
@@ -594,32 +554,18 @@ const WebRTCManager = {
             delete this.iceCandidates[peerId];
             delete this.reconnectAttempts[peerId];
             delete this.iceGatheringStartTimes[peerId];
-
-            EventEmitter.emit('connectionClosed', peerId); // 触发连接关闭事件
+            EventEmitter.emit('connectionClosed', peerId);
         }
     },
-
-    /**
-     * 仅关闭 PeerConnection（通常由 VideoCallManager 调用）。
-     * @param {string} peerId - 目标对方ID。
-     */
-    closePeerConnectionMedia: function(peerId) { // 重命名以区分
+    closePeerConnectionMedia: function(peerId) {
         const conn = this.connections[peerId];
         if (conn && conn.peerConnection && conn.peerConnection.signalingState !== 'closed') {
             Utils.log(`WebRTCManager: 明确关闭 PeerConnection for ${peerId} (媒体部分)。`, Utils.logLevels.INFO);
             try {
                 conn.peerConnection.close();
-                // 注意：这里不删除 this.connections[peerId]，因为数据通道可能仍在使用
-                // 也不触发 connectionClosed 事件，因为这只是媒体部分的关闭
             } catch (e) { /* ... */ }
         }
     },
-
-
-    /**
-     * 处理 iceGatheringState 变化。
-     * @param {string} peerId - 相关的对方 ID。
-     */
     handleIceGatheringStateChange: function (peerId) {
         const pc = this.connections[peerId]?.peerConnection;
         if (!pc) return;
@@ -630,8 +576,6 @@ const WebRTCManager = {
             const duration = (Date.now() - (this.iceGatheringStartTimes[peerId] || Date.now())) / 1000;
             Utils.log(`WebRTCManager: 为 ${peerId} 的 ICE 收集完成，耗时 ${duration}秒。候选者数量: ${this.iceCandidates[peerId]?.length || 0}`, Utils.logLevels.DEBUG);
             delete this.iceGatheringStartTimes[peerId];
-            // 如果是手动流程，需要通知上层ICE已收集完毕 (通过之前 waitForIceGatheringComplete 的回调)
-            // 对于自动流程，ICE已在 onicecandidate 中发送
         }
     },
 };

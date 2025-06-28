@@ -6,22 +6,12 @@
  *              支持消息的本地删除和撤回请求。
  *              在群聊中检测对AI的@提及，并触发AI响应。文件名过长时，在预览和消息中会进行截断显示。
  *              文件消息现在能正确显示文件大小。文件发送时，将Blob存入DB的fileCache，消息体中存储fileHash。
- *              实际文件数据现在通过'file-transfer'类型的消息发送。视频文件消息现在点击后全屏播放。
+ *              实际文件数据现在通过高效的二进制分片传输。视频文件消息现在点击后全屏播放。
  *              图片和视频文件消息现在显示缩略图预览。
  *              新增：在群聊中发送消息时，会检查并提醒用户是否有在线但未连接的群成员。
  *              私聊时，如果对方不在线，则提示用户消息无法发送，并阻止消息发送。
  * @module MessageManager
  * @exports {object} MessageManager - 对外暴露的单例对象，包含消息处理的所有核心方法。
- * @property {function} sendMessage - 从输入框发送消息，处理文本、文件和语音消息。
- * @property {function} displayMessage - 在聊天窗口中显示或更新一条消息。
- * @property {function} cancelFileData - 取消当前已选择但未发送的文件。
- * @property {function} cancelAudioData - 取消当前已录制但未发送的语音。
- * @property {function} clearChat - 触发清空当前聊天记录的确认流程。
- * @property {function} deleteMessageLocally - 本地删除一条消息。
- * @property {function} requestRetractMessage - 请求撤回一条消息。
- * @dependencies ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler,
- *               MediaManager, MediaUIManager, TtsApiHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, AppSettings, DBManager, PeopleLobbyManager
- * @dependents ChatAreaUIManager (绑定发送按钮事件), ChatManager (调用以显示历史消息)
  */
 const MessageManager = {
     selectedFile: null, // 当前选择的文件 { blob, hash, name, type, size, previewUrl }
@@ -31,9 +21,7 @@ const MessageManager = {
     _UNCONNECTED_NOTIFICATION_COOLDOWN: 30000, // 30秒冷却时间
 
     /**
-     * 发送消息。根据输入框内容、已选择的文件或已录制的音频，构建并发送消息。
-     * 在群聊中，会检测对AI的@提及并触发AI响应。
-     * 同时，在群聊中发送消息时，会检查并提醒用户是否有在线但未连接的群成员。
+     * 发送消息。
      */
     sendMessage: async function () {
         const input = document.getElementById('messageInput');
@@ -54,48 +42,29 @@ const MessageManager = {
         const nowTimestamp = new Date().toISOString();
         const messageIdBase = `msg_${Date.now()}_${Utils.generateId(4)}`;
 
-        // 检查群聊中是否有未连接的在线成员 (仅当有内容要发送时)
+        // 检查群聊中是否有未连接的在线成员
         if (isGroup && group && (messageText || currentSelectedFile || currentAudioData)) {
             const currentTime = Date.now();
-            // 检查是否在冷却期内
             if (currentTime - this._lastUnconnectedNotificationTime > this._UNCONNECTED_NOTIFICATION_COOLDOWN) {
-                const myUserId = UserManager.userId;
-                const groupMembers = group.members;
-                const onlineUsers = new Set(PeopleLobbyManager.onlineUserIds || []);
                 const unconnectedOnlineMembersInfo = [];
-
-                for (const memberId of groupMembers) {
-                    if (memberId === myUserId) continue;
-                    const memberContact = UserManager.contacts[memberId];
-                    if (memberContact && memberContact.isAI) continue;
-
-                    if (onlineUsers.has(memberId) && !ConnectionManager.isConnectedTo(memberId)) {
-                        unconnectedOnlineMembersInfo.push({
-                            id: memberId,
-                            name: memberContact?.name || `用户 ${memberId.substring(0,4)}`
-                        });
+                for (const memberId of group.members) {
+                    if (memberId === UserManager.userId || UserManager.contacts[memberId]?.isAI) continue;
+                    if ((PeopleLobbyManager.onlineUserIds || []).includes(memberId) && !ConnectionManager.isConnectedTo(memberId)) {
+                        unconnectedOnlineMembersInfo.push({ id: memberId, name: UserManager.contacts[memberId]?.name || `用户 ${memberId.substring(0,4)}` });
                     }
                 }
-
                 if (unconnectedOnlineMembersInfo.length > 0) {
                     let namesToShow = unconnectedOnlineMembersInfo.slice(0, 2).map(m => m.name).join('、');
-                    if (unconnectedOnlineMembersInfo.length > 2) {
-                        namesToShow += ` 等 ${unconnectedOnlineMembersInfo.length} 人`;
-                    } else if (unconnectedOnlineMembersInfo.length > 0 && unconnectedOnlineMembersInfo.length <=2) {
-                        namesToShow += ` 共 ${unconnectedOnlineMembersInfo.length} 位成员`;
-                    }
-
-
+                    if (unconnectedOnlineMembersInfo.length > 2) namesToShow += ` 等 ${unconnectedOnlineMembersInfo.length} 人`;
+                    else if (unconnectedOnlineMembersInfo.length > 0) namesToShow += ` 共 ${unconnectedOnlineMembersInfo.length} 位成员`;
                     const notificationMessage = `注意: 群内在线成员 ${namesToShow} 当前未与您建立直接连接，他们可能无法收到此消息。可尝试在详情面板中手动连接或等待自动连接。`;
                     NotificationUIManager.showNotification(notificationMessage, 'warning', 7000);
-                    Utils.log(`MessageManager.sendMessage: 检测到 ${unconnectedOnlineMembersInfo.length} 位未连接的在线群成员。`, Utils.logLevels.WARN);
-                    this._lastUnconnectedNotificationTime = currentTime; // 更新上次通知时间
+                    this._lastUnconnectedNotificationTime = currentTime;
                 }
             }
         }
 
-
-        if (contact && contact.isSpecial && contact.isAI && contact.aiConfig && !isGroup) {
+        if (contact && contact.isSpecial && contact.isAI && !isGroup) {
             if (currentAudioData || currentSelectedFile) {
                 NotificationUIManager.showNotification(`不支持向 ${contact.name} 发送音频/文件消息。`, 'warning');
                 if (currentAudioData) MessageManager.cancelAudioData();
@@ -136,8 +105,7 @@ const MessageManager = {
                     if (messageText.match(mentionRegex)) {
                         Utils.log(`MessageManager: 检测到对群内AI ${memberContact.name} (${memberContact.id}) 的提及。`, Utils.logLevels.INFO);
                         const triggeringMsgId = userTextMessageForChat ? userTextMessageForChat.id : null;
-                        AiApiHandler.sendGroupAiMessage(targetId, group, memberContact.id, messageText, UserManager.userId, triggeringMsgId)
-                            .catch(err => Utils.log(`处理群内AI提及 (${memberContact.name}) 时出错: ${err}`, Utils.logLevels.ERROR));
+                        AiApiHandler.sendGroupAiMessage(targetId, group, memberContact.id, messageText, UserManager.userId, triggeringMsgId).catch(err => Utils.log(`处理群内AI提及 (${memberContact.name}) 时出错: ${err}`, Utils.logLevels.ERROR));
                     }
                 }
             }
@@ -153,40 +121,17 @@ const MessageManager = {
 
         if (currentSelectedFile) {
             try {
+                // 1. 将文件 Blob 存入本地缓存
                 await DBManager.setItem('fileCache', {
                     id: currentSelectedFile.hash,
                     fileBlob: currentSelectedFile.blob,
-                    metadata: {
-                        name: currentSelectedFile.name,
-                        type: currentSelectedFile.type,
-                        size: currentSelectedFile.size
-                    }
+                    metadata: { name: currentSelectedFile.name, type: currentSelectedFile.type, size: currentSelectedFile.size }
                 });
                 Utils.log(`文件 ${currentSelectedFile.name} (hash: ${currentSelectedFile.hash.substring(0,8)}...) 已存入本地 fileCache。`, Utils.logLevels.INFO);
 
-                const blobToBase64 = (blob) => new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                });
-
-                const base64Data = await blobToBase64(currentSelectedFile.blob);
-
-                const messagePayloadForSending = {
-                    id: `${messageIdBase}_file`,
-                    type: 'file-transfer',
-                    fileName: currentSelectedFile.name,
-                    fileType: currentSelectedFile.type,
-                    size: currentSelectedFile.size,
-                    fileHash: currentSelectedFile.hash,
-                    fileData: base64Data,
-                    timestamp: nowTimestamp,
-                    sender: UserManager.userId
-                };
-
+                // 2. 创建本地聊天消息 (用于立即显示在UI上)
                 const messagePayloadForLocalChat = {
-                    id: messagePayloadForSending.id,
+                    id: `${messageIdBase}_file`,
                     type: 'file',
                     fileId: currentSelectedFile.hash,
                     fileName: currentSelectedFile.name,
@@ -196,21 +141,38 @@ const MessageManager = {
                     timestamp: nowTimestamp,
                     sender: UserManager.userId
                 };
-
-                if (isGroup) GroupManager.broadcastToGroup(targetId, messagePayloadForSending);
-                else ConnectionManager.sendTo(targetId, messagePayloadForSending);
-
                 await ChatManager.addMessage(targetId, messagePayloadForLocalChat);
+
+                // 3. 通过二进制分片发送文件
+                const sendFileFunction = (peerId) => {
+                    const conn = WebRTCManager.connections[peerId];
+                    if (conn?.dataChannel?.readyState === 'open') {
+                        Utils.sendInChunks(currentSelectedFile.blob, currentSelectedFile.name, conn.dataChannel, peerId, currentSelectedFile.hash);
+                    } else {
+                        Utils.log(`无法向 ${peerId} 发送文件，数据通道未打开。`, Utils.logLevels.WARN);
+                    }
+                };
+                if (isGroup) {
+                    group.members.forEach(memberId => {
+                        if (memberId !== UserManager.userId && !UserManager.contacts[memberId]?.isAI) {
+                            sendFileFunction(memberId);
+                        }
+                    });
+                } else {
+                    sendFileFunction(targetId);
+                }
+
                 messageSent = true;
                 MessageManager.cancelFileData();
 
-            } catch (error) { // Combined catch for DB and blob conversion
+            } catch (error) {
                 Utils.log(`发送文件时出错: ${error}`, Utils.logLevels.ERROR);
                 NotificationUIManager.showNotification('发送文件失败。', 'error');
                 MessageManager.cancelFileData();
                 return;
             }
         }
+
 
         if (userTextMessageForChat) {
             if (isGroup) GroupManager.broadcastToGroup(targetId, userTextMessageForChat);
@@ -538,7 +500,6 @@ ${fileDetailsHtml}
                         URL.revokeObjectURL(existingPlayer.src);
                         return;
                     }
-                    // Insert after the button, or after file-info if button is inside it
                     const insertAfterElement = buttonElement.closest('.file-info') || buttonElement;
                     insertAfterElement.parentNode.insertBefore(mediaElement, insertAfterElement.nextSibling);
                     buttonElement.style.display = 'none';
@@ -734,29 +695,13 @@ ${fileDetailsHtml}
         if (!ChatManager.chats[chatId]) return;
         const messageIndex = ChatManager.chats[chatId].findIndex(msg => msg.id === messageId);
         if (messageIndex === -1) return;
-
         const originalMessage = ChatManager.chats[chatId][messageIndex];
         let retracterDisplayName;
-        if (isOwnRetraction) {
-            retracterDisplayName = UserManager.contacts[UserManager.userId]?.name || UserManager.userName || "你";
-        } else if(retractedByName) {
-            retracterDisplayName = retractedByName;
-        } else if (originalMessage.sender) {
-            retracterDisplayName = UserManager.contacts[originalMessage.sender]?.name || `用户 ${String(originalMessage.sender).substring(0,4)}`;
-        } else {
-            retracterDisplayName = "对方";
-        }
-        const retractedMessage = {
-            ...originalMessage,
-            type: 'system',
-            content: isOwnRetraction ? "你撤回了一条消息" : `${Utils.escapeHtml(retracterDisplayName)} 撤回了一条消息`,
-            isRetracted: true,
-            retractedBy: isOwnRetraction ? UserManager.userId : (originalMessage.sender || null),
-            originalType: originalMessage.type,
-            data: null, // Clear audio/file data for retracted message
-            fileHash: originalMessage.fileHash || null, // Keep hash for potential internal reference if needed
-            isNewlyCompletedAIResponse: false, isStreaming: false, isThinking: false
-        };
+        if (isOwnRetraction) retracterDisplayName = UserManager.contacts[UserManager.userId]?.name || UserManager.userName || "你";
+        else if(retractedByName) retracterDisplayName = retractedByName;
+        else if (originalMessage.sender) retracterDisplayName = UserManager.contacts[originalMessage.sender]?.name || `用户 ${String(originalMessage.sender).substring(0,4)}`;
+        else retracterDisplayName = "对方";
+        const retractedMessage = { ...originalMessage, type: 'system', content: isOwnRetraction ? "你撤回了一条消息" : `${Utils.escapeHtml(retracterDisplayName)} 撤回了一条消息`, isRetracted: true, retractedBy: isOwnRetraction ? UserManager.userId : (originalMessage.sender || null), originalType: originalMessage.type, data: null, fileHash: originalMessage.fileHash || null, isNewlyCompletedAIResponse: false, isStreaming: false, isThinking: false };
         ChatManager.addMessage(chatId, retractedMessage);
     }
 };
