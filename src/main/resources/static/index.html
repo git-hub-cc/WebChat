@@ -38,15 +38,15 @@
 <div class="app-container">
     <!-- 左侧边栏 (导航) -->
     <aside class="sidebar-nav" id="sidebarNav">
-        <div class="sidebar-header">
+        <header class="sidebar-header">
             <button class="menu-btn" id="mainMenuBtn" title="菜单">☰</button>
-            <label for="chatSearchInput"></label><input type="search" class="search-bar" id="chatSearchInput" placeholder="搜索...">
-        </div>
-        <div class="nav-tabs">
+            <label for="chatSearchInput" class="visually-hidden">搜索聊天</label><input type="search" class="search-bar" id="chatSearchInput" placeholder="搜索...">
+        </header>
+        <nav class="nav-tabs">
             <button class="nav-tab active" data-tab-target="all-chats" id="tabAllChats">全部</button>
             <button class="nav-tab" data-tab-target="contacts-list" id="tabContacts">联系人</button>
             <button class="nav-tab" data-tab-target="groups-list" id="tabGroups">群组</button>
-        </div>
+        </nav>
         <div class="chat-list-container">
             <ul id="chatListNav">
                 <!-- 聊天项目将由 JS 在此处填充 -->
@@ -63,7 +63,7 @@
                 <div class="chat-info-main">
                     <div class="chat-avatar-main" id="currentChatAvatarMain"></div>
                     <div class="chat-details-main-header">
-                        <div class="chat-title-main" id="currentChatTitleMain">选择一个聊天</div>
+                        <h1 class="chat-title-main" id="currentChatTitleMain">选择一个聊天</h1>
                         <div class="chat-status-main" id="currentChatStatusMain"></div>
                     </div>
                 </div>
@@ -75,12 +75,12 @@
                 </div>
             </header>
 
-            <div class="no-chat-selected" id="noChatSelectedScreen">
+            <section class="no-chat-selected" id="noChatSelectedScreen">
                 <div class="logo-placeholder">💬</div>
                 <h2>PPMC</h2>
                 <p>从列表中选择聊天开始，或创建一个新聊天。</p>
                 <p id="connectionStatusGlobal" class="status-indicator">状态: <span id="connectionStatusText">初始化中...</span></p>
-            </div>
+            </section>
             <div class="chat-messages-container" id="chatBox">
                 <!-- 消息将在此处填充。noChatSelectedScreen 不再是其子元素。 -->
             </div>
@@ -91,19 +91,17 @@
                 <div class="input-row">
                     <button class="icon-btn attach-btn" id="attachBtnMain" title="附加文件" disabled>📎</button>
                     <button class="icon-btn screenshot-main-btn" id="screenshotMainBtn" title="截图" disabled>📸</button>
-                    <!-- ADDED: Emoji/Sticker button -->
                     <button class="icon-btn emoji-sticker-btn" id="emojiStickerBtn" title="表情/贴图" disabled>😀</button>
-                    <input type="file" id="fileInput">
-                    <label for="messageInput"></label><textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
+                    <input type="file" id="fileInput" class="visually-hidden">
+                    <label for="messageInput" class="visually-hidden">消息输入框</label><textarea id="messageInput" placeholder="输入消息..." disabled></textarea>
                     <button class="icon-btn send-btn" id="sendButtonMain" title="发送" disabled>➤</button>
                     <button class="icon-btn record-btn" id="voiceButtonMain" title="录制语音" disabled>🎙️</button>
                 </div>
-                <!-- ADDED: Emoji/Sticker Panel -->
                 <div id="emojiStickerPanel" class="emoji-sticker-panel">
-                    <div class="menu-tabs">
+                    <nav class="menu-tabs">
                         <button class="menu-tab-item active" data-tab="emoji">Emoji</button>
                         <button class="menu-tab-item" data-tab="sticker">贴图</button>
-                    </div>
+                    </nav>
                     <div id="emojiTabContent" class="menu-tab-content active">
                         <div id="emojiGrid" class="emoji-grid">
                             <!-- Emojis will be populated by JS -->
@@ -114,7 +112,7 @@
                             <!-- Stickers will be populated by JS -->
                         </div>
                         <button id="addStickerBtn" class="btn btn-secondary">添加贴图</button>
-                        <input type="file" id="stickerInput" accept="image/png, image/jpeg, image/gif, image/webp" style="display: none;">
+                        <input type="file" id="stickerInput" accept="image/png, image/jpeg, image/gif, image/webp" class="visually-hidden">
                     </div>
                 </div>
             </footer>
@@ -132,14 +130,14 @@
             <button class="icon-btn close-details-btn" id="closeDetailsBtnMain" title="关闭详情">✕</button>
         </header>
         <div class="details-content" id="detailsPanelContent">
-            <div class="details-section" id="detailsContactInfo">
+            <section class="details-section" id="detailsContactInfo">
                 <div class="details-avatar" id="detailsAvatar"></div>
                 <h4 id="detailsName">名称</h4>
                 <p id="detailsId">ID: </p>
                 <p id="detailsStatus">状态: </p>
-            </div>
+            </section>
             <!-- AI 联系人“关于”部分 -->
-            <div class="details-section" id="aiContactAboutSection">
+            <section class="details-section" id="aiContactAboutSection">
                 <h4>关于 <span id="aiContactAboutName">AI 名称</span></h4>
                 <div id="aiContactDetailsContent">
                     <p><strong>基本信息</strong></p>
@@ -147,38 +145,31 @@
                     <p><strong>关于 <span id="aiContactAboutNameSub">AI 名称</span></strong></p>
                     <p id="aiContactAboutText"></p>
                 </div>
-            </div>
+            </section>
             <!-- AI 联系人“关于”部分结束 -->
 
             <!-- AI 记忆选择部分 -->
-            <div class="details-section" id="aiChapterSection">
+            <section class="details-section" id="aiChapterSection">
                 <h4 id="aiChapterHeader">关卡</h4>
                 <div class="settings-item">
                     <label for="aiChapterSelectContainer">选择关卡:</label> <!-- Changed for attribute -->
-                    <!-- Container for the custom searchable select, to be populated by JS -->
                     <div id="aiChapterSelectContainer">
                         <!-- Searchable select will be built here by JS -->
                     </div>
                 </div>
-            </div>
+            </section>
             <!-- AI 记忆选择部分结束 -->
             <!-- Memory Book Section -->
-            <div class="details-section" id="memoryBookSection" style="display: none;">
+            <section class="details-section" id="memoryBookSection">
                 <h4>记忆书</h4>
                 <div id="memoryBookList">
-                    <!-- Memory sets will be populated here by JS -->
+                    <!-- Memory sets will be populated here by JS, but without management buttons -->
                 </div>
-                <div id="newMemorySetForm" style="display: none; margin-top: 15px;">
-                    <label for="newMemorySetNameInput"></label><input type="text" id="newMemorySetNameInput" placeholder="新要素集名称...">
-                    <label for="newMemorySetElementsInput"></label><input type="text" id="newMemorySetElementsInput" placeholder="关键要素, 用逗号分隔...">
-                    <button id="confirmAddMemorySetBtn" class="btn btn-secondary btn-sm">确认添加</button>
-                </div>
-                <button id="addMemorySetBtn" class="btn btn-primary btn-sm" style="width: 100%; margin-top: 10px;">+ 添加要素集</button>
-            </div>
+            </section>
             <!-- Memory Book Section End -->
 
             <!-- AI TTS 配置部分 (MODIFIED STRUCTURE) -->
-            <div class="details-section" id="aiTtsConfigSection">
+            <section class="details-section" id="aiTtsConfigSection">
                 <!-- Main TTS Config Collapsible Container -->
                 <div class="collapsible-container">
                     <h4 class="collapsible-header" id="aiTtsConfigHeader">
@@ -219,22 +210,22 @@
                                 如果 PPMC 给你带来了哪怕一丝丝的快乐或便利，或者你只是单纯觉得本项目的猫猫开发者很可爱，不妨考虑请我们喝杯咖啡？<br>
                                 您的每一份支持，都是我们继续爆肝更新、添加更多神奇（蛇皮）功能的动力！(づ｡◕‿‿◕｡)づ
                             </p>
-                            <img src="/img/wechat/pay.png" alt="请作者喝杯咖啡" class="wechat-pay">
+                            <img src="/img/wechat/pay.png" alt="请作者喝杯咖啡" class="wechat-pay" loading="lazy">
                             <p>感谢您的慷慨！(〃'▽'〃)</p>
                         </div>
                     </div>
                 </div>
-            </div>
+            </section>
             <!-- AI TTS 配置部分结束 -->
 
             <!-- 群组管理部分 (MODIFIED STRUCTURE) -->
-            <div class="details-section collapsible-container" id="detailsGroupManagement">
+            <section class="details-section collapsible-container" id="detailsGroupManagement">
                 <h4 id="groupMemberListHeader" class="collapsible-header">成员 (<span id="groupMemberCount">0</span>)<span class="collapse-icon">▶</span></h4>
                 <div id="groupMemberListContainer" class="collapsible-content">
                     <div id="groupMemberListDetails" class="member-list-details"></div>
                     <div id="addGroupMemberArea" class="add-member-details">
                         <h5>添加成员 (群组上限20人)</h5>
-                        <label for="contactsDropdownDetails"></label><select id="contactsDropdownDetails"></select>
+                        <label for="contactsDropdownDetails" class="visually-hidden">选择要添加的联系人</label><select id="contactsDropdownDetails"></select>
                         <button id="addMemberBtnDetails" class="btn btn-primary">添加</button>
                     </div>
                     <div id="leftMembersArea" class="left-members-details">
@@ -242,53 +233,49 @@
                         <div id="leftMemberListDetails"></div>
                     </div>
                 </div>
-            </div>
+            </section>
             <!-- 群组内 AI 提示词管理部分 (仅群主可见) (MODIFIED STRUCTURE) -->
-            <div class="details-section collapsible-container" id="groupAiPromptsSection">
+            <section class="details-section collapsible-container" id="groupAiPromptsSection">
                 <h4 id="groupAiPromptsHeader" class="collapsible-header">群内AI行为指示 <span class="collapse-icon">▶</span></h4>
                 <div id="groupAiPromptsListContainer" class="collapsible-content">
                     <!-- AI 提示词编辑器将由 JS 在此动态填充 -->
                 </div>
-            </div>
+            </section>
 
             <!-- 聊天操作部分 -->
-            <div class="details-section" id="currentChatActionsDetails">
+            <section class="details-section" id="currentChatActionsDetails">
                 <h4>操作</h4>
                 <button id="clearCurrentChatBtnDetails" class="btn btn-warning">清空聊天记录</button>
-            </div>
+            </section>
 
             <!-- 群组操作部分 -->
-            <div class="details-section" id="groupActionsDetails">
+            <section class="details-section" id="groupActionsDetails">
                 <h4>群组设置</h4>
                 <button id="leaveGroupBtnDetails" class="btn btn-danger">退出群组</button>
                 <button id="dissolveGroupBtnDetails" class="btn btn-danger">解散群组</button>
-            </div>
+            </section>
 
             <!-- 联系人设置部分 -->
-            <div class="details-section" id="contactActionsDetails">
+            <section class="details-section" id="contactActionsDetails">
                 <h4>联系人设置</h4>
                 <button id="deleteContactBtnDetails" class="btn btn-danger">删除联系人</button>
-            </div>
+            </section>
             <!-- 聊天资源预览部分 - MODIFIED -->
-            <div class="details-section" id="resourcePreviewSection">
+            <section class="details-section" id="resourcePreviewSection">
                 <h4 id="resourcePreviewHeaderTitle">聊天资源</h4>
                 <div id="resourcePreviewPanelContent">
-                    <!-- 新增: 资源搜索框 -->
                     <div class="resource-search-container">
-                        <label for="resourceSearchInputDetailsPanel"></label><input type="search" id="resourceSearchInputDetailsPanel" placeholder="搜索资源内容..." class="search-bar">
+                        <label for="resourceSearchInputDetailsPanel" class="visually-hidden">搜索资源</label><input type="search" id="resourceSearchInputDetailsPanel" placeholder="搜索资源内容..." class="search-bar">
                     </div>
-                    <!-- 修改: 资源分类标签 -->
-                    <div class="resource-category-tabs" id="resourceCategoryTabsContainer">
+                    <nav class="resource-category-tabs" id="resourceCategoryTabsContainer">
                         <button class="resource-category-tab active" data-resource-type="imagery">影像</button>
                         <button class="resource-category-tab" data-resource-type="text">文本</button>
                         <button class="resource-category-tab" data-resource-type="other">其它</button>
                         <button class="resource-category-tab" data-resource-type="date">日期</button>
-                    </div>
-                    <!-- 资源网格容器 (影像、文本、其它) -->
+                    </nav>
                     <div id="resourceGridContainer" class="resource-grid-container">
                         <!-- Resource items will be populated here by JS -->
                     </div>
-                    <!-- 新增: 日历容器 (日期) -->
                     <div id="calendarContainerDetailsPanel" class="calendar-container-rps">
                         <!-- Calendar will be rendered here by JS -->
                     </div>
@@ -296,15 +283,15 @@
                         <div class="spinner"></div>
                     </div>
                 </div>
-            </div>
+            </section>
             <!-- 聊天资源预览部分结束 -->
         </div>
         <!-- 人员大厅内容容器 -->
         <div class="lobby-content" id="peopleLobbyContent">
-            <div class="lobby-header">
+            <header class="lobby-header">
                 <h4>在线用户</h4>
                 <button id="peopleLobbyRefreshBtn" class="icon-btn" title="刷新列表">🔄</button>
-            </div>
+            </header>
             <ul id="peopleLobbyList" class="chat-list-container">
                 <!-- 在线用户将在此处填充 -->
             </ul>
@@ -359,21 +346,20 @@
 <!-- 主菜单 / 设置模态框 -->
 <div id="mainMenuModal" class="modal-like">
     <div class="modal-content">
-        <div class="modal-header">
+        <header class="modal-header">
             <h2>菜单</h2>
             <button class="icon-btn close-modal-btn" data-modal-id="mainMenuModal">✕</button>
-        </div>
+        </header>
         <div class="modal-body">
-            <!-- MODIFIED START: New Tab Structure -->
-            <div class="menu-tabs">
+            <nav class="menu-tabs">
                 <button class="menu-tab-item active" data-tab="general">通用</button>
                 <button class="menu-tab-item" data-tab="appearance">外观</button>
                 <button class="menu-tab-item" data-tab="api">AI & API</button>
                 <button class="menu-tab-item" data-tab="advanced">高级</button>
-            </div>
+            </nav>
 
             <!-- Tab Content: General -->
-            <div id="menu-tab-content-general" class="menu-tab-content active">
+            <section id="menu-tab-content-general" class="menu-tab-content active">
                 <div class="settings-section">
                     <h3>您的用户 ID</h3>
                     <div class="user-id-display">
@@ -395,10 +381,10 @@
                     <button id="modalClearAllChatsBtn" class="btn btn-danger">清空聊天记录</button>
                     <button id="modalClearCacheBtn" class="btn btn-danger">重置页面</button>
                 </div>
-            </div>
+            </section>
 
             <!-- Tab Content: Appearance -->
-            <div id="menu-tab-content-appearance" class="menu-tab-content">
+            <section id="menu-tab-content-appearance" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>外观设置</h3>
                     <div class="settings-item">
@@ -415,14 +401,13 @@
                             <div class="options" id="themeOptionsContainer"></div>
                         </div>
                     </div>
-                    <!-- MODIFIED START: Dual Background Image Settings -->
                     <div class="settings-item">
                         <label for="setBackgroundBtnLight">浅色模式背景:</label>
                         <div class="setting-control-group">
                             <button id="setBackgroundBtnLight" class="btn btn-secondary btn-sm">选择图片</button>
                             <button id="removeBackgroundBtnLight" class="btn btn-danger btn-sm">移除背景</button>
                         </div>
-                        <input type="file" id="bgImageInputLight" accept="image/*">
+                        <input type="file" id="bgImageInputLight" accept="image/*" class="visually-hidden">
                     </div>
                     <div class="settings-item">
                         <label for="setBackgroundBtnDark">深色模式背景:</label>
@@ -430,17 +415,15 @@
                             <button id="setBackgroundBtnDark" class="btn btn-secondary btn-sm">选择图片</button>
                             <button id="removeBackgroundBtnDark" class="btn btn-danger btn-sm">移除背景</button>
                         </div>
-                        <input type="file" id="bgImageInputDark" accept="image/*">
+                        <input type="file" id="bgImageInputDark" accept="image/*" class="visually-hidden">
                     </div>
-                    <!-- MODIFIED END -->
                 </div>
-            </div>
+            </section>
 
             <!-- Tab Content: AI & API -->
-            <div id="menu-tab-content-api" class="menu-tab-content">
+            <section id="menu-tab-content-api" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>AI & API 配置</h3>
-                    <!-- LLM Provider Selector -->
                     <div class="settings-item">
                         <label for="llmProviderSelectContainer">大模型:</label>
                         <div class="custom-select" id="llmProviderSelectContainer">
@@ -448,12 +431,10 @@
                             <div class="options" id="llmProviderOptionsContainer"></div>
                         </div>
                     </div>
-                    <!-- API Endpoint -->
                     <div class="settings-item">
                         <label for="apiEndpointInput">API 端点:</label>
                         <input type="text" id="apiEndpointInput" placeholder="由大模型选择自动填充">
                     </div>
-                    <!-- Model Name (Container for dynamic input/select) -->
                     <div class="settings-item">
                         <label for="apiModelInputContainer">模型名称:</label>
                         <div id="apiModelInputContainer" class="api-model-input-container">
@@ -473,11 +454,10 @@
                         <input type="text" id="ttsApiEndpointInput" placeholder="例如: http://localhost:8000">
                     </div>
                 </div>
-            </div>
-
+            </section>
 
             <!-- Tab Content: Advanced -->
-            <div id="menu-tab-content-advanced" class="menu-tab-content">
+            <section id="menu-tab-content-advanced" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>手动连接</h3>
                     <p>用于信令服务器故障或需要直接建立连接时。</p>
@@ -491,73 +471,80 @@
                         <button id="modalHandleAnswerBtn" class="btn btn-secondary">3. 接受应答 (粘贴应答后)</button>
                     </div>
                     <div class="manual-connect-step">
-                        <label for="modalSdpText"></label><textarea id="modalSdpText" placeholder="在此粘贴对方的连接信息..."></textarea>
+                        <label for="modalSdpText" class="visually-hidden">连接信息</label><textarea id="modalSdpText" placeholder="在此粘贴对方的连接信息..."></textarea>
                         <button class="btn btn-secondary" id="modalCopySdpBtn">复制我的信息</button>
                     </div>
                 </div>
-            </div>
-            <!-- MODIFIED END -->
+            </section>
         </div>
     </div>
 </div>
-<!-- 新建聊天/群组模态框 -->
+<!-- 交互管理模态框 -->
 <div id="newContactGroupModal" class="modal-like">
     <div class="modal-content">
-        <div class="modal-header">
-            <h2>管理联系人与群组</h2>
+        <header class="modal-header">
+            <h2>交互管理</h2>
             <button class="icon-btn close-modal-btn" data-modal-id="newContactGroupModal">✕</button>
-        </div>
+        </header>
         <div class="modal-body">
-            <!-- MODIFICATION START: Replaced single view with tabs -->
-            <div class="menu-tabs">
+            <nav class="menu-tabs">
                 <button class="menu-tab-item active" data-tab-target="#newContactTabContent">联系人</button>
                 <button class="menu-tab-item" data-tab-target="#newGroupTabContent">群组</button>
-                <!-- ADDED: Character Card Tab -->
                 <button class="menu-tab-item" data-tab-target="#newCharacterTabContent">角色</button>
-            </div>
+                <button class="menu-tab-item" data-tab-target="#memorySetTabContent">记忆书</button> <!-- MODIFIED -->
+            </nav>
 
-            <!-- Contact Tab Content (Existing) -->
-            <div id="newContactTabContent" class="menu-tab-content active">
+            <section id="newContactTabContent" class="menu-tab-content active">
                 <div class="settings-section">
-                    <h3>联系人操作</h3>
+                    <h3>联系人管理</h3>
                     <p>输入对方ID。若ID已存在，可修改其昵称。若ID不存在，则添加新联系人。</p>
-                    <label for="newPeerIdInput"></label><input type="text" id="newPeerIdInput" placeholder="输入对方 ID (必填)">
-                    <label for="newPeerNameInput"></label><input type="text" id="newPeerNameInput" placeholder="输入对方昵称 (修改或新建时可选)">
+                    <label for="newPeerIdInput" class="visually-hidden">对方ID</label><input type="text" id="newPeerIdInput" placeholder="输入对方 ID (必填)">
+                    <label for="newPeerNameInput" class="visually-hidden">对方昵称</label><input type="text" id="newPeerNameInput" placeholder="输入对方昵称 (修改或新建时可选)">
                     <button id="confirmNewContactBtn" class="btn btn-primary">添加 / 修改联系人</button>
                 </div>
-            </div>
+            </section>
 
-            <!-- Group Tab Content (Existing) -->
-            <div id="newGroupTabContent" class="menu-tab-content">
+            <section id="newGroupTabContent" class="menu-tab-content">
                 <div class="settings-section">
-                    <h3>创建或修改群组</h3>
+                    <h3>群组管理</h3>
                     <p>输入群组名称。如果提供已存在的群组ID且您是群主，则将修改其名称；否则将创建新群组 (群组人数上限20人)。</p>
-                    <label for="newGroupNameInput"></label><input type="text" id="newGroupNameInput" placeholder="输入群组名称 (必填)">
-                    <label for="newGroupIdInput"></label><input type="text" id="newGroupIdInput" placeholder="群组 ID (可选, 留空则自动生成)">
+                    <label for="newGroupNameInput" class="visually-hidden">群组名称</label><input type="text" id="newGroupNameInput" placeholder="输入群组名称 (必填)">
+                    <label for="newGroupIdInput" class="visually-hidden">群组ID</label><input type="text" id="newGroupIdInput" placeholder="群组 ID (可选, 留空则自动生成)">
                     <button id="confirmNewGroupBtnModal" class="btn btn-primary">创建 / 修改群组</button>
                 </div>
-            </div>
-            <!-- ADDED: Character Card Tab Content -->
-            <div id="newCharacterTabContent" class="menu-tab-content">
+            </section>
+            <section id="newCharacterTabContent" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>角色卡管理</h3>
                     <p>导入和导出角色定义文件 (.json)。导入的角色将持久存在，不受主题切换影响。</p>
                     <button id="importCharacterCardBtn" class="btn btn-primary">导入角色卡</button>
                     <button id="exportThemeCharactersBtn" class="btn btn-secondary">导出当前主题角色</button>
-                    <!-- Hidden file input for import -->
-                    <input type="file" id="characterCardInput" accept=".json" style="display: none;">
+                    <input type="file" id="characterCardInput" accept=".json" class="visually-hidden">
                 </div>
-            </div>
-            <!-- MODIFICATION END -->
+            </section>
+            <!-- ADDED: Memory Set Management Tab -->
+            <section id="memorySetTabContent" class="menu-tab-content">
+                <div class="settings-section">
+                    <h3>记忆书管理</h3>
+                    <p>管理用于AI提取长期记忆的关键要素。这些记忆书可用于任何AI角色。</p>
+                    <div id="memorySetListContainerModal">
+                        <!-- List of sets will be populated here by JS -->
+                    </div>
+                    <div id="memorySetFormContainerModal" style="display: none;">
+                        <!-- Form for add/edit will be populated here by JS -->
+                    </div>
+                    <button id="showAddMemorySetFormBtn" class="btn btn-primary" style="margin-top: 15px;">+ 添加新记忆书</button>
+                </div>
+            </section>
         </div>
     </div>
 </div>
 <div id="openSourceInfoModal" class="modal-like">
     <div class="modal-content">
-        <div class="modal-header">
+        <header class="modal-header">
             <h2>项目已开源！🚀</h2>
             <button class="icon-btn close-modal-btn" id="closeOpenSourceInfoModalBtn" title="关闭">✕</button>
-        </div>
+        </header>
         <div class="modal-body">
             <p>
                 PPMC 现已开源！我们很高兴能与社区分享。
@@ -575,33 +562,140 @@
             <p>
                 如有紧急事宜，您可以通过微信联系我们：
             </p>
-            <img src="/img/wechat/contact.png" alt="微信二维码">
+            <img src="/img/wechat/contact.png" alt="微信二维码" loading="lazy">
             <p>
                 此消息将在 <span id="openSourceModalTimer">8</span> 秒后自动关闭。
             </p>
         </div>
-        <div class="modal-footer">
+        <footer class="modal-footer">
             <button id="permanentlyCloseOpenSourceInfoModalBtn" class="btn btn-secondary">不再显示</button>
-        </div>
+        </footer>
     </div>
 </div>
 
 <!-- 新增截图编辑器模态框 -->
 <div id="screenshotEditorModal" class="modal-like screenshot-editor-modal">
-    <div class="screenshot-editor-toolbar" id="screenshotEditorToolbar">
+    <header class="screenshot-editor-toolbar" id="screenshotEditorToolbar">
         <button id="cropToolBtn" class="screenshot-tool-btn" title="裁剪">✂️</button>
         <button id="drawRectToolBtn" class="screenshot-tool-btn" title="矩形标记">⬜</button>
         <input type="color" id="markColorPicker" class="screenshot-tool-color-picker" title="选择标记颜色" value="#FF0000">
-        <!-- 更多工具可以后续添加 -->
         <div class="toolbar-spacer"></div>
         <button id="confirmScreenshotEditBtn" class="btn btn-success">完成</button>
         <button id="cancelScreenshotEditBtn" class="btn btn-secondary">取消</button>
-    </div>
+    </header>
     <div class="screenshot-canvas-container">
         <canvas id="screenshotEditorCanvas"></canvas>
     </div>
 </div>
 <!-- 截图编辑器模态框结束 -->
+
+<!-- ========================================================================== -->
+<!-- UI 组件模板 (UI Component Templates) -->
+<!-- ========================================================================== -->
+<template id="message-template">
+    <div class="message">
+        <div class="message-sender"></div>
+        <div class="message-content-wrapper">
+            <div class="message-content"></div>
+        </div>
+        <div class="timestamp"></div>
+    </div>
+</template>
+
+<template id="message-file-template">
+    <div class="file-info">
+        <div class="thumbnail-placeholder"></div>
+        <div class="file-details">
+            <div class="file-name"></div>
+            <div class="file-meta"></div>
+        </div>
+        <button class="media-action-btn"></button>
+    </div>
+</template>
+
+<template id="message-audio-template">
+    <div class="voice-message">
+        <button class="play-voice-btn" title="播放/暂停语音">▶</button>
+        <span class="voice-duration"></span>
+    </div>
+</template>
+
+<template id="message-sticker-template">
+    <div class="file-info sticker-info">
+        <div class="thumbnail-placeholder"></div>
+    </div>
+</template>
+
+<template id="chat-list-item-template">
+    <li class="chat-list-item">
+        <div class="chat-list-avatar"></div>
+        <div class="chat-list-info">
+            <div class="chat-list-name">
+                <span class="name-text"></span>
+                <span class="online-dot" title="已连接"></span>
+            </div>
+            <div class="chat-list-preview"></div>
+        </div>
+        <div class="chat-list-meta">
+            <div class="chat-list-time"></div>
+            <div class="chat-list-badge"></div>
+        </div>
+    </li>
+</template>
+
+<template id="group-member-item-template">
+    <div class="member-item-detail">
+        <span class="member-name"></span>
+        <span class="owner-badge">群主</span>
+        <span class="member-status"></span>
+        <span class="member-actions">
+            <button class="reconnect-member-btn-detail" title="重新连接">🔄</button>
+            <button class="remove-member-btn-detail" title="移除成员">✕</button>
+        </span>
+    </div>
+</template>
+
+<template id="ai-mention-suggestion-item-template">
+    <div class="mention-suggestion-item">
+        <div class="mention-suggestion-avatar"></div>
+        <span class="mention-suggestion-name"></span>
+    </div>
+</template>
+
+<template id="notification-template">
+    <div class="notification">
+        <span class="notification-icon"></span>
+        <span class="notification-message"></span>
+        <button class="notification-close" title="关闭">×</button>
+    </div>
+</template>
+
+<template id="audio-preview-template">
+    <div class="voice-message-preview">
+        <span>🎙️ 语音消息 (<span class="preview-duration"></span>)</span>
+        <audio controls class="preview-audio-player" style="display:none;"></audio>
+        <button class="btn-play-preview">播放</button>
+        <button class="btn-cancel-preview">取消</button>
+    </div>
+</template>
+
+<template id="file-preview-template">
+    <div class="file-preview-item">
+        <span class="preview-content">
+            <!-- Image or Icon+Text will be inserted here -->
+        </span>
+        <button class="cancel-file-preview" title="移除附件">✕</button>
+    </div>
+</template>
+
+<template id="resource-preview-item-template">
+    <div class="resource-preview-item">
+        <div class="resource-content-area">
+            <!-- Thumbnail, text snippet, or file icon will be inserted here -->
+        </div>
+        <div class="resource-timestamp"></div>
+    </div>
+</template>
 
 <script src="js/config/LLMProviders.js"></script>
 <script src="js/config/McpTools.js"></script>
@@ -609,7 +703,6 @@
 <script src="js/config/AppSettings.js"></script>
 
 <!-- 脚本加载顺序调整 -->
-<!-- ThemeLoader.js 仍然较早加载，但其 init() 由 AppInitializer 调用 -->
 <script src="js/ThemeLoader.js"></script>
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>

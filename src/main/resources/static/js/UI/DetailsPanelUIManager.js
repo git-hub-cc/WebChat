@@ -13,7 +13,7 @@
  *              修复(BUG): 更新了显示折叠容器的逻辑，使用 display: grid 替代 display: block，以确保高性能的折叠动画正常工作，解决折叠后仍占据空间的问题。
  *              修复(BUG): _makeElementCollapsible 现在使用 parentElement 替代 closest()，以正确处理嵌套的折叠项。
  *              FIXED: 增加了在与AI角色对话时显示记忆书模块的逻辑。
- *              FEATURE: 为记忆书要素集添加了编辑功能。
+ *              FEATURE: 为记忆书添加了编辑功能。
  *              BUGFIX: 为记忆书的“启用记忆”复选框添加了唯一的ID和label的for属性，解决了多个复选框表现得像单选按钮的问题。
  * @module DetailsPanelUIManager
  * @exports {object} DetailsPanelUIManager - 对外暴露的单例对象，包含管理右侧详情面板的所有方法。
@@ -77,13 +77,6 @@ const DetailsPanelUIManager = {
     aiChapterSectionEl: null,
     memoryBookSectionEl: null,
     memoryBookListEl: null,
-    addMemorySetBtn: null,
-    newMemorySetNameInput: null,
-    newMemorySetElementsInput: null,
-    confirmAddMemorySetBtn: null,
-    newMemorySetForm: null,
-
-    _editingMemorySetId: null,
 
     GROUP_MEMBER_REFRESH_INTERVAL_MS: 3000,
     _GROUP_MEMBER_REFRESH_TASK_NAME: 'groupMemberStatusRefresh',
@@ -132,11 +125,6 @@ const DetailsPanelUIManager = {
         this.aiChapterSectionEl = document.getElementById('aiChapterSection');
         this.memoryBookSectionEl = document.getElementById('memoryBookSection');
         this.memoryBookListEl = document.getElementById('memoryBookList');
-        this.addMemorySetBtn = document.getElementById('addMemorySetBtn');
-        this.newMemorySetNameInput = document.getElementById('newMemorySetNameInput');
-        this.newMemorySetElementsInput = document.getElementById('newMemorySetElementsInput');
-        this.confirmAddMemorySetBtn = document.getElementById('confirmAddMemorySetBtn');
-        this.newMemorySetForm = document.getElementById('newMemorySetForm');
 
         this.bindEvents();
 
@@ -191,31 +179,177 @@ const DetailsPanelUIManager = {
         this._makeElementCollapsible(this.groupMemberListHeaderEl);
         this._makeElementCollapsible(this.groupAiPromptsHeaderEl);
 
-        if (this.addMemorySetBtn) {
-            this.addMemorySetBtn.addEventListener('click', () => {
-                this._editingMemorySetId = null;
-                this._showEditSetForm();
-            });
-        }
-        if (this.confirmAddMemorySetBtn) {
-            this.confirmAddMemorySetBtn.addEventListener('click', async () => {
-                const name = this.newMemorySetNameInput.value.trim();
-                const elements = this.newMemorySetElementsInput.value.split(/[,，、\s]+/).map(e => e.trim()).filter(Boolean);
+        // REMOVED: Event bindings for moved elements
+        // if (this.addMemorySetBtn) { ... }
+        // if (this.confirmAddMemorySetBtn) { ... }
+    },
 
-                let success;
-                if (this._editingMemorySetId) {
-                    success = await MemoryBookManager.updateElementSet(this._editingMemorySetId, name, elements);
-                } else {
-                    success = await MemoryBookManager.addElementSet(name, elements);
-                }
+    _updateForContact: function(contactId) {
+        const contact = UserManager.contacts[contactId];
+        if (!contact || !this.detailsPanelEl) return;
 
-                if (success) {
-                    if(this.newMemorySetForm) this.newMemorySetForm.style.display = 'none';
-                    this._editingMemorySetId = null;
-                    if(this.addMemorySetBtn) this.addMemorySetBtn.style.display = 'block';
-                }
-            });
+        if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = `${contact.name} 信息`;
+        this.detailsPanelEl.classList.add('contact-details-active');
+        if (UserManager.isSpecialContactInCurrentTheme(contactId)) {
+            this.detailsPanelEl.classList.add(contact.id);
+        } else if (contact.isAI) {
+            this.detailsPanelEl.classList.add('historical-ai-contact-active');
+        } else {
+            this.detailsPanelEl.classList.add('human-contact-active');
         }
+        if (this.detailsNameEl) this.detailsNameEl.textContent = contact.name;
+        if (this.detailsIdEl) this.detailsIdEl.textContent = `ID: ${contact.id}`;
+        if (this.detailsAvatarEl) {
+            this.detailsAvatarEl.className = 'details-avatar';
+            let fallbackText = (contact.avatarText) ? Utils.escapeHtml(contact.avatarText) :
+                (contact.name && contact.name.length > 0) ? Utils.escapeHtml(contact.name.charAt(0).toUpperCase()) : '?';
+            let avatarContentHtml;
+            if (UserManager.isSpecialContactInCurrentTheme(contactId)) {
+                this.detailsAvatarEl.classList.add('special-avatar', contact.id);
+            } else if (contact.isAI) {
+                this.detailsAvatarEl.classList.add('historical-ai-avatar');
+            }
+            if (contact.avatarUrl) {
+                avatarContentHtml = `<img src="${contact.avatarUrl}" alt="${fallbackText}" class="avatar-image" data-fallback-text="${fallbackText}" data-entity-id="${contact.id}">`;
+            } else {
+                avatarContentHtml = fallbackText;
+            }
+            this.detailsAvatarEl.innerHTML = avatarContentHtml;
+        }
+        if (this.detailsStatusEl) {
+            if (UserManager.isSpecialContact(contactId)) {
+                this.detailsStatusEl.textContent = (contact.isAI ? 'AI 助手' : '特殊联系人') ;
+            } else {
+                this.detailsStatusEl.textContent = ConnectionManager.isConnectedTo(contactId) ? '已连接' : '离线';
+            }
+        }
+
+        if (UserManager.isSpecialContact(contactId)) {
+            if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'none';
+            if (contact.isAI && contact.aboutDetails && this.aiContactAboutSectionEl) {
+                this._populateAiAboutSection(contact);
+                this.aiContactAboutSectionEl.style.display = 'block';
+            }
+            if (contact.isAI && this.aiTtsConfigSectionEl) {
+                this._setupAiTtsConfigSection(contact);
+                this.aiTtsConfigSectionEl.style.display = 'grid';
+            }
+            if (contact.isAI && this.aiChapterSectionEl) {
+                this._renderChapterSelector(contactId, contact);
+            } else if (this.aiChapterSectionEl) {
+                this.aiChapterSectionEl.style.display = 'none';
+            }
+            if (contact.isAI && this.memoryBookSectionEl) {
+                this._renderMemoryBookSection(contactId);
+                this.memoryBookSectionEl.style.display = 'block';
+            }
+
+        } else {
+            if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'block';
+            if (this.deleteContactBtnDetailsEl) {
+                const newBtn = this.deleteContactBtnDetailsEl.cloneNode(true);
+                this.deleteContactBtnDetailsEl.parentNode.replaceChild(newBtn, this.deleteContactBtnDetailsEl);
+                this.deleteContactBtnDetailsEl = newBtn;
+                this.deleteContactBtnDetailsEl.addEventListener('click', () => ChatManager.deleteChat(contactId, 'contact'));
+            }
+            if (this.aiTtsConfigSectionEl) this.aiTtsConfigSectionEl.style.display = 'none';
+            if (this.aiContactAboutSectionEl) this.aiContactAboutSectionEl.style.display = 'none';
+            if (this.aiChapterSectionEl) this.aiChapterSectionEl.style.display = 'none';
+        }
+        if (this.groupAiPromptsSectionEl) this.groupAiPromptsSectionEl.style.display = 'none';
+        if (this.detailsGroupManagementEl) this.detailsGroupManagementEl.style.display = 'none';
+    },
+
+    _updateMemoryBookUI: function(setId, chatId, content) {
+        if (chatId !== this.currentChatId) return;
+        const setItem = this.memoryBookListEl.querySelector(`.memory-set-item[data-set-id="${setId}"]`);
+        if (setItem) {
+            const textarea = setItem.querySelector('.memory-book-textarea');
+            if (textarea) textarea.value = content;
+            this._setMemoryBookLoadingState(setId, chatId, false);
+        }
+    },
+
+    _setMemoryBookLoadingState: function(setId, chatId, isLoading) {
+        if (chatId !== this.currentChatId) return;
+        const setItem = this.memoryBookListEl.querySelector(`.memory-set-item[data-set-id="${setId}"]`);
+        if (setItem) {
+            const recordBtn = setItem.querySelector('.record-btn');
+            if (recordBtn) {
+                recordBtn.disabled = isLoading;
+                recordBtn.textContent = isLoading ? '记录中...' : '记录';
+            }
+        }
+    },
+
+    /**
+     * @private
+     * Renders the entire Memory Book section UI.
+     * REFACTORED: Removed set management buttons (add, edit, delete). This UI now only handles *using* the sets for the current chat.
+     */
+    _renderMemoryBookSection: function(chatId) {
+        if (!this.memoryBookListEl || !chatId) {
+            this.memoryBookListEl.innerHTML = '';
+            return;
+        }
+        this.memoryBookListEl.innerHTML = '';
+        const elementSets = MemoryBookManager.getElementSets();
+
+        if (elementSets.length === 0) {
+            this.memoryBookListEl.innerHTML = `<p style="font-size: 0.9em; color: var(--text-color-light); text-align: center;">请先在“新建”菜单的“记忆书”标签页中添加要记忆书。</p>`;
+            return;
+        }
+
+        elementSets.forEach(set => {
+            const setContainer = document.createElement('div');
+            setContainer.className = 'memory-set-item';
+            setContainer.dataset.setId = set.id;
+
+            const header = document.createElement('div');
+            header.className = 'memory-set-header';
+
+            // MODIFIED: Removed edit and delete buttons
+            header.innerHTML = `
+                <span>${Utils.escapeHtml(set.name)}</span>
+                <div class="memory-set-actions">
+                    <button class="record-btn" title="记录本次对话">记录</button>
+                </div>
+            `;
+
+            const bookContainer = document.createElement('div');
+            bookContainer.className = 'memory-book-container';
+            const bookContent = set.books?.[chatId]?.content || '尚未记录。';
+            const isEnabled = set.books?.[chatId]?.enabled || false;
+
+            const radioId = `enable-memory-book-radio-${set.id}`;
+            const radioName = `memory-book-enabled-group-${chatId}`;
+
+            bookContainer.innerHTML = `
+                <textarea class="memory-book-textarea" rows="4" placeholder="点击“记录”以生成，或在此手动编辑...">${Utils.escapeHtml(bookContent)}</textarea>
+                <div class="memory-book-controls">
+                    <label for="${radioId}">
+                        <input type="radio" id="${radioId}" name="${radioName}" class="enable-memory-book-toggle" ${isEnabled ? 'checked' : ''}> 启用记忆
+                    </label>
+                    <button class="save-memory-book-btn">保存修改</button>
+                </div>
+            `;
+
+            setContainer.appendChild(header);
+            setContainer.appendChild(bookContainer);
+            this.memoryBookListEl.appendChild(setContainer);
+
+            // MODIFIED: Event listeners for edit/delete are removed.
+            header.querySelector('.record-btn').addEventListener('click', () => MemoryBookManager.generateMemoryBook(set.id, chatId));
+
+            bookContainer.querySelector('.enable-memory-book-toggle').addEventListener('change', (e) => {
+                MemoryBookManager.setMemoryBookEnabled(set.id, chatId, e.target.checked);
+            });
+
+            bookContainer.querySelector('.save-memory-book-btn').addEventListener('click', () => {
+                const newContent = bookContainer.querySelector('.memory-book-textarea').value;
+                MemoryBookManager.saveMemoryBookContent(set.id, chatId, newContent);
+            });
+        });
     },
 
     _tryRefreshGroupMembersView: function(peerId) {
@@ -344,82 +478,6 @@ const DetailsPanelUIManager = {
         }
     },
 
-    _updateForContact: function(contactId) {
-        const contact = UserManager.contacts[contactId];
-        if (!contact || !this.detailsPanelEl) return;
-
-        if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = `${contact.name} 信息`;
-        this.detailsPanelEl.classList.add('contact-details-active');
-        if (UserManager.isSpecialContactInCurrentTheme(contactId)) {
-            this.detailsPanelEl.classList.add(contact.id);
-        } else if (contact.isAI) {
-            this.detailsPanelEl.classList.add('historical-ai-contact-active');
-        } else {
-            this.detailsPanelEl.classList.add('human-contact-active');
-        }
-        if (this.detailsNameEl) this.detailsNameEl.textContent = contact.name;
-        if (this.detailsIdEl) this.detailsIdEl.textContent = `ID: ${contact.id}`;
-        if (this.detailsAvatarEl) {
-            this.detailsAvatarEl.className = 'details-avatar';
-            let fallbackText = (contact.avatarText) ? Utils.escapeHtml(contact.avatarText) :
-                (contact.name && contact.name.length > 0) ? Utils.escapeHtml(contact.name.charAt(0).toUpperCase()) : '?';
-            let avatarContentHtml;
-            if (UserManager.isSpecialContactInCurrentTheme(contactId)) {
-                this.detailsAvatarEl.classList.add('special-avatar', contact.id);
-            } else if (contact.isAI) {
-                this.detailsAvatarEl.classList.add('historical-ai-avatar');
-            }
-            if (contact.avatarUrl) {
-                avatarContentHtml = `<img src="${contact.avatarUrl}" alt="${fallbackText}" class="avatar-image" data-fallback-text="${fallbackText}" data-entity-id="${contact.id}">`;
-            } else {
-                avatarContentHtml = fallbackText;
-            }
-            this.detailsAvatarEl.innerHTML = avatarContentHtml;
-        }
-        if (this.detailsStatusEl) {
-            if (UserManager.isSpecialContact(contactId)) {
-                this.detailsStatusEl.textContent = (contact.isAI ? 'AI 助手' : '特殊联系人') ;
-            } else {
-                this.detailsStatusEl.textContent = ConnectionManager.isConnectedTo(contactId) ? '已连接' : '离线';
-            }
-        }
-
-        if (UserManager.isSpecialContact(contactId)) {
-            if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'none';
-            if (contact.isAI && contact.aboutDetails && this.aiContactAboutSectionEl) {
-                this._populateAiAboutSection(contact);
-                this.aiContactAboutSectionEl.style.display = 'block';
-            }
-            if (contact.isAI && this.aiTtsConfigSectionEl) {
-                this._setupAiTtsConfigSection(contact);
-                this.aiTtsConfigSectionEl.style.display = 'grid';
-            }
-            if (contact.isAI && this.aiChapterSectionEl) {
-                this._renderChapterSelector(contactId, contact);
-            } else if (this.aiChapterSectionEl) {
-                this.aiChapterSectionEl.style.display = 'none';
-            }
-            if (contact.isAI && this.memoryBookSectionEl) {
-                this._renderMemoryBookSection(contactId);
-                this.memoryBookSectionEl.style.display = 'block';
-            }
-
-        } else {
-            if (this.contactActionsDetailsEl) this.contactActionsDetailsEl.style.display = 'block';
-            if (this.deleteContactBtnDetailsEl) {
-                const newBtn = this.deleteContactBtnDetailsEl.cloneNode(true);
-                this.deleteContactBtnDetailsEl.parentNode.replaceChild(newBtn, this.deleteContactBtnDetailsEl);
-                this.deleteContactBtnDetailsEl = newBtn;
-                this.deleteContactBtnDetailsEl.addEventListener('click', () => ChatManager.deleteChat(contactId, 'contact'));
-            }
-            if (this.aiTtsConfigSectionEl) this.aiTtsConfigSectionEl.style.display = 'none';
-            if (this.aiContactAboutSectionEl) this.aiContactAboutSectionEl.style.display = 'none';
-            if (this.aiChapterSectionEl) this.aiChapterSectionEl.style.display = 'none';
-        }
-        if (this.groupAiPromptsSectionEl) this.groupAiPromptsSectionEl.style.display = 'none';
-        if (this.detailsGroupManagementEl) this.detailsGroupManagementEl.style.display = 'none';
-    },
-
     _showEditSetForm: function(setData = null) {
         if (!this.newMemorySetForm) return;
 
@@ -440,28 +498,6 @@ const DetailsPanelUIManager = {
 
         this.newMemorySetForm.style.display = 'block';
         this.newMemorySetNameInput.focus();
-    },
-
-    _updateMemoryBookUI: function(setId, chatId, content) {
-        if (chatId !== this.currentChatId) return;
-        const setItem = this.memoryBookListEl.querySelector(`.memory-set-item[data-set-id="${setId}"]`);
-        if (setItem) {
-            const textarea = setItem.querySelector('.memory-book-textarea');
-            if (textarea) textarea.value = content;
-            this._setMemoryBookLoadingState(setId, chatId, false);
-        }
-    },
-
-    _setMemoryBookLoadingState: function(setId, chatId, isLoading) {
-        if (chatId !== this.currentChatId) return;
-        const setItem = this.memoryBookListEl.querySelector(`.memory-set-item[data-set-id="${setId}"]`);
-        if (setItem) {
-            const recordBtn = setItem.querySelector('.record-btn');
-            if (recordBtn) {
-                recordBtn.disabled = isLoading;
-                recordBtn.textContent = isLoading ? '记录中...' : '记录';
-            }
-        }
     },
 
     _createSearchableChapterSelect: function(contactId, contactData, targetDiv) {
@@ -816,84 +852,89 @@ const DetailsPanelUIManager = {
         });
     },
 
+    /**
+     * 更新群组详情中的成员列表和添加成员下拉框。
+     * (已使用 template 方案重构)
+     * @param {string} groupId - 群组ID。
+     */
     updateDetailsPanelMembers: function (groupId) {
         const group = GroupManager.groups[groupId];
         if (!group || !this.groupMemberListDetailsEl || !this.groupMemberCountEl || !this.contactsDropdownDetailsEl || !document.getElementById('leftMemberListDetails')) return;
+
         const leftMemberListDetailsEl = document.getElementById('leftMemberListDetails');
 
+        // 1. 清空旧列表并更新成员数量
         this.groupMemberListDetailsEl.innerHTML = '';
         this.groupMemberCountEl.textContent = group.members.length;
 
-        const membersWithSortInfo = group.members.map(memberId => {
-            const member = UserManager.contacts[memberId] || { id: memberId, name: `用户 ${memberId.substring(0, 4)}`, isAI: false };
-            let sortCategory;
-            const isOwner = memberId === group.owner;
-            const isAI = member.isAI;
-            const isOnline = (!isAI && !isOwner && PeopleLobbyManager.onlineUserIds && PeopleLobbyManager.onlineUserIds.includes(memberId));
+        // 2. 获取排序后的成员数据
+        const membersWithSortInfo = this._getSortedMembers(group);
 
-            if (isOwner) sortCategory = 0;
-            else if (!isAI && isOnline) sortCategory = 1;
-            else if (isAI) sortCategory = 2;
-            else sortCategory = 3;
-            return { ...member, id: memberId, sortCategory, isOnlineForSort: isOnline };
-        });
+        // 3. 获取模板并准备 DocumentFragment 以提高性能
+        const template = document.getElementById('group-member-item-template');
+        if (!template) {
+            Utils.log('DetailsPanelUIManager Error: #group-member-item-template not found in HTML.', Utils.logLevels.ERROR);
+            return;
+        }
+        const fragment = document.createDocumentFragment();
 
-        membersWithSortInfo.sort((a, b) => {
-            if (a.sortCategory !== b.sortCategory) {
-                return a.sortCategory - b.sortCategory;
-            }
-            return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
-        });
-
+        // 4. 遍历成员数据，克隆模板并填充
         membersWithSortInfo.forEach(memberData => {
             const memberId = memberData.id;
-            const member = memberData;
-            const item = document.createElement('div');
-            item.className = 'member-item-detail';
-            let memberInfoHtml = `<span class="member-name">${Utils.escapeHtml(member.name)} ${memberId === UserManager.userId ? '(您)' : ''} ${member.isAI ? '(AI)' : ''}</span>`;
-            let statusHtml = '';
-            let actionsHtml = '';
+            const itemClone = template.content.cloneNode(true);
 
-            if (memberId !== UserManager.userId && !member.isAI) {
+            // 获取模板中的元素
+            const nameEl = itemClone.querySelector('.member-name');
+            const ownerBadge = itemClone.querySelector('.owner-badge');
+            const statusEl = itemClone.querySelector('.member-status');
+            const reconnectBtn = itemClone.querySelector('.reconnect-member-btn-detail');
+            const removeBtn = itemClone.querySelector('.remove-member-btn-detail');
+
+            // 填充名称
+            nameEl.textContent = `${Utils.escapeHtml(memberData.name)} ${memberId === UserManager.userId ? '(您)' : ''} ${memberData.isAI ? '(AI)' : ''}`;
+
+            // 处理群主徽章和移除按钮的可见性
+            if (memberId === group.owner) {
+                ownerBadge.style.display = 'inline-block';
+                removeBtn.remove(); // 群主不能被移除
+            } else {
+                ownerBadge.remove(); // 不是群主则移除徽章
+                if (group.owner === UserManager.userId) {
+                    removeBtn.dataset.memberId = memberId;
+                    removeBtn.addEventListener('click', () => GroupManager.removeMemberFromGroup(groupId, memberId));
+                } else {
+                    removeBtn.remove(); // 非群主不能移除成员
+                }
+            }
+
+            // 处理非AI、非自己的成员状态和连接按钮
+            if (memberId !== UserManager.userId && !memberData.isAI) {
                 const isConnected = ConnectionManager.isConnectedTo(memberId);
                 const isActuallyOnline = PeopleLobbyManager.onlineUserIds ? PeopleLobbyManager.onlineUserIds.includes(memberId) : false;
-                let onlineStatusText = isActuallyOnline ? '在线' : '离线';
-                let statusClass = 'offline';
-                if(isActuallyOnline){
-                    statusClass = isConnected ? 'connected' : 'online-not-connected';
+
+                statusEl.textContent = isActuallyOnline ? (isConnected ? '(已连接)' : '(在线)') : '(离线)';
+                statusEl.className = 'member-status ' + (isActuallyOnline ? (isConnected ? 'connected' : 'online-not-connected') : 'offline');
+
+                if (isActuallyOnline && !isConnected) {
+                    reconnectBtn.dataset.memberId = memberId;
+                    reconnectBtn.addEventListener('click', () => ConnectionManager.createOffer(memberId, { isSilent: false }));
+                } else {
+                    reconnectBtn.remove();
                 }
-                if(isConnected) onlineStatusText = '已连接';
-                statusHtml = `<span class="member-status ${statusClass}">(${onlineStatusText})</span>`;
-                if (!isConnected && isActuallyOnline) {
-                    actionsHtml += `<button class="reconnect-member-btn-detail" data-member-id="${memberId}" title="重新连接">🔄</button>`;
-                }
+            } else {
+                statusEl.remove();
+                reconnectBtn.remove();
+                // 如果是自己，也移除移除按钮（虽然上面已处理，双重保险）
+                if (memberId === UserManager.userId) removeBtn.remove();
             }
 
-            if (memberId === group.owner) {
-                memberInfoHtml += '<span class="owner-badge">群主</span>';
-            } else if (group.owner === UserManager.userId) {
-                actionsHtml += `<button class="remove-member-btn-detail" data-member-id="${memberId}" title="移除成员">✕</button>`;
-            }
-            item.innerHTML = `${memberInfoHtml} ${statusHtml} <span class="member-actions">${actionsHtml}</span>`;
-            this.groupMemberListDetailsEl.appendChild(item);
+            fragment.appendChild(itemClone);
         });
 
-        this.groupMemberListDetailsEl.querySelectorAll('.remove-member-btn-detail').forEach(btn => {
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            newBtn.addEventListener('click', () => GroupManager.removeMemberFromGroup(groupId, newBtn.dataset.memberId));
-        });
+        // 5. 一次性将所有新列表项添加到 DOM
+        this.groupMemberListDetailsEl.appendChild(fragment);
 
-        this.groupMemberListDetailsEl.querySelectorAll('.reconnect-member-btn-detail').forEach(btn => {
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
-            newBtn.addEventListener('click', async () => {
-                const targetMemberId = newBtn.dataset.memberId;
-                NotificationUIManager.showNotification(`尝试重新连接到 ${UserManager.contacts[targetMemberId]?.name || targetMemberId.substring(0,4)}...`, 'info');
-                await ConnectionManager.createOffer(targetMemberId, { isSilent: false });
-            });
-        });
-
+        // 6. 更新“添加成员”下拉框（这部分逻辑不涉及复杂模板，可以保留）
         this.contactsDropdownDetailsEl.innerHTML = '<option value="">选择要添加的联系人...</option>';
         Object.values(UserManager.contacts).forEach(contact => {
             const isAlreadyMember = group.members.includes(contact.id);
@@ -909,6 +950,7 @@ const DetailsPanelUIManager = {
             }
         });
 
+        // 7. 更新“已离开成员”列表（这部分逻辑也不涉及复杂模板，可以保留）
         leftMemberListDetailsEl.innerHTML = '';
         if (group.owner === UserManager.userId && group.leftMembers && group.leftMembers.length > 0 && this.leftMembersAreaEl) {
             group.leftMembers.forEach(leftMember => {
@@ -996,82 +1038,30 @@ const DetailsPanelUIManager = {
 
     /**
      * @private
-     * Renders the entire Memory Book section UI.
-     * FIXED: Generates radio buttons instead of checkboxes for single-selection logic.
+     * 辅助方法：获取排序后的群组成员列表，包含渲染所需的信息。
+     * @param {object} group - 群组对象。
+     * @returns {Array<object>} - 排序后的成员信息数组。
      */
-    _renderMemoryBookSection: function(chatId) {
-        if (!this.memoryBookListEl || !chatId) return;
-        this.memoryBookListEl.innerHTML = '';
-        const elementSets = MemoryBookManager.getElementSets();
+    _getSortedMembers: function(group) {
+        return group.members.map(memberId => {
+            const member = UserManager.contacts[memberId] || { id: memberId, name: `用户 ${memberId.substring(0, 4)}`, isAI: false };
+            let sortCategory;
+            const isOwner = memberId === group.owner;
+            const isAI = member.isAI;
+            const isOnline = !isAI && !isOwner && PeopleLobbyManager.onlineUserIds && PeopleLobbyManager.onlineUserIds.includes(memberId);
 
-        elementSets.forEach(set => {
-            const setContainer = document.createElement('div');
-            setContainer.className = 'memory-set-item';
-            setContainer.dataset.setId = set.id;
+            if (isOwner) sortCategory = 0;
+            else if (!isAI && isOnline) sortCategory = 1;
+            else if (isAI) sortCategory = 2;
+            else sortCategory = 3;
 
-            const header = document.createElement('div');
-            header.className = 'memory-set-header';
-
-            header.innerHTML = `
-                <span>${Utils.escapeHtml(set.name)}</span>
-                <div class="memory-set-actions">
-                    <button class="record-btn" title="记录本次对话">记录</button>
-                    <button class="edit-set-btn" title="编辑要素集">编辑</button> 
-                    <button class="delete-set-btn" title="删除此要素集">✕</button>
-                </div>
-            `;
-
-            const bookContainer = document.createElement('div');
-            bookContainer.className = 'memory-book-container';
-            const bookContent = set.books?.[chatId]?.content || '尚未记录。';
-            const isEnabled = set.books?.[chatId]?.enabled || false;
-
-            // --- BUGFIX & FEATURE CHANGE: Use radio buttons ---
-            const radioId = `enable-memory-book-radio-${set.id}`;
-            // All radio buttons for this chat share the same name to be mutually exclusive
-            const radioName = `memory-book-enabled-group-${chatId}`;
-
-            bookContainer.innerHTML = `
-                <textarea class="memory-book-textarea" rows="4" placeholder="点击“记录”以生成，或在此手动编辑...">${Utils.escapeHtml(bookContent)}</textarea>
-                <div class="memory-book-controls">
-                    <label for="${radioId}">
-                        <input type="radio" id="${radioId}" name="${radioName}" class="enable-memory-book-toggle" ${isEnabled ? 'checked' : ''}> 启用记忆
-                    </label>
-                    <button class="save-memory-book-btn">保存修改</button>
-                </div>
-            `;
-            // --- END OF FIX ---
-
-            setContainer.appendChild(header);
-            setContainer.appendChild(bookContainer);
-            this.memoryBookListEl.appendChild(setContainer);
-
-            // The event listener logic remains the same.
-            // When a radio button is clicked, its `change` event fires with `e.target.checked` as true.
-            // When another radio in the same group is clicked, the previously selected one's `change`
-            // event will fire again, but with `e.target.checked` as false. The manager handles this.
-            header.querySelector('.record-btn').addEventListener('click', () => MemoryBookManager.generateMemoryBook(set.id, chatId));
-            header.querySelector('.edit-set-btn').addEventListener('click', () => {
-                this._editingMemorySetId = set.id;
-                this._showEditSetForm(set);
-            });
-            header.querySelector('.delete-set-btn').addEventListener('click', () => {
-                ModalUIManager.showConfirmationModal(
-                    `确定要删除要素集 "${Utils.escapeHtml(set.name)}" 吗？这将删除其所有已记录的记忆书，此操作无法撤销。`,
-                    () => MemoryBookManager.deleteElementSet(set.id)
-                );
-            });
-
-            // The existing listener works correctly for radio buttons too.
-            bookContainer.querySelector('.enable-memory-book-toggle').addEventListener('change', (e) => {
-                // The `checked` property correctly reflects the new state of the clicked radio button.
-                MemoryBookManager.setMemoryBookEnabled(set.id, chatId, e.target.checked);
-            });
-
-            bookContainer.querySelector('.save-memory-book-btn').addEventListener('click', () => {
-                const newContent = bookContainer.querySelector('.memory-book-textarea').value;
-                MemoryBookManager.saveMemoryBookContent(set.id, chatId, newContent);
-            });
+            return { ...member, id: memberId, sortCategory, isOnlineForSort: isOnline };
+        }).sort((a, b) => {
+            if (a.sortCategory !== b.sortCategory) {
+                return a.sortCategory - b.sortCategory;
+            }
+            return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
         });
     },
+
 };

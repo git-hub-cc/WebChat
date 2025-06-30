@@ -27,9 +27,9 @@ const MemoryBookManager = {
     loadElementSets: async function() {
         try {
             this._elementSets = await DBManager.getAllItems(this._DB_STORE_NAME);
-            Utils.log(`已成功从数据库加载 ${this._elementSets.length} 个记忆要素集。`, Utils.logLevels.INFO);
+            Utils.log(`已成功从数据库加载 ${this._elementSets.length} 个记忆书。`, Utils.logLevels.INFO);
         } catch (error) {
-            Utils.log(`加载记忆要素集失败: ${error}`, Utils.logLevels.ERROR);
+            Utils.log(`加载记忆书失败: ${error}`, Utils.logLevels.ERROR);
             this._elementSets = [];
         }
     },
@@ -50,7 +50,7 @@ const MemoryBookManager = {
      */
     addElementSet: async function(name, elements) {
         if (!name || !Array.isArray(elements) || elements.length === 0) {
-            NotificationUIManager.showNotification('要素集名称和至少一个要素是必需的。', 'error');
+            NotificationUIManager.showNotification('记忆书名称和至少一个要素是必需的。', 'error');
             return false;
         }
         const newSet = {
@@ -66,12 +66,12 @@ const MemoryBookManager = {
             this._elementSets.push(newSet);
             // Notify UI
             EventEmitter.emit('memorySetsUpdated');
-            NotificationUIManager.showNotification(`要素集 "${name}" 已创建。`, 'success');
-            Utils.log(`已创建并保存新的记忆要素集: ${newSet.id}`, Utils.logLevels.INFO);
+            NotificationUIManager.showNotification(`记忆书 "${name}" 已创建。`, 'success');
+            Utils.log(`已创建并保存新的记忆书: ${newSet.id}`, Utils.logLevels.INFO);
             return true;
         } catch (error) {
-            Utils.log(`创建记忆要素集失败: ${error}`, Utils.logLevels.ERROR);
-            NotificationUIManager.showNotification('创建要素集失败。', 'error');
+            Utils.log(`创建记忆书失败: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification('创建记忆书失败。', 'error');
             return false;
         }
     },
@@ -89,11 +89,11 @@ const MemoryBookManager = {
             this._elementSets = this._elementSets.filter(s => s.id !== setId);
             // Notify UI
             EventEmitter.emit('memorySetsUpdated');
-            NotificationUIManager.showNotification('要素集已删除。', 'success');
-            Utils.log(`已删除记忆要素集: ${setId}`, Utils.logLevels.INFO);
+            NotificationUIManager.showNotification('记忆书已删除。', 'success');
+            Utils.log(`已删除记忆书: ${setId}`, Utils.logLevels.INFO);
         } catch (error) {
-            Utils.log(`删除记忆要素集 ${setId} 失败: ${error}`, Utils.logLevels.ERROR);
-            NotificationUIManager.showNotification('删除要素集失败。', 'error');
+            Utils.log(`删除记忆书 ${setId} 失败: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification('删除记忆书失败。', 'error');
         }
     },
 
@@ -109,7 +109,7 @@ const MemoryBookManager = {
         const chatHistory = ChatManager.chats[chatId];
 
         if (!set) {
-            NotificationUIManager.showNotification('未找到指定的要素集。', 'error');
+            NotificationUIManager.showNotification('未找到指定的记忆书。', 'error');
             return;
         }
         if (!chatHistory || chatHistory.length === 0) {
@@ -142,7 +142,7 @@ const MemoryBookManager = {
             await DBManager.setItem(this._DB_STORE_NAME, set);
 
             NotificationUIManager.showNotification(`记忆书已为 "${set.name}" 生成！`, 'success');
-            Utils.log(`已为要素集 ${setId} 生成并保存记忆书 (Chat: ${chatId})`, Utils.logLevels.INFO);
+            Utils.log(`已为记忆书 ${setId} 生成并保存记忆书 (Chat: ${chatId})`, Utils.logLevels.INFO);
             // Notify UI of the update
             EventEmitter.emit('memoryBookUpdated', { setId, chatId, content: set.books[chatId].content });
 
@@ -200,13 +200,13 @@ const MemoryBookManager = {
      */
     updateElementSet: async function(setId, newName, newElements) {
         if (!setId || !newName || !Array.isArray(newElements) || newElements.length === 0) {
-            NotificationUIManager.showNotification('要素集ID、名称和至少一个要素是必需的。', 'error');
+            NotificationUIManager.showNotification('记忆书ID、名称和至少一个要素是必需的。', 'error');
             return false;
         }
 
         const setIndex = this._elementSets.findIndex(s => s.id === setId);
         if (setIndex === -1) {
-            NotificationUIManager.showNotification('未找到要更新的要素集。', 'error');
+            NotificationUIManager.showNotification('未找到要更新的记忆书。', 'error');
             return false;
         }
 
@@ -220,12 +220,12 @@ const MemoryBookManager = {
             await DBManager.setItem(this._DB_STORE_NAME, setToUpdate);
             this._elementSets[setIndex] = setToUpdate; // Update in-memory cache
             EventEmitter.emit('memorySetsUpdated');
-            NotificationUIManager.showNotification(`要素集 "${newName}" 已更新。`, 'success');
-            Utils.log(`已更新并保存记忆要素集: ${setId}`, Utils.logLevels.INFO);
+            NotificationUIManager.showNotification(`记忆书 "${newName}" 已更新。`, 'success');
+            Utils.log(`已更新并保存记忆书: ${setId}`, Utils.logLevels.INFO);
             return true;
         } catch (error) {
-            Utils.log(`更新记忆要素集 ${setId} 失败: ${error}`, Utils.logLevels.ERROR);
-            NotificationUIManager.showNotification('更新要素集失败。', 'error');
+            Utils.log(`更新记忆书 ${setId} 失败: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification('更新记忆书失败。', 'error');
             // Revert in-memory changes on failure
             await this.loadElementSets();
             EventEmitter.emit('memorySetsUpdated');

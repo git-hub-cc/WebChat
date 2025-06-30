@@ -64,41 +64,111 @@ const ChatManager = {
             }
         }
     },
-
     /**
      * 根据筛选条件渲染侧边栏的聊天列表。
-     * 联系人列表现在只显示当前主题的特殊AI和普通联系人。
-     * 群组列表会从 GroupManager 获取最新数据。
      * @param {string} [filter='all'] - 筛选条件 ('all', 'contacts', 'groups')。
      */
     renderChatList: function(filter = 'all') {
         this.currentFilter = filter;
         const chatListEl = document.getElementById('chatListNav');
-        if(!chatListEl) {
+        if (!chatListEl) {
             Utils.log("ChatManager.renderChatList: 未找到 chatListNav 元素！", Utils.logLevels.ERROR);
             return;
         }
-        chatListEl.innerHTML = ''; // 清空现有列表
-        if (typeof SidebarUIManager !== 'undefined') SidebarUIManager.setActiveTab(filter); // 更新侧边栏标签状态
+        chatListEl.innerHTML = '';
+        if (typeof SidebarUIManager !== 'undefined') SidebarUIManager.setActiveTab(filter);
 
-        let itemsToRender = [];
+        let itemsToRender = this._collectItemsToRender(filter);
+        const searchQuery = document.getElementById('chatSearchInput')?.value.toLowerCase() || "";
+        if (searchQuery) {
+            itemsToRender = itemsToRender.filter(item => item.name.toLowerCase().includes(searchQuery));
+        }
 
+        if (itemsToRender.length === 0) {
+            const filterText = { all: '聊天', contacts: '联系人', groups: '群组' }[filter] || '项目';
+            chatListEl.innerHTML = `<li class="chat-list-item-empty">未找到${filterText}。</li>`;
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        const template = document.getElementById('chat-list-item-template').content;
+
+        itemsToRender.forEach(item => {
+            const clone = template.cloneNode(true);
+            const li = clone.querySelector('.chat-list-item');
+            const avatarEl = clone.querySelector('.chat-list-avatar');
+            const nameTextEl = clone.querySelector('.name-text');
+            const onlineDotEl = clone.querySelector('.online-dot');
+            const previewEl = clone.querySelector('.chat-list-preview');
+            const timeEl = clone.querySelector('.chat-list-time');
+            const badgeEl = clone.querySelector('.chat-list-badge');
+
+            // Set data attributes and classes
+            li.dataset.id = item.id;
+            li.dataset.type = item.type;
+            if (item.id === this.currentChatId) li.classList.add('active');
+            if (item.type === 'group') li.classList.add('group');
+            if (item.isSpecial) li.classList.add('special-contact', item.id);
+            if (item.isSpecial) avatarEl.classList.add(item.id);
+
+            // Populate content
+            nameTextEl.textContent = item.name;
+            previewEl.textContent = item.lastMessage;
+            timeEl.textContent = item.lastTime ? Utils.formatDate(new Date(item.lastTime)) : '';
+
+            // Avatar
+            const fallbackText = (item.avatarText) ? Utils.escapeHtml(item.avatarText) : (item.name ? Utils.escapeHtml(item.name.charAt(0).toUpperCase()) : '?');
+            if (item.avatarUrl) {
+                const img = document.createElement('img');
+                img.src = item.avatarUrl;
+                img.alt = fallbackText;
+                img.className = 'avatar-image';
+                img.dataset.fallbackText = fallbackText;
+                img.dataset.entityId = item.id;
+                img.loading = "lazy";
+                avatarEl.appendChild(img);
+            } else {
+                avatarEl.textContent = fallbackText;
+            }
+
+            // Status indicators
+            if (item.type === 'contact' && item.online && !(item.isSpecial && UserManager.contacts[item.id]?.isAI)) {
+                onlineDotEl.style.display = 'inline-block';
+            } else {
+                onlineDotEl.style.display = 'none';
+            }
+
+            if (item.unread > 0) {
+                badgeEl.textContent = item.unread > 99 ? '99+' : item.unread;
+                badgeEl.style.display = 'inline-block';
+            } else {
+                badgeEl.style.display = 'none';
+            }
+
+            li.addEventListener('click', () => this.openChat(item.id, item.type));
+            fragment.appendChild(li);
+        });
+
+        chatListEl.appendChild(fragment);
+    },
+
+    /**
+     * @private
+     * 收集并格式化用于渲染列表项的数据。
+     * @param {string} filter - 筛选条件。
+     * @returns {Array<object>} - 待渲染项的数组。
+     */
+    _collectItemsToRender(filter) {
+        let items = [];
         // 收集联系人
         if (filter === 'all' || filter === 'contacts') {
             Object.values(UserManager.contacts).forEach(contact => {
                 if ((!contact.isSpecial && !contact.isAI) || contact.isSpecial) {
-                    itemsToRender.push({
-                        id: contact.id,
-                        name: contact.name,
-                        avatarText: contact.avatarText || (contact.isSpecial ? 'S' : contact.name.charAt(0).toUpperCase()),
-                        avatarUrl: contact.avatarUrl || null,
-                        lastMessage: this._formatLastMessagePreview(contact.id, contact.lastMessage,
-                            (contact.isSpecial && contact.isAI) ? '准备好聊天！' : '暂无消息'),
-                        lastTime: contact.lastTime,
-                        unread: contact.unread || 0,
-                        type: 'contact',
-                        online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id),
-                        isSpecial: contact.isSpecial
+                    items.push({
+                        id: contact.id, name: contact.name, avatarText: contact.avatarText, avatarUrl: contact.avatarUrl,
+                        lastMessage: this._formatLastMessagePreview(contact.id, contact.lastMessage, (contact.isSpecial && contact.isAI) ? '准备好聊天！' : '暂无消息'),
+                        lastTime: contact.lastTime, unread: contact.unread || 0, type: 'contact',
+                        online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id), isSpecial: contact.isSpecial
                     });
                 }
             });
@@ -106,70 +176,17 @@ const ChatManager = {
         // 收集群组
         if (filter === 'all' || filter === 'groups') {
             Object.values(GroupManager.groups).forEach(group => {
-                itemsToRender.push({
+                items.push({
                     id: group.id, name: group.name, avatarText: '👥', avatarUrl: null,
                     lastMessage: this._formatLastMessagePreview(group.id, group.lastMessage, `成员: ${group.members.length}`),
                     lastTime: group.lastTime, unread: group.unread || 0, type: 'group'
                 });
             });
         }
-
-        // 按最后消息时间排序
-        itemsToRender.sort((a, b) => (b.lastTime && a.lastTime) ? new Date(b.lastTime) - new Date(a.lastTime) : (b.lastTime ? 1 : -1));
-
-        // 应用搜索过滤
-        const chatSearchInputEl = document.getElementById('chatSearchInput');
-        const searchQuery = chatSearchInputEl ? chatSearchInputEl.value.toLowerCase() : "";
-        if (searchQuery) {
-            itemsToRender = itemsToRender.filter(item => item.name.toLowerCase().includes(searchQuery));
-        }
-
-        // 处理空列表情况
-        if (itemsToRender.length === 0) {
-            const filterText = { all: '聊天', contacts: '联系人', groups: '群组' }[filter] || '项目';
-            chatListEl.innerHTML = `<li class="chat-list-item-empty">未找到${filterText}。</li>`;
-            return;
-        }
-
-        // 渲染列表项
-        itemsToRender.forEach(item => {
-            const li = document.createElement('li');
-            li.className = `chat-list-item ${item.id === this.currentChatId ? 'active' : ''} ${item.type === 'group' ? 'group' : ''}`;
-            if (item.isSpecial) li.classList.add('special-contact', item.id);
-            li.setAttribute('data-id', item.id);
-            li.setAttribute('data-type', item.type);
-            const formattedTime = item.lastTime ? Utils.formatDate(new Date(item.lastTime)) : '';
-
-            let statusIndicator = '';
-            if (item.type === 'contact' && item.online && !(item.isSpecial && UserManager.contacts[item.id]?.isAI) ) {
-                statusIndicator = '<span class="online-dot" title="已连接"></span>';
-            }
-
-            let avatarContentHtml;
-            const avatarClass = `chat-list-avatar ${item.isSpecial ? item.id : ''}`;
-            let fallbackText = (item.avatarText) ? Utils.escapeHtml(item.avatarText) :
-                (item.name && item.name.length > 0) ? Utils.escapeHtml(item.name.charAt(0).toUpperCase()) : '?';
-            if (item.avatarUrl) {
-                avatarContentHtml = `<img src="${item.avatarUrl}" alt="${fallbackText}" class="avatar-image" data-fallback-text="${fallbackText}" data-entity-id="${item.id}">`;
-            } else {
-                avatarContentHtml = fallbackText;
-            }
-
-            li.innerHTML = `
-   <div class="${avatarClass}">${avatarContentHtml}</div>
-<div class="chat-list-info">
-    <div class="chat-list-name">${Utils.escapeHtml(item.name)} ${statusIndicator}</div>
-    <div class="chat-list-preview">${Utils.escapeHtml(item.lastMessage)}</div>
-</div>
-<div class="chat-list-meta">
-    <div class="chat-list-time">${formattedTime}</div>
-    ${item.unread > 0 ? `<div class="chat-list-badge">${item.unread > 99 ? '99+' : item.unread}</div>` : ''}
-</div>`;
-            li.addEventListener('click', () => this.openChat(item.id, item.type));
-            chatListEl.appendChild(li);
-        });
+        // 排序
+        items.sort((a, b) => (b.lastTime && a.lastTime) ? new Date(b.lastTime) - new Date(a.lastTime) : (b.lastTime ? 1 : -1));
+        return items;
     },
-
     /**
      * @private
      * 格式化最后一条消息的预览文本。如果消息已被撤回，则显示撤回提示。
@@ -188,7 +205,6 @@ const ChatManager = {
         }
         return currentLastMessageText || defaultText;
     },
-
 
     /**
      * 打开指定的聊天会话。

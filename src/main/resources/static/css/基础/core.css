@@ -1,3 +1,4 @@
+
 /* ========================================================================== */
 /* 基础配置与全局样式 (Base & Global Styles) */
 /* ========================================================================== */
@@ -23,6 +24,11 @@
     --sent-bg-color: #e1ffc7; /* 已发送消息背景色 */
     --received-bg-color: #ffffff; /* 已接收消息背景色 */
     --info-color: #2196F3; /* 信息性颜色，可以用于默认状态或一般提示 */
+
+    /* 新增：特定UI区域颜色 */
+    --panel-bg-color: #f8f9fa; /* 侧边栏和详情面板背景色 */
+    --header-bg-color: #f0f2f5; /* 聊天区和详情区头部背景色 */
+    --chat-bg-color: #e5ddd5;   /* 聊天区背景色 */
 
 
     /* --- 布局与尺寸变量 --- */
@@ -120,7 +126,7 @@ body {
     flex-direction: column;
     flex-shrink: 0; /* 防止侧边栏在 flex 布局中被压缩 */
     width: var(--sidebar-width);
-    background-color: #f8f9fa;
+    background-color: var(--panel-bg-color);
     /* 使用逻辑属性 border-inline-end，自动适应从左到右 (LTR) 和从右到左 (RTL) 的布局 */
     border-inline-end: 1px solid var(--border-color);
     position: relative;
@@ -136,7 +142,7 @@ body {
     display: flex;
     flex-direction: column;
     flex-grow: 1; /* 占据剩余空间 */
-    background-color: #e5ddd5;
+    background-color: var(--chat-bg-color);
 }
 
 .details-panel {
@@ -145,7 +151,7 @@ body {
     flex-shrink: 0;
     width: var(--details-panel-width);
     min-width: var(--details-panel-width);
-    background-color: #f8f9fa;
+    background-color: var(--panel-bg-color);
     border-inline-start: 1px solid var(--border-color);
     /* Transition for sliding is handled in details-panel.css */
 }
@@ -165,6 +171,7 @@ body {
     min-height: var(--header-height);
     padding-inline: var(--spacing-4); /* 使用逻辑属性 padding-inline 替代 padding-left/right */
     border-bottom: 1px solid var(--border-color);
+    background-color: var(--header-bg-color);
 }
 
 /* --- 按钮 --- */
@@ -258,11 +265,16 @@ body {
     transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
-#fileInput,
-#bgImageInput,
-#bgImageInputLight,
-#bgImageInputDark {
-    display: none;
+/* 隐藏原生文件输入框 */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
 }
 
 /* --- 自定义选择框 (Custom Select) --- */
@@ -1538,6 +1550,65 @@ input:checked + .slider::before {
     display: block; /* 只显示激活的内容面板 */
     animation: tab-fade-in 0.3s ease-out;
 }
+
+/* ========================================================================== */
+/* ADDED: Memory Set Management in Modal Styles */
+/* ========================================================================== */
+
+.memory-set-list-item-modal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-2) var(--spacing-3);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-small);
+    margin-bottom: var(--spacing-2);
+    background-color: var(--panel-bg-color); /* Lighter than secondary */
+    transition: background-color 0.2s ease-out;
+}
+.memory-set-list-item-modal:hover {
+    background-color: var(--hover-bg-color);
+}
+
+.memory-set-name-modal {
+    font-weight: 500;
+    flex-grow: 1;
+    margin-right: var(--spacing-3);
+}
+
+.memory-set-actions-modal {
+    display: flex;
+    gap: var(--spacing-2);
+    flex-shrink: 0;
+}
+
+#memorySetFormContainerModal {
+    margin-top: var(--spacing-3);
+    padding: var(--spacing-3);
+    border: 1px dashed var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--panel-bg-color);
+}
+
+#memorySetFormContainerModal h4 {
+    margin-top: 0;
+}
+
+#memorySetFormContainerModal input.form-control {
+    width: 100%;
+    padding: var(--spacing-2);
+    margin-bottom: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--received-bg-color);
+    transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out;
+}
+#memorySetFormContainerModal input.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(0, 136, 204, 0.2);
+}
+
 
 
 /* ========================================================================== */

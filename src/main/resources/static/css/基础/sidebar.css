@@ -4,7 +4,7 @@
 
 .sidebar-header {
     padding-block: var(--spacing-2); /* Specific padding for sidebar header */
-    /* .sidebar-header in core.css provides base flex, align, height, padding, border */
+    /* Base styles are inherited from core.css */
 }
 
 /* .search-bar base style in core.css, specifics for placement/flex here if needed */

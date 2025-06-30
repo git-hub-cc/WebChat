@@ -412,68 +412,52 @@ const ChatAreaUIManager = {
 
     /**
      * @private
-     * 填充 AI @ 提及建议列表，并正确定位在输入框上方。
-     * (已优化，增加头像显示)
-     * @param {Array<object>} aiContacts - 匹配的 AI 联系人对象数组。
-     * @param {number} lengthOfAtAndQuery - `@` 符号加上查询词的长度，用于在选择建议后替换输入框中的文本。
+     * 填充 AI @ 提及建议列表...
      */
     _populateAiMentionSuggestions: function(aiContacts, lengthOfAtAndQuery) {
         if (!this.aiMentionSuggestionsEl || !this.messageInputEl) return;
 
-        // 1. 清空并准备 DOM 更新
-        this.aiMentionSuggestionsEl.innerHTML = ''; // 清空之前的建议项
-        const fragment = document.createDocumentFragment(); // 使用文档片段以提高性能
+        this.aiMentionSuggestionsEl.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        const template = document.getElementById('ai-mention-suggestion-item-template').content;
 
-        // 2. 填充建议项
         aiContacts.forEach(contact => {
-            const itemEl = document.createElement('div');
-            itemEl.className = 'mention-suggestion-item';
+            const itemClone = template.cloneNode(true);
+            const itemEl = itemClone.querySelector('.mention-suggestion-item');
+            const avatarEl = itemClone.querySelector('.mention-suggestion-avatar');
+            const nameEl = itemClone.querySelector('.mention-suggestion-name');
 
-            // 创建头像元素
-            const avatarEl = document.createElement('div');
-            avatarEl.className = 'mention-suggestion-avatar';
+            // Avatar
             if (contact.avatarUrl) {
-                avatarEl.innerHTML = `<img src="${contact.avatarUrl}" alt="${contact.name.charAt(0)}">`;
+                const img = document.createElement('img');
+                img.src = contact.avatarUrl;
+                img.alt = contact.name.charAt(0);
+                img.loading = "lazy";
+                avatarEl.appendChild(img);
             } else {
                 avatarEl.textContent = contact.name.charAt(0).toUpperCase();
-                // 如果有特定颜色，可以应用
-                // avatarEl.style.backgroundColor = contact.color || '#ccc';
             }
 
-            // 创建名称元素
-            const nameEl = document.createElement('span');
-            nameEl.className = 'mention-suggestion-name';
+            // Name
             nameEl.textContent = contact.name;
 
-            // 组装建议项
-            itemEl.appendChild(avatarEl);
-            itemEl.appendChild(nameEl);
-
-            // 绑定点击事件
+            // Click Event
             itemEl.addEventListener('click', () => {
                 const currentText = this.messageInputEl.value;
                 const cursorPos = this.messageInputEl.selectionStart;
-
-                // 精确替换 @query 部分
                 const textBefore = currentText.substring(0, cursorPos - lengthOfAtAndQuery);
                 const textAfter = currentText.substring(cursorPos);
-
-                const mentionText = '@' + contact.name + ' '; // 在末尾加一个空格，方便用户继续输入
+                const mentionText = '@' + contact.name + ' ';
                 this.messageInputEl.value = textBefore + mentionText + textAfter;
-
-                // 恢复焦点并设置光标位置
                 this.messageInputEl.focus();
                 const newCursorPos = textBefore.length + mentionText.length;
                 this.messageInputEl.setSelectionRange(newCursorPos, newCursorPos);
-
-                // 隐藏建议列表
                 this.aiMentionSuggestionsEl.style.display = 'none';
             });
-
-            fragment.appendChild(itemEl); // 先添加到文档片段
+            fragment.appendChild(itemEl);
         });
 
-        this.aiMentionSuggestionsEl.appendChild(fragment); // 一次性添加到 DOM
+        this.aiMentionSuggestionsEl.appendChild(fragment);
 
         // 3. 定位建议列表
         // 关键：将列表的 bottom 设置为输入行的高度，使其精确地显示在输入框上方。
@@ -646,7 +630,6 @@ const ChatAreaUIManager = {
             this.contextMenuAutoHideTimer = null; // 重置定时器ID
         }
     },
-
 
     /**
      * 显示聊天区域，并隐藏“未选择聊天”的占位屏幕。

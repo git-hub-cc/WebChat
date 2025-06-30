@@ -282,8 +282,6 @@ const MessageManager = {
             NotificationUIManager.showNotification('发送贴图失败。', 'error');
         }
     },
-
-
     /**
      * 在聊天窗口中显示或更新一条消息。
      * @param {object} message - 要显示的消息对象。
@@ -293,222 +291,226 @@ const MessageManager = {
         const chatBox = document.getElementById('chatBox');
         if (!chatBox) return;
 
-        const isSentByMe = message.sender === UserManager.userId || (message.originalSender && message.originalSender === UserManager.userId);
-        let msgDiv = null;
-        let mainContentWrapper = null;
-        let contentElement = null;
+        let msgDiv = message.id ? chatBox.querySelector(`.message[data-message-id="${message.id}"]`) : null;
+        const isUpdate = !!msgDiv;
 
-        if (message.id) msgDiv = chatBox.querySelector(`.message[data-message-id="${message.id}"]`);
+        if (isUpdate) {
+            // 更新逻辑：如果只是流式文本更新，则直接修改内容
+            if (message.type === 'text' && message.isStreaming) {
+                const contentEl = msgDiv.querySelector('.message-content');
+                if (contentEl) {
+                    contentEl.innerHTML = Utils.formatMessageText(message.content + "▍");
+                }
+                return; // 快速返回，不重新渲染整个消息
+            }
+            // 如果是更新完成状态
+            if(message.type === 'text' && !message.isStreaming && !message.isNewlyCompletedAIResponse) {
+                const contentEl = msgDiv.querySelector('.message-content');
+                if (contentEl) {
+                    contentEl.innerHTML = Utils.formatMessageText(message.content);
+                }
+                const timestampEl = msgDiv.querySelector('.timestamp');
+                if (timestampEl) {
+                    timestampEl.textContent = Utils.formatDate(new Date(message.timestamp), true);
+                }
+                return;
+            }
+        }
 
+        // --- 创建或完整重绘消息 ---
+        const messageTpl = document.getElementById('message-template').content.cloneNode(true);
+        const newMsgDiv = messageTpl.querySelector('.message');
+        const contentWrapper = messageTpl.querySelector('.message-content-wrapper');
+        const contentEl = messageTpl.querySelector('.message-content');
+        const senderEl = messageTpl.querySelector('.message-sender');
+        const timestampEl = messageTpl.querySelector('.timestamp');
+
+        // 设置通用属性
+        this._setMessageAttributes(newMsgDiv, message);
+
+        // 设置发送者
         const senderContact = UserManager.contacts[message.sender];
+        const isSentByMe = message.sender === UserManager.userId || (message.originalSender && message.originalSender === UserManager.userId);
+        if (!isSentByMe && message.type !== 'system' && !message.isRetracted) {
+            const senderName = message.originalSenderName || (senderContact ? senderContact.name : `用户 ${String(message.sender || '').substring(0, 4)}`);
+            if (message.groupId || senderContact?.isSpecial) {
+                senderEl.textContent = Utils.escapeHtml(senderName);
+            } else {
+                senderEl.remove();
+            }
+        } else {
+            senderEl.remove();
+        }
+
+        // 设置时间戳
+        timestampEl.textContent = message.timestamp ? Utils.formatDate(new Date(message.timestamp), true) : '正在发送...';
+
+        // 根据消息类型填充内容
+        this._fillMessageContent(contentEl, message);
+
+        // 处理TTS
         const isAIMessage = !isSentByMe && senderContact?.isAI;
-        const ttsConfig = isAIMessage && senderContact.aiConfig?.tts;
-
-        if (msgDiv) { // If message div already exists, we are updating it
-            if (message.isRetracted && !msgDiv.classList.contains('retracted')) {
-                msgDiv.innerHTML = '';
-            } else if (!message.isRetracted) {
-                mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
-                contentElement = mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
-            }
-        } else { // If message div does not exist, create it
-            msgDiv = document.createElement('div');
-            msgDiv.className = `message ${isSentByMe ? 'sent' : 'received'}`;
-            if (message.id) msgDiv.setAttribute('data-message-id', message.id);
-            if (message.sender) msgDiv.setAttribute('data-sender-id', message.sender);
-            if (message.timestamp) msgDiv.setAttribute('data-timestamp', new Date(message.timestamp).getTime());
-        }
-
-        if (message.type === 'system' || message.isRetracted) {
-            msgDiv.classList.add('system');
-        } else {
-            msgDiv.classList.remove('system');
-        }
-        if (message.type === 'sticker') { // ADDED: Add sticker class
-            msgDiv.classList.add('sticker');
-        }
-        if (message.isThinking) msgDiv.classList.add('thinking'); else msgDiv.classList.remove('thinking');
-        if (message.isRetracted) msgDiv.classList.add('retracted'); else msgDiv.classList.remove('retracted');
-        if (isAIMessage && senderContact?.id) {
-            msgDiv.classList.add('character-message', senderContact.id);
-        } else {
-            if (senderContact?.id) msgDiv.classList.remove('character-message', senderContact.id);
-            else msgDiv.classList.remove('character-message');
-        }
-
-        if (!contentElement || (message.isRetracted && msgDiv.innerHTML === '')) {
-            let senderNameHtml = '';
-            if (!isSentByMe && message.type !== 'system' && !message.isRetracted) {
-                const senderName = message.originalSenderName || (senderContact ? senderContact.name : `用户 ${String(message.sender || '').substring(0, 4)}`);
-                if ((message.groupId && ChatManager.currentChatId === message.groupId) || (senderContact?.isSpecial && !senderContact.isAI)) {
-                    senderNameHtml = `<div class="message-sender">${Utils.escapeHtml(senderName)}</div>`;
-                } else if (senderContact?.isAI) {
-                    senderNameHtml = `<div class="message-sender ai-sender">${Utils.escapeHtml(senderName)}</div>`;
-                }
-            }
-
-            let messageBodyHtml;
-            if (message.isRetracted) {
-                let retractedText;
-                if (message.retractedBy === UserManager.userId) {
-                    retractedText = "你撤回了一条消息";
-                } else {
-                    const retractedName = UserManager.contacts[message.retractedBy]?.name || (message.originalSenderName && message.retractedBy === (message.originalSender || message.sender) ? message.originalSenderName : null) || `用户 ${String(message.retractedBy || message.sender || '').substring(0,4)}`;
-                    retractedText = `${Utils.escapeHtml(retractedName)} 撤回了一条消息`;
-                }
-                messageBodyHtml = `<div class="message-content-wrapper"><div class="message-content">${Utils.escapeHtml(retractedText)}</div></div>`;
-            } else {
-                const textContent = message.content;
-                const showStreamingCursor = isAIMessage && message.isStreaming;
-                switch (message.type) {
-                    case 'text':
-                        messageBodyHtml = `<div class="message-content-wrapper"><div class="message-content">${Utils.formatMessageText(textContent + (showStreamingCursor ? "▍" : ""))}</div></div>`;
-                        break;
-                    case 'audio':
-                        messageBodyHtml = `<div class="message-content-wrapper"><div class="voice-message"><button class="play-voice-btn" data-audio="${message.data}" onclick="MediaManager.playAudio(this)">▶</button><span class="voice-duration">${Utils.formatTime(message.duration)}</span></div></div>`;
-                        break;
-                    case 'sticker': // ADDED: Sticker case
-                    case 'file':
-                        const originalFileName = message.fileName || '文件';
-                        const escapedOriginalFileName = Utils.escapeHtml(originalFileName);
-                        const displayFileName = Utils.truncateFileName(escapedOriginalFileName, 10);
-                        const fileSizeForDisplay = message.size || message.fileSize || 0;
-                        const fileHash = message.fileHash;
-                        let fileSpecificContainerClass = "";
-                        let initialIconContent = "📄";
-
-                        if (message.fileType?.startsWith('image/') || message.type === 'sticker') { // MODIFIED: Include sticker here
-                            fileSpecificContainerClass = "image-preview-container";
-                            initialIconContent = "🖼️";
-                        } else if (message.fileType?.startsWith('video/')) {
-                            fileSpecificContainerClass = "video-preview-container";
-                            initialIconContent = "🎬";
-                        } else if (message.fileType?.startsWith('audio/')) {
-                            fileSpecificContainerClass = "audio-file-container";
-                            initialIconContent = "🎵";
-                        }
-
-                        const thumbnailPlaceholderHtml = `<div class="thumbnail-placeholder" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}" data-filetype="${message.fileType}">
-    ${initialIconContent}
-${ (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) ? `<span class="play-overlay-icon">${message.fileType.startsWith('image/') ? '👁️' : '▶'}</span>` : '' }
-</div>`;
-                        // For stickers, we only want the thumbnail, not the details.
-                        const fileDetailsHtml = message.type !== 'sticker' ? `
-<div class="file-details">
-    <div class="file-name" title="${escapedOriginalFileName}">${displayFileName}</div>
-<div class="file-meta">${MediaManager.formatFileSize(fileSizeForDisplay)}</div>
-</div>` : '';
-
-                        messageBodyHtml = `
-<div class="message-content-wrapper">
-    <div class="file-info ${fileSpecificContainerClass}"
-data-hash="${fileHash}"
-data-filename="${escapedOriginalFileName}"
-data-filetype="${message.fileType}"
-${(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/') || message.type === 'sticker') ? 'style="cursor:pointer;"' : ''}>
-${thumbnailPlaceholderHtml}
-${fileDetailsHtml}
-</div>`;
-                        if (message.fileType?.startsWith('audio/')) {
-                            messageBodyHtml += `<button class="play-media-btn" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}" data-filetype="${message.fileType}">播放</button>`;
-                        } else if (message.type !== 'sticker' && !(message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) {
-                            messageBodyHtml += `<button class="download-file-btn" data-hash="${fileHash}" data-filename="${escapedOriginalFileName}">下载</button>`;
-                        }
-                        messageBodyHtml += `</div>`;
-                        break;
-                    case 'user':
-                    case 'system':
-                        messageBodyHtml = `<div class="message-content system-text">${Utils.formatMessageText(textContent)}</div>`;
-                        break;
-                    default:
-                        messageBodyHtml = `<div class="message-content-wrapper"><div class="message-content">[不支持的类型: ${message.type}]</div></div>`;
-                }
-            }
-            msgDiv.innerHTML = senderNameHtml + messageBodyHtml + `<div class="timestamp">${message.timestamp ? Utils.formatDate(new Date(message.timestamp), true) : '正在发送...'}</div>`;
-
-            mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
-            contentElement = mainContentWrapper ? mainContentWrapper.querySelector('.message-content') : msgDiv.querySelector('.message-content');
-
-            if (!message.isRetracted && (message.type === 'file' || message.type === 'sticker')) { // MODIFIED
-                const fileInfoContainer = msgDiv.querySelector('.file-info');
-                if (fileInfoContainer && (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/')) && message.type !== 'sticker') { // MODIFIED: Exclude sticker
-                    fileInfoContainer.addEventListener('click', (e) => {
-                        const target = e.currentTarget;
-                        if (target.classList.contains('image-preview-container')) {
-                            this._handleViewFileClick(target);
-                        } else if (target.classList.contains('video-preview-container')) {
-                            this._handlePlayVideoFullScreenClick(target);
-                        }
-                    });
-                }
-                const playMediaBtn = msgDiv.querySelector('.play-media-btn');
-                if (playMediaBtn) playMediaBtn.addEventListener('click', (e) => this._handlePlayMediaClick(e.target));
-                const downloadBtn = msgDiv.querySelector('.download-file-btn');
-                if (downloadBtn) downloadBtn.addEventListener('click', (e) => this._handleDownloadFileClick(e.target));
-            }
-        } else {
-            if (contentElement && message.type === 'text' && !message.isRetracted) {
-                const textContent = message.content;
-                const showStreamingCursor = isAIMessage && message.isStreaming;
-                contentElement.innerHTML = Utils.formatMessageText(textContent + (showStreamingCursor ? "▍" : ""));
-            }
-            const timestampElement = msgDiv.querySelector('.timestamp');
-            if (timestampElement && message.timestamp && timestampElement.textContent !== Utils.formatDate(new Date(message.timestamp), true)) {
-                timestampElement.textContent = Utils.formatDate(new Date(message.timestamp), true);
-            }
-        }
-
-        if (message.isRetracted) {
-            const actionableElements = msgDiv.querySelectorAll('.file-info[style*="cursor:pointer"], button.play-media-btn, button.download-file-btn, .play-voice-btn, .tts-play-button, .tts-retry-button');
-            actionableElements.forEach(el => {
-                if(el.tagName === 'BUTTON') el.disabled = true;
-                el.onclick = null;
-                el.style.cursor = 'default';
-                if (el.classList.contains('tts-play-button') || el.classList.contains('tts-retry-button')) {
-                    el.parentElement.innerHTML = '';
-                }
-            });
-            msgDiv.style.cursor = 'default';
-        }
-
-        if (!message.isRetracted && (message.type === 'file' || message.type === 'sticker') && (message.fileType?.startsWith('image/') || message.fileType?.startsWith('video/'))) { // MODIFIED
-            const placeholderDiv = msgDiv.querySelector('.thumbnail-placeholder');
-            if (placeholderDiv && typeof MediaUIManager !== 'undefined' && MediaUIManager.renderMediaThumbnail) {
-                MediaUIManager.renderMediaThumbnail(placeholderDiv, message.fileHash, message.fileType, message.fileName, false);
-            }
-        }
-
-        if (message.type === 'text' && isAIMessage && ttsConfig?.enabled && !message.isStreaming && message.isNewlyCompletedAIResponse && !message.isRetracted) {
+        if (isAIMessage && senderContact.aiConfig?.tts?.enabled && message.isNewlyCompletedAIResponse && message.type === 'text') {
             const textForTts = TtsApiHandler.cleanTextForTts(message.content);
-            mainContentWrapper = msgDiv.querySelector('.message-content-wrapper');
-            if (textForTts && textForTts.trim() !== "" && mainContentWrapper) {
+            if (textForTts && textForTts.trim() !== "") {
                 const ttsId = message.id || `tts_${Date.now()}`;
-                const oldTtsContainer = mainContentWrapper.querySelector(`.tts-control-container[data-tts-id="${ttsId}"]`);
-                if(oldTtsContainer) oldTtsContainer.remove();
-
-                TtsApiHandler.addTtsPlaceholder(mainContentWrapper, ttsId);
-                TtsApiHandler.requestTtsForMessage(textForTts, ttsConfig, mainContentWrapper, ttsId);
-            } else {
-                Utils.log(`TTS 未为消息 ID ${message.id} 触发: 清理后的文本为空或没有包装器。原文: "${message.content?.substring(0, 50)}..."`, Utils.logLevels.INFO);
+                TtsApiHandler.addTtsPlaceholder(contentWrapper, ttsId);
+                TtsApiHandler.requestTtsForMessage(textForTts, senderContact.aiConfig.tts, contentWrapper, ttsId);
             }
         }
 
-        const noMsgPlaceholder = chatBox.querySelector('.system-message:not(.thinking):not(.reconnect-prompt):not(.retracted):not([class*="loading-indicator"])');
+        // 将新消息插入DOM
+        if (isUpdate) {
+            msgDiv.replaceWith(newMsgDiv);
+        } else {
+            if (prepend && chatBox.firstChild) {
+                chatBox.insertBefore(newMsgDiv, chatBox.firstChild);
+            } else {
+                chatBox.appendChild(newMsgDiv);
+            }
+        }
+
+        // 移除"无消息"占位符
+        this._removeEmptyPlaceholder(chatBox, message);
+    },
+
+    /**
+     * @private
+     * 为消息DOM元素设置通用属性和类。
+     * @param {HTMLElement} msgDiv - 消息的div元素。
+     * @param {object} message - 消息对象。
+     */
+    _setMessageAttributes: function(msgDiv, message) {
+        const isSentByMe = message.sender === UserManager.userId || (message.originalSender && message.originalSender === UserManager.userId);
+        const senderContact = UserManager.contacts[message.sender];
+
+        msgDiv.classList.add(isSentByMe ? 'sent' : 'received');
+        if (message.id) msgDiv.dataset.messageId = message.id;
+        if (message.sender) msgDiv.dataset.senderId = message.sender;
+        if (message.timestamp) msgDiv.dataset.timestamp = new Date(message.timestamp).getTime();
+
+        if (message.type === 'system' || message.isRetracted) msgDiv.classList.add('system');
+        if (message.type === 'sticker') msgDiv.classList.add('sticker');
+        if (message.isThinking) msgDiv.classList.add('thinking');
+        if (message.isRetracted) msgDiv.classList.add('retracted');
+
+        if (!isSentByMe && senderContact?.isAI && senderContact.id) {
+            msgDiv.classList.add('character-message', senderContact.id);
+        }
+    },
+
+    /**
+     * @private
+     * 根据消息类型填充消息内容区域。
+     * @param {HTMLElement} contentEl - 消息内容的容器元素。
+     * @param {object} message - 消息对象。
+     */
+    _fillMessageContent: function(contentEl, message) {
+        if (message.isRetracted) {
+            let retractedText;
+            if (message.retractedBy === UserManager.userId) {
+                retractedText = "你撤回了一条消息";
+            } else {
+                const retractedName = UserManager.contacts[message.retractedBy]?.name || (message.originalSenderName && message.retractedBy === (message.originalSender || message.sender) ? message.originalSenderName : null) || `用户 ${String(message.retractedBy || message.sender || '').substring(0,4)}`;
+                retractedText = `${Utils.escapeHtml(retractedName)} 撤回了一条消息`;
+            }
+            contentEl.textContent = retractedText;
+            return;
+        }
+
+        switch (message.type) {
+            case 'text':
+                contentEl.innerHTML = Utils.formatMessageText(message.content);
+                break;
+            case 'audio':
+                const audioTpl = document.getElementById('message-audio-template').content.cloneNode(true);
+                audioTpl.querySelector('.play-voice-btn').dataset.audio = message.data;
+                audioTpl.querySelector('.play-voice-btn').addEventListener('click', (e) => MediaManager.playAudio(e.currentTarget));
+                audioTpl.querySelector('.voice-duration').textContent = Utils.formatTime(message.duration);
+                contentEl.appendChild(audioTpl);
+                break;
+            case 'sticker':
+                const stickerTpl = document.getElementById('message-sticker-template').content.cloneNode(true);
+                const stickerInfoDiv = stickerTpl.querySelector('.sticker-info');
+                this._setupFileMessage(stickerInfoDiv, message);
+                contentEl.appendChild(stickerTpl);
+                break;
+            case 'file':
+                const fileTpl = document.getElementById('message-file-template').content.cloneNode(true);
+                this._setupFileMessage(fileTpl.querySelector('.file-info'), message);
+                contentEl.appendChild(fileTpl);
+                break;
+            case 'user':
+            case 'system':
+                contentEl.classList.add('system-text');
+                contentEl.innerHTML = Utils.formatMessageText(message.content);
+                break;
+            default:
+                contentEl.textContent = `[不支持的类型: ${message.type}]`;
+        }
+    },
+
+    /**
+     * @private
+     * 设置文件或贴图消息的DOM元素。
+     * @param {HTMLElement} fileInfoDiv - 文件信息的容器元素。
+     * @param {object} message - 消息对象。
+     */
+    _setupFileMessage: function(fileInfoDiv, message) {
+        const { fileHash, fileName, fileType, size } = message;
+        fileInfoDiv.dataset.hash = fileHash;
+        fileInfoDiv.dataset.filename = fileName;
+        fileInfoDiv.dataset.filetype = fileType;
+
+        const thumbnailPlaceholder = fileInfoDiv.querySelector('.thumbnail-placeholder');
+        if (MediaUIManager.renderMediaThumbnail) {
+            MediaUIManager.renderMediaThumbnail(thumbnailPlaceholder, fileHash, fileType, fileName, false);
+        }
+
+        if (fileType.startsWith('image/') || fileType.startsWith('video/')) {
+            fileInfoDiv.style.cursor = 'pointer';
+            fileInfoDiv.addEventListener('click', (e) => {
+                const target = e.currentTarget;
+                if (fileType.startsWith('image/')) this._handleViewFileClick(target);
+                else if (fileType.startsWith('video/')) this._handlePlayVideoFullScreenClick(target);
+            });
+        }
+
+        // 文件详情和操作按钮 (贴图类型没有这些)
+        const fileNameEl = fileInfoDiv.querySelector('.file-name');
+        if(fileNameEl) fileNameEl.textContent = Utils.truncateFileName(fileName, 10);
+
+        const fileMetaEl = fileInfoDiv.querySelector('.file-meta');
+        if(fileMetaEl) fileMetaEl.textContent = MediaManager.formatFileSize(size);
+
+        const actionBtn = fileInfoDiv.querySelector('.media-action-btn');
+        if (actionBtn) {
+            if (fileType.startsWith('audio/')) {
+                actionBtn.textContent = '播放';
+                actionBtn.addEventListener('click', (e) => { e.stopPropagation(); this._handlePlayMediaClick(actionBtn); });
+            } else if (!fileType.startsWith('image/') && !fileType.startsWith('video/')) {
+                actionBtn.textContent = '下载';
+                actionBtn.addEventListener('click', (e) => { e.stopPropagation(); this._handleDownloadFileClick(actionBtn); });
+            } else {
+                actionBtn.remove(); // 图片和视频直接点击容器，不需要按钮
+            }
+        }
+    },
+
+    /**
+     * @private
+     * 移除聊天框中的 "暂无消息" 占位符。
+     * @param {HTMLElement} chatBox - 聊天框元素。
+     * @param {object} message - 新增的消息对象。
+     */
+    _removeEmptyPlaceholder: function(chatBox, message) {
+        const noMsgPlaceholder = chatBox.querySelector('.system-message:not(.thinking)');
         if (noMsgPlaceholder && (noMsgPlaceholder.textContent.includes("暂无消息") || noMsgPlaceholder.textContent.includes("您创建了此群组") || noMsgPlaceholder.textContent.includes("开始对话"))) {
             if (!message.isThinking && !message.isStreaming && !message.isRetracted) {
                 noMsgPlaceholder.remove();
             }
         }
-
-        if (!chatBox.contains(msgDiv)) {
-            if (prepend && chatBox.firstChild) {
-                chatBox.insertBefore(msgDiv, chatBox.firstChild);
-            } else {
-                chatBox.appendChild(msgDiv);
-            }
-        }
     },
-
     /**
      * @private
      * 处理文件消息中“查看”按钮（通常是图片）的点击事件。

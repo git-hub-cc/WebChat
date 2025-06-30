@@ -39,49 +39,75 @@ const MediaUIManager = {
      * @param {number} duration - 音频时长（秒）。
      */
     displayAudioPreview: function (audioDataUrl, duration) {
-        if (!this.audioPreviewContainerEl) { // 防御性检查
-            Utils.log("未找到音频预览容器。", Utils.logLevels.ERROR);
-            return;
-        }
-        // 清除文件预览（如果存在），因为一次只能预览一种媒体
-        if (this.filePreviewContainerEl) this.filePreviewContainerEl.innerHTML = '';
-        if (MessageManager.selectedFile) { // 清空MessageManager中的文件和其预览URL
-            if (MessageManager.selectedFile.previewUrl) {
-                URL.revokeObjectURL(MessageManager.selectedFile.previewUrl);
+        if (!this.audioPreviewContainerEl) return;
+        this.clearFilePreview(); // 确保文件预览被清除
+        MessageManager.selectedFile = null;
+
+        const template = document.getElementById('audio-preview-template').content.cloneNode(true);
+        const previewDiv = template.querySelector('.voice-message-preview');
+        const durationEl = template.querySelector('.preview-duration');
+        const audioEl = template.querySelector('.preview-audio-player');
+        const playBtn = template.querySelector('.btn-play-preview');
+        const cancelBtn = template.querySelector('.btn-cancel-preview');
+
+        durationEl.textContent = Utils.formatTime(duration);
+        audioEl.src = audioDataUrl;
+
+        playBtn.addEventListener('click', () => {
+            if (audioEl.paused) {
+                audioEl.play().catch(e => Utils.log("播放预览音频时出错: " + e, Utils.logLevels.ERROR));
+                playBtn.textContent = "暂停";
+            } else {
+                audioEl.pause();
+                playBtn.textContent = "播放";
             }
-            MessageManager.selectedFile = null;
+        });
+        audioEl.onended = () => { playBtn.textContent = "播放"; };
+
+        cancelBtn.addEventListener('click', () => MessageManager.cancelAudioData());
+
+        this.audioPreviewContainerEl.innerHTML = '';
+        this.audioPreviewContainerEl.appendChild(previewDiv);
+    },
+
+    /**
+     * 在输入区域显示用户选择的文件的预览。
+     * @param {object} fileObj - 包含文件信息...的对象。
+     */
+    displayFilePreview: function(fileObj) {
+        if (!this.filePreviewContainerEl) return;
+        this.clearAudioPreview();
+        MessageManager.audioData = null;
+
+        const template = document.getElementById('file-preview-template').content.cloneNode(true);
+        const previewDiv = template.querySelector('.file-preview-item');
+        const contentEl = template.querySelector('.preview-content');
+
+        const originalFileName = fileObj.name;
+        const escapedFileName = Utils.escapeHtml(originalFileName);
+        const displayFileName = Utils.truncateFileName(escapedFileName, 25);
+
+        if (fileObj.type.startsWith('image/') && fileObj.previewUrl) {
+            const img = document.createElement('img');
+            img.src = fileObj.previewUrl;
+            img.alt = "预览";
+            img.style.maxHeight = '50px';
+            img.style.borderRadius = '4px';
+            img.style.marginRight = '8px';
+            img.title = escapedFileName;
+            img.loading = "lazy";
+            contentEl.appendChild(img);
+            contentEl.appendChild(document.createTextNode(displayFileName));
+        } else {
+            const icon = fileObj.type.startsWith('video/') ? '🎬' : '📄';
+            const fileTypeText = fileObj.type.startsWith('video/') ? ' (视频)' : ` (${MediaManager.formatFileSize(fileObj.size)})`;
+            contentEl.innerHTML = `${icon} <span title="${escapedFileName}">${displayFileName}</span>${fileTypeText}`;
         }
 
+        template.querySelector('.cancel-file-preview').addEventListener('click', () => MessageManager.cancelFileData());
 
-        const formattedDuration = Utils.formatTime(duration); // 格式化时长
-        // 构建音频预览HTML
-        this.audioPreviewContainerEl.innerHTML = `
-<div class="voice-message-preview">
-    <span>🎙️ 语音消息 (${formattedDuration})</span>
-<audio controls src="${audioDataUrl}" style="display:none;"></audio> <!-- 隐藏默认播放器 -->
-<button class="btn-play-preview">播放</button>
-<button class="btn-cancel-preview">取消</button>
-</div>
-`;
-        const playBtn = this.audioPreviewContainerEl.querySelector('.btn-play-preview');
-        const cancelBtn = this.audioPreviewContainerEl.querySelector('.btn-cancel-preview');
-        const audioEl = this.audioPreviewContainerEl.querySelector('audio'); // 获取<audio>元素
-
-        // 绑定预览播放按钮的事件
-        if (playBtn && audioEl) {
-            playBtn.addEventListener('click', () => {
-                if (audioEl.paused) { // 如果暂停，则播放
-                    audioEl.play().catch(e => Utils.log("播放预览音频时出错: " + e, Utils.logLevels.ERROR));
-                    playBtn.textContent = "暂停";
-                } else { // 如果正在播放，则暂停
-                    audioEl.pause();
-                    playBtn.textContent = "播放";
-                }
-            });
-            audioEl.onended = () => { playBtn.textContent = "播放"; }; // 播放结束时重置按钮文本
-        }
-        // 绑定取消按钮的事件
-        if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelAudioData());
+        this.filePreviewContainerEl.innerHTML = '';
+        this.filePreviewContainerEl.appendChild(previewDiv);
     },
 
     /**
@@ -89,58 +115,6 @@ const MediaUIManager = {
      */
     clearAudioPreview: function() {
         if (this.audioPreviewContainerEl) this.audioPreviewContainerEl.innerHTML = '';
-    },
-
-    /**
-     * 在输入区域显示用户选择的文件的预览。
-     * @param {object} fileObj - 包含文件信息（blob, hash, name, type, size, previewUrl）的对象。
-     */
-    displayFilePreview: function(fileObj) {
-        if (!this.filePreviewContainerEl) { // 防御性检查
-            Utils.log("未找到文件预览容器。", Utils.logLevels.ERROR);
-            return;
-        }
-        // 清除音频预览（如果存在）
-        if (this.audioPreviewContainerEl) this.audioPreviewContainerEl.innerHTML = '';
-        MessageManager.audioData = null;
-        MessageManager.audioDuration = 0;
-
-
-        this.filePreviewContainerEl.innerHTML = ''; // 清除之前的预览
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'file-preview-item';
-
-        const originalFileName = fileObj.name; // 保留原始文件名
-        const escapedOriginalFileName = Utils.escapeHtml(originalFileName); // 转义HTML字符
-        const displayFileName = Utils.truncateFileName(escapedOriginalFileName, 25); // 截断文件名以适应预览区 (25字符)
-
-        let contentHtml;
-
-        // 使用 previewUrl (Object URL) 进行预览
-        if (fileObj.type.startsWith('image/') && fileObj.previewUrl) {
-            contentHtml = `<img src="${fileObj.previewUrl}" alt="预览" style="max-height: 50px; border-radius: 4px; margin-right: 8px;" title="${escapedOriginalFileName}"> ${displayFileName}`;
-        } else if (fileObj.type.startsWith('video/') && fileObj.previewUrl) {
-            contentHtml = `🎬 <span title="${escapedOriginalFileName}">${displayFileName}</span> (视频) <video src="${fileObj.previewUrl}" style="display:none;" controls></video>`; // 预览时可以不显示播放器，或显示一个小的
-        } else { // 其他文件类型
-            contentHtml = `📄 <span title="${escapedOriginalFileName}">${displayFileName}</span> (${MediaManager.formatFileSize(fileObj.size)})`;
-        }
-        previewDiv.innerHTML = `<span>${contentHtml}</span><button class="cancel-file-preview" title="移除附件">✕</button>`;
-
-        // 如果主要内容在span内（非图片情况），则在该span上设置title属性
-        const mainSpan = previewDiv.querySelector('span');
-        if(mainSpan && !(fileObj.type.startsWith('image/') && fileObj.previewUrl)) {
-            const fileNameSpan = mainSpan.querySelector('span[title]'); // 查找特定的文件名span
-            if (fileNameSpan) { // 如果存在
-                fileNameSpan.title = escapedOriginalFileName;
-            } else { // 否则设置在主span上
-                mainSpan.title = escapedOriginalFileName;
-            }
-        }
-
-
-        this.filePreviewContainerEl.appendChild(previewDiv);
-        const cancelBtn = this.filePreviewContainerEl.querySelector('.cancel-file-preview');
-        if (cancelBtn) cancelBtn.addEventListener('click', () => MessageManager.cancelFileData()); // 绑定取消事件
     },
 
     /**

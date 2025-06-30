@@ -374,9 +374,7 @@ const MediaManager = {
                 return;
             }
 
-            NotificationUIManager.showNotification('1秒后截取屏幕...', 'info', 1000); // 提示用户
-
-            setTimeout(async () => { // 延迟1秒截图
+            setTimeout(async () => { // 延迟0.3秒截图
                 // 再次检查流是否仍然活动
                 if (!stream || !stream.active || videoTrack.readyState === 'ended') {
                     Utils.log('MediaManager.captureScreen: 延迟后屏幕共享流已停止或无效。', Utils.logLevels.WARN);
@@ -430,7 +428,7 @@ const MediaManager = {
                     NotificationUIManager.showNotification(`截图处理失败: ${captureError.message}`, 'error');
                     if (stream) stream.getTracks().forEach(track => track.stop());
                 }
-            }, 1000); // 延迟1秒
+            }, 300); // 延迟0.3秒
 
         } catch (err) { // 请求屏幕共享权限失败
             Utils.log('屏幕捕获初始设置失败: ' + err.message, Utils.logLevels.ERROR);

@@ -11,8 +11,7 @@
 
 /* --- 聊天区头部 --- */
 .chat-header-main {
-    background-color: #f0f2f5; /* Specific background for chat header */
-    /* .sidebar-header in core.css provides base flex, align, height, padding, border */
+    /* .sidebar-header in core.css provides base flex, align, height, padding, border, and background-color */
 }
 
 .back-to-list-btn { /* Specific for chat header, shown on mobile */
@@ -204,7 +203,7 @@
     align-self: center;
     padding: 5px 10px;
     border-radius: 15px;
-    background-color: #f0f2f5c9;
+    background-color: rgba(240, 242, 245, 0.8); /* Use var(--header-bg-color) with alpha */
     box-shadow: none;
     color: var(--text-color-light);
     text-align: center;
@@ -582,7 +581,7 @@
     flex-direction: column;
     padding: var(--spacing-3) var(--spacing-4);
     border-top: 1px solid var(--border-color);
-    background-color: #f0f2f5;
+    background-color: var(--header-bg-color);
     position: relative; /* For AI mention suggestions */
 }
 

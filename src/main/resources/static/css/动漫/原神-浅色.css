@@ -591,7 +591,6 @@ img {
 .details-panel {
     background-color: rgba(var(--gi-parchment-dark-rgb), 0.9);
     border-left: 1px solid var(--color-border-secondary);
-    overflow-y: auto;
     color: var(--color-text-secondary);
 }
 .details-panel .details-header {
