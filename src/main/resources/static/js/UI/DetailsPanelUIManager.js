@@ -296,7 +296,7 @@ const DetailsPanelUIManager = {
         const elementSets = MemoryBookManager.getElementSets();
 
         if (elementSets.length === 0) {
-            this.memoryBookListEl.innerHTML = `<p style="font-size: 0.9em; color: var(--text-color-light); text-align: center;">请先在“新建”菜单的“记忆书”标签页中添加要记忆书。</p>`;
+            this.memoryBookListEl.innerHTML = `<p style="font-size: 0.9em; color: var(--text-color-light); text-align: center;">请先在“交互管理”菜单的“记忆书”标签页中添加要记忆书。</p>`;
             return;
         }
 

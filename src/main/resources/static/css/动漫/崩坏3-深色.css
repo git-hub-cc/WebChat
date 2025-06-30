@@ -1,622 +1,279 @@
-/* --- START OF FILE 崩坏3-深色-Enhanced.css --- */
+/*
+================================================================================
+|                                                                              |
+|                    🚀 崩坏3 - 虚空余烬 (Dark Theme) 🚀                     |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained, enhanced dark theme file for Honkai Impact 3rd.
+*
+*/
 
 :root {
-    /* 崩坏3 - 虚空余烬 主题色板 (Honkai Impact 3rd - Void Embers Palette) */
-    --hi3-deep-space-bg-rgb: 18, 20, 35;         /* 深邃宇宙 (更暗的背景) */
-    --hi3-deep-space-bg: rgb(var(--hi3-deep-space-bg-rgb));
-    --hi3-void-panel-bg-rgb: 30, 33, 55;        /* 虚空暗板 (更暗的面板) */
-    --hi3-void-panel-bg: rgb(var(--hi3-void-panel-bg-rgb));
-    --hi3-energy-stream-cyan-rgb: 0, 220, 255;  /* 能量流青 (主强调/交互) */
-    --hi3-energy-stream-cyan: rgb(var(--hi3-energy-stream-cyan-rgb));
-    --hi3-herrscher-purple-rgb: 170, 80, 240;   /* 律者紫 (更鲜明的紫) */
-    --hi3-herrscher-purple: rgb(var(--hi3-herrscher-purple-rgb));
-    --hi3-warning-red-rgb: 255, 60, 90;         /* 警示绯红 (战斗/危险) */
-    --hi3-warning-red: rgb(var(--hi3-warning-red-rgb));
-    --hi3-data-glow-white-rgb: 230, 235, 245;   /* 数据荧光白 (主要文字) */
-    --hi3-data-glow-white: rgb(var(--hi3-data-glow-white-rgb));
-    --hi3-interface-gray-rgb: 130, 135, 150;    /* 界面灰 (次要文字) */
-    --hi3-interface-gray: rgb(var(--hi3-interface-gray-rgb));
-    --hi3-tech-border-rgb: 60, 65, 95;          /* 科技边界 (边框) */
-    --hi3-tech-border: rgb(var(--hi3-tech-border-rgb));
-    --hi3-tech-accent-glow: rgba(var(--hi3-energy-stream-cyan-rgb), 0.7); /* 通用科技光晕 */
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "崩坏3 - 虚空余烬";
+    --theme-mode: "dark";
 
-    /* 角色特定颜色 (深色) - Using provided, ensuring good contrast */
-    --hi3-himeko-primary-dark: #FF4800;
-    --hi3-himeko-primary-dark-rgb: 255, 72, 0; /* ADDED RGB */
-    --hi3-himeko-secondary-dark: rgba(var(--hi3-himeko-primary-dark-rgb), 0.2);
-    --hi3-himeko-glow: rgba(var(--hi3-himeko-primary-dark-rgb), 0.6);
+    /* ------------------------- 🎨 核心配色方案 -------------------------- */
+    --hi3-deep-space-bg-rgb: 18, 20, 35;
+    --hi3-void-panel-bg-rgb: 30, 33, 55;
+    --hi3-energy-stream-cyan-rgb: 0, 220, 255;
+    --hi3-herrscher-purple-rgb: 170, 80, 240;
+    --hi3-warning-red-rgb: 255, 60, 90;
+    --hi3-data-glow-white-rgb: 230, 235, 245;
+    --hi3-interface-gray-rgb: 130, 135, 150;
+    --hi3-tech-border-rgb: 60, 65, 95;
+    --hi3-black-rgb: 0, 0, 0;
 
-    --hi3-seeleveliona-primary-dark: #8F3EFF;
-    --hi3-seeleveliona-primary-dark-rgb: 143, 62, 255; /* ADDED RGB */
-    --hi3-seeleveliona-secondary-dark: rgba(var(--hi3-seeleveliona-primary-dark-rgb), 0.2);
-    --hi3-seeleveliona-glow: rgba(var(--hi3-seeleveliona-primary-dark-rgb), 0.6);
+    /* --- 语义化颜色变量覆盖 --- */
+    --brand-rgb: var(--hi3-energy-stream-cyan-rgb);
+    --brand-dark-rgb: 0, 190, 225;
+    --text-on-brand-rgb: var(--hi3-deep-space-bg-rgb);
 
-    --hi3-keqing-primary-dark: #B9A2E0;
-    --hi3-keqing-primary-dark-rgb: 185, 162, 224; /* ADDED RGB */
-    --hi3-keqing-secondary-dark: rgba(var(--hi3-keqing-primary-dark-rgb), 0.2);
-    --hi3-keqing-glow: rgba(var(--hi3-keqing-primary-dark-rgb), 0.5);
+    --surface-1-rgb: var(--hi3-void-panel-bg-rgb);
+    --surface-2-rgb: rgba(var(--hi3-tech-border-rgb), 0.9);
+    --surface-hover-rgb: var(--hi3-tech-border-rgb);
+    --surface-active-rgb: rgba(var(--hi3-energy-stream-cyan-rgb), 0.15);
 
-    --hi3-aponia-primary-dark: #A0C4FF;
-    --hi3-aponia-primary-dark-rgb: 160, 196, 255; /* ADDED RGB */
-    --hi3-aponia-secondary-dark: rgba(var(--hi3-aponia-primary-dark-rgb), 0.15);
-    --hi3-aponia-glow: rgba(var(--hi3-aponia-primary-dark-rgb), 0.5);
+    --text-primary-rgb: var(--hi3-data-glow-white-rgb);
+    --text-secondary-rgb: var(--hi3-interface-gray-rgb);
 
-    --hi3-fischloz-primary-dark: #C047D6;
-    --hi3-fischloz-primary-dark-rgb: 192, 71, 214; /* ADDED RGB */
-    --hi3-fischloz-secondary-dark: rgba(var(--hi3-fischloz-primary-dark-rgb), 0.2); /* MODIFIED: Uses new -rgb var */
-    --hi3-fischloz-glow: rgba(var(--hi3-fischloz-primary-dark-rgb), 0.6); /* MODIFIED: Uses new -rgb var */
-    --hi3-fischloz-oz-text: #E0E0E0;
+    --border-subtle-rgb: rgba(var(--hi3-tech-border-rgb), 0.45);
 
-    --hi3-origin-primary-dark: #E080E8;
-    --hi3-origin-primary-dark-rgb: 224, 128, 232; /* ADDED RGB */
-    --hi3-origin-secondary-dark: rgba(var(--hi3-origin-primary-dark-rgb), 0.2);
-    --hi3-origin-glow: rgba(var(--hi3-origin-primary-dark-rgb), 0.6);
+    --accent-success-rgb: var(--hi3-herrscher-purple-rgb);
+    --accent-danger-rgb: var(--hi3-warning-red-rgb);
+    --accent-warning-rgb: 255, 171, 0;
 
-    --hi3-aichan-primary-dark: #32CD32;
-    --hi3-aichan-primary-dark-rgb: 50, 205, 50; /* ADDED RGB */
-    --hi3-aichan-secondary-dark: rgba(var(--hi3-aichan-primary-dark-rgb), 0.2);
-    --hi3-aichan-glow: rgba(var(--hi3-aichan-primary-dark-rgb), 0.6);
-
-    --hi3-rozaliya-primary-dark: #FF69B4;
-    --hi3-rozaliya-primary-dark-rgb: 255, 105, 180; /* ADDED RGB */
-    --hi3-rozaliya-secondary-dark: rgba(var(--hi3-rozaliya-primary-dark-rgb), 0.2);
-    --hi3-rozaliya-glow: rgba(var(--hi3-rozaliya-primary-dark-rgb), 0.6);
-
-    /* 覆盖  Chat 原有变量 */
-    --primary-color: var(--hi3-energy-stream-cyan);
-    --primary-color-dark: rgb(0, 190, 225);
-    --secondary-color: var(--hi3-void-panel-bg); /* 应用主背景 */
-    --text-color: var(--hi3-data-glow-white);
-    --text-color-light: var(--hi3-interface-gray);
-    --text-color-inverted: var(--hi3-deep-space-bg);
-    --accent-color: var(--hi3-herrscher-purple);
-    --danger-color: var(--hi3-warning-red);
-    --warning-color: #FFAB00;
+    /* --- 组件级颜色变量覆盖 --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgba(var(--hi3-deep-space-bg-rgb), 0.4);
+    --chat-bg-color: rgb(var(--hi3-deep-space-bg-rgb));
+    --input-bg-color: rgba(var(--hi3-deep-space-bg-rgb), 0.8);
 
     --sent-bg-color: rgba(var(--hi3-energy-stream-cyan-rgb), 0.12);
-    --received-bg-color: rgba(var(--hi3-tech-border-rgb), 0.9);
+    --text-on-sent: rgb(var(--text-primary-rgb));
+    --received-bg-color: rgb(var(--surface-2-rgb));
+    --text-on-received: rgb(var(--text-primary-rgb));
 
-    --border-color: rgba(var(--hi3-tech-border-rgb), 0.45); /* Slightly darker border */
-    --hover-bg-color: rgba(var(--hi3-data-glow-white-rgb), 0.05); /* Less pronounced hover */
-    --active-bg-color: rgba(var(--hi3-energy-stream-cyan-rgb), 0.15); /* Slightly less pronounced active */
-    --border-radius: 4px; /* Sharper edges */
-    --border-radius-large: 6px; /* For main container */
-    --font-family: "Exo 2", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif; /* Added Noto Sans for broader CJK */
-    --box-shadow-glow: 0 0 8px -2px var(--hi3-tech-accent-glow), 0 0 3px 0px rgba(var(--hi3-tech-border-rgb),0.5) inset; /* Standard glow */
-    --box-shadow-strong-glow: 0 0 12px -2px var(--hi3-tech-accent-glow), 0 0 6px 0px rgba(var(--hi3-energy-stream-cyan-rgb),0.2) inset;
-    --special-contact-color: var(--hi3-himeko-primary-dark); /* Default, will be overridden */
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "Exo 2", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-radius-sm: 2px;
+    --border-radius-md: 4px;
+    --border-radius-lg: 6px;
+    --box-shadow-glow: 0 0 8px -2px rgba(var(--brand-rgb), 0.7), 0 0 3px 0px rgba(var(--hi3-tech-border-rgb), 0.5) inset;
+    --box-shadow-strong-glow: 0 0 12px -2px rgba(var(--brand-rgb), 0.7), 0 0 6px 0px rgba(var(--brand-rgb), 0.2) inset;
+
+    /* --- 角色样式占位符 (会被具体角色类覆盖) --- */
+    --special-contact-color: rgb(var(--brand-rgb));
+    --special-contact-glow: rgba(var(--brand-rgb), 0.6);
+    --special-contact-secondary-glow: rgba(var(--brand-rgb), 0.2);
+    --special-contact-text-color: rgb(var(--text-on-brand-rgb));
 }
 
-* { box-sizing: border-box;   }
-
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    font-family: var(--font-family);
-    background-color: var(--hi3-deep-space-bg);
-    color: var(--text-color);
-    /* Slightly tighter */
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    /* Subtle animated tech background pattern */
+    font-family: var(--font-family-base);
+    background-color: var(--chat-bg-color);
+    color: rgb(var(--text-primary-rgb));
     background-image:
             linear-gradient(rgba(var(--hi3-tech-border-rgb), 0.03) 1px, transparent 1px),
             linear-gradient(90deg, rgba(var(--hi3-tech-border-rgb), 0.03) 1px, transparent 1px);
     animation: hi3-scanlines 60s linear infinite;
-    /* will-change: background-position; */ /* Consider if performance issues arise from this specific animation */
 }
 
 @keyframes hi3-scanlines {
     0% { background-position: 0 0; }
-    100% { background-position: 240px 120px; } /* Adjust for desired speed/direction */
+    100% { background-position: 240px 120px; }
 }
 
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(var(--hi3-deep-space-bg-rgb), 0.7); }
+::-webkit-scrollbar-thumb { background: rgb(var(--hi3-tech-border-rgb)); border-radius: var(--border-radius-md); }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--brand-rgb)); box-shadow: 0 0 5px rgb(var(--brand-rgb)); }
 
+/* ------------------------- 🏛️ 页面结构与容器 ------------------------ */
 .app-container {
-    display: flex;
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius-large);
-    border: 1px solid var(--hi3-tech-border);
-    overflow: hidden;
-    position: relative; /* For pseudo-elements */
+    background-color: rgb(var(--surface-1-rgb));
+    border: 1px solid rgb(var(--hi3-tech-border-rgb));
+    border-radius: var(--border-radius-lg);
 }
 
-/* Subtle corner accents for app container */
 .app-container::before, .app-container::after {
     content: '';
     position: absolute;
-    /* Define size */
-    /* Define size */
-    border-color: var(--hi3-energy-stream-cyan);
+    width: 20px;
+    height: 20px;
+    border-color: rgb(var(--brand-rgb));
     opacity: 0.6;
     pointer-events: none;
 }
-.app-container::before {
-    top: 5px; left: 5px;
-    border-top: 1px solid;
-    border-left: 1px solid;
-    border-top-left-radius: var(--border-radius-large);
-}
-.app-container::after {
-    bottom: 5px; right: 5px;
-    border-bottom: 1px solid;
-    border-right: 1px solid;
-    border-bottom-right-radius: var(--border-radius-large);
-}
+.app-container::before { top: -1px; left: -1px; border-top: 1px solid; border-left: 1px solid; border-top-left-radius: var(--border-radius-lg); }
+.app-container::after { bottom: -1px; right: -1px; border-bottom: 1px solid; border-right: 1px solid; border-bottom-right-radius: var(--border-radius-lg); }
 
-
-/* --- 滚动条美化 --- */
-::-webkit-scrollbar { width: 5px; height: 5px; } /* Slimmer */
-::-webkit-scrollbar-track { background: rgba(var(--hi3-deep-space-bg-rgb), 0.7); border-radius: 0; } /* Sharp track */
-::-webkit-scrollbar-thumb { background: var(--hi3-tech-border); border-radius: var(--border-radius); }
-::-webkit-scrollbar-thumb:hover { background: var(--hi3-energy-stream-cyan); box-shadow: 0 0 5px var(--hi3-energy-stream-cyan); }
-
-/* --- Sidebar Navigation --- */
+/* ------------------------- 🧭 侧边栏 -------------------- */
 .sidebar-nav {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.5); /* More transparent */
-    border-right: 1px solid var(--border-color);
-    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
+    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.5);
+    border-right: 1px solid rgb(var(--border-subtle-rgb));
 }
-.sidebar-header {
-    background-color: transparent; /* Cleaner */
-}
-.menu-btn { color: var(--hi3-interface-gray); }
-.menu-btn:hover { color: var(--hi3-energy-stream-cyan); text-shadow: 0 0 5px var(--hi3-energy-stream-cyan); }
+.sidebar-header { background-color: transparent; }
+.menu-btn { color: rgb(var(--text-secondary-rgb)); }
+.menu-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 5px rgb(var(--brand-rgb)); }
 
 .search-bar {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.8);
-    border: 1px solid var(--hi3-tech-border);
-    color: var(--text-color);
-    border-radius: var(--border-radius); /* Sharper */
+    background-color: var(--input-bg-color);
+    border: 1px solid rgb(var(--hi3-tech-border-rgb));
+    color: rgb(var(--text-primary-rgb));
     box-shadow: var(--box-shadow-glow);
 }
-.search-bar::placeholder { color: var(--hi3-interface-gray); }
-.search-bar:focus {
-    border-color: var(--hi3-energy-stream-cyan);
-    box-shadow: 0 0 0 1px var(--hi3-energy-stream-cyan), var(--box-shadow-strong-glow);
-}
-.nav-tabs { border-bottom: 1px solid var(--border-color); }
-.nav-tab { color: var(--hi3-interface-gray);  font-size: 0.9em; letter-spacing: 0.5px; }
-.nav-tab:hover { color: var(--hi3-energy-stream-cyan); }
+.search-bar:focus { border-color: rgb(var(--brand-rgb)); box-shadow: 0 0 0 1px rgb(var(--brand-rgb)), var(--box-shadow-strong-glow); }
+.search-bar::placeholder { color: rgb(var(--text-secondary-rgb)); }
+
+.nav-tabs { border-bottom: 1px solid rgb(var(--border-subtle-rgb)); }
+.nav-tab { color: rgb(var(--text-secondary-rgb)); font-size: 0.9em; letter-spacing: 0.5px; }
+.nav-tab:hover { color: rgb(var(--brand-rgb)); }
 .nav-tab.active {
-    color: var(--hi3-energy-stream-cyan);
-    border-bottom: 2px solid var(--hi3-energy-stream-cyan);
-    background-color: rgba(var(--hi3-energy-stream-cyan-rgb), 0.05);
-    text-shadow: 0 0 3px var(--hi3-energy-stream-cyan);
+    color: rgb(var(--brand-rgb));
+    border-bottom: 2px solid rgb(var(--brand-rgb));
+    background-color: rgb(var(--surface-active-rgb));
+    text-shadow: 0 0 3px rgb(var(--brand-rgb));
 }
 
-.chat-list-item {
-    border-bottom: 1px solid var(--border-color);
-}
-.chat-list-item:hover {
-    background-color: var(--hover-bg-color);
-    box-shadow: inset 3px 0 0 var(--hi3-energy-stream-cyan); /* Subtle hover indicator */
-}
-.chat-list-item.active {
-    background-color: var(--active-bg-color);
-    box-shadow: inset 3px 0 0 var(--hi3-energy-stream-cyan), 0 0 10px rgba(var(--hi3-energy-stream-cyan-rgb), 0.2) inset;
-}
-.chat-list-item.active .chat-list-name { color: var(--hi3-energy-stream-cyan); font-weight: 600; text-shadow: 0 0 2px var(--hi3-energy-stream-cyan);}
+.chat-list-item { border-bottom: 1px solid rgb(var(--border-subtle-rgb)); }
+.chat-list-item:hover { background-color: rgba(var(--hi3-data-glow-white-rgb), 0.05); box-shadow: inset 3px 0 0 rgb(var(--brand-rgb)); }
+.chat-list-item.active { background-color: rgb(var(--surface-active-rgb)); box-shadow: inset 3px 0 0 rgb(var(--brand-rgb)), 0 0 10px rgba(var(--brand-rgb), 0.2) inset; }
+.chat-list-item.active .chat-list-name { color: rgb(var(--brand-rgb)); font-weight: 600; text-shadow: 0 0 2px rgb(var(--brand-rgb));}
+
 .chat-list-avatar {
-    background-color: var(--hi3-tech-border);
+    background-color: rgb(var(--hi3-tech-border-rgb));
     border: 1px solid rgba(var(--hi3-data-glow-white-rgb), 0.1);
-    color: var(--hi3-data-glow-white);
-    border-radius: 25%; /* Squircle, more techy */
-    box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    will-change: transform;
+    border-radius: 25%;
+    transition: transform 0.2s ease-out;
 }
 .chat-list-item:hover .chat-list-avatar { transform: scale(1.05); }
 
-/* --- 角色特定样式 (深色) --- */
-/* Base for character items */
-.chat-list-item.special-contact .chat-list-avatar,
-.chat-avatar-main.is-character, .details-avatar.is-character, #callingModalAvatar.is-character {
-    box-shadow: 0 0 8px -2px var(--special-contact-glow, var(--hi3-tech-accent-glow)), 0 0 3px 0px rgba(0,0,0,0.5) inset;
-    border-width: 1.5px; /* Thicker border for special contacts */
-}
-.chat-list-item.active.special-contact {
-    box-shadow: inset 3px 0 0 var(--special-contact-color), 0 0 10px var(--special-contact-secondary-glow, rgba(var(--hi3-energy-stream-cyan-rgb), 0.2)) inset;
-}
-.chat-list-item.active.special-contact .chat-list-name { text-shadow: 0 0 3px var(--special-contact-color); }
-.message.received.is-character-message {
-    border-left-width: 3px; /* Stronger accent */
-    border-image-slice: 1;
-    /* border-image-source: linear-gradient(to bottom, var(--special-contact-color), var(--special-contact-secondary-glow)); */ /* This can be problematic if secondary-glow is rgba */
-    border-left-color: var(--special-contact-color); /* Fallback if border-image is tricky */
+/* ------------------------- 💬 主聊天区 -------------------- */
+.chat-header-main { border-bottom: 1px solid rgb(var(--border-subtle-rgb)); }
+.chat-avatar-main { border: 1px solid rgb(var(--hi3-tech-border-rgb)); border-radius: 25%; }
+.chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 0 8px rgba(var(--text-primary-rgb), 0.2); }
+.header-action-btn { transition: color 0.2s, text-shadow 0.2s, transform 0.2s; }
+.header-action-btn:hover { transform: scale(1.1); }
 
-}
-.message.received.is-character-message .message-sender { font-weight: 600; }
-.chat-header-main.is-character-chat .chat-title-main { text-shadow: 0 0 5px var(--special-contact-glow); }
-
-/* Applying vars for each character */
-/* 姬子 */
-.AI_Himeko_崩坏3 { --special-contact-color: var(--hi3-himeko-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-himeko-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-himeko-primary-dark-rgb), 0.6); }
-.chat-list-item.AI_Himeko_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_Himeko_崩坏3, .details-avatar.AI_Himeko_崩坏3, #callingModalAvatar.AI_Himeko_崩坏3 { background-color: var(--hi3-himeko-primary-dark); color: var(--hi3-deep-space-bg); border-color: var(--hi3-himeko-glow); }
-
-/* 黑希儿 */
-.AI_SeeleVeliona_崩坏3 { --special-contact-color: var(--hi3-seeleveliona-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-seeleveliona-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-seeleveliona-primary-dark-rgb), 0.6); }
-.chat-list-item.AI_SeeleVeliona_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_SeeleVeliona_崩坏3, .details-avatar.AI_SeeleVeliona_崩坏3, #callingModalAvatar.AI_SeeleVeliona_崩坏3 { background-color: var(--hi3-seeleveliona-primary-dark); color: var(--hi3-data-glow-white); border-color: var(--hi3-seeleveliona-glow); text-shadow: 0 0 3px var(--hi3-warning-red); }
-
-/* 刻晴 */
-.AI_Keqing_崩坏3 { --special-contact-color: var(--hi3-keqing-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-keqing-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-keqing-primary-dark-rgb), 0.5); }
-.chat-list-item.AI_Keqing_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_Keqing_崩坏3, .details-avatar.AI_Keqing_崩坏3, #callingModalAvatar.AI_Keqing_崩坏3 { background-color: var(--hi3-keqing-primary-dark); color: var(--hi3-deep-space-bg); border-color: var(--hi3-keqing-glow); }
-
-/* 阿波尼亚 */
-.AI_Aponia_崩坏3 { --special-contact-color: var(--hi3-aponia-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-aponia-primary-dark-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-aponia-primary-dark-rgb), 0.5); }
-.chat-list-item.AI_Aponia_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_Aponia_崩坏3, .details-avatar.AI_Aponia_崩坏3, #callingModalAvatar.AI_Aponia_崩坏3 { background-color: var(--hi3-aponia-primary-dark); color: var(--hi3-deep-space-bg); border-color: var(--hi3-aponia-glow); }
-
-/* 菲谢尔&奥兹 */
-.AI_FischlOz_崩坏3 { --special-contact-color: var(--hi3-fischloz-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-fischloz-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-fischloz-primary-dark-rgb), 0.6); }
-.chat-list-item.AI_FischlOz_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_FischlOz_崩坏3, .details-avatar.AI_FischlOz_崩坏3, #callingModalAvatar.AI_FischlOz_崩坏3 { background-color: var(--hi3-fischloz-primary-dark); color: var(--hi3-fischloz-oz-text); border-color: var(--hi3-fischloz-glow); }
-.chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-deep-space-bg); opacity: 0.7; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-dark-rgb),0.5);  border-radius: 2px;}
-
-/* 始源之律者 */
-.AI_HerrscherOfOrigin_崩坏3 { --special-contact-color: var(--hi3-origin-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-origin-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-origin-primary-dark-rgb), 0.6); }
-.chat-list-item.AI_HerrscherOfOrigin_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_HerrscherOfOrigin_崩坏3, .details-avatar.AI_HerrscherOfOrigin_崩坏3, #callingModalAvatar.AI_HerrscherOfOrigin_崩坏3 { background-color: var(--hi3-origin-primary-dark); color: var(--hi3-deep-space-bg); border-color: var(--hi3-origin-glow); text-shadow: 0 0 2px var(--hi3-energy-stream-cyan); }
-
-/* 爱酱 */
-.AI_AiChan_崩坏3 { --special-contact-color: var(--hi3-aichan-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-aichan-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-aichan-primary-dark-rgb), 0.6); }
-.chat-list-item.AI_AiChan_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_AiChan_崩坏3, .details-avatar.AI_AiChan_崩坏3, #callingModalAvatar.AI_AiChan_崩坏3 { background-color: var(--hi3-aichan-primary-dark); color: var(--hi3-deep-space-bg); border-color: var(--hi3-aichan-glow); }
-
-/* 萝莎莉娅 */
-.AI_Rozaliya_崩坏3 { --special-contact-color: var(--hi3-rozaliya-primary-dark); --special-contact-secondary-glow: rgba(var(--hi3-rozaliya-primary-dark-rgb), 0.2); --special-contact-glow: rgba(var(--hi3-rozaliya-primary-dark-rgb), 0.6); }
-.chat-list-item.AI_Rozaliya_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_Rozaliya_崩坏3, .details-avatar.AI_Rozaliya_崩坏3, #callingModalAvatar.AI_Rozaliya_崩坏3 { background-color: var(--hi3-rozaliya-primary-dark); color: var(--hi3-deep-space-bg); border-color: var(--hi3-rozaliya-glow); }
-
-/* Connect character styles to elements - Simplified using the CSS var inheritance */
-.chat-list-item.active.special-contact[class*="AI_"] { background-color: var(--special-contact-secondary-glow); }
-.chat-list-item.active.special-contact[class*="AI_"] .chat-list-name { color: var(--special-contact-color); }
-.chat-header-main.current-chat[class*="AI_"] .chat-title-main { color: var(--special-contact-color); }
-.message.received[data-sender-id*="AI_"] { border-left-color: var(--special-contact-color); background-color: var(--special-contact-secondary-glow, rgba(var(--hi3-tech-border-rgb),0.2));} /* Fallback for general character bg */
-.message.received[data-sender-id*="AI_"] .message-sender { color: var(--special-contact-color); }
-.details-panel[class*="AI_"] #aiContactAboutSection h4 span, .details-panel[class*="AI_"] #detailsName { color: var(--special-contact-color); }
-
-
-.chat-list-badge {
-    background-color: var(--hi3-warning-red);
-    color: var(--hi3-data-glow-white);
-    box-shadow: 0 0 5px var(--hi3-warning-red), 0 0 8px var(--hi3-warning-red);
-    border-radius: var(--border-radius);
-    font-weight: bold;
-    animation: hi3-badge-pulse 1.5s infinite alternate;
-    will-change: opacity, transform;
-}
-@keyframes hi3-badge-pulse {
-    from { opacity: 0.7; transform: scale(1); }
-    to { opacity: 1; transform: scale(1.1); }
-}
-
-.new-chat-fab {
-    background: linear-gradient(135deg, var(--hi3-energy-stream-cyan), var(--hi3-herrscher-purple));
-    color: var(--hi3-data-glow-white);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5), 0 0 10px var(--hi3-energy-stream-cyan), 0 0 15px var(--hi3-herrscher-purple);
-    border-radius: 50%;
-    will-change: transform;
-}
-.new-chat-fab:hover {
-    transform: scale(1.1) rotate(45deg);
-}
-
-/* --- Main Chat Area --- */
-.chat-area { background-color: transparent; position: relative;}
-.chat-header-main {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.4); /* More transparent */
-    border-bottom: 1px solid var(--border-color);
-}
-.chat-avatar-main { border: 1px solid var(--hi3-tech-border); border-radius: 25%;}
-.chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 0 8px rgba(var(--hi3-data-glow-white-rgb), 0.2); }
-.header-action-btn {
-    color: var(--hi3-interface-gray);
-    will-change: transform;
-}
-.header-action-btn:hover { color: var(--hi3-energy-stream-cyan); text-shadow: 0 0 5px var(--hi3-energy-stream-cyan); transform: scale(1.1); }
-
-.chat-messages-container { }
-.no-chat-selected {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
 .no-chat-selected .logo-placeholder {
-    font-family: var(--font-family); /* Use the theme font */
     font-size: 5rem;
     font-weight: bold;
-    color: rgba(var(--hi3-energy-stream-cyan-rgb), 0.3); /* Cyan color */
-    text-shadow: 0 0 10px rgba(var(--hi3-energy-stream-cyan-rgb), 0.5),
-    0 0 20px rgba(var(--hi3-energy-stream-cyan-rgb), 0.3);
+    color: rgba(var(--brand-rgb), 0.3);
+    text-shadow: 0 0 10px rgba(var(--brand-rgb), 0.5), 0 0 20px rgba(var(--brand-rgb), 0.3);
     animation: hi3-placeholder-beam 4s infinite ease-in-out;
-    position: relative;
-    will-change: opacity, transform;
 }
-.no-chat-selected .logo-placeholder::before,
-.no-chat-selected .logo-placeholder::after { /* Scanlines over text */
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    background: var(--hi3-energy-stream-cyan);
-    opacity: 0.5;
-    animation: hi3-scanline-move 2s infinite linear;
-    will-change: transform;
-}
-.no-chat-selected .logo-placeholder::before { top: 30%; }
-.no-chat-selected .logo-placeholder::after { bottom: 30%; animation-delay: -1s; }
-
 @keyframes hi3-placeholder-beam {
     0%, 100% { opacity: 0.4; transform: translateY(0) scale(1); }
     50% { opacity: 0.8; transform: translateY(-5px) scale(1.05); }
 }
-@keyframes hi3-scanline-move {
-    0% { transform: translateY(-5px); }
-    50% { transform: translateY(5px); }
-    100% { transform: translateY(-5px); }
-}
-.no-chat-selected .placeholder-text {
-    font-size: 1.1em;
-    color: var(--hi3-interface-gray);
-}
 
+.message { border: 1px solid rgb(var(--border-subtle-rgb)); box-shadow: 0 1px 2px rgba(var(--hi3-black-rgb), 0.5), 0 0 5px rgba(var(--hi3-tech-border-rgb), 0.1) inset; }
+.message.sent { border-left: 3px solid rgb(var(--brand-rgb)); }
+.message.received { border-right: 3px solid rgb(var(--hi3-tech-border-rgb)); }
 
-.status-indicator.global {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.6);
-    border: 1px solid var(--border-color);
-    color: var(--hi3-energy-stream-cyan);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-glow);
-}
-
-/* 消息气泡 */
-.message {
-    border: 1px solid var(--border-color);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.5), 0 0 5px rgba(var(--hi3-tech-border-rgb),0.1) inset;
-    border-radius: var(--border-radius); /* Use consistent radius */
-    position: relative;
-}
-/* Message bubble tail - sharper, more techy */
-.message:before {
-    content: "";
-    position: absolute;
-    top: 10px; /* Consistent position */
-    border-style: solid;
-    border-width: 6px; /* Slightly smaller */
-    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.3)); /* Shadow for tail */
-}
-.message.sent {
-    background-color: var(--sent-bg-color);
-    border-left: 3px solid var(--hi3-energy-stream-cyan); /* Consistent accent */
-}
-.message.sent:before { /* Pointing left, on the right side */
-    right: -11px; /* Adjust for border width */
-    border-color: transparent transparent transparent var(--sent-bg-color);
-}
-.message.received {
-    background-color: var(--received-bg-color);
-    border-right: 3px solid var(--hi3-tech-border);
-}
-.message.received:before { /* Pointing right, on the left side */
-    left: -11px;
-    border-color: transparent var(--received-bg-color) transparent transparent;
-}
 .message.system {
-    background-color: rgba(var(--hi3-herrscher-purple-rgb), 0.1);
-    color: var(--hi3-herrscher-purple);
-    font-style: normal; /* Less generic italic */
-    font-size: 0.9em;
-    border: 1px dashed var(--hi3-herrscher-purple);
-    box-shadow: 0 0 8px rgba(var(--hi3-herrscher-purple-rgb),0.3) inset;
-    text-align: center;
-}
-.message.system:before { display: none; }
-
-.message-sender { color: var(--hi3-interface-gray); font-weight: 500; font-size: 0.9em; }
-.message .timestamp { color: var(--hi3-interface-gray); opacity: 0.6; font-size: 0.7em; }
-
-.chat-input-container {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.6);
-    border-top: 1px solid var(--border-color);
-}
-#messageInput {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.9);
-    border: 1px solid var(--hi3-tech-border);
-    color: var(--text-color);
-    border-radius: var(--border-radius); /* Sharper */
-    box-shadow: var(--box-shadow-glow);
-}
-#messageInput::placeholder { color: var(--hi3-interface-gray); }
-#messageInput:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 1px var(--primary-color), var(--box-shadow-strong-glow);
-}
-.icon-btn {
-    color: var(--hi3-interface-gray);
-    will-change: transform; /* For hover scale */
-}
-.icon-btn:hover { color: var(--hi3-energy-stream-cyan); text-shadow: 0 0 5px var(--hi3-energy-stream-cyan); transform: scale(1.15); background-color: transparent; }
-#sendButtonMain { color: var(--hi3-energy-stream-cyan); font-weight: 600; letter-spacing: 1px; }
-#sendButtonMain:hover { text-shadow: 0 0 8px var(--hi3-energy-stream-cyan); }
-#voiceButtonMain.recording {
-    color: var(--danger-color);
-    animation: hi3-dark-pulse 1.2s infinite;
-    will-change: text-shadow, transform;
-}
-@keyframes hi3-dark-pulse { /* Modified pulse */
-    0% { text-shadow: 0 0 0 rgba(var(--hi3-warning-red-rgb), 0.7); transform: scale(1); }
-    50% { text-shadow: 0 0 10px rgba(var(--hi3-warning-red-rgb), 1); transform: scale(1.2); }
-    100% { text-shadow: 0 0 0 rgba(var(--hi3-warning-red-rgb), 0.7); transform: scale(1); }
+    background-color: rgba(var(--accent-success-rgb), 0.1);
+    color: rgb(var(--accent-success-rgb));
+    border: 1px dashed rgb(var(--accent-success-rgb));
+    box-shadow: 0 0 8px rgba(var(--accent-success-rgb), 0.3) inset;
 }
 
-/* --- Details Panel --- */
-.details-panel {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.9); /* More transparent */
-    border-left: 1px solid var(--border-color);
+#voiceButtonMain.recording { color: rgb(var(--accent-danger-rgb)); animation: hi3-dark-pulse 1.2s infinite; }
+@keyframes hi3-dark-pulse {
+    0% { text-shadow: 0 0 0 rgba(var(--accent-danger-rgb), 0.7); transform: scale(1); }
+    50% { text-shadow: 0 0 10px rgb(var(--accent-danger-rgb)); transform: scale(1.2); }
+    100% { text-shadow: 0 0 0 rgba(var(--accent-danger-rgb), 0.7); transform: scale(1); }
 }
-.details-header {
-    background-color: transparent;
-    border-bottom: 1px solid var(--border-color);
-}
-.details-avatar {
-    border: 2px solid var(--hi3-tech-border);
-    box-shadow: 0 0 10px rgba(var(--hi3-data-glow-white-rgb), 0.1), 0 0 5px rgba(0,0,0,0.5);
-    border-radius: 25%;
-}
-#detailsName { text-shadow: 0 0 5px rgba(var(--hi3-data-glow-white-rgb), 0.3); font-size: 1.2em; letter-spacing: 0.5px; }
-#aiContactDetailsContent {
-    background-color: rgba(var(--hi3-void-panel-bg-rgb), 0.3);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-glow);
-}
-#aiContactDetailsContent p strong { color: var(--hi3-energy-stream-cyan); border-bottom: 1px solid rgba(var(--hi3-energy-stream-cyan-rgb), 0.3);  }
-#aiContactBasicInfoList li { border-bottom: 1px dotted rgba(var(--hi3-interface-gray-rgb), 0.2); }
-#aiContactAboutText { color: var(--hi3-interface-gray); font-size: 0.95em; }
 
-/* 通用按钮样式 - More techy */
+/* ------------------------- ⚙️ 通用组件 -------------------- */
 .btn {
-    border-radius: var(--border-radius);
     text-transform: uppercase;
-    letter-spacing: 1px; /* More spacing */
-    font-weight: 600; /* Bold */
-    box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 0 3px rgba(255,255,255,0.03);
-    border: 1px solid var(--hi3-tech-border); /* Default border */
-    position: relative;
-    overflow: hidden; /* For pseudo-element effects */
-}
-.btn::before { /* Scanline effect on hover */
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(var(--hi3-data-glow-white-rgb),0.2), transparent);
-    transform: translateX(-100%);
-    pointer-events: none;
-    will-change: transform;
-    /* Add transition here if smooth scanline is desired, e.g., transition: transform 0.3s ease-out; */
-}
-.btn:hover::before {
-    transform: translateX(100%);
-}
-
-.btn-primary { background-color: var(--hi3-energy-stream-cyan); color: var(--hi3-deep-space-bg); border-color: var(--hi3-energy-stream-cyan); }
-.btn-primary:hover { background-color: var(--primary-color-dark); box-shadow: 0 2px 5px rgba(var(--hi3-energy-stream-cyan-rgb),0.4), 0 0 10px var(--hi3-energy-stream-cyan), inset 0 0 8px rgba(0,0,0,0.25); }
-.btn-secondary { background-color: var(--hi3-tech-border); color: var(--hi3-data-glow-white); }
-.btn-secondary:hover { background-color: rgb(75, 80, 110); box-shadow: 0 2px 5px rgba(var(--hi3-tech-border-rgb),0.4), inset 0 0 8px rgba(0,0,0,0.25); }
-.btn-danger { background-color: var(--hi3-warning-red); color: var(--hi3-data-glow-white); border-color: var(--hi3-warning-red); }
-.btn-danger:hover { background-color: rgb(225, 30, 60); box-shadow: 0 2px 5px rgba(var(--hi3-warning-red-rgb),0.4), 0 0 10px var(--hi3-warning-red), inset 0 0 8px rgba(0,0,0,0.25); }
-.btn-success { background-color: var(--hi3-herrscher-purple); color: var(--hi3-data-glow-white); border-color: var(--hi3-herrscher-purple); }
-.btn-success:hover { background-color: rgb(140, 50, 210); box-shadow: 0 2px 5px rgba(var(--hi3-herrscher-purple-rgb),0.4), 0 0 10px var(--hi3-herrscher-purple), inset 0 0 8px rgba(0,0,0,0.25); }
-
-
-/* --- Modals --- */
-.loading-overlay { background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.95);  }
-.loading-spinner {
-    border-top-color: var(--hi3-energy-stream-cyan);
-    border-left-color: var(--hi3-energy-stream-cyan);
-    border-bottom-color: var(--hi3-herrscher-purple); /* Bi-color spinner */
-    border-right-color: var(--hi3-herrscher-purple);
-    box-shadow: 0 0 10px var(--hi3-energy-stream-cyan), 0 0 10px var(--hi3-herrscher-purple);
-}
-.modal-content {
-    background-color: var(--secondary-color);
-    border: 1px solid var(--hi3-tech-border);
-    border-radius: var(--border-radius-large);
-    position: relative; /* For accents */
-}
-
-.modal-content::before { top: -2px; left: -2px; border-top: 2px solid; border-left: 2px solid; border-top-left-radius: var(--border-radius-large); }
-.modal-content::after { bottom: -2px; right: -2px; border-bottom: 2px solid; border-right: 2px solid; border-bottom-right-radius: var(--border-radius-large); }
-
-.modal-header h2 { color: var(--hi3-energy-stream-cyan); text-shadow: 0 0 8px var(--hi3-energy-stream-cyan), 0 0 4px var(--hi3-energy-stream-cyan); letter-spacing: 1px; }
-.close-modal-btn {
-    will-change: transform; /* For hover rotate/scale */
-}
-.close-modal-btn:hover { color: var(--hi3-warning-red); text-shadow: 0 0 5px var(--hi3-warning-red); transform: rotate(90deg) scale(1.2); }
-.modal-body input[type="text"], .modal-body textarea {
-    background-color: rgba(var(--hi3-deep-space-bg-rgb), 0.85);
-    color: var(--text-color);
-    border: 1px solid var(--hi3-tech-border);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-glow);
-}
-.modal-body input[type="text"]:focus, .modal-body textarea:focus {
-    border-color: var(--hi3-energy-stream-cyan);
-    box-shadow: 0 0 0 1px var(--hi3-energy-stream-cyan), var(--box-shadow-strong-glow);
-}
-.user-id-display #modalUserIdValue {
-    background: rgba(var(--hi3-deep-space-bg-rgb),0.85);
-    color: var(--hi3-energy-stream-cyan);
-    border: 1px dashed var(--hi3-energy-stream-cyan);
-    border-radius: var(--border-radius);
-    box-shadow: 0 0 5px rgba(var(--hi3-energy-stream-cyan-rgb),0.2) inset;
     letter-spacing: 1px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(var(--hi3-black-rgb), 0.5), inset 0 0 3px rgba(var(--hi3-data-glow-white-rgb), 0.03);
+    border: 1px solid rgb(var(--hi3-tech-border-rgb));
+}
+.btn-primary { background-color: rgb(var(--brand-rgb)); color: rgb(var(--text-on-brand-rgb)); border-color: rgb(var(--brand-rgb)); }
+.btn-primary:hover { background-color: rgb(var(--brand-dark-rgb)); box-shadow: 0 2px 5px rgba(var(--brand-rgb), 0.4), 0 0 10px rgb(var(--brand-rgb)), inset 0 0 8px rgba(var(--hi3-black-rgb), 0.25); }
+
+.modal-content { border: 1px solid rgb(var(--hi3-tech-border-rgb)); }
+.modal-header h2 { color: rgb(var(--brand-rgb)); text-shadow: 0 0 8px rgb(var(--brand-rgb)); letter-spacing: 1px; }
+
+/* ------------------------- 👤 角色专属样式 -------------------------- */
+/* 通用角色样式 */
+.chat-list-item.special-contact .chat-list-avatar,
+.chat-avatar-main.is-character, .details-avatar.is-character, #callingModalAvatar.is-character {
+    box-shadow: 0 0 8px -2px var(--special-contact-glow), 0 0 3px 0px rgba(var(--hi3-black-rgb), 0.5) inset;
+    border: 1.5px solid var(--special-contact-color);
+    background-color: var(--special-contact-color);
+    color: var(--special-contact-text-color);
+}
+.chat-list-item.active.special-contact { box-shadow: inset 3px 0 0 var(--special-contact-color), 0 0 10px var(--special-contact-secondary-glow) inset; }
+.chat-list-item.active.special-contact .chat-list-name,
+.chat-header-main.is-character-chat .chat-title-main,
+.message.received.is-character-message .message-sender,
+.details-panel.is-character-chat #detailsName,
+.details-panel.is-character-chat #aiContactAboutSection h4 span {
+    color: var(--special-contact-color);
+    text-shadow: 0 0 5px var(--special-contact-glow);
+}
+.message.received.is-character-message {
+    border-left: 3px solid var(--special-contact-color);
+    background-color: var(--special-contact-secondary-glow);
 }
 
-/* Video Call */
-.video-call-avatar { background-color: var(--hi3-tech-border); border: 1px solid var(--border-color); border-radius: 25%;}
-.video-call-button { will-change: transform; } /* For potential hover effects like end-call */
-.video-call-button.end-call { background: var(--danger-color); box-shadow: 0 0 10px var(--danger-color); }
-.video-call-button.end-call:hover { transform: scale(1.1); }
-.video-call-button.active { background: var(--hi3-energy-stream-cyan); color: var(--hi3-deep-space-bg); box-shadow: 0 0 10px var(--hi3-energy-stream-cyan);}
-
-/* Toggle Switch - Honkai Style */
-.switch { position: relative; display: inline-block;} /* Smaller */
-.switch input { opacity: 0; }
-.slider {
-    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: var(--hi3-tech-border);
-    border: 1px solid rgba(var(--hi3-tech-border-rgb),0.5);
-    border-radius: var(--border-radius); /* Sharp rectangle */
-    transition: .4s;
-    will-change: background-color, box-shadow;
+/* --- 角色变量定义 --- */
+.AI_Himeko_崩坏3 {
+    --special-contact-color: #FF4800;
+    --special-contact-glow: rgba(255, 72, 0, 0.6);
+    --special-contact-secondary-glow: rgba(255, 72, 0, 0.2);
+    --special-contact-text-color: rgb(var(--hi3-deep-space-bg-rgb));
 }
-.slider:before { /* The knob */
-    position: absolute; content: ""; left: 2px; bottom: 1px; /* Adjusted for new size */
-    background-color: var(--hi3-deep-space-bg);
-    border: 1px solid var(--hi3-energy-stream-cyan);
-    border-radius: 2px; /* Sharp square knob */
-    transition: .4s;
-    will-change: transform, background-color, border-color;
+.AI_SeeleVeliona_崩坏3 {
+    --special-contact-color: #8F3EFF;
+    --special-contact-glow: rgba(143, 62, 255, 0.6);
+    --special-contact-secondary-glow: rgba(143, 62, 255, 0.2);
+    --special-contact-text-color: rgb(var(--hi3-data-glow-white-rgb));
 }
-input:checked + .slider { background-color: var(--hi3-energy-stream-cyan); box-shadow: 0 0 5px var(--hi3-energy-stream-cyan); }
-input:checked + .slider:before {
-    transform: translateX(18px); /* Adjusted for new size */
-    background-color: var(--hi3-data-glow-white);
-    border-color: var(--hi3-deep-space-bg);
+.AI_Keqing_崩坏3 {
+    --special-contact-color: #B9A2E0;
+    --special-contact-glow: rgba(185, 162, 224, 0.5);
+    --special-contact-secondary-glow: rgba(185, 162, 224, 0.2);
+    --special-contact-text-color: rgb(var(--hi3-deep-space-bg-rgb));
 }
-
-
-/* Ensuring visibility for AI sections as per original logic */
-#detailsPanelContent #aiContactAboutSection,
-#detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
-#detailsPanelContent #detailsGroupManagement #leftMembersArea,
-#detailsPanelContent #groupActionsDetails,
-#detailsPanelContent #dissolveGroupBtnDetails,
-#mainMenuModal .settings-section.manual-connection-advanced,
-#mainMenuModal #modalResetAllConnectionsBtn {
-    display: none;
+.AI_Aponia_崩坏3 {
+    --special-contact-color: #A0C4FF;
+    --special-contact-glow: rgba(160, 196, 255, 0.5);
+    --special-contact-secondary-glow: rgba(160, 196, 255, 0.15);
+    --special-contact-text-color: rgb(var(--hi3-deep-space-bg-rgb));
 }
-/* Simplified visibility for AI sections */
-.details-panel[class*="AI_"] #aiContactAboutSection { display: block; }
-
-
-.details-panel.human-contact-active #contactActionsDetails { display: block; }
-.details-panel.group-chat-active #detailsGroupManagement,
-.details-panel.group-chat-active #groupActionsDetails { display: block; }
-
-.notification {
-    background: var(--hi3-void-panel-bg);
-    border-left: 3px solid var(--hi3-energy-stream-cyan);
-    color: var(--text-color);
-    border-radius: var(--border-radius);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5), 0 0 5px var(--hi3-energy-stream-cyan) inset;
+.AI_FischlOz_崩坏3 {
+    --special-contact-color: #C047D6;
+    --special-contact-glow: rgba(192, 71, 214, 0.6);
+    --special-contact-secondary-glow: rgba(192, 71, 214, 0.2);
+    --special-contact-text-color: #E0E0E0;
 }
-.notification strong { color: var(--hi3-energy-stream-cyan); }
+.AI_HerrscherOfOrigin_崩坏3 {
+    --special-contact-color: #E080E8;
+    --special-contact-glow: rgba(224, 128, 232, 0.6);
+    --special-contact-secondary-glow: rgba(224, 128, 232, 0.2);
+    --special-contact-text-color: rgb(var(--hi3-deep-space-bg-rgb));
+}
+.AI_AiChan_崩坏3 {
+    --special-contact-color: #32CD32;
+    --special-contact-glow: rgba(50, 205, 50, 0.6);
+    --special-contact-secondary-glow: rgba(50, 205, 50, 0.2);
+    --special-contact-text-color: rgb(var(--hi3-deep-space-bg-rgb));
+}
+.AI_Rozaliya_崩坏3 {
+    --special-contact-color: #FF69B4;
+    --special-contact-glow: rgba(255, 105, 180, 0.6);
+    --special-contact-secondary-glow: rgba(255, 105, 180, 0.2);
+    --special-contact-text-color: rgb(var(--hi3-deep-space-bg-rgb));
+}

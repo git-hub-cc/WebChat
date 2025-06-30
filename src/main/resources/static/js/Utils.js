@@ -17,8 +17,8 @@ const Utils = {
     currentLogLevel: _Utils_logLevels.DEBUG, // 默认日志级别
 
     // 定义用于 sendInChunks 的常量
-    BUFFERED_AMOUNT_HIGH_THRESHOLD: 1 * 1024 * 1024, // 缓冲量高水位阈值 (1MB)
-    BUFFER_CHECK_INTERVAL: 50, // 缓冲量检查间隔 (50ms)
+    BUFFERED_AMOUNT_HIGH_THRESHOLD: 2 * 1024 * 1024, // 缓冲量高水位阈值 (2MB)
+    BUFFER_CHECK_INTERVAL: 200, // 缓冲量检查间隔 (200ms)
 
     /**
      * 从全局配置 `AppSettings.logLevel` 中设置当前的日志级别。

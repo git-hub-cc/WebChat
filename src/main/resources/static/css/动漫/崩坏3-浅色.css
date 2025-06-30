@@ -1,576 +1,328 @@
+/*
+================================================================================
+|                                                                              |
+|             ✨ 崩坏3 - 星光协议 (Honkai Impact 3rd - Starlight Protocol) ✨   |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained light theme file for Honkai Impact 3rd.
+*
+*/
+
 :root {
-    /* 崩坏3 - 星光协议 主题色板 (Honkai Impact 3rd - Starlight Protocol Palette) */
-    --hi3-hyperion-hull-bg-rgb: 242, 245, 250;       /* 休伯利安壳白 (更纯净的白) */
-    --hi3-hyperion-hull-bg: rgb(var(--hi3-hyperion-hull-bg-rgb));
-    --hi3-control-deck-panel-rgb: 228, 232, 240;  /* 控制台浅灰 (更清晰的灰) */
-    --hi3-control-deck-panel: rgb(var(--hi3-control-deck-panel-rgb));
-    --hi3-tech-blue-rgb: 0, 150, 255;   /* 科技湛蓝 (主强调/交互) */
-    --hi3-tech-blue: rgb(var(--hi3-tech-blue-rgb));
-    --hi3-valkyrie-orange-rgb: 255, 120, 30;  /* 女武神橙 (更鲜明的橙) */
-    --hi3-valkyrie-orange: rgb(var(--hi3-valkyrie-orange-rgb));
-    --hi3-status-critical-red-rgb: 230, 40, 70; /* 状态危急红 */
-    --hi3-status-critical-red: rgb(var(--hi3-status-critical-red-rgb));
-    --hi3-interface-dark-text-rgb: 30, 35, 55; /* 界面深色文本 (更深，对比更好) */
-    --hi3-interface-dark-text: rgb(var(--hi3-interface-dark-text-rgb));
-    --hi3-secondary-data-text-rgb: 90, 95, 115; /* 次要数据文本 */
-    --hi3-secondary-data-text: rgb(var(--hi3-secondary-data-text-rgb));
-    --hi3-light-divider-line-rgb: 195, 200, 215;   /* 浅色分割线 */
-    --hi3-light-divider-line: rgb(var(--hi3-light-divider-line-rgb));
-    --hi3-light-accent-glow: rgba(var(--hi3-tech-blue-rgb), 0.6); /* 通用科技光晕 */
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "崩坏3 - 星光协议";
+    --theme-mode: "light";
 
-    /* 角色特定颜色 (浅色) - Ensuring good contrast on light bg */
-    --hi3-himeko-primary-light: #E64A19;
-    --hi3-himeko-primary-light-rgb: 230, 74, 25; /* ADDED RGB */
-    --hi3-himeko-secondary-light: rgba(var(--hi3-himeko-primary-light-rgb), 0.15);
-    --hi3-himeko-glow-light: rgba(var(--hi3-himeko-primary-light-rgb), 0.5);
+    /* ------------------------- 🎨 核心配色方案 -------------------------- */
+    /* 色板 - Starlight Protocol Palette */
+    --hi3-hyperion-hull-bg-rgb: 242, 245, 250;
+    --hi3-control-deck-panel-rgb: 228, 232, 240;
+    --hi3-tech-blue-rgb: 0, 150, 255;
+    --hi3-tech-blue-dark-rgb: 0, 120, 225;
+    --hi3-valkyrie-orange-rgb: 255, 120, 30;
+    --hi3-status-critical-red-rgb: 230, 40, 70;
+    --hi3-interface-dark-text-rgb: 30, 35, 55;
+    --hi3-secondary-data-text-rgb: 90, 95, 115;
+    --hi3-light-divider-line-rgb: 195, 200, 215;
 
-    --hi3-seeleveliona-primary-light: #5E35B1; /* Deep Purple, slightly lighter for light theme */
-    --hi3-seeleveliona-primary-light-rgb: 94, 53, 177; /* ADDED RGB */
-    --hi3-seeleveliona-secondary-light: rgba(var(--hi3-seeleveliona-primary-light-rgb), 0.15);
-    --hi3-seeleveliona-glow-light: rgba(var(--hi3-seeleveliona-primary-light-rgb), 0.5);
+    /* --- 语义化颜色变量覆盖 --- */
+    --brand-rgb: var(--hi3-tech-blue-rgb);
+    --brand-dark-rgb: var(--hi3-tech-blue-dark-rgb);
+    --text-on-brand-rgb: var(--hi3-hyperion-hull-bg-rgb);
 
-    --hi3-keqing-primary-light: #7E57C2; /* Lighter Purple */
-    --hi3-keqing-primary-light-rgb: 126, 87, 194; /* ADDED RGB */
-    --hi3-keqing-secondary-light: rgba(var(--hi3-keqing-primary-light-rgb), 0.15);
-    --hi3-keqing-glow-light: rgba(var(--hi3-keqing-primary-light-rgb), 0.4);
+    --surface-1-rgb: var(--hi3-control-deck-panel-rgb);
+    --surface-2-rgb: var(--hi3-hyperion-hull-bg-rgb);
+    --surface-hover-rgb: 235, 238, 245; /* Slightly lighter hover */
+    --surface-active-rgb: 220, 225, 235; /* Darker active */
 
-    --hi3-aponia-primary-light: #0288D1; /* Stronger Blue */
-    --hi3-aponia-primary-light-rgb: 2, 136, 209; /* ADDED RGB */
-    --hi3-aponia-secondary-light: rgba(var(--hi3-aponia-primary-light-rgb), 0.12);
-    --hi3-aponia-glow-light: rgba(var(--hi3-aponia-primary-light-rgb), 0.4);
+    --text-primary-rgb: var(--hi3-interface-dark-text-rgb);
+    --text-secondary-rgb: var(--hi3-secondary-data-text-rgb);
 
-    --hi3-fischloz-primary-light: #8E24AA; /* Darker Purple */
-    --hi3-fischloz-primary-light-rgb: 142, 36, 170; /* ADDED RGB */
-    --hi3-fischloz-secondary-light: rgba(var(--hi3-fischloz-primary-light-rgb), 0.15); /* MODIFIED: Uses new -rgb var */
-    --hi3-fischloz-glow-light: rgba(var(--hi3-fischloz-primary-light-rgb), 0.5); /* MODIFIED: Uses new -rgb var */
-    --hi3-fischloz-oz-text-light: var(--hi3-interface-dark-text);
+    --border-subtle-rgb: var(--hi3-light-divider-line-rgb);
 
-    --hi3-origin-primary-light: #D81B60; /* Magenta/Pink for contrast */
-    --hi3-origin-primary-light-rgb: 216, 27, 96; /* ADDED RGB */
-    --hi3-origin-secondary-light: rgba(var(--hi3-origin-primary-light-rgb), 0.15);
-    --hi3-origin-glow-light: rgba(var(--hi3-origin-primary-light-rgb), 0.5);
+    --accent-success-rgb: 67, 160, 71; /* Ai-chan Green */
+    --accent-danger-rgb: var(--hi3-status-critical-red-rgb);
+    --accent-warning-rgb: 255, 160, 0; /* A clearer warning orange */
+    --accent-info-rgb: var(--hi3-tech-blue-rgb);
 
-    --hi3-aichan-primary-light: #43A047; /* Darker Green */
-    --hi3-aichan-primary-light-rgb: 67, 160, 71; /* ADDED RGB */
-    --hi3-aichan-secondary-light: rgba(var(--hi3-aichan-primary-light-rgb), 0.15);
-    --hi3-aichan-glow-light: rgba(var(--hi3-aichan-primary-light-rgb), 0.5);
-
-    --hi3-rozaliya-primary-light: #E91E63; /* Strong Pink */
-    --hi3-rozaliya-primary-light-rgb: 233, 30, 99; /* ADDED RGB */
-    --hi3-rozaliya-secondary-light: rgba(var(--hi3-rozaliya-primary-light-rgb), 0.15);
-    --hi3-rozaliya-glow-light: rgba(var(--hi3-rozaliya-primary-light-rgb), 0.5);
-
-
-    /* 覆盖  Chat 原有变量 */
-    --primary-color: var(--hi3-tech-blue);
-    --primary-color-dark: rgb(0, 120, 225);
-    --secondary-color: var(--hi3-hyperion-hull-bg);
-    --text-color: var(--hi3-interface-dark-text);
-    --text-color-light: var(--hi3-secondary-data-text);
-    --text-color-inverted: var(--hi3-hyperion-hull-bg);
-    --accent-color: var(--hi3-valkyrie-orange);
-    --danger-color: var(--hi3-status-critical-red);
-    --warning-color: #FFA000;
+    /* --- 组件级颜色变量覆盖 --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgba(var(--surface-2-rgb), 0.7);
+    --chat-bg-color: rgb(var(--surface-1-rgb));
+    --input-bg-color: rgb(var(--surface-2-rgb));
 
     --sent-bg-color: rgba(var(--hi3-tech-blue-rgb), 0.1);
+    --text-on-sent: rgb(var(--text-primary-rgb));
     --received-bg-color: rgba(var(--hi3-control-deck-panel-rgb), 0.9);
+    --text-on-received: rgb(var(--text-primary-rgb));
 
-    --border-color: rgba(var(--hi3-light-divider-line-rgb), 0.6);
-    --hover-bg-color: rgba(var(--hi3-tech-blue-rgb), 0.06);
-    --active-bg-color: rgba(var(--hi3-tech-blue-rgb), 0.12);
-    --border-radius: 4px;
-    --border-radius-large: 6px;
-    --font-family: "Exo 2", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
-    --box-shadow-soft: 0 2px 5px rgba(var(--hi3-interface-dark-text-rgb),0.08), 0 1px 2px rgba(var(--hi3-interface-dark-text-rgb),0.05);
-    --box-shadow-glow-light: 0 0 8px -2px var(--hi3-light-accent-glow), 0 0 3px 0px rgba(var(--hi3-light-divider-line-rgb),0.5) inset;
-    --box-shadow-strong-glow-light: 0 0 12px -2px var(--hi3-light-accent-glow), 0 0 6px 0px rgba(var(--hi3-tech-blue-rgb),0.15) inset;
-    --special-contact-color: var(--hi3-himeko-primary-light);
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "Exo 2", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-radius-md: 4px;
+    --box-shadow-sm: 0 2px 5px rgba(var(--hi3-interface-dark-text-rgb), 0.08), 0 1px 2px rgba(var(--hi3-interface-dark-text-rgb), 0.05);
+    --box-shadow-md: 0 4px 10px rgba(var(--hi3-interface-dark-text-rgb), 0.1);
+
+    /* --- 角色主题占位符 (会被JS或角色类覆盖) --- */
+    --character-theme-primary: rgb(var(--hi3-tech-blue-rgb));
+    --character-theme-secondary: rgba(var(--hi3-tech-blue-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-tech-blue-rgb), 0.5);
+    --character-text-color: rgb(var(--hi3-hyperion-hull-bg-rgb));
+
+    /* --- 角色颜色库 (供主题CSS内部使用) --- */
+    --hi3-himeko-primary-rgb: 230, 74, 25;
+    --hi3-seeleveliona-primary-rgb: 94, 53, 177;
+    --hi3-keqing-primary-rgb: 126, 87, 194;
+    --hi3-aponia-primary-rgb: 2, 136, 209;
+    --hi3-fischloz-primary-rgb: 142, 36, 170;
+    --hi3-origin-primary-rgb: 216, 27, 96;
+    --hi3-aichan-primary-rgb: 67, 160, 71;
+    --hi3-rozaliya-primary-rgb: 233, 30, 99;
 }
 
-* { box-sizing: border-box;   }
 
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    font-family: var(--font-family);
-    background-color: var(--hi3-control-deck-panel); /* Base background */
-    color: var(--text-color);
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    /* Subtle geometric pattern for light theme */
+    background-color: rgb(var(--surface-1-rgb));
     background-image:
-            radial-gradient(circle at 1px 1px, rgba(var(--hi3-light-divider-line-rgb), 0.3) 1px, transparent 0),
-            radial-gradient(circle at 15px 15px, rgba(var(--hi3-light-divider-line-rgb), 0.3) 1px, transparent 0);
-    background-size: 30px 30px; /* MODIFIED: Added background-size for radial-gradients */
+            radial-gradient(circle at 1px 1px, rgba(var(--border-subtle-rgb), 0.3) 1px, transparent 0),
+            radial-gradient(circle at 15px 15px, rgba(var(--border-subtle-rgb), 0.3) 1px, transparent 0);
+    background-size: 30px 30px;
 }
+
+::-webkit-scrollbar-track { background: rgba(var(--surface-1-rgb), 0.8); }
+::-webkit-scrollbar-thumb { background: rgb(var(--border-subtle-rgb)); border-radius: var(--border-radius-md); }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--brand-rgb)); box-shadow: 0 0 5px rgb(var(--brand-rgb)); }
 
 .app-container {
-    display: flex;
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius-large);
-    border: 1px solid var(--hi3-light-divider-line);
-    overflow: hidden;
+    background-color: rgb(var(--surface-2-rgb));
+    border: 1px solid rgb(var(--border-subtle-rgb));
     position: relative;
 }
 .app-container::before, .app-container::after {
     content: '';
     position: absolute;
-    /* Define size */
-    /* Define size */
-    border-color: var(--hi3-tech-blue);
+    width: 20px;
+    height: 20px;
+    border-color: rgb(var(--brand-rgb));
     opacity: 0.5;
     pointer-events: none;
 }
-.app-container::before { top: 5px; left: 5px; border-top: 1px solid; border-left: 1px solid; border-top-left-radius: var(--border-radius-large); }
-.app-container::after { bottom: 5px; right: 5px; border-bottom: 1px solid; border-right: 1px solid; border-bottom-right-radius: var(--border-radius-large); }
+.app-container::before { top: -1px; left: -1px; border-top: 1px solid; border-left: 1px solid; border-top-left-radius: var(--border-radius-md); }
+.app-container::after { bottom: -1px; right: -1px; border-bottom: 1px solid; border-right: 1px solid; border-bottom-right-radius: var(--border-radius-md); }
 
 
-/* --- 滚动条美化 --- */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: rgba(var(--hi3-control-deck-panel-rgb), 0.8); border-radius: 0; }
-::-webkit-scrollbar-thumb { background: var(--hi3-light-divider-line); border-radius: var(--border-radius); }
-::-webkit-scrollbar-thumb:hover { background: var(--hi3-tech-blue); box-shadow: 0 0 5px var(--hi3-tech-blue); }
-
-/* --- Sidebar Navigation --- */
+/* ------------------------- 🧭 侧边栏与导航 ------------------------- */
 .sidebar-nav {
-    background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.7);
-    border-right: 1px solid var(--border-color);
-    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
+    background-color: rgba(var(--surface-2-rgb), 0.7);
+    backdrop-filter: blur(5px);
 }
-.sidebar-header {
-    background-color: transparent;
-}
-.menu-btn { color: var(--hi3-secondary-data-text); }
-.menu-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); }
+.menu-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 4px rgb(var(--brand-rgb)); }
 
 .search-bar {
-    background-color: var(--hi3-hyperion-hull-bg);
-    border: 1px solid var(--hi3-light-divider-line);
-    color: var(--text-color);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-soft);
+    background-color: rgb(var(--surface-2-rgb));
+    border: 1px solid rgb(var(--border-subtle-rgb));
+    box-shadow: var(--box-shadow-sm);
 }
-.search-bar::placeholder { color: var(--hi3-secondary-data-text); }
-.search-bar:focus {
-    border-color: var(--hi3-tech-blue);
-    box-shadow: 0 0 0 1px var(--hi3-tech-blue), var(--box-shadow-strong-glow-light);
-}
-.nav-tabs { border-bottom: 1px solid var(--border-color); }
-.nav-tab { color: var(--hi3-secondary-data-text);  font-size: 0.9em; letter-spacing: 0.5px;}
-.nav-tab:hover { color: var(--hi3-tech-blue); }
-.nav-tab.active {
-    color: var(--hi3-tech-blue);
-    border-bottom: 2px solid var(--hi3-tech-blue);
-    background-color: rgba(var(--hi3-tech-blue-rgb), 0.03);
-    text-shadow: 0 0 2px rgba(var(--hi3-tech-blue-rgb),0.5);
+.search-bar:focus-within {
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 0 1px rgb(var(--brand-rgb)), 0 2px 8px rgba(var(--brand-rgb), 0.2);
 }
 
-.chat-list-item {
-    border-bottom: 1px solid var(--border-color);
-    position: relative;
+.nav-tabs { border-bottom: 1px solid rgb(var(--border-subtle-rgb)); }
+.nav-tab.active {
+    color: rgb(var(--brand-rgb));
+    border-bottom: 2px solid rgb(var(--brand-rgb));
+    background-color: rgba(var(--brand-rgb), 0.05);
 }
+
 .chat-list-item:hover {
-    background-color: var(--hover-bg-color);
-    box-shadow: inset 3px 0 0 var(--hi3-tech-blue);
+    background-color: rgb(var(--surface-hover-rgb));
+    box-shadow: inset 3px 0 0 rgb(var(--brand-rgb));
 }
 .chat-list-item.active {
-    background-color: var(--active-bg-color);
-    box-shadow: inset 3px 0 0 var(--hi3-tech-blue), 0 0 8px rgba(var(--hi3-tech-blue-rgb), 0.15) inset;
+    background-color: rgba(var(--brand-rgb), 0.1);
+    box-shadow: inset 3px 0 0 rgb(var(--brand-rgb));
 }
-.chat-list-item.active .chat-list-name { color: var(--hi3-tech-blue); font-weight: 600; }
+.chat-list-item.active .chat-list-name { color: rgb(var(--brand-rgb)); }
 .chat-list-avatar {
-    background-color: var(--hi3-light-divider-line);
-    border: 1px solid rgba(var(--hi3-interface-dark-text-rgb), 0.1);
-    color: var(--hi3-interface-dark-text);
+    background-color: rgb(var(--border-subtle-rgb));
+    border: 1px solid rgba(var(--text-primary-rgb), 0.1);
     border-radius: 25%;
-    box-shadow: var(--box-shadow-soft);
-    will-change: transform;
+    transition: transform 0.2s ease-out;
 }
 .chat-list-item:hover .chat-list-avatar { transform: scale(1.05); }
 
-
-/* --- 角色特定样式 (浅色) --- */
-.chat-list-item.special-contact .chat-list-avatar,
-.chat-avatar-main.is-character, .details-avatar.is-character, #callingModalAvatar.is-character {
-    box-shadow: 0 0 8px -2px var(--special-contact-glow, var(--hi3-light-accent-glow)), var(--box-shadow-soft);
-    border-width: 1.5px;
-}
-.chat-list-item.active.special-contact {
-    box-shadow: inset 3px 0 0 var(--special-contact-color), 0 0 8px var(--special-contact-secondary-glow, rgba(var(--hi3-tech-blue-rgb), 0.15)) inset;
-}
-.message.received.is-character-message {
-    border-left-width: 3px;
-    border-image-slice: 1;
-    /* border-image-source: linear-gradient(to bottom, var(--special-contact-color), var(--special-contact-secondary-glow)); */ /* This can be problematic if secondary-glow is rgba */
-    border-left-color: var(--special-contact-color); /* Fallback if border-image is tricky */
-}
-.message.received.is-character-message .message-sender { font-weight: 600; }
-.chat-header-main.is-character-chat .chat-title-main { text-shadow: 0 0 3px var(--special-contact-glow); }
-
-/* Applying vars for each character - Light theme */
-.AI_Himeko_崩坏3 { --special-contact-color: var(--hi3-himeko-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-himeko-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-himeko-primary-light-rgb), 0.5); }
-.chat-list-item.AI_Himeko_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_Himeko_崩坏3, .details-avatar.AI_Himeko_崩坏3, #callingModalAvatar.AI_Himeko_崩坏3 { background-color: var(--hi3-himeko-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-himeko-glow-light); }
-
-.AI_SeeleVeliona_崩坏3 { --special-contact-color: var(--hi3-seeleveliona-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-seeleveliona-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-seeleveliona-primary-light-rgb), 0.5); }
-.chat-list-item.AI_SeeleVeliona_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_SeeleVeliona_崩坏3, .details-avatar.AI_SeeleVeliona_崩坏3, #callingModalAvatar.AI_SeeleVeliona_崩坏3 { background-color: var(--hi3-seeleveliona-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-seeleveliona-glow-light); }
-
-.AI_Keqing_崩坏3 { --special-contact-color: var(--hi3-keqing-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-keqing-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-keqing-primary-light-rgb), 0.4); }
-.chat-list-item.AI_Keqing_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_Keqing_崩坏3, .details-avatar.AI_Keqing_崩坏3, #callingModalAvatar.AI_Keqing_崩坏3 { background-color: var(--hi3-keqing-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-keqing-glow-light); }
-
-.AI_Aponia_崩坏3 { --special-contact-color: var(--hi3-aponia-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-aponia-primary-light-rgb), 0.12); --special-contact-glow: rgba(var(--hi3-aponia-primary-light-rgb), 0.4); }
-.chat-list-item.AI_Aponia_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_Aponia_崩坏3, .details-avatar.AI_Aponia_崩坏3, #callingModalAvatar.AI_Aponia_崩坏3 { background-color: var(--hi3-aponia-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-aponia-glow-light); }
-
-.AI_FischlOz_崩坏3 { --special-contact-color: var(--hi3-fischloz-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-fischloz-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-fischloz-primary-light-rgb), 0.5); }
-.chat-list-item.AI_FischlOz_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_FischlOz_崩坏3, .details-avatar.AI_FischlOz_崩坏3, #callingModalAvatar.AI_FischlOz_崩坏3 { background-color: var(--hi3-fischloz-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-fischloz-glow-light); }
-.chat-list-avatar:after { content: "Oz"; font-size: 8px; position: absolute; bottom: 2px; right: 2px; color: var(--hi3-fischloz-oz-text-light); opacity: 0.9; font-weight: bold; background: rgba(var(--hi3-fischloz-primary-light-rgb),0.3);  border-radius: 2px;}
-
-
-.AI_HerrscherOfOrigin_崩坏3 { --special-contact-color: var(--hi3-origin-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-origin-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-origin-primary-light-rgb), 0.5); }
-.chat-list-item.AI_HerrscherOfOrigin_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_HerrscherOfOrigin_崩坏3, .details-avatar.AI_HerrscherOfOrigin_崩坏3, #callingModalAvatar.AI_HerrscherOfOrigin_崩坏3 { background-color: var(--hi3-origin-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-origin-glow-light); }
-
-.AI_AiChan_崩坏3 { --special-contact-color: var(--hi3-aichan-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-aichan-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-aichan-primary-light-rgb), 0.5); }
-.chat-list-item.AI_AiChan_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_AiChan_崩坏3, .details-avatar.AI_AiChan_崩坏3, #callingModalAvatar.AI_AiChan_崩坏3 { background-color: var(--hi3-aichan-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-aichan-glow-light); }
-
-.AI_Rozaliya_崩坏3 { --special-contact-color: var(--hi3-rozaliya-primary-light); --special-contact-secondary-glow: rgba(var(--hi3-rozaliya-primary-light-rgb), 0.15); --special-contact-glow: rgba(var(--hi3-rozaliya-primary-light-rgb), 0.5); }
-.chat-list-item.AI_Rozaliya_崩坏3 .chat-list-avatar,
-.chat-avatar-main.AI_Rozaliya_崩坏3, .details-avatar.AI_Rozaliya_崩坏3, #callingModalAvatar.AI_Rozaliya_崩坏3 { background-color: var(--hi3-rozaliya-primary-light); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-rozaliya-glow-light); }
-
-/* Connect character styles to elements - Simplified */
-.chat-list-item.active.special-contact[class*="AI_"] { background-color: var(--special-contact-secondary-glow); }
-.chat-list-item.active.special-contact[class*="AI_"] .chat-list-name { color: var(--special-contact-color); }
-.chat-header-main.current-chat[class*="AI_"] .chat-title-main { color: var(--special-contact-color); }
-.message.received[data-sender-id*="AI_"] { border-left-color: var(--special-contact-color); background-color: var(--special-contact-secondary-glow, rgba(var(--hi3-control-deck-panel-rgb),0.8));}
-.message.received[data-sender-id*="AI_"] .message-sender { color: var(--special-contact-color); }
-.details-panel[class*="AI_"] #aiContactAboutSection h4 span, .details-panel[class*="AI_"] #detailsName { color: var(--special-contact-color); }
-
 .chat-list-badge {
-    background-color: var(--hi3-status-critical-red);
-    color: var(--hi3-hyperion-hull-bg);
-    box-shadow: 0 0 4px var(--hi3-status-critical-red), 0 0 6px var(--hi3-status-critical-red);
-    border-radius: var(--border-radius);
-    font-weight: bold;
+    background-color: rgb(var(--accent-danger-rgb));
+    box-shadow: 0 0 6px rgb(var(--accent-danger-rgb));
     animation: hi3-badge-pulse-light 1.5s infinite alternate;
-    will-change: opacity, transform;
 }
 @keyframes hi3-badge-pulse-light {
     from { opacity: 0.8; transform: scale(1); }
     to { opacity: 1; transform: scale(1.1); }
 }
+
 .new-chat-fab {
-    background: linear-gradient(135deg, var(--hi3-tech-blue), var(--hi3-valkyrie-orange));
-    color: var(--hi3-hyperion-hull-bg);
-    box-shadow: 0 2px 8px rgba(var(--hi3-interface-dark-text-rgb),0.3), 0 0 8px var(--hi3-tech-blue), 0 0 12px var(--hi3-valkyrie-orange);
-    border-radius: 50%;
-    will-change: transform;
+    background: linear-gradient(135deg, rgb(var(--brand-rgb)), rgb(var(--hi3-valkyrie-orange-rgb)));
+    box-shadow: 0 2px 8px rgba(var(--text-primary-rgb), 0.3);
+    transition: transform 0.2s ease-out;
 }
-.new-chat-fab:hover {
-    transform: scale(1.1) rotate(45deg);
-}
+.new-chat-fab:hover { transform: scale(1.1) rotate(45deg); }
 
-/* --- Main Chat Area --- */
-.chat-area { background-color: transparent; }
-.chat-header-main {
-    background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.6);
-    border-bottom: 1px solid var(--border-color);
-}
-.chat-avatar-main { border: 1px solid var(--hi3-light-divider-line); border-radius: 25%;}
-.chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 0 5px rgba(var(--hi3-tech-blue-rgb), 0.1); }
-.header-action-btn {
-    color: var(--hi3-secondary-data-text);
-    will-change: transform;
-}
-.header-action-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); transform: scale(1.1); }
 
-.chat-messages-container { }
-.no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center;}
+/* ------------------------- 💬 主聊天区 ------------------------- */
+.chat-header-main, .details-header {
+    background-color: rgba(var(--surface-2-rgb), 0.6);
+    backdrop-filter: blur(5px);
+}
+.chat-avatar-main { border-radius: 25%; }
+.header-action-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 4px rgb(var(--brand-rgb)); transform: scale(1.1); }
+
 .no-chat-selected .logo-placeholder {
-    font-family: var(--font-family);
-    /* content: "HI3"; */ /* From original CSS, good for light. This was a CSS content property, which is unusual for a class like this. Assuming the text 'HI3' will be in HTML. */
     font-size: 5rem;
     font-weight: bold;
-    color: rgba(var(--hi3-tech-blue-rgb), 0.5);
-    text-shadow: 0 0 8px rgba(var(--hi3-tech-blue-rgb), 0.3), 1px 1px 0px var(--hi3-hyperion-hull-bg);
+    color: rgba(var(--brand-rgb), 0.5);
+    text-shadow: 0 0 8px rgba(var(--brand-rgb), 0.3), 1px 1px 0px rgb(var(--surface-2-rgb));
     animation: hi3-placeholder-float-light 3s infinite ease-in-out;
-    position: relative;
-    will-change: transform, opacity;
-}
-.no-chat-selected .logo-placeholder::before { /* Subtle highlight */
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: radial-gradient(circle at center, rgba(var(--hi3-hyperion-hull-bg-rgb),0.5) 0%, transparent 70%);
-    opacity: 0.5;
-    animation: hi3-placeholder-highlight 3s infinite ease-in-out;
-    animation-delay: -0.5s;
-    will-change: transform, opacity;
 }
 @keyframes hi3-placeholder-float-light {
-    0%, 100% { transform: translateY(0px); opacity: 0.6; }
     50% { transform: translateY(-8px); opacity: 0.9; }
 }
-@keyframes hi3-placeholder-highlight {
-    0%, 100% { transform: scale(0.8); opacity: 0.3; }
-    50% { transform: scale(1.2); opacity: 0.7; }
-}
-.no-chat-selected .placeholder-text { font-size: 1.1em; color: var(--hi3-secondary-data-text); }
 
+.message { border-radius: var(--border-radius-md); }
+.message.sent { border-left: 3px solid rgb(var(--brand-rgb)); }
+.message.received { border: 1px solid rgb(var(--border-subtle-rgb)); }
 
-.status-indicator.global {
-    background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.8);
-    border: 1px solid var(--border-color);
-    color: var(--hi3-tech-blue);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-soft);
-}
-
-/* 消息气泡 */
-.message {
-    border: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow-soft);
-    border-radius: var(--border-radius);
-    position: relative;
-}
-.message:before {
-    content: "";
-    position: absolute;
-    top: 10px;
-    border-style: solid;
-    border-width: 6px;
-}
-.message.sent {
-    background-color: var(--sent-bg-color);
-    color: var(--text-color);
-    border-left: 3px solid var(--hi3-tech-blue);
-}
-.message.sent:before {
-    right: -11px;
-    border-color: transparent transparent transparent var(--sent-bg-color);
-}
-.message.received {
-    background-color: var(--received-bg-color);
-    color: var(--text-color);
-    border-right: 3px solid var(--hi3-light-divider-line);
-}
-.message.received:before {
-    left: -11px;
-    border-color: transparent var(--received-bg-color) transparent transparent;
-}
 .message.system {
     background-color: rgba(var(--hi3-valkyrie-orange-rgb), 0.08);
-    color: var(--hi3-valkyrie-orange);
-    font-style: normal;
-    font-size: 0.9em;
-    border: 1px dashed var(--hi3-valkyrie-orange);
+    color: rgb(var(--hi3-valkyrie-orange-rgb));
+    border: 1px dashed rgb(var(--hi3-valkyrie-orange-rgb));
     box-shadow: 0 0 6px rgba(var(--hi3-valkyrie-orange-rgb),0.2) inset;
-    text-align: center;
 }
-.message.system:before { display: none; }
 
-.message-sender { color: var(--text-color-light); font-weight: 500; font-size: 0.9em;  }
-.message .timestamp { color: var(--text-color-light); opacity: 0.7; font-size: 0.7em; }
-
-.chat-input-container {
-    background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.7);
-    border-top: 1px solid var(--border-color);
-}
-#messageInput {
-    background-color: var(--hi3-hyperion-hull-bg);
-    border: 1px solid var(--hi3-light-divider-line);
-    color: var(--text-color);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-soft);
-}
-#messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 1px var(--primary-color), var(--box-shadow-strong-glow-light);
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 0 1px rgb(var(--brand-rgb)), 0 2px 8px rgba(var(--brand-rgb), 0.2);
 }
-.icon-btn {
-    color: var(--text-color-light);
-    will-change: transform; /* For hover scale */
-}
-.icon-btn:hover { color: var(--hi3-tech-blue); text-shadow: 0 0 4px var(--hi3-tech-blue); transform: scale(1.15); background-color: transparent;}
-#sendButtonMain { color: var(--hi3-tech-blue); font-weight: 600; letter-spacing: 1px; }
-#sendButtonMain:hover { text-shadow: 0 0 6px var(--hi3-tech-blue); }
-#voiceButtonMain.recording {
-    color: var(--danger-color);
-    animation: hi3-light-pulse-btn 1.2s infinite;
-    will-change: text-shadow, transform;
-}
+.icon-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 4px rgb(var(--brand-rgb)); transform: scale(1.15); }
+#voiceButtonMain.recording { color: rgb(var(--accent-danger-rgb)); animation: hi3-light-pulse-btn 1.2s infinite; }
 @keyframes hi3-light-pulse-btn {
-    0% { text-shadow: 0 0 0 rgba(var(--hi3-status-critical-red-rgb), 0.5); transform: scale(1); }
-    50% { text-shadow: 0 0 8px rgba(var(--hi3-status-critical-red-rgb), 0.8); transform: scale(1.2); }
-    100% { text-shadow: 0 0 0 rgba(var(--hi3-status-critical-red-rgb), 0.5); transform: scale(1); }
+    50% { text-shadow: 0 0 8px rgba(var(--accent-danger-rgb), 0.8); transform: scale(1.2); }
 }
 
-/* --- Details Panel --- */
-.details-panel {
-    background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.9);
-    border-left: 1px solid var(--border-color);
-}
-.details-header {
-    background-color: transparent;
-    border-bottom: 1px solid var(--border-color);
-}
-.details-avatar {
-    border: 2px solid var(--hi3-light-divider-line);
-    box-shadow: 0 0 8px rgba(var(--hi3-interface-dark-text-rgb), 0.1), var(--box-shadow-soft);
-    border-radius: 25%;
-}
-#detailsName { text-shadow: 0 0 3px rgba(var(--hi3-interface-dark-text-rgb), 0.15); font-size: 1.2em; letter-spacing: 0.5px; }
-#aiContactDetailsContent {
-    background-color: rgba(var(--hi3-control-deck-panel-rgb), 0.5);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-soft);
-}
-#aiContactDetailsContent p strong { color: var(--hi3-tech-blue); border-bottom: 1px solid rgba(var(--hi3-tech-blue-rgb), 0.25);  }
-#aiContactBasicInfoList li { border-bottom: 1px dotted rgba(var(--hi3-secondary-data-text-rgb), 0.3); }
-#aiContactAboutText { color: var(--hi3-secondary-data-text); font-size: 0.95em; }
 
-/* 通用按钮样式 */
+/* ------------------------- 🔘 通用组件 ------------------------- */
 .btn {
-    border-radius: var(--border-radius);
+    border-radius: var(--border-radius-md);
     text-transform: uppercase;
-    letter-spacing: 1px;
     font-weight: 600;
-    box-shadow: 0 1px 2px rgba(var(--hi3-interface-dark-text-rgb),0.2), inset 0 0 2px rgba(0,0,0,0.02);
-    border: 1px solid var(--hi3-light-divider-line);
-    position: relative;
-    overflow: hidden;
+    border: 1px solid rgb(var(--border-subtle-rgb));
 }
-.btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(var(--hi3-hyperion-hull-bg-rgb),0.6), transparent);
-    transform: translateX(-100%);
-    pointer-events: none;
-    will-change: transform;
-    /* Add transition here if smooth scanline is desired, e.g., transition: transform 0.3s ease-out; */
-}
-.btn:hover::before {
-    transform: translateX(100%);
-}
+.btn-primary { background-color: rgb(var(--brand-rgb)); border-color: rgb(var(--brand-rgb)); }
+.btn-primary:hover { background-color: rgb(var(--brand-dark-rgb)); box-shadow: 0 2px 5px rgba(var(--brand-rgb),0.3); }
 
-.btn-primary { background-color: var(--hi3-tech-blue); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-tech-blue); }
-.btn-primary:hover { background-color: var(--primary-color-dark); box-shadow: 0 2px 5px rgba(var(--hi3-tech-blue-rgb),0.3), 0 0 8px var(--hi3-tech-blue); }
-.btn-secondary { background-color: var(--hi3-light-divider-line); color: var(--hi3-interface-dark-text); }
-.btn-secondary:hover { background-color: rgb(170, 175, 190); box-shadow: 0 2px 5px rgba(var(--hi3-light-divider-line-rgb),0.3); }
-.btn-danger { background-color: var(--hi3-status-critical-red); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-status-critical-red); }
-.btn-danger:hover { background-color: rgb(200, 20, 50); box-shadow: 0 2px 5px rgba(var(--hi3-status-critical-red-rgb),0.3), 0 0 8px var(--hi3-status-critical-red); }
-.btn-success { background-color: var(--hi3-valkyrie-orange); color: var(--hi3-hyperion-hull-bg); border-color: var(--hi3-valkyrie-orange); }
-.btn-success:hover { background-color: rgb(225, 110, 0); box-shadow: 0 2px 5px rgba(var(--hi3-valkyrie-orange-rgb),0.3), 0 0 8px var(--hi3-valkyrie-orange); }
-
-/* --- Modals --- */
-.loading-overlay { background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.9); }
-.loading-spinner {
-    border-top-color: var(--hi3-tech-blue);
-    border-left-color: var(--hi3-tech-blue);
-    border-bottom-color: var(--hi3-valkyrie-orange);
-    border-right-color: var(--hi3-valkyrie-orange);
-    box-shadow: 0 0 8px var(--hi3-tech-blue), 0 0 8px var(--hi3-valkyrie-orange);
-}
 .modal-content {
-    background-color: var(--secondary-color);
-    border: 1px solid var(--hi3-light-divider-line);
-    border-radius: var(--border-radius-large);
-    position: relative;
+    background-color: rgb(var(--surface-2-rgb));
+    border: 1px solid rgb(var(--border-subtle-rgb));
 }
-.modal-content::before { top: -2px; left: -2px; border-top: 2px solid; border-left: 2px solid; border-top-left-radius: var(--border-radius-large); }
-.modal-content::after { bottom: -2px; right: -2px; border-bottom: 2px solid; border-right: 2px solid; border-bottom-right-radius: var(--border-radius-large); }
+.modal-header h2 { color: rgb(var(--brand-rgb)); }
 
-.modal-header h2 { color: var(--hi3-tech-blue); text-shadow: 0 0 6px rgba(var(--hi3-tech-blue-rgb),0.4); letter-spacing: 1px; }
-.close-modal-btn {
-    will-change: transform; /* For hover rotate/scale */
+
+/*
+================================================================================
+|                            👤 角色专属样式 👤                              |
+================================================================================
+*/
+
+/* --- 角色样式应用规则 --- */
+.chat-list-item.special-contact .chat-list-avatar,
+.chat-avatar-main.is-character,
+.details-avatar.is-character {
+    background-color: var(--character-theme-primary);
+    color: var(--character-text-color);
+    border: 2px solid var(--character-theme-primary);
+    box-shadow: 0 0 8px -2px var(--character-theme-glow), var(--box-shadow-sm);
 }
-.close-modal-btn:hover { color: var(--hi3-status-critical-red); text-shadow: 0 0 4px var(--hi3-status-critical-red); transform: rotate(90deg) scale(1.2); }
-.modal-body input[type="text"], .modal-body textarea {
-    background-color: rgba(var(--hi3-hyperion-hull-bg-rgb), 0.95);
-    color: var(--text-color);
-    border: 1px solid var(--hi3-light-divider-line);
-    border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-soft);
+.chat-list-item.active.special-contact {
+    background-color: var(--character-theme-secondary);
+    box-shadow: inset 3px 0 0 var(--character-theme-primary);
 }
-.modal-body input[type="text"]:focus, .modal-body textarea:focus {
-    border-color: var(--hi3-tech-blue);
-    box-shadow: 0 0 0 1px var(--hi3-tech-blue), var(--box-shadow-strong-glow-light);
+.chat-list-item.active.special-contact .chat-list-name {
+    color: var(--character-theme-primary);
 }
-.user-id-display #modalUserIdValue {
-    background: rgba(var(--hi3-hyperion-hull-bg-rgb),0.95);
-    color: var(--hi3-tech-blue);
-    border: 1px dashed var(--hi3-tech-blue);
-    border-radius: var(--border-radius);
-    box-shadow: 0 0 4px rgba(var(--hi3-tech-blue-rgb),0.15) inset;
-    letter-spacing: 1px;
+.chat-header-main.is-character-chat .chat-title-main {
+    color: var(--character-theme-primary);
+    text-shadow: 0 0 5px var(--character-theme-glow);
+}
+.message.received.is-character-message {
+    background-color: var(--character-theme-secondary);
+    border-color: var(--character-theme-primary);
+}
+.message.received.is-character-message .message-sender {
+    color: var(--character-theme-primary);
+    font-weight: 600;
+}
+.details-panel.is-character-chat #detailsName,
+.details-panel.is-character-chat #aiContactAboutSection h4 span {
+    color: var(--character-theme-primary);
 }
 
-/* Video Call */
-.video-call-avatar { background-color: var(--hi3-light-divider-line); border: 1px solid var(--border-color); border-radius: 25%;}
-.video-call-button { will-change: transform; } /* For potential hover effects like end-call */
-.video-call-button.end-call { background: var(--danger-color); box-shadow: 0 0 8px var(--danger-color); }
-.video-call-button.end-call:hover { transform: scale(1.1); }
-.video-call-button.active { background: var(--hi3-tech-blue); color: var(--hi3-hyperion-hull-bg); box-shadow: 0 0 8px var(--hi3-tech-blue);}
-
-/* Toggle Switch - Honkai Style Light */
-.switch { position: relative; display: inline-block;}
-.switch input { opacity: 0; }
-.slider {
-    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: var(--hi3-light-divider-line);
-    border: 1px solid rgba(var(--hi3-light-divider-line-rgb),0.8);
-    border-radius: var(--border-radius);
-    transition: .4s;
-    will-change: background-color, box-shadow, border-color;
+/* --- 角色颜色定义 --- */
+.AI_Himeko_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-himeko-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-himeko-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-himeko-primary-rgb), 0.5);
 }
-.slider:before {
-    position: absolute; content: ""; left: 2px; bottom: 1px;
-    background-color: var(--hi3-hyperion-hull-bg);
-    border: 1px solid var(--hi3-tech-blue);
+.AI_SeeleVeliona_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-seeleveliona-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-seeleveliona-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-seeleveliona-primary-rgb), 0.5);
+}
+.AI_Keqing_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-keqing-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-keqing-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-keqing-primary-rgb), 0.4);
+}
+.AI_Aponia_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-aponia-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-aponia-primary-rgb), 0.12);
+    --character-theme-glow: rgba(var(--hi3-aponia-primary-rgb), 0.4);
+}
+.AI_FischlOz_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-fischloz-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-fischloz-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-fischloz-primary-rgb), 0.5);
+}
+.AI_HerrscherOfOrigin_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-origin-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-origin-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-origin-primary-rgb), 0.5);
+}
+.AI_AiChan_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-aichan-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-aichan-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-aichan-primary-rgb), 0.5);
+}
+.AI_Rozaliya_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-rozaliya-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-rozaliya-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-rozaliya-primary-rgb), 0.5);
+}
+
+/* 特殊角色微调：菲谢尔的奥兹 */
+.chat-list-avatar.AI_FischlOz_崩坏3::after {
+    content: "Oz";
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    padding: 0 3px;
+    font-size: 8px;
+    color: rgb(var(--text-primary-rgb));
+    background: rgba(var(--hi3-fischloz-primary-rgb), 0.3);
     border-radius: 2px;
-    transition: .4s;
-    will-change: transform, background-color, border-color;
+    font-weight: bold;
 }
-input:checked + .slider { background-color: var(--hi3-tech-blue); box-shadow: 0 0 5px var(--hi3-tech-blue); border-color: var(--hi3-tech-blue); }
-input:checked + .slider:before {
-    transform: translateX(18px);
-    background-color: var(--hi3-hyperion-hull-bg);
-    border-color: var(--hi3-interface-dark-text);
-}
-
-
-/* Ensuring visibility for AI sections */
-#detailsPanelContent #aiContactAboutSection,
-#detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
-#detailsPanelContent #detailsGroupManagement #leftMembersArea,
-#detailsPanelContent #groupActionsDetails,
-#detailsPanelContent #dissolveGroupBtnDetails,
-#mainMenuModal .settings-section.manual-connection-advanced,
-#mainMenuModal #modalResetAllConnectionsBtn {
-    display: none;
-}
-.details-panel[class*="AI_"] #aiContactAboutSection { display: block; }
-
-
-.details-panel.human-contact-active #contactActionsDetails { display: block; }
-.details-panel.group-chat-active #detailsGroupManagement,
-.details-panel.group-chat-active #groupActionsDetails { display: block; }
-
-.notification {
-    background: var(--hi3-control-deck-panel);
-    border-left: 3px solid var(--hi3-tech-blue);
-    color: var(--text-color);
-    border-radius: var(--border-radius);
-    box-shadow: 0 2px 8px rgba(var(--hi3-interface-dark-text-rgb),0.15), 0 0 4px var(--hi3-tech-blue) inset;
-}
-.notification strong { color: var(--hi3-tech-blue); }

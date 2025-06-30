@@ -13,427 +13,287 @@
 
     /* ------------------------- 🎨 核心配色方案 (暗色) ----------------------- */
 
-    /* Base Palette */
-    --cs-bg-main-rgb: 24, 24, 27;
-    --cs-bg-container-rgb: 30, 30, 34;
-    --cs-bg-sidebar-rgb: 37, 37, 42;
-    --cs-bg-elevated-rgb: 45, 45, 50;
-    --cs-bg-subtle-accent-rgb: 51, 51, 55;
+    /* 基础色板 */
+    --cs-dark-bg-main-rgb: 24, 24, 27;         /* #18181B - VSCode-like Dark Grey */
+    --cs-dark-bg-container-rgb: 30, 30, 34;    /* #1E1E22 - Slightly lighter */
+    --cs-dark-bg-sidebar-rgb: 37, 37, 42;      /* #25252A - Sidebar color */
+    --cs-dark-bg-elevated-rgb: 45, 45, 50;     /* #2D2D32 - Elevated surfaces */
+    --cs-dark-bg-subtle-accent-rgb: 51, 51, 55;/* #333337 - Hover/Subtle accents */
 
-    --cs-text-primary-rgb: 112, 112, 112;
-    --cs-text-secondary-rgb: 150, 150, 150;
-    --cs-text-placeholder-rgb: 100, 100, 100;
+    --cs-dark-text-primary-rgb: 212, 212, 212;   /* #D4D4D4 - Primary text */
+    --cs-dark-text-secondary-rgb: 150, 150, 150; /* #969696 - Secondary text */
 
-    /* Accent & Syntax Colors */
-    --cs-accent-blue-rgb: 0, 122, 204;
-    --cs-accent-cyan-rgb: 156, 220, 254;
+    --cs-dark-accent-blue-rgb: 0, 122, 204;       /* #007ACC - VSCode Blue */
+    --cs-dark-accent-cyan-rgb: 156, 220, 254;     /* #9CDCFE - Cyan for types/keywords */
 
-    /* [定义] 边框颜色RGB值 */
-    --cs-border-strong-rgb: 60, 60, 60;
-    --cs-border-light-rgb: 43, 43, 43; /* #2B2B2B - Subtle Dark Border */
-    --cs-border-interactive-rgb: var(--cs-accent-blue-rgb);
+    --cs-dark-border-rgb: 60, 60, 60;            /* #3C3C3C - Borders */
 
-    /* Status & Feedback */
-    --cs-status-online-rgb: 77, 183, 119;
-    --cs-status-notification-rgb: 244, 121, 93;
+    --cs-dark-status-online-rgb: 77, 183, 119;      /* #4DB777 - Green */
+    --cs-dark-status-notification-rgb: 244, 121, 93;/* #F4795D - Orange/Red */
 
-    /* ... Shadows etc. ... */
-    --cs-shadow-focus-ring: 0 0 0 2px rgba(var(--cs-accent-blue-rgb), 0.6);
+    /* --- 语义化颜色变量覆盖 --- */
+    --brand-rgb: var(--cs-dark-accent-blue-rgb);
+    --brand-dark-rgb: 0, 102, 174;
+    --text-on-brand-rgb: 255, 255, 255;
 
-    /* 通用 UI 配色 */
-    --color-primary: rgb(var(--cs-accent-blue-rgb));
-    --color-accent: rgb(var(--cs-accent-cyan-rgb));
-    --color-background-body: rgb(var(--cs-bg-main-rgb));
-    --color-background-container: rgb(var(--cs-bg-container-rgb));
-    --color-background-elevated: rgb(var(--cs-bg-elevated-rgb));
+    --surface-1-rgb: var(--cs-dark-bg-sidebar-rgb);
+    --surface-2-rgb: var(--cs-dark-bg-container-rgb);
+    --surface-hover-rgb: var(--cs-dark-bg-subtle-accent-rgb);
+    --surface-active-rgb: rgba(var(--brand-rgb), 0.15);
 
-    --color-text-primary: rgb(var(--cs-text-primary-rgb));
-    --color-text-secondary: rgb(var(--cs-text-secondary-rgb));
-    --color-text-placeholder: rgb(var(--cs-text-placeholder-rgb));
-    --color-text-on-accent: white;
-    --color-text-link: rgb(var(--cs-accent-blue-rgb));
+    --text-primary-rgb: var(--cs-dark-text-primary-rgb);
+    --text-secondary-rgb: var(--cs-dark-text-secondary-rgb);
 
-    /* [使用] 将RGB值转换为可用的颜色变量 */
-    --color-border-primary: rgb(var(--cs-accent-blue-rgb));
-    --color-border-light: rgb(var(--cs-border-light-rgb));
-    --color-border-strong: rgb(var(--cs-border-strong-rgb));
-    --color-border-secondary: var(--color-border-light); /* 使用别名，更清晰 */
-    --color-border-interactive: rgb(var(--cs-border-interactive-rgb));
+    --border-subtle-rgb: var(--cs-dark-border-rgb);
+    --border-strong-rgb: 80, 80, 80;
 
-    /* ... (其余部分与上一版相同) ... */
+    --accent-success-rgb: var(--cs-dark-status-online-rgb);
+    --accent-danger-rgb: var(--cs-dark-status-notification-rgb);
 
-    /* 消息气泡 (Code/Terminal Style) */
-    --color-message-sent-bg: rgba(var(--cs-accent-blue-rgb), 0.2);
-    --color-message-sent-text: rgb(var(--cs-text-primary-rgb));
-    --color-message-received-bg: rgb(var(--cs-bg-elevated-rgb));
-    --color-message-received-text: rgb(var(--cs-text-primary-rgb));
-    --color-message-system-bg: transparent;
-    --color-message-system-text: rgb(var(--cs-text-secondary-rgb));
-    --color-message-system-border: rgba(var(--cs-border-strong-rgb), 0.5);
+    /* --- 组件级颜色变量覆盖 --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgb(var(--surface-1-rgb));
+    --chat-bg-color: rgb(var(--cs-dark-bg-main-rgb));
+    --input-bg-color: rgb(var(--cs-dark-bg-main-rgb)); /* Make input same as chat bg */
 
-    /* Character Palettes (from prompt) */
+    --sent-bg-color: rgba(var(--brand-rgb), 0.2);
+    --text-on-sent: rgb(var(--text-primary-rgb));
+    --received-bg-color: rgb(var(--cs-dark-bg-elevated-rgb));
+    --text-on-received: rgb(var(--text-primary-rgb));
+
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", "Source Code Pro", Consolas, monospace;
+    --font-size-base: 14px;
+    --font-size-small: 12px;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-radius-sm: 3px;
+    --border-radius-md: 5px;
+    --border-radius-lg: 8px;
+    --box-shadow-sm: none; /* Flat design, minimal shadows */
+    --box-shadow-md: none;
+    --box-shadow-lg: none;
+    --box-shadow-focus: 0 0 0 2px rgba(var(--brand-rgb), 0.6);
+
+    /* --- 滚动条覆盖 --- */
+    --scrollbar-track-color: transparent;
+    --scrollbar-thumb-color: rgba(var(--cs-dark-bg-subtle-accent-rgb), 0.8);
+    --scrollbar-thumb-hover-color: rgba(var(--brand-rgb), 0.7);
+    --scrollbar-size: 8px;
+
+    /* --- 角色颜色定义 --- */
     --cs-char-ada-primary-rgb: 97, 175, 239;
     --cs-char-geek-primary-rgb: 229, 192, 123;
     --cs-char-wendy-primary-rgb: 198, 120, 221;
     --cs-char-ligou-primary-rgb: 86, 182, 194;
     --cs-char-phantom-primary-rgb: 46, 204, 113;
-
-    /* 字体排版 */
-    --font-family-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-    --font-family-mono: "Fira Code", "JetBrains Mono", "Source Code Pro", Consolas, monospace;
-    --font-size-base: 14px;
-    --font-size-small: 12px;
-    --font-size-large: 16px;
-    --line-height-base: 1.6;
-
-    /* 整体风格参数 */
-    --border-radius-small: 3px;
-    --border-radius-medium: 5px;
-    --border-radius-large: 8px;
-    --transition-fast: all 0.15s ease-out;
-    --transition-medium: all 0.25s ease-out;
-
-    --scrollbar-track-color: rgba(var(--cs-bg-main-rgb), 0.5);
-    --scrollbar-thumb-color: rgba(var(--cs-bg-subtle-accent-rgb), 0.8);
-    --scrollbar-thumb-hover-color: rgba(var(--cs-accent-blue-rgb), 0.7);
-    --scrollbar-size: 8px;
 }
 
-/* --- 全局与基础样式 (与上一版相同) --- */
-*, *::before, *::after {
-    box-sizing: border-box;
-}
-
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    font-family: var(--font-family-sans);
-    font-size: var(--font-size-base);
-    line-height: var(--line-height-base);
-    color: var(--color-text-primary);
-    background-color: var(--color-background-body);
-    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAAAUVBMVEWFhYWDg4N3d3dtbW17e3t1dXWBgYGHh4d5eXlzc3OLi4ubm5uVlZWPj4+NjY19fX2JiYl/f39sbGxra2uBgYFzc3N1dXWGhoZugIWiAAAAI3RSTlMABwoPy4h7SRcv5v1lQEtNQjU4C2s0R2o2S0hxdnZ1d6kYvlojAAAAAWJLRQQLHLwW2AAAAIZJREFUeNrt0ksOwyAMRFG0QfDEI/7/l4xYUCvE6WuyFh27L4fJAgBSpK3naqZVUwJApQv14pQoWqg4QYIwCKiG2jVHYiJ92hZ9gS0g1JfsUGI/ILfHr2i9H2hZqdxgqf5ATgn2kHcb3KxYbb1Q5p11yI03G1hS/Y2jL6CPgFWKMEo/P35TAAAAAElFTkSuQmCC");
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
+    font-family: var(--font-family-base);
+    background-color: rgb(var(--cs-dark-bg-main-rgb)); /* Set solid dark background color */
+    /* NEW: Subtle, dark grid background to replace the white one */
+    background-image: linear-gradient(rgba(var(--border-subtle-rgb), 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--border-subtle-rgb), 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
 }
 
 ::-webkit-scrollbar {
     width: var(--scrollbar-size);
     height: var(--scrollbar-size);
 }
-
 ::-webkit-scrollbar-track {
-    background-color: transparent;
+    background-color: var(--scrollbar-track-color);
 }
-
 ::-webkit-scrollbar-thumb {
     background-color: var(--scrollbar-thumb-color);
-    border-radius: var(--border-radius-medium);
+    border-radius: var(--border-radius-md);
 }
-
 ::-webkit-scrollbar-thumb:hover {
     background-color: var(--scrollbar-thumb-hover-color);
 }
 
-.app-container {
-    display: flex;
-    background-color: var(--color-background-container);
-    border: 1px solid var(--color-border-secondary);
-    border-radius: var(--border-radius-large);
-    overflow: hidden;
+/* --- UI 组件调整 --- */
+.app-container,
+.sidebar-nav,
+.details-panel {
+    border-color: rgb(var(--border-subtle-rgb));
 }
 
-.sidebar-nav {
-    background-color: rgb(var(--cs-bg-sidebar-rgb));
-    border-right: 1px solid var(--color-border-secondary);
-    display: flex;
-    flex-direction: column;
+.search-bar,
+#messageInput {
+    background-color: rgb(var(--cs-dark-bg-main-rgb));
+    border: 1px solid rgb(var(--border-subtle-rgb));
 }
 
-.search-bar input[type="text"] {
-    border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-border-secondary);
-    background-color: rgb(var(--cs-bg-main-rgb));
-    color: var(--color-text-primary);
-    font-family: var(--font-family-sans);
-    transition: var(--transition-medium);
-}
-
-.search-bar input[type="text"]:focus {
-    outline: none;
-    border-color: var(--color-border-interactive);
-    box-shadow: var(--cs-shadow-focus-ring);
+.search-bar:focus,
+.modal-body input:focus,
+.modal-body textarea:focus,
+.custom-select:focus-within,
+#messageInput:focus {
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: var(--box-shadow-focus);
 }
 
 .chat-list-item {
-    border-radius: var(--border-radius-medium);
-    cursor: pointer;
-    transition: background-color var(--transition-fast);
-    border: 1px solid transparent;
     border-left: 3px solid transparent;
+    transition: background-color 0.15s ease-out, border-color 0.15s ease-out;
 }
-
-.chat-list-item:hover {
-    background-color: rgb(var(--cs-bg-subtle-accent-rgb));
-}
-
 .chat-list-item.active {
-    background-color: rgba(var(--cs-accent-blue-rgb), 0.15);
-    border-left-color: var(--color-primary);
+    background-color: rgb(var(--surface-active-rgb));
+    border-left-color: rgb(var(--brand-rgb));
 }
-
 .chat-list-item.active .chat-list-name {
-    color: var(--color-text-primary);
+    color: rgb(var(--text-primary-rgb));
     font-weight: 500;
 }
 
-.chat-list-avatar {
-    border-radius: 50%;
-    background-color: rgb(var(--cs-bg-elevated-rgb));
-    border: 2px solid rgb(var(--cs-bg-sidebar-rgb));
+.chat-avatar-main, .details-avatar {
+    border: 2px solid rgb(var(--cs-dark-bg-sidebar-rgb));
+    background-color: rgb(var(--cs-dark-bg-elevated-rgb));
 }
-
-.chat-list-badge {
-    background-color: var(--color-status-notification);
-    color: white;
-    font-size: 10px;
-    font-weight: bold;
-    min-width: 18px;
-    text-align: center;
-    border-radius: 9px;
-    border: 1px solid rgb(var(--cs-bg-sidebar-rgb));
-}
-
-.chat-area {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: var(--color-background-container);
-    overflow: hidden;
-}
-
-.chat-header-main {
-    border-bottom: 1px solid var(--color-border-secondary);
-    background: rgb(var(--cs-bg-sidebar-rgb));
-    z-index: 10;
-}
-
 .chat-avatar-main {
-    border-radius: 50%;
-    border: 2px solid rgb(var(--cs-bg-sidebar-rgb));
-    box-shadow: 0 0 8px rgba(var(--cs-accent-cyan-rgb), 0.3);
-}
-
-.chat-title-main {
-    font-weight: 600;
-    color: var(--color-text-primary);
+    box-shadow: 0 0 8px rgba(var(--cs-dark-accent-cyan-rgb), 0.3);
 }
 
 .chat-status-main::before {
-    content: '';
-    background-color: var(--color-status-online);
-    animation: pulse-cs 2s infinite;
-    box-shadow: 0 0 0 0 rgba(var(--cs-status-online-rgb), 0.7);
+    animation: pulse-cs-dark 2s infinite;
 }
-
-@keyframes pulse-cs {
-    0% {
-        box-shadow: 0 0 0 0 rgba(var(--cs-status-online-rgb), 0.6);
-    }
-    70% {
-        box-shadow: 0 0 0 5px rgba(var(--cs-status-online-rgb), 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(var(--cs-status-online-rgb), 0);
-    }
-}
-
-.chat-messages {
-    flex-grow: 1;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column-reverse;
+@keyframes pulse-cs-dark {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-success-rgb), 0.6); }
+    70% { box-shadow: 0 0 0 5px rgba(var(--accent-success-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-success-rgb), 0); }
 }
 
 .no-chat-selected .logo-placeholder {
-    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23333337' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='8 6 2 12 8 18'%3E%3C/polyline%3E%3Cpolyline points='16 18 22 12 16 6'%3E%3C/polyline%3E%3C/svg%3E");
+    /* Updated SVG with a color that works on the new dark background */
+    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='rgb(60,60,60)' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='8 6 2 12 8 18'%3E%3C/polyline%3E%3Cpolyline points='16 18 22 12 16 6'%3E%3C/polyline%3E%3C/svg%3E");
+    opacity: 0.5;
 }
 
-.message {
-    max-width: 85%;
-    border-radius: var(--border-radius-medium);
+.message, #messageInput, .details-section h4 {
     font-family: var(--font-family-mono);
-    font-size: var(--font-size-base);
-    line-height: 1.5;
-    word-wrap: break-word;
-    border: 1px solid transparent;
 }
-
-.message p {
-    margin: 0;
-}
-
 .message.sent {
-    background-color: var(--color-message-sent-bg);
-    border-color: rgba(var(--cs-accent-blue-rgb), 0.3);
-    align-self: flex-end;
+    border: 1px solid rgba(var(--brand-rgb), 0.3);
 }
-
 .message.received {
-    background-color: var(--color-message-received-bg);
-    border-color: var(--color-border-secondary);
-    align-self: flex-start;
+    border: 1px solid rgb(var(--border-subtle-rgb));
 }
-
-.message-sender {
-    font-size: var(--font-size-small);
-    font-weight: 600;
-    color: var(--color-text-secondary);
-    font-family: var(--font-family-sans);
-}
-
-.message-timestamp {
-    display: none;
-}
-
 .message.system {
-    align-self: center;
     background: none;
-    color: var(--color-text-placeholder);
-    font-size: var(--font-size-small);
-    border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-message-system-border);
-    max-width: 90%;
-    text-align: center;
-    font-family: var(--font-family-mono);
+    color: rgb(var(--text-secondary-rgb));
+    border: 1px dashed rgba(var(--border-strong-rgb), 0.5);
 }
 
-.chat-input-container {
-    border-top: 1px solid var(--color-border-secondary);
-    background-color: rgb(var(--cs-bg-container-rgb));
-}
-
-.chat-input-container textarea {
-    border: 1px solid transparent;
-    background-color: transparent;
-    font-family: var(--font-family-mono);
-    color: var(--color-text-primary);
-    resize: none;
-}
-
-.chat-input-container textarea:focus {
-    outline: none;
-    background-color: rgb(var(--cs-bg-elevated-rgb));
-}
-
-#sendButtonMain {
-    border-radius: var(--border-radius-medium);
-    background-color: var(--color-primary);
-    color: var(--color-text-on-accent);
-    transition: var(--transition-fast);
-}
-
-#sendButtonMain:hover {
-    background-color: rgb(var(--cs-accent-blue-rgb), 0.85);
-}
-
-#sendButtonMain::after {
-}
-
-.details-panel {
-    background-color: rgb(var(--cs-bg-sidebar-rgb));
-    border-left: 1px solid var(--color-border-secondary);
-}
-
-.details-panel .details-avatar {
-    border: 4px solid rgb(var(--cs-bg-sidebar-rgb));
-}
-
-.details-section-title {
-    font-family: var(--font-family-mono);
+.details-section h4 {
     text-transform: uppercase;
-    font-size: var(--font-size-small);
     letter-spacing: 0.5px;
-    color: var(--color-text-secondary);
-    border-bottom: 1px solid var(--color-border-strong);
+    border-bottom-color: rgb(var(--border-subtle-rgb));
 }
 
-.details-info-label {
-    font-weight: 600;
-    color: var(--color-text-primary);
+/* ------------------------- 👤 角色专属样式 -------------------------- */
+/* General pattern for all characters */
+.chat-list-item.active[class*="AI_"],
+.message.received.character-message[class*="AI_"] {
+    transition: border-left-color 0.2s ease-out;
 }
 
-.details-about-text {
-    font-family: var(--font-family-sans);
-    background-color: rgb(var(--cs-bg-container-rgb));
-    border: 1px solid var(--color-border-secondary);
+.chat-list-item.active[class*="AI_"] .chat-list-name,
+.chat-header-main.character-active[class*="AI_"] .chat-title-main,
+.message.received.character-message[class*="AI_"] .message-sender,
+.details-panel.character-active[class*="AI_"] #detailsName {
+    transition: color 0.2s ease-out;
 }
 
-.chat-list-item.active.AI_Ada_Foundations, .message.received[data-sender-id="AI_Ada_Foundations"] {
+.chat-avatar-main[class*="AI_"],
+.details-avatar[class*="AI_"] {
+    transition: box-shadow 0.2s ease-out;
+}
+
+/* --- Ada Lovelace (Blue) --- */
+.chat-list-item.active.AI_Ada_Foundations,
+.message.received.character-message.AI_Ada_Foundations {
     border-left-color: rgb(var(--cs-char-ada-primary-rgb));
 }
-
-.chat-list-item.active.AI_Ada_Foundations .chat-list-name, .chat-header-main.current-chat-AI_Ada_Foundations .chat-title-main, .message.received[data-sender-id="AI_Ada_Foundations"] .message-sender, .details-panel.AI_Ada_Foundations .details-name {
+.chat-list-item.active.AI_Ada_Foundations .chat-list-name,
+.chat-header-main.character-active.AI_Ada_Foundations .chat-title-main,
+.message.received.character-message.AI_Ada_Foundations .message-sender,
+.details-panel.character-active.AI_Ada_Foundations #detailsName {
     color: rgb(var(--cs-char-ada-primary-rgb));
 }
-
-.chat-avatar-main.AI_Ada_Foundations, .details-panel.AI_Ada_Foundations .details-avatar {
+.chat-avatar-main.AI_Ada_Foundations,
+.details-avatar.AI_Ada_Foundations {
     box-shadow: 0 0 10px rgba(var(--cs-char-ada-primary-rgb), 0.5);
 }
 
-.chat-list-item.active.AI_GaoJike_PracticalPython, .message.received[data-sender-id="AI_GaoJike_PracticalPython"] {
+/* --- Gao Jike (Yellow) --- */
+.chat-list-item.active.AI_GaoJike_PracticalPython,
+.message.received.character-message.AI_GaoJike_PracticalPython {
     border-left-color: rgb(var(--cs-char-geek-primary-rgb));
 }
-
-.chat-list-item.active.AI_GaoJike_PracticalPython .chat-list-name, .chat-header-main.current-chat-AI_GaoJike_PracticalPython .chat-title-main, .message.received[data-sender-id="AI_GaoJike_PracticalPython"] .message-sender, .details-panel.AI_GaoJike_PracticalPython .details-name {
+.chat-list-item.active.AI_GaoJike_PracticalPython .chat-list-name,
+.chat-header-main.character-active.AI_GaoJike_PracticalPython .chat-title-main,
+.message.received.character-message.AI_GaoJike_PracticalPython .message-sender,
+.details-panel.character-active.AI_GaoJike_PracticalPython #detailsName {
     color: rgb(var(--cs-char-geek-primary-rgb));
 }
-
-.chat-avatar-main.AI_GaoJike_PracticalPython, .details-panel.AI_GaoJike_PracticalPython .details-avatar {
+.chat-avatar-main.AI_GaoJike_PracticalPython,
+.details-avatar.AI_GaoJike_PracticalPython {
     box-shadow: 0 0 10px rgba(var(--cs-char-geek-primary-rgb), 0.5);
 }
 
-.chat-list-item.active.AI_Wendy_FrontendWizard, .message.received[data-sender-id="AI_Wendy_FrontendWizard"] {
+/* --- Wendy (Magenta) --- */
+.chat-list-item.active.AI_Wendy_FrontendWizard,
+.message.received.character-message.AI_Wendy_FrontendWizard {
     border-left-color: rgb(var(--cs-char-wendy-primary-rgb));
 }
-
-.chat-list-item.active.AI_Wendy_FrontendWizard .chat-list-name, .chat-header-main.current-chat-AI_Wendy_FrontendWizard .chat-title-main, .message.received[data-sender-id="AI_Wendy_FrontendWizard"] .message-sender, .details-panel.AI_Wendy_FrontendWizard .details-name {
+.chat-list-item.active.AI_Wendy_FrontendWizard .chat-list-name,
+.chat-header-main.character-active.AI_Wendy_FrontendWizard .chat-title-main,
+.message.received.character-message.AI_Wendy_FrontendWizard .message-sender,
+.details-panel.character-active.AI_Wendy_FrontendWizard #detailsName {
     color: rgb(var(--cs-char-wendy-primary-rgb));
 }
-
-.chat-avatar-main.AI_Wendy_FrontendWizard, .details-panel.AI_Wendy_FrontendWizard .details-avatar {
+.chat-avatar-main.AI_Wendy_FrontendWizard,
+.details-avatar.AI_Wendy_FrontendWizard {
     box-shadow: 0 0 10px rgba(var(--cs-char-wendy-primary-rgb), 0.5);
 }
 
-.chat-list-item.active.AI_LiGou_SystemDesign, .message.received[data-sender-id="AI_LiGou_SystemDesign"] {
+/* --- Li Gou (Teal) --- */
+.chat-list-item.active.AI_LiGou_SystemDesign,
+.message.received.character-message.AI_LiGou_SystemDesign {
     border-left-color: rgb(var(--cs-char-ligou-primary-rgb));
 }
-
-.chat-list-item.active.AI_LiGou_SystemDesign .chat-list-name, .chat-header-main.current-chat-AI_LiGou_SystemDesign .chat-title-main, .message.received[data-sender-id="AI_LiGou_SystemDesign"] .message-sender, .details-panel.AI_LiGou_SystemDesign .details-name {
+.chat-list-item.active.AI_LiGou_SystemDesign .chat-list-name,
+.chat-header-main.character-active.AI_LiGou_SystemDesign .chat-title-main,
+.message.received.character-message.AI_LiGou_SystemDesign .message-sender,
+.details-panel.character-active.AI_LiGou_SystemDesign #detailsName {
     color: rgb(var(--cs-char-ligou-primary-rgb));
 }
-
-.chat-avatar-main.AI_LiGou_SystemDesign, .details-panel.AI_LiGou_SystemDesign .details-avatar {
+.chat-avatar-main.AI_LiGou_SystemDesign,
+.details-avatar.AI_LiGou_SystemDesign {
     box-shadow: 0 0 10px rgba(var(--cs-char-ligou-primary-rgb), 0.5);
 }
 
-.chat-list-item.active.AI_Phantom_CyberSecurity, .message.received[data-sender-id="AI_Phantom_CyberSecurity"] {
+/* --- Phantom (Green) --- */
+.chat-list-item.active.AI_Phantom_CyberSecurity,
+.message.received.character-message.AI_Phantom_CyberSecurity {
     border-left-color: rgb(var(--cs-char-phantom-primary-rgb));
 }
-
-.chat-list-item.active.AI_Phantom_CyberSecurity .chat-list-name, .chat-header-main.current-chat-AI_Phantom_CyberSecurity .chat-title-main, .message.received[data-sender-id="AI_Phantom_CyberSecurity"] .message-sender, .details-panel.AI_Phantom_CyberSecurity .details-name {
+.chat-list-item.active.AI_Phantom_CyberSecurity .chat-list-name,
+.chat-header-main.character-active.AI_Phantom_CyberSecurity .chat-title-main,
+.message.received.character-message.AI_Phantom_CyberSecurity .message-sender,
+.details-panel.character-active.AI_Phantom_CyberSecurity #detailsName {
     color: rgb(var(--cs-char-phantom-primary-rgb));
 }
-
-.chat-avatar-main.AI_Phantom_CyberSecurity, .details-panel.AI_Phantom_CyberSecurity .details-avatar {
+.chat-avatar-main.AI_Phantom_CyberSecurity,
+.details-avatar.AI_Phantom_CyberSecurity {
     box-shadow: 0 0 10px rgba(var(--cs-char-phantom-primary-rgb), 0.5);
 }
-
-.message.received[data-sender-id="AI_Phantom_CyberSecurity"] {
-    background-color: #0c0c0c;
-    border-color: #1a1a1a;
-    color: rgb(var(--cs-char-phantom-primary-rgb));
-}
-
-.message.received[data-sender-id="AI_Phantom_CyberSecurity"] p {
+.message.received.character-message.AI_Phantom_CyberSecurity {
+    background-color: rgba(var(--cs-char-phantom-primary-rgb), 0.05); /* Special bg for hacker */
+    border-color: rgba(var(--cs-char-phantom-primary-rgb), 0.3);
     color: rgb(var(--cs-char-phantom-primary-rgb));
 }

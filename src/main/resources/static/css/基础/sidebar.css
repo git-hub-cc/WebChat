@@ -1,21 +1,15 @@
 /* ========================================================================== */
-/* 左侧边栏 (Sidebar / Navigation) */
+/* 侧边栏头部与导航选项卡 (Sidebar Header & Navigation Tabs) */
 /* ========================================================================== */
 
 .sidebar-header {
-    padding-block: var(--spacing-2); /* Specific padding for sidebar header */
-    /* Base styles are inherited from core.css */
+    padding-block: var(--spacing-2);
 }
 
-/* .search-bar base style in core.css, specifics for placement/flex here if needed */
-/* .menu-btn base style in core.css, includes transition */
-
-/* --- 导航与标签页 --- */
 .nav-tabs {
     display: flex;
     justify-content: space-around;
     padding-block-start: var(--spacing-3);
-    /*border-bottom: 1px solid var(--border-color);*/ /* Optional: if tabs need a bottom border */
 }
 
 .nav-tab {
@@ -24,29 +18,31 @@
     border-bottom: 2px solid transparent;
     background: none;
     cursor: pointer;
-    color: var(--text-color-light);
-    font-size: 14px;
-    font-weight: 500;
-    transition: color 0.2s ease-out, border-bottom-color 0.2s ease-out;
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    transition: color var(--transition-duration-normal) ease-out, border-bottom-color var(--transition-duration-normal) ease-out;
 }
 
-.nav-tab:hover { /* Hover state for nav-tabs in sidebar */
-    color: var(--primary-color);
+.nav-tab:hover {
+    color: var(--brand-bg);
 }
 
-.nav-tab.active { /* Active state for nav-tabs in sidebar */
-    border-bottom-color: var(--primary-color);
-    color: var(--primary-color);
+.nav-tab.active {
+    border-bottom-color: var(--brand-bg);
+    color: var(--brand-bg);
 }
 
+/* ========================================================================== */
+/* 聊天列表 (Chat List) */
+/* ========================================================================== */
 
-/* --- 聊天列表 --- */
 .chat-list-container {
     flex-grow: 1;
     overflow-y: auto;
 }
 
-#chatListNav { /* UL element */
+#chatListNav {
     list-style: none;
 }
 
@@ -54,23 +50,21 @@
     display: flex;
     align-items: center;
     padding: var(--spacing-3) var(--spacing-4);
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: var(--border-width-standard) solid var(--border-color);
     cursor: pointer;
-    transition: background-color 0.15s ease-out;
+    transition: background-color var(--transition-duration-fast) ease-out;
 }
 
 .chat-list-item:hover {
-    background-color: var(--hover-bg-color);
+    background-color: var(--surface-hover-bg);
 }
 
 .chat-list-item.active {
-    /* For special contacts, this background color might be overridden by --character-secondary-color */
-    background-color: var(--active-bg-color);
+    background-color: var(--surface-active-bg);
 }
 
-/* Only bold name for active non-special contacts */
 .chat-list-item.active .chat-list-name:not(.special-contact .chat-list-name) {
-    font-weight: bold; /* This change is usually instant, transition not typically applied to font-weight directly for performance */
+    font-weight: var(--font-weight-bold);
 }
 
 .chat-list-info {
@@ -85,28 +79,29 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    font-size: 15px;
-    font-weight: 600;
-    transition: color 0.3s ease-out; /* For special contact active name color */
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    transition: color var(--transition-duration-slow) ease-out;
 }
 
 .chat-list-preview {
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
-    color: var(--text-color-light);
-    font-size: 13px;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
 }
 
 .chat-list-meta {
     min-width: 50px;
-    text-align: end; /* Supports RTL */
+    text-align: end;
 }
 
 .chat-list-time {
-    margin-bottom: 4px;
-    color: var(--text-color-light);
-    font-size: 12px;
+    margin-bottom: var(--spacing-1);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
 }
 
 .chat-list-badge {
@@ -114,93 +109,101 @@
     min-width: 18px;
     padding: 2px 6px;
     border-radius: 10px;
-    background-color: var(--accent-color);
-    color: var(--text-color-inverted);
+    background-color: var(--success-bg);
+    color: var(--text-on-success);
     text-align: center;
-    font-size: 11px;
-    font-weight: bold;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
 }
 
 .chat-list-item-empty {
     padding: var(--spacing-5);
-    color: var(--text-color-light);
+    color: var(--text-secondary);
     text-align: center;
 }
 
-/* --- 头像 (Sidebar Specific Sizes/Margins) --- */
-/* .chat-list-avatar base styles in core.css, includes theme transition */
 .chat-list-avatar {
-    width: 40px;
-    height: 40px;
+    width: var(--avatar-size-md);
+    height: var(--avatar-size-md);
     margin-inline-end: var(--spacing-3);
-    font-size: 18px;
+    font-size: var(--font-size-xl);
 }
 
-/* --- 新建聊天悬浮按钮 --- */
+/* ========================================================================== */
+/* 新建聊天悬浮按钮 (New Chat FAB) */
+/* ========================================================================== */
+
 .new-chat-fab {
     position: absolute;
-    z-index: 10;
+    z-index: var(--z-index-content);
     inset-block-end: 20px;
-    inset-inline-start: calc(var(--sidebar-width) - 70px); /* Adjust if sidebar width changes */
+    inset-inline-start: calc(var(--sidebar-width) - 70px);
     display: flex;
     align-items: center;
     justify-content: center;
     width: 50px;
     height: 50px;
     border: none;
-    border-radius: 50%;
-    background-color: var(--primary-color);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-circle);
+    background-color: var(--brand-bg);
+    box-shadow: 0 2px 10px rgba(var(--black-rgb), 0.2);
     cursor: pointer;
-    color: var(--text-color-inverted);
-    font-size: 24px;
-    transition: background-color 0.2s ease-out, transform 0.2s ease-out;
+    color: var(--text-on-brand);
+    font-size: var(--font-size-icon-lg);
+    transition: background-color var(--transition-duration-normal) ease-out, transform var(--transition-duration-normal) ease-out;
 }
 
 .new-chat-fab:hover {
-    background-color: var(--primary-color-dark);
+    background-color: var(--brand-bg-dark);
     transform: scale(1.05);
 }
 
-/* --- 人员大厅 (When shown in sidebar/styled like chat list) --- */
-/* .lobby-content, #peopleLobbyList base structure if used in sidebar */
-.lobby-content { /* Assuming it might be part of sidebar layout sometimes */
+/* ========================================================================== */
+/* 人员大厅相关 (People Lobby Related) */
+/* ========================================================================== */
+
+.lobby-content {
     display: flex;
     flex-direction: column;
     height: 100%;
 }
-#peopleLobbyList { /* If used as a list within sidebar, similar to chat-list-container */
+
+#peopleLobbyList {
     flex-grow: 1;
     overflow-y: auto;
 }
-/* Refresh button style if it's part of a header within sidebar */
+
 #peopleLobbyRefreshBtn.loading {
-    animation: spin 1s linear infinite; /* Uses spin from core.css */
+    animation: spin 1s linear infinite;
     pointer-events: none;
     opacity: 0.7;
 }
 
+/* ========================================================================== */
+/* 列表项状态修饰符 (List Item State Modifiers) */
+/* ========================================================================== */
 
-/* --- 角色主题修饰符 (Sidebar Specific) --- */
-.chat-list-item.group .chat-list-avatar { /* Group avatar color */
-    background-color: var(--accent-color);
+.chat-list-item.group .chat-list-avatar {
+    background-color: var(--success-bg);
 }
 
-.chat-list-item.active.special-contact .chat-list-name { /* Special contact active name color */
-    color: var(--character-primary-color);
-    font-weight: bold;
+.chat-list-item.active.special-contact .chat-list-name {
+    color: var(--character-theme-primary);
+    font-weight: var(--font-weight-bold);
 }
 
-.chat-list-item.special-contact .chat-list-avatar { /* Special contact avatar style */
+.chat-list-item.special-contact .chat-list-avatar {
     background-color: var(--character-avatar-bg);
     color: var(--character-avatar-text-color);
-    /* Transition already on .chat-list-avatar base */
 }
 
-/* --- 响应式设计 (Sidebar Specific) --- */
+/* ========================================================================== */
+/* 响应式设计 (Responsive Design) */
+/* ========================================================================== */
+
 @media screen and (max-width: 768px) {
     .new-chat-fab {
-        inset-inline-start: auto; /* Reset for RTL/LTR */
-        inset-inline-end: 20px;   /* Position to the right on mobile */
+        inset-inline-start: auto;
+        inset-inline-end: 20px;
     }
 }

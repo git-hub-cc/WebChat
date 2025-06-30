@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -6,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PPMC</title>
 
-    <!-- SEO Meta Tags -->
+    <!-- ========================================================================== -->
+    <!-- SEO 与元数据 (SEO & Metadata) -->
+    <!-- ========================================================================== -->
     <meta name="description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
     <meta name="keywords" content="PPMC, WebRTC, AI Chat, Character Chat, Role-playing, JavaScript, Spring Boot, WebSocket, Real-time Communication, Video Call, Audio Call, Screen Sharing, TTS, Text-to-Speech, Theming, Genshin Impact, Xian Ni, Battle Through the Heavens, Crayon Shin-chan, Delicious in Dungeon, Jujutsu Kaisen, AI聊天, 角色扮演, 实时通讯, 文本转语音, 原神, 仙逆, 斗破苍穹, 蜡笔小新, 迷宫饭, 咒术回战, 即时通讯, AI助手">
     <meta name="author" content="git-hub-cc">
@@ -26,6 +27,11 @@
     <meta property="twitter:image" content="https://175.178.216.24/img/desktop/img.png">
     <!-- End of SEO Meta Tags -->
 
+    <!-- ========================================================================== -->
+    <!-- 样式表 (Stylesheets) -->
+    <!-- ========================================================================== -->
+    <!-- !!! IMPORTANT: variables.css 必须首先加载 !!! -->
+    <link rel="stylesheet" href="css/基础/variables.css">
     <link rel="stylesheet" href="css/基础/core.css">
     <link rel="stylesheet" href="css/基础/sidebar.css">
     <link rel="stylesheet" href="css/基础/chat-area.css">
@@ -35,8 +41,15 @@
     <link rel="icon" href="favicon.ico" type="image/x-icon">
 </head>
 <body>
+
+<!-- ========================================================================== -->
+<!-- 应用主容器 (App Container) -->
+<!-- ========================================================================== -->
 <div class="app-container">
-    <!-- 左侧边栏 (导航) -->
+
+    <!-- ========================================================================== -->
+    <!-- START: 左侧边栏 (导航) / Sidebar (Navigation) -->
+    <!-- ========================================================================== -->
     <aside class="sidebar-nav" id="sidebarNav">
         <header class="sidebar-header">
             <button class="menu-btn" id="mainMenuBtn" title="菜单">☰</button>
@@ -55,9 +68,17 @@
         </div>
         <button class="new-chat-fab" id="newChatFab" title="新聊天/群组">+</button>
     </aside>
-    <!-- 主聊天区 -->
+    <!-- ========================================================================== -->
+    <!-- END: 左侧边栏 (导航) / Sidebar (Navigation) -->
+    <!-- ========================================================================== -->
+
+
+    <!-- ========================================================================== -->
+    <!-- START: 主聊天区 / Main Chat Area -->
+    <!-- ========================================================================== -->
     <main class="chat-area" id="chatArea">
         <div class="chat-area-content">
+            <!-- 聊天区域头部 -->
             <header class="chat-header-main">
                 <button class="back-to-list-btn" id="backToListBtn" title="返回列表">←</button>
                 <div class="chat-info-main">
@@ -75,6 +96,7 @@
                 </div>
             </header>
 
+            <!-- 消息显示区域 -->
             <section class="no-chat-selected" id="noChatSelectedScreen">
                 <div class="logo-placeholder">💬</div>
                 <h2>PPMC</h2>
@@ -85,6 +107,7 @@
                 <!-- 消息将在此处填充。noChatSelectedScreen 不再是其子元素。 -->
             </div>
 
+            <!-- 消息输入区域 -->
             <footer class="chat-input-container">
                 <div id="filePreviewContainer" class="file-preview-input"></div>
                 <div id="audioPreviewContainer" class="audio-preview-input"></div>
@@ -117,25 +140,35 @@
                 </div>
             </footer>
         </div>
-        <!-- 为拖放功能添加 -->
+        <!-- 拖放文件遮罩层 -->
         <div class="drop-overlay" id="dropOverlay">
             <div class="drop-overlay-text">拖拽文件到此处发送</div>
         </div>
     </main>
+    <!-- ========================================================================== -->
+    <!-- END: 主聊天区 / Main Chat Area -->
+    <!-- ========================================================================== -->
 
-    <!-- 右侧详情面板 -->
+
+    <!-- ========================================================================== -->
+    <!-- START: 右侧详情面板 / Right Details Panel -->
+    <!-- ========================================================================== -->
     <aside class="details-panel" id="detailsPanel">
         <header class="details-header">
             <h3 id="detailsPanelTitle">聊天信息</h3> <!-- 此标题会被 JS 动态更改 -->
             <button class="icon-btn close-details-btn" id="closeDetailsBtnMain" title="关闭详情">✕</button>
         </header>
+
+        <!-- 详情面板主要内容 -->
         <div class="details-content" id="detailsPanelContent">
+            <!-- 联系人/群组基础信息 -->
             <section class="details-section" id="detailsContactInfo">
                 <div class="details-avatar" id="detailsAvatar"></div>
                 <h4 id="detailsName">名称</h4>
                 <p id="detailsId">ID: </p>
                 <p id="detailsStatus">状态: </p>
             </section>
+
             <!-- AI 联系人“关于”部分 -->
             <section class="details-section" id="aiContactAboutSection">
                 <h4>关于 <span id="aiContactAboutName">AI 名称</span></h4>
@@ -146,31 +179,29 @@
                     <p id="aiContactAboutText"></p>
                 </div>
             </section>
-            <!-- AI 联系人“关于”部分结束 -->
 
-            <!-- AI 记忆选择部分 -->
+            <!-- AI 章节/记忆选择部分 -->
             <section class="details-section" id="aiChapterSection">
                 <h4 id="aiChapterHeader">关卡</h4>
                 <div class="settings-item">
-                    <label for="aiChapterSelectContainer">选择关卡:</label> <!-- Changed for attribute -->
+                    <label for="aiChapterSelectContainer">选择关卡:</label>
                     <div id="aiChapterSelectContainer">
                         <!-- Searchable select will be built here by JS -->
                     </div>
                 </div>
             </section>
-            <!-- AI 记忆选择部分结束 -->
-            <!-- Memory Book Section -->
+
+            <!-- 记忆书展示区 -->
             <section class="details-section" id="memoryBookSection">
                 <h4>记忆书</h4>
                 <div id="memoryBookList">
                     <!-- Memory sets will be populated here by JS, but without management buttons -->
                 </div>
             </section>
-            <!-- Memory Book Section End -->
 
-            <!-- AI TTS 配置部分 (MODIFIED STRUCTURE) -->
+            <!-- AI TTS 配置部分 -->
             <section class="details-section" id="aiTtsConfigSection">
-                <!-- Main TTS Config Collapsible Container -->
+                <!-- 主要TTS配置 -->
                 <div class="collapsible-container">
                     <h4 class="collapsible-header" id="aiTtsConfigHeader">
                         TTS 配置 <span class="collapse-icon">▶</span>
@@ -183,7 +214,7 @@
                     </div>
                 </div>
 
-                <!-- Attribution Collapsible Container -->
+                <!-- 贡献者/开源信息 -->
                 <div class="tts-attribution-section collapsible-container">
                     <h4 class="collapsible-header attribution-sub-header" id="ttsAttributionCollapsibleTrigger">
                         更多 <span class="collapse-icon">▶</span>
@@ -216,9 +247,8 @@
                     </div>
                 </div>
             </section>
-            <!-- AI TTS 配置部分结束 -->
 
-            <!-- 群组管理部分 (MODIFIED STRUCTURE) -->
+            <!-- 群组管理部分 -->
             <section class="details-section collapsible-container" id="detailsGroupManagement">
                 <h4 id="groupMemberListHeader" class="collapsible-header">成员 (<span id="groupMemberCount">0</span>)<span class="collapse-icon">▶</span></h4>
                 <div id="groupMemberListContainer" class="collapsible-content">
@@ -234,7 +264,8 @@
                     </div>
                 </div>
             </section>
-            <!-- 群组内 AI 提示词管理部分 (仅群主可见) (MODIFIED STRUCTURE) -->
+
+            <!-- 群组内 AI 提示词管理部分 -->
             <section class="details-section collapsible-container" id="groupAiPromptsSection">
                 <h4 id="groupAiPromptsHeader" class="collapsible-header">群内AI行为指示 <span class="collapse-icon">▶</span></h4>
                 <div id="groupAiPromptsListContainer" class="collapsible-content">
@@ -255,12 +286,13 @@
                 <button id="dissolveGroupBtnDetails" class="btn btn-danger">解散群组</button>
             </section>
 
-            <!-- 联系人设置部分 -->
+            <!-- 联系人操作部分 -->
             <section class="details-section" id="contactActionsDetails">
                 <h4>联系人设置</h4>
                 <button id="deleteContactBtnDetails" class="btn btn-danger">删除联系人</button>
             </section>
-            <!-- 聊天资源预览部分 - MODIFIED -->
+
+            <!-- 聊天资源预览部分 -->
             <section class="details-section" id="resourcePreviewSection">
                 <h4 id="resourcePreviewHeaderTitle">聊天资源</h4>
                 <div id="resourcePreviewPanelContent">
@@ -284,8 +316,8 @@
                     </div>
                 </div>
             </section>
-            <!-- 聊天资源预览部分结束 -->
         </div>
+
         <!-- 人员大厅内容容器 -->
         <div class="lobby-content" id="peopleLobbyContent">
             <header class="lobby-header">
@@ -297,12 +329,27 @@
             </ul>
         </div>
     </aside>
+    <!-- ========================================================================== -->
+    <!-- END: 右侧详情面板 / Right Details Panel -->
+    <!-- ========================================================================== -->
+
 </div>
-<!-- 模态框 -->
+<!-- ========================================================================== -->
+<!-- END: 应用主容器 (App Container) -->
+<!-- ========================================================================== -->
+
+
+<!-- ========================================================================== -->
+<!-- START: 模态框与浮层 (Modals & Overlays) -->
+<!-- ========================================================================== -->
+
+<!-- 全局加载遮罩 -->
 <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-spinner"></div>
     <div class="loading-text">连接中，请稍候...</div>
 </div>
+
+<!-- 来电请求 -->
 <div id="videoCallRequest" class="modal-like video-call-request">
     <div class="modal-content">
         <div class="video-call-avatar">👤</div>
@@ -314,6 +361,8 @@
         </div>
     </div>
 </div>
+
+<!-- 呼叫中模态框 -->
 <div id="callingModal" class="modal-like">
     <div class="modal-content">
         <div class="modal-header">
@@ -328,11 +377,12 @@
         </div>
     </div>
 </div>
+
+<!-- 视频通话主界面 -->
 <div id="videoCallContainer" class="video-call-container-main">
     <div class="video-streams">
         <video id="remoteVideo" autoplay playsinline></video>
         <video id="localVideo" autoplay playsinline muted></video>
-        <!-- 音频质量指示器移到这里，使其在视频流之上 -->
         <div id="audioQualityIndicator" class="call-status-indicator">质量</div>
     </div>
     <div class="video-call-controls">
@@ -343,6 +393,7 @@
         <button class="video-call-button audio-only" id="audioOnlyBtn">🔊</button>
     </div>
 </div>
+
 <!-- 主菜单 / 设置模态框 -->
 <div id="mainMenuModal" class="modal-like">
     <div class="modal-content">
@@ -358,7 +409,7 @@
                 <button class="menu-tab-item" data-tab="advanced">高级</button>
             </nav>
 
-            <!-- Tab Content: General -->
+            <!-- 设置 - 通用 -->
             <section id="menu-tab-content-general" class="menu-tab-content active">
                 <div class="settings-section">
                     <h3>您的用户 ID</h3>
@@ -383,7 +434,7 @@
                 </div>
             </section>
 
-            <!-- Tab Content: Appearance -->
+            <!-- 设置 - 外观 -->
             <section id="menu-tab-content-appearance" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>外观设置</h3>
@@ -420,7 +471,7 @@
                 </div>
             </section>
 
-            <!-- Tab Content: AI & API -->
+            <!-- 设置 - AI & API -->
             <section id="menu-tab-content-api" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>AI & API 配置</h3>
@@ -456,7 +507,7 @@
                 </div>
             </section>
 
-            <!-- Tab Content: Advanced -->
+            <!-- 设置 - 高级 -->
             <section id="menu-tab-content-advanced" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>手动连接</h3>
@@ -479,7 +530,8 @@
         </div>
     </div>
 </div>
-<!-- 交互管理模态框 -->
+
+<!-- 交互管理模态框 (联系人、群组、角色、记忆书) -->
 <div id="newContactGroupModal" class="modal-like">
     <div class="modal-content">
         <header class="modal-header">
@@ -491,9 +543,10 @@
                 <button class="menu-tab-item active" data-tab-target="#newContactTabContent">联系人</button>
                 <button class="menu-tab-item" data-tab-target="#newGroupTabContent">群组</button>
                 <button class="menu-tab-item" data-tab-target="#newCharacterTabContent">角色</button>
-                <button class="menu-tab-item" data-tab-target="#memorySetTabContent">记忆书</button> <!-- MODIFIED -->
+                <button class="menu-tab-item" data-tab-target="#memorySetTabContent">记忆书</button>
             </nav>
 
+            <!-- 交互管理 - 联系人 -->
             <section id="newContactTabContent" class="menu-tab-content active">
                 <div class="settings-section">
                     <h3>联系人管理</h3>
@@ -504,6 +557,7 @@
                 </div>
             </section>
 
+            <!-- 交互管理 - 群组 -->
             <section id="newGroupTabContent" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>群组管理</h3>
@@ -513,6 +567,8 @@
                     <button id="confirmNewGroupBtnModal" class="btn btn-primary">创建 / 修改群组</button>
                 </div>
             </section>
+
+            <!-- 交互管理 - 角色 -->
             <section id="newCharacterTabContent" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>角色卡管理</h3>
@@ -522,7 +578,8 @@
                     <input type="file" id="characterCardInput" accept=".json" class="visually-hidden">
                 </div>
             </section>
-            <!-- ADDED: Memory Set Management Tab -->
+
+            <!-- 交互管理 - 记忆书 -->
             <section id="memorySetTabContent" class="menu-tab-content">
                 <div class="settings-section">
                     <h3>记忆书管理</h3>
@@ -530,15 +587,17 @@
                     <div id="memorySetListContainerModal">
                         <!-- List of sets will be populated here by JS -->
                     </div>
-                    <div id="memorySetFormContainerModal" style="display: none;">
+                    <div id="memorySetFormContainerModal">
                         <!-- Form for add/edit will be populated here by JS -->
                     </div>
-                    <button id="showAddMemorySetFormBtn" class="btn btn-primary" style="margin-top: 15px;">+ 添加新记忆书</button>
+                    <button id="showAddMemorySetFormBtn" class="btn btn-primary">+ 添加新记忆书</button>
                 </div>
             </section>
         </div>
     </div>
 </div>
+
+<!-- 开源信息提示模态框 -->
 <div id="openSourceInfoModal" class="modal-like">
     <div class="modal-content">
         <header class="modal-header">
@@ -573,7 +632,7 @@
     </div>
 </div>
 
-<!-- 新增截图编辑器模态框 -->
+<!-- 截图编辑器模态框 -->
 <div id="screenshotEditorModal" class="modal-like screenshot-editor-modal">
     <header class="screenshot-editor-toolbar" id="screenshotEditorToolbar">
         <button id="cropToolBtn" class="screenshot-tool-btn" title="裁剪">✂️</button>
@@ -587,10 +646,14 @@
         <canvas id="screenshotEditorCanvas"></canvas>
     </div>
 </div>
-<!-- 截图编辑器模态框结束 -->
+<!-- ========================================================================== -->
+<!-- END: 模态框与浮层 (Modals & Overlays) -->
+<!-- ========================================================================== -->
+
 
 <!-- ========================================================================== -->
-<!-- UI 组件模板 (UI Component Templates) -->
+<!-- START: UI 组件模板 (UI Component Templates) -->
+<!-- 这些 <template> 元素包含各种UI组件的HTML结构，JS将克隆并填充它们以动态生成界面。 -->
 <!-- ========================================================================== -->
 <template id="message-template">
     <div class="message">
@@ -673,7 +736,7 @@
 <template id="audio-preview-template">
     <div class="voice-message-preview">
         <span>🎙️ 语音消息 (<span class="preview-duration"></span>)</span>
-        <audio controls class="preview-audio-player" style="display:none;"></audio>
+        <audio controls class="preview-audio-player"></audio>
         <button class="btn-play-preview">播放</button>
         <button class="btn-cancel-preview">取消</button>
     </div>
@@ -696,47 +759,47 @@
         <div class="resource-timestamp"></div>
     </div>
 </template>
+<!-- ========================================================================== -->
+<!-- END: UI 组件模板 (UI Component Templates) -->
+<!-- ========================================================================== -->
 
+
+<!-- ========================================================================== -->
+<!-- START: 脚本加载 (Scripts) -->
+<!-- 脚本加载顺序至关重要，请谨慎修改。管理器之间存在依赖关系。 -->
+<!-- ========================================================================== -->
+
+<!-- 配置文件 (首先加载) -->
 <script src="js/config/LLMProviders.js"></script>
 <script src="js/config/McpTools.js"></script>
-<!-- AppSettings 依赖 LLMProviders -->
-<script src="js/config/AppSettings.js"></script>
+<script src="js/config/AppSettings.js"></script> <!-- AppSettings 依赖 LLMProviders -->
 
-<!-- 脚本加载顺序调整 -->
+<!-- 核心工具与管理器 -->
 <script src="js/ThemeLoader.js"></script>
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>
 <script src="js/DBManager.js"></script>
-<!-- UserManager 依赖 ThemeLoader, AppSettings, Utils, EventEmitter, DBManager -->
 <script src="js/UserManager.js"></script>
-<!-- ConnectionManager 依赖 AppSettings, Utils, EventEmitter, UserManager -->
 <script src="js/WebRTCManager.js"></script>
 <script src="js/TimerManager.js"></script>
 <script src="js/WebSocketManager.js"></script>
 <script src="js/ConnectionManager.js"></script>
-<!-- MediaManager 依赖 AppSettings, Utils, NotificationUIManager, MessageManager, MediaUIManager, EventEmitter -->
 <script src="js/MediaManager.js"></script>
-<!-- VideoCallManager 依赖 AppSettings, Utils, NotificationUIManager, ConnectionManager, UserManager, VideoCallUIManager, ModalUIManager -->
 <script src="js/VideoCallManager.js"></script>
-<!-- MessageManager 依赖 ChatManager, UserManager, ConnectionManager, GroupManager, NotificationUIManager, AiApiHandler, MediaManager, TtsApiHandler, Utils, ModalUIManager, ChatAreaUIManager, UIManager, AppSettings -->
 <script src="js/MessageManager.js"></script>
-<!-- ChatManager 依赖 DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationUIManager, Utils, ModalUIManager -->
 <script src="js/ChatManager.js"></script>
-<!-- GroupManager 依赖 DBManager, UserManager, ChatManager, ConnectionManager, NotificationUIManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager -->
 <script src="js/GroupManager.js"></script>
-<!-- 新增的角色卡管理器脚本 -->
 <script src="js/CharacterCardManager.js"></script>
-
-<!-- ADDED SCRIPT: EmojiStickerUIManager must be loaded before AppInitializer -->
-<script src="js/UI/EmojiStickerUIManager.js"></script>
 <script src="js/MemoryBookManager.js"></script>
+<script src="js/PeopleLobbyManager.js"></script>
 
-<!-- 专业处理器/管理器 -->
+<!-- 专用处理器/处理器 -->
 <script src="js/handler/DataChannelHandler.js"></script>
 <script src="js/handler/AiApiHandler.js"></script>
 <script src="js/handler/TtsApiHandler.js"></script>
 
-<!-- UI组件管理器 -->
+<!-- UI 组件管理器 -->
+<script src="js/UI/EmojiStickerUIManager.js"></script>
 <script src="js/UI/TtsUIManager.js"></script>
 <script src="js/UI/ScreenshotEditorUIManager.js"></script>
 <script src="js/UI/ModalUIManager.js"></script>
@@ -749,9 +812,12 @@
 <script src="js/UI/ResourcePreviewUIManager.js"></script>
 <script src="js/UI/VideoCallUIManager.js"></script>
 <script src="js/UI/MediaUIManager.js"></script>
-<script src="js/PeopleLobbyManager.js"></script>
 
 <!-- 应用初始化程序 (最后加载) -->
 <script src="js/AppInitializer.js"></script>
+<!-- ========================================================================== -->
+<!-- END: 脚本加载 (Scripts) -->
+<!-- ========================================================================== -->
+
 </body>
 </html>

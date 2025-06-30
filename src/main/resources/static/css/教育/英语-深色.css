@@ -4,6 +4,10 @@
 |                📚 LexiLearn - Word Weavers (Dark Theme) 📚                  |
 |                                                                              |
 ================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained dark theme file for the LexiLearn English learning environment.
+*
 */
 
 :root {
@@ -26,699 +30,165 @@
 
     /* Accent Colors (remain vibrant) */
     --ll-primary-green-rgb: 16, 185, 129;   /* #10B981 - Emerald Green */
-    --ll-secondary-blue-rgb: 59, 130, 246;  /* #3B82F6 - Bright Blue */
+    --ll-secondary-blue-rgb: 96, 165, 250;  /* #60A5FA - Brighter Blue for Dark Mode */
 
     --ll-border-strong-rgb: 55, 65, 81;     /* #374151 - Dark Grey Border */
     --ll-border-light-rgb: 43, 52, 69;      /* #2B3445 - Subtle Dark Border */
     --ll-border-interactive-rgb: var(--ll-secondary-blue-rgb);
 
-    /* Status & Feedback (remain vibrant) */
-    --ll-status-online-rgb: var(--ll-primary-green-rgb);
     --ll-status-notification-rgb: 239, 68, 68; /* #EF4444 - Red */
-    --ll-highlight-yellow-rgb: 250, 204, 21;    /* #FACC15 - Sun Yellow (was #FDE047, made slightly stronger) */
-
-    /* Shadows (dark theme adjustments) */
-    --ll-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.15);
-    --ll-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.15);
-    --ll-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.15);
-    --ll-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.15);
     --ll-shadow-focus-ring: 0 0 0 3px rgba(var(--ll-secondary-blue-rgb), 0.4);
-    --ll-shadow-glow-accent: 0 0 8px rgba(var(--ll-primary-green-rgb), 0.2); /* For subtle glows */
+    --ll-shadow-glow-accent: 0 0 8px rgba(var(--ll-primary-green-rgb), 0.2);
 
-    /* 通用 UI 配色 */
-    --color-primary: rgb(var(--ll-primary-green-rgb));
-    --color-accent: rgb(var(--ll-secondary-blue-rgb));
-    --color-background-body: rgb(var(--ll-bg-main-rgb));
-    --color-background-container: rgb(var(--ll-bg-container-rgb));
-    --color-background-elevated: rgb(var(--ll-bg-elevated-rgb));
+    /* --- 语义化颜色变量覆盖 (Semantic Overrides) --- */
+    --brand-rgb: var(--ll-primary-green-rgb);
+    --brand-dark-rgb: 12, 148, 103;
+    --text-on-brand-rgb: 255, 255, 255;
 
-    --color-text-primary: rgb(var(--ll-text-primary-rgb));
-    --color-text-secondary: rgb(var(--ll-text-secondary-rgb));
-    --color-text-placeholder: rgb(var(--ll-text-placeholder-rgb));
-    --color-text-on-accent: white; /* Text on primary/accent color backgrounds */
-    --color-text-link: rgb(var(--ll-secondary-blue-rgb));
+    --surface-1-rgb: var(--ll-bg-sidebar-rgb);
+    --surface-2-rgb: var(--ll-bg-container-rgb);
+    --surface-hover-rgb: var(--ll-bg-subtle-accent-rgb);
+    --surface-active-rgb: 45, 52, 65; /* Dark blue/grey for active items */
 
-    --color-border-primary: rgb(var(--ll-primary-green-rgb));
-    --color-border-secondary: rgb(var(--ll-border-light-rgb));
-    --color-border-interactive: rgb(var(--ll-border-interactive-rgb));
+    --text-primary-rgb: var(--ll-text-primary-rgb);
+    --text-secondary-rgb: var(--ll-text-secondary-rgb);
+    --text-on-accent-rgb: 255, 255, 255;
 
-    --color-status-online: rgb(var(--ll-status-online-rgb));
-    --color-status-notification: rgb(var(--ll-status-notification-rgb));
-    --color-shadow-soft: var(--ll-shadow-sm);
-    --color-shadow-medium: var(--ll-shadow-md);
+    --border-subtle-rgb: var(--ll-border-light-rgb);
+    --border-strong-rgb: var(--ll-border-strong-rgb);
 
-    /* 消息气泡 (Dark Theme) */
-    --color-message-sent-bg: linear-gradient(135deg, rgb(var(--ll-primary-green-rgb),0.9), rgb(var(--ll-primary-green-rgb), 0.7));
-    --color-message-sent-text: white;
-    --color-message-received-bg: rgb(var(--ll-bg-elevated-rgb));
-    --color-message-received-text: rgb(var(--ll-text-primary-rgb));
-    --color-message-system-bg: rgba(var(--ll-bg-main-rgb), 0.8);
-    --color-message-system-text: rgb(var(--ll-text-secondary-rgb));
-    --color-message-system-border: rgb(var(--ll-border-light-rgb));
+    --accent-success-rgb: var(--ll-primary-green-rgb);
+    --accent-danger-rgb: var(--ll-status-notification-rgb);
+    --accent-info-rgb: var(--ll-secondary-blue-rgb);
 
-    /* Character Palettes - RGBs remain same, msg backgrounds change */
-    /* Professor Lex - Guiding, Clear, Green/Yellow Tones */
-    --ll-char-lex-primary-rgb: 16, 185, 129;    /* #10B981 (Emerald Green) */
-    --ll-char-lex-secondary-rgb: 167, 243, 208; /* #A7F3D0 (Light Emerald) */
-    --ll-char-lex-accent-rgb: 250, 204, 21;     /* #FACC15 (Sun Yellow) */
-    --ll-char-lex-msg-bg-dark: linear-gradient(135deg, #162b23, #1f3a31);
+    /* --- 组件级颜色变量覆盖 (Component-level Overrides) --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgb(var(--surface-2-rgb));
+    --chat-bg-color: rgb(var(--ll-bg-main-rgb));
+    --input-bg-color: rgb(var(--ll-bg-elevated-rgb));
 
-    /* Dr. Origin - Historical, Scholarly, Blue/Grey Tones */
-    --ll-char-origin-primary-rgb: 59, 130, 246; /* #3B82F6 (Bright Blue) */
-    --ll-char-origin-secondary-rgb: 147, 197, 253;/* #93C5FD (Sky Blue) */
-    --ll-char-origin-accent-rgb: 107, 114, 128; /* #6B7280 (Slate Grey) */
-    --ll-char-origin-msg-bg-dark: linear-gradient(135deg, #1a273f, #22334f);
+    --sent-bg-color: linear-gradient(135deg, rgb(var(--ll-primary-green-rgb),0.9), rgb(var(--ll-primary-green-rgb), 0.7));
+    --text-on-sent: white;
+    --received-bg-color: rgb(var(--ll-bg-elevated-rgb));
+    --text-on-received: rgb(var(--text-primary-rgb));
 
-    /* Pattern Penny - Analytical, Bright, Orange/Amber Tones */
-    --ll-char-penny-primary-rgb: 245, 158, 11;  /* #F59E0B (Amber) */
-    --ll-char-penny-secondary-rgb: 252, 211, 77;/* #FCD34D (Light Amber) */
-    --ll-char-penny-accent-rgb: 234, 88, 12;   /* #EA580C (Deep Orange) */
-    --ll-char-penny-msg-bg-dark: linear-gradient(135deg, #3a2e15, #473a1e);
-
-    /* Context Cody - Practical, Engaging, Purple/Pink Tones */
-    --ll-char-cody-primary-rgb: 139, 92, 246;   /* #8B5CF6 (Violet) */
-    --ll-char-cody-secondary-rgb: 196, 181, 253;/* #C4B5FD (Light Violet) */
-    --ll-char-cody-accent-rgb: 236, 72, 153;    /* #EC4899 (Pink) */
-    --ll-char-cody-msg-bg-dark: linear-gradient(135deg, #2c2242, #392d53);
-
-    /* 刘彬老师 - Scholarly, Wise, Teal/Gold Tones */
-    --ll-char-liubin-primary-rgb: 10, 126, 140;   /* #0A7E8C (Deep Teal) */
-    --ll-char-liubin-secondary-rgb: 162, 213, 218; /* #A2D5DA (Light Teal) */
-    --ll-char-liubin-accent-rgb: 230, 184, 92;    /* #E6B85C (Gold-ish Yellow) */
-    --ll-char-liubin-msg-bg-dark: linear-gradient(135deg, #0d3f4f, #115061); /* Dark Cyan gradient */
-
-    /* ------------------------- ✒️ 字体排版 -------------------------- */
-    --font-family: "Nunito Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-size-base: 15px;
-    --font-size-small: 13px;
-    --font-size-large: 18px;
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "Nunito Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
     --line-height-base: 1.65;
 
-    /* ------------------------- ✨ 整体风格参数 ------------------------ */
-    --border-radius-small: 4px;
+    /* --- 边框与阴影覆盖 --- */
     --border-radius-medium: 8px;
     --border-radius-large: 12px;
-    --shadow-elevation-1: var(--ll-shadow-sm);
-    --shadow-elevation-2: var(--ll-shadow-md);
-    --shadow-elevation-3: var(--ll-shadow-lg);
-    --shadow-ornate: var(--ll-shadow-sm);
-    --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-medium: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --box-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.15);
+    --box-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.15);
+    --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.15);
 
+    /* --- 滚动条覆盖 --- */
     --scrollbar-track-color: rgba(var(--ll-bg-main-rgb), 0.5);
     --scrollbar-thumb-color: rgba(var(--ll-text-secondary-rgb), 0.3);
     --scrollbar-thumb-hover-color: rgba(var(--ll-secondary-blue-rgb), 0.5);
-    --scrollbar-size: 7px;
+
+    /* --- 角色颜色定义 (供主题CSS使用) --- */
+    --ll-char-liubin-primary-rgb: 44, 192, 212;   /* Brighter Teal */
+    --ll-char-liubin-msg-bg-dark: linear-gradient(135deg, #0d3f4f, #115061);
+
+    --ll-char-wangfei-primary-rgb: 96, 165, 250;   /* Brighter Blue */
+    --ll-char-wangfei-msg-bg-dark: linear-gradient(135deg, #1e293b, #28354c);
+
+    --ll-char-kevin-primary-rgb: 251, 146, 60;  /* Bright Orange */
+    --ll-char-kevin-msg-bg-dark: linear-gradient(135deg, #3d2c1d, #4b3720);
+
+    --ll-char-hughes-primary-rgb: 174, 188, 206; /* Steel Blue */
+    --ll-char-hughes-msg-bg-dark: linear-gradient(135deg, #2a3240, #313a4a);
+
+    --ll-char-sarah-primary-rgb: 244, 114, 182;  /* Bright Pink */
+    --ll-char-sarah-msg-bg-dark: linear-gradient(135deg, #3c2131, #4a293c);
+
+    --ll-char-lijing-primary-rgb: 239, 68, 68;    /* Bright Red */
+    --ll-char-lijing-msg-bg-dark: linear-gradient(135deg, #451a1a, #542222);
+
+    --ll-char-david-primary-rgb: 59, 130, 246;   /* Standard Bright Blue */
+    --ll-char-david-msg-bg-dark: linear-gradient(135deg, #1f2d48, #263655);
 }
 
-
 /* ------------------------- 🌍 全局与基础样式 ------------------------ */
-*, *::before, *::after { box-sizing: border-box; }
-
 body {
-    font-family: var(--font-family);
-    font-size: var(--font-size-base);
-    line-height: var(--line-height-base);
-    color: var(--color-text-primary);
-    background-color: var(--color-background-body);
-    /* Dark subtle pattern */
+    background-color: var(--chat-bg-color);
     background-image: url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='10' height='10' fill='%23171B23'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='%232B3445'/%3E%3C/svg%3E");
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
 }
 
-a {
-    color: var(--color-text-link);
-    text-decoration: none;
-    transition: var(--transition-fast);
-}
-a:hover {
-    color: rgb(var(--ll-primary-green-rgb));
-    text-decoration: underline;
-}
-
-img { max-width: 100%; display: block; }
-
-/* Scrollbar Styling */
-::-webkit-scrollbar { width: var(--scrollbar-size); height: var(--scrollbar-size); }
-::-webkit-scrollbar-track { background-color: var(--scrollbar-track-color); border-radius: var(--border-radius-medium); }
-::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb-color);
-    border-radius: var(--border-radius-medium);
-    border: 2px solid transparent;
-    background-clip: content-box;
-}
 ::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover-color); }
-
 
 /* ------------------------- 🏛️ 页面结构与容器 ------------------------ */
 .app-container {
-    display: flex;
-    background-color: var(--color-background-container);
-    box-shadow: var(--ll-shadow-lg), 0 0 0 1px rgba(var(--ll-border-light-rgb), 0.5); /* Add subtle edge */
-    overflow: hidden;
-    border: 1px solid var(--color-border-secondary);
+    box-shadow: var(--box-shadow-lg), 0 0 0 1px rgba(var(--border-subtle-rgb), 0.5);
+    border: 1px solid rgb(var(--border-subtle-rgb));
     border-radius: var(--border-radius-large);
 }
 
-/* ------------------------- 🧭 侧边栏 .sidebar-nav -------------------- */
-.sidebar-nav {
-    background-color: rgb(var(--ll-bg-sidebar-rgb));
-    border-right: 1px solid var(--color-border-secondary);
-    display: flex; flex-direction: column;
-    position: relative; overflow-y: auto;
-}
+.chat-header-main, .details-header { box-shadow: var(--box-shadow-sm); z-index: 10; }
+.chat-input-container { box-shadow: 0 -1px 3px rgba(0,0,0, 0.1); }
 
-.search-bar { position: relative; }
-.search-bar input[type="text"] {
-    border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-border-secondary);
-    background-color: var(--color-background-elevated);
-    color: var(--color-text-primary);
-    font-family: var(--font-family);
-    transition: var(--transition-medium);
-    box-shadow: var(--ll-shadow-xs);
-}
-.search-bar input[type="text"]::placeholder { color: var(--color-text-placeholder); }
-.search-bar input[type="text"]:focus {
-    outline: none;
-    border-color: var(--color-border-interactive);
-    box-shadow: var(--ll-shadow-focus-ring), var(--ll-shadow-xs);
-}
-.search-bar::before { /* Search Icon (SVG for dark) */
-    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236B7280' width='16' height='16'%3E%3Cpath fill-rule='evenodd' d='M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z' clip-rule='evenodd'/%3E%3C/svg%3E");
-    position: absolute; left: 12px; top: 50%;
-    transform: translateY(-50%); opacity: 0.7;
-}
-
-.chat-list { list-style: none; overflow-y: auto; flex-grow: 1; }
-.chat-list-item {
-    display: flex; align-items: center;
-    border-radius: var(--border-radius-medium);
-    cursor: pointer;
-    transition: background-color var(--transition-fast), border-left-color var(--transition-fast);
-    border: 1px solid transparent;
-    border-left: 4px solid transparent;
-    position: relative;
-}
-.chat-list-item:hover { background-color: rgb(var(--ll-bg-subtle-accent-rgb)); }
-.chat-list-item.active {
-    background-color: rgba(var(--ll-primary-green-rgb), 0.15); /* Dark mode active bg */
-}
-.chat-list-item.active .chat-list-name {
-    color: rgb(var(--ll-primary-green-rgb)); /* Green for active name */
-    font-weight: 600;
-}
-
-.chat-list-avatar {
-    border-radius: 50%; object-fit: cover;
-    background-color: rgb(var(--ll-border-strong-rgb)); /* Darker placeholder */
-    border: 2px solid transparent;
-    box-shadow: var(--ll-shadow-xs);
-}
-.chat-list-item.active .chat-list-avatar {
-    box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px var(--color-primary);
-}
-
-.chat-list-details { flex-grow: 1; overflow: hidden; }
-.chat-list-name {
-    font-weight: 500; font-size: var(--font-size-base);
-    color: var(--color-text-primary);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.chat-list-preview {
-    font-size: var(--font-size-small); color: var(--color-text-secondary);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.chat-list-badge {
-    background-color: var(--color-status-notification); color: white;
-    font-size: 11px; font-weight: bold;
-    min-width: 20px; text-align: center;
-    border-radius: 10px;
-}
-
-
-/* ------------------------- 📜 聊天主区 .chat-area -------------------- */
-.chat-area {
-    flex-grow: 1; display: flex; flex-direction: column;
-    background-color: var(--color-background-body); /* Darkest part for chat messages */
-    overflow: hidden;
-}
-
-.chat-header-main {
-    border-bottom: 1px solid var(--color-border-secondary);
-    background: rgb(var(--ll-bg-container-rgb)); /* Match app container bg */
-    display: flex; align-items: center;
-    box-shadow: var(--ll-shadow-sm); z-index: 10;
-}
-.chat-avatar-main {
-    border-radius: 50%; object-fit: cover;
-    border: 3px solid rgb(var(--ll-bg-container-rgb)); /* Char accent border */
-    box-shadow: var(--ll-shadow-sm);
-}
-.chat-title-main {
-    font-size: var(--font-size-large); font-weight: 600;
-    color: var(--color-text-primary);
-}
-.chat-status-main {
-    font-size: var(--font-size-small); color: var(--color-text-secondary);
-    display: flex; align-items: center;
-}
-.chat-status-main::before {
-    content: ''; display: inline-block;
-    border-radius: 50%; background-color: var(--color-status-online);
-    animation: pulse-ll-dark 2s infinite;
-    box-shadow: 0 0 0 0 rgba(var(--ll-primary-green-rgb), 0.7);
-}
-@keyframes pulse-ll-dark {
-    0% { box-shadow: 0 0 0 0 rgba(var(--ll-primary-green-rgb), 0.6); }
-    70% { box-shadow: 0 0 0 6px rgba(var(--ll-primary-green-rgb), 0); }
-    100% { box-shadow: 0 0 0 0 rgba(var(--ll-primary-green-rgb), 0); }
-}
-
-.chat-messages {
-    flex-grow: 1; overflow-y: auto;
-    display: flex; flex-direction: column-reverse;
-    /* Faint notebook lines for dark mode */
-    background-image:
-            linear-gradient(to bottom, transparent  calc(1.65em - 1px), rgba(var(--ll-secondary-blue-rgb), 0.06) calc(1.65em - 1px), rgba(var(--ll-secondary-blue-rgb), 0.06) 1.65em);
+/* Chat Area Notebook Lines */
+.chat-messages-container {
+    background-image: linear-gradient(to bottom, transparent calc(1.65em - 1px), rgba(var(--ll-secondary-blue-rgb), 0.06) calc(1.65em - 1px), rgba(var(--ll-secondary-blue-rgb), 0.06) 1.65em);
     background-size: 100% 1.65em;
     background-position: 0 0.5em;
 }
-.chat-messages > div { display: flex; flex-direction: column; gap: 12px; }
 
-
-.no-chat-selected {
-    flex-grow: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; text-align: center;
-    color: var(--color-text-secondary);
-    background-color: rgb(var(--ll-bg-container-rgb)); /* Match app container */
-}
-.no-chat-selected .logo-placeholder {
-    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='1' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'%3E%3C/path%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'%3E%3C/path%3E%3C/svg%3E");
-    opacity: 0.5; margin-bottom: 16px;
-}
-.no-chat-selected p { font-size: var(--font-size-large); font-weight: 500; }
-
-/* 💬 消息气泡 .message */
-.message {
-    max-width: 78%; border-radius: var(--border-radius-large);
-    box-shadow: var(--ll-shadow-sm); word-wrap: break-word;
-    position: relative; line-height: 1.5;
-}
-.message::before {
-    content: ""; position: absolute; bottom: 1px;
-    width: 0; height: 0; border: 8px solid transparent;
-}
-
-.message.sent {
-    background: var(--color-message-sent-bg); color: var(--color-message-sent-text);
-    align-self: flex-end; border-bottom-right-radius: var(--border-radius-small);
-}
-.message.sent::before {
-    right: -8px; border-left-color: rgb(var(--ll-primary-green-rgb), 0.7);
-    border-right-width: 0; border-bottom-width: 0;
-    transform: translateY(-3px) scaleX(0.9);
-}
-
-.message.received {
-    background-color: var(--color-message-received-bg); color: var(--color-message-received-text);
-    align-self: flex-start; border-bottom-left-radius: var(--border-radius-small);
-    border: 1px solid var(--color-border-secondary);
-}
-.message.received::before {
-    left: -8px; border-right-color: var(--color-message-received-bg);
-    border-left-width: 0; border-bottom-width: 0;
-    transform: translateY(-3px) scaleX(0.9);
-    filter: drop-shadow(-1px 0px 0px rgba(var(--ll-border-light-rgb),0.7));
-}
-
-.message-sender {
-    font-size: var(--font-size-small); font-weight: 600;
-    color: var(--color-text-secondary);
-}
-.message-timestamp {
-    font-size: 11px; color: rgba(var(--ll-text-secondary-rgb), 0.7);
-    text-align: right;
-}
-.message.received .message-timestamp { text-align: left; }
-
+/* ------------------------- 💬 消息气泡 ------------------------ */
 .message.system {
-    align-self: center; background-color: var(--color-message-system-bg);
-    color: var(--color-message-system-text); font-size: var(--font-size-small);
-    border-radius: var(--border-radius-medium);
-    border: 1px dashed var(--color-message-system-border);
-    max-width: 90%; text-align: center; box-shadow: none;
+    background-color: rgba(var(--ll-bg-main-rgb), 0.8);
+    color: rgb(var(--text-secondary-rgb));
+    border: 1px dashed rgb(var(--border-subtle-rgb));
 }
-.message.system::before { display: none; }
-
-
-/* ⌨️ 输入区 .chat-input-container */
-.chat-input-container {
-    border-top: 1px solid var(--color-border-secondary);
-    background-color: rgb(var(--ll-bg-sidebar-rgb));
-    display: flex;
-    box-shadow: 0 -1px 3px rgba(0,0,0, 0.1);
-}
-.chat-input-container textarea {
-    flex-grow: 1; border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-border-secondary);
-    background-color: var(--color-background-elevated);
-    font-family: var(--font-family); font-size: var(--font-size-base);
-    color: var(--color-text-primary); resize: none;
-    transition: var(--transition-medium); box-shadow: var(--ll-shadow-xs);
-}
-.chat-input-container textarea::placeholder { color: var(--color-text-placeholder); }
-.chat-input-container textarea:focus {
-    outline: none; border-color: var(--color-border-interactive);
-    box-shadow: var(--ll-shadow-focus-ring), var(--ll-shadow-xs);
-}
-
-#sendButtonMain {
-    border-radius: var(--border-radius-medium);
-    background-color: var(--color-primary); color: var(--color-text-on-accent);
-    border: none; cursor: pointer;
-    font-family: var(--font-family); font-weight: 600;
-    transition: var(--transition-fast); box-shadow: var(--ll-shadow-sm);
-    display: flex; align-items: center; justify-content: center;
-}
-#sendButtonMain:hover {
-    background-color: rgb(var(--ll-primary-green-rgb), 0.85);
-    box-shadow: var(--ll-shadow-md), var(--ll-shadow-glow-accent);
-}
-#sendButtonMain:active { transform: translateY(1px); box-shadow: var(--ll-shadow-xs); }
-#sendButtonMain::after { /* SVG icon */
-    display: inline-block; line-height: 1;
-}
-
-
-/* ℹ️ 详情面板 .details-panel */
-.details-panel {
-    background-color: rgb(var(--ll-bg-sidebar-rgb));
-    border-left: 1px solid var(--color-border-secondary);
-    overflow-y: auto; color: var(--color-text-secondary);
-}
-.details-panel .details-header {
-    text-align: center; border-bottom: 1px solid var(--color-border-secondary);
-    background: linear-gradient(to bottom, rgb(var(--ll-bg-container-rgb)), rgb(var(--ll-bg-sidebar-rgb)));
-}
-.details-panel .details-avatar {
-    border-radius: 50%; object-fit: cover;
-    border: 4px solid rgb(var(--ll-bg-sidebar-rgb));
-    box-shadow: 0 0 0 4px rgb(var(--ll-bg-sidebar-rgb)), 0 0 15px 2px rgba(var(--ll-secondary-blue-rgb),0.3);
-}
-.details-panel .details-name {
-    font-weight: 700; font-size: 1.1em; color: var(--color-text-primary);
-}
-.details-panel .details-title {
-    font-size: var(--font-size-small); color: var(--color-text-secondary); font-style: italic;
-}
-.details-section { }
-.details-section-title {
-    font-size: var(--font-size-base); font-weight: 600;
-    color: var(--color-text-primary);
-    border-bottom: 2px solid rgb(var(--ll-primary-green-rgb), 0.8);
-    position: relative; display: inline-block;
-}
-.details-info-item { display: flex; font-size: var(--font-size-small); }
-.details-info-label {
-    font-weight: 600; color: var(--color-text-primary);
-    flex-shrink: 0; min-width: 70px;
-}
-.details-info-value { color: var(--color-text-secondary); flex-grow: 1; }
-.details-about-text {
-    font-size: var(--font-size-small); color: var(--color-text-secondary);
-    white-space: pre-wrap;
-    background-color: rgb(var(--ll-bg-elevated-rgb));
-    border-radius: var(--border-radius-medium);
-    border: 1px solid var(--color-border-secondary);
-}
-
-
-/* 🔘 按钮 .btn */
-.btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    padding: 8px 16px;
-    font-family: var(--font-family); font-size: var(--font-size-base);
-    font-weight: 600; text-align: center; text-decoration: none;
-    border-radius: var(--border-radius-medium); cursor: pointer;
-    transition: var(--transition-fast);
-    border: 1px solid transparent; box-shadow: var(--ll-shadow-sm);
-}
-.btn:hover { box-shadow: var(--ll-shadow-md), var(--ll-shadow-glow-accent); }
-.btn:active { transform: translateY(1px); box-shadow: var(--ll-shadow-xs); }
-
-.btn-primary {
-    background-color: var(--color-primary); color: var(--color-text-on-accent);
-    border-color: var(--color-primary);
-}
-.btn-primary:hover { background-color: rgb(var(--ll-primary-green-rgb), 0.85); }
-
-.btn-secondary {
-    background-color: rgb(var(--ll-bg-elevated-rgb)); color: var(--color-text-primary);
-    border-color: var(--color-border-secondary);
-}
-.btn-secondary:hover { background-color: rgb(var(--ll-border-strong-rgb)); }
-
-
-/* 🖼️ 弹窗 .modal-content */
-.modal-overlay {
-    position: fixed; top: 0; left: 0;
-    background-color: rgba(var(--ll-bg-main-rgb), 0.7); /* Darker overlay */
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000;
-}
-.modal-content {
-    background-color: var(--color-background-container);
-    border-radius: var(--border-radius-large);
-    box-shadow: var(--ll-shadow-lg), 0 0 0 1px rgba(var(--ll-border-light-rgb), 0.7);
-    border: 1px solid var(--color-border-secondary); position: relative;
-}
-.modal-header {
-    font-weight: 600; font-size: var(--font-size-large);
-    color: var(--color-text-primary);
-    border-bottom: 1px solid var(--color-border-secondary);
-    border-top: 4px solid var(--color-primary);
-    border-top-left-radius: var(--border-radius-large);
-    border-top-right-radius: var(--border-radius-large);
-}
-.modal-body { }
-.modal-footer {
-    display: flex; justify-content: flex-end;
-    gap: 10px; border-top: 1px solid var(--color-border-secondary);
-}
-.modal-close-button {
-    position: absolute; top: 12px; right: 12px;
-    background: none; border: none;
-    color: var(--color-text-secondary); cursor: pointer;
-    border-radius: 50%; width: 32px; height: 32px;
-    display: flex; align-items: center; justify-content: center;
-    transition: background-color var(--transition-fast), color var(--transition-fast);
-}
-.modal-close-button:hover {
-    background-color: rgb(var(--ll-bg-subtle-accent-rgb));
-    color: var(--color-primary);
-}
-.modal-close-button::after {
-    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239CA3AF' width='20' height='20'%3E%3Cpath d='M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z'/%3E%3C/svg%3E");
-}
-.modal-close-button:hover::after {
-    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2310B981' width='20' height='20'%3E%3Cpath d='M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z'/%3E%3C/svg%3E");
-}
-
-/* ------------------------- 👤 Character Specific Styles (Dark Mode) -------------------------- */
-
-/* 👨‍🏫 刘彬老师 (Liu Bin) */
-.chat-list-item.active.AI_LiuBin_CiHuiDaShi { border-left-color: rgb(var(--ll-char-liubin-primary-rgb)); }
-.chat-list-item.active.AI_LiuBin_CiHuiDaShi .chat-list-name { color: rgb(var(--ll-char-liubin-primary-rgb)); }
-.chat-list-item.active.AI_LiuBin_CiHuiDaShi .chat-list-avatar,
-.chat-avatar-main.AI_LiuBin_CiHuiDaShi {
-    border-color: rgb(var(--ll-char-liubin-primary-rgb));
-    box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-liubin-primary-rgb)), 0 0 10px rgba(var(--ll-char-liubin-primary-rgb),0.3);
-}
-.chat-header-main.current-chat-AI_LiuBin_CiHuiDaShi .chat-title-main { color: rgb(var(--ll-char-liubin-primary-rgb)); }
-.message.received[data-sender-id="AI_LiuBin_CiHuiDaShi"] {
-    border-left: 4px solid rgb(var(--ll-char-liubin-primary-rgb));
-    background: var(--ll-char-liubin-msg-bg-dark);
-}
-.message.received[data-sender-id="AI_LiuBin_CiHuiDaShi"] .message-sender { color: rgb(var(--ll-char-liubin-primary-rgb)); }
-.details-panel.AI_LiuBin_CiHuiDaShi .details-avatar {
-    box-shadow: 0 0 0 4px rgb(var(--ll-bg-sidebar-rgb)), 0 0 15px 2px rgba(var(--ll-char-liubin-primary-rgb),0.5);
-}
-.details-panel.AI_LiuBin_CiHuiDaShi .details-name { color: rgb(var(--ll-char-liubin-primary-rgb)); }
-.details-panel.AI_LiuBin_CiHuiDaShi .details-section-title { border-bottom-color: rgb(var(--ll-char-liubin-primary-rgb)); }
 
 /*
 ================================================================================
-|                     👤 Additional Character Styles (Dark)                     |
+|                            👤 角色专属样式 👤                              |
 ================================================================================
 */
 
-/* ------------------------- 👩‍🏫 王菲老师 (语法) - 清晰、逻辑 (亮蓝+淡紫) -------------------------- */
-:root {
-    --ll-char-wangfei-primary-rgb: 96, 165, 250;   /* #60A5FA - Lighter, Brighter Blue for dark mode */
-    --ll-char-wangfei-accent-rgb: 196, 181, 253; /* #C4B5FD - Light Lavender */
-    --ll-char-wangfei-msg-bg-dark: linear-gradient(135deg, #1e293b, #28354c); /* Deep Indigo/Blue */
-}
+/* --- 👨‍🏫 刘彬老师 (词汇) --- */
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi, .message.received.character-message.AI_LiuBin_CiHuiDaShi { border-left-color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi .chat-list-name, .chat-header-main.character-active.AI_LiuBin_CiHuiDaShi .chat-title-main, .message.received.character-message.AI_LiuBin_CiHuiDaShi .message-sender, .details-panel.character-active.AI_LiuBin_CiHuiDaShi #detailsName, .details-panel.AI_LiuBin_CiHuiDaShi .details-section-title { color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi .chat-list-avatar, .chat-avatar-main.AI_LiuBin_CiHuiDaShi, .details-panel.AI_LiuBin_CiHuiDaShi .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-liubin-primary-rgb)), 0 0 10px rgba(var(--ll-char-liubin-primary-rgb),0.3); border-color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.message.received.character-message.AI_LiuBin_CiHuiDaShi { background: var(--ll-char-liubin-msg-bg-dark); }
 
-.chat-list-item.active.AI_WangFei_YuFaDaShi { border-left-color: rgb(var(--ll-char-wangfei-primary-rgb)); }
-.chat-list-item.active.AI_WangFei_YuFaDaShi .chat-list-name { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
-.chat-list-item.active.AI_WangFei_YuFaDaShi .chat-list-avatar,
-.chat-avatar-main.AI_WangFei_YuFaDaShi {
-    border-color: rgb(var(--ll-char-wangfei-primary-rgb));
-    box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-wangfei-primary-rgb)), 0 0 10px rgba(var(--ll-char-wangfei-primary-rgb),0.3);
-}
-.chat-header-main.current-chat-AI_WangFei_YuFaDaShi .chat-title-main { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
-.message.received[data-sender-id="AI_WangFei_YuFaDaShi"] {
-    border-left: 4px solid rgb(var(--ll-char-wangfei-primary-rgb));
-    background: var(--ll-char-wangfei-msg-bg-dark);
-}
-.message.received[data-sender-id="AI_WangFei_YuFaDaShi"] .message-sender { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
-.details-panel.AI_WangFei_YuFaDaShi .details-avatar {
-    box-shadow: 0 0 0 4px rgb(var(--ll-bg-sidebar-rgb)), 0 0 15px 2px rgba(var(--ll-char-wangfei-primary-rgb),0.4);
-}
-.details-panel.AI_WangFei_YuFaDaShi .details-name { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
-.details-panel.AI_WangFei_YuFaDaShi .details-section-title { border-bottom-color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+/* --- 👩‍🏫 王菲老师 (语法) --- */
+.chat-list-item.active.AI_WangFei_YuFaDaShi, .message.received.character-message.AI_WangFei_YuFaDaShi { border-left-color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.chat-list-item.active.AI_WangFei_YuFaDaShi .chat-list-name, .chat-header-main.character-active.AI_WangFei_YuFaDaShi .chat-title-main, .message.received.character-message.AI_WangFei_YuFaDaShi .message-sender, .details-panel.character-active.AI_WangFei_YuFaDaShi #detailsName, .details-panel.AI_WangFei_YuFaDaShi .details-section-title { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.chat-list-item.active.AI_WangFei_YuFaDaShi .chat-list-avatar, .chat-avatar-main.AI_WangFei_YuFaDaShi, .details-panel.AI_WangFei_YuFaDaShi .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-wangfei-primary-rgb)), 0 0 10px rgba(var(--ll-char-wangfei-primary-rgb),0.3); border-color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.message.received.character-message.AI_WangFei_YuFaDaShi { background: var(--ll-char-wangfei-msg-bg-dark); }
 
+/* --- 👨‍🎤 Kevin老师 (口语) --- */
+.chat-list-item.active.AI_Kevin_KouYuTingLi, .message.received.character-message.AI_Kevin_KouYuTingLi { border-left-color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.chat-list-item.active.AI_Kevin_KouYuTingLi .chat-list-name, .chat-header-main.character-active.AI_Kevin_KouYuTingLi .chat-title-main, .message.received.character-message.AI_Kevin_KouYuTingLi .message-sender, .details-panel.character-active.AI_Kevin_KouYuTingLi #detailsName, .details-panel.AI_Kevin_KouYuTingLi .details-section-title { color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.chat-list-item.active.AI_Kevin_KouYuTingLi .chat-list-avatar, .chat-avatar-main.AI_Kevin_KouYuTingLi, .details-panel.AI_Kevin_KouYuTingLi .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-kevin-primary-rgb)), 0 0 10px rgba(var(--ll-char-kevin-primary-rgb),0.3); border-color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.message.received.character-message.AI_Kevin_KouYuTingLi { background: var(--ll-char-kevin-msg-bg-dark); }
 
-/* ------------------------- 👨‍🎤 Kevin老师 (口语) - 活力、潮流 (亮橙+黄色) -------------------------- */
-:root {
-    --ll-char-kevin-primary-rgb: 251, 146, 60;  /* #FB923C - Bright Orange */
-    --ll-char-kevin-accent-rgb: 250, 204, 21;   /* #FACC15 - Sun Yellow */
-    --ll-char-kevin-msg-bg-dark: linear-gradient(135deg, #3d2c1d, #4b3720); /* Dark Orange/Brown */
-}
+/* --- 👨‍🎓 休斯博士 (阅读) --- */
+.chat-list-item.active.AI_DrHughes_YueDuLiJie, .message.received.character-message.AI_DrHughes_YueDuLiJie { border-left-color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.chat-list-item.active.AI_DrHughes_YueDuLiJie .chat-list-name, .chat-header-main.character-active.AI_DrHughes_YueDuLiJie .chat-title-main, .message.received.character-message.AI_DrHughes_YueDuLiJie .message-sender, .details-panel.character-active.AI_DrHughes_YueDuLiJie #detailsName, .details-panel.AI_DrHughes_YueDuLiJie .details-section-title { color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.chat-list-item.active.AI_DrHughes_YueDuLiJie .chat-list-avatar, .chat-avatar-main.AI_DrHughes_YueDuLiJie, .details-panel.AI_DrHughes_YueDuLiJie .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-hughes-primary-rgb)), 0 0 10px rgba(var(--ll-char-hughes-primary-rgb),0.3); border-color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.message.received.character-message.AI_DrHughes_YueDuLiJie { background: var(--ll-char-hughes-msg-bg-dark); }
 
-.chat-list-item.active.AI_Kevin_KouYuTingLi { border-left-color: rgb(var(--ll-char-kevin-primary-rgb)); }
-.chat-list-item.active.AI_Kevin_KouYuTingLi .chat-list-name { color: rgb(var(--ll-char-kevin-primary-rgb)); }
-.chat-list-item.active.AI_Kevin_KouYuTingLi .chat-list-avatar,
-.chat-avatar-main.AI_Kevin_KouYuTingLi {
-    border-color: rgb(var(--ll-char-kevin-primary-rgb));
-    box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-kevin-primary-rgb)), 0 0 10px rgba(var(--ll-char-kevin-primary-rgb),0.3);
-}
-.chat-header-main.current-chat-AI_Kevin_KouYuTingLi .chat-title-main { color: rgb(var(--ll-char-kevin-primary-rgb)); }
-.message.received[data-sender-id="AI_Kevin_KouYuTingLi"] {
-    border-left: 4px solid rgb(var(--ll-char-kevin-primary-rgb));
-    background: var(--ll-char-kevin-msg-bg-dark);
-}
-.message.received[data-sender-id="AI_Kevin_KouYuTingLi"] .message-sender { color: rgb(var(--ll-char-kevin-primary-rgb)); }
-.details-panel.AI_Kevin_KouYuTingLi .details-avatar {
-    box-shadow: 0 0 0 4px rgb(var(--ll-bg-sidebar-rgb)), 0 0 15px 2px rgba(var(--ll-char-kevin-primary-rgb),0.4);
-}
-.details-panel.AI_Kevin_KouYuTingLi .details-name { color: rgb(var(--ll-char-kevin-primary-rgb)); }
-.details-panel.AI_Kevin_KouYuTingLi .details-section-title { border-bottom-color: rgb(var(--ll-char-kevin-primary-rgb)); }
+/* --- 👩‍🎨 Sarah老师 (写作) --- */
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao, .message.received.character-message.AI_Sarah_XieZuoZhiDao { border-left-color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao .chat-list-name, .chat-header-main.character-active.AI_Sarah_XieZuoZhiDao .chat-title-main, .message.received.character-message.AI_Sarah_XieZuoZhiDao .message-sender, .details-panel.character-active.AI_Sarah_XieZuoZhiDao #detailsName, .details-panel.AI_Sarah_XieZuoZhiDao .details-section-title { color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao .chat-list-avatar, .chat-avatar-main.AI_Sarah_XieZuoZhiDao, .details-panel.AI_Sarah_XieZuoZhiDao .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-sarah-primary-rgb)), 0 0 10px rgba(var(--ll-char-sarah-primary-rgb),0.3); border-color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.message.received.character-message.AI_Sarah_XieZuoZhiDao { background: var(--ll-char-sarah-msg-bg-dark); }
 
+/* --- 👩‍💼 李静老师 (应试) --- */
+.chat-list-item.active.AI_LiJing_KaoShiTingGao, .message.received.character-message.AI_LiJing_KaoShiTingGao { border-left-color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.chat-list-item.active.AI_LiJing_KaoShiTingGao .chat-list-name, .chat-header-main.character-active.AI_LiJing_KaoShiTingGao .chat-title-main, .message.received.character-message.AI_LiJing_KaoShiTingGao .message-sender, .details-panel.character-active.AI_LiJing_KaoShiTingGao #detailsName, .details-panel.AI_LiJing_KaoShiTingGao .details-section-title { color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.chat-list-item.active.AI_LiJing_KaoShiTingGao .chat-list-avatar, .chat-avatar-main.AI_LiJing_KaoShiTingGao, .details-panel.AI_LiJing_KaoShiTingGao .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-lijing-primary-rgb)), 0 0 10px rgba(var(--ll-char-lijing-primary-rgb),0.3); border-color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.message.received.character-message.AI_LiJing_KaoShiTingGao { background: var(--ll-char-lijing-msg-bg-dark); }
 
-/* ------------------------- 👨‍🎓 休斯博士 (阅读) - 学术、深刻 (淡金+深灰蓝) -------------------------- */
-:root {
-    --ll-char-hughes-primary-rgb: 174, 188, 206; /* #AEBCCE - Lighter, 'Steel' Blue for text */
-    --ll-char-hughes-accent-rgb: 221, 199, 168;  /* #DDC7A8 - Parchment/Beige */
-    --ll-char-hughes-msg-bg-dark: linear-gradient(135deg, #2a3240, #313a4a); /* Dark Slate */
-}
-
-.chat-list-item.active.AI_DrHughes_YueDuLiJie { border-left-color: rgb(var(--ll-char-hughes-primary-rgb)); }
-.chat-list-item.active.AI_DrHughes_YueDuLiJie .chat-list-name { color: rgb(var(--ll-char-hughes-primary-rgb)); }
-.chat-list-item.active.AI_DrHughes_YueDuLiJie .chat-list-avatar,
-.chat-avatar-main.AI_DrHughes_YueDuLiJie {
-    border-color: rgb(var(--ll-char-hughes-primary-rgb));
-    box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-hughes-primary-rgb)), 0 0 10px rgba(var(--ll-char-hughes-primary-rgb),0.3);
-}
-.chat-header-main.current-chat-AI_DrHughes_YueDuLiJie .chat-title-main { color: rgb(var(--ll-char-hughes-primary-rgb)); }
-.message.received[data-sender-id="AI_DrHughes_YueDuLiJie"] {
-    border-left: 4px solid rgb(var(--ll-char-hughes-primary-rgb));
-    background: var(--ll-char-hughes-msg-bg-dark);
-}
-.message.received[data-sender-id="AI_DrHughes_YueDuLiJie"] .message-sender { color: rgb(var(--ll-char-hughes-primary-rgb)); }
-.details-panel.AI_DrHughes_YueDuLiJie .details-avatar {
-    box-shadow: 0 0 0 4px rgb(var(--ll-bg-sidebar-rgb)), 0 0 15px 2px rgba(var(--ll-char-hughes-primary-rgb),0.3);
-}
-.details-panel.AI_DrHughes_YueDuLiJie .details-name { color: rgb(var(--ll-char-hughes-primary-rgb)); }
-.details-panel.AI_DrHughes_YueDuLiJie .details-section-title { border-bottom-color: rgb(var(--ll-char-hughes-primary-rgb)); }
-
-
-/* ------------------------- 👩‍🎨 Sarah老师 (写作) - 温和、鼓励 (亮粉+薄荷绿) -------------------------- */
-:root {
-    --ll-char-sarah-primary-rgb: 244, 114, 182;  /* #F472B6 - Lighter, brighter Pink */
-    --ll-char-sarah-accent-rgb: 110, 231, 183;   /* #6EE7B7 - Lighter Mint Green */
-    --ll-char-sarah-msg-bg-dark: linear-gradient(135deg, #3c2131, #4a293c); /* Deep Pink/Purple */
-}
-
-.chat-list-item.active.AI_Sarah_XieZuoZhiDao { border-left-color: rgb(var(--ll-char-sarah-primary-rgb)); }
-.chat-list-item.active.AI_Sarah_XieZuoZhiDao .chat-list-name { color: rgb(var(--ll-char-sarah-primary-rgb)); }
-.chat-list-item.active.AI_Sarah_XieZuoZhiDao .chat-list-avatar,
-.chat-avatar-main.AI_Sarah_XieZuoZhiDao {
-    border-color: rgb(var(--ll-char-sarah-primary-rgb));
-    box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-sarah-primary-rgb)), 0 0 10px rgba(var(--ll-char-sarah-primary-rgb),0.3);
-}
-.chat-header-main.current-chat-AI_Sarah_XieZuoZhiDao .chat-title-main { color: rgb(var(--ll-char-sarah-primary-rgb)); }
-.message.received[data-sender-id="AI_Sarah_XieZuoZhiDao"] {
-    border-left: 4px solid rgb(var(--ll-char-sarah-primary-rgb));
-    background: var(--ll-char-sarah-msg-bg-dark);
-}
-.message.received[data-sender-id="AI_Sarah_XieZuoZhiDao"] .message-sender { color: rgb(var(--ll-char-sarah-primary-rgb)); }
-.details-panel.AI_Sarah_XieZuoZhiDao .details-avatar {
-    box-shadow: 0 0 0 4px rgb(var(--ll-bg-sidebar-rgb)), 0 0 15px 2px rgba(var(--ll-char-sarah-primary-rgb),0.4);
-}
-.details-panel.AI_Sarah_XieZuoZhiDao .details-name { color: rgb(var(--ll-char-sarah-primary-rgb)); }
-.details-panel.AI_Sarah_XieZuoZhiDao .details-section-title { border-bottom-color: rgb(var(--ll-char-sarah-primary-rgb)); }
-
-
-/* ------------------------- 👩‍💼 李静老师 (应试) - 高效、锐利 (亮红+浅灰) -------------------------- */
-:root {
-    --ll-char-lijing-primary-rgb: 239, 68, 68;    /* #EF4444 - Bright Red */
-    --ll-char-lijing-accent-rgb: 107, 114, 128;   /* #6B7280 - Graphite Grey */
-    --ll-char-lijing-msg-bg-dark: linear-gradient(135deg, #451a1a, #542222); /* Dark Red/Brown */
-}
-
-.chat-list-item.active.AI_LiJing_KaoShiTingGao { border-left-color: rgb(var(--ll-char-lijing-primary-rgb)); }
-.chat-list-item.active.AI_LiJing_KaoShiTingGao .chat-list-name { color: rgb(var(--ll-char-lijing-primary-rgb)); }
-.chat-list-item.active.AI_LiJing_KaoShiTingGao .chat-list-avatar,
-.chat-avatar-main.AI_LiJing_KaoShiTingGao {
-    border-color: rgb(var(--ll-char-lijing-primary-rgb));
-    box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-lijing-primary-rgb)), 0 0 10px rgba(var(--ll-char-lijing-primary-rgb),0.3);
-}
-.chat-header-main.current-chat-AI_LiJing_KaoShiTingGao .chat-title-main { color: rgb(var(--ll-char-lijing-primary-rgb)); }
-.message.received[data-sender-id="AI_LiJing_KaoShiTingGao"] {
-    border-left: 4px solid rgb(var(--ll-char-lijing-primary-rgb));
-    background: var(--ll-char-lijing-msg-bg-dark);
-}
-.message.received[data-sender-id="AI_LiJing_KaoShiTingGao"] .message-sender { color: rgb(var(--ll-char-lijing-primary-rgb)); }
-.details-panel.AI_LiJing_KaoShiTingGao .details-avatar {
-    box-shadow: 0 0 0 4px rgb(var(--ll-bg-sidebar-rgb)), 0 0 15px 2px rgba(var(--ll-char-lijing-primary-rgb),0.4);
-}
-.details-panel.AI_LiJing_KaoShiTingGao .details-name { color: rgb(var(--ll-char-lijing-primary-rgb)); }
-.details-panel.AI_LiJing_KaoShiTingGao .details-section-title { border-bottom-color: rgb(var(--ll-char-lijing-primary-rgb)); }
-
-
-/* ------------------------- 👨‍💼 David Chen (商务) - 专业、沉稳 (天蓝+银灰) -------------------------- */
-:root {
-    --ll-char-david-primary-rgb: 59, 130, 246;   /* #3B82F6 - Standard Bright Blue */
-    --ll-char-david-accent-rgb: 209, 213, 219;  /* #D1D4DB - Light Silver Grey */
-    --ll-char-david-msg-bg-dark: linear-gradient(135deg, #1f2d48, #263655); /* Deep Corporate Blue */
-}
-
-.chat-list-item.active.AI_DavidChen_ShangWuYingYu { border-left-color: rgb(var(--ll-char-david-primary-rgb)); }
-.chat-list-item.active.AI_DavidChen_ShangWuYingYu .chat-list-name { color: rgb(var(--ll-char-david-primary-rgb)); }
-.chat-list-item.active.AI_DavidChen_ShangWuYingYu .chat-list-avatar,
-.chat-avatar-main.AI_DavidChen_ShangWuYingYu {
-    border-color: rgb(var(--ll-char-david-primary-rgb));
-    box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-david-primary-rgb)), 0 0 10px rgba(var(--ll-char-david-primary-rgb),0.3);
-}
-.chat-header-main.current-chat-AI_DavidChen_ShangWuYingYu .chat-title-main { color: rgb(var(--ll-char-david-primary-rgb)); }
-.message.received[data-sender-id="AI_DavidChen_ShangWuYingYu"] {
-    border-left: 4px solid rgb(var(--ll-char-david-primary-rgb));
-    background: var(--ll-char-david-msg-bg-dark);
-}
-.message.received[data-sender-id="AI_DavidChen_ShangWuYingYu"] .message-sender { color: rgb(var(--ll-char-david-primary-rgb)); }
-.details-panel.AI_DavidChen_ShangWuYingYu .details-avatar {
-    box-shadow: 0 0 0 4px rgb(var(--ll-bg-sidebar-rgb)), 0 0 15px 2px rgba(var(--ll-char-david-primary-rgb),0.4);
-}
-.details-panel.AI_DavidChen_ShangWuYingYu .details-name { color: rgb(var(--ll-char-david-primary-rgb)); }
-.details-panel.AI_DavidChen_ShangWuYingYu .details-section-title { border-bottom-color: rgb(var(--ll-char-david-primary-rgb)); }
-
-#messageInput, .notification-message {
-    color: var(--color-text-primary); /* Ensure text is visible on dark backgrounds */
-}
-#ttsConfigFormContainer .tts-config-item label {
-    color: var(--color-text-secondary); /* Ensure labels are readable */
-}
+/* --- 👨‍💼 David Chen (商务) --- */
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu, .message.received.character-message.AI_DavidChen_ShangWuYingYu { border-left-color: rgb(var(--ll-char-david-primary-rgb)); }
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu .chat-list-name, .chat-header-main.character-active.AI_DavidChen_ShangWuYingYu .chat-title-main, .message.received.character-message.AI_DavidChen_ShangWuYingYu .message-sender, .details-panel.character-active.AI_DavidChen_ShangWuYingYu #detailsName, .details-panel.AI_DavidChen_ShangWuYingYu .details-section-title { color: rgb(var(--ll-char-david-primary-rgb)); }
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu .chat-list-avatar, .chat-avatar-main.AI_DavidChen_ShangWuYingYu, .details-panel.AI_DavidChen_ShangWuYingYu .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-david-primary-rgb)), 0 0 10px rgba(var(--ll-char-david-primary-rgb),0.3); border-color: rgb(var(--ll-char-david-primary-rgb)); }
+.message.received.character-message.AI_DavidChen_ShangWuYingYu { background: var(--ll-char-david-msg-bg-dark); }

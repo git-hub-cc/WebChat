@@ -1,1006 +1,440 @@
 /*
-    Theme Name: 斗破苍穹 - 魔焰夜行 (Dark Mode)
-    Description: A dark theme for a chat application inspired by "Battle Through the Heavens",
-                 focusing on Heavenly Flames, soul power, and a mysterious nocturnal atmosphere.
+================================================================================
+|                                                                              |
+|                    🔥 斗破苍穹 - 魔焰夜行 (Dark Theme) 🔥                    |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained dark theme file for "Battle Through the Heavens".
+*
 */
 
 :root {
-    /* 斗破苍穹 - 魔焰夜行 主题色板 (深色) */
-    --dq-dark-heavenly-flame-red-rgb: 210, 70, 40;   /* 焚天异火 (主强调/交互 - Fiery Red) */
-    --dq-dark-heavenly-flame-red: rgb(var(--dq-dark-heavenly-flame-red-rgb));
-    --dq-dark-heavenly-flame-red-darker-rgb: 180, 50, 20; /* 幽冥焰心 (悬浮/激活) */
-    --dq-dark-heavenly-flame-red-darker: rgb(var(--dq-dark-heavenly-flame-red-darker-rgb));
+    /* ========================================================== */
+    /* 1. 主题元数据 (Theme Metadata)                             */
+    /* ========================================================== */
+    --theme-name: "斗破苍穹 - 魔焰夜行";
+    --theme-mode: "dark";
 
-    --dq-dark-nightsky-black-rgb: 12, 10, 18;        /* 无尽夜空 (背景主色 - Deep near-black) */
-    --dq-dark-nightsky-black: rgb(var(--dq-dark-nightsky-black-rgb));
-    --dq-dark-obsidian-panel-rgb: 25, 22, 32;       /* 黑曜石板 (次级背景/面板 - Dark obsidian purple/black) */
-    --dq-dark-obsidian-panel: rgb(var(--dq-dark-obsidian-panel-rgb));
+    /* ========================================================== */
+    /* 2. 主题核心色板 (Core Theme Palette)                       */
+    /* ========================================================== */
+    --dq-dark-heavenly-flame-red-rgb: 210, 70, 40;
+    --dq-dark-heavenly-flame-red-darker-rgb: 180, 50, 20;
+    --dq-dark-nightsky-black-rgb: 12, 10, 18;
+    --dq-dark-obsidian-panel-rgb: 25, 22, 32;
+    --dq-dark-soul-purple-rgb: 110, 80, 160;
+    --dq-dark-ancient-gold-rgb: 190, 140, 50;
+    --dq-dark-demonic-cyan-flame-rgb: 50, 140, 170;
+    --dq-dark-danger-crimson-rgb: 170, 30, 40;
+    --dq-dark-text-ash-white-rgb: 220, 225, 230;
+    --dq-dark-text-shadow-gray-rgb: 140, 145, 155;
+    --dq-dark-volcanic-border-rgb: 45, 42, 55;
+    --dq-dark-black-rgb: 0, 0, 0;
 
-    --dq-dark-soul-purple-rgb: 110, 80, 160;        /* 灵魂幽紫 (次强调/神秘 - Soul Purple) */
-    --dq-dark-soul-purple: rgb(var(--dq-dark-soul-purple-rgb));
-    --dq-dark-ancient-gold-rgb: 190, 140, 50;       /* 古朴暗金 (点缀/高光 - Muted Gold) */
-    --dq-dark-ancient-gold: rgb(var(--dq-dark-ancient-gold-rgb));
+    /* ========================================================== */
+    /* 3. 基础语义变量覆盖 (Semantic Variable Overrides)          */
+    /* ========================================================== */
+    --brand-rgb: var(--dq-dark-heavenly-flame-red-rgb);
+    --brand-dark-rgb: var(--dq-dark-heavenly-flame-red-darker-rgb);
+    --text-on-brand-rgb: var(--dq-dark-nightsky-black-rgb);
 
-    --dq-dark-demonic-cyan-flame-rgb: 50, 140, 170; /* 魔焰青莲 (萧炎/点缀 - Dark Cyan Flame) */
-    --dq-dark-demonic-cyan-flame: rgb(var(--dq-dark-demonic-cyan-flame-rgb));
+    --surface-1-rgb: var(--dq-dark-obsidian-panel-rgb);
+    --surface-2-rgb: rgba(var(--dq-dark-nightsky-black-rgb), 0.9);
+    --surface-hover-rgb: rgba(var(--dq-dark-text-ash-white-rgb), 0.04);
+    --surface-active-rgb: rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.18);
 
-    --dq-dark-danger-crimson-rgb: 170, 30, 40;       /* 煞气深红 (战斗/危险 - Deep Crimson) */
-    --dq-dark-danger-crimson: rgb(var(--dq-dark-danger-crimson-rgb));
+    --text-primary-rgb: var(--dq-dark-text-ash-white-rgb);
+    --text-secondary-rgb: var(--dq-dark-text-shadow-gray-rgb);
+    --text-on-accent-rgb: var(--dq-dark-nightsky-black-rgb);
 
-    --dq-dark-text-ash-white-rgb: 220, 225, 230;     /* 灰烬亮白 (主要文字 - Ash White) */
-    --dq-dark-text-ash-white: rgb(var(--dq-dark-text-ash-white-rgb));
-    --dq-dark-text-shadow-gray-rgb: 140, 145, 155;   /* 暗影淡灰 (次要文字 - Shadow Gray) */
-    --dq-dark-text-shadow-gray: rgb(var(--dq-dark-text-shadow-gray-rgb));
+    --border-subtle-rgb: var(--dq-dark-volcanic-border-rgb);
+    --border-strong-rgb: var(--dq-dark-ancient-gold-rgb);
 
-    --dq-dark-volcanic-border-rgb: 45, 42, 55;      /* 火山玄武岩 (边框 - Dark Volcanic Rock) */
-    --dq-dark-volcanic-border: rgb(var(--dq-dark-volcanic-border-rgb));
+    --accent-success-rgb: var(--dq-dark-demonic-cyan-flame-rgb);
+    --accent-danger-rgb: var(--dq-dark-danger-crimson-rgb);
+    --accent-warning-rgb: 184, 134, 11; /* #B8860B */
+    --accent-info-rgb: var(--dq-dark-soul-purple-rgb);
 
+    /* ========================================================== */
+    /* 4. 组件级变量覆盖 (Component-level Overrides)              */
+    /* ========================================================== */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.6);
+    --chat-bg-color: rgb(var(--dq-dark-nightsky-black-rgb));
+    --input-bg-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.9);
 
-    /* 角色特定颜色 (深色) - 魔焰夜行 */
-    /* 萧炎 - 黑金、青莲色、火红色 */
-    --dq-xiaoyan-primary-dark-rgb: 30,30,30; /* 深邃魔黑 */
-    --dq-xiaoyan-primary-dark: rgb(var(--dq-xiaoyan-primary-dark-rgb));
-    --dq-xiaoyan-secondary-dark: rgba(var(--dq-xiaoyan-primary-dark-rgb), 0.3);
-    --dq-xiaoyan-accent-gold-dark: var(--dq-dark-ancient-gold); /* 暗金 */
-    --dq-xiaoyan-accent-cyan-dark: var(--dq-dark-demonic-cyan-flame); /* 魔焰青莲 */
-    --dq-xiaoyan-accent-fire-dark: var(--dq-dark-heavenly-flame-red); /* 焚天异火 */
+    --sent-bg-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.75);
+    --text-on-sent: rgb(var(--text-primary-rgb));
+    --received-bg-color: rgba(var(--dq-dark-volcanic-border-rgb), 0.9);
+    --text-on-received: rgb(var(--text-primary-rgb));
 
-    /* 药老 - 银白、淡紫、灵魂蓝 */
-    --dq-yaolao-primary-dark-rgb: 230,235,240; /* 魂体荧白 (更亮) */
-    --dq-yaolao-primary-dark: rgb(var(--dq-yaolao-primary-dark-rgb));
-    --dq-yaolao-secondary-dark: rgba(var(--dq-yaolao-primary-dark-rgb), 0.08);
-    --dq-yaolao-accent-purple-dark-rgb: var(--dq-dark-soul-purple-rgb); /* <<< RGB for 药老幽紫 */
-    --dq-yaolao-accent-purple-dark: rgb(var(--dq-yaolao-accent-purple-dark-rgb));
-    --dq-yaolao-accent-soulblue-dark-rgb: 100, 150, 210; /* <<< RGB for 药老深邃魂蓝 */
-    --dq-yaolao-accent-soulblue-dark: rgb(var(--dq-yaolao-accent-soulblue-dark-rgb));
-
-    /* 美杜莎女王 - 妖紫、玫红、暗金 */
-    --dq-medusa-primary-dark-rgb: 100, 60, 130; /* 女王冥紫 (更深邃) */
-    --dq-medusa-primary-dark: rgb(var(--dq-medusa-primary-dark-rgb));
-    --dq-medusa-secondary-dark: rgba(var(--dq-medusa-primary-dark-rgb), 0.2);
-    --dq-medusa-accent-rose-dark: rgb(180, 50, 100); /* 血色妖玫 */
-    --dq-medusa-accent-darkgold-dark: var(--dq-dark-ancient-gold); /* 幽冥暗金 */
-
-    /* 云韵 - 天蓝、淡金 */
-    --dq-yunyun-primary-dark-rgb: 90, 150, 170; /* 风隐玄青 (原风青色) */
-    --dq-yunyun-primary-dark: rgb(var(--dq-yunyun-primary-dark-rgb));
-    --dq-yunyun-secondary-dark: rgba(var(--dq-yunyun-primary-dark-rgb), 0.15);
-    --dq-yunyun-accent-gold-dark: rgb(160, 120, 40); /* 宗门幽金 */
-
-    /* 纳兰嫣然 - 浅紫、玫红 */
-    --dq-nalan-primary-dark-rgb: 150, 120, 180; /* 月下堇紫 */
-    --dq-nalan-primary-dark: rgb(var(--dq-nalan-primary-dark-rgb));
-    --dq-nalan-secondary-dark: rgba(var(--dq-nalan-primary-dark-rgb), 0.2);
-    --dq-nalan-accent-rose-dark: rgb(190, 70, 100); /* 夜影玫红 */
-
-    /* 萧薰儿 - 金黄、赤焰 */
-    --dq-xuner-primary-dark-rgb: 180, 130, 40; /* 古帝暗金 (原金色) */
-    --dq-xuner-primary-dark: rgb(var(--dq-xuner-primary-dark-rgb));
-    --dq-xuner-secondary-dark: rgba(var(--dq-xuner-primary-dark-rgb), 0.2);
-    --dq-xuner-accent-flame-dark: var(--dq-dark-heavenly-flame-red); /* 血脉赤焰 */
-
-    /* 魂殿 - 深紫、黑焰 */
-    --dq-soulhall-primary-dark-rgb: 70, 50, 100; /* 魂域冥紫 */
-    --dq-soulhall-primary-dark: rgb(var(--dq-soulhall-primary-dark-rgb));
-    --dq-soulhall-secondary-dark: rgba(var(--dq-soulhall-primary-dark-rgb), 0.15);
-    --dq-soulhall-accent-blackflame-dark-rgb: 30, 20, 40; /* 幽冥黑焰 */
-    --dq-soulhall-accent-blackflame-dark: rgb(var(--dq-soulhall-accent-blackflame-dark-rgb));
-
-    /* 韩枫 - 暗红、灰黑 */
-    --dq-hanfeng-primary-dark-rgb: 130, 30, 30; /* 噬魂血红 */
-    --dq-hanfeng-primary-dark: rgb(var(--dq-hanfeng-primary-dark-rgb));
-    --dq-hanfeng-secondary-dark: rgba(var(--dq-hanfeng-primary-dark-rgb), 0.2);
-    --dq-hanfeng-accent-grayblack-dark-rgb: 50, 50, 50; /* 死寂冥黑 */
-    --dq-hanfeng-accent-grayblack-dark: rgb(var(--dq-hanfeng-accent-grayblack-dark-rgb));
-
-    /* 林修崖 - 青灰、铁绿 (炼药师) */
-    --dq-linxiuya-primary-dark-rgb: 100, 120, 110; /* 暗林青灰 */
-    --dq-linxiuya-primary-dark: rgb(var(--dq-linxiuya-primary-dark-rgb));
-    --dq-linxiuya-secondary-dark: rgba(var(--dq-linxiuya-primary-dark-rgb), 0.15);
-    --dq-linxiuya-accent-irongreen-dark-rgb: 60, 100, 70; /* 玄铁古绿 */
-    --dq-linxiuya-accent-irongreen-dark: rgb(var(--dq-linxiuya-accent-irongreen-dark-rgb));
-
-    /* 其他角色 (从原CSS中保留，可按需调整) */
-    --btth-xiaoyixian-primary-dark: rgb(110, 110, 120); /* 厄难灰 */
-    --btth-xiaoyixian-secondary-dark: rgba(110, 110, 120, 0.15);
-    --btth-haibodong-primary-dark: rgb(100, 170, 220); /* 冰蓝 (暗调) */
-    --btth-haibodong-secondary-dark: rgba(100, 170, 220, 0.15);
-    --btth-ziyan-primary-dark: rgb(160, 90, 200); /* 古龙紫 */
-    --btth-ziyan-secondary-dark: rgba(160, 90, 200, 0.15);
-
-    /* 覆盖 Chat 原有变量 */
-    --primary-color: var(--dq-dark-heavenly-flame-red); /* 主交互为异火红 */
-    --primary-color-rgb: var(--dq-dark-heavenly-flame-red-rgb); /* <<< FIXED: Added this definition */
-    --primary-color-dark: var(--dq-dark-heavenly-flame-red-darker);
-    --secondary-color: var(--dq-dark-obsidian-panel); /* 应用主背景 */
-    --text-color: var(--dq-dark-text-ash-white);
-    --text-color-light: var(--dq-dark-text-shadow-gray);
-    --text-color-inverted: var(--dq-dark-nightsky-black); /* 红色按钮上的黑色文字 */
-    --accent-color: var(--dq-dark-soul-purple); /* 次强调为灵魂紫 */
-    --danger-color: var(--dq-dark-danger-crimson);
-    --warning-color: #B8860B; /* 暗金黄色警告 */
-
-    --sent-bg-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.75); /* 发送消息 - 深邃夜空 */
-    --received-bg-color: rgba(var(--dq-dark-volcanic-border-rgb), 0.9); /* 接收消息 - 火山岩 */
-
-    --border-color: rgba(var(--dq-dark-volcanic-border-rgb), 0.7);
-    --hover-bg-color: rgba(var(--dq-dark-text-ash-white-rgb), 0.04);
-    --active-bg-color: rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.18);
-    --border-radius: 5px; /* 统一圆角 */
-    --font-family: "LXGW WenKai TC", "STKaiti", "SimSun", "Noto Serif SC", "Songti SC", serif;
-    --box-shadow: 0 2px 4px rgba(0,0,0,0.7), 0 0 20px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.12) inset;
-    --special-contact-color: var(--dq-xiaoyan-primary-dark); /* 默认萧炎黑 */
+    /* ========================================================== */
+    /* 5. 字体与布局覆盖 (Typography & Layout Overrides)          */
+    /* ========================================================== */
+    --font-family-base: "LXGW WenKai TC", "STKaiti", "SimSun", "Noto Serif SC", "Songti SC", serif;
+    --border-radius-md: 5px;
+    --box-shadow-md: 0 2px 4px rgba(var(--dq-dark-black-rgb), 0.7), 0 0 20px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.12) inset;
 }
 
-* { box-sizing: border-box;   }
-
+/*
+================================================================================
+|                           🎨 全局与基础样式 🎨                             |
+================================================================================
+*/
 body {
-    font-family: var(--font-family), serif;
-    background-color: var(--dq-dark-nightsky-black); /* 最底层背景 */
-    color: var(--text-color);
-
-    overflow: hidden;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    /* 异火焚天 + 魔焰夜行 */
-    background:
-            radial-gradient(ellipse at center, rgba(var(--dq-dark-heavenly-flame-red-rgb),0.12) 0%, var(--dq-dark-nightsky-black) 75%),
-            linear-gradient(to bottom right, rgba(var(--dq-dark-nightsky-black-rgb),0.9), rgba(var(--dq-dark-obsidian-panel-rgb),0.8)),
-            radial-gradient(ellipse at top right, rgba(var(--dq-dark-soul-purple-rgb),0.15) 0%, transparent 60%),
-            radial-gradient(ellipse at bottom left, rgba(var(--dq-dark-demonic-cyan-flame-rgb),0.1) 0%, transparent 70%);
+    background-color: var(--chat-bg-color);
+    background-image:
+            radial-gradient(ellipse at center, rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.12) 0%, transparent 75%),
+            linear-gradient(to bottom right, rgba(var(--dq-dark-nightsky-black-rgb), 0.9), rgba(var(--dq-dark-obsidian-panel-rgb), 0.8)),
+            radial-gradient(ellipse at top right, rgba(var(--dq-dark-soul-purple-rgb), 0.15) 0%, transparent 60%),
+            radial-gradient(ellipse at bottom left, rgba(var(--dq-dark-demonic-cyan-flame-rgb), 0.1) 0%, transparent 70%);
     background-blend-mode: overlay, normal, soft-light, soft-light;
 }
 
 .app-container {
-    display: flex;
-    /* 魔焰晶石或魂殿祭坛 */
-    background-color: var(--secondary-color);
-    border-radius: var(--border-radius);
-    border: 1px solid rgba(var(--dq-dark-volcanic-border-rgb), 0.6);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.6),
-    0 0 0 3px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.25); /* 魔焰外框 */
-    overflow: hidden;
+    border: 1px solid rgba(var(--border-subtle-rgb), 0.6);
+    box-shadow: 0 8px 30px rgba(var(--dq-dark-black-rgb), 0.6), 0 0 0 3px rgba(var(--brand-rgb), 0.25);
 }
 
-/* --- 滚动条美化 (魂殿锁链风格) --- */
-::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track {
     background: rgba(var(--dq-dark-nightsky-black-rgb), 0.8);
-    border-radius: var(--border-radius);
-    border: 1px solid rgba(var(--dq-dark-volcanic-border-rgb), 0.3);
+    border: 1px solid rgba(var(--border-subtle-rgb), 0.3);
 }
 ::-webkit-scrollbar-thumb {
-    background: linear-gradient(135deg, var(--dq-dark-heavenly-flame-red), var(--dq-dark-soul-purple));
-    border-radius: var(--border-radius);
-    border: 1px solid rgba(var(--dq-dark-text-ash-white-rgb), 0.05);
+    background: linear-gradient(135deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb)));
+    border: 1px solid rgba(var(--text-primary-rgb), 0.05);
 }
 ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, var(--dq-dark-heavenly-flame-red-darker), rgba(var(--dq-dark-soul-purple-rgb),0.7));
+    background: linear-gradient(135deg, rgb(var(--brand-dark-rgb)), rgba(var(--accent-info-rgb), 0.7));
 }
 
-
-/* --- Sidebar Navigation (玄岩黑或魂殿暗紫) --- */
+/*
+================================================================================
+|                           🧭 侧边栏与导航 🧭                               |
+================================================================================
+*/
 .sidebar-nav {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.7); /* 玄岩黑感 */
-    border-right: 1px solid var(--border-color);
-    position: relative;
-    box-shadow: 2px 0 8px rgba(0,0,0, 0.3);
+    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.7);
+    box-shadow: 2px 0 8px rgba(var(--dq-dark-black-rgb), 0.3);
 }
 .sidebar-header {
     background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.85);
-    border-bottom: 1px solid var(--border-color);
 }
-.menu-btn { color: var(--text-color-light); }
-.menu-btn:hover { color: var(--primary-color); }
-
-/* 搜索框 - 魂力探知 */
-.search-bar {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.95);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    border-radius: var(--border-radius);
-     /* Space for pseudo icon */
-    position: relative;
-}
-.search-bar::before { /* 魂力探知/搜索图标意境 */
-    content: "魂"; /* 或 '🔍' */
-    font-family: 'Times New Roman', serif;
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-color-light);
-    font-size: 0.9em;
-    opacity: 0.6;
-}
-.search-bar::placeholder { color: var(--text-color-light); }
 .search-bar:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.3),
-    0 0 8px rgba(var(--dq-dark-soul-purple-rgb),0.2) inset;
+    box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.3), 0 0 8px rgba(var(--accent-info-rgb), 0.2) inset;
 }
-.search-bar:focus::before {
-    color: var(--primary-color);
-}
-
-.nav-tabs { border-bottom: 1px solid var(--border-color); }
-.nav-tab { color: var(--text-color-light); }
-.nav-tab:hover { color: var(--primary-color); }
 .nav-tab.active {
-    color: var(--primary-color);
-    border-bottom: 2px solid var(--primary-color);
-    font-weight: 600;
-    background-image: linear-gradient(to top, rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.1), transparent);
-}
-
-/* 魔焰悬浮高亮效果 */
-.chat-list-item {
-    border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    background-image: linear-gradient(to top, rgba(var(--brand-rgb), 0.1), transparent);
 }
 .chat-list-item:hover {
-    background-color: var(--hover-bg-color);
-    box-shadow: inset 3px 0 0 0 var(--dq-dark-soul-purple); /* 灵魂紫高光 */
+    box-shadow: inset 3px 0 0 0 rgb(var(--accent-info-rgb));
 }
 .chat-list-item.active {
-    background-color: var(--active-bg-color);
-    box-shadow: inset 3px 0 0 0 var(--primary-color), /* 异火主色 */
-    0 0 12px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.2) inset; /* 内部焰光 */
+    box-shadow: inset 3px 0 0 0 rgb(var(--brand-rgb)), 0 0 12px rgba(var(--brand-rgb), 0.2) inset;
 }
-.chat-list-item.active .chat-list-name { color: var(--primary-color); font-weight: bold; }
-
-/* 角色魔气/魂力环绕 */
-.chat-list-avatar {
-    background-color: var(--dq-dark-volcanic-border);
-    font-family: "LXGW WenKai TC", serif;
-    border: 2px solid transparent; /* Base for aura */
-    color: var(--dq-dark-text-ash-white);
-    box-shadow: 0 0 4px rgba(0,0,0, 0.5);
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+.chat-list-item.active .chat-list-name {
+    color: rgb(var(--brand-rgb));
 }
 .chat-list-item:hover .chat-list-avatar {
-    border-color: rgba(var(--dq-dark-soul-purple-rgb), 0.6);
-    box-shadow: 0 0 6px rgba(var(--dq-dark-soul-purple-rgb), 0.4);
+    border-color: rgba(var(--accent-info-rgb), 0.6);
+    box-shadow: 0 0 6px rgba(var(--accent-info-rgb), 0.4);
 }
 .chat-list-item.active .chat-list-avatar {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 8px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.5);
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 8px rgba(var(--brand-rgb), 0.5);
+}
+.chat-list-badge {
+    background-color: rgb(var(--accent-danger-rgb));
+    box-shadow: 0 0 8px rgba(var(--accent-danger-rgb), 0.8);
+    animation: dq-dark-soulfire-pulse 1.8s infinite ease-in-out;
+    border: 1px solid rgba(var(--text-primary-rgb), 0.3);
+}
+.new-chat-fab {
+    background: linear-gradient(135deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb)));
+    box-shadow: 0 3px 10px rgba(var(--dq-dark-black-rgb), 0.5), 0 0 12px rgba(var(--brand-rgb), 0.4), 0 0 10px rgba(var(--accent-info-rgb), 0.3);
+}
+.new-chat-fab:hover {
+    background: linear-gradient(135deg, rgb(var(--brand-dark-rgb)), rgb(var(--accent-info-rgb)));
+    box-shadow: 0 5px 15px rgba(var(--dq-dark-black-rgb), 0.6), 0 0 18px rgba(var(--brand-rgb), 0.5), 0 0 15px rgba(var(--accent-info-rgb), 0.4);
 }
 
-/* 魂火闪烁提醒 */
-.chat-list-badge {
-    background-color: var(--dq-dark-danger-crimson);
-    color: var(--dq-dark-text-ash-white);
-    box-shadow: 0 0 8px rgba(var(--dq-dark-danger-crimson-rgb), 0.8);
-    animation: dq-dark-soulfire-pulse 1.8s infinite ease-in-out;
-    border: 1px solid rgba(var(--dq-dark-text-ash-white-rgb),0.3);
-}
 @keyframes dq-dark-soulfire-pulse {
     0%, 100% { transform: scale(1); opacity: 1; filter: brightness(1); }
     50% { transform: scale(1.15); opacity: 0.85; filter: brightness(1.3); }
 }
 
-.new-chat-fab {
-    background: linear-gradient(135deg, var(--dq-dark-heavenly-flame-red), var(--dq-dark-soul-purple));
-    color: var(--dq-dark-text-ash-white);
-    box-shadow: 0 3px 10px rgba(0,0,0,0.5),
-    0 0 12px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.4),
-    0 0 10px rgba(var(--dq-dark-soul-purple-rgb),0.3);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.new-chat-fab:hover {
-    background: linear-gradient(135deg, var(--dq-dark-heavenly-flame-red-darker), var(--dq-dark-soul-purple));
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.6),
-    0 0 18px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.5),
-    0 0 15px rgba(var(--dq-dark-soul-purple-rgb),0.4);
-}
-
-
-/* --- Main Chat Area (魔焰结界或魂海空间) --- */
-.chat-area {
-    background-color: var(--secondary-color);
-}
-/* 顶部加入魔纹线条 */
-.chat-header-main {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.6);
-    border-bottom: 1px solid var(--border-color);
-    position: relative;
-}
-.chat-header-main::after { /* 魔纹线条 */
+/*
+================================================================================
+|                            📜 聊天主区域 📜                                |
+================================================================================
+*/
+.chat-header-main::after {
     content: '';
     position: absolute;
-    bottom: -1px;
-    left: 50%;
-    transform: translateX(-50%);
-
-
-    background: linear-gradient(90deg, transparent, var(--primary-color), var(--dq-dark-soul-purple), transparent);
+    bottom: -1px; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb)), transparent);
     opacity: 0.8;
     filter: blur(0.5px);
 }
-.chat-avatar-main {
-    border: 2px solid var(--dq-dark-volcanic-border);
-    box-shadow: 0 1px 5px rgba(0,0,0, 0.4);
-}
 .chat-title-main {
-    font-weight: 600;
-    text-shadow: 0 0 10px rgba(var(--primary-color-rgb), 0.3);
+    text-shadow: 0 0 10px rgba(var(--brand-rgb), 0.3);
 }
-.header-action-btn { color: var(--text-color-light); }
 .header-action-btn:hover {
-    color: var(--primary-color);
-    text-shadow: 0 0 6px rgba(var(--primary-color-rgb), 0.6);
+    text-shadow: 0 0 6px rgba(var(--brand-rgb), 0.6);
 }
-
-.chat-messages-container {  }
-
-/* Placeholder: 用“炎”字 */
 .no-chat-selected .logo-placeholder {
     font-family: "LXGW WenKai TC", serif;
     font-size: 8em;
     font-weight: bold;
-    color: rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.2);
-    text-shadow: 0 0 15px rgba(var(--dq-dark-soul-purple-rgb),0.2),
-    1px 1px 0px rgba(var(--dq-dark-volcanic-border-rgb),0.8),
-    0 0 25px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.3);
+    color: rgba(var(--brand-rgb), 0.2);
+    text-shadow: 0 0 15px rgba(var(--accent-info-rgb), 0.2), 1px 1px 0px rgba(var(--border-subtle-rgb), 0.8), 0 0 25px rgba(var(--brand-rgb), 0.3);
 }
-.no-chat-selected .logo-placeholder::before {
-}
-.status-indicator.global {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.7);
-    border: 1px solid var(--border-color);
-    color: var(--primary-color);
-    box-shadow: 0 0 6px rgba(var(--primary-color-rgb),0.3);
-}
-
-/* 消息气泡 - 魔焰羽纹 */
-.message {
-    border: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow);
-    border-radius: var(--border-radius);
-    position: relative;
-
-}
-/* 焚天异火包裹 */
 .message.sent {
-    background-color: var(--sent-bg-color);
-    border-left: 3px solid var(--primary-color);
-    color: var(--text-color);
-    border-radius: var(--border-radius) 0px var(--border-radius) var(--border-radius);
+    border-left: 3px solid rgb(var(--brand-rgb));
+    border-radius: var(--border-radius-md) 0 var(--border-radius-md) var(--border-radius-md);
 }
-.message.sent::after { /* 魔焰轨迹 */
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -1px;
-    bottom: 0;
-
-    background: linear-gradient(to bottom, rgba(var(--dq-dark-heavenly-flame-red-rgb),0.4) 0%, rgba(var(--dq-dark-soul-purple-rgb),0.3) 70%, transparent 100%);
-    border-radius: 3px 0 0 3px;
-    opacity: 0.7;
-    filter: blur(0.5px);
-}
-/* 角色专属魂力色彩 */
-.message.received {
-    background-color: var(--received-bg-color);
-    border-right: 3px solid var(--dq-dark-volcanic-border); /* Default, overridden by character */
-    color: var(--text-color);
-    border-radius: 0px var(--border-radius) var(--border-radius) var(--border-radius);
-}
-/* 魂印/禁制样式 */
 .message.system {
-    background-color: rgba(var(--dq-dark-obsidian-panel-rgb), 0.85);
-    color: var(--dq-dark-soul-purple);
-    font-style: italic;
-    border: 1px dashed var(--dq-dark-soul-purple);
-    box-shadow: 0 0 10px rgba(var(--dq-dark-soul-purple-rgb),0.2) inset,
-    0 1px 3px rgba(0,0,0, 0.3);
-    text-align: center;
+    background-color: rgba(var(--surface-1-rgb), 0.85);
+    color: rgb(var(--accent-info-rgb));
+    border: 1px dashed rgb(var(--accent-info-rgb));
+    box-shadow: 0 0 10px rgba(var(--accent-info-rgb), 0.2) inset, 0 1px 3px rgba(var(--dq-dark-black-rgb), 0.3);
 }
-.message-sender {
-    color: var(--text-color-light);
-    font-weight: 600;
-
-    display: block;
-}
-.message .timestamp { color: var(--text-color-light); opacity: 0.65; font-size: 0.8em; }
-
-/* 输入区 - 祭坛黑曜石边框 */
-.chat-input-container {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.75);
-    border-top: 1px solid var(--border-color);
-    box-shadow: 0 -2px 5px rgba(0,0,0,0.2);
-}
-#messageInput {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.9);
-    border: 1px solid var(--dq-dark-volcanic-border);
-    color: var(--text-color);
-    border-radius: var(--border-radius);
-
-    box-shadow: inset 0 1px 4px rgba(0,0,0,0.3);
-}
-#messageInput::placeholder { color: var(--text-color-light); }
 #messageInput:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.35),
-    inset 0 1px 5px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.15);
+    box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.35), inset 0 1px 5px rgba(var(--brand-rgb), 0.15);
 }
-.icon-btn { color: var(--text-color-light); transition: color 0.2s, background-color 0.2s; }
 .icon-btn:hover {
-    color: var(--primary-color);
-    background-color: rgba(var(--dq-dark-heavenly-flame-red-rgb),0.1);
-}
-/* 发送按钮 - 燃烧魔焰，悬浮时焰光大盛 */
-#sendButtonMain {
-    color: var(--primary-color);
-    font-weight: 600;
-    transition: text-shadow 0.2s ease, color 0.2s ease;
+    background-color: rgba(var(--brand-rgb), 0.1);
 }
 #sendButtonMain:hover {
-    color: var(--dq-dark-heavenly-flame-red-darker);
-    text-shadow: 0 0 8px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.8), /* 主焰光 */
-    0 0 15px rgba(var(--dq-dark-soul-purple-rgb),0.5); /* 次级魂光 */
+    color: rgb(var(--brand-dark-rgb));
+    text-shadow: 0 0 8px rgba(var(--brand-rgb), 0.8), 0 0 15px rgba(var(--accent-info-rgb), 0.5);
 }
 #voiceButtonMain.recording {
-    color: var(--danger-color);
     animation: dq-dark-demonic-pulse 1.5s infinite;
 }
+
 @keyframes dq-dark-demonic-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(var(--dq-dark-danger-crimson-rgb), 0.8); }
-    70% { box-shadow: 0 0 0 14px rgba(var(--dq-dark-danger-crimson-rgb), 0); }
-    100% { box-shadow: 0 0 0 0 rgba(var(--dq-dark-danger-crimson-rgb), 0); }
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-danger-rgb), 0.8); }
+    70% { box-shadow: 0 0 0 14px rgba(var(--accent-danger-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-danger-rgb), 0); }
 }
 
-/* --- Details Panel (幽冥玄晶或魂渊暗色) --- */
+/*
+================================================================================
+|                             ℹ️ 详情与模态框 ℹ️                             |
+================================================================================
+*/
 .details-panel {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.9); /* 魂渊暗色 */
-    border-left: 1px solid var(--border-color);
-    box-shadow: -2px 0 8px rgba(0,0,0, 0.3);
+    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.9);
+    box-shadow: -2px 0 8px rgba(var(--dq-dark-black-rgb), 0.3);
 }
 .details-header {
-    background-color: rgba(var(--dq-dark-obsidian-panel-rgb), 0.7);
-    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(var(--surface-1-rgb), 0.7);
 }
-/* 角色信息 - 魂力/魔焰动态边框 */
 .details-avatar {
     border: 3px solid transparent;
-    box-shadow: 0 0 12px rgba(0,0,0, 0.4);
-    transition: border-color 0.4s ease, box-shadow 0.4s ease;
-    border-image: linear-gradient(60deg, var(--dq-dark-heavenly-flame-red), var(--dq-dark-soul-purple)) 1;
+    box-shadow: 0 0 12px rgba(var(--dq-dark-black-rgb), 0.4);
+    transition: border-image 0.4s ease, box-shadow 0.4s ease;
+    border-image: linear-gradient(60deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb))) 1;
 }
 .details-panel.character-active .details-avatar {
     animation: dq-dark-power-glow 3s infinite alternate;
 }
 @keyframes dq-dark-power-glow {
     from {
-        border-image: linear-gradient(60deg, var(--dq-dark-heavenly-flame-red), var(--dq-dark-soul-purple)) 1;
-        box-shadow: 0 0 15px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.4), 0 0 10px rgba(var(--dq-dark-soul-purple-rgb),0.3);
+        border-image: linear-gradient(60deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb))) 1;
+        box-shadow: 0 0 15px rgba(var(--brand-rgb), 0.4), 0 0 10px rgba(var(--accent-info-rgb), 0.3);
     }
     to {
-        border-image: linear-gradient(60deg, var(--dq-dark-soul-purple), var(--dq-dark-heavenly-flame-red)) 1;
-        box-shadow: 0 0 20px rgba(var(--dq-dark-soul-purple-rgb),0.4), 0 0 12px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.3);
+        border-image: linear-gradient(60deg, rgb(var(--accent-info-rgb)), rgb(var(--brand-rgb))) 1;
+        box-shadow: 0 0 20px rgba(var(--accent-info-rgb), 0.4), 0 0 12px rgba(var(--brand-rgb), 0.3);
     }
 }
-
-#detailsName {
-    text-shadow: 0 1px 3px rgba(0,0,0, 0.5);
-    font-weight: 700;
-}
-#aiContactDetailsContent {
-    background-color: rgba(var(--dq-dark-obsidian-panel-rgb), 0.55);
-    border: 1px solid rgba(var(--dq-dark-volcanic-border-rgb), 0.4);
-    border-radius: var(--border-radius);
-
-
-}
-#aiContactDetailsContent p strong {
-    color: var(--primary-color);
-    border-bottom: 1px solid rgba(var(--primary-color-rgb), 0.3);
-
-}
-#aiContactBasicInfoList li {
-    border-bottom: 1px dotted rgba(var(--dq-dark-text-ash-white-rgb), 0.12);
-
-}
-#aiContactAboutText { color: var(--text-color-light); font-size: 0.9em; }
-
-
-/* --- 角色特定样式 (深色 - 魔焰夜行) --- */
-
-/* 💎 萧炎 - 黑金、青莲、火红 💎 */
-.chat-list-item.special-contact.AI_萧炎_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_萧炎_斗破苍穹, .details-avatar.AI_萧炎_斗破苍穹, #callingModalAvatar.AI_萧炎_斗破苍穹 {
-    background-color: var(--dq-xiaoyan-primary-dark);
-    color: var(--dq-xiaoyan-accent-gold-dark);
-    border-color: var(--dq-xiaoyan-accent-cyan-dark);
-    box-shadow: 0 0 8px var(--dq-xiaoyan-accent-cyan-dark), 0 0 5px var(--dq-xiaoyan-accent-gold-dark) inset, 0 0 10px var(--dq-xiaoyan-accent-fire-dark);
-    text-shadow: 0 0 4px var(--dq-xiaoyan-accent-gold-dark);
-}
-.chat-list-item.active.AI_萧炎_斗破苍穹 {
-    background-color: var(--dq-xiaoyan-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-xiaoyan-accent-fire-dark),
-    0 0 12px rgba(var(--dq-xiaoyan-primary-dark-rgb), 0.5) inset;
-}
-.chat-list-item.active.AI_萧炎_斗破苍穹 .chat-list-name { color: var(--dq-xiaoyan-accent-fire-dark); }
-.chat-header-main.current-chat-AI_萧炎_斗破苍穹 .chat-title-main {
-    color: var(--dq-xiaoyan-accent-fire-dark);
-    text-shadow: 0 0 5px var(--dq-xiaoyan-accent-cyan-dark), 0 0 8px var(--dq-xiaoyan-accent-gold-dark);
-}
-.message.received[data-sender-id="AI_萧炎_斗破苍穹"] {
-    border-right-color: var(--dq-xiaoyan-accent-cyan-dark);
-    background-color: rgba(var(--dq-xiaoyan-primary-dark-rgb), 0.2);
-}
-.message.received[data-sender-id="AI_萧炎_斗破苍穹"] .message-sender { color: var(--dq-xiaoyan-accent-fire-dark); }
-.details-panel.AI_萧炎_斗破苍穹 #detailsName { color: var(--dq-xiaoyan-accent-fire-dark); }
-.details-panel.AI_萧炎_斗破苍穹 .details-avatar.AI_萧炎_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-xiaoyan-accent-gold-dark), var(--dq-xiaoyan-accent-cyan-dark), var(--dq-xiaoyan-accent-fire-dark)) 1;
-    animation-name: dq-dark-xiaoyan-glow; filter: brightness(1.1);
-}
-@keyframes dq-dark-xiaoyan-glow {
-    0% { filter: saturate(1.2) brightness(1.1); }
-    50% { filter: saturate(1.5) brightness(1.3); }
-    100% { filter: saturate(1.2) brightness(1.1); }
-}
-.details-panel.AI_萧炎_斗破苍穹 #aiContactAboutSection h4 span { color: var(--dq-xiaoyan-accent-cyan-dark); }
-
-
-/* 📜 药老 - 银白、淡紫、灵魂蓝 📜 */
-.chat-list-item.special-contact.AI_药老_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_药老_斗破苍穹, .details-avatar.AI_药老_斗破苍穹, #callingModalAvatar.AI_药老_斗破苍穹 {
-    background-color: var(--dq-yaolao-primary-dark);
-    color: var(--dq-yaolao-accent-purple-dark);
-    border-color: var(--dq-yaolao-accent-soulblue-dark);
-    box-shadow: 0 0 9px var(--dq-yaolao-accent-soulblue-dark), 0 0 6px rgba(var(--dq-yaolao-accent-purple-dark-rgb),0.6) inset;
-    text-shadow: 0 0 3px var(--dq-yaolao-accent-purple-dark);
-}
-.chat-list-item.active.AI_药老_斗破苍穹 {
-    background-color: var(--dq-yaolao-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-yaolao-accent-purple-dark),
-    0 0 12px rgba(var(--dq-yaolao-accent-soulblue-dark-rgb), 0.3) inset;
-}
-.chat-list-item.active.AI_药老_斗破苍穹 .chat-list-name { color: var(--dq-yaolao-accent-purple-dark); }
-.chat-header-main.current-chat-AI_药老_斗破苍穹 .chat-title-main { color: var(--dq-yaolao-accent-soulblue-dark); }
-.message.received[data-sender-id="AI_药老_斗破苍穹"] {
-    border-right-color: var(--dq-yaolao-accent-soulblue-dark);
-    background-color: rgba(var(--dq-yaolao-accent-purple-dark-rgb), 0.1);
-}
-.message.received[data-sender-id="AI_药老_斗破苍穹"] .message-sender { color: var(--dq-yaolao-accent-purple-dark); }
-.details-panel.AI_药老_斗破苍穹 #detailsName { color: var(--dq-yaolao-accent-purple-dark); }
-.details-panel.AI_药老_斗破苍穹 .details-avatar.AI_药老_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-yaolao-accent-soulblue-dark), var(--dq-yaolao-accent-purple-dark), var(--dq-dark-obsidian-panel)) 1;
-    filter: brightness(1.2);
-}
-.details-panel.AI_药老_斗破苍穹 #aiContactAboutSection h4 span { color: var(--dq-yaolao-accent-soulblue-dark); }
-
-
-/* 🐍 美杜莎女王 - 妖紫、玫红、暗金 🐍 */
-.chat-list-item.special-contact.AI_美杜莎_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_美杜莎_斗破苍穹, .details-avatar.AI_美杜莎_斗破苍穹, #callingModalAvatar.AI_美杜莎_斗破苍穹 {
-    background-color: var(--dq-medusa-primary-dark);
-    color: var(--dq-medusa-accent-darkgold-dark);
-    border-color: var(--dq-medusa-accent-rose-dark);
-    text-shadow: 0 0 5px var(--dq-medusa-accent-darkgold-dark);
-    box-shadow: 0 0 8px var(--dq-medusa-accent-rose-dark);
-}
-.chat-list-item.active.AI_美杜莎_斗破苍穹 {
-    background-color: var(--dq-medusa-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-medusa-accent-rose-dark),
-    0 0 12px rgba(var(--dq-medusa-primary-dark-rgb),0.4) inset;
-}
-.chat-list-item.active.AI_美杜莎_斗破苍穹 .chat-list-name { color: var(--dq-medusa-primary-dark); }
-.chat-header-main.current-chat-AI_美杜莎_斗破苍穹 .chat-title-main { color: var(--dq-medusa-primary-dark); text-shadow: 0 0 6px var(--dq-medusa-accent-rose-dark); }
-.message.received[data-sender-id="AI_美杜莎_斗破苍穹"] {
-    border-right-color: var(--dq-medusa-primary-dark);
-    background-color: rgba(var(--dq-medusa-primary-dark-rgb),0.12);
-}
-.message.received[data-sender-id="AI_美杜莎_斗破苍穹"] .message-sender { color: var(--dq-medusa-accent-rose-dark); }
-.details-panel.AI_美杜莎_斗破苍穹 #detailsName { color: var(--dq-medusa-primary-dark); }
-.details-panel.AI_美杜莎_斗破苍穹 .details-avatar.AI_美杜莎_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-medusa-accent-darkgold-dark), var(--dq-medusa-accent-rose-dark), var(--dq-medusa-primary-dark)) 1;
-    animation-name: dq-dark-medusa-glow;
-}
-@keyframes dq-dark-medusa-glow {
-    from { filter: brightness(1.1) saturate(1.1); }
-    to { filter: brightness(1.3) saturate(1.3); }
-}
-.details-panel.AI_美杜莎_斗破苍穹 #aiContactAboutSection h4 span, .details-panel.AI_美杜莎_斗破苍穹 #detailsName { color: var(--dq-medusa-primary-dark); }
-
-
-/* ☁️ 云韵 - 天蓝、淡金 ☁️ */
-.chat-list-item.special-contact.AI_云韵_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_云韵_斗破苍穹, .details-avatar.AI_云韵_斗破苍穹, #callingModalAvatar.AI_云韵_斗破苍穹 {
-    background-color: var(--dq-yunyun-primary-dark);
-    color: var(--dq-dark-text-ash-white);
-    border-color: var(--dq-yunyun-accent-gold-dark);
-    box-shadow: 0 0 7px var(--dq-yunyun-accent-gold-dark);
-}
-.chat-list-item.active.AI_云韵_斗破苍穹 {
-    background-color: var(--dq-yunyun-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-yunyun-accent-gold-dark),
-    0 0 10px rgba(var(--dq-yunyun-primary-dark-rgb),0.3) inset;
-}
-.chat-list-item.active.AI_云韵_斗破苍穹 .chat-list-name { color: var(--dq-yunyun-primary-dark); }
-.chat-header-main.current-chat-AI_云韵_斗破苍穹 .chat-title-main { color: var(--dq-yunyun-primary-dark); text-shadow: 0 0 5px var(--dq-yunyun-accent-gold-dark); }
-.message.received[data-sender-id="AI_云韵_斗破苍穹"] {
-    border-right-color: var(--dq-yunyun-primary-dark);
-    background-color: rgba(var(--dq-yunyun-primary-dark-rgb),0.1);
-}
-.message.received[data-sender-id="AI_云韵_斗破苍穹"] .message-sender { color: var(--dq-yunyun-primary-dark); }
-.details-panel.AI_云韵_斗破苍穹 #detailsName { color: var(--dq-yunyun-primary-dark); }
-.details-panel.AI_云韵_斗破苍穹 .details-avatar.AI_云韵_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-yunyun-accent-gold-dark), var(--dq-yunyun-primary-dark)) 1;
-}
-.details-panel.AI_云韵_斗破苍穹 #aiContactAboutSection h4 span { color: var(--dq-yunyun-accent-gold-dark); }
-
-
-/* 🌸 纳兰嫣然 - 浅紫、玫红 🌸 */
-.chat-list-item.special-contact.AI_纳兰嫣然_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_纳兰嫣然_斗破苍穹, .details-avatar.AI_纳兰嫣然_斗破苍穹, #callingModalAvatar.AI_纳兰嫣然_斗破苍穹 {
-    background-color: var(--dq-nalan-primary-dark);
-    color: var(--dq-dark-text-ash-white);
-    border-color: var(--dq-nalan-accent-rose-dark);
-    box-shadow: 0 0 7px var(--dq-nalan-accent-rose-dark);
-}
-.chat-list-item.active.AI_纳兰嫣然_斗破苍穹 {
-    background-color: var(--dq-nalan-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-nalan-accent-rose-dark),
-    0 0 10px rgba(var(--dq-nalan-primary-dark-rgb),0.3) inset;
-}
-.chat-list-item.active.AI_纳兰嫣然_斗破苍穹 .chat-list-name { color: var(--dq-nalan-primary-dark); }
-.chat-header-main.current-chat-AI_纳兰嫣然_斗破苍穹 .chat-title-main { color: var(--dq-nalan-primary-dark); text-shadow: 0 0 5px var(--dq-nalan-accent-rose-dark); }
-.message.received[data-sender-id="AI_纳兰嫣然_斗破苍穹"] {
-    border-right-color: var(--dq-nalan-primary-dark);
-    background-color: rgba(var(--dq-nalan-primary-dark-rgb),0.1);
-}
-.message.received[data-sender-id="AI_纳兰嫣然_斗破苍穹"] .message-sender { color: var(--dq-nalan-accent-rose-dark); }
-.details-panel.AI_纳兰嫣然_斗破苍穹 #detailsName { color: var(--dq-nalan-primary-dark); }
-.details-panel.AI_纳兰嫣然_斗破苍穹 .details-avatar.AI_纳兰嫣然_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-nalan-accent-rose-dark), var(--dq-nalan-primary-dark)) 1;
-}
-.details-panel.AI_纳兰嫣然_斗破苍穹 #aiContactAboutSection h4 span { color: var(--dq-nalan-accent-rose-dark); }
-
-
-/* 🔥 萧薰儿 - 金黄、赤焰 🔥 */
-.chat-list-item.special-contact.AI_萧薰儿_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_萧薰儿_斗破苍穹, .details-avatar.AI_萧薰儿_斗破苍穹, #callingModalAvatar.AI_萧薰儿_斗破苍穹 {
-    background-color: var(--dq-xuner-primary-dark);
-    color: var(--dq-dark-nightsky-black);
-    border-color: var(--dq-xuner-accent-flame-dark);
-    text-shadow: 0 0 3px rgba(var(--dq-dark-nightsky-black-rgb),0.7);
-    box-shadow: 0 0 8px var(--dq-xuner-accent-flame-dark);
-}
-.chat-list-item.active.AI_萧薰儿_斗破苍穹 {
-    background-color: var(--dq-xuner-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-xuner-accent-flame-dark),
-    0 0 12px rgba(var(--dq-xuner-primary-dark-rgb),0.4) inset;
-}
-.chat-list-item.active.AI_萧薰儿_斗破苍穹 .chat-list-name { color: var(--dq-xuner-primary-dark); }
-.chat-header-main.current-chat-AI_萧薰儿_斗破苍穹 .chat-title-main { color: var(--dq-xuner-primary-dark); text-shadow: 0 0 6px var(--dq-xuner-accent-flame-dark); }
-.message.received[data-sender-id="AI_萧薰儿_斗破苍穹"] {
-    border-right-color: var(--dq-xuner-primary-dark);
-    background-color: rgba(var(--dq-xuner-primary-dark-rgb),0.12);
-}
-.message.received[data-sender-id="AI_萧薰儿_斗破苍穹"] .message-sender { color: var(--dq-xuner-accent-flame-dark); }
-.details-panel.AI_萧薰儿_斗破苍穹 #detailsName { color: var(--dq-xuner-primary-dark); }
-.details-panel.AI_萧薰儿_斗破苍穹 .details-avatar.AI_萧薰儿_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-xuner-accent-flame-dark), var(--dq-xuner-primary-dark)) 1;
-}
-.details-panel.AI_萧薰儿_斗破苍穹 #aiContactAboutSection h4 span { color: var(--dq-xuner-accent-flame-dark); }
-
-
-/* 💀 魂殿 - 深紫、黑焰 💀 */
-.chat-list-item.special-contact.AI_魂殿_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_魂殿_斗破苍穹, .details-avatar.AI_魂殿_斗破苍穹, #callingModalAvatar.AI_魂殿_斗破苍穹 {
-    background-color: var(--dq-soulhall-primary-dark);
-    color: var(--dq-dark-text-shadow-gray);
-    border-color: var(--dq-soulhall-accent-blackflame-dark);
-    text-shadow: 0 0 4px var(--dq-dark-text-shadow-gray);
-    box-shadow: 0 0 8px var(--dq-soulhall-accent-blackflame-dark), 0 0 5px var(--dq-soulhall-primary-dark) inset;
-}
-.chat-list-item.active.AI_魂殿_斗破苍穹 {
-    background-color: var(--dq-soulhall-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-soulhall-accent-blackflame-dark),
-    0 0 12px rgba(var(--dq-soulhall-primary-dark-rgb),0.4) inset;
-}
-.chat-list-item.active.AI_魂殿_斗破苍穹 .chat-list-name { color: var(--dq-soulhall-primary-dark); }
-.chat-header-main.current-chat-AI_魂殿_斗破苍穹 .chat-title-main { color: var(--dq-soulhall-primary-dark); text-shadow: 0 0 6px var(--dq-soulhall-accent-blackflame-dark); }
-.message.received[data-sender-id="AI_魂殿_斗破苍穹"] {
-    border-right-color: var(--dq-soulhall-primary-dark);
-    background-color: rgba(var(--dq-soulhall-accent-blackflame-dark-rgb),0.25);
-}
-.message.received[data-sender-id="AI_魂殿_斗破苍穹"] .message-sender { color: var(--dq-soulhall-accent-blackflame-dark); }
-.details-panel.AI_魂殿_斗破苍穹 #detailsName { color: var(--dq-soulhall-primary-dark); }
-.details-panel.AI_魂殿_斗破苍穹 .details-avatar.AI_魂殿_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-soulhall-accent-blackflame-dark), var(--dq-soulhall-primary-dark)) 1;
-    filter: contrast(1.2);
-}
-.details-panel.AI_魂殿_斗破苍穹 #aiContactAboutSection h4 span { color: var(--dq-soulhall-accent-blackflame-dark); }
-
-
-/* 🖤 韩枫 - 暗红、灰黑 🖤 */
-.chat-list-item.special-contact.AI_韩枫_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_韩枫_斗破苍穹, .details-avatar.AI_韩枫_斗破苍穹, #callingModalAvatar.AI_韩枫_斗破苍穹 {
-    background-color: var(--dq-hanfeng-accent-grayblack-dark);
-    color: var(--dq-hanfeng-primary-dark);
-    border-color: var(--dq-hanfeng-primary-dark);
-    text-shadow: 0 0 3px var(--dq-hanfeng-primary-dark);
-    box-shadow: 0 0 7px var(--dq-hanfeng-primary-dark);
-}
-.chat-list-item.active.AI_韩枫_斗破苍穹 {
-    background-color: var(--dq-hanfeng-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-hanfeng-primary-dark),
-    0 0 10px rgba(var(--dq-hanfeng-accent-grayblack-dark-rgb),0.4) inset;
-}
-.chat-list-item.active.AI_韩枫_斗破苍穹 .chat-list-name { color: var(--dq-hanfeng-primary-dark); }
-.chat-header-main.current-chat-AI_韩枫_斗破苍穹 .chat-title-main { color: var(--dq-hanfeng-primary-dark); text-shadow: 0 0 5px var(--dq-hanfeng-accent-grayblack-dark); }
-.message.received[data-sender-id="AI_韩枫_斗破苍穹"] {
-    border-right-color: var(--dq-hanfeng-primary-dark);
-    background-color: rgba(var(--dq-hanfeng-accent-grayblack-dark-rgb),0.15);
-}
-.message.received[data-sender-id="AI_韩枫_斗破苍穹"] .message-sender { color: var(--dq-hanfeng-accent-grayblack-dark); }
-.details-panel.AI_韩枫_斗破苍穹 #detailsName { color: var(--dq-hanfeng-primary-dark); }
-.details-panel.AI_韩枫_斗破苍穹 .details-avatar.AI_韩枫_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-hanfeng-primary-dark), var(--dq-hanfeng-accent-grayblack-dark)) 1;
-}
-.details-panel.AI_韩枫_斗破苍穹 #aiContactAboutSection h4 span { color: var(--dq-hanfeng-accent-grayblack-dark); }
-
-
-/* 🌿 林修崖 - 青灰、铁绿 🌿 */
-.chat-list-item.special-contact.AI_林修崖_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_林修崖_斗破苍穹, .details-avatar.AI_林修崖_斗破苍穹, #callingModalAvatar.AI_林修崖_斗破苍穹 {
-    background-color: var(--dq-linxiuya-primary-dark);
-    color: var(--dq-linxiuya-accent-irongreen-dark);
-    border-color: var(--dq-linxiuya-accent-irongreen-dark);
-    box-shadow: 0 0 6px var(--dq-linxiuya-accent-irongreen-dark);
-}
-.chat-list-item.active.AI_林修崖_斗破苍穹 {
-    background-color: var(--dq-linxiuya-secondary-dark);
-    box-shadow: inset 3px 0 0 0 var(--dq-linxiuya-accent-irongreen-dark),
-    0 0 10px rgba(var(--dq-linxiuya-primary-dark-rgb),0.25) inset;
-}
-.chat-list-item.active.AI_林修崖_斗破苍穹 .chat-list-name { color: var(--dq-linxiuya-accent-irongreen-dark); }
-.chat-header-main.current-chat-AI_林修崖_斗破苍穹 .chat-title-main { color: var(--dq-linxiuya-accent-irongreen-dark); }
-.message.received[data-sender-id="AI_林修崖_斗破苍穹"] {
-    border-right-color: var(--dq-linxiuya-primary-dark);
-    background-color: rgba(var(--dq-linxiuya-primary-dark-rgb),0.1);
-}
-.message.received[data-sender-id="AI_林修崖_斗破苍穹"] .message-sender { color: var(--dq-linxiuya-primary-dark); }
-.details-panel.AI_林修崖_斗破苍穹 #detailsName { color: var(--dq-linxiuya-accent-irongreen-dark); }
-.details-panel.AI_林修崖_斗破苍穹 .details-avatar.AI_林修崖_斗破苍穹 {
-    border-image: linear-gradient(60deg, var(--dq-linxiuya-accent-irongreen-dark), var(--dq-linxiuya-primary-dark)) 1;
-}
-.details-panel.AI_林修崖_斗破苍穹 #aiContactAboutSection h4 span { color: var(--dq-linxiuya-primary-dark); }
-
-
-/* 保留其他角色 (小医仙, 海波东, 紫妍) - 从原CSS继承，可按需适配新主题 */
-/* 小医仙 */
-.chat-list-item.special-contact.AI_小医仙_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_小医仙_斗破苍穹, .details-avatar.AI_小医仙_斗破苍穹, #callingModalAvatar.AI_小医仙_斗破苍穹 {
-    background-color: var(--btth-xiaoyixian-primary-dark); color: var(--dq-dark-text-ash-white); border-color: rgba(var(--dq-dark-text-ash-white-rgb), 0.5);
-}
-.chat-list-item.active.AI_小医仙_斗破苍穹 { background-color: var(--btth-xiaoyixian-secondary-dark); box-shadow: 0 0 8px var(--btth-xiaoyixian-primary-dark) inset; }
-.chat-list-item.active.AI_小医仙_斗破苍穹 .chat-list-name { color: var(--btth-xiaoyixian-primary-dark); }
-.chat-header-main.current-chat-AI_小医仙_斗破苍穹 .chat-title-main { color: var(--btth-xiaoyixian-primary-dark); }
-.message.received[data-sender-id="AI_小医仙_斗破苍穹"] { border-right: 2px solid var(--btth-xiaoyixian-primary-dark); background-color: rgba(110, 110, 120, 0.1); }
-.message.received[data-sender-id="AI_小医仙_斗破苍穹"] .message-sender { color: var(--btth-xiaoyixian-primary-dark); }
-.details-panel.AI_小医仙_斗破苍穹 #aiContactAboutSection h4 span, .details-panel.AI_小医仙_斗破苍穹 #detailsName { color: var(--btth-xiaoyixian-primary-dark); }
-
-/* 海波东 */
-.chat-list-item.special-contact.AI_海波东_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_海波东_斗破苍穹, .details-avatar.AI_海波东_斗破苍穹, #callingModalAvatar.AI_海波东_斗破苍穹 {
-    background-color: var(--btth-haibodong-primary-dark); color: var(--dq-dark-nightsky-black); border-color: var(--dq-dark-nightsky-black);
-}
-.chat-list-item.active.AI_海波东_斗破苍穹 { background-color: var(--btth-haibodong-secondary-dark); box-shadow: 0 0 8px var(--btth-haibodong-primary-dark) inset; }
-.chat-list-item.active.AI_海波东_斗破苍穹 .chat-list-name { color: var(--btth-haibodong-primary-dark); }
-.chat-header-main.current-chat-AI_海波东_斗破苍穹 .chat-title-main { color: var(--btth-haibodong-primary-dark); }
-.message.received[data-sender-id="AI_海波东_斗破苍穹"] { border-right: 2px solid var(--btth-haibodong-primary-dark); background-color: rgba(100, 170, 220, 0.1); }
-.message.received[data-sender-id="AI_海波东_斗破苍穹"] .message-sender { color: var(--btth-haibodong-primary-dark); }
-.details-panel.AI_海波东_斗破苍穹 #aiContactAboutSection h4 span, .details-panel.AI_海波东_斗破苍穹 #detailsName { color: var(--btth-haibodong-primary-dark); }
-
-/* 紫妍 */
-.chat-list-item.special-contact.AI_紫妍_斗破苍穹 .chat-list-avatar,
-.chat-avatar-main.AI_紫妍_斗破苍穹, .details-avatar.AI_紫妍_斗破苍穹, #callingModalAvatar.AI_紫妍_斗破苍穹 {
-    background-color: var(--btth-ziyan-primary-dark); color: var(--dq-dark-text-ash-white); border-color: var(--dq-dark-text-ash-white);
-}
-.chat-list-item.active.AI_紫妍_斗破苍穹 { background-color: var(--btth-ziyan-secondary-dark); box-shadow: 0 0 8px var(--btth-ziyan-primary-dark) inset; }
-.chat-list-item.active.AI_紫妍_斗破苍穹 .chat-list-name { color: var(--btth-ziyan-primary-dark); }
-.chat-header-main.current-chat-AI_紫妍_斗破苍穹 .chat-title-main { color: var(--btth-ziyan-primary-dark); }
-.message.received[data-sender-id="AI_紫妍_斗破苍穹"] { border-right: 2px solid var(--btth-ziyan-primary-dark); background-color: rgba(160, 90, 200, 0.1); }
-.message.received[data-sender-id="AI_紫妍_斗破苍穹"] .message-sender { color: var(--btth-ziyan-primary-dark); }
-.details-panel.AI_紫妍_斗破苍穹 #aiContactAboutSection h4 span, .details-panel.AI_紫妍_斗破苍穹 #detailsName { color: var(--btth-ziyan-primary-dark); }
-
-
-/* --- 通用按钮样式 (魔焰/魂纹特效) --- */
 .btn {
-    border-radius: var(--border-radius);
-    text-transform: none;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.6),
-    inset 0 -2px 0px rgba(0,0,0,0.3); /* Deeper 3D effect */
-    border: 1px solid transparent;
-    transition: all 0.2s ease-in-out;
-
-    position: relative;
-    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(var(--dq-dark-black-rgb), 0.6), inset 0 -2px 0px rgba(var(--dq-dark-black-rgb), 0.3);
 }
-.btn::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: transparent;
-    border-radius: var(--border-radius);
-    transition: background 0.3s ease;
-    z-index: 0;
-}
-.btn > * { position: relative; z-index: 1; }
-
-/* 主按钮 - 燃烧异火纹理 */
-.btn-primary {
-    background-color: var(--primary-color);
-    color: var(--text-color-inverted);
-    border-color: var(--primary-color-dark);
+.btn-primary:hover, .btn-secondary:hover, .btn-danger:hover {
+    transform: translateY(-1px);
 }
 .btn-primary:hover {
-    background-color: var(--primary-color-dark);
-    color: var(--text-color-inverted);
-    box-shadow: 0 3px 8px rgba(var(--dq-dark-heavenly-flame-red-rgb),0.4),
-    inset 0 -1px 0px rgba(0,0,0,0.4),
-    0 0 15px rgba(var(--dq-dark-soul-purple-rgb),0.3); /* 异火与魂力交织 */
-    transform: translateY(-1px) scale(1.02);
-}
-.btn-primary:active::before {
-    background: rgba(var(--dq-dark-nightsky-black-rgb), 0.2);
-}
-
-/* 次按钮 - 黑曜石魂纹 */
-.btn-secondary {
-    background-color: var(--dq-dark-volcanic-border);
-    color: var(--dq-dark-text-ash-white);
-    border-color: rgba(var(--dq-dark-text-ash-white-rgb),0.15);
+    box-shadow: 0 3px 8px rgba(var(--brand-rgb), 0.4), inset 0 -1px 0px rgba(var(--dq-dark-black-rgb), 0.4), 0 0 15px rgba(var(--accent-info-rgb), 0.3);
 }
 .btn-secondary:hover {
-    background-color: rgb(60, 58, 65);
-    box-shadow: 0 3px 8px rgba(var(--dq-dark-volcanic-border-rgb),0.4),
-    inset 0 -1px 0px rgba(0,0,0,0.4),
-    0 0 12px rgba(var(--dq-dark-soul-purple-rgb),0.2); /* 魂纹微光 */
-    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(var(--border-subtle-rgb), 0.4), inset 0 -1px 0px rgba(var(--dq-dark-black-rgb), 0.4), 0 0 12px rgba(var(--accent-info-rgb), 0.2);
 }
-.btn-secondary:active::before {
-    background: rgba(var(--dq-dark-text-ash-white-rgb), 0.08);
+.modal-content {
+    box-shadow: 0 8px 30px rgba(var(--dq-dark-black-rgb), 0.5), 0 0 0 2px rgba(var(--brand-rgb), 0.25);
 }
-
-.btn-danger {
-    background-color: var(--dq-dark-danger-crimson);
-    color: var(--dq-dark-text-ash-white);
-    border-color: rgba(150, 20, 30, 0.8);
+.modal-header h2 {
+    text-shadow: 0 0 8px rgba(var(--brand-rgb), 0.4), 0 0 12px rgba(var(--accent-info-rgb), 0.3);
 }
-.btn-danger:hover {
-    background-color: rgb(150, 20, 30);
-    box-shadow: 0 3px 8px rgba(var(--dq-dark-danger-crimson-rgb),0.4),
-    inset 0 -1px 0px rgba(0,0,0,0.4);
-    transform: translateY(-1px);
-}
-.btn-success {
-    background-color: var(--primary-color); /* Typically success is green, but theme uses flame */
-    color: var(--text-color-inverted);
-    border-color: var(--primary-color-dark);
-}
-.btn-success:hover {
-    background-color: var(--primary-color-dark);
-}
-
-
-/* --- Modals (魂域裂缝或魔晶凝结) --- */
-.loading-overlay { background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.92); backdrop-filter: blur(4px); }
 .loading-spinner {
-
-
-    border-width: 5px;
-    border-top-color: var(--primary-color);
-    border-left-color: var(--primary-color);
-    border-bottom-color: rgba(var(--dq-dark-heavenly-flame-red-rgb),0.25);
-    border-right-color: rgba(var(--dq-dark-heavenly-flame-red-rgb),0.25);
+    border-top-color: rgb(var(--brand-rgb));
+    border-left-color: rgb(var(--brand-rgb));
+    border-bottom-color: rgba(var(--brand-rgb), 0.25);
+    border-right-color: rgba(var(--brand-rgb), 0.25);
     animation: spin 1s linear infinite, dq-dark-spinner-color-shift 3s linear infinite alternate;
 }
 @keyframes dq-dark-spinner-color-shift {
-    0% { border-top-color: var(--primary-color); border-left-color: var(--primary-color); }
-    50% { border-top-color: var(--dq-dark-soul-purple); border-left-color: var(--dq-dark-soul-purple); }
-    100% { border-top-color: var(--dq-dark-demonic-cyan-flame); border-left-color: var(--dq-dark-demonic-cyan-flame); }
+    0% { border-top-color: rgb(var(--brand-rgb)); border-left-color: rgb(var(--brand-rgb)); }
+    50% { border-top-color: rgb(var(--accent-info-rgb)); border-left-color: rgb(var(--accent-info-rgb)); }
+    100% { border-top-color: rgb(var(--accent-success-rgb)); border-left-color: rgb(var(--accent-success-rgb)); }
 }
 
-.modal-content {
-    background-color: var(--secondary-color);
-    border: 1px solid var(--border-color);
-    box-shadow: 0 8px 30px rgba(0,0,0,0.5),
-    0 0 0 2px rgba(var(--primary-color-rgb),0.25); /* 魔晶外框 */
-    border-radius: var(--border-radius);
+#ttsConfigFormContainer .tts-config-item,
+#ttsConfigFormContainer .tts-config-item * {
+    color: rgb(var(--text-secondary-rgb));
 }
-.modal-header h2 {
-    color: var(--primary-color);
-    text-shadow: 0 0 8px rgba(var(--primary-color-rgb),0.4),
-    0 0 12px rgba(var(--dq-dark-soul-purple-rgb),0.3);
-}
-.close-modal-btn:hover { color: var(--primary-color); }
-.modal-body input[type="text"], .modal-body textarea {
-    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.88);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius);
-
-}
-.modal-body input[type="text"]:focus, .modal-body textarea:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 1.5px rgba(var(--primary-color-rgb),0.4);
-}
-.user-id-display #modalUserIdValue {
-    background: rgba(var(--dq-dark-nightsky-black-rgb),0.85);
-    color: var(--primary-color);
-    border: 1px dashed var(--primary-color);
-
-    border-radius: var(--border-radius);
+#ttsConfigFormContainer .tts-config-item label {
     font-weight: 500;
 }
 
-/* Video Call */
-.video-call-avatar { background-color: var(--dq-dark-volcanic-border); border: 1px solid var(--border-color); }
-.video-call-button.end-call { background: var(--danger-color); }
-.video-call-button.active { background: var(--primary-color); color: var(--text-color-inverted); }
-
-/* Toggle Switch */
-.slider { background-color: var(--dq-dark-volcanic-border); }
-.slider:before { background-color: var(--dq-dark-obsidian-panel); box-shadow: 0 1px 2px rgba(0,0,0,0.4); }
-input:checked + .slider { background-color: var(--primary-color); }
-input:checked + .slider:before { transform: translateX(20px); }
-
-
-/* --- 确保特定隐藏/显示部分 --- */
-#detailsPanelContent #aiContactAboutSection,
-#detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
-#detailsPanelContent #detailsGroupManagement #leftMembersArea,
-#detailsPanelContent #groupActionsDetails,
-#detailsPanelContent #dissolveGroupBtnDetails,
-#mainMenuModal .settings-section.manual-connection-advanced,
-#mainMenuModal #modalResetAllConnectionsBtn {
-    display: none;
+/*
+================================================================================
+|                            👤 角色专属样式 👤                              |
+================================================================================
+*/
+/* 💎 萧炎 - 黑金、青莲、火红 💎 */
+.AI_萧炎_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_萧炎_斗破苍穹, .details-avatar.AI_萧炎_斗破苍穹 {
+    background-color: rgb(30,30,30);
+    color: rgb(190, 140, 50);
+    border-color: rgb(var(--dq-dark-demonic-cyan-flame-rgb));
+    box-shadow: 0 0 8px rgb(var(--dq-dark-demonic-cyan-flame-rgb)), 0 0 5px rgb(190, 140, 50) inset, 0 0 10px rgb(var(--brand-rgb));
 }
-
-/* 特定于AI角色显示"关于"区域的样式 */
-.details-panel.AI_萧炎_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_药老_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_萧薰儿_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_美杜莎_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_小医仙_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_云韵_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_海波东_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_紫妍_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_纳兰嫣然_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_魂殿_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_韩枫_斗破苍穹 #aiContactAboutSection,
-.details-panel.AI_林修崖_斗破苍穹 #aiContactAboutSection {
-    display: block;
+.chat-list-item.active.AI_萧炎_斗破苍穹 {
+    background-color: rgba(30,30,30, 0.3);
+    box-shadow: inset 3px 0 0 0 rgb(var(--brand-rgb)), 0 0 12px rgba(30,30,30, 0.5) inset;
 }
-
-.details-panel.human-contact-active #contactActionsDetails { display: block; }
-.details-panel.group-chat-active #detailsGroupManagement,
-.details-panel.group-chat-active #groupActionsDetails { display: block; }
-
-.notification {
-    background: var(--dq-dark-obsidian-panel);
-    border-left: 4px solid var(--primary-color);
-    color: var(--text-color);
-    box-shadow: 0 3px 10px rgba(0,0,0,0.4);
-    border-radius: var(--border-radius);
-
+.chat-list-item.active.AI_萧炎_斗破苍穹 .chat-list-name { color: rgb(var(--brand-rgb)); }
+.chat-header-main.character-active.AI_萧炎_斗破苍穹 .chat-title-main {
+    color: rgb(var(--brand-rgb));
+    text-shadow: 0 0 5px rgb(var(--dq-dark-demonic-cyan-flame-rgb)), 0 0 8px rgb(190, 140, 50);
 }
-.notification.error {
-    border-left-color: var(--danger-color);
+.message.received.character-message.AI_萧炎_斗破苍穹 {
+    border-color: rgb(var(--dq-dark-demonic-cyan-flame-rgb));
+    background-color: rgba(30,30,30, 0.2);
 }
-.notification.success {
-    border-left-color: var(--dq-dark-ancient-gold);
+.message.received.character-message.AI_萧炎_斗破苍穹 .message-sender { color: rgb(var(--brand-rgb)); }
+.details-panel.character-active.AI_萧炎_斗破苍穹 #detailsName { color: rgb(var(--brand-rgb)); }
+
+/* 📜 药老 - 银白、淡紫、灵魂蓝 📜 */
+.AI_药老_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_药老_斗破苍穹, .details-avatar.AI_药老_斗破苍穹 {
+    background-color: rgb(230,235,240);
+    color: rgb(var(--accent-info-rgb));
+    border-color: rgb(100, 150, 210);
+    box-shadow: 0 0 9px rgb(100, 150, 210), 0 0 6px rgba(var(--accent-info-rgb), 0.6) inset;
 }
-#ttsConfigFormContainer .tts-config-item * {
-    color: #ccc;
+.chat-list-item.active.AI_药老_斗破苍穹 {
+    background-color: rgba(230,235,240, 0.08);
+    box-shadow: inset 3px 0 0 0 rgb(var(--accent-info-rgb)), 0 0 12px rgba(100, 150, 210, 0.3) inset;
+}
+.chat-list-item.active.AI_药老_斗破苍穹 .chat-list-name { color: rgb(var(--accent-info-rgb)); }
+.chat-header-main.character-active.AI_药老_斗破苍穹 .chat-title-main { color: rgb(100, 150, 210); }
+.message.received.character-message.AI_药老_斗破苍穹 {
+    border-color: rgb(100, 150, 210);
+    background-color: rgba(var(--accent-info-rgb), 0.1);
+}
+.message.received.character-message.AI_药老_斗破苍穹 .message-sender { color: rgb(var(--accent-info-rgb)); }
+.details-panel.character-active.AI_药老_斗破苍穹 #detailsName { color: rgb(var(--accent-info-rgb)); }
+
+/* 🐍 美杜莎女王 - 妖紫、玫红、暗金 🐍 */
+.AI_美杜莎_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_美杜莎_斗破苍穹, .details-avatar.AI_美杜莎_斗破苍穹 {
+    background-color: rgb(100, 60, 130);
+    color: rgb(var(--border-strong-rgb));
+    border-color: rgb(180, 50, 100);
+    box-shadow: 0 0 8px rgb(180, 50, 100);
+}
+.chat-list-item.active.AI_美杜莎_斗破苍穹 {
+    background-color: rgba(100, 60, 130, 0.2);
+    box-shadow: inset 3px 0 0 0 rgb(180, 50, 100), 0 0 12px rgba(100, 60, 130, 0.4) inset;
+}
+.chat-list-item.active.AI_美杜莎_斗破苍穹 .chat-list-name { color: rgb(100, 60, 130); }
+.chat-header-main.character-active.AI_美杜莎_斗破苍穹 .chat-title-main { color: rgb(100, 60, 130); text-shadow: 0 0 6px rgb(180, 50, 100); }
+.message.received.character-message.AI_美杜莎_斗破苍穹 {
+    border-color: rgb(100, 60, 130);
+    background-color: rgba(100, 60, 130, 0.12);
+}
+.message.received.character-message.AI_美杜莎_斗破苍穹 .message-sender { color: rgb(180, 50, 100); }
+.details-panel.character-active.AI_美杜莎_斗破苍穹 #detailsName { color: rgb(100, 60, 130); }
+
+/* ☁️ 云韵 - 天蓝、淡金 ☁️ */
+.AI_云韵_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_云韵_斗破苍穹, .details-avatar.AI_云韵_斗破苍穹 {
+    background-color: rgb(90, 150, 170);
+    color: rgb(var(--text-primary-rgb));
+    border-color: rgb(160, 120, 40);
+    box-shadow: 0 0 7px rgb(160, 120, 40);
+}
+.chat-list-item.active.AI_云韵_斗破苍穹 {
+    background-color: rgba(90, 150, 170, 0.15);
+    box-shadow: inset 3px 0 0 0 rgb(160, 120, 40), 0 0 10px rgba(90, 150, 170, 0.3) inset;
+}
+.chat-list-item.active.AI_云韵_斗破苍穹 .chat-list-name { color: rgb(90, 150, 170); }
+.chat-header-main.character-active.AI_云韵_斗破苍穹 .chat-title-main { color: rgb(90, 150, 170); text-shadow: 0 0 5px rgb(160, 120, 40); }
+.message.received.character-message.AI_云韵_斗破苍穹 {
+    border-color: rgb(90, 150, 170);
+    background-color: rgba(90, 150, 170, 0.1);
+}
+.message.received.character-message.AI_云韵_斗破苍穹 .message-sender { color: rgb(90, 150, 170); }
+.details-panel.character-active.AI_云韵_斗破苍穹 #detailsName { color: rgb(90, 150, 170); }
+
+/* 🌸 纳兰嫣然 - 浅紫、玫红 🌸 */
+.AI_纳兰嫣然_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_纳兰嫣然_斗破苍穹, .details-avatar.AI_纳兰嫣然_斗破苍穹 {
+    background-color: rgb(150, 120, 180);
+    color: rgb(var(--text-primary-rgb));
+    border-color: rgb(190, 70, 100);
+    box-shadow: 0 0 7px rgb(190, 70, 100);
+}
+.chat-list-item.active.AI_纳兰嫣然_斗破苍穹 {
+    background-color: rgba(150, 120, 180, 0.2);
+    box-shadow: inset 3px 0 0 0 rgb(190, 70, 100), 0 0 10px rgba(150, 120, 180, 0.3) inset;
+}
+.chat-list-item.active.AI_纳兰嫣然_斗破苍穹 .chat-list-name { color: rgb(150, 120, 180); }
+.chat-header-main.character-active.AI_纳兰嫣然_斗破苍穹 .chat-title-main { color: rgb(150, 120, 180); text-shadow: 0 0 5px rgb(190, 70, 100); }
+.message.received.character-message.AI_纳兰嫣然_斗破苍穹 {
+    border-color: rgb(150, 120, 180);
+    background-color: rgba(150, 120, 180, 0.1);
+}
+.message.received.character-message.AI_纳兰嫣然_斗破苍穹 .message-sender { color: rgb(190, 70, 100); }
+.details-panel.character-active.AI_纳兰嫣然_斗破苍穹 #detailsName { color: rgb(150, 120, 180); }
+
+/* 🔥 萧薰儿 - 金黄、赤焰 🔥 */
+.AI_萧薰儿_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_萧薰儿_斗破苍穹, .details-avatar.AI_萧薰儿_斗破苍穹 {
+    background-color: rgb(180, 130, 40);
+    color: rgb(var(--dq-dark-nightsky-black-rgb));
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 8px rgb(var(--brand-rgb));
+}
+.chat-list-item.active.AI_萧薰儿_斗破苍穹 {
+    background-color: rgba(180, 130, 40, 0.2);
+    box-shadow: inset 3px 0 0 0 rgb(var(--brand-rgb)), 0 0 12px rgba(180, 130, 40, 0.4) inset;
+}
+.chat-list-item.active.AI_萧薰儿_斗破苍穹 .chat-list-name { color: rgb(180, 130, 40); }
+.chat-header-main.character-active.AI_萧薰儿_斗破苍穹 .chat-title-main { color: rgb(180, 130, 40); text-shadow: 0 0 6px rgb(var(--brand-rgb)); }
+.message.received.character-message.AI_萧薰儿_斗破苍穹 {
+    border-color: rgb(180, 130, 40);
+    background-color: rgba(180, 130, 40, 0.12);
+}
+.message.received.character-message.AI_萧薰儿_斗破苍穹 .message-sender { color: rgb(var(--brand-rgb)); }
+.details-panel.character-active.AI_萧薰儿_斗破苍穹 #detailsName { color: rgb(180, 130, 40); }
+
+/* --- 剩余角色 --- */
+.AI_小医仙_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_小医仙_斗破苍穹, .details-avatar.AI_小医仙_斗破苍穹 {
+    background-color: rgb(110, 110, 120); border-color: rgba(var(--text-primary-rgb), 0.5);
+}
+.AI_海波东_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_海波东_斗破苍穹, .details-avatar.AI_海波东_斗破苍穹 {
+    background-color: rgb(100, 170, 220); border-color: rgb(var(--dq-dark-nightsky-black-rgb));
+}
+.AI_紫妍_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_紫妍_斗破苍穹, .details-avatar.AI_紫妍_斗破苍穹 {
+    background-color: rgb(160, 90, 200); border-color: rgb(var(--text-primary-rgb));
 }
