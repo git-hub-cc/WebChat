@@ -1,0 +1,662 @@
+/* --- START OF FILE 鸣潮-深色.css --- */
+
+:root {
+    /* 鸣潮 - 哀叹余晖与信标微光 (Wuthering Waves - Twilight of the Lament & Beacon's Glimmer) */
+    /* Core Palette - Evokes deep night, technological glow, and melancholic hope */
+    --ww-nightfall-gray-bg-rgb: 22, 26, 32;      /* 夜幕深灰 (更深的背景，增强对比) */
+    --ww-nightfall-gray-bg: rgb(var(--ww-nightfall-gray-bg-rgb));
+    --ww-data-void-panel-rgb: 35, 40, 48;       /* 数据暗域 (面板，比之前稍深) */
+    --ww-data-void-panel: rgb(var(--ww-data-void-panel-rgb));
+    --ww-tacet-glow-cyan-rgb: 0, 210, 230;      /* 无音辉光青 (主强调/交互，更亮一点) */
+    --ww-tacet-glow-cyan: rgb(var(--ww-tacet-glow-cyan-rgb));
+    --ww-rover-gold-rgb: 210, 170, 100;         /* 漂泊者金 (次强调/希望，略微调整) */
+    --ww-rover-gold: rgb(var(--ww-rover-gold-rgb));
+    --ww-warning-amber-rgb: 255, 180, 40;       /* 警示琥珀 (点缀/警告) */
+    --ww-warning-amber: rgb(var(--ww-warning-amber-rgb));
+    --ww-glacio-frost-blue-rgb: 120, 170, 220; /* 冷凝霜蓝 (辅助/科技感) */
+    --ww-glacio-frost-blue: rgb(var(--ww-glacio-frost-blue-rgb));
+    --ww-lament-crimson-rgb: 220, 45, 55;       /* 悲鸣绯红 (危险/错误，更饱和) */
+    --ww-lament-crimson: rgb(var(--ww-lament-crimson-rgb));
+    --ww-beacon-white-rgb: 230, 235, 245;       /* 信标亮白 (主要文字，更亮) */
+    --ww-beacon-white: rgb(var(--ww-beacon-white-rgb));
+    --ww-echo-gray-rgb: 140, 145, 155;          /* 余音灰 (次要文字) */
+    --ww-echo-gray: rgb(var(--ww-echo-gray-rgb));
+    --ww-fractured-steel-border-rgb: 75, 82, 92;/* 残钢边框 (边框，更明确) */
+    --ww-fractured-steel-border: rgb(var(--ww-fractured-steel-border-rgb));
+    --ww-data-stream-shadow: 0 0 8px rgba(var(--ww-tacet-glow-cyan-rgb), 0.35); /* 数据流光影 */
+    --ww-sharp-border-radius: 3px; /* 更锐利的边角 */
+    --ww-panel-border: 1px solid rgba(var(--ww-fractured-steel-border-rgb), 0.6); /* 面板统一边框 */
+
+    /* 角色特定颜色 (深色) - Updated List */
+    --ww-rover-primary-dark: #FFC107; /* 漂泊者-亮金 (更鲜明) */
+    --ww-rover-secondary-dark: rgba(255, 193, 7, 0.1);
+    --ww-yuanwu-primary-dark: #8E24AA; /* 渊武-深紫 (更沉稳) */
+    --ww-yuanwu-secondary-dark: rgba(142, 36, 170, 0.12);
+    --ww-baizhi-primary-dark: #69F0AE; /* 白芷-薄荷荧光绿 (更具科技感的治疗色) */
+    --ww-baizhi-secondary-dark: rgba(105, 240, 174, 0.12);
+    --ww-chixia-primary-dark: #FF5722; /* 炽霞-烈焰橙 (更炽热) */
+    --ww-chixia-secondary-dark: rgba(255, 87, 34, 0.12);
+    --ww-yangyang-primary-dark: #8BC34A; /* 秧秧-青草绿 (更清新) */
+    --ww-yangyang-secondary-dark: rgba(139, 195, 74, 0.12);
+    --ww-youhu-primary-dark: #78909C; /* 釉瑚-蓝调灰 (更冷峻) */
+    --ww-youhu-secondary-dark: rgba(120, 144, 156, 0.12);
+    --ww-taoqi-primary-dark: #3F51B5; /* 桃祈-靛蓝 (更深邃) */
+    --ww-taoqi-secondary-dark: rgba(63, 81, 181, 0.12);
+    --ww-changli-primary-dark: #E91E63; /* 长离-洋红 (更妩媚) */
+    --ww-changli-secondary-dark: rgba(233, 30, 99, 0.12);
+    --ww-badorio-primary-dark: #8D6E63; /* 巴多里奥-砂石褐 (更粗犷) */
+    --ww-badorio-secondary-dark: rgba(141, 110, 99, 0.12);
+
+    /* 覆盖  Chat 原有变量 */
+    --primary-color: var(--ww-tacet-glow-cyan);
+    --primary-color-dark: rgb(0, 180, 200); /* 略微提亮暗态 */
+    --secondary-color: var(--ww-data-void-panel);
+    --text-color: var(--ww-beacon-white);
+    --text-color-light: var(--ww-echo-gray);
+    --text-color-inverted: var(--ww-nightfall-gray-bg);
+    --accent-color: var(--ww-rover-gold);
+    --danger-color: var(--ww-lament-crimson);
+    --warning-color: var(--ww-warning-amber);
+
+    --sent-bg-color: rgba(var(--ww-tacet-glow-cyan-rgb), 0.08); /* 发送消息背景带主色调 */
+    --received-bg-color: rgba(var(--ww-data-void-panel-rgb), 0.9); /* 接收消息背景更融入面板 */
+
+    --border-color: rgba(var(--ww-fractured-steel-border-rgb), 0.5);
+    --hover-bg-color: rgba(var(--ww-beacon-white-rgb), 0.04); /* hover更细腻 */
+    --active-bg-color: rgba(var(--ww-tacet-glow-cyan-rgb), 0.15); /* active更明显 */
+    --border-radius: var(--ww-sharp-border-radius);
+    /* 强化鸣潮风格的阴影，结合数据光效和面板层级感 */
+    --special-contact-color: var(--ww-rover-primary-dark);
+}
+
+* { box-sizing: border-box;   outline-color: var(--ww-tacet-glow-cyan); }
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--ww-nightfall-gray-bg);
+    color: var(--text-color);
+
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* 更有层次和动态感的背景，模拟宇宙尘埃和能量场 */
+    background-image:
+            radial-gradient(ellipse at 70% 30%, rgba(var(--ww-tacet-glow-cyan-rgb), 0.12) 0%, transparent 40%),
+            radial-gradient(ellipse at 30% 70%, rgba(var(--ww-rover-gold-rgb), 0.08) 0%, transparent 50%),
+            linear-gradient(170deg, var(--ww-nightfall-gray-bg) 50%, rgba(var(--ww-data-void-panel-rgb),0.6) 100%),
+            url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='rgba(var(--ww-fractured-steel-border-rgb),0.05)' fill-opacity='0.4'%3E%3Cpath d='M30 0h1v60h-1zM0 30h60v1h-60z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); /* 微弱网格/数据纹理 */
+    background-blend-mode: overlay, screen, normal, normal;
+    font-synthesis: none; /* 避免伪粗体/斜体 */
+    text-rendering: optimizeLegibility;
+}
+
+.app-container {
+    display: flex;
+    background-color: rgba(var(--ww-data-void-panel-rgb), 0.85); /* 半透明面板 */
+    border-radius: calc(var(--border-radius) + 2px); /* 统一应用容器圆角 */
+    border: var(--ww-panel-border);
+    overflow: hidden;
+    position: relative; /* For pseudo-elements */
+}
+
+/* Optional: Add subtle "glitch" or "data line" accents to container */
+.app-container::before {
+    content: '';
+    position: absolute;
+    top: -2px; left: 20%;
+
+    background: var(--ww-tacet-glow-cyan);
+    opacity: 0.5;
+    filter: blur(1px);
+    border-radius: 3px;
+    animation: ww-data-flicker 15s infinite alternate;
+}
+
+@keyframes ww-data-flicker {
+    0%, 100% { opacity: 0.2; transform: translateX(0); }
+    20% { opacity: 0.6; transform: translateX(-5px); }
+    40% { opacity: 0.3; transform: translateX(5px); }
+    60% { opacity: 0.7; transform: scaleY(1.2); }
+    80% { opacity: 0.4; transform: scaleY(0.8); }
+}
+
+
+/* --- 滚动条美化 --- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(var(--ww-nightfall-gray-bg-rgb), 0.7); border-radius: var(--ww-sharp-border-radius); }
+::-webkit-scrollbar-thumb { background: var(--ww-fractured-steel-border); border-radius: var(--ww-sharp-border-radius); border: 1px solid rgba(var(--ww-nightfall-gray-bg-rgb),0.5); }
+::-webkit-scrollbar-thumb:hover { background: var(--ww-tacet-glow-cyan); box-shadow: var(--ww-data-stream-shadow); }
+
+/* --- Sidebar Navigation --- */
+.sidebar-nav {
+    background-color: transparent; /* Rely on app-container background */
+    border-right: var(--ww-panel-border);
+
+    flex-shrink: 0;
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
+}
+.sidebar-header {
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.5); /* Slight distinction */
+    border-bottom: var(--ww-panel-border);
+}
+.menu-btn { color: var(--ww-echo-gray);}
+.menu-btn:hover { color: var(--ww-tacet-glow-cyan); text-shadow: var(--ww-data-stream-shadow); }
+.search-bar {
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.7);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+.search-bar::placeholder { color: var(--ww-echo-gray); }
+.search-bar:focus {
+    border-color: var(--ww-tacet-glow-cyan);
+    box-shadow: 0 0 0 2px rgba(var(--ww-tacet-glow-cyan-rgb),0.25), var(--ww-data-stream-shadow) inset;
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.9);
+}
+.nav-tabs { border-bottom: var(--ww-panel-border); }
+.nav-tab { color: var(--ww-echo-gray); position: relative; }
+.nav-tab:hover { color: var(--ww-tacet-glow-cyan); }
+.nav-tab.active { color: var(--ww-tacet-glow-cyan); font-weight: 500; }
+.nav-tab.active::after { /* Active indicator */
+    content: '';
+    position: absolute;
+    bottom: -1px; /* Align with border */
+    left: 0;
+
+
+    background-color: var(--ww-tacet-glow-cyan);
+    box-shadow: var(--ww-data-stream-shadow);
+}
+
+.chat-list-item {
+    border-bottom: 1px solid var(--border-color);
+}
+.chat-list-item:hover {
+    background-color: var(--hover-bg-color);
+    box-shadow: 2px 0 0 var(--ww-tacet-glow-cyan) inset; /* Hover indicator */
+}
+.chat-list-item.active {
+    background-color: var(--active-bg-color);
+    box-shadow: 3px 0 0 var(--ww-tacet-glow-cyan) inset, 0 0 8px rgba(var(--ww-tacet-glow-cyan-rgb), 0.2) inset;
+}
+.chat-list-item.active .chat-list-name { color: var(--ww-tacet-glow-cyan); font-weight: 600; }
+.chat-list-avatar {
+    background-color: var(--ww-fractured-steel-border);
+    font-family: var(--font-family); /* Ensure consistent font for initials */
+    border: 1px solid rgba(var(--ww-beacon-white-rgb), 0.15);
+    color: var(--ww-beacon-white);
+    font-weight: 500;
+    /* Consider slightly angular avatars if possible via clip-path, otherwise, standard circle is fine */
+    /* border-radius: 30%; clip-path: polygon(50% 0%, 90% 20%, 90% 80%, 50% 100%, 10% 80%, 10% 20%); */
+}
+
+/* --- 角色特定样式 (深色) - Updated List --- */
+/* Rover */
+.chat-list-item.special-contact.AI_Rover_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Rover_鸣潮, .details-avatar.AI_Rover_鸣潮, #callingModalAvatar.AI_Rover_鸣潮 {
+    background-color: var(--ww-rover-primary-dark); color: var(--ww-nightfall-gray-bg); border-color: var(--ww-rover-primary-dark);
+    box-shadow: 0 0 8px var(--ww-rover-primary-dark); text-shadow: 0 0 3px rgba(var(--ww-nightfall-gray-bg-rgb), 0.5);
+}
+.chat-list-item.active.AI_Rover_鸣潮 { background-color: var(--ww-rover-secondary-dark); box-shadow: 3px 0 0 var(--ww-rover-primary-dark) inset, 0 0 8px var(--ww-rover-primary-dark) inset; }
+.chat-list-item.active.AI_Rover_鸣潮 .chat-list-name { color: var(--ww-rover-primary-dark); }
+.chat-header-main.current-chat-AI_Rover_鸣潮 .chat-title-main { color: var(--ww-rover-primary-dark); text-shadow: 0 0 7px var(--ww-rover-primary-dark); }
+.message.received[data-sender-id="AI_Rover_鸣潮"] { border-left: 3px solid var(--ww-rover-primary-dark); background-color: rgba(255, 193, 7, 0.05); box-shadow: -2px 0 5px rgba(255,193,7,0.1) inset; }
+.message.received[data-sender-id="AI_Rover_鸣潮"] .message-sender { color: var(--ww-rover-primary-dark); font-weight: 600; }
+.details-panel.AI_Rover_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Rover_鸣潮 #detailsName { color: var(--ww-rover-primary-dark); text-shadow: 0 0 5px var(--ww-rover-primary-dark); }
+
+/* 渊武 (Yuanwu) */
+.chat-list-item.special-contact.AI_Yuanwu_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Yuanwu_鸣潮, .details-avatar.AI_Yuanwu_鸣潮, #callingModalAvatar.AI_Yuanwu_鸣潮 {
+    background-color: var(--ww-yuanwu-primary-dark); color: var(--ww-beacon-white); border-color: var(--ww-yuanwu-primary-dark);
+    box-shadow: 0 0 8px var(--ww-yuanwu-primary-dark);
+}
+.chat-list-item.active.AI_Yuanwu_鸣潮 { background-color: var(--ww-yuanwu-secondary-dark); box-shadow: 3px 0 0 var(--ww-yuanwu-primary-dark) inset, 0 0 8px var(--ww-yuanwu-primary-dark) inset; }
+.chat-list-item.active.AI_Yuanwu_鸣潮 .chat-list-name { color: var(--ww-yuanwu-primary-dark); }
+.chat-header-main.current-chat-AI_Yuanwu_鸣潮 .chat-title-main { color: var(--ww-yuanwu-primary-dark); text-shadow: 0 0 7px var(--ww-yuanwu-primary-dark); }
+.message.received[data-sender-id="AI_Yuanwu_鸣潮"] { border-left: 3px solid var(--ww-yuanwu-primary-dark); background-color: rgba(142, 36, 170, 0.06); box-shadow: -2px 0 5px rgba(142,36,170,0.1) inset;}
+.message.received[data-sender-id="AI_Yuanwu_鸣潮"] .message-sender { color: var(--ww-yuanwu-primary-dark); font-weight: 600; }
+.details-panel.AI_Yuanwu_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Yuanwu_鸣潮 #detailsName { color: var(--ww-yuanwu-primary-dark); text-shadow: 0 0 5px var(--ww-yuanwu-primary-dark); }
+
+/* 白芷 (Baizhi) */
+.chat-list-item.special-contact.AI_Baizhi_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Baizhi_鸣潮, .details-avatar.AI_Baizhi_鸣潮, #callingModalAvatar.AI_Baizhi_鸣潮 {
+    background-color: var(--ww-baizhi-primary-dark); color: var(--ww-nightfall-gray-bg); border-color: var(--ww-baizhi-primary-dark);
+    box-shadow: 0 0 8px var(--ww-baizhi-primary-dark); text-shadow: 0 0 2px rgba(var(--ww-nightfall-gray-bg-rgb),0.4);
+}
+.chat-list-item.active.AI_Baizhi_鸣潮 { background-color: var(--ww-baizhi-secondary-dark); box-shadow: 3px 0 0 var(--ww-baizhi-primary-dark) inset, 0 0 8px var(--ww-baizhi-primary-dark) inset; }
+.chat-list-item.active.AI_Baizhi_鸣潮 .chat-list-name { color: var(--ww-baizhi-primary-dark); }
+.chat-header-main.current-chat-AI_Baizhi_鸣潮 .chat-title-main { color: var(--ww-baizhi-primary-dark); text-shadow: 0 0 7px var(--ww-baizhi-primary-dark); }
+.message.received[data-sender-id="AI_Baizhi_鸣潮"] { border-left: 3px solid var(--ww-baizhi-primary-dark); background-color: rgba(105, 240, 174, 0.06); box-shadow: -2px 0 5px rgba(105,240,174,0.1) inset;}
+.message.received[data-sender-id="AI_Baizhi_鸣潮"] .message-sender { color: var(--ww-baizhi-primary-dark); font-weight: 600; }
+.details-panel.AI_Baizhi_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Baizhi_鸣潮 #detailsName { color: var(--ww-baizhi-primary-dark); text-shadow: 0 0 5px var(--ww-baizhi-primary-dark); }
+
+/* 炽霞 (Chixia) */
+.chat-list-item.special-contact.AI_Chixia_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Chixia_鸣潮, .details-avatar.AI_Chixia_鸣潮, #callingModalAvatar.AI_Chixia_鸣潮 {
+    background-color: var(--ww-chixia-primary-dark); color: var(--ww-beacon-white); border-color: var(--ww-chixia-primary-dark);
+    box-shadow: 0 0 8px var(--ww-chixia-primary-dark); text-shadow: 0 0 2px rgba(var(--ww-nightfall-gray-bg-rgb),0.3);
+}
+.chat-list-item.active.AI_Chixia_鸣潮 { background-color: var(--ww-chixia-secondary-dark); box-shadow: 3px 0 0 var(--ww-chixia-primary-dark) inset, 0 0 8px var(--ww-chixia-primary-dark) inset; }
+.chat-list-item.active.AI_Chixia_鸣潮 .chat-list-name { color: var(--ww-chixia-primary-dark); }
+.chat-header-main.current-chat-AI_Chixia_鸣潮 .chat-title-main { color: var(--ww-chixia-primary-dark); text-shadow: 0 0 7px var(--ww-chixia-primary-dark); }
+.message.received[data-sender-id="AI_Chixia_鸣潮"] { border-left: 3px solid var(--ww-chixia-primary-dark); background-color: rgba(255, 87, 34, 0.06); box-shadow: -2px 0 5px rgba(255,87,34,0.1) inset;}
+.message.received[data-sender-id="AI_Chixia_鸣潮"] .message-sender { color: var(--ww-chixia-primary-dark); font-weight: 600; }
+.details-panel.AI_Chixia_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Chixia_鸣潮 #detailsName { color: var(--ww-chixia-primary-dark); text-shadow: 0 0 5px var(--ww-chixia-primary-dark); }
+
+/* 秧秧 (Yangyang) */
+.chat-list-item.special-contact.AI_Yangyang_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Yangyang_鸣潮, .details-avatar.AI_Yangyang_鸣潮, #callingModalAvatar.AI_Yangyang_鸣潮 {
+    background-color: var(--ww-yangyang-primary-dark); color: var(--ww-nightfall-gray-bg); border-color: var(--ww-yangyang-primary-dark);
+    box-shadow: 0 0 8px var(--ww-yangyang-primary-dark); text-shadow: 0 0 2px rgba(var(--ww-nightfall-gray-bg-rgb),0.4);
+}
+.chat-list-item.active.AI_Yangyang_鸣潮 { background-color: var(--ww-yangyang-secondary-dark); box-shadow: 3px 0 0 var(--ww-yangyang-primary-dark) inset, 0 0 8px var(--ww-yangyang-primary-dark) inset; }
+.chat-list-item.active.AI_Yangyang_鸣潮 .chat-list-name { color: var(--ww-yangyang-primary-dark); }
+.chat-header-main.current-chat-AI_Yangyang_鸣潮 .chat-title-main { color: var(--ww-yangyang-primary-dark); text-shadow: 0 0 7px var(--ww-yangyang-primary-dark); }
+.message.received[data-sender-id="AI_Yangyang_鸣潮"] { border-left: 3px solid var(--ww-yangyang-primary-dark); background-color: rgba(139, 195, 74, 0.06); box-shadow: -2px 0 5px rgba(139,195,74,0.1) inset;}
+.message.received[data-sender-id="AI_Yangyang_鸣潮"] .message-sender { color: var(--ww-yangyang-primary-dark); font-weight: 600; }
+.details-panel.AI_Yangyang_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Yangyang_鸣潮 #detailsName { color: var(--ww-yangyang-primary-dark); text-shadow: 0 0 5px var(--ww-yangyang-primary-dark); }
+
+/* 釉瑚 (Youhu) */
+.chat-list-item.special-contact.AI_Youhu_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Youhu_鸣潮, .details-avatar.AI_Youhu_鸣潮, #callingModalAvatar.AI_Youhu_鸣潮 {
+    background-color: var(--ww-youhu-primary-dark); color: var(--ww-nightfall-gray-bg); border-color: var(--ww-youhu-primary-dark);
+    box-shadow: 0 0 8px var(--ww-youhu-primary-dark); text-shadow: 0 0 2px rgba(var(--ww-nightfall-gray-bg-rgb),0.4);
+}
+.chat-list-item.active.AI_Youhu_鸣潮 { background-color: var(--ww-youhu-secondary-dark); box-shadow: 3px 0 0 var(--ww-youhu-primary-dark) inset, 0 0 8px var(--ww-youhu-primary-dark) inset; }
+.chat-list-item.active.AI_Youhu_鸣潮 .chat-list-name { color: var(--ww-youhu-primary-dark); }
+.chat-header-main.current-chat-AI_Youhu_鸣潮 .chat-title-main { color: var(--ww-youhu-primary-dark); text-shadow: 0 0 7px var(--ww-youhu-primary-dark); }
+.message.received[data-sender-id="AI_Youhu_鸣潮"] { border-left: 3px solid var(--ww-youhu-primary-dark); background-color: rgba(120, 144, 156, 0.06); box-shadow: -2px 0 5px rgba(120,144,156,0.1) inset;}
+.message.received[data-sender-id="AI_Youhu_鸣潮"] .message-sender { color: var(--ww-youhu-primary-dark); font-weight: 600; }
+.details-panel.AI_Youhu_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Youhu_鸣潮 #detailsName { color: var(--ww-youhu-primary-dark); text-shadow: 0 0 5px var(--ww-youhu-primary-dark); }
+
+/* 桃祈 (Taoqi) */
+.chat-list-item.special-contact.AI_Taoqi_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Taoqi_鸣潮, .details-avatar.AI_Taoqi_鸣潮, #callingModalAvatar.AI_Taoqi_鸣潮 {
+    background-color: var(--ww-taoqi-primary-dark); color: var(--ww-beacon-white); border-color: var(--ww-taoqi-primary-dark);
+    box-shadow: 0 0 8px var(--ww-taoqi-primary-dark); text-shadow: 0 0 2px rgba(var(--ww-nightfall-gray-bg-rgb),0.3);
+}
+.chat-list-item.active.AI_Taoqi_鸣潮 { background-color: var(--ww-taoqi-secondary-dark); box-shadow: 3px 0 0 var(--ww-taoqi-primary-dark) inset, 0 0 8px var(--ww-taoqi-primary-dark) inset; }
+.chat-list-item.active.AI_Taoqi_鸣潮 .chat-list-name { color: var(--ww-taoqi-primary-dark); }
+.chat-header-main.current-chat-AI_Taoqi_鸣潮 .chat-title-main { color: var(--ww-taoqi-primary-dark); text-shadow: 0 0 7px var(--ww-taoqi-primary-dark); }
+.message.received[data-sender-id="AI_Taoqi_鸣潮"] { border-left: 3px solid var(--ww-taoqi-primary-dark); background-color: rgba(63, 81, 181, 0.06); box-shadow: -2px 0 5px rgba(63,81,181,0.1) inset;}
+.message.received[data-sender-id="AI_Taoqi_鸣潮"] .message-sender { color: var(--ww-taoqi-primary-dark); font-weight: 600; }
+.details-panel.AI_Taoqi_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Taoqi_鸣潮 #detailsName { color: var(--ww-taoqi-primary-dark); text-shadow: 0 0 5px var(--ww-taoqi-primary-dark); }
+
+/* 长离 (Changli) */
+.chat-list-item.special-contact.AI_Changli_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Changli_鸣潮, .details-avatar.AI_Changli_鸣潮, #callingModalAvatar.AI_Changli_鸣潮 {
+    background-color: var(--ww-changli-primary-dark); color: var(--ww-beacon-white); border-color: var(--ww-changli-primary-dark);
+    box-shadow: 0 0 8px var(--ww-changli-primary-dark); text-shadow: 0 0 2px rgba(var(--ww-nightfall-gray-bg-rgb),0.3);
+}
+.chat-list-item.active.AI_Changli_鸣潮 { background-color: var(--ww-changli-secondary-dark); box-shadow: 3px 0 0 var(--ww-changli-primary-dark) inset, 0 0 8px var(--ww-changli-primary-dark) inset; }
+.chat-list-item.active.AI_Changli_鸣潮 .chat-list-name { color: var(--ww-changli-primary-dark); }
+.chat-header-main.current-chat-AI_Changli_鸣潮 .chat-title-main { color: var(--ww-changli-primary-dark); text-shadow: 0 0 7px var(--ww-changli-primary-dark); }
+.message.received[data-sender-id="AI_Changli_鸣潮"] { border-left: 3px solid var(--ww-changli-primary-dark); background-color: rgba(233, 30, 99, 0.06); box-shadow: -2px 0 5px rgba(233,30,99,0.1) inset;}
+.message.received[data-sender-id="AI_Changli_鸣潮"] .message-sender { color: var(--ww-changli-primary-dark); font-weight: 600; }
+.details-panel.AI_Changli_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Changli_鸣潮 #detailsName { color: var(--ww-changli-primary-dark); text-shadow: 0 0 5px var(--ww-changli-primary-dark); }
+
+/* 巴多里奥 (Badorio) */
+.chat-list-item.special-contact.AI_Badorio_鸣潮 .chat-list-avatar,
+.chat-avatar-main.AI_Badorio_鸣潮, .details-avatar.AI_Badorio_鸣潮, #callingModalAvatar.AI_Badorio_鸣潮 {
+    background-color: var(--ww-badorio-primary-dark); color: var(--ww-beacon-white); border-color: var(--ww-badorio-primary-dark);
+    box-shadow: 0 0 8px var(--ww-badorio-primary-dark); text-shadow: 0 0 2px rgba(var(--ww-nightfall-gray-bg-rgb),0.3);
+}
+.chat-list-item.active.AI_Badorio_鸣潮 { background-color: var(--ww-badorio-secondary-dark); box-shadow: 3px 0 0 var(--ww-badorio-primary-dark) inset, 0 0 8px var(--ww-badorio-primary-dark) inset; }
+.chat-list-item.active.AI_Badorio_鸣潮 .chat-list-name { color: var(--ww-badorio-primary-dark); }
+.chat-header-main.current-chat-AI_Badorio_鸣潮 .chat-title-main { color: var(--ww-badorio-primary-dark); text-shadow: 0 0 7px var(--ww-badorio-primary-dark); }
+.message.received[data-sender-id="AI_Badorio_鸣潮"] { border-left: 3px solid var(--ww-badorio-primary-dark); background-color: rgba(141, 110, 99, 0.06); box-shadow: -2px 0 5px rgba(141,110,99,0.1) inset;}
+.message.received[data-sender-id="AI_Badorio_鸣潮"] .message-sender { color: var(--ww-badorio-primary-dark); font-weight: 600; }
+.details-panel.AI_Badorio_鸣潮 #aiContactAboutSection h4 span, .details-panel.AI_Badorio_鸣潮 #detailsName { color: var(--ww-badorio-primary-dark); text-shadow: 0 0 5px var(--ww-badorio-primary-dark); }
+
+
+.chat-list-badge {
+    background-color: var(--ww-lament-crimson);
+    color: var(--ww-beacon-white);
+    box-shadow: 0 0 5px var(--ww-lament-crimson), 0 0 8px var(--ww-lament-crimson) inset;
+    border-radius: 50%;
+    font-size: 0.7rem;
+
+
+
+}
+.new-chat-fab {
+    background: linear-gradient(145deg, var(--ww-tacet-glow-cyan), var(--primary-color-dark));
+    color: var(--ww-nightfall-gray-bg);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.5), 0 0 12px var(--ww-tacet-glow-cyan);
+    border: 1px solid rgba(var(--ww-beacon-white-rgb),0.1);
+}
+.new-chat-fab:hover {
+    background: linear-gradient(145deg, var(--primary-color-dark), var(--ww-tacet-glow-cyan));
+    transform: scale(1.08) translateY(-2px);
+    box-shadow: 0 5px 15px rgba(var(--ww-tacet-glow-cyan-rgb),0.4), 0 0 20px var(--ww-tacet-glow-cyan);
+}
+
+/* --- Main Chat Area --- */
+.chat-area { background-color: transparent; display: flex; flex-direction: column; }
+.chat-header-main {
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.5); /* Slight distinction */
+    border-bottom: var(--ww-panel-border);
+}
+.chat-avatar-main {
+    border: 2px solid var(--ww-fractured-steel-border);
+    box-shadow: 0 0 6px rgba(var(--ww-beacon-white-rgb),0.1);
+}
+.chat-title-main { font-weight: 500; letter-spacing: 0.5px; text-shadow: 0 0 8px rgba(var(--ww-beacon-white-rgb), 0.1); }
+.header-action-btn { color: var(--ww-echo-gray); }
+.header-action-btn:hover { color: var(--ww-tacet-glow-cyan); text-shadow: var(--ww-data-stream-shadow); transform: scale(1.1); }
+
+.no-chat-selected {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    user-select: none;
+}
+.no-chat-selected .logo-placeholder { /* "汐" - Tide/Evening, very Wuthering Waves */
+    font-family: 'Times New Roman', 'LXGW WenKai TC', serif; /* Or a more stylistic serif if available */
+    font-weight: 300;
+    color: rgba(var(--ww-tacet-glow-cyan-rgb), 0.3);
+    animation: ww-logo-pulse-dark 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+.no-chat-selected .logo-placeholder::before { /* Echo effect */
+    content: "汐";
+    position: absolute;
+    left:0; top:0;
+    opacity: 0.5;
+    filter: blur(5px);
+    animation: ww-logo-echo-dark 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+    animation-delay: 0.2s;
+}
+
+@keyframes ww-logo-pulse-dark {
+    0%, 100% { opacity: 0.3; transform: scale(0.92); }
+    50% { opacity: 0.5; transform: scale(1); }
+}
+@keyframes ww-logo-echo-dark {
+    0%, 100% { opacity: 0.1; transform: scale(0.95) translateX(-2px) translateY(1px); }
+    50% { opacity: 0.25; transform: scale(1.05) translateX(2px) translateY(-1px); }
+}
+
+.status-indicator.global {
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.8);
+    border: var(--ww-panel-border);
+    color: var(--ww-tacet-glow-cyan);
+    border-radius: var(--border-radius);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3), var(--ww-data-stream-shadow) inset;
+}
+
+/* 消息气泡 */
+.message {
+    border: 1px solid transparent; /* Base transparent border */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4), 0 0 5px rgba(var(--ww-fractured-steel-border-rgb),0.1) inset; /* Softer shadow for messages */
+    border-radius: var(--border-radius);
+    /* For a more "data shard" feel - optional, can be complex */
+    /* clip-path: polygon(0 5px, 5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px)); */
+}
+.message.sent {
+    background-color: var(--sent-bg-color);
+    border-left: 3px solid var(--ww-tacet-glow-cyan); /* Stronger accent for sent */
+    /* For right-aligned sent messages, this might be border-right */
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4), var(--ww-data-stream-shadow) inset;
+}
+.message.received {
+    background-color: var(--received-bg-color);
+    border-right: 3px solid var(--ww-fractured-steel-border); /* Subtle accent for received */
+}
+.message.system {
+    background-color: transparent;
+    color: var(--ww-rover-gold);
+    font-style: italic;
+    font-size: 0.9em;
+    text-align: center;
+    border: 1px dashed rgba(var(--ww-rover-gold-rgb), 0.5);
+    box-shadow: 0 0 8px rgba(var(--ww-rover-gold-rgb),0.15) inset;
+}
+.message-sender {
+    color: var(--text-color-light);
+    font-weight: 500;
+
+    font-size: 0.85em;
+    opacity: 0.9;
+}
+.message .timestamp {
+    color: var(--text-color-light);
+    opacity: 0.6;
+    font-size: 0.7em;
+
+}
+
+.chat-input-container {
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.7);
+    border-top: var(--ww-panel-border);
+}
+#messageInput {
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.85);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+#messageInput::placeholder { color: var(--ww-echo-gray); opacity: 0.8; }
+#messageInput:focus {
+    border-color: var(--primary-color);
+    background-color: var(--ww-nightfall-gray-bg);
+    box-shadow: 0 0 0 2px rgba(var(--ww-tacet-glow-cyan-rgb),0.25), var(--ww-data-stream-shadow) inset;
+}
+.icon-btn { color: var(--ww-echo-gray);  border-radius: 50%; }
+.icon-btn:hover {
+    color: var(--ww-tacet-glow-cyan);
+    background-color: rgba(var(--ww-tacet-glow-cyan-rgb),0.1);
+    box-shadow: var(--ww-data-stream-shadow);
+}
+#sendButtonMain { color: var(--ww-tacet-glow-cyan); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+#sendButtonMain:hover { text-shadow: var(--ww-data-stream-shadow); }
+#voiceButtonMain.recording { color: var(--danger-color); animation: ww-dark-pulse 1.2s infinite ease-in-out; }
+@keyframes ww-dark-pulse { /* More pronounced pulse */
+    0% { box-shadow: 0 0 0 0 rgba(var(--ww-lament-crimson-rgb), 0.7); opacity: 0.7;}
+    100% { box-shadow: 0 0 0 0 rgba(var(--ww-lament-crimson-rgb), 0); opacity: 0.7;}
+}
+
+/* --- Details Panel --- */
+.details-panel {
+    background-color: transparent; /* Rely on app-container */
+    border-left: var(--ww-panel-border);
+    flex-shrink: 0;
+}
+.details-header {
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.5); /* Slight distinction */
+    border-bottom: var(--ww-panel-border);
+}
+#detailsName { font-size: 1.4em; text-shadow: 0 0 8px rgba(var(--ww-beacon-white-rgb), 0.2);  }
+#aiContactDetailsContent {
+    background-color: rgba(var(--ww-data-void-panel-rgb), 0.6);
+    border: var(--ww-panel-border);
+    border-radius: var(--border-radius);
+
+    box-shadow: 0 0 10px rgba(0,0,0,0.2) inset;
+}
+#aiContactDetailsContent p strong {
+    color: var(--ww-rover-gold);
+    border-bottom: 1px solid rgba(var(--ww-rover-gold-rgb), 0.3);
+
+    font-weight: 600;
+}
+#aiContactBasicInfoList li {
+    border-bottom: 1px dotted rgba(var(--ww-beacon-white-rgb), 0.2);
+
+    font-size: 0.9em;
+}
+#aiContactAboutText { color: var(--ww-echo-gray); font-size: 0.9em; }
+
+/* 通用按钮样式 */
+.btn {
+    border-radius: var(--border-radius);
+    text-transform: uppercase;
+    letter-spacing: 1px; /* More spacing for tech feel */
+    font-weight: 600; /* Bolder buttons */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4), 0 0 0 1px transparent inset; /* Base shadow */
+    border: 1px solid transparent; /* Prepare for border transitions */
+    position: relative;
+    overflow: hidden; /* For pseudo-element effects */
+}
+.btn::before { /* Subtle shimmer effect on hover */
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+
+    background: linear-gradient(90deg, transparent, rgba(var(--ww-beacon-white-rgb),0.15), transparent);
+}
+.btn:hover::before { left: 100%; }
+
+.btn-primary {
+    background: linear-gradient(145deg, var(--ww-tacet-glow-cyan), var(--primary-color-dark));
+    color: var(--ww-nightfall-gray-bg);
+    border-color: var(--ww-tacet-glow-cyan);
+    box-shadow: 0 2px 5px rgba(var(--ww-tacet-glow-cyan-rgb),0.25), 0 0 10px rgba(var(--ww-tacet-glow-cyan-rgb),0.15);
+}
+.btn-primary:hover {
+    background: linear-gradient(145deg, var(--primary-color-dark), var(--ww-tacet-glow-cyan));
+    box-shadow: 0 3px 8px rgba(var(--ww-tacet-glow-cyan-rgb),0.4), 0 0 15px var(--ww-tacet-glow-cyan);
+    transform: translateY(-2px);
+}
+.btn-secondary {
+    background-color: var(--ww-fractured-steel-border);
+    color: var(--ww-beacon-white);
+    border-color: rgba(var(--ww-beacon-white-rgb),0.2);
+}
+.btn-secondary:hover {
+    background-color: var(--ww-fractured-steel-border);
+    border-color: var(--ww-tacet-glow-cyan);
+    box-shadow: 0 2px 6px rgba(var(--ww-fractured-steel-border-rgb),0.3), 0 0 5px var(--ww-tacet-glow-cyan);
+    transform: translateY(-2px);
+}
+.btn-danger {
+    background-color: var(--ww-lament-crimson);
+    color: var(--ww-beacon-white);
+    border-color: var(--ww-lament-crimson);
+    box-shadow: 0 2px 5px rgba(var(--ww-lament-crimson-rgb),0.25);
+}
+.btn-danger:hover {
+    background-color: var(--ww-lament-crimson);
+    box-shadow: 0 3px 8px rgba(var(--ww-lament-crimson-rgb),0.4), 0 0 10px var(--ww-lament-crimson);
+    transform: translateY(-2px);
+}
+.btn-success {
+    background-color: var(--ww-glacio-frost-blue);
+    color: var(--ww-nightfall-gray-bg);
+    border-color: var(--ww-glacio-frost-blue);
+}
+.btn-success:hover {
+    background-color: var(--ww-glacio-frost-blue);
+    box-shadow: 0 2px 6px rgba(var(--ww-glacio-frost-blue-rgb),0.3);
+    transform: translateY(-2px);
+}
+
+
+/* --- Modals --- */
+.loading-overlay { background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.95); backdrop-filter: blur(5px); }
+.loading-spinner {
+    border-top-color: var(--ww-tacet-glow-cyan);
+    border-left-color: var(--ww-tacet-glow-cyan);
+    border-bottom-color: rgba(var(--ww-tacet-glow-cyan-rgb),0.15);
+    border-right-color: rgba(var(--ww-tacet-glow-cyan-rgb),0.15);
+    border-width: 4px; /* Larger spinner */
+    animation: spin 0.8s linear infinite, ww-spinner-pulse 1.6s ease-in-out infinite alternate;
+}
+@keyframes ww-spinner-pulse {
+    from { box-shadow: 0 0 0 0 var(--ww-tacet-glow-cyan); }
+    to { box-shadow: 0 0 0 8px rgba(var(--ww-tacet-glow-cyan-rgb),0.3); }
+}
+
+.modal-content {
+    background-color: var(--ww-data-void-panel); /* Consistent panel color */
+    border: var(--ww-panel-border);
+    border-radius: calc(var(--border-radius) + 2px);
+
+}
+.modal-header h2 { color: var(--ww-tacet-glow-cyan); text-shadow: 0 0 8px var(--ww-tacet-glow-cyan); font-weight: 500; letter-spacing: 0.5px; }
+.close-modal-btn:hover { color: var(--ww-tacet-glow-cyan); transform: scale(1.2) rotate(90deg); }
+.modal-body input[type="text"], .modal-body textarea {
+    background-color: rgba(var(--ww-nightfall-gray-bg-rgb), 0.8);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+}
+.modal-body input[type="text"]:focus, .modal-body textarea:focus {
+    border-color: var(--ww-tacet-glow-cyan);
+    box-shadow: 0 0 0 2px rgba(var(--ww-tacet-glow-cyan-rgb),0.2), var(--ww-data-stream-shadow) inset;
+}
+.user-id-display #modalUserIdValue {
+    background: rgba(var(--ww-nightfall-gray-bg-rgb),0.7);
+    color: var(--ww-tacet-glow-cyan);
+    border: 1px dashed rgba(var(--ww-tacet-glow-cyan-rgb),0.7);
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    user-select: all;
+}
+
+/* Video Call */
+.video-call-avatar { background-color: var(--ww-fractured-steel-border); border: 1px solid var(--border-color); box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+.video-call-button.end-call { background: var(--danger-color); box-shadow: 0 0 8px var(--danger-color); }
+.video-call-button.end-call:hover { background: var(--danger-color); }
+.video-call-button.active { background: var(--ww-tacet-glow-cyan); color: var(--ww-nightfall-gray-bg); box-shadow: 0 0 8px var(--ww-tacet-glow-cyan); }
+.video-call-button.active:hover { background: var(--ww-tacet-glow-cyan); }
+
+/* Toggle Switch */
+.switch input { opacity: 0; }
+.slider {
+    position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: var(--ww-fractured-steel-border);
+}
+.slider:before {
+    position: absolute; content: ""; left: 3px; bottom: 3px;
+    background-color: var(--ww-data-void-panel);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+input:checked + .slider { background-color: var(--ww-tacet-glow-cyan); box-shadow: 0 0 5px var(--ww-tacet-glow-cyan); }
+input:focus + .slider { box-shadow: 0 0 1px var(--ww-tacet-glow-cyan), 0 0 0 2px rgba(var(--ww-tacet-glow-cyan-rgb),0.3); }
+
+
+/* Visibility for AI sections */
+#detailsPanelContent #aiContactAboutSection,
+#detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
+#detailsPanelContent #detailsGroupManagement #leftMembersArea,
+#detailsPanelContent #groupActionsDetails,
+#detailsPanelContent #dissolveGroupBtnDetails,
+#mainMenuModal .settings-section.manual-connection-advanced,
+#mainMenuModal #modalResetAllConnectionsBtn {
+    display: none;
+}
+.details-panel.AI_Rover_鸣潮 #aiContactAboutSection,
+.details-panel.AI_Yuanwu_鸣潮 #aiContactAboutSection,
+.details-panel.AI_Baizhi_鸣潮 #aiContactAboutSection,
+.details-panel.AI_Chixia_鸣潮 #aiContactAboutSection,
+.details-panel.AI_Yangyang_鸣潮 #aiContactAboutSection,
+.details-panel.AI_Youhu_鸣潮 #aiContactAboutSection,
+.details-panel.AI_Taoqi_鸣潮 #aiContactAboutSection,
+.details-panel.AI_Changli_鸣潮 #aiContactAboutSection,
+.details-panel.AI_Badorio_鸣潮 #aiContactAboutSection
+{
+    display: block;
+}
+
+.details-panel.human-contact-active #contactActionsDetails { display: block; }
+.details-panel.group-chat-active #detailsGroupManagement,
+.details-panel.group-chat-active #groupActionsDetails { display: block; }
+
+.notification {
+    background: var(--ww-data-void-panel);
+    border-left: 4px solid var(--ww-tacet-glow-cyan);
+    color: var(--text-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(var(--ww-tacet-glow-cyan-rgb),0.2) inset;
+    border-radius: var(--border-radius);
+}
+.notification.error {
+    border-left-color: var(--ww-lament-crimson);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(var(--ww-lament-crimson-rgb),0.2) inset;
+}
+.notification.success {
+    border-left-color: var(--ww-glacio-frost-blue); /* Assuming this is success for dark */
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 8px rgba(var(--ww-glacio-frost-blue-rgb),0.2) inset;
+}

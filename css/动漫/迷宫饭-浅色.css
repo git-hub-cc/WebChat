@@ -1,0 +1,207 @@
+/*
+================================================================================
+|                                                                              |
+|             🍱 迷宫饭 - 明亮厨房 (Dungeon Meshi - Light Theme) 🍱            |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained light theme file for Dungeon Meshi.
+*
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "迷宫饭 - 明亮厨房";
+    --theme-mode: "light";
+
+    /* ------------------------- 🎨 核心配色方案 -------------------------- */
+
+    /* 基础色板 - Bright Kitchen/Exploration Palette */
+    --mgf-parchment-bg-rgb: 248, 244, 232;       /* 羊皮纸米白 (背景主色) */
+    --mgf-light-stone-panel-rgb: 238, 232, 220;  /* 明亮石板 (次级背景/面板) */
+    --mgf-cooked-food-brown-rgb: 180, 130, 90;   /* 熟食暖棕 (主强调/交互) */
+    --mgf-cooked-food-brown-dark-rgb: 150, 100, 60; /* 深一点的熟食棕 */
+    --mgf-fresh-herb-green-rgb: 130, 160, 100;  /* 新鲜香草绿 (次强调/自然) */
+    --mgf-berry-red-rgb: 190, 70, 80;           /* 浆果红 (点缀/危险) */
+    --mgf-text-ink-brown-rgb: 85, 70, 55;       /* 墨迹棕 (主要文字) */
+    --mgf-text-light-soup-rgb: 150, 140, 125;   /* 清汤浅褐 (次要文字) */
+    --mgf-border-old-wood-rgb: 205, 195, 180;   /* 旧木边框 (边框) */
+
+    /* --- 语义化颜色变量覆盖 --- */
+    --brand-rgb: var(--mgf-cooked-food-brown-rgb);
+    --brand-dark-rgb: var(--mgf-cooked-food-brown-dark-rgb);
+    --text-on-brand-rgb: var(--mgf-parchment-bg-rgb);
+
+    --surface-1-rgb: var(--mgf-light-stone-panel-rgb);
+    --surface-2-rgb: var(--mgf-parchment-bg-rgb);
+    --surface-hover-rgb: rgba(var(--mgf-cooked-food-brown-rgb), 0.07);
+    --surface-active-rgb: rgba(var(--mgf-cooked-food-brown-rgb), 0.15);
+
+    --text-primary-rgb: var(--mgf-text-ink-brown-rgb);
+    --text-secondary-rgb: var(--mgf-text-light-soup-rgb);
+
+    --border-subtle-rgb: var(--mgf-border-old-wood-rgb);
+
+    --accent-success-rgb: var(--mgf-fresh-herb-green-rgb);
+    --accent-danger-rgb: var(--mgf-berry-red-rgb);
+    --accent-warning-rgb: 255, 160, 0;
+
+    /* --- 组件级颜色变量覆盖 --- */
+    --sent-bg-color: rgba(var(--mgf-cooked-food-brown-rgb), 0.12);
+    --text-on-sent: rgb(var(--text-primary-rgb));
+    --received-bg-color: rgb(var(--surface-2-rgb));
+    --text-on-received: rgb(var(--text-primary-rgb));
+
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "LXGW WenKai TC", "Source Han Serif SC", serif;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-radius-md: 6px;
+    --box-shadow-md: 0 1px 3px rgba(var(--mgf-text-ink-brown-rgb),0.12), 0 0 8px rgba(var(--mgf-cooked-food-brown-rgb),0.06) inset;
+
+    /* --- 角色特定颜色 --- */
+    --mgf-laios-primary: #A0522D; /* 莱欧斯-剑鞘棕 */
+    --mgf-marcille-primary: #FFB300; /* 玛露希尔-法杖金 (更鲜明的金) */
+    --mgf-chilchuck-primary: #C62828; /* 奇尔查克-工具红 (更沉稳的红) */
+    --mgf-senshi-primary: #616161; /* 先西-铁锅灰 (更深的灰) */
+    --mgf-falin-primary: #795548; /* 法琳-柔褐 */
+    --mgf-izutsumi-primary: #37474F; /* 井堤-暗蓝灰 (更具质感的黑) */
+    --mgf-kabru-primary: #1565C0; /* 卡布尔-队长蓝 (更深的蓝) */
+    --mgf-wingedlion-primary: #E65100; /* 有翼狮-狮王橙 (更偏橙的金色) */
+}
+
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
+body {
+    background: linear-gradient(135deg, rgba(var(--mgf-parchment-bg-rgb),0.9), rgba(var(--mgf-light-stone-panel-rgb),0.8)),
+    radial-gradient(ellipse at top left, rgba(var(--mgf-fresh-herb-green-rgb),0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(var(--mgf-cooked-food-brown-rgb),0.08) 0%, transparent 60%);
+    background-blend-mode: normal, overlay, overlay;
+}
+
+::-webkit-scrollbar-track { background: rgba(var(--mgf-light-stone-panel-rgb), 0.6); border-radius: var(--border-radius-md); }
+::-webkit-scrollbar-thumb { background: rgba(var(--mgf-cooked-food-brown-rgb), 0.4); border-radius: var(--border-radius-md); }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--brand-rgb)); }
+
+/* ------------------------- 🏛️ 页面结构与容器 ------------------------ */
+.app-container { border: 1px solid rgba(var(--border-subtle-rgb), 0.5); }
+.sidebar-nav { background-color: rgba(var(--surface-1-rgb), 0.8); }
+.sidebar-header { background-color: rgba(var(--surface-2-rgb), 0.6); }
+.search-bar { background-color: rgba(var(--surface-2-rgb), 0.9); }
+.search-bar:focus { border-color: rgb(var(--brand-rgb)); box-shadow: 0 0 0 1px rgba(var(--brand-rgb),0.35); }
+.nav-tabs { border-bottom: 1px solid rgb(var(--border-subtle-rgb)); }
+.nav-tab.active { color: rgb(var(--brand-rgb)); border-bottom-color: rgb(var(--brand-rgb)); }
+.chat-list-item.active { box-shadow: 0 0 6px rgba(var(--brand-rgb), 0.25) inset; }
+.chat-list-item.active .chat-list-name { color: rgb(var(--brand-rgb)); font-weight: bold; }
+.chat-list-avatar { background-color: rgb(var(--border-subtle-rgb)); border: 1px solid rgba(var(--text-primary-rgb), 0.15); }
+
+/* ------------------------- 💬 聊天主区 ------------------------ */
+.chat-header-main, .chat-input-container { background-color: rgba(var(--surface-2-rgb), 0.5); }
+.chat-avatar-main { border: 1px solid rgb(var(--border-subtle-rgb)); }
+.chat-title-main { text-shadow: 0 0 4px rgba(var(--brand-rgb), 0.1); }
+.header-action-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 2px rgb(var(--brand-rgb)); }
+
+.no-chat-selected .logo-placeholder::before { content: "🍲"; font-size: 60px; font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; color: rgba(var(--brand-rgb), 0.45); }
+.message { border: 1px solid rgb(var(--border-subtle-rgb)); }
+.message.sent { border-left: 2px solid rgb(var(--brand-rgb)); }
+.message.received { border-right: 2px solid rgb(var(--border-subtle-rgb)); }
+.message.system { background-color: rgba(var(--surface-1-rgb), 0.85); color: rgb(var(--brand-rgb)); font-style: italic; border: 1px dashed rgb(var(--brand-rgb)); box-shadow: 0 0 4px rgba(var(--brand-rgb),0.18) inset; }
+.icon-btn:hover { color: rgb(var(--brand-rgb)); background-color: var(--surface-hover-rgb); }
+#sendButtonMain { color: rgb(var(--brand-rgb)); }
+#sendButtonMain:hover { text-shadow: 0 0 2px rgb(var(--brand-rgb)); }
+
+/* ------------------------- 🎛️ 控件与弹窗 ------------------------ */
+.new-chat-fab { background-color: rgb(var(--brand-rgb)); color: rgb(var(--text-on-brand-rgb)); box-shadow: 0 1px 4px rgba(var(--text-primary-rgb),0.35), 0 0 5px rgb(var(--brand-rgb)); }
+.new-chat-fab:hover { background-color: rgb(var(--brand-dark-rgb)); }
+.chat-list-badge { background-color: rgb(var(--accent-danger-rgb)); }
+.btn-primary { background-color: rgb(var(--brand-rgb)); border: 1px solid rgba(var(--text-primary-rgb),0.25); }
+.btn-primary:hover { background-color: rgb(var(--brand-dark-rgb)); }
+.btn-secondary { background-color: rgb(var(--border-subtle-rgb)); border: 1px solid rgba(var(--text-primary-rgb),0.15); }
+.btn-secondary:hover { background-color: rgb(185, 175, 160); }
+.btn-danger { background-color: rgb(var(--accent-danger-rgb)); border: 1px solid rgba(var(--text-primary-rgb),0.15); }
+.btn-danger:hover { background-color: rgb(160, 50, 60); }
+.btn-success { background-color: rgb(var(--accent-success-rgb)); }
+.btn-success:hover { background-color: rgb(100, 130, 70); }
+
+.loading-overlay { background-color: rgba(var(--surface-2-rgb), 0.85); }
+.loading-spinner { border-top-color: rgb(var(--brand-rgb)); border-left-color: rgb(var(--brand-rgb)); }
+.modal-header h2 { color: rgb(var(--brand-rgb)); }
+.modal-body input, .modal-body textarea { background-color: rgba(var(--surface-2-rgb), 0.8); }
+
+input:checked + .slider { background-color: rgb(var(--brand-rgb)); }
+.slider { background-color: rgb(var(--border-subtle-rgb)); }
+.slider:before { background-color: rgb(var(--surface-2-rgb)); }
+.notification { border-left-color: rgb(var(--brand-rgb)); }
+
+/*
+================================================================================
+|                            👤 角色专属样式 👤                              |
+================================================================================
+*/
+
+/* --- 莱欧斯 (Laios) --- */
+.AI_Laious_迷宫饭 { --character-theme-primary: var(--mgf-laios-primary); }
+.AI_Laious_迷宫饭 .chat-list-avatar, .chat-avatar-main.AI_Laious_迷宫饭, .details-avatar.AI_Laious_迷宫饭 {
+    background-color: var(--mgf-laios-primary); color: #F5EFE0; border: 1px solid #795548;
+}
+.chat-list-item.active.AI_Laious_迷宫饭 { background: linear-gradient(135deg, #fdf8f0, #f7f1e5); border-left: 3px solid var(--mgf-laios-primary); box-shadow: none; }
+.message.received.character-message.AI_Laious_迷宫饭 { background: linear-gradient(135deg, #fdf8f0, #f7f1e5); }
+
+/* --- 玛露希尔 (Marcille) --- */
+.AI_Marcille_迷宫饭 { --character-theme-primary: var(--mgf-marcille-primary); }
+.AI_Marcille_迷宫饭 .chat-list-avatar, .chat-avatar-main.AI_Marcille_迷宫饭, .details-avatar.AI_Marcille_迷宫饭 {
+    background-color: var(--mgf-marcille-primary); color: #614108; border: 1px solid #fce5a9;
+}
+.chat-list-item.active.AI_Marcille_迷宫饭 { background: linear-gradient(135deg, #fffcf2, #fff8e1); border-left: 3px solid var(--mgf-marcille-primary); box-shadow: 0 0 8px rgba(255,179,0,0.2) inset; }
+.message.received.character-message.AI_Marcille_迷宫饭 { background: linear-gradient(135deg, #fffcf2, #fff8e1); }
+.chat-header-main.character-active.AI_Marcille_迷宫饭 .chat-title-main { text-shadow: 0 0 5px rgba(255,179,0,0.4); }
+
+/* --- 奇尔查克 (Chilchuck) --- */
+.AI_Chilchuck_迷宫饭 { --character-theme-primary: var(--mgf-chilchuck-primary); }
+.AI_Chilchuck_迷宫饭 .chat-list-avatar, .chat-avatar-main.AI_Chilchuck_迷宫饭, .details-avatar.AI_Chilchuck_迷宫饭 {
+    background-color: var(--mgf-chilchuck-primary); color: #FFEBEE; border: 1px solid #8E0000;
+}
+.chat-list-item.active.AI_Chilchuck_迷宫饭 { background: linear-gradient(135deg, #fff6f6, #ffebee); border-left: 3px solid var(--mgf-chilchuck-primary); box-shadow: none; }
+.message.received.character-message.AI_Chilchuck_迷宫饭 { background: linear-gradient(135deg, #fff6f6, #ffebee); }
+
+/* --- 先西 (Senshi) --- */
+.AI_Senshi_迷宫饭 { --character-theme-primary: var(--mgf-senshi-primary); }
+.AI_Senshi_迷宫饭 .chat-list-avatar, .chat-avatar-main.AI_Senshi_迷宫饭, .details-avatar.AI_Senshi_迷宫饭 {
+    background-color: var(--mgf-senshi-primary); color: #E0E0E0; border: 1px solid #424242; font-weight: bold;
+}
+.chat-list-item.active.AI_Senshi_迷宫饭 { background: linear-gradient(135deg, #f5f5f5, #eeeeee); border-left: 3px solid var(--mgf-senshi-primary); box-shadow: none; }
+.message.received.character-message.AI_Senshi_迷宫饭 { background: linear-gradient(135deg, #f5f5f5, #eeeeee); }
+
+/* --- 法琳 (Falin) --- */
+.AI_Falin_迷宫饭 { --character-theme-primary: var(--mgf-falin-primary); }
+.AI_Falin_迷宫饭 .chat-list-avatar, .chat-avatar-main.AI_Falin_迷宫饭, .details-avatar.AI_Falin_迷宫饭 {
+    background-color: #F0F8FF; color: var(--mgf-falin-primary); border: 1px solid #D7CCC8;
+}
+.chat-list-item.active.AI_Falin_迷宫饭 { background: linear-gradient(135deg, #F8F9FA, #F1F3F5); border-left: 3px solid var(--mgf-falin-primary); box-shadow: none; }
+.message.received.character-message.AI_Falin_迷宫饭 { background: linear-gradient(135deg, #F8F9FA, #F1F3F5); }
+.chat-list-item.active.AI_Falin_迷宫饭 .chat-list-name, .chat-header-main.character-active.AI_Falin_迷宫饭 .chat-title-main, .message.received.character-message.AI_Falin_迷宫饭 .message-sender { color: #5D4037; } /* A bit darker for text */
+
+/* --- 井堤 (Izutsumi) --- */
+.AI_Izutsumi_迷宫饭 { --character-theme-primary: var(--mgf-izutsumi-primary); }
+.AI_Izutsumi_迷宫饭 .chat-list-avatar, .chat-avatar-main.AI_Izutsumi_迷宫饭, .details-avatar.AI_Izutsumi_迷宫饭 {
+    background-color: var(--mgf-izutsumi-primary); color: #CFD8DC; border: 1px solid #263238;
+}
+.chat-list-item.active.AI_Izutsumi_迷宫饭 { background: linear-gradient(135deg, #ECEFF1, #CFD8DC); border-left: 3px solid var(--mgf-izutsumi-primary); box-shadow: none; }
+.message.received.character-message.AI_Izutsumi_迷宫饭 { background: linear-gradient(135deg, #ECEFF1, #CFD8DC); }
+
+/* --- 卡布尔 (Kabru) --- */
+.AI_Kabru_迷宫饭 { --character-theme-primary: var(--mgf-kabru-primary); }
+.AI_Kabru_迷宫饭 .chat-list-avatar, .chat-avatar-main.AI_Kabru_迷宫饭, .details-avatar.AI_Kabru_迷宫饭 {
+    background-color: var(--mgf-kabru-primary); color: #E3F2FD; border: 1px solid #0D47A1;
+}
+.chat-list-item.active.AI_Kabru_迷宫饭 { background: linear-gradient(135deg, #f0f7ff, #e3f2fd); border-left: 3px solid var(--mgf-kabru-primary); box-shadow: none; }
+.message.received.character-message.AI_Kabru_迷宫饭 { background: linear-gradient(135deg, #f0f7ff, #e3f2fd); }
+
+/* --- 有翼狮 (Winged Lion) --- */
+.AI_WingedLion_迷宫饭 { --character-theme-primary: var(--mgf-wingedlion-primary); }
+.AI_WingedLion_迷宫饭 .chat-list-avatar, .chat-avatar-main.AI_WingedLion_迷宫饭, .details-avatar.AI_WingedLion_迷宫饭 {
+    background-color: var(--mgf-wingedlion-primary); color: #4E342E; border: 1px solid #BF360C;
+}
+.chat-list-item.active.AI_WingedLion_迷宫饭 { background: linear-gradient(135deg, #fff3e0, #ffe0b2); border-left: 3px solid var(--mgf-wingedlion-primary); box-shadow: 0 0 8px rgba(230,81,0,0.2) inset; }
+.message.received.character-message.AI_WingedLion_迷宫饭 { background: linear-gradient(135deg, #fff3e0, #ffe0b2); }
+.chat-header-main.character-active.AI_WingedLion_迷宫饭 .chat-title-main { text-shadow: 0 0 5px rgba(230,81,0,0.4); }

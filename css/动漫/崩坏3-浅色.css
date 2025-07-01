@@ -1,0 +1,328 @@
+/*
+================================================================================
+|                                                                              |
+|             ✨ 崩坏3 - 星光协议 (Honkai Impact 3rd - Starlight Protocol) ✨   |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained light theme file for Honkai Impact 3rd.
+*
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "崩坏3 - 星光协议";
+    --theme-mode: "light";
+
+    /* ------------------------- 🎨 核心配色方案 -------------------------- */
+    /* 色板 - Starlight Protocol Palette */
+    --hi3-hyperion-hull-bg-rgb: 242, 245, 250;
+    --hi3-control-deck-panel-rgb: 228, 232, 240;
+    --hi3-tech-blue-rgb: 0, 150, 255;
+    --hi3-tech-blue-dark-rgb: 0, 120, 225;
+    --hi3-valkyrie-orange-rgb: 255, 120, 30;
+    --hi3-status-critical-red-rgb: 230, 40, 70;
+    --hi3-interface-dark-text-rgb: 30, 35, 55;
+    --hi3-secondary-data-text-rgb: 90, 95, 115;
+    --hi3-light-divider-line-rgb: 195, 200, 215;
+
+    /* --- 语义化颜色变量覆盖 --- */
+    --brand-rgb: var(--hi3-tech-blue-rgb);
+    --brand-dark-rgb: var(--hi3-tech-blue-dark-rgb);
+    --text-on-brand-rgb: var(--hi3-hyperion-hull-bg-rgb);
+
+    --surface-1-rgb: var(--hi3-control-deck-panel-rgb);
+    --surface-2-rgb: var(--hi3-hyperion-hull-bg-rgb);
+    --surface-hover-rgb: 235, 238, 245; /* Slightly lighter hover */
+    --surface-active-rgb: 220, 225, 235; /* Darker active */
+
+    --text-primary-rgb: var(--hi3-interface-dark-text-rgb);
+    --text-secondary-rgb: var(--hi3-secondary-data-text-rgb);
+
+    --border-subtle-rgb: var(--hi3-light-divider-line-rgb);
+
+    --accent-success-rgb: 67, 160, 71; /* Ai-chan Green */
+    --accent-danger-rgb: var(--hi3-status-critical-red-rgb);
+    --accent-warning-rgb: 255, 160, 0; /* A clearer warning orange */
+    --accent-info-rgb: var(--hi3-tech-blue-rgb);
+
+    /* --- 组件级颜色变量覆盖 --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgba(var(--surface-2-rgb), 0.7);
+    --chat-bg-color: rgb(var(--surface-1-rgb));
+    --input-bg-color: rgb(var(--surface-2-rgb));
+
+    --sent-bg-color: rgba(var(--hi3-tech-blue-rgb), 0.1);
+    --text-on-sent: rgb(var(--text-primary-rgb));
+    --received-bg-color: rgba(var(--hi3-control-deck-panel-rgb), 0.9);
+    --text-on-received: rgb(var(--text-primary-rgb));
+
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "Exo 2", "Source Han Sans CN", "Noto Sans CJK SC", sans-serif;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-radius-md: 4px;
+    --box-shadow-sm: 0 2px 5px rgba(var(--hi3-interface-dark-text-rgb), 0.08), 0 1px 2px rgba(var(--hi3-interface-dark-text-rgb), 0.05);
+    --box-shadow-md: 0 4px 10px rgba(var(--hi3-interface-dark-text-rgb), 0.1);
+
+    /* --- 角色主题占位符 (会被JS或角色类覆盖) --- */
+    --character-theme-primary: rgb(var(--hi3-tech-blue-rgb));
+    --character-theme-secondary: rgba(var(--hi3-tech-blue-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-tech-blue-rgb), 0.5);
+    --character-text-color: rgb(var(--hi3-hyperion-hull-bg-rgb));
+
+    /* --- 角色颜色库 (供主题CSS内部使用) --- */
+    --hi3-himeko-primary-rgb: 230, 74, 25;
+    --hi3-seeleveliona-primary-rgb: 94, 53, 177;
+    --hi3-keqing-primary-rgb: 126, 87, 194;
+    --hi3-aponia-primary-rgb: 2, 136, 209;
+    --hi3-fischloz-primary-rgb: 142, 36, 170;
+    --hi3-origin-primary-rgb: 216, 27, 96;
+    --hi3-aichan-primary-rgb: 67, 160, 71;
+    --hi3-rozaliya-primary-rgb: 233, 30, 99;
+}
+
+
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
+body {
+    background-color: rgb(var(--surface-1-rgb));
+    background-image:
+            radial-gradient(circle at 1px 1px, rgba(var(--border-subtle-rgb), 0.3) 1px, transparent 0),
+            radial-gradient(circle at 15px 15px, rgba(var(--border-subtle-rgb), 0.3) 1px, transparent 0);
+    background-size: 30px 30px;
+}
+
+::-webkit-scrollbar-track { background: rgba(var(--surface-1-rgb), 0.8); }
+::-webkit-scrollbar-thumb { background: rgb(var(--border-subtle-rgb)); border-radius: var(--border-radius-md); }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--brand-rgb)); box-shadow: 0 0 5px rgb(var(--brand-rgb)); }
+
+.app-container {
+    background-color: rgb(var(--surface-2-rgb));
+    border: 1px solid rgb(var(--border-subtle-rgb));
+    position: relative;
+}
+.app-container::before, .app-container::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: rgb(var(--brand-rgb));
+    opacity: 0.5;
+    pointer-events: none;
+}
+.app-container::before { top: -1px; left: -1px; border-top: 1px solid; border-left: 1px solid; border-top-left-radius: var(--border-radius-md); }
+.app-container::after { bottom: -1px; right: -1px; border-bottom: 1px solid; border-right: 1px solid; border-bottom-right-radius: var(--border-radius-md); }
+
+
+/* ------------------------- 🧭 侧边栏与导航 ------------------------- */
+.sidebar-nav {
+    background-color: rgba(var(--surface-2-rgb), 0.7);
+    backdrop-filter: blur(5px);
+}
+.menu-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 4px rgb(var(--brand-rgb)); }
+
+.search-bar {
+    background-color: rgb(var(--surface-2-rgb));
+    border: 1px solid rgb(var(--border-subtle-rgb));
+    box-shadow: var(--box-shadow-sm);
+}
+.search-bar:focus-within {
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 0 1px rgb(var(--brand-rgb)), 0 2px 8px rgba(var(--brand-rgb), 0.2);
+}
+
+.nav-tabs { border-bottom: 1px solid rgb(var(--border-subtle-rgb)); }
+.nav-tab.active {
+    color: rgb(var(--brand-rgb));
+    border-bottom: 2px solid rgb(var(--brand-rgb));
+    background-color: rgba(var(--brand-rgb), 0.05);
+}
+
+.chat-list-item:hover {
+    background-color: rgb(var(--surface-hover-rgb));
+    box-shadow: inset 3px 0 0 rgb(var(--brand-rgb));
+}
+.chat-list-item.active {
+    background-color: rgba(var(--brand-rgb), 0.1);
+    box-shadow: inset 3px 0 0 rgb(var(--brand-rgb));
+}
+.chat-list-item.active .chat-list-name { color: rgb(var(--brand-rgb)); }
+.chat-list-avatar {
+    background-color: rgb(var(--border-subtle-rgb));
+    border: 1px solid rgba(var(--text-primary-rgb), 0.1);
+    border-radius: 25%;
+    transition: transform 0.2s ease-out;
+}
+.chat-list-item:hover .chat-list-avatar { transform: scale(1.05); }
+
+.chat-list-badge {
+    background-color: rgb(var(--accent-danger-rgb));
+    box-shadow: 0 0 6px rgb(var(--accent-danger-rgb));
+    animation: hi3-badge-pulse-light 1.5s infinite alternate;
+}
+@keyframes hi3-badge-pulse-light {
+    from { opacity: 0.8; transform: scale(1); }
+    to { opacity: 1; transform: scale(1.1); }
+}
+
+.new-chat-fab {
+    background: linear-gradient(135deg, rgb(var(--brand-rgb)), rgb(var(--hi3-valkyrie-orange-rgb)));
+    box-shadow: 0 2px 8px rgba(var(--text-primary-rgb), 0.3);
+    transition: transform 0.2s ease-out;
+}
+.new-chat-fab:hover { transform: scale(1.1) rotate(45deg); }
+
+
+/* ------------------------- 💬 主聊天区 ------------------------- */
+.chat-header-main, .details-header {
+    background-color: rgba(var(--surface-2-rgb), 0.6);
+    backdrop-filter: blur(5px);
+}
+.chat-avatar-main { border-radius: 25%; }
+.header-action-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 4px rgb(var(--brand-rgb)); transform: scale(1.1); }
+
+.no-chat-selected .logo-placeholder {
+    font-size: 5rem;
+    font-weight: bold;
+    color: rgba(var(--brand-rgb), 0.5);
+    text-shadow: 0 0 8px rgba(var(--brand-rgb), 0.3), 1px 1px 0px rgb(var(--surface-2-rgb));
+    animation: hi3-placeholder-float-light 3s infinite ease-in-out;
+}
+@keyframes hi3-placeholder-float-light {
+    50% { transform: translateY(-8px); opacity: 0.9; }
+}
+
+.message { border-radius: var(--border-radius-md); }
+.message.sent { border-left: 3px solid rgb(var(--brand-rgb)); }
+.message.received { border: 1px solid rgb(var(--border-subtle-rgb)); }
+
+.message.system {
+    background-color: rgba(var(--hi3-valkyrie-orange-rgb), 0.08);
+    color: rgb(var(--hi3-valkyrie-orange-rgb));
+    border: 1px dashed rgb(var(--hi3-valkyrie-orange-rgb));
+    box-shadow: 0 0 6px rgba(var(--hi3-valkyrie-orange-rgb),0.2) inset;
+}
+
+#messageInput:focus {
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 0 1px rgb(var(--brand-rgb)), 0 2px 8px rgba(var(--brand-rgb), 0.2);
+}
+.icon-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 4px rgb(var(--brand-rgb)); transform: scale(1.15); }
+#voiceButtonMain.recording { color: rgb(var(--accent-danger-rgb)); animation: hi3-light-pulse-btn 1.2s infinite; }
+@keyframes hi3-light-pulse-btn {
+    50% { text-shadow: 0 0 8px rgba(var(--accent-danger-rgb), 0.8); transform: scale(1.2); }
+}
+
+
+/* ------------------------- 🔘 通用组件 ------------------------- */
+.btn {
+    border-radius: var(--border-radius-md);
+    text-transform: uppercase;
+    font-weight: 600;
+    border: 1px solid rgb(var(--border-subtle-rgb));
+}
+.btn-primary { background-color: rgb(var(--brand-rgb)); border-color: rgb(var(--brand-rgb)); }
+.btn-primary:hover { background-color: rgb(var(--brand-dark-rgb)); box-shadow: 0 2px 5px rgba(var(--brand-rgb),0.3); }
+
+.modal-content {
+    background-color: rgb(var(--surface-2-rgb));
+    border: 1px solid rgb(var(--border-subtle-rgb));
+}
+.modal-header h2 { color: rgb(var(--brand-rgb)); }
+
+
+/*
+================================================================================
+|                            👤 角色专属样式 👤                              |
+================================================================================
+*/
+
+/* --- 角色样式应用规则 --- */
+.chat-list-item.special-contact .chat-list-avatar,
+.chat-avatar-main.is-character,
+.details-avatar.is-character {
+    background-color: var(--character-theme-primary);
+    color: var(--character-text-color);
+    border: 2px solid var(--character-theme-primary);
+    box-shadow: 0 0 8px -2px var(--character-theme-glow), var(--box-shadow-sm);
+}
+.chat-list-item.active.special-contact {
+    background-color: var(--character-theme-secondary);
+    box-shadow: inset 3px 0 0 var(--character-theme-primary);
+}
+.chat-list-item.active.special-contact .chat-list-name {
+    color: var(--character-theme-primary);
+}
+.chat-header-main.is-character-chat .chat-title-main {
+    color: var(--character-theme-primary);
+    text-shadow: 0 0 5px var(--character-theme-glow);
+}
+.message.received.is-character-message {
+    background-color: var(--character-theme-secondary);
+    border-color: var(--character-theme-primary);
+}
+.message.received.is-character-message .message-sender {
+    color: var(--character-theme-primary);
+    font-weight: 600;
+}
+.details-panel.is-character-chat #detailsName,
+.details-panel.is-character-chat #aiContactAboutSection h4 span {
+    color: var(--character-theme-primary);
+}
+
+/* --- 角色颜色定义 --- */
+.AI_Himeko_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-himeko-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-himeko-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-himeko-primary-rgb), 0.5);
+}
+.AI_SeeleVeliona_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-seeleveliona-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-seeleveliona-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-seeleveliona-primary-rgb), 0.5);
+}
+.AI_Keqing_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-keqing-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-keqing-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-keqing-primary-rgb), 0.4);
+}
+.AI_Aponia_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-aponia-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-aponia-primary-rgb), 0.12);
+    --character-theme-glow: rgba(var(--hi3-aponia-primary-rgb), 0.4);
+}
+.AI_FischlOz_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-fischloz-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-fischloz-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-fischloz-primary-rgb), 0.5);
+}
+.AI_HerrscherOfOrigin_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-origin-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-origin-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-origin-primary-rgb), 0.5);
+}
+.AI_AiChan_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-aichan-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-aichan-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-aichan-primary-rgb), 0.5);
+}
+.AI_Rozaliya_崩坏3 {
+    --character-theme-primary: rgb(var(--hi3-rozaliya-primary-rgb));
+    --character-theme-secondary: rgba(var(--hi3-rozaliya-primary-rgb), 0.15);
+    --character-theme-glow: rgba(var(--hi3-rozaliya-primary-rgb), 0.5);
+}
+
+/* 特殊角色微调：菲谢尔的奥兹 */
+.chat-list-avatar.AI_FischlOz_崩坏3::after {
+    content: "Oz";
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    padding: 0 3px;
+    font-size: 8px;
+    color: rgb(var(--text-primary-rgb));
+    background: rgba(var(--hi3-fischloz-primary-rgb), 0.3);
+    border-radius: 2px;
+    font-weight: bold;
+}

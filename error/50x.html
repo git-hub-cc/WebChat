@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>500 - 服务器内部发生错误</title>
+    <!-- 主题特定 CSS, 确保路径正确 -->
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
+    <style>
+        :root {
+            /* Fallback variables if theme CSS doesn't load, though it should */
+            --gs-dawn-beige-bg-rgb: 245, 240, 232;
+            --gs-moonlight-porcelain-panel-rgb: 253, 252, 248;
+            --gs-teyvat-gold-rgb: 210, 170, 80;
+            --gs-starlight-blue-rgb: 50, 160, 230;
+            --gs-pyro-red-rgb: 225, 70, 70;
+            --gs-scroll-ink-gray-rgb: 65, 75, 85;
+            --gs-scroll-ink-gray: rgb(var(--gs-scroll-ink-gray-rgb));
+            --gs-ancient-inscription-gray: rgb(125, 135, 145);
+            --gs-pyro-red: rgb(var(--gs-pyro-red-rgb));
+            --gs-starlight-blue: rgb(var(--gs-starlight-blue-rgb));
+            --gs-moonlight-porcelain-panel: rgb(var(--gs-moonlight-porcelain-panel-rgb));
+            --border-radius: 7px;
+            --primary-color-dark: rgb(30, 130, 200); /* Fallback, should be from theme */
+            --font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
+        }
+        html {
+            height: 100%;
+        }
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            /* Replicate Genshin theme body styles directly for robustness */
+            background: linear-gradient(135deg, rgba(var(--gs-dawn-beige-bg-rgb),0.95), rgba(var(--gs-moonlight-porcelain-panel-rgb),0.85)),
+            radial-gradient(ellipse at top left, rgba(var(--gs-teyvat-gold-rgb),0.12) 0%, transparent 55%),
+            radial-gradient(ellipse at bottom right, rgba(var(--gs-starlight-blue-rgb),0.1) 0%, transparent 65%),
+            url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23D2B48C' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            background-blend-mode: normal, luminosity, luminosity, normal;
+            font-family: var(--font-family, "LXGW WenKai TC", "Source Han Serif SC", serif);
+            color: var(--gs-scroll-ink-gray, #414B55);
+            text-align: center;
+        }
+        .error-container {
+            background-color: var(--gs-moonlight-porcelain-panel, #fdfcf8);
+            padding: 30px 40px;
+            border-radius: var(--border-radius, 7px);
+            box-shadow: 0 7px 30px rgba(var(--gs-scroll-ink-gray-rgb, 65, 75, 85),0.1), 0 0 18px rgba(var(--gs-starlight-blue-rgb, 50, 160, 230),0.07) inset;
+            border: 1px solid var(--border-color, rgba(200, 210, 220, 0.45));
+            max-width: 550px;
+            width: 100%;
+        }
+        .error-code {
+            font-size: 5rem;
+            font-weight: bold;
+            font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
+            color: var(--gs-pyro-red, #E14646); /* Use pyro red for server error */
+            margin-bottom: 0px;
+            line-height: 1;
+            text-shadow: 0 0 10px rgba(var(--gs-pyro-red-rgb, 225, 70, 70), 0.3);
+        }
+        .error-message {
+            font-size: 1.7rem;
+            font-family: "LXGW WenKai TC", "Source Han Serif SC", serif;
+            color: var(--gs-scroll-ink-gray, #414B55);
+            margin-top: 15px;
+            margin-bottom: 20px;
+        }
+        .error-description {
+            font-size: 0.95rem;
+            color: var(--gs-ancient-inscription-gray, #7D8791);
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .home-link {
+            display: inline-block;
+            padding: 10px 25px;
+            background-color: var(--gs-starlight-blue, #32A0E6);
+            color: var(--gs-moonlight-porcelain-panel, #fdfcf8) !important;
+            text-decoration: none;
+            border-radius: var(--border-radius, 7px);
+            font-weight: 500;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 1px 3px rgba(var(--gs-scroll-ink-gray-rgb, 65, 75, 85),0.22);
+            border: 1px solid rgba(var(--gs-scroll-ink-gray-rgb, 65, 75, 85),0.2);
+        }
+        .home-link:hover {
+            background-color: var(--primary-color-dark, rgb(30, 130, 200));
+            box-shadow: 0 2px 5px rgba(var(--gs-starlight-blue-rgb, 50, 160, 230),0.2);
+            transform: translateY(-1px);
+        }
+        /* Genshin warning/error motif */
+        .error-motif {
+            font-size: 2.5rem;
+            color: rgba(var(--gs-pyro-red-rgb, 225, 70, 70), 0.7);
+            margin-bottom: 15px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<div class="error-container">
+    <span class="error-motif">🔥</span>
+    <div class="error-code">500</div>
+    <div class="error-message">服务器好像过载了</div>
+    <p class="error-description">可莉不小心在服务器旁边玩炸弹了... 啊不，是说服务器暂时遇到了一些技术问题，正在紧急修复中。请稍后再来查看吧！</p>
+    <a href="https://175.178.216.24/" class="home-link">返回安全区域（首页）</a>
+</div>
+</body>
+</html>

@@ -1,0 +1,522 @@
+:root {
+    /* 咒术回战 - 现代都市/咒术高专 主题色板 (Jujutsu Kaisen - Modern City/Jujutsu High Palette - Light) */
+    --jjk-cursed-seal-white-rgb: 248, 249, 250;  /* 符咒白 (背景主色 - very clean white) */
+    --jjk-cursed-seal-white: rgb(var(--jjk-cursed-seal-white-rgb));
+    --jjk-tokyo-sky-panel-rgb: 233, 236, 239;   /* 东京天灰 (次级背景/面板 - light cool gray) */
+    --jjk-tokyo-sky-panel: rgb(var(--jjk-tokyo-sky-panel-rgb));
+    --jjk-cursed-energy-blue-rgb: 40, 90, 170;/* 咒力蓝 (主强调/交互 - slightly deeper blue for better contrast) */
+    --jjk-cursed-energy-blue: rgb(var(--jjk-cursed-energy-blue-rgb));
+    --jjk-cursed-energy-blue-light: rgba(var(--jjk-cursed-energy-blue-rgb), 0.15);
+    --jjk-cursed-energy-blue-hover: rgb(30, 70, 140);
+
+    --jjk-blood-oath-red-rgb: 200, 50, 60;      /* 血契赤 (次强调/危险 - more saturated red) */
+    --jjk-blood-oath-red: rgb(var(--jjk-blood-oath-red-rgb));
+    --jjk-domain-purple-rgb: 110, 80, 150;     /* 领域紫 (点缀/神秘 - slightly more saturated) */
+    --jjk-domain-purple: rgb(var(--jjk-domain-purple-rgb));
+    --jjk-ink-black-rgb: 33, 37, 41;            /* 墨黑 (主要文字 - near black for strong contrast) */
+    --jjk-ink-black: rgb(var(--jjk-ink-black-rgb));
+    --jjk-shadow-gray-rgb: 90, 95, 105;      /* 影灰 (次要文字 - darker gray for readability) */
+    --jjk-shadow-gray: rgb(var(--jjk-shadow-gray-rgb));
+    --jjk-steel-frame-rgb: 190, 195, 205;      /* 钢构框 (边框 - lighter, cleaner metallic gray) */
+    --jjk-steel-frame: rgb(var(--jjk-steel-frame-rgb));
+    --jjk-steel-frame-light: rgba(var(--jjk-steel-frame-rgb), 0.5);
+
+    /* 角色特定颜色 (浅色) - Jujutsu Kaisen (Adjusted for better pop on light bg) */
+    --jjk-gojo-primary-light: #00AADD;      /* 五条悟-六眼天蓝 (Vibrant Sky Blue) */
+    --jjk-gojo-secondary-light: rgba(0, 170, 221, 0.12);
+    --jjk-gojo-text-light: var(--jjk-ink-black); /* Text on Gojo's light bg */
+
+    --jjk-itadori-primary-light: #FF7F50;   /* 虎杖悠仁-悠仁珊瑚橙 (Coral Orange) */
+    --jjk-itadori-secondary-light: rgba(255, 127, 80, 0.12);
+    --jjk-itadori-text-light: var(--jjk-ink-black);
+
+    --jjk-fushiguro-primary-light: #204A87; /* 伏黑惠-影法术深蓝 (Darker Blue for contrast) */
+    --jjk-fushiguro-secondary-light: rgba(32, 74, 135, 0.12);
+    --jjk-fushiguro-text-light: var(--jjk-cursed-seal-white); /* White text on dark blue */
+
+    --jjk-kugisaki-primary-light: #E06C75; /* 钉崎野蔷薇-野蔷薇粉玫 (Dusty Rose/Pink) */
+    --jjk-kugisaki-secondary-light: rgba(224, 108, 117, 0.12);
+    --jjk-kugisaki-text-light: var(--jjk-ink-black);
+
+    --jjk-sukuna-primary-light: #B82525;    /* 两面宿傩-宿傩深绯 (Darker Crimson) */
+    --jjk-sukuna-secondary-light: rgba(184, 37, 37, 0.12);
+    --jjk-sukuna-text-light: var(--jjk-cursed-seal-white);
+
+    --jjk-nanami-primary-light: #A89C7D;    /* 七海建人-七海亚麻 (Linen/Khaki) */
+    --jjk-nanami-secondary-light: rgba(168, 156, 125, 0.12);
+    --jjk-nanami-text-light: var(--jjk-ink-black);
+
+
+    /* 覆盖  Chat 原有变量 */
+    --primary-color: var(--jjk-cursed-energy-blue);
+    --primary-color-dark: var(--jjk-cursed-energy-blue-hover);
+    --secondary-color: var(--jjk-cursed-seal-white); /* 应用主背景 */
+    --text-color: var(--jjk-ink-black);
+    --text-color-light: var(--jjk-shadow-gray);
+    --text-color-inverted: var(--jjk-cursed-seal-white);
+    --accent-color: var(--jjk-domain-purple);
+    --danger-color: var(--jjk-blood-oath-red);
+    --warning-color: #F59F00; /* Standard Amber Warning, slightly more vibrant */
+
+    --sent-bg-color: var(--jjk-cursed-energy-blue-light);
+    --received-bg-color: var(--jjk-tokyo-sky-panel); /* Slightly off-white for received */
+
+    --border-color: var(--jjk-steel-frame-light);
+    --hover-bg-color: rgba(var(--jjk-cursed-energy-blue-rgb), 0.06);
+    --active-bg-color: rgba(var(--jjk-cursed-energy-blue-rgb), 0.12);
+    --border-radius: 5px; /* Slightly softer for light theme, but still sharp */
+    --font-family: "Noto Sans SC", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    /* Clean, modern shadow for light theme */
+    --box-shadow: 0 2px 4px rgba(var(--jjk-ink-black-rgb),0.08), 0 1px 2px rgba(var(--jjk-ink-black-rgb),0.06);
+    --special-contact-color: var(--jjk-gojo-primary-light);
+}
+
+* { box-sizing: border-box;   }
+
+body {
+    font-family: var(--font-family), sans-serif;
+    background-color: var(--jjk-tokyo-sky-panel); /* Overall page bg */
+    color: var(--text-color);
+
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* Subtle geometric/urban texture for JJK High feel */
+    background-image:
+            linear-gradient(45deg, rgba(var(--jjk-steel-frame-rgb),0.07) 25%, transparent 25%, transparent 75%, rgba(var(--jjk-steel-frame-rgb),0.07) 75%, rgba(var(--jjk-steel-frame-rgb),0.07)),
+            linear-gradient(45deg, rgba(var(--jjk-steel-frame-rgb),0.07) 25%, transparent 25%, transparent 75%, rgba(var(--jjk-steel-frame-rgb),0.07) 75%, rgba(var(--jjk-steel-frame-rgb),0.07)),
+            linear-gradient(to bottom, var(--jjk-tokyo-sky-panel), var(--jjk-cursed-seal-white));
+}
+
+.app-container {
+    display: flex;
+    background-color: var(--secondary-color); /* App container is cleaner white */
+    box-shadow: 0 6px 25px rgba(var(--jjk-ink-black-rgb),0.1), 0 0 0 1px rgba(var(--jjk-steel-frame-rgb), 0.3); /* Defined border */
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(var(--jjk-steel-frame-rgb), 0.5); /* Clearer border */
+    overflow: hidden;
+}
+
+/* --- 滚动条美化 --- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.8); border-radius: var(--border-radius); }
+::-webkit-scrollbar-thumb { background: var(--jjk-steel-frame); border-radius: var(--border-radius); border: 1px solid rgba(var(--jjk-ink-black-rgb),0.1); }
+::-webkit-scrollbar-thumb:hover { background: var(--jjk-shadow-gray); }
+
+/* --- Sidebar Navigation --- */
+.sidebar-nav {
+    background-color: var(--jjk-tokyo-sky-panel); /* Sidebar is slightly off-white */
+    border-right: 1px solid var(--border-color);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
+}
+.sidebar-header {
+    background-color: rgba(var(--jjk-cursed-seal-white-rgb), 0.8);
+    border-bottom: 1px solid var(--border-color);
+}
+.menu-btn:hover { color: var(--jjk-cursed-energy-blue); transform: scale(1.1); }
+.search-bar {
+    background-color: var(--jjk-cursed-seal-white);
+    border: 1px solid var(--jjk-steel-frame-light);
+    color: var(--text-color);
+}
+.search-bar::placeholder { color: var(--text-color-light); } /* MODIFIED: Corrected variable */
+.search-bar:focus {
+    border-color: var(--jjk-cursed-energy-blue);
+    box-shadow: 0 0 0 2.5px rgba(var(--jjk-cursed-energy-blue-rgb),0.25), 0 0 5px rgba(var(--jjk-cursed-energy-blue-rgb),0.05) inset;
+}
+.nav-tabs { border-bottom: 1px solid var(--border-color); }
+.nav-tab { color: var(--text-color-light); }
+.nav-tab:hover { color: var(--jjk-cursed-energy-blue); }
+.nav-tab.active {
+    color: var(--jjk-cursed-energy-blue);
+    border-bottom: 2.5px solid var(--jjk-cursed-energy-blue);
+    font-weight: 500;
+}
+
+.chat-list-item {
+    border-bottom: 1px solid var(--border-color);
+}
+.chat-list-item:hover {
+    background-color: var(--hover-bg-color);
+    box-shadow: inset 3px 0 0 var(--jjk-domain-purple); /* Use accent for hover */
+}
+.chat-list-item.active {
+    background-color: var(--active-bg-color);
+    box-shadow: inset 4px 0 0 var(--jjk-cursed-energy-blue);
+}
+.chat-list-item.active .chat-list-name {
+    color: var(--jjk-cursed-energy-blue);
+    font-weight: 600;
+}
+.chat-list-avatar {
+    background-color: var(--jjk-steel-frame);
+    font-family: var(--font-family), sans-serif;
+    border: 1px solid rgba(var(--jjk-ink-black-rgb), 0.15);
+    color: var(--jjk-ink-black);
+    box-shadow: 0 1px 1px rgba(var(--jjk-ink-black-rgb),0.1);
+
+}
+.chat-list-item:hover .chat-list-avatar {
+    border-color: var(--jjk-domain-purple);
+    transform: scale(1.05);
+}
+.chat-list-item.active .chat-list-avatar {
+    border-color: var(--jjk-cursed-energy-blue);
+    box-shadow: 0 0 4px rgba(var(--jjk-cursed-energy-blue-rgb),0.3);
+}
+
+/* --- 角色特定样式 (浅色) - Jujutsu Kaisen --- */
+/* Base for character items */
+.chat-list-item.special-contact .chat-list-avatar,
+.chat-avatar-main, .details-avatar, #callingModalAvatar {
+    border-width: 1.5px; /* Thicker border for character avatars */
+}
+
+/* 五条悟 */
+.chat-list-item.special-contact.AI_五条悟 .chat-list-avatar,
+.chat-avatar-main.AI_五条悟, .details-avatar.AI_五条悟, #callingModalAvatar.AI_五条悟 {
+    background-color: var(--jjk-gojo-primary-light); color: var(--jjk-gojo-text-light); border-color: var(--jjk-gojo-primary-light);
+    box-shadow: 0 0 8px rgba(var(--jjk-gojo-primary-light), 0.4);
+}
+.chat-list-item.active.AI_五条悟 { background-color: var(--jjk-gojo-secondary-light); box-shadow: inset 4px 0 0 var(--jjk-gojo-primary-light), 0 0 6px rgba(var(--jjk-gojo-primary-light), 0.2) inset; }
+.chat-list-item.active.AI_五条悟 .chat-list-name,
+.chat-header-main.current-chat-AI_五条悟 .chat-title-main,
+.message.received[data-sender-id="AI_五条悟"] .message-sender,
+.details-panel.AI_五条悟 #aiContactAboutSection h4 span, .details-panel.AI_五条悟 #detailsName { color: var(--jjk-gojo-primary-light); font-weight: 600; text-shadow: 0 0 3px rgba(var(--jjk-gojo-primary-light),0.2); }
+.message.received[data-sender-id="AI_五条悟"] { border-left: 3px solid var(--jjk-gojo-primary-light); background-color: var(--jjk-gojo-secondary-light); }
+
+
+/* 虎杖悠仁 */
+.chat-list-item.special-contact.AI_虎杖悠仁 .chat-list-avatar,
+.chat-avatar-main.AI_虎杖悠仁, .details-avatar.AI_虎杖悠仁, #callingModalAvatar.AI_虎杖悠仁 {
+    background-color: var(--jjk-itadori-primary-light); color: var(--jjk-itadori-text-light); border-color: var(--jjk-itadori-primary-light);
+    box-shadow: 0 0 8px rgba(var(--jjk-itadori-primary-light), 0.4);
+}
+.chat-list-item.active.AI_虎杖悠仁 { background-color: var(--jjk-itadori-secondary-light); box-shadow: inset 4px 0 0 var(--jjk-itadori-primary-light), 0 0 6px rgba(var(--jjk-itadori-primary-light),0.2) inset; }
+.chat-list-item.active.AI_虎杖悠仁 .chat-list-name,
+.chat-header-main.current-chat-AI_虎杖悠仁 .chat-title-main,
+.message.received[data-sender-id="AI_虎杖悠仁"] .message-sender,
+.details-panel.AI_虎杖悠仁 #aiContactAboutSection h4 span, .details-panel.AI_虎杖悠仁 #detailsName { color: var(--jjk-itadori-primary-light); font-weight: 600; text-shadow: 0 0 3px rgba(var(--jjk-itadori-primary-light),0.2); }
+.message.received[data-sender-id="AI_虎杖悠仁"] { border-left: 3px solid var(--jjk-itadori-primary-light); background-color: var(--jjk-itadori-secondary-light); }
+
+/* 伏黑惠 */
+.chat-list-item.special-contact.AI_伏黑惠 .chat-list-avatar,
+.chat-avatar-main.AI_伏黑惠, .details-avatar.AI_伏黑惠, #callingModalAvatar.AI_伏黑惠 {
+    background-color: var(--jjk-fushiguro-primary-light); color: var(--jjk-fushiguro-text-light); border-color: var(--jjk-fushiguro-primary-light);
+    box-shadow: 0 0 8px rgba(var(--jjk-fushiguro-primary-light), 0.3);
+}
+.chat-list-item.active.AI_伏黑惠 { background-color: var(--jjk-fushiguro-secondary-light); box-shadow: inset 4px 0 0 var(--jjk-fushiguro-primary-light), 0 0 6px rgba(var(--jjk-fushiguro-primary-light),0.15) inset; }
+.chat-list-item.active.AI_伏黑惠 .chat-list-name,
+.chat-header-main.current-chat-AI_伏黑惠 .chat-title-main,
+.message.received[data-sender-id="AI_伏黑惠"] .message-sender,
+.details-panel.AI_伏黑惠 #aiContactAboutSection h4 span, .details-panel.AI_伏黑惠 #detailsName { color: var(--jjk-fushiguro-primary-light); font-weight: 600; text-shadow: 0 0 3px rgba(var(--jjk-fushiguro-primary-light),0.1); }
+.message.received[data-sender-id="AI_伏黑惠"] { border-left: 3px solid var(--jjk-fushiguro-primary-light); background-color: var(--jjk-fushiguro-secondary-light); }
+
+/* 钉崎野蔷薇 */
+.chat-list-item.special-contact.AI_钉崎野蔷薇 .chat-list-avatar,
+.chat-avatar-main.AI_钉崎野蔷薇, .details-avatar.AI_钉崎野蔷薇, #callingModalAvatar.AI_钉崎野蔷薇 {
+    background-color: var(--jjk-kugisaki-primary-light); color: var(--jjk-kugisaki-text-light); border-color: var(--jjk-kugisaki-primary-light);
+    box-shadow: 0 0 8px rgba(var(--jjk-kugisaki-primary-light), 0.3);
+}
+.chat-list-item.active.AI_钉崎野蔷薇 { background-color: var(--jjk-kugisaki-secondary-light); box-shadow: inset 4px 0 0 var(--jjk-kugisaki-primary-light), 0 0 6px rgba(var(--jjk-kugisaki-primary-light),0.15) inset; }
+.chat-list-item.active.AI_钉崎野蔷薇 .chat-list-name,
+.chat-header-main.current-chat-AI_钉崎野蔷薇 .chat-title-main,
+.message.received[data-sender-id="AI_钉崎野蔷薇"] .message-sender,
+.details-panel.AI_钉崎野蔷薇 #aiContactAboutSection h4 span, .details-panel.AI_钉崎野蔷薇 #detailsName { color: var(--jjk-kugisaki-primary-light); font-weight: 600; text-shadow: 0 0 3px rgba(var(--jjk-kugisaki-primary-light),0.1); }
+.message.received[data-sender-id="AI_钉崎野蔷薇"] { border-left: 3px solid var(--jjk-kugisaki-primary-light); background-color: var(--jjk-kugisaki-secondary-light); }
+
+/* 两面宿傩 */
+.chat-list-item.special-contact.AI_两面宿傩 .chat-list-avatar,
+.chat-avatar-main.AI_两面宿傩, .details-avatar.AI_两面宿傩, #callingModalAvatar.AI_两面宿傩 {
+    background-color: var(--jjk-sukuna-primary-light); color: var(--jjk-sukuna-text-light); border-color: var(--jjk-ink-black); /* Black border for Sukuna's markings */
+    box-shadow: 0 0 10px rgba(var(--jjk-sukuna-primary-light), 0.5), 0 0 0 1px var(--jjk-ink-black);
+}
+.chat-list-item.active.AI_两面宿傩 { background-color: var(--jjk-sukuna-secondary-light); box-shadow: inset 4px 0 0 var(--jjk-sukuna-primary-light), 0 0 8px rgba(var(--jjk-sukuna-primary-light),0.3) inset, inset 0 0 3px rgba(var(--jjk-ink-black-rgb), 0.2); }
+.chat-list-item.active.AI_两面宿傩 .chat-list-name,
+.chat-header-main.current-chat-AI_两面宿傩 .chat-title-main,
+.details-panel.AI_两面宿傩 #aiContactAboutSection h4 span, .details-panel.AI_两面宿傩 #detailsName { color: var(--jjk-sukuna-primary-light); font-weight: 700; text-shadow: 0 0 5px rgba(var(--jjk-sukuna-primary-light),0.3), 0 0 1px rgba(var(--jjk-ink-black-rgb),0.3); }
+.message.received[data-sender-id="AI_两面宿傩"] { border-left: 3px solid var(--jjk-sukuna-primary-light); background-color: var(--jjk-sukuna-secondary-light); border-right: 1.5px solid var(--jjk-ink-black); }
+.message.received[data-sender-id="AI_两面宿傩"] .message-sender { color: var(--jjk-sukuna-primary-light); font-weight: bold; text-shadow: 0 0 2px rgba(var(--jjk-ink-black-rgb),0.2); }
+
+
+/* 七海建人 */
+.chat-list-item.special-contact.AI_七海建人 .chat-list-avatar,
+.chat-avatar-main.AI_七海建人, .details-avatar.AI_七海建人, #callingModalAvatar.AI_七海建人 {
+    background-color: var(--jjk-nanami-primary-light); color: var(--jjk-nanami-text-light); border-color: var(--jjk-nanami-primary-light);
+    box-shadow: 0 0 6px rgba(var(--jjk-nanami-primary-light), 0.3);
+}
+.chat-list-item.active.AI_七海建人 { background-color: var(--jjk-nanami-secondary-light); box-shadow: inset 4px 0 0 var(--jjk-nanami-primary-light), 0 0 5px rgba(var(--jjk-nanami-primary-light),0.15) inset; }
+.chat-list-item.active.AI_七海建人 .chat-list-name,
+.chat-header-main.current-chat-AI_七海建人 .chat-title-main,
+.message.received[data-sender-id="AI_七海建人"] .message-sender,
+.details-panel.AI_七海建人 #aiContactAboutSection h4 span, .details-panel.AI_七海建人 #detailsName { color: var(--jjk-nanami-primary-light); font-weight: 600; text-shadow: 0 0 3px rgba(var(--jjk-nanami-primary-light),0.1); }
+.message.received[data-sender-id="AI_七海建人"] { border-left: 3px solid var(--jjk-nanami-primary-light); background-color: var(--jjk-nanami-secondary-light); }
+
+
+.chat-list-badge {
+    background-color: var(--jjk-blood-oath-red);
+    color: var(--jjk-cursed-seal-white);
+    box-shadow: 0 1px 3px rgba(var(--jjk-blood-oath-red-rgb),0.5), 0 0 0 1px rgba(var(--jjk-ink-black-rgb),0.1);
+     font-weight: 600; border-radius: 10px;
+}
+.new-chat-fab {
+    background-color: var(--jjk-cursed-energy-blue);
+    color: var(--jjk-cursed-seal-white);
+    box-shadow: 0 2px 6px rgba(var(--jjk-ink-black-rgb),0.25), 0 0 8px rgba(var(--jjk-cursed-energy-blue-rgb),0.3);
+}
+.new-chat-fab:hover {
+    background-color: var(--primary-color-dark);
+    box-shadow: 0 4px 10px rgba(var(--jjk-ink-black-rgb),0.3), 0 0 10px rgba(var(--jjk-cursed-energy-blue-rgb),0.4);
+    transform: translateY(-1px) scale(1.05);
+}
+
+/* --- Main Chat Area --- */
+.chat-area { background-color: var(--secondary-color); }
+.chat-header-main {
+    background-color: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.7); /* Slightly off-white header */
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(var(--jjk-ink-black-rgb),0.05);
+}
+.chat-avatar-main {
+    border: 1.5px solid var(--jjk-steel-frame);
+    box-shadow: 0 1px 3px rgba(var(--jjk-ink-black-rgb),0.1);
+}
+.chat-title-main { font-weight: 600; text-shadow: 0 0 2px rgba(var(--jjk-ink-black-rgb), 0.05); font-size: 1.1em; }
+.header-action-btn { color: var(--jjk-shadow-gray);  }
+.header-action-btn:hover { color: var(--jjk-cursed-energy-blue); transform: scale(1.15); }
+
+.chat-messages-container { }
+.no-chat-selected {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    user-select: none;
+}
+.no-chat-selected .logo-placeholder {
+    font-family: "Noto Serif SC", serif; /* Or a more brush-like font if available */
+    font-weight: bold;
+    color: rgba(var(--jjk-cursed-energy-blue-rgb), 0.25); /* More visible placeholder */
+    animation: jjk-light-placeholder-subtle-move 5s infinite ease-in-out alternate;
+}
+@keyframes jjk-light-placeholder-subtle-move {
+    from { transform: translateY(-2px) translateX(-1px) rotate(-1deg); }
+    to { transform: translateY(2px) translateX(1px) rotate(1deg); }
+}
+.no-chat-selected .placeholder-text {
+    font-size: 1.1em;
+    color: var(--text-color-light);
+}
+
+.status-indicator.global {
+    background-color: rgba(var(--jjk-cursed-seal-white-rgb), 0.8);
+    border: 1px solid var(--border-color);
+    color: var(--jjk-cursed-energy-blue);
+    border-radius: var(--border-radius);
+}
+
+/* 消息气泡 */
+.message {
+    border: 1px solid var(--jjk-steel-frame-light);
+    box-shadow: var(--box-shadow);
+    border-radius: var(--border-radius);
+}
+.message.sent {
+    background-color: var(--sent-bg-color);
+    border-left: 3.5px solid var(--jjk-cursed-energy-blue);
+    color: var(--text-color);
+}
+.message.received {
+    background-color: var(--received-bg-color);
+    border-right: 3.5px solid var(--jjk-steel-frame);
+    color: var(--text-color);
+}
+/* Character-specific received messages have border-left rules */
+
+.message.system {
+    background-color: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.9);
+    color: var(--jjk-cursed-energy-blue);
+    font-style: italic;
+    border: 1px dashed var(--jjk-cursed-energy-blue);
+    box-shadow: 0 0 5px rgba(var(--jjk-cursed-energy-blue-rgb),0.1) inset;
+    text-align: center;
+}
+.message-sender { color: var(--text-color-light); font-weight: 500;  display: block;}
+.message .timestamp { color: var(--text-color-light); opacity: 0.8; }
+
+.chat-input-container {
+    background-color: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.8);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -1px 3px rgba(var(--jjk-ink-black-rgb),0.05);
+}
+#messageInput {
+    background-color: var(--jjk-cursed-seal-white);
+    border: 1px solid var(--jjk-steel-frame-light);
+    color: var(--text-color);
+}
+#messageInput::placeholder { color: var(--text-color-light); }
+#messageInput:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.25), 0 0 8px rgba(var(--jjk-cursed-energy-blue-rgb),0.05) inset;
+}
+.icon-btn { color: var(--text-color-light);  border-radius: 50%; }
+.icon-btn:hover { color: var(--jjk-cursed-energy-blue); background-color: rgba(var(--jjk-cursed-energy-blue-rgb),0.08); transform: scale(1.1); }
+#sendButtonMain { color: var(--jjk-cursed-energy-blue); font-weight: 600; font-size: 1.5em; }
+#sendButtonMain:hover { transform: translateX(2px) scale(1.05); filter: brightness(0.9); }
+#voiceButtonMain.recording { color: var(--danger-color); animation: jjk-light-pulse 1.2s infinite; background-color: rgba(var(--jjk-blood-oath-red-rgb),0.1); }
+@keyframes jjk-light-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--jjk-blood-oath-red-rgb), 0.3); }
+    50% { transform: scale(1.15); box-shadow: 0 0 6px 4px rgba(var(--jjk-blood-oath-red-rgb), 0.15); }
+}
+
+/* --- Details Panel --- */
+.details-panel {
+    background-color: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.9);
+    border-left: 1px solid var(--border-color);
+    box-shadow: -1px 0 3px rgba(var(--jjk-ink-black-rgb),0.05);
+}
+.details-header {
+    background-color: rgba(var(--jjk-cursed-seal-white-rgb), 0.7);
+    border-bottom: 1px solid var(--border-color);
+}
+.details-avatar {
+    border: 2px solid var(--jjk-steel-frame);
+    box-shadow: 0 0 8px rgba(var(--jjk-ink-black-rgb), 0.1), 0 0 0 2px var(--secondary-color);
+}
+#detailsName { text-shadow: 0 0 2px rgba(var(--jjk-ink-black-rgb), 0.05); font-size: 1.2em; font-weight: 600; }
+#aiContactDetailsContent {
+    background-color: rgba(var(--jjk-cursed-seal-white-rgb), 0.8);
+    backdrop-filter: blur(4px);
+    border: 1px solid var(--jjk-steel-frame-light);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+#aiContactDetailsContent p strong {
+    color: var(--jjk-cursed-energy-blue);
+    border-bottom: 1.5px solid rgba(var(--jjk-cursed-energy-blue-rgb), 0.25);
+
+    font-weight: 500;
+}
+#aiContactBasicInfoList li {
+    border-bottom: 1px solid rgba(var(--jjk-steel-frame-rgb), 0.4);
+
+}
+#aiContactAboutText { color: var(--jjk-shadow-gray); font-size: 0.9em; }
+
+/* 通用按钮样式 */
+.btn {
+    border-radius: var(--border-radius);
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    font-weight: 600;
+    box-shadow: 0 1.5px 2.5px rgba(var(--jjk-ink-black-rgb),0.15), inset 0 -1px 0 rgba(var(--jjk-ink-black-rgb),0.1);
+    border: 1px solid transparent;
+}
+.btn:active { transform: translateY(1px) scale(0.98); box-shadow: 0 0 1px rgba(var(--jjk-ink-black-rgb),0.1);}
+
+.btn-primary { background-color: var(--jjk-cursed-energy-blue); color: var(--jjk-cursed-seal-white); border-color: var(--jjk-cursed-energy-blue-hover); text-shadow: 0 1px 1px rgba(0,0,0,0.15); }
+.btn-primary:hover { background-color: var(--jjk-cursed-energy-blue-hover); border-color: var(--jjk-cursed-energy-blue); box-shadow: 0 2px 4px rgba(var(--jjk-cursed-energy-blue-rgb),0.2), inset 0 -1px 0 rgba(0,0,0,0.1); }
+.btn-secondary { background-color: var(--jjk-steel-frame); color: var(--jjk-ink-black); border-color: rgba(var(--jjk-ink-black-rgb),0.15); text-shadow: 0 1px 1px rgba(255,255,255,0.2); }
+.btn-secondary:hover { background-color: rgb(195, 200, 210); border-color: rgba(var(--jjk-ink-black-rgb),0.2); box-shadow: 0 2px 4px rgba(var(--jjk-steel-frame-rgb),0.15), inset 0 -1px 0 rgba(0,0,0,0.1); }
+.btn-danger { background-color: var(--jjk-blood-oath-red); color: var(--jjk-cursed-seal-white); border-color: rgb(170, 40, 50); text-shadow: 0 1px 1px rgba(0,0,0,0.15); }
+.btn-danger:hover { background-color: rgb(170, 40, 50); border-color: var(--jjk-blood-oath-red); box-shadow: 0 2px 4px rgba(var(--jjk-blood-oath-red-rgb),0.2), inset 0 -1px 0 rgba(0,0,0,0.1); }
+.btn-success { background-color: var(--jjk-domain-purple); color: var(--jjk-cursed-seal-white); border-color: rgb(90, 60, 130); }
+.btn-success:hover { background-color: rgb(90, 60, 130); border-color: var(--jjk-domain-purple); box-shadow: 0 2px 4px rgba(var(--jjk-domain-purple-rgb),0.2), inset 0 -1px 0 rgba(0,0,0,0.1); }
+
+
+/* --- Modals --- */
+.loading-overlay { background-color: rgba(var(--jjk-cursed-seal-white-rgb), 0.85); backdrop-filter: blur(3px); }
+.loading-spinner {
+    border-top-color: var(--jjk-cursed-energy-blue);
+    border-left-color: var(--jjk-cursed-energy-blue);
+    border-bottom-color: rgba(var(--jjk-cursed-energy-blue-rgb),0.25);
+    border-right-color: rgba(var(--jjk-cursed-energy-blue-rgb),0.25);
+    animation: spin 0.8s linear infinite;
+}
+.modal-content {
+    background-color: var(--secondary-color);
+    border: 1px solid var(--jjk-steel-frame);
+    box-shadow: 0 6px 22px rgba(var(--jjk-ink-black-rgb),0.18), 0 0 0 1px rgba(var(--jjk-steel-frame-rgb),0.2);
+    border-radius: var(--border-radius);
+}
+.modal-header h2 {
+    color: var(--jjk-cursed-energy-blue);
+    font-size: 1.35em; font-weight: 600;
+    text-shadow: 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.15);
+    border-bottom: 1px solid rgba(var(--jjk-cursed-energy-blue-rgb), 0.2);
+
+}
+.close-modal-btn { font-size: 1.5em; }
+.close-modal-btn:hover { color: var(--jjk-blood-oath-red); transform: rotate(90deg) scale(1.1); }
+.modal-body input[type="text"], .modal-body textarea, .modal-body input[type="password"], .modal-body input[type="number"] {
+    background-color: rgba(var(--jjk-tokyo-sky-panel-rgb), 0.7);
+    color: var(--text-color);
+    border: 1px solid var(--jjk-steel-frame-light);
+    border-radius: var(--border-radius);
+}
+.modal-body input[type="text"]:focus, .modal-body textarea:focus, .modal-body input[type="password"]:focus, .modal-body input[type="number"]:focus {
+    border-color: var(--jjk-cursed-energy-blue);
+    background-color: var(--jjk-cursed-seal-white);
+    box-shadow: 0 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.25);
+}
+.user-id-display #modalUserIdValue {
+    background: rgba(var(--jjk-tokyo-sky-panel-rgb),0.8);
+    color: var(--jjk-cursed-energy-blue);
+    border: 1.5px dashed var(--jjk-cursed-energy-blue);
+
+    font-size: 1em; font-weight: 500;
+    word-break: break-all;
+}
+
+/* Video Call */
+.video-call-avatar { background-color: var(--jjk-steel-frame); border: 1px solid var(--border-color); box-shadow: 0 0 8px rgba(var(--jjk-ink-black-rgb),0.1); }
+.video-call-button {  }
+.video-call-button.end-call { background: var(--danger-color); }
+.video-call-button.end-call:hover { background: rgb(170,40,50); transform: scale(1.05); }
+.video-call-button.active { background: var(--jjk-cursed-energy-blue); color: var(--jjk-cursed-seal-white); }
+.video-call-button.active:hover { background: var(--jjk-cursed-energy-blue-hover); transform: scale(1.05); }
+
+
+/* Toggle Switch */
+input:checked + .slider { background-color: var(--jjk-cursed-energy-blue); box-shadow: 0 0 4px rgba(var(--jjk-cursed-energy-blue-rgb),0.3); }
+.slider { background-color: var(--jjk-steel-frame); }
+.slider:before { background-color: var(--jjk-cursed-seal-white); box-shadow: 0 1px 2px rgba(var(--jjk-ink-black-rgb),0.2);  }
+input:focus + .slider { box-shadow: 0 0 0 3px rgba(var(--jjk-cursed-energy-blue-rgb),0.25); }
+
+
+/* Ensure specific hidden parts are hidden (consistency with base.css) */
+#detailsPanelContent #aiContactAboutSection,
+#detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
+#detailsPanelContent #detailsGroupManagement #leftMembersArea,
+#detailsPanelContent #groupActionsDetails,
+#detailsPanelContent #dissolveGroupBtnDetails,
+#mainMenuModal .settings-section.manual-connection-advanced,
+#mainMenuModal #modalResetAllConnectionsBtn {
+    display: none;
+}
+/* Specific to AI characters to show their "About" section */
+.details-panel.AI_五条悟 #aiContactAboutSection,
+.details-panel.AI_虎杖悠仁 #aiContactAboutSection,
+.details-panel.AI_伏黑惠 #aiContactAboutSection,
+.details-panel.AI_钉崎野蔷薇 #aiContactAboutSection,
+.details-panel.AI_两面宿傩 #aiContactAboutSection,
+.details-panel.AI_七海建人 #aiContactAboutSection {
+    display: block;
+}
+
+.details-panel.human-contact-active #contactActionsDetails { display: block; }
+.details-panel.group-chat-active #detailsGroupManagement,
+.details-panel.group-chat-active #groupActionsDetails { display: block; }
+
+.notification {
+    background: rgba(var(--jjk-cursed-seal-white-rgb), 0.95);
+    backdrop-filter: blur(6px);
+    border-left: 5px solid var(--jjk-cursed-energy-blue);
+    color: var(--text-color);
+    border-radius: var(--border-radius);
+}
+.notification.notification-error { border-left-color: var(--jjk-blood-oath-red); }
+.notification.notification-warning { border-left-color: var(--warning-color); }
+.notification.notification-success { border-left-color: var(--jjk-domain-purple); } /* Purple for success in light theme */

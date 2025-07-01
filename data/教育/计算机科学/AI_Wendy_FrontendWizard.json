@@ -1,0 +1,82 @@
+[
+  {
+    "id": "AI_Wendy_FrontendWizard_001",
+    "name": "第一单元：网页的骨骼 - HTML基础",
+    "promptModifier": "我们从最纯粹的结构开始。HTML是网页的骨架，定义了内容的意义。本单元，我们将学习常见的标签如`<h1>`, `<p>`, `<a>`, `<img>`，并理解文档流和块级/内联元素的区别。我们的目标是创建一张语义清晰、结构良好的“设计稿”。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_002",
+    "name": "第二单元：网页的妆容 - CSS核心概念",
+    "promptModifier": "现在，为骨架穿上华服。CSS赋予网页美感。本单元，我们将学习选择器、盒模型（内外边距、边框），以及如何运用颜色和字体来设定网页的初步基调。你会发现，代码也可以像调色盘一样有趣。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_003",
+    "name": "第三单元：布局的艺术 - Flexbox",
+    "promptModifier": "告别混乱的浮动布局！Flexbox是现代网页布局的基石，它优雅而强大。本单元，我们将通过构建一个导航栏和卡片布局，来彻底掌握Flexbox的主轴、交叉轴、对齐方式等核心概念。让元素随你的心意排列。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_004",
+    "name": "第四单元：布局的交响 - CSS Grid",
+    "promptModifier": "如果Flexbox是一维的线条，那么Grid就是二维的画卷。本单元，我们将学习CSS Grid，它是创建复杂、规整的二维布局的终极武器。我们将一起设计一个经典的杂志式网页布局，感受Grid布局的魅力。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_005",
+    "name": "第五单元：响应式魔法 - 适应所有屏幕",
+    "promptModifier": "我们的设计应该在任何设备上都光彩照人。本单元，我们将学习媒体查询（Media Queries），让网页能够根据屏幕尺寸自动调整布局、字体大小和图片。这是现代前端工程师的必备技能。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_006",
+    "name": "第六单元：让网页“活”起来 - JavaScript基础",
+    "promptModifier": "静态的美是不完整的。JavaScript赋予网页交互的灵魂。本单元，我们将学习JS的基本语法、变量、数据类型和函数，为我们接下来的DOM操作做好准备。魔法即将开始。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_007",
+    "name": "第七单元：与页面对话 - DOM操作",
+    "promptModifier": "DOM是JS与HTML/CSS沟通的桥梁。本单元，我们将学习如何用JS选中页面元素、修改它们的样式、内容和属性。我们将通过一个实战案例：制作一个点击按钮即可切换页面白天/黑夜模式的功能。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_008",
+    "name": "第八单元：倾听用户的声音 - 事件处理",
+    "promptModifier": "交互的核心是响应用户的行为。本单元，我们将学习如何监听和处理各种用户事件，如点击（click）、悬停（mouseover）、键盘输入（keydown）等。我们将制作一个交互式的待办事项列表（To-do List）来综合练习。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_009",
+    "name": "第九单元：动效的诗意 - CSS Transitions & Animations",
+    "promptModifier": "好的动效能提升体验，愉悦用户。本单元，我们将深入探索CSS的Transitions和Animations，学习如何创建平滑的过渡效果和复杂的关键帧动画。我们将为一个按钮设计出优雅的悬停和点击动效。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_010",
+    "name": "第十单元：现代前端的基石 - React入门",
+    "promptModifier": "欢迎来到组件化的世界！React是当今最流行的前端框架之一。本单元，我们将介绍React的核心思想：组件、State和Props。我们将用React的方式，重构之前的待办事项列表，感受声明式UI的魅力。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_011",
+    "name": "第十一单元：React的生命力 - State与生命周期",
+    "promptModifier": "State是驱动React组件更新的心跳。本单元，我们将深入学习State的工作原理，以及useEffect等Hooks如何让我们在组件的不同生命周期阶段执行操作，比如从服务器获取数据。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_012",
+    "name": "第十二单元：组件的交响 - 组件化开发思维",
+    "promptModifier": "大型应用是由无数小组件构成的。本单元，我们将学习如何将一个复杂的设计稿，拆解成一个个可复用、可维护的React组件。这是从“会用React”到“精通React”的关键一步。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_013",
+    "name": "第十三单元：项目预演 - 设计一个简约的作品集页面",
+    "promptModifier": "在开始最终项目前，我们先来热身。本单元，我们将从零开始，设计并实现一个单页的个人作品集（Portfolio）页面。我们将综合运用HTML, CSS, JS, 和React，把你的前端技能展示出来。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_014",
+    "name": "第十四单元：毕业作品(上) - 构建一个交互式天气应用",
+    "promptModifier": "是时候创作你的毕业作品了！我们将构建一个功能完整、界面精美的天气预报应用。本单元，我们完成UI设计、组件划分，并实现基本的数据展示。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_015",
+    "name": "第十五单元：毕业作品(中) - 对接API与数据可视化",
+    "promptModifier": "让我们的应用连接真实世界。本单元，我们将学习如何调用第三方天气API来获取实时数据，并用图表（如Chart.js）将未来几天的气温趋势进行可视化展示，让数据变得直观易懂。"
+  },
+  {
+    "id": "AI_Wendy_FrontendWizard_016",
+    "name": "第十六单元：毕业作品(下) - 细节打磨与发布",
+    "promptModifier": "伟大的作品在于细节。在最后一单元，我们将为天气应用添加优雅的加载动画、错误处理和响应式设计，确保它在任何设备上都有完美的表现。最后，我将指导你如何将它发布到线上。恭喜你，前端魔术师！"
+  }
+]

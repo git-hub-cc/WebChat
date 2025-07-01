@@ -1,0 +1,561 @@
+:root {
+    /* 星穹铁道 - 晨曦航线与罗盘指针 (Honkai: Star Rail - Dawn Cruise & Compass Needle) */
+    --hsr-clear-sky-bg-rgb: 238, 243, 248;        /* 晴空万里 (背景主色) */
+    --hsr-clear-sky-bg: rgb(var(--hsr-clear-sky-bg-rgb));
+    --hsr-express-cabin-panel-rgb: 250, 252, 255; /* 列车车厢白 (次级背景/面板) */
+    --hsr-express-cabin-panel: rgb(var(--hsr-express-cabin-panel-rgb));
+    --hsr-nav-compass-blue-rgb: 0, 120, 190;     /* 导航罗盘蓝 (主强调/交互) */
+    --hsr-nav-compass-blue: rgb(var(--hsr-nav-compass-blue-rgb));
+    --hsr-sunlit-gold-rgb: 255, 190, 70;         /* 日照金辉 (次强调/活力) */
+    --hsr-sunlit-gold: rgb(var(--hsr-sunlit-gold-rgb));
+    --hsr-energy-core-cyan-rgb: 0, 180, 200;      /* 能源核心青 (点缀/科技) */
+    --hsr-energy-core-cyan: rgb(var(--hsr-energy-core-cyan-rgb));
+    --hsr-data-stream-teal-rgb: 60, 160, 170;     /* 数据流青 (辅助/信息) */
+    --hsr-data-stream-teal: rgb(var(--hsr-data-stream-teal-rgb));
+    --hsr-system-warning-red-rgb: 210, 55, 60;   /* 系统警报红 (危险/错误) */
+    --hsr-system-warning-red: rgb(var(--hsr-system-warning-red-rgb));
+    --hsr-console-dark-text-rgb: 45, 50, 60;      /* 控制台暗文 (主要文字) */
+    --hsr-console-dark-text: rgb(var(--hsr-console-dark-text-rgb));
+    --hsr-hologram-gray-text-rgb: 100, 110, 125;  /* 全息投影灰 (次要文字) */
+    --hsr-hologram-gray-text: rgb(var(--hsr-hologram-gray-text-rgb));
+    --hsr-polished-rail-border-rgb: 185, 195, 205;/* 光洁钢轨银 (边框) */
+    --hsr-polished-rail-border: rgb(var(--hsr-polished-rail-border-rgb));
+
+    /* 角色特定颜色 (浅色) */
+    --hsr-sushang-primary-light: #D35400;
+    --hsr-sushang-secondary-light: rgba(211, 84, 0, 0.15); /* Slightly more opacity */
+    --hsr-misha-primary-light: #5DADE2;
+    --hsr-misha-secondary-light: rgba(93, 173, 226, 0.15); /* Slightly more opacity */
+    --hsr-danheng-primary-light: #1ABC9C;
+    --hsr-danheng-secondary-light: rgba(26, 188, 156, 0.12); /* Slightly more opacity */
+    --hsr-sampo-primary-light: #8E44AD;
+    --hsr-sampo-secondary-light: rgba(142, 68, 173, 0.12); /* Slightly more opacity */
+    --hsr-bailu-primary-light: #2ECC71;
+    --hsr-bailu-secondary-light: rgba(46, 204, 113, 0.12); /* Slightly more opacity */
+    --hsr-aglaia-primary-light: #EC7063;
+    --hsr-aglaia-secondary-light: rgba(236, 112, 99, 0.12); /* Slightly more opacity */
+    --hsr-yanqing-primary-light: #3498DB;
+    --hsr-yanqing-secondary-light: rgba(52, 152, 219, 0.15); /* Slightly more opacity */
+    --hsr-xiadie-primary-light: #A569BD; /* Adjusted for better contrast */
+    --hsr-xiadie-secondary-light: rgba(165, 105, 189, 0.12); /* Slightly more opacity */
+    --hsr-trailblazer-primary-light: var(--hsr-sunlit-gold);
+    --hsr-trailblazer-secondary-light: rgba(var(--hsr-sunlit-gold-rgb), 0.15); /* Slightly more opacity */
+
+    /* 覆盖  Chat 原有变量 */
+    --primary-color: var(--hsr-nav-compass-blue);
+    --primary-color-dark: rgb(0, 100, 160);
+    --secondary-color: var(--hsr-express-cabin-panel);
+    --text-color: var(--hsr-console-dark-text);
+    --text-color-light: var(--hsr-hologram-gray-text);
+    --text-color-inverted: var(--hsr-clear-sky-bg);
+    --accent-color: var(--hsr-sunlit-gold);
+    --danger-color: var(--hsr-system-warning-red);
+    --warning-color: #F39C12;
+
+    --sent-bg-color: rgba(var(--hsr-nav-compass-blue-rgb), 0.08); /* Slightly more distinct */
+    --received-bg-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.9); /* Slightly more distinct */
+
+    --border-color: rgba(var(--hsr-polished-rail-border-rgb), 0.75); /* Slightly stronger */
+    --hover-bg-color: rgba(var(--hsr-nav-compass-blue-rgb), 0.05); /* Slightly more visible */
+    --active-bg-color: rgba(var(--hsr-nav-compass-blue-rgb), 0.1); /* Slightly more visible */
+    --border-radius: 4px;
+    --font-family: "Exo 2", "Orbitron", "Noto Sans SC", sans-serif;
+    --box-shadow: 0 1px 3px rgba(var(--hsr-console-dark-text-rgb),0.12), 0 0 12px rgba(var(--hsr-nav-compass-blue-rgb),0.08) inset;
+    --special-contact-color: var(--hsr-trailblazer-primary-light);
+    --monospace-font: "Share Tech Mono", "Courier New", monospace;
+}
+
+* { box-sizing: border-box;   }
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--hsr-clear-sky-bg);
+    color: var(--text-color);
+
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-image:
+            radial-gradient(ellipse at 5% 95%, rgba(var(--hsr-energy-core-cyan-rgb), 0.1) 0%, transparent 50%),
+            radial-gradient(ellipse at 95% 5%, rgba(var(--hsr-sunlit-gold-rgb), 0.09) 0%, transparent 60%),
+            var(--hsr-clear-sky-bg);
+    background-blend-mode: overlay, overlay, normal;
+}
+
+.app-container {
+    display: flex;
+    background-color: var(--secondary-color);
+    box-shadow: 0 0 0 1px rgba(var(--hsr-nav-compass-blue-rgb), 0.15), /* Outer subtle line */
+    0 8px 30px rgba(var(--hsr-polished-rail-border-rgb),0.5), /* Main shadow */
+    0 0 20px rgba(var(--hsr-nav-compass-blue-rgb),0.07) inset; /* Inner subtle glow */
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.6); /* Slightly stronger border */
+    overflow: hidden;
+}
+
+/* --- 滚动条美化 --- */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: rgba(var(--hsr-clear-sky-bg-rgb), 0.65); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--hsr-polished-rail-border); border-radius: 3px; border: 1px solid rgba(var(--hsr-clear-sky-bg-rgb),0.5); }
+::-webkit-scrollbar-thumb:hover { background: var(--hsr-nav-compass-blue); box-shadow: 0 0 5px var(--hsr-nav-compass-blue); }
+
+/* --- Sidebar Navigation --- */
+.sidebar-nav {
+    background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.75); /* Slightly more transparent */
+    border-right: 1px solid var(--border-color);
+    backdrop-filter: blur(3px);
+    position: relative; /* <<< 非常重要：将侧边栏设置为绝对定位子元素的参照物 */
+}
+.sidebar-header {
+    background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.9); /* Slightly more opaque */
+    border-bottom: 1px solid rgba(var(--hsr-nav-compass-blue-rgb), 0.15); /* Subtle separator */
+    box-shadow: 0 2px 5px rgba(var(--hsr-nav-compass-blue-rgb), 0.05);
+}
+.menu-btn { color: var(--text-color-light);  font-size: 1.1rem; }
+.menu-btn:hover { color: var(--hsr-nav-compass-blue); text-shadow: 0 0 5px rgba(var(--hsr-nav-compass-blue-rgb), 0.5); }
+.search-bar {
+    background-color: var(--hsr-clear-sky-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 0.9em;
+
+}
+.search-bar::placeholder { color: var(--text-color-light); opacity: 0.7; }
+.search-bar:focus {
+    border-color: var(--hsr-nav-compass-blue);
+    box-shadow: 0 0 0 2px rgba(var(--hsr-nav-compass-blue-rgb),0.2), 0 0 8px rgba(var(--hsr-nav-compass-blue-rgb),0.05) inset;
+    background-color: rgba(var(--hsr-express-cabin-panel-rgb), 0.9);
+}
+.nav-tabs { border-bottom: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.9); } /* Stronger border */
+.nav-tab { color: var(--text-color-light); position: relative;  font-weight: 500; letter-spacing: 0.5px;}
+.nav-tab:hover { color: var(--hsr-nav-compass-blue); }
+.nav-tab.active { color: var(--hsr-nav-compass-blue); font-weight: 700; }
+.nav-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+
+
+    background-color: var(--hsr-nav-compass-blue);
+    box-shadow: 0 0 7px rgba(var(--hsr-nav-compass-blue-rgb), 0.7); /* Stronger glow for light theme */
+    border-radius: 1px;
+}
+
+
+.chat-list-item { border-bottom: 1px solid var(--border-color);  }
+.chat-list-item:hover { background-color: var(--hover-bg-color); }
+.chat-list-item.active {
+    background-color: var(--active-bg-color);
+    box-shadow: 0 0 8px rgba(var(--hsr-nav-compass-blue-rgb), 0.2) inset; /* Enhanced inset shadow */
+    border-left: 4px solid var(--hsr-nav-compass-blue); /* Thicker active marker */
+
+}
+.chat-list-item.active .chat-list-name { color: var(--hsr-nav-compass-blue); font-weight: 700; }
+.chat-list-avatar {
+    background-color: var(--hsr-polished-rail-border);
+    font-family: var(--font-family);
+    border: 1px solid rgba(var(--hsr-console-dark-text-rgb), 0.1);
+    color: var(--hsr-console-dark-text);
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+/* --- 角色特定样式 (浅色) --- */
+.chat-list-item.active[class*="AI_"][class*="_HSR"] {
+    border-left-width: 4px;
+    border-left-style: solid;
+
+}
+.message.received[data-sender-id*="AI_"][data-sender-id*="_HSR"] {
+    border-left-width: 3px;
+    border-left-style: solid;
+    background-color: rgba(var(--hsr-express-cabin-panel-rgb), 0.95); /* Base AI message background */
+}
+.message.received[data-sender-id*="AI_"][data-sender-id*="_HSR"] .message-sender { font-weight: 600; }
+
+/* Trailblazer (开拓者) */
+.chat-list-item.special-contact.AI_Trailblazer_HSR .chat-list-avatar,
+.chat-avatar-main.AI_Trailblazer_HSR, .details-avatar.AI_Trailblazer_HSR, #callingModalAvatar.AI_Trailblazer_HSR {
+    background-color: var(--hsr-trailblazer-primary-light); color: var(--hsr-console-dark-text); border-color: rgba(var(--hsr-sunlit-gold-rgb),0.7); box-shadow: 0 0 5px var(--hsr-trailblazer-primary-light);
+}
+.chat-list-item.active.AI_Trailblazer_HSR { background-color: var(--hsr-trailblazer-secondary-light); box-shadow: 0 0 10px var(--hsr-trailblazer-primary-light) inset; border-left-color: var(--hsr-trailblazer-primary-light); }
+.chat-list-item.active.AI_Trailblazer_HSR .chat-list-name { color: var(--hsr-trailblazer-primary-light); }
+.chat-header-main.current-chat-AI_Trailblazer_HSR .chat-title-main { color: var(--hsr-trailblazer-primary-light); text-shadow: 0 0 8px rgba(var(--hsr-sunlit-gold-rgb),0.6); } /* Enhanced shadow */
+.message.received[data-sender-id="AI_Trailblazer_HSR"] { border-left-color: var(--hsr-trailblazer-primary-light); background-color: var(--hsr-trailblazer-secondary-light); }
+.message.received[data-sender-id="AI_Trailblazer_HSR"] .message-sender { color: var(--hsr-trailblazer-primary-light); }
+.details-panel.AI_Trailblazer_HSR #detailsName { color: var(--hsr-trailblazer-primary-light); text-shadow: 0 0 8px rgba(var(--hsr-sunlit-gold-rgb),0.6); }
+.details-panel.AI_Trailblazer_HSR #aiContactAboutSection h4 span { color: var(--hsr-trailblazer-primary-light); }
+
+
+/* Sushang (素裳) */
+.chat-list-item.special-contact.AI_Sushang_HSR .chat-list-avatar,
+.chat-avatar-main.AI_Sushang_HSR, .details-avatar.AI_Sushang_HSR, #callingModalAvatar.AI_Sushang_HSR {
+    background-color: var(--hsr-sushang-primary-light); color: var(--hsr-clear-sky-bg); border-color: rgba(211, 84, 0, 0.7); box-shadow: 0 0 5px var(--hsr-sushang-primary-light);
+}
+.chat-list-item.active.AI_Sushang_HSR { background-color: var(--hsr-sushang-secondary-light); box-shadow: 0 0 10px var(--hsr-sushang-primary-light) inset; border-left-color: var(--hsr-sushang-primary-light); }
+.chat-list-item.active.AI_Sushang_HSR .chat-list-name { color: var(--hsr-sushang-primary-light); }
+.chat-header-main.current-chat-AI_Sushang_HSR .chat-title-main { color: var(--hsr-sushang-primary-light); text-shadow: 0 0 8px rgba(211, 84, 0, 0.5); }
+.message.received[data-sender-id="AI_Sushang_HSR"] { border-left-color: var(--hsr-sushang-primary-light); background-color: var(--hsr-sushang-secondary-light); }
+.message.received[data-sender-id="AI_Sushang_HSR"] .message-sender { color: var(--hsr-sushang-primary-light); }
+.details-panel.AI_Sushang_HSR #detailsName { color: var(--hsr-sushang-primary-light); text-shadow: 0 0 8px rgba(211, 84, 0, 0.5); }
+.details-panel.AI_Sushang_HSR #aiContactAboutSection h4 span { color: var(--hsr-sushang-primary-light); }
+
+/* Misha (米沙) */
+.chat-list-item.special-contact.AI_Misha_HSR .chat-list-avatar,
+.chat-avatar-main.AI_Misha_HSR, .details-avatar.AI_Misha_HSR, #callingModalAvatar.AI_Misha_HSR {
+    background-color: var(--hsr-misha-primary-light); color: var(--hsr-console-dark-text); border-color: rgba(93, 173, 226, 0.7); box-shadow: 0 0 5px var(--hsr-misha-primary-light);
+}
+.chat-list-item.active.AI_Misha_HSR { background-color: var(--hsr-misha-secondary-light); box-shadow: 0 0 10px var(--hsr-misha-primary-light) inset; border-left-color: var(--hsr-misha-primary-light); }
+.chat-list-item.active.AI_Misha_HSR .chat-list-name { color: var(--hsr-misha-primary-light); }
+.chat-header-main.current-chat-AI_Misha_HSR .chat-title-main { color: var(--hsr-misha-primary-light); text-shadow: 0 0 8px rgba(93, 173, 226, 0.5); }
+.message.received[data-sender-id="AI_Misha_HSR"] { border-left-color: var(--hsr-misha-primary-light); background-color: var(--hsr-misha-secondary-light); }
+.message.received[data-sender-id="AI_Misha_HSR"] .message-sender { color: var(--hsr-misha-primary-light); }
+.details-panel.AI_Misha_HSR #detailsName { color: var(--hsr-misha-primary-light); text-shadow: 0 0 8px rgba(93, 173, 226, 0.5); }
+.details-panel.AI_Misha_HSR #aiContactAboutSection h4 span { color: var(--hsr-misha-primary-light); }
+
+/* Dan Heng (丹恒) */
+.chat-list-item.special-contact.AI_DanHeng_HSR .chat-list-avatar,
+.chat-avatar-main.AI_DanHeng_HSR, .details-avatar.AI_DanHeng_HSR, #callingModalAvatar.AI_DanHeng_HSR {
+    background-color: var(--hsr-danheng-primary-light); color: var(--hsr-clear-sky-bg); border-color: rgba(26, 188, 156, 0.7); box-shadow: 0 0 5px var(--hsr-danheng-primary-light);
+}
+.chat-list-item.active.AI_DanHeng_HSR { background-color: var(--hsr-danheng-secondary-light); box-shadow: 0 0 10px var(--hsr-danheng-primary-light) inset; border-left-color: var(--hsr-danheng-primary-light); }
+.chat-list-item.active.AI_DanHeng_HSR .chat-list-name { color: var(--hsr-danheng-primary-light); }
+.chat-header-main.current-chat-AI_DanHeng_HSR .chat-title-main { color: var(--hsr-danheng-primary-light); text-shadow: 0 0 8px rgba(26, 188, 156, 0.5); }
+.message.received[data-sender-id="AI_DanHeng_HSR"] { border-left-color: var(--hsr-danheng-primary-light); background-color: var(--hsr-danheng-secondary-light); }
+.message.received[data-sender-id="AI_DanHeng_HSR"] .message-sender { color: var(--hsr-danheng-primary-light); }
+.details-panel.AI_DanHeng_HSR #detailsName { color: var(--hsr-danheng-primary-light); text-shadow: 0 0 8px rgba(26, 188, 156, 0.5); }
+.details-panel.AI_DanHeng_HSR #aiContactAboutSection h4 span { color: var(--hsr-danheng-primary-light); }
+
+/* Sampo (桑博) */
+.chat-list-item.special-contact.AI_Sampo_HSR .chat-list-avatar,
+.chat-avatar-main.AI_Sampo_HSR, .details-avatar.AI_Sampo_HSR, #callingModalAvatar.AI_Sampo_HSR {
+    background-color: var(--hsr-sampo-primary-light); color: var(--hsr-clear-sky-bg); border-color: rgba(142, 68, 173, 0.7); box-shadow: 0 0 5px var(--hsr-sampo-primary-light);
+}
+.chat-list-item.active.AI_Sampo_HSR { background-color: var(--hsr-sampo-secondary-light); box-shadow: 0 0 10px var(--hsr-sampo-primary-light) inset; border-left-color: var(--hsr-sampo-primary-light); }
+.chat-list-item.active.AI_Sampo_HSR .chat-list-name { color: var(--hsr-sampo-primary-light); }
+.chat-header-main.current-chat-AI_Sampo_HSR .chat-title-main { color: var(--hsr-sampo-primary-light); text-shadow: 0 0 8px rgba(142, 68, 173, 0.5); }
+.message.received[data-sender-id="AI_Sampo_HSR"] { border-left-color: var(--hsr-sampo-primary-light); background-color: var(--hsr-sampo-secondary-light); }
+.message.received[data-sender-id="AI_Sampo_HSR"] .message-sender { color: var(--hsr-sampo-primary-light); }
+.details-panel.AI_Sampo_HSR #detailsName { color: var(--hsr-sampo-primary-light); text-shadow: 0 0 8px rgba(142, 68, 173, 0.5); }
+.details-panel.AI_Sampo_HSR #aiContactAboutSection h4 span { color: var(--hsr-sampo-primary-light); }
+
+/* Bailu (白露) */
+.chat-list-item.special-contact.AI_Bailu_HSR .chat-list-avatar,
+.chat-avatar-main.AI_Bailu_HSR, .details-avatar.AI_Bailu_HSR, #callingModalAvatar.AI_Bailu_HSR {
+    background-color: var(--hsr-bailu-primary-light); color: var(--hsr-console-dark-text); border-color: rgba(46, 204, 113, 0.7); box-shadow: 0 0 5px var(--hsr-bailu-primary-light);
+}
+.chat-list-item.active.AI_Bailu_HSR { background-color: var(--hsr-bailu-secondary-light); box-shadow: 0 0 10px var(--hsr-bailu-primary-light) inset; border-left-color: var(--hsr-bailu-primary-light); }
+.chat-list-item.active.AI_Bailu_HSR .chat-list-name { color: var(--hsr-bailu-primary-light); }
+.chat-header-main.current-chat-AI_Bailu_HSR .chat-title-main { color: var(--hsr-bailu-primary-light); text-shadow: 0 0 8px rgba(46, 204, 113, 0.5); }
+.message.received[data-sender-id="AI_Bailu_HSR"] { border-left-color: var(--hsr-bailu-primary-light); background-color: var(--hsr-bailu-secondary-light); }
+.message.received[data-sender-id="AI_Bailu_HSR"] .message-sender { color: var(--hsr-bailu-primary-light); }
+.details-panel.AI_Bailu_HSR #detailsName { color: var(--hsr-bailu-primary-light); text-shadow: 0 0 8px rgba(46, 204, 113, 0.5); }
+.details-panel.AI_Bailu_HSR #aiContactAboutSection h4 span { color: var(--hsr-bailu-primary-light); }
+
+/* Aglaia (阿格莱雅 - Placeholder) */
+.chat-list-item.special-contact.AI_Aglaia_HSR .chat-list-avatar,
+.chat-avatar-main.AI_Aglaia_HSR, .details-avatar.AI_Aglaia_HSR, #callingModalAvatar.AI_Aglaia_HSR {
+    background-color: var(--hsr-aglaia-primary-light); color: var(--hsr-clear-sky-bg); border-color: rgba(236, 112, 99, 0.7); box-shadow: 0 0 5px var(--hsr-aglaia-primary-light);
+}
+.chat-list-item.active.AI_Aglaia_HSR { background-color: var(--hsr-aglaia-secondary-light); box-shadow: 0 0 10px var(--hsr-aglaia-primary-light) inset; border-left-color: var(--hsr-aglaia-primary-light); }
+.chat-list-item.active.AI_Aglaia_HSR .chat-list-name { color: var(--hsr-aglaia-primary-light); }
+.chat-header-main.current-chat-AI_Aglaia_HSR .chat-title-main { color: var(--hsr-aglaia-primary-light); text-shadow: 0 0 8px rgba(236, 112, 99, 0.5); }
+.message.received[data-sender-id="AI_Aglaia_HSR"] { border-left-color: var(--hsr-aglaia-primary-light); background-color: var(--hsr-aglaia-secondary-light); }
+.message.received[data-sender-id="AI_Aglaia_HSR"] .message-sender { color: var(--hsr-aglaia-primary-light); }
+.details-panel.AI_Aglaia_HSR #detailsName { color: var(--hsr-aglaia-primary-light); text-shadow: 0 0 8px rgba(236, 112, 99, 0.5); }
+.details-panel.AI_Aglaia_HSR #aiContactAboutSection h4 span { color: var(--hsr-aglaia-primary-light); }
+
+/* Yanqing (彦卿) */
+.chat-list-item.special-contact.AI_Yanqing_HSR .chat-list-avatar,
+.chat-avatar-main.AI_Yanqing_HSR, .details-avatar.AI_Yanqing_HSR, #callingModalAvatar.AI_Yanqing_HSR {
+    background-color: var(--hsr-yanqing-primary-light); color: var(--hsr-clear-sky-bg); border-color: rgba(52, 152, 219, 0.7); box-shadow: 0 0 5px var(--hsr-yanqing-primary-light);
+}
+.chat-list-item.active.AI_Yanqing_HSR { background-color: var(--hsr-yanqing-secondary-light); box-shadow: 0 0 10px var(--hsr-yanqing-primary-light) inset; border-left-color: var(--hsr-yanqing-primary-light); }
+.chat-list-item.active.AI_Yanqing_HSR .chat-list-name { color: var(--hsr-yanqing-primary-light); }
+.chat-header-main.current-chat-AI_Yanqing_HSR .chat-title-main { color: var(--hsr-yanqing-primary-light); text-shadow: 0 0 8px rgba(52, 152, 219, 0.5); }
+.message.received[data-sender-id="AI_Yanqing_HSR"] { border-left-color: var(--hsr-yanqing-primary-light); background-color: var(--hsr-yanqing-secondary-light); }
+.message.received[data-sender-id="AI_Yanqing_HSR"] .message-sender { color: var(--hsr-yanqing-primary-light); }
+.details-panel.AI_Yanqing_HSR #detailsName { color: var(--hsr-yanqing-primary-light); text-shadow: 0 0 8px rgba(52, 152, 219, 0.5); }
+.details-panel.AI_Yanqing_HSR #aiContactAboutSection h4 span { color: var(--hsr-yanqing-primary-light); }
+
+/* XiaDie (遐蝶 - Placeholder) */
+.chat-list-item.special-contact.AI_XiaDie_HSR .chat-list-avatar,
+.chat-avatar-main.AI_XiaDie_HSR, .details-avatar.AI_XiaDie_HSR, #callingModalAvatar.AI_XiaDie_HSR {
+    background-color: var(--hsr-xiadie-primary-light); color: var(--hsr-clear-sky-bg); border-color: rgba(165, 105, 189, 0.7); box-shadow: 0 0 5px var(--hsr-xiadie-primary-light);
+}
+.chat-list-item.active.AI_XiaDie_HSR { background-color: var(--hsr-xiadie-secondary-light); box-shadow: 0 0 10px var(--hsr-xiadie-primary-light) inset; border-left-color: var(--hsr-xiadie-primary-light); }
+.chat-list-item.active.AI_XiaDie_HSR .chat-list-name { color: var(--hsr-xiadie-primary-light); }
+.chat-header-main.current-chat-AI_XiaDie_HSR .chat-title-main { color: var(--hsr-xiadie-primary-light); text-shadow: 0 0 8px rgba(165, 105, 189, 0.5); }
+.message.received[data-sender-id="AI_XiaDie_HSR"] { border-left-color: var(--hsr-xiadie-primary-light); background-color: var(--hsr-xiadie-secondary-light); }
+.message.received[data-sender-id="AI_XiaDie_HSR"] .message-sender { color: var(--hsr-xiadie-primary-light); }
+.details-panel.AI_XiaDie_HSR #detailsName { color: var(--hsr-xiadie-primary-light); text-shadow: 0 0 8px rgba(165, 105, 189, 0.5); }
+.details-panel.AI_XiaDie_HSR #aiContactAboutSection h4 span { color: var(--hsr-xiadie-primary-light); }
+
+
+.chat-list-badge {
+    background-color: var(--hsr-system-warning-red);
+    color: var(--hsr-clear-sky-bg);
+    box-shadow: 0 0 5px var(--hsr-system-warning-red), 0 0 7px var(--hsr-system-warning-red) inset; /* Enhanced glow */
+    border-radius: 3px;
+    font-size: 0.75em;
+
+    font-weight: 600;
+}
+.new-chat-fab {
+    background: linear-gradient(135deg, var(--hsr-sunlit-gold), var(--hsr-nav-compass-blue));
+    color: var(--hsr-clear-sky-bg);
+    box-shadow: 0 4px 10px rgba(var(--hsr-console-dark-text-rgb),0.25), 0 0 12px var(--hsr-sunlit-gold), 0 0 5px var(--hsr-nav-compass-blue) inset;
+    font-size: 1.6rem;
+}
+.new-chat-fab:hover {
+    transform: translateY(-3px) scale(1.08);
+}
+
+/* --- Main Chat Area --- */
+.chat-area { background-color: transparent; display: flex; flex-direction: column; }
+.chat-messages-container { flex-grow: 1; overflow-y: auto; }
+.chat-header-main {
+    background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.8); /* Slightly more opaque for better readability */
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid rgba(var(--hsr-nav-compass-blue-rgb), 0.2);
+    box-shadow: 0 3px 8px rgba(var(--hsr-nav-compass-blue-rgb), 0.08);
+}
+.chat-avatar-main { border: 2px solid var(--hsr-polished-rail-border); border-radius: 3px; box-shadow: 0 0 5px rgba(var(--hsr-console-dark-text-rgb), 0.08); }
+.chat-title-main { font-weight: 600; letter-spacing: 0.5px; text-shadow: 0 1px 2px rgba(var(--hsr-console-dark-text-rgb), 0.1); } /* Subtle shadow for light theme */
+.header-action-btn { color: var(--text-color-light); font-size: 1.2rem; }
+.header-action-btn:hover { color: var(--hsr-nav-compass-blue); text-shadow: 0 0 6px rgba(var(--hsr-nav-compass-blue-rgb),0.4); transform: scale(1.1); }
+
+.no-chat-selected { display: flex; flex-direction: column; justify-content: center; align-items: center; user-select: none;}
+.no-chat-selected .logo-placeholder {
+    font-family: var(--font-family);
+    content: "폼폼!";
+    font-weight: 700;
+    color: rgba(var(--hsr-nav-compass-blue-rgb), 0.4);
+    text-shadow: 0 0 25px rgba(var(--hsr-sunlit-gold-rgb), 0.35), 0 0 5px rgba(var(--hsr-nav-compass-blue-rgb), 0.2);
+    opacity: 0.7;
+    animation: hsr-placeholder-fade-light 3.5s infinite alternate ease-in-out;
+}
+@keyframes hsr-placeholder-fade-light {
+    from { opacity: 0.5; transform: translateY(0px); } to { opacity: 0.85; transform: translateY(-5px); }
+}
+.status-indicator.global {
+    background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.9);
+    border: 1px solid var(--border-color);
+    color: var(--hsr-nav-compass-blue);
+    border-radius: var(--border-radius);
+
+    font-size: 0.88em;
+    box-shadow: 0 0 5px rgba(var(--hsr-nav-compass-blue-rgb), 0.1);
+}
+
+/* 消息气泡 */
+.message {
+    border: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.8); /* Slightly stronger border */
+    box-shadow: 0 2px 4px rgba(var(--hsr-polished-rail-border-rgb),0.4), 0 0 10px rgba(var(--hsr-nav-compass-blue-rgb),0.04) inset; /* Refined shadow for light */
+    border-radius: var(--border-radius);
+
+}
+.message.sent {
+    background-color: var(--sent-bg-color);
+    border-left-width: 3px;
+    border-left-style: solid;
+    border-left-color: var(--hsr-sunlit-gold);
+
+}
+.message.received {
+    background-color: var(--received-bg-color);
+    border-right: 3px solid var(--hsr-data-stream-teal); /* Using teal for non-AI received messages */
+
+}
+.message.system {
+    background-color: transparent;
+    color: var(--hsr-nav-compass-blue);
+    text-align: center;
+    border: none;
+    border-top: 1px dashed rgba(var(--hsr-nav-compass-blue-rgb), 0.45);
+    border-bottom: 1px dashed rgba(var(--hsr-nav-compass-blue-rgb), 0.45);
+
+    font-size: 0.9em;
+    font-family: var(--monospace-font);
+    opacity: 0.9;
+}
+.message-sender {
+    color: var(--text-color-light);
+    font-weight: 500;
+
+    font-size: 0.9em;
+    display: block;
+}
+.message .timestamp { color: var(--text-color-light); opacity: 0.65; font-size: 0.7rem; display: block;  }
+.message.sent .timestamp { text-align: right; }
+.message.received .timestamp { text-align: left; }
+
+.chat-input-container {
+    background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.95);
+    backdrop-filter: blur(4px);
+    border-top: 1px solid rgba(var(--hsr-polished-rail-border-rgb),0.8);
+}
+#messageInput {
+    background-color: var(--hsr-express-cabin-panel);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    font-size: 0.98em;
+}
+#messageInput::placeholder { color: var(--text-color-light); opacity: 0.7;}
+#messageInput:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--hsr-nav-compass-blue-rgb),0.2), 0 0 10px rgba(var(--hsr-nav-compass-blue-rgb),0.06) inset;
+    background-color: var(--hsr-express-cabin-panel);
+}
+.icon-btn { color: var(--text-color-light); font-size: 1.2rem;   border-radius: 50%; }
+.icon-btn:hover { color: var(--hsr-nav-compass-blue); background-color: rgba(var(--hsr-nav-compass-blue-rgb),0.07); transform: scale(1.1); }
+#sendButtonMain { color: var(--hsr-nav-compass-blue); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+#sendButtonMain:hover { text-shadow: 0 0 6px rgba(var(--hsr-nav-compass-blue-rgb),0.5); filter: brightness(0.95); }
+#voiceButtonMain.recording { color: var(--danger-color); animation: hsr-light-pulse 1.2s infinite ease-in-out; }
+@keyframes hsr-light-pulse {
+    0% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.15); box-shadow: 0 0 8px var(--danger-color); }
+    100% { opacity: 0.6; transform: scale(1); }
+}
+
+/* --- Details Panel --- */
+.details-panel {
+    background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.9);
+    border-left: 1px solid var(--border-color);
+    backdrop-filter: blur(6px);
+}
+.details-header {
+    background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.97);
+    border-bottom: 1px solid rgba(var(--hsr-nav-compass-blue-rgb), 0.15);
+}
+.details-avatar {
+    border: 2px solid var(--border-color);
+    box-shadow: 0 0 12px rgba(var(--hsr-console-dark-text-rgb), 0.08), 0 0 3px rgba(var(--hsr-console-dark-text-rgb), 0.04) inset;
+    border-radius: 3px;
+}
+#detailsName { text-shadow: 0 1px 2px rgba(var(--hsr-console-dark-text-rgb), 0.12); font-weight: 600; letter-spacing: 0.8px;}
+#aiContactDetailsContent {
+    background-color: rgba(var(--hsr-express-cabin-panel-rgb), 0.75);
+    border: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.9);
+    border-radius: var(--border-radius);
+    box-shadow: 0 0 8px rgba(var(--hsr-polished-rail-border-rgb), 0.3) inset;
+}
+#aiContactDetailsContent p strong { color: var(--hsr-nav-compass-blue); border-bottom: 1px solid rgba(var(--hsr-nav-compass-blue-rgb), 0.45); }
+#aiContactBasicInfoList li { border-bottom: 1px solid rgba(var(--hsr-polished-rail-border-rgb), 0.85);  font-size: 0.92em;}
+#aiContactAboutText { color: var(--text-color-light); font-size: 0.92em; opacity: 0.95; }
+
+/* 通用按钮样式 */
+.btn {
+    border-radius: var(--border-radius);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(var(--hsr-console-dark-text-rgb),0.15), 0 1px 1px rgba(var(--hsr-console-dark-text-rgb),0.03) inset, 0 0 0 1px rgba(var(--hsr-polished-rail-border-rgb),0.8);
+    border: 1px solid transparent;
+}
+.btn:active { transform: translateY(1px) scale(0.98); box-shadow: 0 1px 2px rgba(var(--hsr-console-dark-text-rgb),0.2), 0 0 1px rgba(var(--hsr-console-dark-text-rgb),0.05) inset; }
+
+.btn-primary { background: var(--hsr-nav-compass-blue); color: var(--hsr-clear-sky-bg); border-color: var(--hsr-nav-compass-blue); }
+.btn-primary:hover { background: rgb(0, 100, 170); box-shadow: 0 3px 8px rgba(var(--hsr-nav-compass-blue-rgb),0.3), 0 0 0 1px rgba(var(--hsr-polished-rail-border-rgb),0.8); transform: translateY(-2px) scale(1.02); }
+.btn-secondary { background: var(--hsr-polished-rail-border); color: var(--hsr-console-dark-text); border-color: rgba(var(--hsr-console-dark-text-rgb),0.2); }
+.btn-secondary:hover { background: rgb(165, 175, 185); box-shadow: 0 3px 8px rgba(var(--hsr-polished-rail-border-rgb),0.3), 0 0 0 1px rgba(var(--hsr-console-dark-text-rgb),0.25); transform: translateY(-2px) scale(1.02); }
+.btn-danger { background: var(--hsr-system-warning-red); color: var(--hsr-clear-sky-bg); border-color: var(--hsr-system-warning-red); }
+.btn-danger:hover { background: rgb(180, 45, 50); box-shadow: 0 3px 8px rgba(var(--hsr-system-warning-red-rgb),0.3), 0 0 0 1px rgba(var(--hsr-polished-rail-border-rgb),0.8); transform: translateY(-2px) scale(1.02); }
+.btn-success { background: var(--hsr-energy-core-cyan); color: var(--hsr-console-dark-text); border-color: var(--hsr-energy-core-cyan); }
+.btn-success:hover { background: rgb(0, 160, 180); box-shadow: 0 3px 8px rgba(var(--hsr-energy-core-cyan-rgb),0.3), 0 0 0 1px rgba(var(--hsr-polished-rail-border-rgb),0.8); transform: translateY(-2px) scale(1.02); }
+
+/* --- Modals --- */
+.loading-overlay { background-color: rgba(var(--hsr-clear-sky-bg-rgb), 0.94); backdrop-filter: blur(5px); }
+.loading-spinner {
+    border-top-color: var(--hsr-nav-compass-blue);
+    border-left-color: var(--hsr-energy-core-cyan);
+    border-bottom-color: rgba(var(--hsr-nav-compass-blue-rgb),0.3);
+    border-right-color: rgba(var(--hsr-energy-core-cyan-rgb),0.3);
+    animation: hsr-spinner-rotate 1s linear infinite; border-width: 4px;
+}
+
+.modal-content {
+    background-color: var(--secondary-color);
+    border: 1px solid rgba(var(--hsr-polished-rail-border-rgb),0.9);
+    box-shadow: 0 12px 35px rgba(var(--hsr-polished-rail-border-rgb),0.65), 0 0 25px rgba(var(--hsr-nav-compass-blue-rgb),0.1) inset, 0 0 0 1px rgba(var(--hsr-nav-compass-blue-rgb),0.15);
+    border-radius: var(--border-radius);
+}
+.modal-header h2 { color: var(--hsr-nav-compass-blue); text-shadow: 0 0 8px rgba(var(--hsr-nav-compass-blue-rgb),0.4), 0 0 2px rgba(var(--hsr-nav-compass-blue-rgb),0.2); letter-spacing: 0.5px;}
+.close-modal-btn { font-size: 1.5rem;  }
+.close-modal-btn:hover { color: var(--hsr-nav-compass-blue); transform: scale(1.15) rotate(90deg); }
+.modal-body input[type="text"], .modal-body textarea {
+    background-color: var(--hsr-clear-sky-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+
+}
+.modal-body input[type="text"]:focus, .modal-body textarea:focus {
+    border-color: var(--hsr-nav-compass-blue);
+    box-shadow: 0 0 0 1px rgba(var(--hsr-nav-compass-blue-rgb),0.3), 0 0 5px rgba(var(--hsr-nav-compass-blue-rgb),0.08) inset;
+}
+.user-id-display #modalUserIdValue {
+    background: var(--hsr-clear-sky-bg);
+    color: var(--hsr-nav-compass-blue);
+    border: 1px dashed rgba(var(--hsr-nav-compass-blue-rgb), 0.7);
+
+    border-radius: 3px;
+    font-family: var(--monospace-font);
+    letter-spacing: 1px;
+    user-select: text;
+}
+
+/* Video Call */
+.video-call-avatar { background-color: var(--hsr-polished-rail-border); border: 2px solid var(--border-color); border-radius: 3px; box-shadow: 0 0 8px rgba(var(--hsr-console-dark-text-rgb),0.1); }
+.video-call-button.end-call { background: var(--danger-color); }
+.video-call-button.active { background: var(--hsr-nav-compass-blue); color: var(--hsr-clear-sky-bg); }
+
+/* Toggle Switch */
+input:checked + .slider { background-color: var(--hsr-nav-compass-blue); box-shadow: 0 0 5px var(--hsr-nav-compass-blue) inset; }
+.slider { background-color: var(--hsr-polished-rail-border); border-radius: 13px;  border: 1px solid rgba(var(--hsr-clear-sky-bg-rgb),0.5);}
+.slider:before {
+    background-color: var(--hsr-express-cabin-panel);
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(var(--hsr-console-dark-text-rgb),0.25);
+
+}
+input:checked + .slider:before { background-color: var(--hsr-clear-sky-bg); box-shadow: 0 1px 3px rgba(var(--hsr-console-dark-text-rgb),0.25), 0 0 3px var(--hsr-nav-compass-blue); }
+
+
+/* Visibility for AI sections (matches other themes) */
+#detailsPanelContent #aiContactAboutSection,
+#detailsPanelContent #detailsGroupManagement #addGroupMemberArea,
+#detailsPanelContent #detailsGroupManagement #leftMembersArea,
+#detailsPanelContent #groupActionsDetails,
+#detailsPanelContent #dissolveGroupBtnDetails,
+#mainMenuModal .settings-section.manual-connection-advanced,
+#mainMenuModal #modalResetAllConnectionsBtn {
+    display: none;
+}
+/* Specific AI characters showing "About" section */
+.details-panel.AI_Trailblazer_HSR #aiContactAboutSection,
+.details-panel.AI_Sushang_HSR #aiContactAboutSection,
+.details-panel.AI_Misha_HSR #aiContactAboutSection,
+.details-panel.AI_DanHeng_HSR #aiContactAboutSection,
+.details-panel.AI_Sampo_HSR #aiContactAboutSection,
+.details-panel.AI_Bailu_HSR #aiContactAboutSection,
+.details-panel.AI_Aglaia_HSR #aiContactAboutSection,
+.details-panel.AI_Yanqing_HSR #aiContactAboutSection,
+.details-panel.AI_XiaDie_HSR #aiContactAboutSection {
+    display: block;
+}
+
+.details-panel.human-contact-active #contactActionsDetails { display: block; }
+.details-panel.group-chat-active #detailsGroupManagement,
+.details-panel.group-chat-active #groupActionsDetails { display: block; }
+
+.notification {
+    background: var(--hsr-express-cabin-panel);
+    border-left: 5px solid var(--hsr-nav-compass-blue);
+    color: var(--text-color);
+    border-radius: var(--border-radius);
+}
+.notification strong { color: var(--hsr-nav-compass-blue); text-shadow: 0 0 3px rgba(var(--hsr-nav-compass-blue-rgb),0.3); }

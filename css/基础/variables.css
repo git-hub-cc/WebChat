@@ -1,0 +1,218 @@
+/**
+ * ==========================================================================
+ * 全局设计令牌 (Global Design Tokens)
+ * ==========================================================================
+ */
+
+:root {
+    /* ========================================================== */
+    /* 1. 色彩系统 (Color System)                                 */
+    /* ========================================================== */
+
+    /* --- 1a. 核心原始颜色 (Core Raw Colors) --- */
+    /* 主题的基础色板，定义为 RGB 值以便于使用透明度 */
+    --brand-rgb: 0, 136, 204;
+    --brand-dark-rgb: 0, 119, 179;
+    --accent-success-rgb: 76, 175, 80;
+    --accent-danger-rgb: 244, 67, 54;
+    --accent-danger-dark-rgb: 200, 35, 51;
+    --accent-warning-rgb: 255, 152, 0;
+    --accent-info-rgb: 33, 150, 243;
+    --accent-deep-green-rgb: 76, 175, 80;
+
+    --surface-1-rgb: 248, 249, 250;
+    --surface-2-rgb: 255, 255, 255;
+    --surface-hover-rgb: 240, 240, 240;
+    --surface-active-rgb: 224, 224, 224;
+
+    --text-primary-rgb: 33, 33, 33;
+    --text-secondary-rgb: 117, 117, 117;
+    --text-on-brand-rgb: 255, 255, 255;
+    --text-on-accent-rgb: 255, 255, 255;
+
+    --border-subtle-rgb: 224, 224, 224;
+    --disabled-rgb: 204, 204, 204;
+    --disabled-text-rgb: 102, 102, 102;
+    --black-rgb: 0, 0, 0;
+    --white-rgb: 255, 255, 255;
+
+    /* 特殊用途颜色 */
+    --raw-chat-bg-color: #e5ddd5;
+    --raw-sent-bg-color: #e1ffc7;
+    --raw-secondary-btn-bg: #6c757d;
+    --raw-secondary-btn-dark-bg: #5a6268;
+
+    /* --- 1b. 语义化颜色变量 (Semantic Color Variables) --- */
+    /* 组件将直接使用这些变量 */
+    --brand-bg: rgb(var(--brand-rgb));
+    --brand-bg-dark: rgb(var(--brand-dark-rgb));
+    --text-on-brand: rgb(var(--text-on-brand-rgb));
+
+    --success-bg: rgb(var(--accent-success-rgb));
+    --text-on-success: rgb(var(--text-on-accent-rgb));
+    --danger-bg: rgb(var(--accent-danger-rgb));
+    --danger-bg-dark: rgb(var(--accent-danger-dark-rgb));
+    --text-on-danger: rgb(var(--text-on-accent-rgb));
+    --warning-bg: rgb(var(--accent-warning-rgb));
+    --text-on-warning: rgb(var(--text-on-accent-rgb));
+    --info-bg: rgb(var(--accent-info-rgb));
+    --text-on-info: rgb(var(--text-on-accent-rgb));
+
+    --surface-1-bg: rgb(var(--surface-1-rgb));
+    --surface-2-bg: rgb(var(--surface-2-rgb));
+    --surface-hover-bg: rgb(var(--surface-hover-rgb));
+    --surface-active-bg: rgb(var(--surface-active-rgb));
+
+    --text-primary: rgb(var(--text-primary-rgb));
+    --text-secondary: rgb(var(--text-secondary-rgb));
+    --text-inverted: rgb(var(--text-on-brand-rgb));
+    --text-disabled: rgb(var(--disabled-text-rgb));
+
+    --border-color: rgb(var(--border-subtle-rgb));
+    --border-color-interactive: rgba(var(--brand-rgb), 0.5);
+    --border-color-strong: rgba(var(--text-primary-rgb), 0.5);
+
+    --disabled-bg: rgb(var(--disabled-rgb));
+
+    /* --- 1c. 组件级颜色变量 (Component-level Color Variables) --- */
+    --primary-color: var(--brand-bg);
+    --primary-color-dark: var(--brand-bg-dark);
+    --secondary-btn-bg: var(--raw-secondary-btn-bg);
+    --secondary-btn-dark-bg: var(--raw-secondary-btn-dark-bg);
+    --text-color: var(--text-primary);
+    --text-color-light: var(--text-secondary);
+    --text-color-inverted: var(--text-inverted);
+
+    --panel-bg-color: var(--surface-1-bg);
+    --header-bg-color: var(--surface-1-bg);
+    --chat-bg-color: var(--raw-chat-bg-color);
+    --input-bg-color: var(--surface-2-bg);
+
+    --sent-bg-color: var(--raw-sent-bg-color);
+    --text-on-sent: var(--text-primary);
+    --received-bg-color: var(--surface-2-bg);
+    --text-on-received: var(--text-primary);
+
+    --modal-backdrop-bg: rgba(var(--black-rgb), 0.5);
+    --video-call-backdrop-bg: rgba(var(--black-rgb), 0.9);
+    --video-call-ui-bg: rgba(var(--black-rgb), 0.3);
+    --screenshot-editor-backdrop-bg: rgba(30, 30, 30, 0.9);
+    --screenshot-editor-toolbar-bg: #333; /* kept for specific dark UI */
+
+    --loading-overlay-bg: rgba(var(--text-primary-rgb), 0.7);
+
+    --audio-quality-level-0-bg: var(--danger-bg);
+    --audio-quality-level-1-bg: var(--warning-bg);
+    --audio-quality-level-2-bg: var(--info-bg);
+    --audio-quality-level-3-bg: var(--success-bg);
+    --audio-quality-level-4-bg: rgb(var(--accent-deep-green-rgb));
+
+    /* --- 1d. 角色主题化占位符 (Character Theming Placeholders) --- */
+    --character-theme-primary-rgb: var(--brand-rgb);
+    --character-theme-primary: rgb(var(--character-theme-primary-rgb));
+    --text-on-character-theme: var(--text-on-brand);
+    --character-avatar-bg: var(--character-theme-primary);
+    --character-avatar-text-color: var(--text-on-character-theme);
+    --character-message-border-color: var(--character-theme-primary);
+    --character-message-bg-color: var(--received-bg-color);
+    --character-message-sender-color: var(--character-theme-primary);
+    --character-details-name-color: var(--character-theme-primary);
+    --character-title-color: var(--character-theme-primary);
+
+    /* ========================================================== */
+    /* 2. 布局与尺寸 (Layout & Sizing)                            */
+    /* ========================================================== */
+
+    /* --- 2a. 间距 (Spacing) --- */
+    --spacing-1: 4px;
+    --spacing-2: 8px;
+    --spacing-3: 12px;
+    --spacing-4: 16px;
+    --spacing-5: 20px;
+    --spacing-6: 24px;
+
+    /* --- 2b. 布局尺寸 (Layout Sizing) --- */
+    --sidebar-width: 320px;
+    --details-panel-width: 320px;
+    --header-height: 60px;
+    --max-app-width: 1400px;
+    --message-bubble-max-width: 80%;
+
+    /* --- 2c. 组件尺寸 (Component Sizing) --- */
+    --avatar-size-sm: 32px;
+    --avatar-size-md: 40px;
+    --avatar-size-lg: 60px;
+    --avatar-size-xl: 80px;
+    --icon-btn-size: 40px;
+
+    /* ========================================================== */
+    /* 3. 排版 (Typography)                                       */
+    /* ========================================================== */
+    --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-family-serif: serif;
+
+    --font-size-xs: 11px;
+    --font-size-sm: 13px;
+    --font-size-base: 14px;
+    --font-size-md: 15px;
+    --font-size-lg: 16px;
+    --font-size-xl: 18px;
+    --font-size-xxl: 20px;
+    --font-size-icon: 22px;
+    --font-size-icon-lg: 24px;
+
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --line-height-base: 1.4;
+    --line-height-heading: 1.2;
+
+    /* ========================================================== */
+    /* 4. 边框与阴影 (Borders & Shadows)                          */
+    /* ========================================================== */
+    --border-width-standard: 1px;
+    --border-width-thick: 3px;
+    --border-width-focus: 2px;
+
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-pill: 20px;
+    --border-radius-circle: 50%;
+
+    --box-shadow-sm: 0 1px 2px rgba(var(--black-rgb), 0.05);
+    --box-shadow-md: 0 1px 3px rgba(var(--black-rgb), 0.12), 0 1px 2px rgba(var(--black-rgb), 0.24);
+    --box-shadow-lg: 0 5px 15px rgba(var(--black-rgb), 0.2);
+    --box-shadow-inset: inset 0 1px 2px rgba(var(--black-rgb), 0.1);
+
+    /* ========================================================== */
+    /* 5. 过渡与动画 (Transitions & Animations)                   */
+    /* ========================================================== */
+    --transition-duration-fast: 0.15s;
+    --transition-duration-normal: 0.2s;
+    --transition-duration-slow: 0.3s;
+    --transition-timing-function-ease-out: ease-out;
+    --transition-timing-function-ease-in-out: ease-in-out;
+
+    --animation-duration-spin: 1.5s;
+    --animation-duration-pulse: 1.5s;
+    --animation-duration-blink: 1s;
+
+    /* ========================================================== */
+    /* 6. Z-Index 层级 (Z-Indexes)                                */
+    /* ========================================================== */
+    --z-index-base: 1;
+    --z-index-content: 10;
+    --z-index-details-panel: 15;
+    --z-index-dropdown: 100;
+    --z-index-sticky: 200;
+    --z-index-modal: 1000;
+    --z-index-modal-video: 1001;
+    --z-index-modal-screenshot: 1002;
+    --z-index-pip: 1005;
+    --z-index-context-menu: 10000;
+    --z-index-loading-overlay: 9999;
+    --z-index-notification: 9999;
+}

@@ -1,0 +1,360 @@
+/*
+================================================================================
+|                                                                              |
+|                    🎨 蜡笔小新 - 动感春日 (浅色主题) 🎨                      |
+|                  (Crayon Shin-chan - Dynamic Spring - Light Theme)           |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained light theme file for Crayon Shin-chan.
+*
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "蜡笔小新 - 动感春日";
+    --theme-mode: "light";
+
+    /* ------------------------- 🎨 核心配色方案 -------------------------- */
+    /* 角色色板 (Character Palette) */
+    --cs-shinchan-red-rgb: 237, 28, 36;
+    --cs-shinchan-yellow-rgb: 255, 242, 0;
+    --cs-misae-pink-rgb: 243, 157, 190;
+    --cs-hiroshi-blue-rgb: 60, 90, 150;
+    --cs-kazama-sky-blue-rgb: 135, 206, 250;
+    --cs-shiro-white-rgb: 255, 255, 255;
+
+    /* 材质与背景色板 (Texture & Background Palette) */
+    --cs-shiro-bg-rgb: 245, 245, 245;
+    --cs-background-light-yellow-rgb: 255, 253, 235;
+    --cs-bubble-blue-rgb: 200, 230, 255;
+    --cs-border-brown-rgb: 180, 150, 120;
+
+    /* 文本与强调色 (Text & Accent Palette) */
+    --cs-text-dark-rgb: 55, 55, 55;
+    --cs-text-light-rgb: 120, 120, 120;
+    --cs-accent-green-rgb: 76, 175, 80;
+    --cs-danger-red-rgb: 229, 57, 53;
+    --cs-warning-yellow-rgb: 253, 216, 53;
+
+    /* --- 语义化颜色变量覆盖 (Semantic Overrides) --- */
+    --brand-rgb: var(--cs-shinchan-red-rgb);
+    --brand-dark-rgb: 200, 20, 28;
+    --text-on-brand-rgb: var(--cs-shiro-white-rgb);
+
+    --surface-1-rgb: var(--cs-background-light-yellow-rgb); /* 侧边栏、面板等 */
+    --surface-2-rgb: var(--cs-shiro-white-rgb);             /* 输入框、卡片等 */
+    --surface-hover-rgb: 255, 249, 196; /* 浅黄悬停色 */
+    --surface-active-rgb: 255, 245, 157; /* 激活色 */
+
+    --text-primary-rgb: var(--cs-text-dark-rgb);
+    --text-secondary-rgb: var(--cs-text-light-rgb);
+
+    --border-subtle-rgb: var(--cs-border-brown-rgb);
+
+    --accent-success-rgb: var(--cs-accent-green-rgb);
+    --accent-danger-rgb: var(--cs-danger-red-rgb);
+    --accent-warning-rgb: var(--cs-warning-yellow-rgb);
+
+    /* --- 组件级颜色变量覆盖 (Component-level Overrides) --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgb(var(--surface-1-rgb));
+    --chat-bg-color: rgb(var(--cs-shiro-bg-rgb));
+    --input-bg-color: rgb(var(--surface-2-rgb));
+
+    --sent-bg-color: rgb(var(--brand-rgb));
+    --text-on-sent: rgb(var(--text-on-brand-rgb));
+    --received-bg-color: rgb(var(--cs-bubble-blue-rgb));
+    --text-on-received: rgb(var(--text-primary-rgb));
+
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "Comic Sans MS", "Chalkduster", "Arial Rounded MT Bold", sans-serif;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-width-standard: 2px;
+    --border-width-thick: 3px;
+    --border-radius-md: 10px; /* 卡通风格的圆角 */
+    --box-shadow-md: 2px 2px 0px rgb(var(--cs-text-dark-rgb)); /* 2D卡通阴影 */
+    --box-shadow-lg: 0 4px 8px rgba(var(--cs-border-brown-rgb), 0.2);
+}
+
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
+body {
+    background-color: rgb(var(--cs-shinchan-yellow-rgb));
+    background-image: linear-gradient(to bottom, rgb(var(--cs-kazama-sky-blue-rgb)), rgb(var(--cs-background-light-yellow-rgb)));
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(var(--cs-border-brown-rgb), 0.1);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(var(--cs-shinchan-red-rgb), 0.6);
+    border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--cs-shinchan-red-rgb));
+}
+
+/* ------------------------- 🏛️ 页面结构与容器 ------------------------ */
+.app-container {
+    background-color: rgb(var(--surface-2-rgb));
+    border: var(--border-width-thick) solid rgb(var(--border-subtle-rgb));
+}
+
+.sidebar-nav, .chat-header-main, .details-panel, .chat-input-container {
+    border-color: rgb(var(--border-subtle-rgb));
+}
+
+.menu-btn:hover, .header-action-btn:hover, .icon-btn:hover {
+    color: rgb(var(--brand-rgb));
+}
+
+.search-bar {
+    border-width: var(--border-width-standard);
+}
+.search-bar:focus {
+    box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.2);
+}
+
+.nav-tab.active {
+    color: rgb(var(--brand-rgb));
+    border-bottom-color: rgb(var(--brand-rgb));
+}
+
+.chat-list-item {
+    border-bottom: 1px dashed rgba(var(--border-subtle-rgb), 0.5);
+}
+.chat-list-item.active {
+    background-color: rgb(var(--brand-rgb));
+}
+.chat-list-item.active .chat-list-name,
+.chat-list-item.active .chat-list-preview,
+.chat-list-item.active .chat-list-time {
+    color: rgb(var(--text-on-brand-rgb));
+}
+
+.chat-list-avatar, .chat-avatar-main, .details-avatar {
+    border: var(--border-width-standard) solid rgb(var(--text-primary-rgb));
+}
+
+.chat-list-badge {
+    background-color: rgb(var(--accent-success-rgb));
+}
+
+.new-chat-fab {
+    background-color: rgb(var(--cs-shinchan-yellow-rgb));
+    color: rgb(var(--cs-shinchan-red-rgb));
+    border: var(--border-width-standard) solid rgb(var(--cs-shinchan-red-rgb));
+    box-shadow: 0 3px 8px rgba(var(--cs-border-brown-rgb), 0.4);
+}
+.new-chat-fab:hover {
+    background-color: rgb(255, 250, 100);
+}
+
+/* ------------------------- ⌨️ 输入与消息 ------------------------ */
+.no-chat-selected .logo-placeholder::before {
+    content: "🖍️";
+    font-size: 60px;
+    color: rgb(var(--brand-rgb));
+    text-shadow: 2px 2px rgba(var(--border-subtle-rgb), 0.3);
+}
+
+.message {
+    box-shadow: 2px 2px 4px rgba(var(--border-subtle-rgb), 0.2);
+    border-radius: var(--border-radius-md);
+}
+.message.sent {
+    border-bottom-right-radius: 3px;
+}
+.message.received {
+    border: 1px solid rgba(var(--cs-hiroshi-blue-rgb), 0.3);
+    border-bottom-left-radius: 3px;
+}
+.message.system {
+    background-color: rgba(var(--border-subtle-rgb), 0.2);
+    font-style: italic;
+}
+.message-sender {
+    font-weight: bold;
+}
+.message .download-btn {
+    color: rgb(var(--brand-rgb));
+}
+
+#messageInput {
+    border-width: var(--border-width-standard);
+}
+#voiceButtonMain.recording {
+    color: rgb(var(--brand-rgb));
+    animation: cs-pulse 1.2s infinite;
+}
+@keyframes cs-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--brand-rgb), 0.5); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--brand-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--brand-rgb), 0); }
+}
+
+/* ------------------------- 🔘 UI 组件 ------------------------ */
+.btn {
+    border-radius: var(--border-radius-md);
+    border: var(--border-width-standard) solid rgb(var(--text-primary-rgb));
+    box-shadow: var(--box-shadow-md);
+    text-transform: uppercase;
+    font-weight: bold;
+}
+.btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+}
+.btn-primary { background-color: rgb(var(--brand-rgb)); color: rgb(var(--text-on-brand-rgb)); }
+.btn-primary:hover { background-color: rgb(var(--brand-dark-rgb)); }
+.btn-secondary { background-color: rgb(var(--cs-hiroshi-blue-rgb)); color: rgb(var(--cs-shiro-white-rgb)); }
+.btn-secondary:hover { background-color: rgb(50, 80, 130); }
+.btn-danger { background-color: rgb(var(--accent-danger-rgb)); color: rgb(var(--cs-shiro-white-rgb)); }
+.btn-danger:hover { background-color: rgb(211, 47, 47); }
+.btn-success { background-color: rgb(var(--accent-success-rgb)); color: rgb(var(--cs-shiro-white-rgb)); }
+.btn-success:hover { background-color: rgb(67, 160, 71); }
+
+.loading-overlay { background-color: rgba(var(--cs-shinchan-yellow-rgb), 0.7); }
+.loading-spinner { border-top-color: rgb(var(--brand-rgb)); border-left-color: rgb(var(--brand-rgb)); }
+.modal-content { border: var(--border-width-thick) solid rgb(var(--border-subtle-rgb)); }
+.modal-header h2 { color: rgb(var(--brand-rgb)); }
+#modalUserIdValue { background: rgb(var(--cs-bubble-blue-rgb)); border: 1px dashed rgb(var(--cs-hiroshi-blue-rgb)); }
+input:checked + .slider { background-color: rgb(var(--brand-rgb)); }
+
+/*
+================================================================================
+|                            👤 角色专属样式 👤                              |
+================================================================================
+*/
+
+/* --- 野原新之助 --- */
+.AI_野原新之助 .chat-list-avatar,
+.chat-avatar-main.AI_野原新之助,
+.details-avatar.AI_野原新之助,
+#callingModalAvatar.AI_野原新之助 {
+    background-color: rgb(var(--cs-shinchan-yellow-rgb));
+    color: rgb(var(--cs-shinchan-red-rgb));
+    border-color: rgb(var(--cs-shinchan-red-rgb));
+}
+.chat-list-item.active.AI_野原新之助 {
+    background-color: rgb(var(--cs-shinchan-red-rgb));
+    box-shadow: 0 0 8px rgb(var(--cs-shinchan-yellow-rgb)) inset;
+}
+.chat-header-main.character-active.AI_野原新之助 .chat-title-main {
+    color: rgb(var(--cs-shinchan-red-rgb));
+    text-shadow: 1px 1px rgb(var(--cs-shinchan-yellow-rgb));
+}
+.message.received.character-message.AI_野原新之助 {
+    background-color: rgb(var(--cs-shinchan-yellow-rgb));
+    border-color: rgb(var(--cs-shinchan-red-rgb));
+}
+.message.received.character-message.AI_野原新之助 .message-sender,
+.details-panel.character-active.AI_野原新之助 #detailsName,
+.details-panel.character-active.AI_野原新之助 #aiContactAboutSection h4 span {
+    color: rgb(var(--cs-shinchan-red-rgb));
+}
+
+
+/* --- 野原美伢 --- */
+.AI_野原美伢 .chat-list-avatar,
+.chat-avatar-main.AI_野原美伢,
+.details-avatar.AI_野原美伢,
+#callingModalAvatar.AI_野原美伢 {
+    background-color: rgb(var(--cs-misae-pink-rgb));
+    color: rgb(var(--cs-shiro-white-rgb));
+}
+.chat-list-item.active.AI_野原美伢 {
+    background-color: rgb(var(--cs-misae-pink-rgb));
+}
+.chat-list-item.active.AI_野原美伢 .chat-list-name {
+    color: rgb(var(--text-primary-rgb));
+}
+.message.received.character-message.AI_野原美伢 {
+    background-color: rgba(var(--cs-misae-pink-rgb), 0.3);
+    border-color: rgb(var(--cs-misae-pink-rgb));
+}
+.chat-header-main.character-active.AI_野原美伢 .chat-title-main,
+.message.received.character-message.AI_野原美伢 .message-sender,
+.details-panel.character-active.AI_野原美伢 #detailsName,
+.details-panel.character-active.AI_野原美伢 #aiContactAboutSection h4 span {
+    color: rgb(var(--cs-misae-pink-rgb));
+}
+
+/* --- 野原广志 --- */
+.AI_野原广志 .chat-list-avatar,
+.chat-avatar-main.AI_野原广志,
+.details-avatar.AI_野原广志,
+#callingModalAvatar.AI_野原广志 {
+    background-color: rgb(var(--cs-hiroshi-blue-rgb));
+    color: rgb(var(--cs-shiro-white-rgb));
+}
+.chat-list-item.active.AI_野原广志 {
+    background-color: rgb(var(--cs-hiroshi-blue-rgb));
+}
+.message.received.character-message.AI_野原广志 {
+    background-color: rgba(var(--cs-hiroshi-blue-rgb), 0.3);
+    border-color: rgb(var(--cs-hiroshi-blue-rgb));
+}
+.chat-header-main.character-active.AI_野原广志 .chat-title-main,
+.message.received.character-message.AI_野原广志 .message-sender,
+.details-panel.character-active.AI_野原广志 #detailsName,
+.details-panel.character-active.AI_野原广志 #aiContactAboutSection h4 span {
+    color: rgb(var(--cs-hiroshi-blue-rgb));
+}
+
+
+/* --- 风间彻 --- */
+.AI_风间彻 .chat-list-avatar,
+.chat-avatar-main.AI_风间彻,
+.details-avatar.AI_风间彻,
+#callingModalAvatar.AI_风间彻 {
+    background-color: rgb(var(--cs-kazama-sky-blue-rgb));
+    color: rgb(var(--cs-text-dark-rgb));
+}
+.chat-list-item.active.AI_风间彻 {
+    background-color: rgb(var(--cs-kazama-sky-blue-rgb));
+}
+.chat-list-item.active.AI_风间彻 .chat-list-name {
+    color: rgb(var(--cs-text-dark-rgb));
+}
+.message.received.character-message.AI_风间彻 {
+    background-color: rgba(var(--cs-kazama-sky-blue-rgb), 0.3);
+    border-color: rgb(var(--cs-kazama-sky-blue-rgb));
+}
+.chat-header-main.character-active.AI_风间彻 .chat-title-main,
+.message.received.character-message.AI_风间彻 .message-sender,
+.details-panel.character-active.AI_风间彻 #detailsName,
+.details-panel.character-active.AI_风间彻 #aiContactAboutSection h4 span {
+    color: rgb(var(--cs-hiroshi-blue-rgb)); /* Use a darker blue for text for readability */
+}
+
+
+/* --- 小白 --- */
+.AI_小白 .chat-list-avatar,
+.chat-avatar-main.AI_小白,
+.details-avatar.AI_小白,
+#callingModalAvatar.AI_小白 {
+    background-color: rgb(var(--cs-shiro-white-rgb));
+    color: rgb(var(--cs-text-dark-rgb));
+    border-color: rgb(var(--cs-text-light-rgb));
+}
+.chat-list-item.active.AI_小白 {
+    background-color: rgb(var(--cs-shiro-bg-rgb));
+}
+.chat-list-item.active.AI_小白 .chat-list-name {
+    color: rgb(var(--cs-text-dark-rgb));
+}
+.message.received.character-message.AI_小白 {
+    background-color: rgb(var(--cs-shiro-bg-rgb));
+    border-color: rgb(var(--cs-text-light-rgb));
+    font-style: italic;
+}
+.chat-header-main.character-active.AI_小白 .chat-title-main,
+.message.received.character-message.AI_小白 .message-sender,
+.details-panel.character-active.AI_小白 #detailsName,
+.details-panel.character-active.AI_小白 #aiContactAboutSection h4 span {
+    color: rgb(var(--cs-text-light-rgb));
+}

@@ -1,0 +1,209 @@
+/* ========================================================================== */
+/* 侧边栏头部与导航选项卡 (Sidebar Header & Navigation Tabs) */
+/* ========================================================================== */
+
+.sidebar-header {
+    padding-block: var(--spacing-2);
+}
+
+.nav-tabs {
+    display: flex;
+    justify-content: space-around;
+    padding-block-start: var(--spacing-3);
+}
+
+.nav-tab {
+    padding: var(--spacing-2) var(--spacing-3);
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    transition: color var(--transition-duration-normal) ease-out, border-bottom-color var(--transition-duration-normal) ease-out;
+}
+
+.nav-tab:hover {
+    color: var(--brand-bg);
+}
+
+.nav-tab.active {
+    border-bottom-color: var(--brand-bg);
+    color: var(--brand-bg);
+}
+
+/* ========================================================================== */
+/* 聊天列表 (Chat List) */
+/* ========================================================================== */
+
+.chat-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+#chatListNav {
+    list-style: none;
+}
+
+.chat-list-item {
+    display: flex;
+    align-items: center;
+    padding: var(--spacing-3) var(--spacing-4);
+    border-bottom: var(--border-width-standard) solid var(--border-color);
+    cursor: pointer;
+    transition: background-color var(--transition-duration-fast) ease-out;
+}
+
+.chat-list-item:hover {
+    background-color: var(--surface-hover-bg);
+}
+
+.chat-list-item.active {
+    background-color: var(--surface-active-bg);
+}
+
+.chat-list-item.active .chat-list-name:not(.special-contact .chat-list-name) {
+    font-weight: var(--font-weight-bold);
+}
+
+.chat-list-info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.chat-list-name {
+    display: flex;
+    align-items: center;
+    margin-bottom: 2px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    transition: color var(--transition-duration-slow) ease-out;
+}
+
+.chat-list-preview {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.chat-list-meta {
+    min-width: 50px;
+    text-align: end;
+}
+
+.chat-list-time {
+    margin-bottom: var(--spacing-1);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+}
+
+.chat-list-badge {
+    display: inline-block;
+    min-width: 18px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    background-color: var(--success-bg);
+    color: var(--text-on-success);
+    text-align: center;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+}
+
+.chat-list-item-empty {
+    padding: var(--spacing-5);
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.chat-list-avatar {
+    width: var(--avatar-size-md);
+    height: var(--avatar-size-md);
+    margin-inline-end: var(--spacing-3);
+    font-size: var(--font-size-xl);
+}
+
+/* ========================================================================== */
+/* 新建聊天悬浮按钮 (New Chat FAB) */
+/* ========================================================================== */
+
+.new-chat-fab {
+    position: absolute;
+    z-index: var(--z-index-content);
+    inset-block-end: 20px;
+    inset-inline-start: calc(var(--sidebar-width) - 70px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 50px;
+    height: 50px;
+    border: none;
+    border-radius: var(--border-radius-circle);
+    background-color: var(--brand-bg);
+    box-shadow: 0 2px 10px rgba(var(--black-rgb), 0.2);
+    cursor: pointer;
+    color: var(--text-on-brand);
+    font-size: var(--font-size-icon-lg);
+    transition: background-color var(--transition-duration-normal) ease-out, transform var(--transition-duration-normal) ease-out;
+}
+
+.new-chat-fab:hover {
+    background-color: var(--brand-bg-dark);
+    transform: scale(1.05);
+}
+
+/* ========================================================================== */
+/* 人员大厅相关 (People Lobby Related) */
+/* ========================================================================== */
+
+.lobby-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#peopleLobbyList {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+#peopleLobbyRefreshBtn.loading {
+    animation: spin 1s linear infinite;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+/* ========================================================================== */
+/* 列表项状态修饰符 (List Item State Modifiers) */
+/* ========================================================================== */
+
+.chat-list-item.group .chat-list-avatar {
+    background-color: var(--success-bg);
+}
+
+.chat-list-item.active.special-contact .chat-list-name {
+    color: var(--character-theme-primary);
+    font-weight: var(--font-weight-bold);
+}
+
+.chat-list-item.special-contact .chat-list-avatar {
+    background-color: var(--character-avatar-bg);
+    color: var(--character-avatar-text-color);
+}
+
+/* ========================================================================== */
+/* 响应式设计 (Responsive Design) */
+/* ========================================================================== */
+
+@media screen and (max-width: 768px) {
+    .new-chat-fab {
+        inset-inline-start: auto;
+        inset-inline-end: 20px;
+    }
+}

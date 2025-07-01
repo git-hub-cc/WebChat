@@ -1,0 +1,440 @@
+/*
+================================================================================
+|                                                                              |
+|                    🔥 斗破苍穹 - 魔焰夜行 (Dark Theme) 🔥                    |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained dark theme file for "Battle Through the Heavens".
+*
+*/
+
+:root {
+    /* ========================================================== */
+    /* 1. 主题元数据 (Theme Metadata)                             */
+    /* ========================================================== */
+    --theme-name: "斗破苍穹 - 魔焰夜行";
+    --theme-mode: "dark";
+
+    /* ========================================================== */
+    /* 2. 主题核心色板 (Core Theme Palette)                       */
+    /* ========================================================== */
+    --dq-dark-heavenly-flame-red-rgb: 210, 70, 40;
+    --dq-dark-heavenly-flame-red-darker-rgb: 180, 50, 20;
+    --dq-dark-nightsky-black-rgb: 12, 10, 18;
+    --dq-dark-obsidian-panel-rgb: 25, 22, 32;
+    --dq-dark-soul-purple-rgb: 110, 80, 160;
+    --dq-dark-ancient-gold-rgb: 190, 140, 50;
+    --dq-dark-demonic-cyan-flame-rgb: 50, 140, 170;
+    --dq-dark-danger-crimson-rgb: 170, 30, 40;
+    --dq-dark-text-ash-white-rgb: 220, 225, 230;
+    --dq-dark-text-shadow-gray-rgb: 140, 145, 155;
+    --dq-dark-volcanic-border-rgb: 45, 42, 55;
+    --dq-dark-black-rgb: 0, 0, 0;
+
+    /* ========================================================== */
+    /* 3. 基础语义变量覆盖 (Semantic Variable Overrides)          */
+    /* ========================================================== */
+    --brand-rgb: var(--dq-dark-heavenly-flame-red-rgb);
+    --brand-dark-rgb: var(--dq-dark-heavenly-flame-red-darker-rgb);
+    --text-on-brand-rgb: var(--dq-dark-nightsky-black-rgb);
+
+    --surface-1-rgb: var(--dq-dark-obsidian-panel-rgb);
+    --surface-2-rgb: rgba(var(--dq-dark-nightsky-black-rgb), 0.9);
+    --surface-hover-rgb: rgba(var(--dq-dark-text-ash-white-rgb), 0.04);
+    --surface-active-rgb: rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.18);
+
+    --text-primary-rgb: var(--dq-dark-text-ash-white-rgb);
+    --text-secondary-rgb: var(--dq-dark-text-shadow-gray-rgb);
+    --text-on-accent-rgb: var(--dq-dark-nightsky-black-rgb);
+
+    --border-subtle-rgb: var(--dq-dark-volcanic-border-rgb);
+    --border-strong-rgb: var(--dq-dark-ancient-gold-rgb);
+
+    --accent-success-rgb: var(--dq-dark-demonic-cyan-flame-rgb);
+    --accent-danger-rgb: var(--dq-dark-danger-crimson-rgb);
+    --accent-warning-rgb: 184, 134, 11; /* #B8860B */
+    --accent-info-rgb: var(--dq-dark-soul-purple-rgb);
+
+    /* ========================================================== */
+    /* 4. 组件级变量覆盖 (Component-level Overrides)              */
+    /* ========================================================== */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.6);
+    --chat-bg-color: rgb(var(--dq-dark-nightsky-black-rgb));
+    --input-bg-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.9);
+
+    --sent-bg-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.75);
+    --text-on-sent: rgb(var(--text-primary-rgb));
+    --received-bg-color: rgba(var(--dq-dark-volcanic-border-rgb), 0.9);
+    --text-on-received: rgb(var(--text-primary-rgb));
+
+    /* ========================================================== */
+    /* 5. 字体与布局覆盖 (Typography & Layout Overrides)          */
+    /* ========================================================== */
+    --font-family-base: "LXGW WenKai TC", "STKaiti", "SimSun", "Noto Serif SC", "Songti SC", serif;
+    --border-radius-md: 5px;
+    --box-shadow-md: 0 2px 4px rgba(var(--dq-dark-black-rgb), 0.7), 0 0 20px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.12) inset;
+}
+
+/*
+================================================================================
+|                           🎨 全局与基础样式 🎨                             |
+================================================================================
+*/
+body {
+    background-color: var(--chat-bg-color);
+    background-image:
+            radial-gradient(ellipse at center, rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.12) 0%, transparent 75%),
+            linear-gradient(to bottom right, rgba(var(--dq-dark-nightsky-black-rgb), 0.9), rgba(var(--dq-dark-obsidian-panel-rgb), 0.8)),
+            radial-gradient(ellipse at top right, rgba(var(--dq-dark-soul-purple-rgb), 0.15) 0%, transparent 60%),
+            radial-gradient(ellipse at bottom left, rgba(var(--dq-dark-demonic-cyan-flame-rgb), 0.1) 0%, transparent 70%);
+    background-blend-mode: overlay, normal, soft-light, soft-light;
+}
+
+.app-container {
+    border: 1px solid rgba(var(--border-subtle-rgb), 0.6);
+    box-shadow: 0 8px 30px rgba(var(--dq-dark-black-rgb), 0.6), 0 0 0 3px rgba(var(--brand-rgb), 0.25);
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(var(--dq-dark-nightsky-black-rgb), 0.8);
+    border: 1px solid rgba(var(--border-subtle-rgb), 0.3);
+}
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb)));
+    border: 1px solid rgba(var(--text-primary-rgb), 0.05);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, rgb(var(--brand-dark-rgb)), rgba(var(--accent-info-rgb), 0.7));
+}
+
+/*
+================================================================================
+|                           🧭 侧边栏与导航 🧭                               |
+================================================================================
+*/
+.sidebar-nav {
+    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.7);
+    box-shadow: 2px 0 8px rgba(var(--dq-dark-black-rgb), 0.3);
+}
+.sidebar-header {
+    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.85);
+}
+.search-bar:focus {
+    box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.3), 0 0 8px rgba(var(--accent-info-rgb), 0.2) inset;
+}
+.nav-tab.active {
+    background-image: linear-gradient(to top, rgba(var(--brand-rgb), 0.1), transparent);
+}
+.chat-list-item:hover {
+    box-shadow: inset 3px 0 0 0 rgb(var(--accent-info-rgb));
+}
+.chat-list-item.active {
+    box-shadow: inset 3px 0 0 0 rgb(var(--brand-rgb)), 0 0 12px rgba(var(--brand-rgb), 0.2) inset;
+}
+.chat-list-item.active .chat-list-name {
+    color: rgb(var(--brand-rgb));
+}
+.chat-list-item:hover .chat-list-avatar {
+    border-color: rgba(var(--accent-info-rgb), 0.6);
+    box-shadow: 0 0 6px rgba(var(--accent-info-rgb), 0.4);
+}
+.chat-list-item.active .chat-list-avatar {
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 8px rgba(var(--brand-rgb), 0.5);
+}
+.chat-list-badge {
+    background-color: rgb(var(--accent-danger-rgb));
+    box-shadow: 0 0 8px rgba(var(--accent-danger-rgb), 0.8);
+    animation: dq-dark-soulfire-pulse 1.8s infinite ease-in-out;
+    border: 1px solid rgba(var(--text-primary-rgb), 0.3);
+}
+.new-chat-fab {
+    background: linear-gradient(135deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb)));
+    box-shadow: 0 3px 10px rgba(var(--dq-dark-black-rgb), 0.5), 0 0 12px rgba(var(--brand-rgb), 0.4), 0 0 10px rgba(var(--accent-info-rgb), 0.3);
+}
+.new-chat-fab:hover {
+    background: linear-gradient(135deg, rgb(var(--brand-dark-rgb)), rgb(var(--accent-info-rgb)));
+    box-shadow: 0 5px 15px rgba(var(--dq-dark-black-rgb), 0.6), 0 0 18px rgba(var(--brand-rgb), 0.5), 0 0 15px rgba(var(--accent-info-rgb), 0.4);
+}
+
+@keyframes dq-dark-soulfire-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; filter: brightness(1); }
+    50% { transform: scale(1.15); opacity: 0.85; filter: brightness(1.3); }
+}
+
+/*
+================================================================================
+|                            📜 聊天主区域 📜                                |
+================================================================================
+*/
+.chat-header-main::after {
+    content: '';
+    position: absolute;
+    bottom: -1px; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb)), transparent);
+    opacity: 0.8;
+    filter: blur(0.5px);
+}
+.chat-title-main {
+    text-shadow: 0 0 10px rgba(var(--brand-rgb), 0.3);
+}
+.header-action-btn:hover {
+    text-shadow: 0 0 6px rgba(var(--brand-rgb), 0.6);
+}
+.no-chat-selected .logo-placeholder {
+    font-family: "LXGW WenKai TC", serif;
+    font-size: 8em;
+    font-weight: bold;
+    color: rgba(var(--brand-rgb), 0.2);
+    text-shadow: 0 0 15px rgba(var(--accent-info-rgb), 0.2), 1px 1px 0px rgba(var(--border-subtle-rgb), 0.8), 0 0 25px rgba(var(--brand-rgb), 0.3);
+}
+.message.sent {
+    border-left: 3px solid rgb(var(--brand-rgb));
+    border-radius: var(--border-radius-md) 0 var(--border-radius-md) var(--border-radius-md);
+}
+.message.system {
+    background-color: rgba(var(--surface-1-rgb), 0.85);
+    color: rgb(var(--accent-info-rgb));
+    border: 1px dashed rgb(var(--accent-info-rgb));
+    box-shadow: 0 0 10px rgba(var(--accent-info-rgb), 0.2) inset, 0 1px 3px rgba(var(--dq-dark-black-rgb), 0.3);
+}
+#messageInput:focus {
+    box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.35), inset 0 1px 5px rgba(var(--brand-rgb), 0.15);
+}
+.icon-btn:hover {
+    background-color: rgba(var(--brand-rgb), 0.1);
+}
+#sendButtonMain:hover {
+    color: rgb(var(--brand-dark-rgb));
+    text-shadow: 0 0 8px rgba(var(--brand-rgb), 0.8), 0 0 15px rgba(var(--accent-info-rgb), 0.5);
+}
+#voiceButtonMain.recording {
+    animation: dq-dark-demonic-pulse 1.5s infinite;
+}
+
+@keyframes dq-dark-demonic-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-danger-rgb), 0.8); }
+    70% { box-shadow: 0 0 0 14px rgba(var(--accent-danger-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-danger-rgb), 0); }
+}
+
+/*
+================================================================================
+|                             ℹ️ 详情与模态框 ℹ️                             |
+================================================================================
+*/
+.details-panel {
+    background-color: rgba(var(--dq-dark-nightsky-black-rgb), 0.9);
+    box-shadow: -2px 0 8px rgba(var(--dq-dark-black-rgb), 0.3);
+}
+.details-header {
+    background-color: rgba(var(--surface-1-rgb), 0.7);
+}
+.details-avatar {
+    border: 3px solid transparent;
+    box-shadow: 0 0 12px rgba(var(--dq-dark-black-rgb), 0.4);
+    transition: border-image 0.4s ease, box-shadow 0.4s ease;
+    border-image: linear-gradient(60deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb))) 1;
+}
+.details-panel.character-active .details-avatar {
+    animation: dq-dark-power-glow 3s infinite alternate;
+}
+@keyframes dq-dark-power-glow {
+    from {
+        border-image: linear-gradient(60deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb))) 1;
+        box-shadow: 0 0 15px rgba(var(--brand-rgb), 0.4), 0 0 10px rgba(var(--accent-info-rgb), 0.3);
+    }
+    to {
+        border-image: linear-gradient(60deg, rgb(var(--accent-info-rgb)), rgb(var(--brand-rgb))) 1;
+        box-shadow: 0 0 20px rgba(var(--accent-info-rgb), 0.4), 0 0 12px rgba(var(--brand-rgb), 0.3);
+    }
+}
+.btn {
+    box-shadow: 0 1px 3px rgba(var(--dq-dark-black-rgb), 0.6), inset 0 -2px 0px rgba(var(--dq-dark-black-rgb), 0.3);
+}
+.btn-primary:hover, .btn-secondary:hover, .btn-danger:hover {
+    transform: translateY(-1px);
+}
+.btn-primary:hover {
+    box-shadow: 0 3px 8px rgba(var(--brand-rgb), 0.4), inset 0 -1px 0px rgba(var(--dq-dark-black-rgb), 0.4), 0 0 15px rgba(var(--accent-info-rgb), 0.3);
+}
+.btn-secondary:hover {
+    box-shadow: 0 3px 8px rgba(var(--border-subtle-rgb), 0.4), inset 0 -1px 0px rgba(var(--dq-dark-black-rgb), 0.4), 0 0 12px rgba(var(--accent-info-rgb), 0.2);
+}
+.modal-content {
+    box-shadow: 0 8px 30px rgba(var(--dq-dark-black-rgb), 0.5), 0 0 0 2px rgba(var(--brand-rgb), 0.25);
+}
+.modal-header h2 {
+    text-shadow: 0 0 8px rgba(var(--brand-rgb), 0.4), 0 0 12px rgba(var(--accent-info-rgb), 0.3);
+}
+.loading-spinner {
+    border-top-color: rgb(var(--brand-rgb));
+    border-left-color: rgb(var(--brand-rgb));
+    border-bottom-color: rgba(var(--brand-rgb), 0.25);
+    border-right-color: rgba(var(--brand-rgb), 0.25);
+    animation: spin 1s linear infinite, dq-dark-spinner-color-shift 3s linear infinite alternate;
+}
+@keyframes dq-dark-spinner-color-shift {
+    0% { border-top-color: rgb(var(--brand-rgb)); border-left-color: rgb(var(--brand-rgb)); }
+    50% { border-top-color: rgb(var(--accent-info-rgb)); border-left-color: rgb(var(--accent-info-rgb)); }
+    100% { border-top-color: rgb(var(--accent-success-rgb)); border-left-color: rgb(var(--accent-success-rgb)); }
+}
+
+#ttsConfigFormContainer .tts-config-item,
+#ttsConfigFormContainer .tts-config-item * {
+    color: rgb(var(--text-secondary-rgb));
+}
+#ttsConfigFormContainer .tts-config-item label {
+    font-weight: 500;
+}
+
+/*
+================================================================================
+|                            👤 角色专属样式 👤                              |
+================================================================================
+*/
+/* 💎 萧炎 - 黑金、青莲、火红 💎 */
+.AI_萧炎_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_萧炎_斗破苍穹, .details-avatar.AI_萧炎_斗破苍穹 {
+    background-color: rgb(30,30,30);
+    color: rgb(190, 140, 50);
+    border-color: rgb(var(--dq-dark-demonic-cyan-flame-rgb));
+    box-shadow: 0 0 8px rgb(var(--dq-dark-demonic-cyan-flame-rgb)), 0 0 5px rgb(190, 140, 50) inset, 0 0 10px rgb(var(--brand-rgb));
+}
+.chat-list-item.active.AI_萧炎_斗破苍穹 {
+    background-color: rgba(30,30,30, 0.3);
+    box-shadow: inset 3px 0 0 0 rgb(var(--brand-rgb)), 0 0 12px rgba(30,30,30, 0.5) inset;
+}
+.chat-list-item.active.AI_萧炎_斗破苍穹 .chat-list-name { color: rgb(var(--brand-rgb)); }
+.chat-header-main.character-active.AI_萧炎_斗破苍穹 .chat-title-main {
+    color: rgb(var(--brand-rgb));
+    text-shadow: 0 0 5px rgb(var(--dq-dark-demonic-cyan-flame-rgb)), 0 0 8px rgb(190, 140, 50);
+}
+.message.received.character-message.AI_萧炎_斗破苍穹 {
+    border-color: rgb(var(--dq-dark-demonic-cyan-flame-rgb));
+    background-color: rgba(30,30,30, 0.2);
+}
+.message.received.character-message.AI_萧炎_斗破苍穹 .message-sender { color: rgb(var(--brand-rgb)); }
+.details-panel.character-active.AI_萧炎_斗破苍穹 #detailsName { color: rgb(var(--brand-rgb)); }
+
+/* 📜 药老 - 银白、淡紫、灵魂蓝 📜 */
+.AI_药老_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_药老_斗破苍穹, .details-avatar.AI_药老_斗破苍穹 {
+    background-color: rgb(230,235,240);
+    color: rgb(var(--accent-info-rgb));
+    border-color: rgb(100, 150, 210);
+    box-shadow: 0 0 9px rgb(100, 150, 210), 0 0 6px rgba(var(--accent-info-rgb), 0.6) inset;
+}
+.chat-list-item.active.AI_药老_斗破苍穹 {
+    background-color: rgba(230,235,240, 0.08);
+    box-shadow: inset 3px 0 0 0 rgb(var(--accent-info-rgb)), 0 0 12px rgba(100, 150, 210, 0.3) inset;
+}
+.chat-list-item.active.AI_药老_斗破苍穹 .chat-list-name { color: rgb(var(--accent-info-rgb)); }
+.chat-header-main.character-active.AI_药老_斗破苍穹 .chat-title-main { color: rgb(100, 150, 210); }
+.message.received.character-message.AI_药老_斗破苍穹 {
+    border-color: rgb(100, 150, 210);
+    background-color: rgba(var(--accent-info-rgb), 0.1);
+}
+.message.received.character-message.AI_药老_斗破苍穹 .message-sender { color: rgb(var(--accent-info-rgb)); }
+.details-panel.character-active.AI_药老_斗破苍穹 #detailsName { color: rgb(var(--accent-info-rgb)); }
+
+/* 🐍 美杜莎女王 - 妖紫、玫红、暗金 🐍 */
+.AI_美杜莎_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_美杜莎_斗破苍穹, .details-avatar.AI_美杜莎_斗破苍穹 {
+    background-color: rgb(100, 60, 130);
+    color: rgb(var(--border-strong-rgb));
+    border-color: rgb(180, 50, 100);
+    box-shadow: 0 0 8px rgb(180, 50, 100);
+}
+.chat-list-item.active.AI_美杜莎_斗破苍穹 {
+    background-color: rgba(100, 60, 130, 0.2);
+    box-shadow: inset 3px 0 0 0 rgb(180, 50, 100), 0 0 12px rgba(100, 60, 130, 0.4) inset;
+}
+.chat-list-item.active.AI_美杜莎_斗破苍穹 .chat-list-name { color: rgb(100, 60, 130); }
+.chat-header-main.character-active.AI_美杜莎_斗破苍穹 .chat-title-main { color: rgb(100, 60, 130); text-shadow: 0 0 6px rgb(180, 50, 100); }
+.message.received.character-message.AI_美杜莎_斗破苍穹 {
+    border-color: rgb(100, 60, 130);
+    background-color: rgba(100, 60, 130, 0.12);
+}
+.message.received.character-message.AI_美杜莎_斗破苍穹 .message-sender { color: rgb(180, 50, 100); }
+.details-panel.character-active.AI_美杜莎_斗破苍穹 #detailsName { color: rgb(100, 60, 130); }
+
+/* ☁️ 云韵 - 天蓝、淡金 ☁️ */
+.AI_云韵_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_云韵_斗破苍穹, .details-avatar.AI_云韵_斗破苍穹 {
+    background-color: rgb(90, 150, 170);
+    color: rgb(var(--text-primary-rgb));
+    border-color: rgb(160, 120, 40);
+    box-shadow: 0 0 7px rgb(160, 120, 40);
+}
+.chat-list-item.active.AI_云韵_斗破苍穹 {
+    background-color: rgba(90, 150, 170, 0.15);
+    box-shadow: inset 3px 0 0 0 rgb(160, 120, 40), 0 0 10px rgba(90, 150, 170, 0.3) inset;
+}
+.chat-list-item.active.AI_云韵_斗破苍穹 .chat-list-name { color: rgb(90, 150, 170); }
+.chat-header-main.character-active.AI_云韵_斗破苍穹 .chat-title-main { color: rgb(90, 150, 170); text-shadow: 0 0 5px rgb(160, 120, 40); }
+.message.received.character-message.AI_云韵_斗破苍穹 {
+    border-color: rgb(90, 150, 170);
+    background-color: rgba(90, 150, 170, 0.1);
+}
+.message.received.character-message.AI_云韵_斗破苍穹 .message-sender { color: rgb(90, 150, 170); }
+.details-panel.character-active.AI_云韵_斗破苍穹 #detailsName { color: rgb(90, 150, 170); }
+
+/* 🌸 纳兰嫣然 - 浅紫、玫红 🌸 */
+.AI_纳兰嫣然_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_纳兰嫣然_斗破苍穹, .details-avatar.AI_纳兰嫣然_斗破苍穹 {
+    background-color: rgb(150, 120, 180);
+    color: rgb(var(--text-primary-rgb));
+    border-color: rgb(190, 70, 100);
+    box-shadow: 0 0 7px rgb(190, 70, 100);
+}
+.chat-list-item.active.AI_纳兰嫣然_斗破苍穹 {
+    background-color: rgba(150, 120, 180, 0.2);
+    box-shadow: inset 3px 0 0 0 rgb(190, 70, 100), 0 0 10px rgba(150, 120, 180, 0.3) inset;
+}
+.chat-list-item.active.AI_纳兰嫣然_斗破苍穹 .chat-list-name { color: rgb(150, 120, 180); }
+.chat-header-main.character-active.AI_纳兰嫣然_斗破苍穹 .chat-title-main { color: rgb(150, 120, 180); text-shadow: 0 0 5px rgb(190, 70, 100); }
+.message.received.character-message.AI_纳兰嫣然_斗破苍穹 {
+    border-color: rgb(150, 120, 180);
+    background-color: rgba(150, 120, 180, 0.1);
+}
+.message.received.character-message.AI_纳兰嫣然_斗破苍穹 .message-sender { color: rgb(190, 70, 100); }
+.details-panel.character-active.AI_纳兰嫣然_斗破苍穹 #detailsName { color: rgb(150, 120, 180); }
+
+/* 🔥 萧薰儿 - 金黄、赤焰 🔥 */
+.AI_萧薰儿_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_萧薰儿_斗破苍穹, .details-avatar.AI_萧薰儿_斗破苍穹 {
+    background-color: rgb(180, 130, 40);
+    color: rgb(var(--dq-dark-nightsky-black-rgb));
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 8px rgb(var(--brand-rgb));
+}
+.chat-list-item.active.AI_萧薰儿_斗破苍穹 {
+    background-color: rgba(180, 130, 40, 0.2);
+    box-shadow: inset 3px 0 0 0 rgb(var(--brand-rgb)), 0 0 12px rgba(180, 130, 40, 0.4) inset;
+}
+.chat-list-item.active.AI_萧薰儿_斗破苍穹 .chat-list-name { color: rgb(180, 130, 40); }
+.chat-header-main.character-active.AI_萧薰儿_斗破苍穹 .chat-title-main { color: rgb(180, 130, 40); text-shadow: 0 0 6px rgb(var(--brand-rgb)); }
+.message.received.character-message.AI_萧薰儿_斗破苍穹 {
+    border-color: rgb(180, 130, 40);
+    background-color: rgba(180, 130, 40, 0.12);
+}
+.message.received.character-message.AI_萧薰儿_斗破苍穹 .message-sender { color: rgb(var(--brand-rgb)); }
+.details-panel.character-active.AI_萧薰儿_斗破苍穹 #detailsName { color: rgb(180, 130, 40); }
+
+/* --- 剩余角色 --- */
+.AI_小医仙_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_小医仙_斗破苍穹, .details-avatar.AI_小医仙_斗破苍穹 {
+    background-color: rgb(110, 110, 120); border-color: rgba(var(--text-primary-rgb), 0.5);
+}
+.AI_海波东_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_海波东_斗破苍穹, .details-avatar.AI_海波东_斗破苍穹 {
+    background-color: rgb(100, 170, 220); border-color: rgb(var(--dq-dark-nightsky-black-rgb));
+}
+.AI_紫妍_斗破苍穹 .chat-list-avatar,
+.chat-avatar-main.AI_紫妍_斗破苍穹, .details-avatar.AI_紫妍_斗破苍穹 {
+    background-color: rgb(160, 90, 200); border-color: rgb(var(--text-primary-rgb));
+}

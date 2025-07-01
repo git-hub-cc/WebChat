@@ -1,0 +1,215 @@
+/*
+================================================================================
+|                                                                              |
+|              🤖 MCP - 赛博核心 (Cybernetic Core) 🤖                        |
+|                                (深色主题)                                    |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained dark theme file for the MCP Assistant.
+*
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "MCP - Cybernetic Core";
+    --theme-mode: "dark";
+
+    /* ------------------------- 🎨 核心配色方案 -------------------------- */
+
+    /* 基础色板 - Cyberpunk HUD */
+    --mcp-bg-main-rgb: 16, 20, 28;         /* #10141C - Deep, dark navy blue */
+    --mcp-bg-container-rgb: 22, 28, 39;    /* #161C27 - Slightly lighter navy for panels */
+    --mcp-bg-elevated-rgb: 29, 36, 51;      /* #1D2433 - Elevation color */
+    --mcp-text-primary-rgb: 205, 214, 229;  /* #CDD6E5 - Light cool gray, like terminal text */
+    --mcp-text-secondary-rgb: 128, 144, 169;/* #8090A9 - Muted for secondary info */
+    --mcp-char-primary-rgb: 0, 229, 255;    /* #00E5FF - Bright, glowing cyan */
+    --mcp-char-accent-rgb: 102, 255, 255;   /* #66FFFF - Even brighter for highlights */
+    --mcp-border-light-rgb: 44, 53, 70;      /* #2C3546 - Subtle border */
+    --mcp-border-strong-rgb: 61, 73, 94;     /* #3D495E - Stronger border */
+    --mcp-black-rgb: 0, 0, 0;
+
+    /* --- 语义化颜色变量覆盖 --- */
+    --brand-rgb: var(--mcp-char-primary-rgb);
+    --brand-dark-rgb: 0, 200, 220; /* A slightly darker cyan */
+    --text-on-brand-rgb: var(--mcp-bg-main-rgb);
+
+    --surface-1-rgb: var(--mcp-bg-container-rgb);
+    --surface-2-rgb: var(--mcp-bg-elevated-rgb);
+    --surface-hover-rgb: var(--mcp-border-light-rgb);
+    --surface-active-rgb: var(--mcp-bg-elevated-rgb);
+
+    --text-primary-rgb: var(--mcp-text-primary-rgb);
+    --text-secondary-rgb: var(--mcp-text-secondary-rgb);
+
+    --border-subtle-rgb: var(--mcp-border-light-rgb);
+    --border-strong-rgb: var(--mcp-border-strong-rgb);
+
+    --accent-success-rgb: 75, 255, 150; /* A vibrant green */
+    --accent-danger-rgb: 255, 75, 75;  /* A neon-like red */
+
+    /* --- 组件级颜色变量覆盖 --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgb(var(--surface-1-rgb));
+    --chat-bg-color: rgb(var(--mcp-bg-main-rgb));
+    --input-bg-color: rgb(var(--surface-2-rgb));
+
+    --sent-bg-color: rgb(var(--mcp-bg-elevated-rgb));
+    --text-on-sent: rgb(var(--text-primary-rgb));
+    --received-bg-color: rgb(var(--surface-2-rgb));
+    --text-on-received: rgb(var(--text-primary-rgb));
+
+    /* --- 字体排版覆盖 (更具科技感) --- */
+    --font-family-base: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", "Roboto Mono", monospace;
+    --font-size-base: 14px; /* Slightly smaller for a denser, more "data" feel */
+
+    /* --- 边框与阴影覆盖 (棱角分明) --- */
+    --border-radius-sm: 2px;
+    --border-radius-md: 4px;
+    --border-radius-lg: 5px;
+    --box-shadow-sm: 0 1px 2px 0 rgba(var(--mcp-black-rgb), 0.3);
+    --box-shadow-md: 0 2px 5px 0 rgba(var(--mcp-black-rgb), 0.4);
+    --box-shadow-lg: 0 4px 12px 0 rgba(var(--mcp-black-rgb), 0.5);
+
+    /* --- 滚动条覆盖 --- */
+    --scrollbar-track-color: rgba(var(--mcp-bg-main-rgb), 0.5);
+    --scrollbar-thumb-color: rgb(var(--mcp-border-strong-rgb));
+    --scrollbar-thumb-hover-color: rgb(var(--mcp-char-primary-rgb));
+}
+
+
+/*
+================================================================================
+|                              🎨 主题特定样式 🎨                             |
+================================================================================
+*/
+
+/* --- 0. 创意背景 & 扫描线动画 --- */
+body {
+    background-color: rgb(var(--mcp-bg-main-rgb));
+    /* Subtle grid pattern */
+    background-image:
+            linear-gradient(rgba(var(--mcp-border-light-rgb), 0.5) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(var(--mcp-border-light-rgb), 0.5) 1px, transparent 1px);
+    background-size: 30px 30px;
+    position: relative;
+    overflow: hidden; /* Important for scanline */
+}
+
+body::after {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Scanline effect */
+    background: linear-gradient(to bottom, rgba(22, 28, 39, 0) 0%, rgba(22, 28, 39, 0.8) 50%, rgba(22, 28, 39, 0) 100%);
+    opacity: 0.1;
+    animation: scanline 8s linear infinite;
+    pointer-events: none;
+    z-index: -1;
+}
+
+@keyframes scanline {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 100vh; }
+}
+
+/* --- 全局字体应用 --- */
+body, .btn, input, textarea, select {
+    font-family: var(--font-family-base);
+}
+
+.message-content {
+    font-family: var(--font-family-mono); /* Use monospace for AI messages for a terminal feel */
+}
+
+/*
+================================================================================
+|                         🤖 MCP 助手专属样式规则 🤖                         |
+================================================================================
+*/
+
+/* --- 1. 聊天列表项激活状态 (带辉光) --- */
+.chat-list-item.active.AI_McpAssistant_System {
+    background: rgba(var(--mcp-char-primary-rgb), 0.1);
+    border-left: 3px solid rgb(var(--mcp-char-primary-rgb));
+    box-shadow: inset 3px 0 8px -2px rgba(var(--mcp-char-primary-rgb), 0.4);
+}
+
+/* --- 2. 标题和名称颜色 (带文字辉光) --- */
+.chat-list-item.active.AI_McpAssistant_System .chat-list-name,
+.chat-header-main.character-active.AI_McpAssistant_System .chat-title-main,
+.message.received.character-message.AI_McpAssistant_System .message-sender,
+.details-panel.character-active.AI_McpAssistant_System #detailsName {
+    color: rgb(var(--mcp-char-accent-rgb));
+    text-shadow: 0 0 5px rgba(var(--mcp-char-primary-rgb), 0.7);
+}
+
+/* --- 3. 接收到的消息气泡样式 (玻璃拟物化) --- */
+.message.received.character-message.AI_McpAssistant_System {
+    background-color: rgba(var(--mcp-char-primary-rgb), 0.1);
+    border: 1px solid rgba(var(--mcp-char-primary-rgb), 0.7);
+    box-shadow: 0 0 15px rgba(var(--mcp-char-primary-rgb), 0.2);
+    -webkit-backdrop-filter: blur(8px); /* For Safari */
+    backdrop-filter: blur(8px);         /* Glassmorphism effect */
+}
+
+/* --- 4. 头像辉光效果 (能量核心) --- */
+.AI_McpAssistant_System .chat-list-avatar,
+.chat-avatar-main.AI_McpAssistant_System,
+.details-avatar.AI_McpAssistant_System {
+    background-color: rgb(var(--mcp-char-primary-rgb));
+    color: rgb(var(--mcp-bg-main-rgb)); /* Dark text on bright avatar */
+    border: 2px solid rgba(var(--mcp-char-accent-rgb), 0.8);
+    box-shadow: 0 0 12px rgba(var(--mcp-char-primary-rgb), 0.8), 0 0 25px rgba(var(--mcp-char-primary-rgb), 0.5);
+    animation: avatar-pulse 3s ease-in-out infinite;
+}
+
+@keyframes avatar-pulse {
+    0% {
+        box-shadow: 0 0 12px rgba(var(--mcp-char-primary-rgb), 0.8), 0 0 25px rgba(var(--mcp-char-primary-rgb), 0.5);
+    }
+    50% {
+        box-shadow: 0 0 18px rgba(var(--mcp-char-accent-rgb), 1), 0 0 35px rgba(var(--mcp-char-accent-rgb), 0.6);
+    }
+    100% {
+        box-shadow: 0 0 12px rgba(var(--mcp-char-primary-rgb), 0.8), 0 0 25px rgba(var(--mcp-char-primary-rgb), 0.5);
+    }
+}
+
+/* --- 5. 专属细节面板标题 (HUD风格) --- */
+.details-panel.character-active.AI_McpAssistant_System .details-section h4 {
+    color: rgb(var(--mcp-char-accent-rgb));
+    border-bottom: 1px solid rgba(var(--mcp-char-primary-rgb), 0.5);
+    letter-spacing: 1.5px;
+    text-shadow: 0 0 3px rgba(var(--mcp-char-primary-rgb), 0.5);
+    text-transform: uppercase; /* Classic HUD feel */
+}
+
+/* --- 6. 通用组件调整，以匹配科技感 --- */
+.btn-primary {
+    background-color: transparent;
+    border: 1px solid rgb(var(--brand-rgb));
+    color: rgb(var(--brand-rgb));
+    text-shadow: 0 0 3px rgba(var(--brand-rgb), 0.5);
+}
+
+.btn-primary:hover {
+    background-color: rgba(var(--brand-rgb), 0.2);
+    color: rgb(var(--mcp-char-accent-rgb));
+    border-color: rgb(var(--mcp-char-accent-rgb));
+}
+
+#messageInput, .search-bar, .modal-body input, .modal-body textarea {
+    background-color: rgba(var(--mcp-bg-main-rgb), 0.5);
+    border-color: rgb(var(--border-subtle-rgb));
+    caret-color: rgb(var(--mcp-char-primary-rgb)); /* Cursor color */
+}
+
+#messageInput:focus, .search-bar:focus, .modal-body input:focus, .modal-body textarea:focus {
+    border-color: rgb(var(--mcp-char-primary-rgb));
+    box-shadow: 0 0 8px rgba(var(--mcp-char-primary-rgb), 0.4);
+}

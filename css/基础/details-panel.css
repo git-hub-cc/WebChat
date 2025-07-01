@@ -1,0 +1,1014 @@
+/* ========================================================================== */
+/* 面板布局与可见性 (Panel Layout & Visibility) */
+/* ========================================================================== */
+
+.details-panel {
+    display: flex;
+    flex-direction: column;
+    width: var(--details-panel-width);
+    min-width: var(--details-panel-width);
+    flex-shrink: 0;
+    background-color: var(--panel-bg-color);
+    border-inline-start: var(--border-width-standard) solid var(--border-color);
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    z-index: var(--z-index-details-panel);
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform var(--transition-duration-slow) cubic-bezier(0.215, 0.610, 0.355, 1) 0s, visibility 0s linear var(--transition-duration-slow);
+}
+
+.app-container.show-details .details-panel {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform var(--transition-duration-slow) cubic-bezier(0.215, 0.610, 0.355, 1) 0s, visibility 0s linear 0s;
+}
+
+.details-header {
+    justify-content: space-between;
+}
+
+.details-content {
+    flex-grow: 1;
+    padding: var(--spacing-4);
+    overflow-y: auto;
+}
+
+.details-section {
+    margin-bottom: var(--spacing-6);
+    padding-inline: 5px;
+}
+
+.details-section h4 {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: var(--spacing-2);
+    margin-bottom: var(--spacing-3);
+    border-bottom: var(--border-width-standard) solid var(--border-color);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    transition: color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out;
+}
+
+/* ========================================================================== */
+/* 联系人信息区域 (Contact Info Section) */
+/* ========================================================================== */
+
+.details-avatar {
+    width: var(--avatar-size-xl);
+    height: var(--avatar-size-xl);
+    margin: 10px auto 15px;
+    box-shadow: var(--box-shadow-md);
+    font-size: 36px;
+}
+
+#detailsName {
+    margin-bottom: 5px;
+    font-size: var(--font-size-xl);
+    font-weight: var(--font-weight-semibold);
+    text-align: center;
+    color: var(--text-primary);
+    transition: color var(--transition-duration-slow) ease-out;
+}
+
+#detailsId,
+#detailsStatus {
+    margin-bottom: 2px;
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    text-align: center;
+}
+
+#detailsStatus {
+    margin-bottom: 15px;
+}
+
+/* ========================================================================== */
+/* AI 角色相关区域 (AI Character Sections) */
+/* ========================================================================== */
+
+#aiContactAboutSection h4 {
+    color: var(--text-secondary);
+}
+
+#aiContactDetailsContent ul {
+    list-style-position: inside;
+    padding-left: 0;
+    margin-bottom: var(--spacing-3);
+}
+
+#aiContactDetailsContent ul li {
+    margin-bottom: var(--spacing-1);
+}
+
+#aiContactDetailsContent p {
+    margin-bottom: var(--spacing-2);
+    line-height: 1.5;
+}
+
+#aiChapterSection .settings-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-3);
+    margin-bottom: 0;
+}
+
+#aiChapterSection .settings-item label {
+    flex-shrink: 0;
+    width: 80px;
+    text-align: end;
+    font-weight: var(--font-weight-medium);
+    font-size: var(--font-size-base);
+}
+
+#aiChapterSection .settings-item #aiChapterSelectContainer {
+    flex-grow: 1;
+}
+
+/* ========================================================================== */
+/* 可搜索下拉选择器 (Searchable Select Component) */
+/* ========================================================================== */
+
+.details-searchable-select,
+.searchable-select-tts {
+    position: relative;
+    flex-grow: 1;
+}
+
+.details-searchable-select-input,
+.searchable-select-input-tts {
+    width: 100%;
+    padding: 7px 10px;
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--surface-2-bg);
+    font-family: var(--font-family-base), var(--font-family-serif);
+    font-size: 0.9em;
+    color: var(--text-primary);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right var(--spacing-2) center;
+    background-repeat: no-repeat;
+    padding-right: calc(var(--spacing-2) + 20px + 5px);
+    transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out, background-image var(--transition-duration-normal) ease-out;
+}
+
+.details-searchable-select-input:focus,
+.searchable-select-input-tts:focus {
+    outline: none;
+    border-color: var(--brand-bg);
+    box-shadow: 0 0 0 var(--border-width-focus) rgba(var(--brand-rgb), 0.2);
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%230088CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 15 12 9 18 15"></polyline></svg>');
+}
+
+.details-searchable-select-input:disabled,
+.searchable-select-input-tts:disabled {
+    background-color: var(--surface-hover-bg);
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23AAAAAA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+}
+
+.details-searchable-select-options-container,
+.searchable-select-options-container-tts {
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    max-height: 150px;
+    overflow-y: auto;
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--surface-2-bg);
+    box-shadow: 0 2px 5px rgba(var(--black-rgb), 0.1);
+}
+
+.details-searchable-select-option,
+.searchable-select-option-tts {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+    transition: background-color var(--transition-duration-fast) ease-out, color var(--transition-duration-fast) ease-out;
+}
+
+.details-searchable-select-option:hover,
+.details-searchable-select-option.highlighted,
+.searchable-select-option-tts:hover {
+    background-color: var(--surface-hover-bg);
+    color: var(--brand-bg);
+}
+
+.details-searchable-select-option.no-results,
+.searchable-select-option-tts.no-results {
+    color: var(--text-secondary);
+    cursor: default;
+    font-style: italic;
+}
+
+/* ========================================================================== */
+/* TTS 配置区域 (TTS Config Section) */
+/* ========================================================================== */
+
+#ttsConfigFormContainer .tts-config-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: var(--spacing-3);
+}
+
+#ttsConfigFormContainer .tts-config-item label {
+    flex-shrink: 0;
+    width: 85px;
+    margin-inline-end: 10px;
+    color: var(--text-primary);
+    font-size: 0.88em;
+    font-weight: var(--font-weight-medium);
+    text-align: end;
+}
+
+#ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]),
+#ttsConfigFormContainer .tts-config-item select {
+    flex-grow: 1;
+    min-width: 50px;
+    padding: 7px 10px;
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--surface-2-bg);
+    font-family: var(--font-family-base), var(--font-family-serif);
+    font-size: 0.9em;
+    transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
+}
+
+#ttsConfigFormContainer .tts-config-item input:not([type="checkbox"]):focus,
+#ttsConfigFormContainer .tts-config-item select:focus {
+    outline: none;
+    border-color: var(--brand-bg);
+    box-shadow: 0 0 0 var(--border-width-focus) rgba(var(--brand-rgb), 0.2);
+}
+
+#ttsConfigFormContainer .tts-config-item select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-inline-end: 30px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+#ttsConfigFormContainer .tts-config-item select:disabled {
+    background-color: var(--surface-hover-bg);
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+#ttsConfigFormContainer .tts-config-item input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-inline-end: auto;
+    accent-color: var(--brand-bg);
+    cursor: pointer;
+}
+
+.tts-attribution-section .attribution-sub-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 6px;
+    margin-top: 15px;
+    margin-bottom: 0;
+    border-bottom: var(--border-width-standard) dashed var(--border-color);
+    cursor: pointer;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    transition: color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out;
+}
+
+.tts-attribution-section .attribution-sub-header.active {
+    border-bottom-style: solid;
+    border-bottom-color: var(--brand-bg);
+    color: var(--brand-bg);
+}
+
+.tts-attribution-section .attribution-sub-content {
+    padding-inline-start: var(--spacing-3);
+    margin-top: var(--spacing-2);
+    font-size: 0.85em;
+    overflow: hidden;
+}
+
+.tts-attribution-section a {
+    color: var(--brand-bg);
+    text-decoration: none;
+    transition: text-decoration var(--transition-duration-normal) ease-out;
+}
+
+.tts-attribution-section a:hover {
+    text-decoration: underline;
+}
+
+/* ========================================================================== */
+/* 群组管理 (Group Management) */
+/* ========================================================================== */
+
+
+#detailsGroupManagement #addGroupMemberArea h5 {
+    margin-bottom: var(--spacing-2);
+    font-size: 1.1em;
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+}
+
+.member-item-detail {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2) 0;
+    border-bottom: var(--border-width-standard) solid var(--border-color);
+}
+
+.member-item-detail:last-child {
+    border-bottom: none;
+}
+
+.member-item-detail .member-name {
+    flex-grow: 1;
+    margin-right: var(--spacing-2);
+}
+
+.member-item-detail .member-status {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-right: var(--spacing-2);
+    white-space: nowrap;
+    transition: color var(--transition-duration-slow) ease-out;
+}
+
+.member-item-detail .member-status.connected {
+    color: var(--success-bg);
+}
+
+.member-item-detail .member-status.online-not-connected {
+    color: var(--warning-bg);
+}
+
+.member-item-detail .member-status.offline {
+    color: #aaa;
+}
+
+.member-item-detail .member-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-1);
+}
+
+.member-item-detail .remove-member-btn-detail,
+.member-item-detail .reconnect-member-btn-detail {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    border: var(--border-width-standard) solid transparent;
+    transition: background-color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out, color var(--transition-duration-normal) ease-out;
+}
+
+.member-item-detail .remove-member-btn-detail {
+    background-color: rgba(var(--accent-danger-rgb), 0.1);
+    color: var(--danger-bg);
+}
+
+.member-item-detail .remove-member-btn-detail:hover {
+    background-color: rgba(var(--accent-danger-rgb), 0.2);
+    border-color: var(--danger-bg);
+}
+
+.member-item-detail .reconnect-member-btn-detail {
+    background-color: rgba(var(--brand-rgb), 0.1);
+    color: var(--brand-bg);
+}
+
+.member-item-detail .reconnect-member-btn-detail:hover {
+    background-color: rgba(var(--brand-rgb), 0.2);
+    border-color: var(--brand-bg);
+}
+
+.ai-prompt-editor-item {
+    padding: var(--spacing-3);
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--panel-bg-color);
+}
+
+.ai-prompt-editor-item h5 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-2);
+    font-size: 1.05em;
+    font-weight: var(--font-weight-medium);
+}
+
+.ai-prompt-editor-item textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: var(--spacing-2);
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-family: var(--font-family-base);
+    font-size: 0.9em;
+    resize: vertical;
+    margin-bottom: var(--spacing-2);
+    transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
+}
+
+.ai-prompt-editor-item textarea:focus {
+    outline: none;
+    border-color: var(--brand-bg);
+    box-shadow: 0 0 0 var(--border-width-focus) rgba(var(--brand-rgb), 0.2);
+}
+
+.ai-prompt-editor-item .btn-sm {
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: 0.85em;
+}
+
+.ai-prompt-editor-item > div:last-child {
+    display: flex;
+    gap: 10px;
+}
+
+#detailsGroupManagement #contactsDropdownDetails {
+    width: calc(100% - 90px); /* 减去按钮宽度和间距 */
+    margin-right: 10px;
+    padding: 7px 10px;
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--surface-2-bg);
+    font-family: var(--font-family-base), var(--font-family-serif);
+    font-size: 0.9em;
+    transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
+
+    /* 关键：应用自定义外观和箭头 */
+    appearance: none;
+    -webkit-appearance: none;
+    padding-inline-end: 30px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+#detailsGroupManagement #contactsDropdownDetails:focus {
+    outline: none;
+    border-color: var(--brand-bg);
+    box-shadow: 0 0 0 var(--border-width-focus) rgba(var(--brand-rgb), 0.2);
+}
+
+#detailsGroupManagement #addGroupMemberArea {
+    /* 微调一下布局，让下拉框和按钮对齐 */
+    display: flex;
+    align-items: center;
+}
+
+/* ========================================================================== */
+/* 聊天资源预览 (Chat Resource Preview) */
+/* ========================================================================== */
+
+.resource-search-container {
+    margin-bottom: var(--spacing-3);
+    order: -1;
+}
+
+#resourceSearchInputDetailsPanel {
+    width: 100%;
+}
+
+#resourceSearchInputDetailsPanel:focus {
+    outline: none;
+    border-color: var(--brand-bg);
+    box-shadow: 0 0 0 var(--border-width-focus) rgba(var(--brand-rgb), 0.2);
+}
+
+.resource-category-tabs {
+    display: flex;
+    justify-content: space-around;
+    padding: var(--spacing-2) var(--spacing-1);
+    border-bottom: var(--border-width-standard) solid var(--border-color);
+    flex-shrink: 0;
+    background-color: var(--panel-bg-color);
+}
+
+.resource-category-tab {
+    padding: var(--spacing-2) var(--spacing-3);
+    border: none;
+    background-color: transparent;
+    color: var(--text-secondary);
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out;
+}
+
+.resource-category-tab:hover {
+    color: var(--brand-bg);
+}
+
+.resource-category-tab.active {
+    color: var(--brand-bg);
+    border-bottom-color: var(--brand-bg);
+}
+
+.resource-grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5px;
+    padding: var(--spacing-2);
+    overflow-y: auto;
+    flex-grow: 1;
+    position: relative;
+}
+
+.resource-preview-item {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    background-color: var(--surface-hover-bg);
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    border: var(--border-width-standard) solid var(--border-color);
+    transition: box-shadow var(--transition-duration-normal) ease-out, transform var(--transition-duration-normal) ease-out;
+}
+
+.resource-preview-item:hover {
+    box-shadow: 0 2px 5px rgba(var(--black-rgb), 0.1);
+    transform: translateY(-2px);
+}
+
+.resource-preview-item .thumbnail-placeholder-resource {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2em;
+    color: var(--text-secondary);
+    background-color: var(--surface-active-bg);
+    position: relative;
+}
+
+.resource-preview-item .message-thumbnail-resource {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.resource-preview-item .file-icon-resource {
+    font-size: 2em;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-1);
+}
+
+.resource-preview-item .resource-name {
+    font-size: 0.8em;
+    color: var(--text-primary);
+    padding: 0 var(--spacing-1);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 90%;
+}
+
+.resource-preview-item .resource-timestamp {
+    font-size: 0.7em;
+    color: var(--text-on-brand);
+    position: absolute;
+    bottom: 2px;
+    right: 4px;
+    background-color: rgba(var(--black-rgb), 0.3);
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+.resource-preview-item.text-message-preview {
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: flex-start;
+    padding: var(--spacing-2);
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--surface-2-bg);
+    cursor: pointer;
+    margin-bottom: var(--spacing-1);
+    height: auto;
+    aspect-ratio: unset;
+}
+
+.resource-preview-item.text-message-preview:hover {
+    background-color: var(--surface-hover-bg);
+}
+
+.resource-text-sender-preview {
+    font-size: 0.8em;
+    font-weight: var(--font-weight-bold);
+    color: var(--brand-bg);
+    margin-bottom: 3px;
+}
+
+.resource-text-content-preview {
+    font-size: 0.9em;
+    color: var(--text-primary);
+    word-break: break-word;
+    max-height: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+}
+
+.resource-preview-item.text-message-preview .resource-timestamp {
+    position: static;
+    align-self: flex-end;
+    margin-top: var(--spacing-1);
+    background-color: transparent;
+    color: var(--text-secondary);
+    padding: 0;
+}
+
+.loading-indicator-grid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacing-3);
+    width: 100%;
+    flex-shrink: 0;
+}
+
+.loading-indicator-grid .spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: var(--border-width-thick) solid var(--surface-hover-bg);
+    border-top-color: var(--brand-bg);
+    border-radius: var(--border-radius-circle);
+    animation: spin 1s linear infinite;
+}
+
+.resource-grid-empty-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--spacing-4);
+    color: var(--text-secondary);
+}
+
+/* ========================================================================== */
+/* 日历视图 (Calendar View) */
+/* ========================================================================== */
+
+.calendar-container-rps {
+    padding: var(--spacing-3);
+    background-color: var(--surface-2-bg);
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    margin-top: var(--spacing-2);
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.calendar-loading, .calendar-error {
+    text-align: center;
+    padding: var(--spacing-4);
+    color: var(--text-secondary);
+}
+
+.calendar-header-rps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-3);
+    width: 100%;
+    max-width: 300px;
+}
+
+.calendar-nav-btn-rps {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: var(--brand-bg);
+    cursor: pointer;
+    padding: 0 var(--spacing-2);
+    transition: color var(--transition-duration-normal) ease-out;
+}
+
+.calendar-nav-btn-rps:hover {
+    color: var(--brand-bg-dark);
+}
+
+.calendar-monthyear-rps {
+    font-weight: var(--font-weight-semibold);
+    font-size: 1.1em;
+}
+
+.calendar-grid-rps {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    width: 100%;
+    max-width: 300px;
+}
+
+.calendar-day-header-rps, .calendar-day-rps {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-1);
+    text-align: center;
+    font-size: 0.85em;
+    border-radius: var(--border-radius-sm);
+}
+
+.calendar-day-header-rps {
+    font-weight: var(--font-weight-bold);
+    color: var(--text-secondary);
+}
+
+.calendar-day-rps {
+    height: 30px;
+    border: var(--border-width-standard) solid transparent;
+    transition: background-color var(--transition-duration-normal) ease-out, color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out;
+}
+
+.calendar-day-rps.empty {
+    visibility: hidden;
+}
+
+.calendar-day-rps.has-messages-rps {
+    background-color: var(--sent-bg-color);
+    color: var(--text-on-sent);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+    border: var(--border-width-standard) solid var(--success-bg);
+}
+
+.calendar-day-rps.has-messages-rps:hover {
+    background-color: var(--brand-bg);
+    color: var(--text-on-brand);
+}
+
+.calendar-day-rps.no-messages-rps {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* ========================================================================== */
+/* 人员大厅 (People Lobby) */
+/* ========================================================================== */
+
+.lobby-content {
+    display: none;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.lobby-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2) var(--spacing-3);
+    border-bottom: var(--border-width-standard) solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.lobby-header h4 {
+    margin: 0;
+    font-size: 1em;
+}
+
+.lobby-header #peopleLobbyRefreshBtn {
+    font-size: 1.1em;
+}
+
+#newContactGroupModal .modal-body p {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-2);
+}
+
+/* ========================================================================== */
+/* 记忆书 (Memory Book) */
+/* ========================================================================== */
+
+#memoryBookList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-3);
+}
+
+.memory-set-item {
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    background-color: var(--surface-2-bg);
+    box-shadow: var(--box-shadow-sm);
+    transition: box-shadow var(--transition-duration-normal) ease-in-out;
+}
+
+.memory-set-item:hover {
+    box-shadow: 0 2px 4px rgba(var(--black-rgb), 0.06);
+}
+
+.memory-set-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-2) var(--spacing-3);
+    background-color: var(--surface-hover-bg);
+    font-weight: var(--font-weight-medium);
+    border-bottom: var(--border-width-standard) solid var(--border-color);
+}
+
+.memory-set-actions {
+    display: flex;
+    gap: var(--spacing-2);
+}
+
+.memory-set-actions .record-btn,
+.memory-set-actions .delete-set-btn {
+    padding: 3px 8px;
+    font-size: 0.85em;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    border: var(--border-width-standard) solid transparent;
+    transition: background-color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out, color var(--transition-duration-normal) ease-out;
+}
+
+.memory-set-actions .record-btn {
+    background-color: rgba(var(--brand-rgb), 0.1);
+    color: var(--brand-bg);
+}
+
+.memory-set-actions .record-btn:hover:not(:disabled) {
+    background-color: rgba(var(--brand-rgb), 0.2);
+    border-color: var(--brand-bg);
+}
+
+.memory-set-actions .record-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.memory-set-actions .delete-set-btn,
+.memory-set-actions .edit-set-btn {
+    padding: 3px 8px;
+    font-size: 0.85em;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    border: var(--border-width-standard) solid transparent;
+    transition: background-color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out, color var(--transition-duration-normal) ease-out;
+}
+
+.memory-set-actions .delete-set-btn {
+    background-color: rgba(var(--accent-danger-rgb), 0.1);
+    color: var(--danger-bg);
+}
+
+.memory-set-actions .delete-set-btn:hover {
+    background-color: rgba(var(--accent-danger-rgb), 0.2);
+    border-color: var(--danger-bg);
+}
+
+.memory-set-actions .edit-set-btn {
+    background-color: rgba(var(--accent-warning-rgb), 0.1);
+    color: var(--warning-bg);
+}
+
+.memory-set-actions .edit-set-btn:hover {
+    background-color: rgba(var(--accent-warning-rgb), 0.2);
+    border-color: var(--warning-bg);
+}
+
+.memory-book-container {
+    padding: var(--spacing-3);
+}
+
+.memory-book-textarea {
+    width: 100%;
+    padding: var(--spacing-2);
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    font-family: var(--font-family-base), var(--font-family-serif);
+    font-size: 0.9em;
+    resize: vertical;
+    margin-bottom: var(--spacing-2);
+    background-color: var(--surface-2-bg);
+    color: var(--text-primary);
+    transition: border-color var(--transition-duration-normal) ease-in-out, box-shadow var(--transition-duration-normal) ease-in-out;
+}
+
+.memory-book-textarea:focus {
+    outline: none;
+    border-color: var(--brand-bg);
+    box-shadow: 0 0 0 var(--border-width-focus) rgba(var(--brand-rgb), 0.2);
+}
+
+.memory-book-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.memory-book-controls label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.9em;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color var(--transition-duration-normal) ease-out;
+}
+
+.memory-book-controls label:hover {
+    color: var(--text-primary);
+}
+
+.memory-book-controls .enable-memory-book-toggle {
+    accent-color: var(--brand-bg);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.memory-book-controls .save-memory-book-btn {
+    padding: 4px 10px;
+    font-size: 0.85em;
+    background-color: var(--surface-hover-bg);
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-weight: var(--font-weight-medium);
+    transition: background-color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out;
+}
+
+.memory-book-controls .save-memory-book-btn:hover {
+    background-color: var(--surface-active-bg);
+    border-color: #bbb;
+}
+
+/* ========================================================================== */
+/* 状态与可见性修饰符 (State & Visibility Modifiers) */
+/* ========================================================================== */
+
+.details-panel.character-active .details-avatar {
+    background-color: var(--character-avatar-bg);
+    color: var(--character-avatar-text-color);
+}
+
+.details-panel.character-active #detailsName,
+.details-panel.character-active #aiContactAboutSection h4 span {
+    color: var(--character-details-name-color);
+}
+
+#callingModalAvatar.character-active {
+    background-color: var(--character-avatar-bg);
+    color: var(--character-avatar-text-color);
+}
+
+#aiContactAboutSection, #aiChapterSection, #aiTtsConfigSection, #detailsGroupManagement, #groupAiPromptsSection, #currentChatActionsDetails, #groupActionsDetails, #contactActionsDetails, #resourcePreviewSection, #peopleLobbyContent, #addGroupMemberArea, #leftMembersArea, #calendarContainerDetailsPanel, #resourceGridLoadingIndicator, #memoryBookSection {
+    display: none;
+}
+
+#saveAiTtsSettingsBtnDetails {
+    margin-top: 15px;
+    width: 100%;
+}
+
+#resourcePreviewPanelContent {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: hidden;
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+#resourceGridContainer {
+    display: grid;
+}

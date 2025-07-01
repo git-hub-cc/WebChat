@@ -1,0 +1,194 @@
+/*
+================================================================================
+|                                                                              |
+|                📚 LexiLearn - Word Weavers (Dark Theme) 📚                  |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换所有其他主题文件。
+* This is a self-contained dark theme file for the LexiLearn English learning environment.
+*
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "LexiLearn - Word Weavers (Dark)";
+    --theme-mode: "dark";
+
+    /* ------------------------- 🎨 核心配色方案 (暗色) ----------------------- */
+
+    /* Base Palette - LexiLearn Dark */
+    --ll-bg-main-rgb: 23, 27, 35;        /* #171B23 - Very Dark Blue/Grey (Body BG) */
+    --ll-bg-container-rgb: 30, 35, 45;   /* #1E232D - Dark Grey (App Container) */
+    --ll-bg-sidebar-rgb: 27, 31, 40;     /* #1B1F28 - Slightly different Dark (Sidebar BG) */
+    --ll-bg-elevated-rgb: 40, 46, 58;    /* #282E3A - Elevated Dark Grey (Inputs, Cards) */
+    --ll-bg-subtle-accent-rgb: 45, 52, 65; /* #2D3441 - Darker Blue/Grey (for hover, etc.) */
+
+    --ll-text-primary-rgb: 229, 231, 235; /* #E5E7EB - Light Grey/Off-White (Main Text) */
+    --ll-text-secondary-rgb: 156, 163, 175;/* #9CA3AF - Lighter Grey (Secondary Text) */
+    --ll-text-placeholder-rgb: 107, 114, 128;/* #6B7280 - Medium Dark Grey (Placeholder) */
+
+    /* Accent Colors (remain vibrant) */
+    --ll-primary-green-rgb: 16, 185, 129;   /* #10B981 - Emerald Green */
+    --ll-secondary-blue-rgb: 96, 165, 250;  /* #60A5FA - Brighter Blue for Dark Mode */
+
+    --ll-border-strong-rgb: 55, 65, 81;     /* #374151 - Dark Grey Border */
+    --ll-border-light-rgb: 43, 52, 69;      /* #2B3445 - Subtle Dark Border */
+    --ll-border-interactive-rgb: var(--ll-secondary-blue-rgb);
+
+    --ll-status-notification-rgb: 239, 68, 68; /* #EF4444 - Red */
+    --ll-shadow-focus-ring: 0 0 0 3px rgba(var(--ll-secondary-blue-rgb), 0.4);
+    --ll-shadow-glow-accent: 0 0 8px rgba(var(--ll-primary-green-rgb), 0.2);
+
+    /* --- 语义化颜色变量覆盖 (Semantic Overrides) --- */
+    --brand-rgb: var(--ll-primary-green-rgb);
+    --brand-dark-rgb: 12, 148, 103;
+    --text-on-brand-rgb: 255, 255, 255;
+
+    --surface-1-rgb: var(--ll-bg-sidebar-rgb);
+    --surface-2-rgb: var(--ll-bg-container-rgb);
+    --surface-hover-rgb: var(--ll-bg-subtle-accent-rgb);
+    --surface-active-rgb: 45, 52, 65; /* Dark blue/grey for active items */
+
+    --text-primary-rgb: var(--ll-text-primary-rgb);
+    --text-secondary-rgb: var(--ll-text-secondary-rgb);
+    --text-on-accent-rgb: 255, 255, 255;
+
+    --border-subtle-rgb: var(--ll-border-light-rgb);
+    --border-strong-rgb: var(--ll-border-strong-rgb);
+
+    --accent-success-rgb: var(--ll-primary-green-rgb);
+    --accent-danger-rgb: var(--ll-status-notification-rgb);
+    --accent-info-rgb: var(--ll-secondary-blue-rgb);
+
+    /* --- 组件级颜色变量覆盖 (Component-level Overrides) --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgb(var(--surface-2-rgb));
+    --chat-bg-color: rgb(var(--ll-bg-main-rgb));
+    --input-bg-color: rgb(var(--ll-bg-elevated-rgb));
+
+    --sent-bg-color: linear-gradient(135deg, rgb(var(--ll-primary-green-rgb),0.9), rgb(var(--ll-primary-green-rgb), 0.7));
+    --text-on-sent: white;
+    --received-bg-color: rgb(var(--ll-bg-elevated-rgb));
+    --text-on-received: rgb(var(--text-primary-rgb));
+
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "Nunito Sans", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --line-height-base: 1.65;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-radius-medium: 8px;
+    --border-radius-large: 12px;
+    --box-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px -1px rgba(0, 0, 0, 0.15);
+    --box-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.15);
+    --box-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.15);
+
+    /* --- 滚动条覆盖 --- */
+    --scrollbar-track-color: rgba(var(--ll-bg-main-rgb), 0.5);
+    --scrollbar-thumb-color: rgba(var(--ll-text-secondary-rgb), 0.3);
+    --scrollbar-thumb-hover-color: rgba(var(--ll-secondary-blue-rgb), 0.5);
+
+    /* --- 角色颜色定义 (供主题CSS使用) --- */
+    --ll-char-liubin-primary-rgb: 44, 192, 212;   /* Brighter Teal */
+    --ll-char-liubin-msg-bg-dark: linear-gradient(135deg, #0d3f4f, #115061);
+
+    --ll-char-wangfei-primary-rgb: 96, 165, 250;   /* Brighter Blue */
+    --ll-char-wangfei-msg-bg-dark: linear-gradient(135deg, #1e293b, #28354c);
+
+    --ll-char-kevin-primary-rgb: 251, 146, 60;  /* Bright Orange */
+    --ll-char-kevin-msg-bg-dark: linear-gradient(135deg, #3d2c1d, #4b3720);
+
+    --ll-char-hughes-primary-rgb: 174, 188, 206; /* Steel Blue */
+    --ll-char-hughes-msg-bg-dark: linear-gradient(135deg, #2a3240, #313a4a);
+
+    --ll-char-sarah-primary-rgb: 244, 114, 182;  /* Bright Pink */
+    --ll-char-sarah-msg-bg-dark: linear-gradient(135deg, #3c2131, #4a293c);
+
+    --ll-char-lijing-primary-rgb: 239, 68, 68;    /* Bright Red */
+    --ll-char-lijing-msg-bg-dark: linear-gradient(135deg, #451a1a, #542222);
+
+    --ll-char-david-primary-rgb: 59, 130, 246;   /* Standard Bright Blue */
+    --ll-char-david-msg-bg-dark: linear-gradient(135deg, #1f2d48, #263655);
+}
+
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
+body {
+    background-color: var(--chat-bg-color);
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='10' height='10' fill='%23171B23'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='%232B3445'/%3E%3C/svg%3E");
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover-color); }
+
+/* ------------------------- 🏛️ 页面结构与容器 ------------------------ */
+.app-container {
+    box-shadow: var(--box-shadow-lg), 0 0 0 1px rgba(var(--border-subtle-rgb), 0.5);
+    border: 1px solid rgb(var(--border-subtle-rgb));
+    border-radius: var(--border-radius-large);
+}
+
+.chat-header-main, .details-header { box-shadow: var(--box-shadow-sm); z-index: 10; }
+.chat-input-container { box-shadow: 0 -1px 3px rgba(0,0,0, 0.1); }
+
+/* Chat Area Notebook Lines */
+.chat-messages-container {
+    background-image: linear-gradient(to bottom, transparent calc(1.65em - 1px), rgba(var(--ll-secondary-blue-rgb), 0.06) calc(1.65em - 1px), rgba(var(--ll-secondary-blue-rgb), 0.06) 1.65em);
+    background-size: 100% 1.65em;
+    background-position: 0 0.5em;
+}
+
+/* ------------------------- 💬 消息气泡 ------------------------ */
+.message.system {
+    background-color: rgba(var(--ll-bg-main-rgb), 0.8);
+    color: rgb(var(--text-secondary-rgb));
+    border: 1px dashed rgb(var(--border-subtle-rgb));
+}
+
+/*
+================================================================================
+|                            👤 角色专属样式 👤                              |
+================================================================================
+*/
+
+/* --- 👨‍🏫 刘彬老师 (词汇) --- */
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi, .message.received.character-message.AI_LiuBin_CiHuiDaShi { border-left-color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi .chat-list-name, .chat-header-main.character-active.AI_LiuBin_CiHuiDaShi .chat-title-main, .message.received.character-message.AI_LiuBin_CiHuiDaShi .message-sender, .details-panel.character-active.AI_LiuBin_CiHuiDaShi #detailsName, .details-panel.AI_LiuBin_CiHuiDaShi .details-section-title { color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.chat-list-item.active.AI_LiuBin_CiHuiDaShi .chat-list-avatar, .chat-avatar-main.AI_LiuBin_CiHuiDaShi, .details-panel.AI_LiuBin_CiHuiDaShi .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-liubin-primary-rgb)), 0 0 10px rgba(var(--ll-char-liubin-primary-rgb),0.3); border-color: rgb(var(--ll-char-liubin-primary-rgb)); }
+.message.received.character-message.AI_LiuBin_CiHuiDaShi { background: var(--ll-char-liubin-msg-bg-dark); }
+
+/* --- 👩‍🏫 王菲老师 (语法) --- */
+.chat-list-item.active.AI_WangFei_YuFaDaShi, .message.received.character-message.AI_WangFei_YuFaDaShi { border-left-color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.chat-list-item.active.AI_WangFei_YuFaDaShi .chat-list-name, .chat-header-main.character-active.AI_WangFei_YuFaDaShi .chat-title-main, .message.received.character-message.AI_WangFei_YuFaDaShi .message-sender, .details-panel.character-active.AI_WangFei_YuFaDaShi #detailsName, .details-panel.AI_WangFei_YuFaDaShi .details-section-title { color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.chat-list-item.active.AI_WangFei_YuFaDaShi .chat-list-avatar, .chat-avatar-main.AI_WangFei_YuFaDaShi, .details-panel.AI_WangFei_YuFaDaShi .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-wangfei-primary-rgb)), 0 0 10px rgba(var(--ll-char-wangfei-primary-rgb),0.3); border-color: rgb(var(--ll-char-wangfei-primary-rgb)); }
+.message.received.character-message.AI_WangFei_YuFaDaShi { background: var(--ll-char-wangfei-msg-bg-dark); }
+
+/* --- 👨‍🎤 Kevin老师 (口语) --- */
+.chat-list-item.active.AI_Kevin_KouYuTingLi, .message.received.character-message.AI_Kevin_KouYuTingLi { border-left-color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.chat-list-item.active.AI_Kevin_KouYuTingLi .chat-list-name, .chat-header-main.character-active.AI_Kevin_KouYuTingLi .chat-title-main, .message.received.character-message.AI_Kevin_KouYuTingLi .message-sender, .details-panel.character-active.AI_Kevin_KouYuTingLi #detailsName, .details-panel.AI_Kevin_KouYuTingLi .details-section-title { color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.chat-list-item.active.AI_Kevin_KouYuTingLi .chat-list-avatar, .chat-avatar-main.AI_Kevin_KouYuTingLi, .details-panel.AI_Kevin_KouYuTingLi .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-kevin-primary-rgb)), 0 0 10px rgba(var(--ll-char-kevin-primary-rgb),0.3); border-color: rgb(var(--ll-char-kevin-primary-rgb)); }
+.message.received.character-message.AI_Kevin_KouYuTingLi { background: var(--ll-char-kevin-msg-bg-dark); }
+
+/* --- 👨‍🎓 休斯博士 (阅读) --- */
+.chat-list-item.active.AI_DrHughes_YueDuLiJie, .message.received.character-message.AI_DrHughes_YueDuLiJie { border-left-color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.chat-list-item.active.AI_DrHughes_YueDuLiJie .chat-list-name, .chat-header-main.character-active.AI_DrHughes_YueDuLiJie .chat-title-main, .message.received.character-message.AI_DrHughes_YueDuLiJie .message-sender, .details-panel.character-active.AI_DrHughes_YueDuLiJie #detailsName, .details-panel.AI_DrHughes_YueDuLiJie .details-section-title { color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.chat-list-item.active.AI_DrHughes_YueDuLiJie .chat-list-avatar, .chat-avatar-main.AI_DrHughes_YueDuLiJie, .details-panel.AI_DrHughes_YueDuLiJie .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-hughes-primary-rgb)), 0 0 10px rgba(var(--ll-char-hughes-primary-rgb),0.3); border-color: rgb(var(--ll-char-hughes-primary-rgb)); }
+.message.received.character-message.AI_DrHughes_YueDuLiJie { background: var(--ll-char-hughes-msg-bg-dark); }
+
+/* --- 👩‍🎨 Sarah老师 (写作) --- */
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao, .message.received.character-message.AI_Sarah_XieZuoZhiDao { border-left-color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao .chat-list-name, .chat-header-main.character-active.AI_Sarah_XieZuoZhiDao .chat-title-main, .message.received.character-message.AI_Sarah_XieZuoZhiDao .message-sender, .details-panel.character-active.AI_Sarah_XieZuoZhiDao #detailsName, .details-panel.AI_Sarah_XieZuoZhiDao .details-section-title { color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.chat-list-item.active.AI_Sarah_XieZuoZhiDao .chat-list-avatar, .chat-avatar-main.AI_Sarah_XieZuoZhiDao, .details-panel.AI_Sarah_XieZuoZhiDao .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-sarah-primary-rgb)), 0 0 10px rgba(var(--ll-char-sarah-primary-rgb),0.3); border-color: rgb(var(--ll-char-sarah-primary-rgb)); }
+.message.received.character-message.AI_Sarah_XieZuoZhiDao { background: var(--ll-char-sarah-msg-bg-dark); }
+
+/* --- 👩‍💼 李静老师 (应试) --- */
+.chat-list-item.active.AI_LiJing_KaoShiTingGao, .message.received.character-message.AI_LiJing_KaoShiTingGao { border-left-color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.chat-list-item.active.AI_LiJing_KaoShiTingGao .chat-list-name, .chat-header-main.character-active.AI_LiJing_KaoShiTingGao .chat-title-main, .message.received.character-message.AI_LiJing_KaoShiTingGao .message-sender, .details-panel.character-active.AI_LiJing_KaoShiTingGao #detailsName, .details-panel.AI_LiJing_KaoShiTingGao .details-section-title { color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.chat-list-item.active.AI_LiJing_KaoShiTingGao .chat-list-avatar, .chat-avatar-main.AI_LiJing_KaoShiTingGao, .details-panel.AI_LiJing_KaoShiTingGao .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-lijing-primary-rgb)), 0 0 10px rgba(var(--ll-char-lijing-primary-rgb),0.3); border-color: rgb(var(--ll-char-lijing-primary-rgb)); }
+.message.received.character-message.AI_LiJing_KaoShiTingGao { background: var(--ll-char-lijing-msg-bg-dark); }
+
+/* --- 👨‍💼 David Chen (商务) --- */
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu, .message.received.character-message.AI_DavidChen_ShangWuYingYu { border-left-color: rgb(var(--ll-char-david-primary-rgb)); }
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu .chat-list-name, .chat-header-main.character-active.AI_DavidChen_ShangWuYingYu .chat-title-main, .message.received.character-message.AI_DavidChen_ShangWuYingYu .message-sender, .details-panel.character-active.AI_DavidChen_ShangWuYingYu #detailsName, .details-panel.AI_DavidChen_ShangWuYingYu .details-section-title { color: rgb(var(--ll-char-david-primary-rgb)); }
+.chat-list-item.active.AI_DavidChen_ShangWuYingYu .chat-list-avatar, .chat-avatar-main.AI_DavidChen_ShangWuYingYu, .details-panel.AI_DavidChen_ShangWuYingYu .details-avatar { box-shadow: 0 0 0 2px rgb(var(--ll-bg-container-rgb)), 0 0 0 4px rgb(var(--ll-char-david-primary-rgb)), 0 0 10px rgba(var(--ll-char-david-primary-rgb),0.3); border-color: rgb(var(--ll-char-david-primary-rgb)); }
+.message.received.character-message.AI_DavidChen_ShangWuYingYu { background: var(--ll-char-david-msg-bg-dark); }

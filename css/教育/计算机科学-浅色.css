@@ -1,0 +1,264 @@
+/*
+================================================================================
+|                                                                              |
+|                    💻 CS - 代码之光 (CodeLight) 💻                          |
+|                               (完整最终版)                                   |
+================================================================================
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "CS - CodeLight";
+    --theme-mode: "light";
+
+    /* ------------------------- 🎨 核心配色方案 (浅色) ----------------------- */
+
+    /* 基础色板 */
+    --cs-bg-main-rgb: 248, 249, 250;
+    --cs-bg-container-rgb: 255, 255, 255;
+    --cs-bg-sidebar-rgb: 252, 253, 254;
+    --cs-bg-elevated-rgb: 241, 243, 245;
+    --cs-bg-subtle-accent-rgb: 231, 245, 255;
+
+    --cs-text-primary-rgb: 33, 37, 41;
+    --cs-text-secondary-rgb: 73, 80, 87;
+    --cs-text-placeholder-rgb: 173, 181, 189;
+
+    --cs-accent-blue-rgb: 0, 122, 204;
+    --cs-border-light-rgb: 233, 236, 239;
+    --cs-border-strong-rgb: 206, 212, 218;
+
+    --cs-status-online-rgb: 25, 135, 84;
+    --cs-status-notification-rgb: 220, 53, 69;
+
+    /* --- 语义化颜色变量覆盖 --- */
+    --brand-rgb: var(--cs-accent-blue-rgb);
+    --brand-dark-rgb: 0, 102, 174; /* Darker blue */
+    --text-on-brand-rgb: 255, 255, 255;
+
+    --surface-1-rgb: var(--cs-bg-sidebar-rgb);
+    --surface-2-rgb: var(--cs-bg-container-rgb);
+    --surface-hover-rgb: var(--cs-bg-elevated-rgb);
+    --surface-active-rgb: var(--cs-bg-subtle-accent-rgb);
+
+    --text-primary-rgb: var(--cs-text-primary-rgb);
+    --text-secondary-rgb: var(--cs-text-secondary-rgb);
+
+    --border-subtle-rgb: var(--cs-border-light-rgb);
+    --border-strong-rgb: var(--cs-border-strong-rgb);
+
+    --accent-success-rgb: var(--cs-status-online-rgb);
+    --accent-danger-rgb: var(--cs-status-notification-rgb);
+
+    /* --- 组件级颜色变量覆盖 --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgb(var(--surface-2-rgb));
+    --chat-bg-color: rgb(var(--cs-bg-main-rgb));
+    --input-bg-color: rgb(var(--surface-2-rgb));
+
+    --sent-bg-color: rgb(var(--brand-rgb));
+    --text-on-sent: rgb(var(--text-on-brand-rgb));
+    --received-bg-color: rgb(var(--cs-bg-elevated-rgb));
+    --text-on-received: rgb(var(--text-primary-rgb));
+
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", "Source Code Pro", Consolas, monospace;
+    --font-size-base: 14px;
+    --font-size-small: 12px;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-radius-sm: 3px;
+    --border-radius-md: 5px;
+    --border-radius-lg: 8px;
+    --box-shadow-focus: 0 0 0 3px rgba(var(--brand-rgb), 0.25);
+
+    /* --- 滚动条覆盖 --- */
+    --scrollbar-track-color: rgba(var(--cs-text-primary-rgb), 0.05);
+    --scrollbar-thumb-color: rgba(var(--cs-text-primary-rgb), 0.2);
+    --scrollbar-thumb-hover-color: rgba(var(--brand-rgb), 0.6);
+    --scrollbar-size: 8px;
+
+    /* --- 角色颜色定义 --- */
+    --cs-char-ada-primary-rgb: 0, 106, 178;
+    --cs-char-ada-accent-rgb: 97, 175, 239;
+    --cs-char-ada-msg-bg-rgb: 231, 245, 255;
+
+    --cs-char-geek-primary-rgb: 161, 113, 25;
+    --cs-char-geek-accent-rgb: 229, 192, 123;
+    --cs-char-geek-msg-bg-rgb: 255, 251, 235;
+
+    --cs-char-wendy-primary-rgb: 166, 38, 164;
+    --cs-char-wendy-accent-rgb: 198, 120, 221;
+    --cs-char-wendy-msg-bg-rgb: 250, 245, 255;
+
+    --cs-char-ligou-primary-rgb: 13, 114, 128;
+    --cs-char-ligou-accent-rgb: 86, 182, 194;
+    --cs-char-ligou-msg-bg-rgb: 224, 247, 250;
+
+    --cs-char-phantom-primary-rgb: 30, 132, 73;
+    --cs-char-phantom-accent-rgb: 46, 204, 113;
+    --cs-char-phantom-msg-bg-rgb: 232, 245, 233;
+}
+
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
+body {
+    font-family: var(--font-family-base);
+}
+
+::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+}
+::-webkit-scrollbar-track {
+    background-color: var(--scrollbar-track-color);
+}
+::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb-color);
+    border-radius: var(--border-radius-md);
+}
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover-color);
+}
+
+.search-bar:focus,
+.modal-body input:focus,
+.modal-body textarea:focus,
+.custom-select:focus-within,
+#messageInput:focus {
+    box-shadow: var(--box-shadow-focus);
+}
+
+.chat-list-item {
+    border-left: 3px solid transparent;
+}
+.chat-list-item.active {
+    background-color: rgb(var(--surface-active-rgb));
+    border-left-color: rgb(var(--brand-rgb));
+}
+.chat-list-item.active .chat-list-name {
+    color: rgb(var(--brand-rgb));
+}
+
+.chat-status-main::before {
+    animation: pulse-cs-light 2s infinite;
+}
+@keyframes pulse-cs-light {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-success-rgb), 0.4); }
+    70% { box-shadow: 0 0 0 5px rgba(var(--accent-success-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-success-rgb), 0); }
+}
+
+.no-chat-selected .logo-placeholder {
+    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 24 24' fill='none' stroke='%23CED4DA' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='8 6 2 12 8 18'%3E%3C/polyline%3E%3Cpolyline points='16 18 22 12 16 6'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+.message, #messageInput {
+    font-family: var(--font-family-mono);
+}
+.message.received {
+    border: 1px solid rgb(var(--border-subtle-rgb));
+}
+.message.system {
+    background: none;
+    color: rgb(var(--text-secondary-rgb));
+    font-family: var(--font-family-mono);
+    border: 1px dashed rgb(var(--border-subtle-rgb));
+}
+
+/* ------------------------- 👤 角色专属样式 -------------------------- */
+
+/* Ada Lovelace */
+.chat-list-item.active.AI_Ada_Foundations {
+    border-left-color: rgb(var(--cs-char-ada-primary-rgb));
+}
+.chat-list-item.active.AI_Ada_Foundations .chat-list-name,
+.chat-header-main.character-active.AI_Ada_Foundations .chat-title-main,
+.message.received.character-message.AI_Ada_Foundations .message-sender,
+.details-panel.character-active.AI_Ada_Foundations #detailsName {
+    color: rgb(var(--cs-char-ada-primary-rgb));
+}
+.message.received.character-message.AI_Ada_Foundations {
+    background-color: rgb(var(--cs-char-ada-msg-bg-rgb));
+    border-color: rgba(var(--cs-char-ada-accent-rgb), 0.4);
+}
+.chat-avatar-main.AI_Ada_Foundations,
+.details-avatar.AI_Ada_Foundations {
+    box-shadow: 0 0 10px rgba(var(--cs-char-ada-accent-rgb), 0.6);
+}
+
+/* Gao Jike */
+.chat-list-item.active.AI_GaoJike_PracticalPython {
+    border-left-color: rgb(var(--cs-char-geek-primary-rgb));
+}
+.chat-list-item.active.AI_GaoJike_PracticalPython .chat-list-name,
+.chat-header-main.character-active.AI_GaoJike_PracticalPython .chat-title-main,
+.message.received.character-message.AI_GaoJike_PracticalPython .message-sender,
+.details-panel.character-active.AI_GaoJike_PracticalPython #detailsName {
+    color: rgb(var(--cs-char-geek-primary-rgb));
+}
+.message.received.character-message.AI_GaoJike_PracticalPython {
+    background-color: rgb(var(--cs-char-geek-msg-bg-rgb));
+    border-color: rgba(var(--cs-char-geek-accent-rgb), 0.4);
+}
+.chat-avatar-main.AI_GaoJike_PracticalPython,
+.details-avatar.AI_GaoJike_PracticalPython {
+    box-shadow: 0 0 10px rgba(var(--cs-char-geek-accent-rgb), 0.6);
+}
+
+/* Wendy */
+.chat-list-item.active.AI_Wendy_FrontendWizard {
+    border-left-color: rgb(var(--cs-char-wendy-primary-rgb));
+}
+.chat-list-item.active.AI_Wendy_FrontendWizard .chat-list-name,
+.chat-header-main.character-active.AI_Wendy_FrontendWizard .chat-title-main,
+.message.received.character-message.AI_Wendy_FrontendWizard .message-sender,
+.details-panel.character-active.AI_Wendy_FrontendWizard #detailsName {
+    color: rgb(var(--cs-char-wendy-primary-rgb));
+}
+.message.received.character-message.AI_Wendy_FrontendWizard {
+    background-color: rgb(var(--cs-char-wendy-msg-bg-rgb));
+    border-color: rgba(var(--cs-char-wendy-accent-rgb), 0.4);
+}
+.chat-avatar-main.AI_Wendy_FrontendWizard,
+.details-avatar.AI_Wendy_FrontendWizard {
+    box-shadow: 0 0 10px rgba(var(--cs-char-wendy-accent-rgb), 0.6);
+}
+
+/* Li Gou */
+.chat-list-item.active.AI_LiGou_SystemDesign {
+    border-left-color: rgb(var(--cs-char-ligou-primary-rgb));
+}
+.chat-list-item.active.AI_LiGou_SystemDesign .chat-list-name,
+.chat-header-main.character-active.AI_LiGou_SystemDesign .chat-title-main,
+.message.received.character-message.AI_LiGou_SystemDesign .message-sender,
+.details-panel.character-active.AI_LiGou_SystemDesign #detailsName {
+    color: rgb(var(--cs-char-ligou-primary-rgb));
+}
+.message.received.character-message.AI_LiGou_SystemDesign {
+    background-color: rgb(var(--cs-char-ligou-msg-bg-rgb));
+    border-color: rgba(var(--cs-char-ligou-accent-rgb), 0.4);
+}
+.chat-avatar-main.AI_LiGou_SystemDesign,
+.details-avatar.AI_LiGou_SystemDesign {
+    box-shadow: 0 0 10px rgba(var(--cs-char-ligou-accent-rgb), 0.6);
+}
+
+/* Phantom */
+.chat-list-item.active.AI_Phantom_CyberSecurity {
+    border-left-color: rgb(var(--cs-char-phantom-primary-rgb));
+}
+.chat-list-item.active.AI_Phantom_CyberSecurity .chat-list-name,
+.chat-header-main.character-active.AI_Phantom_CyberSecurity .chat-title-main,
+.message.received.character-message.AI_Phantom_CyberSecurity .message-sender,
+.details-panel.character-active.AI_Phantom_CyberSecurity #detailsName {
+    color: rgb(var(--cs-char-phantom-primary-rgb));
+}
+.message.received.character-message.AI_Phantom_CyberSecurity {
+    background-color: rgb(var(--cs-char-phantom-msg-bg-rgb));
+    border-color: rgba(var(--cs-char-phantom-accent-rgb), 0.4);
+}
+.chat-avatar-main.AI_Phantom_CyberSecurity,
+.details-avatar.AI_Phantom_CyberSecurity {
+    box-shadow: 0 0 10px rgba(var(--cs-char-phantom-accent-rgb), 0.6);
+}

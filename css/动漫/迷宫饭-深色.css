@@ -1,0 +1,385 @@
+/*
+================================================================================
+|                                                                              |
+|                  🍽️ 迷宫饭 - 幽暗地牢 (Dark Theme) 🍽️                         |
+|                  (Dungeon Meshi - Dark Dungeon Theme)                        |
+|                                                                              |
+================================================================================
+*
+* 使用方法: 在 HTML 中，用此文件替换其他主题文件来应用此主题。
+* This is a self-contained dark theme file for Dungeon Meshi.
+*
+*/
+
+:root {
+    /* ------------------------- 🌈 主题名称与模式 ------------------------- */
+    --theme-name: "迷宫饭 - 幽暗地牢";
+    --theme-mode: "dark";
+
+    /* ------------------------- 🎨 核心配色方案 -------------------------- */
+    /* 基础色板 - Dungeon Meshi Palette */
+    --mgf-deep-cave-bg-rgb: 35, 30, 25;
+    --mgf-dark-earth-panel-rgb: 50, 45, 40;
+    --mgf-torch-flame-orange-rgb: 220, 130, 50;
+    --mgf-dungeon-moss-green-rgb: 80, 110, 70;
+    --mgf-dried-blood-red-rgb: 130, 40, 45;
+    --mgf-bone-white-rgb: 210, 205, 195;
+    --mgf-shadow-gray-rgb: 145, 140, 135;
+    --mgf-ancient-stone-border-rgb: 75, 70, 65;
+
+    /* --- 语义化颜色变量覆盖 --- */
+    --brand-rgb: var(--mgf-torch-flame-orange-rgb);
+    --brand-dark-rgb: 190, 100, 30;
+    --text-on-brand-rgb: var(--mgf-deep-cave-bg-rgb);
+
+    --surface-1-rgb: var(--mgf-dark-earth-panel-rgb);
+    --surface-2-rgb: var(--mgf-deep-cave-bg-rgb);
+    --surface-hover-rgb: 45, 40, 35;
+    --surface-active-rgb: 60, 55, 50;
+
+    --text-primary-rgb: var(--mgf-bone-white-rgb);
+    --text-secondary-rgb: var(--mgf-shadow-gray-rgb);
+    --text-on-accent-rgb: var(--mgf-bone-white-rgb);
+
+    --border-subtle-rgb: var(--mgf-ancient-stone-border-rgb);
+
+    --accent-success-rgb: var(--mgf-dungeon-moss-green-rgb);
+    --accent-danger-rgb: var(--mgf-dried-blood-red-rgb);
+    --accent-warning-rgb: 184, 134, 11; /* DarkGoldenrod */
+
+    /* --- 组件级颜色变量覆盖 --- */
+    --panel-bg-color: rgb(var(--surface-1-rgb));
+    --header-bg-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.55);
+    --chat-bg-color: rgb(var(--surface-1-rgb));
+    --input-bg-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.92);
+
+    --sent-bg-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.75);
+    --received-bg-color: rgba(var(--mgf-ancient-stone-border-rgb), 0.9);
+
+    /* --- 字体与排版覆盖 --- */
+    --font-family-base: "LXGW WenKai TC", "Source Han Serif SC", serif;
+
+    /* --- 边框与阴影覆盖 --- */
+    --border-radius-md: 4px; /* 更粗犷的边角 */
+    --box-shadow-md: 0 1px 2px rgba(0,0,0,0.65);
+
+    /* --- 角色颜色定义 --- */
+    --mgf-laios-primary-dark: #B8860B;
+    --mgf-laios-secondary-dark: rgba(184, 134, 11, 0.15);
+    --mgf-marcille-primary-dark: #FFD700;
+    --mgf-marcille-secondary-dark: rgba(255, 215, 0, 0.15);
+    --mgf-chilchuck-primary-dark: #E53935;
+    --mgf-chilchuck-secondary-dark: rgba(229, 57, 53, 0.15);
+    --mgf-senshi-primary-dark: #9E9E9E;
+    --mgf-senshi-secondary-dark: rgba(158, 158, 158, 0.2);
+    --mgf-falin-primary-dark: #CFD8DC;
+    --mgf-falin-secondary-dark: rgba(207, 216, 220, 0.1);
+    --mgf-izutsumi-primary-dark: #37474F;
+    --mgf-izutsumi-secondary-dark: rgba(55, 71, 79, 0.25);
+    --mgf-kabru-primary-dark: #5C6BC0;
+    --mgf-kabru-secondary-dark: rgba(92, 107, 192, 0.15);
+    --mgf-wingedlion-primary-dark: #FBC02D;
+    --mgf-wingedlion-secondary-dark: rgba(251, 192, 45, 0.15);
+}
+
+
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
+body {
+    background: radial-gradient(ellipse at center, rgba(var(--mgf-dungeon-moss-green-rgb),0.15) 0%, rgb(var(--mgf-deep-cave-bg-rgb)) 70%),
+    linear-gradient(to bottom right, rgba(var(--mgf-deep-cave-bg-rgb),0.92), rgba(var(--mgf-dark-earth-panel-rgb),0.85));
+    background-blend-mode: overlay, normal;
+}
+
+.app-container {
+    border: 1px solid rgba(var(--mgf-ancient-stone-border-rgb), 0.45);
+}
+
+::-webkit-scrollbar-track { background: rgba(var(--mgf-deep-cave-bg-rgb), 0.85); border-radius: var(--border-radius-md); }
+::-webkit-scrollbar-thumb { background: rgba(var(--mgf-ancient-stone-border-rgb), 0.75); border-radius: var(--border-radius-md); }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--brand-rgb)); }
+
+/* ------------------------- 🧭 侧边栏 -------------------- */
+.sidebar-nav {
+    background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.65);
+    border-right: 1px solid var(--border-color);
+}
+.sidebar-header {
+    background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.8);
+}
+.menu-btn:hover { color: rgb(var(--brand-rgb)); }
+
+.search-bar {
+    background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.9);
+}
+.search-bar:focus {
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 0 1px rgba(var(--brand-rgb),0.45);
+}
+
+.nav-tabs { border-bottom: 1px solid var(--border-color); }
+.nav-tab:hover { color: rgb(var(--brand-rgb)); }
+.nav-tab.active { color: rgb(var(--brand-rgb)); border-bottom-color: rgb(var(--brand-rgb)); }
+
+.chat-list-item.active {
+    background-color: rgba(var(--brand-rgb), 0.18);
+    box-shadow: 0 0 7px rgba(var(--brand-rgb), 0.3) inset;
+}
+.chat-list-item.active .chat-list-name { color: rgb(var(--brand-rgb)); font-weight: bold; }
+
+.chat-list-avatar {
+    background-color: rgb(var(--mgf-ancient-stone-border-rgb));
+    border: 1px solid rgba(var(--mgf-bone-white-rgb), 0.12);
+}
+
+.chat-list-badge {
+    background-color: rgb(var(--accent-danger-rgb));
+    color: rgb(var(--text-primary-rgb));
+    box-shadow: 0 0 3px rgb(var(--accent-danger-rgb));
+}
+
+.new-chat-fab {
+    background-color: rgb(var(--brand-rgb));
+    color: rgb(var(--text-on-brand-rgb));
+    box-shadow: 0 1px 4px rgba(0,0,0,0.55), 0 0 5px rgb(var(--brand-rgb));
+}
+.new-chat-fab:hover { background-color: rgb(var(--brand-dark-rgb)); }
+
+/* ------------------------- 📜 聊天主区 -------------------- */
+.chat-title-main { font-weight: 600; text-shadow: 0 0 6px rgba(var(--text-primary-rgb), 0.1); }
+.header-action-btn:hover { color: rgb(var(--brand-rgb)); text-shadow: 0 0 4px rgb(var(--brand-rgb)); }
+
+.no-chat-selected .logo-placeholder::before {
+    font-family: var(--font-family-base);
+    color: rgba(var(--text-primary-rgb), 0.25);
+    font-size: 60px;
+}
+
+.message.sent {
+    border-left: 2px solid rgb(var(--brand-rgb));
+}
+.message.received {
+    border: 1px solid var(--border-color);
+    border-right: 2px solid rgb(var(--mgf-ancient-stone-border-rgb));
+}
+.message.system {
+    background-color: rgba(var(--mgf-dark-earth-panel-rgb), 0.85);
+    color: rgb(var(--brand-rgb));
+    font-style: italic;
+    border: 1px dashed rgb(var(--brand-rgb));
+    box-shadow: 0 0 4px rgba(var(--brand-rgb),0.22) inset;
+}
+
+#messageInput:focus {
+    border-color: rgb(var(--brand-rgb));
+    box-shadow: 0 0 0 1px rgba(var(--brand-rgb),0.45), 0 0 7px rgba(var(--brand-rgb),0.18) inset;
+}
+.icon-btn:hover { color: rgb(var(--brand-rgb)); background-color: rgba(var(--brand-rgb),0.07); }
+#sendButtonMain { color: rgb(var(--brand-rgb)); font-weight: 500; }
+#sendButtonMain:hover { text-shadow: 0 0 4px rgb(var(--brand-rgb)); }
+#voiceButtonMain.recording { color: rgb(var(--accent-danger-rgb)); animation: mgf-dark-pulse 1.5s infinite; }
+@keyframes mgf-dark-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-danger-rgb), 0.75); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--accent-danger-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-danger-rgb), 0); }
+}
+
+/* ------------------------- ℹ️ 详情与模态框 ------------------------ */
+.details-panel { background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.9); }
+.details-header { background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.85); }
+.details-avatar { border: 2px solid var(--border-color); box-shadow: 0 0 8px rgba(var(--text-primary-rgb), 0.06); }
+#detailsName { text-shadow: 0 0 4px rgba(var(--text-primary-rgb), 0.22); }
+#aiContactDetailsContent {
+    background-color: rgba(var(--mgf-dark-earth-panel-rgb), 0.45);
+    border: 1px solid var(--border-color);
+}
+#aiContactDetailsContent p strong { color: rgb(var(--brand-rgb)); border-bottom: 1px solid rgba(var(--brand-rgb), 0.22); }
+
+.btn { box-shadow: 0 1px 2px rgba(0,0,0,0.65); font-weight: 500; }
+.btn-primary:hover { box-shadow: 0 2px 5px rgba(var(--brand-rgb),0.35); }
+.btn-secondary { background-color: rgb(var(--mgf-ancient-stone-border-rgb)); border: 1px solid rgba(var(--text-primary-rgb),0.12); }
+.btn-secondary:hover { background-color: rgb(95, 90, 85); box-shadow: 0 2px 5px rgba(var(--mgf-ancient-stone-border-rgb),0.35); }
+.btn-danger { background-color: rgb(var(--accent-danger-rgb)); border: 1px solid rgba(var(--text-primary-rgb),0.12); }
+.btn-danger:hover { background-color: rgb(100, 30, 35); box-shadow: 0 2px 5px rgba(var(--accent-danger-rgb),0.35); }
+.btn-success { background-color: rgb(var(--accent-success-rgb)); }
+.btn-success:hover { background-color: rgb(60, 80, 50); }
+
+.loading-overlay { background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.9); }
+.loading-spinner {
+    border-top-color: rgb(var(--brand-rgb));
+    border-left-color: rgb(var(--brand-rgb));
+    border-bottom-color: rgba(var(--brand-rgb),0.28);
+    border-right-color: rgba(var(--brand-rgb),0.28);
+}
+.modal-header h2 { color: rgb(var(--brand-rgb)); text-shadow: 0 0 4px rgba(var(--brand-rgb),0.35); }
+.modal-body input, .modal-body textarea {
+    background-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.75);
+}
+.user-id-display #modalUserIdValue {
+    background: rgba(var(--mgf-deep-cave-bg-rgb),0.75);
+    color: rgb(var(--brand-rgb));
+    border: 1px dashed rgb(var(--brand-rgb));
+}
+#ttsConfigFormContainer * { color: rgb(var(--text-secondary-rgb)); }
+
+.video-call-button.active { background: rgb(var(--brand-rgb)); color: rgb(var(--text-on-brand-rgb)); }
+
+input:checked + .slider { background-color: rgb(var(--brand-rgb)); }
+.slider { background-color: rgb(var(--mgf-ancient-stone-border-rgb)); }
+.slider:before { background-color: rgb(var(--mgf-dark-earth-panel-rgb)); }
+
+.notification { background: rgb(var(--mgf-dark-earth-panel-rgb)); border-left-color: rgb(var(--brand-rgb)); }
+
+/*
+================================================================================
+|                            👤 角色专属样式 👤                              |
+================================================================================
+*/
+
+/* --- 莱欧斯 --- */
+.AI_Laious_迷宫饭 .chat-list-avatar,
+.chat-avatar-main.AI_Laious_迷宫饭,
+.details-avatar.AI_Laious_迷宫饭,
+#callingModalAvatar.AI_Laious_迷宫饭 {
+    background-color: var(--mgf-laios-primary-dark);
+    color: var(--mgf-deep-cave-bg-rgb);
+    border-color: var(--mgf-deep-cave-bg-rgb);
+}
+.chat-list-item.active.AI_Laious_迷宫饭 { background-color: var(--mgf-laios-secondary-dark); box-shadow: 0 0 7px var(--mgf-laios-primary-dark) inset; }
+.chat-list-item.active.AI_Laious_迷宫饭 .chat-list-name,
+.chat-header-main.character-active.AI_Laious_迷宫饭 .chat-title-main,
+.message.received.character-message.AI_Laious_迷宫饭 .message-sender,
+.details-panel.character-active.AI_Laious_迷宫饭 #detailsName {
+    color: var(--mgf-laios-primary-dark);
+}
+.message.received.character-message.AI_Laious_迷宫饭 { border-left: 2px solid var(--mgf-laios-primary-dark); background-color: rgba(184, 134, 11, 0.09); }
+
+/* --- 玛露希尔 --- */
+.AI_Marcille_迷宫饭 .chat-list-avatar,
+.chat-avatar-main.AI_Marcille_迷宫饭,
+.details-avatar.AI_Marcille_迷宫饭,
+#callingModalAvatar.AI_Marcille_迷宫饭 {
+    background-color: var(--mgf-marcille-primary-dark);
+    color: rgb(var(--mgf-deep-cave-bg-rgb));
+    border-color: rgb(var(--mgf-deep-cave-bg-rgb));
+    text-shadow: 0 0 2px rgba(var(--mgf-deep-cave-bg-rgb), 0.4);
+}
+.chat-list-item.active.AI_Marcille_迷宫饭 { background-color: var(--mgf-marcille-secondary-dark); box-shadow: 0 0 7px var(--mgf-marcille-primary-dark) inset; }
+.chat-list-item.active.AI_Marcille_迷宫饭 .chat-list-name,
+.chat-header-main.character-active.AI_Marcille_迷宫饭 .chat-title-main,
+.message.received.character-message.AI_Marcille_迷宫饭 .message-sender,
+.details-panel.character-active.AI_Marcille_迷宫饭 #detailsName {
+    color: var(--mgf-marcille-primary-dark);
+}
+.message.received.character-message.AI_Marcille_迷宫饭 { border-left: 2px solid var(--mgf-marcille-primary-dark); background-color: rgba(255, 215, 0, 0.07); }
+
+/* --- 奇尔查克 --- */
+.AI_Chilchuck_迷宫饭 .chat-list-avatar,
+.chat-avatar-main.AI_Chilchuck_迷宫饭,
+.details-avatar.AI_Chilchuck_迷宫饭,
+#callingModalAvatar.AI_Chilchuck_迷宫饭 {
+    background-color: var(--mgf-chilchuck-primary-dark);
+    color: rgb(var(--text-primary-rgb));
+    border-color: rgb(var(--text-primary-rgb));
+}
+.chat-list-item.active.AI_Chilchuck_迷宫饭 { background-color: var(--mgf-chilchuck-secondary-dark); box-shadow: 0 0 7px var(--mgf-chilchuck-primary-dark) inset; }
+.chat-list-item.active.AI_Chilchuck_迷宫饭 .chat-list-name,
+.chat-header-main.character-active.AI_Chilchuck_迷宫饭 .chat-title-main,
+.message.received.character-message.AI_Chilchuck_迷宫饭 .message-sender,
+.details-panel.character-active.AI_Chilchuck_迷宫饭 #detailsName {
+    color: var(--mgf-chilchuck-primary-dark);
+}
+.message.received.character-message.AI_Chilchuck_迷宫饭 { border-left: 2px solid var(--mgf-chilchuck-primary-dark); background-color: rgba(229, 57, 53, 0.08); }
+
+/* --- 先西 --- */
+.AI_Senshi_迷宫饭 .chat-list-avatar,
+.chat-avatar-main.AI_Senshi_迷宫饭,
+.details-avatar.AI_Senshi_迷宫饭,
+#callingModalAvatar.AI_Senshi_迷宫饭 {
+    background-color: var(--mgf-senshi-primary-dark);
+    color: rgb(var(--mgf-deep-cave-bg-rgb));
+    border-color: rgb(var(--mgf-deep-cave-bg-rgb));
+}
+.chat-list-item.active.AI_Senshi_迷宫饭 { background-color: var(--mgf-senshi-secondary-dark); box-shadow: 0 0 7px var(--mgf-senshi-primary-dark) inset; }
+.chat-list-item.active.AI_Senshi_迷宫饭 .chat-list-name,
+.chat-header-main.character-active.AI_Senshi_迷宫饭 .chat-title-main,
+.message.received.character-message.AI_Senshi_迷宫饭 .message-sender,
+.details-panel.character-active.AI_Senshi_迷宫饭 #detailsName {
+    color: var(--mgf-senshi-primary-dark);
+}
+.message.received.character-message.AI_Senshi_迷宫饭 { border-left: 2px solid var(--mgf-senshi-primary-dark); background-color: rgba(158, 158, 158, 0.1); }
+
+/* --- 法琳 --- */
+.AI_Falin_迷宫饭 .chat-list-avatar,
+.chat-avatar-main.AI_Falin_迷宫饭,
+.details-avatar.AI_Falin_迷宫饭,
+#callingModalAvatar.AI_Falin_迷宫饭 {
+    background-color: rgb(var(--mgf-deep-cave-bg-rgb));
+    color: var(--mgf-falin-primary-dark);
+    border-color: var(--mgf-falin-primary-dark);
+    box-shadow: 0 0 5px var(--mgf-falin-primary-dark);
+}
+.chat-list-item.active.AI_Falin_迷宫饭 { background-color: var(--mgf-falin-secondary-dark); box-shadow: 0 0 7px var(--mgf-falin-primary-dark) inset; }
+.chat-list-item.active.AI_Falin_迷宫饭 .chat-list-name,
+.chat-header-main.character-active.AI_Falin_迷宫饭 .chat-title-main,
+.message.received.character-message.AI_Falin_迷宫饭 .message-sender,
+.details-panel.character-active.AI_Falin_迷宫饭 #detailsName {
+    color: var(--mgf-falin-primary-dark);
+}
+.chat-header-main.character-active.AI_Falin_迷宫饭 .chat-title-main { text-shadow: 0 0 3px var(--mgf-falin-primary-dark); }
+.message.received.character-message.AI_Falin_迷宫饭 { border-left: 2px solid var(--mgf-falin-primary-dark); background-color: rgba(var(--mgf-deep-cave-bg-rgb),0.5); }
+
+/* --- 井堤 --- */
+.AI_Izutsumi_迷宫饭 .chat-list-avatar,
+.chat-avatar-main.AI_Izutsumi_迷宫饭,
+.details-avatar.AI_Izutsumi_迷宫饭,
+#callingModalAvatar.AI_Izutsumi_迷宫饭 {
+    background-color: var(--mgf-izutsumi-primary-dark);
+    color: rgb(var(--text-primary-rgb));
+    border-color: rgb(var(--text-primary-rgb));
+}
+.chat-list-item.active.AI_Izutsumi_迷宫饭 { background-color: var(--mgf-izutsumi-secondary-dark); box-shadow: 0 0 7px var(--mgf-izutsumi-primary-dark) inset; }
+.chat-list-item.active.AI_Izutsumi_迷宫饭 .chat-list-name,
+.chat-header-main.character-active.AI_Izutsumi_迷宫饭 .chat-title-main,
+.message.received.character-message.AI_Izutsumi_迷宫饭 .message-sender,
+.details-panel.character-active.AI_Izutsumi_迷宫饭 #detailsName {
+    color: rgb(var(--text-primary-rgb));
+}
+.message.received.character-message.AI_Izutsumi_迷宫饭 { border-left: 2px solid var(--mgf-izutsumi-primary-dark); background-color: rgba(55,71,79,0.12); }
+
+/* --- 卡布尔 --- */
+.AI_Kabru_迷宫饭 .chat-list-avatar,
+.chat-avatar-main.AI_Kabru_迷宫饭,
+.details-avatar.AI_Kabru_迷宫饭,
+#callingModalAvatar.AI_Kabru_迷宫饭 {
+    background-color: var(--mgf-kabru-primary-dark);
+    color: rgb(var(--text-primary-rgb));
+    border-color: rgb(var(--text-primary-rgb));
+}
+.chat-list-item.active.AI_Kabru_迷宫饭 { background-color: var(--mgf-kabru-secondary-dark); box-shadow: 0 0 7px var(--mgf-kabru-primary-dark) inset; }
+.chat-list-item.active.AI_Kabru_迷宫饭 .chat-list-name,
+.chat-header-main.character-active.AI_Kabru_迷宫饭 .chat-title-main,
+.message.received.character-message.AI_Kabru_迷宫饭 .message-sender,
+.details-panel.character-active.AI_Kabru_迷宫饭 #detailsName {
+    color: var(--mgf-kabru-primary-dark);
+}
+.message.received.character-message.AI_Kabru_迷宫饭 { border-left: 2px solid var(--mgf-kabru-primary-dark); background-color: rgba(92,107,192,0.08); }
+
+/* --- 有翼狮 --- */
+.AI_WingedLion_迷宫饭 .chat-list-avatar,
+.chat-avatar-main.AI_WingedLion_迷宫饭,
+.details-avatar.AI_WingedLion_迷宫饭,
+#callingModalAvatar.AI_WingedLion_迷宫饭 {
+    background-color: var(--mgf-wingedlion-primary-dark);
+    color: rgb(var(--mgf-deep-cave-bg-rgb));
+    border-color: rgb(var(--mgf-deep-cave-bg-rgb));
+    font-weight: bold;
+    text-shadow: 0 0 4px var(--mgf-wingedlion-primary-dark);
+}
+.chat-list-item.active.AI_WingedLion_迷宫饭 { background-color: var(--mgf-wingedlion-secondary-dark); box-shadow: 0 0 7px var(--mgf-wingedlion-primary-dark) inset; }
+.chat-list-item.active.AI_WingedLion_迷宫饭 .chat-list-name,
+.chat-header-main.character-active.AI_WingedLion_迷宫饭 .chat-title-main,
+.message.received.character-message.AI_WingedLion_迷宫饭 .message-sender,
+.details-panel.character-active.AI_WingedLion_迷宫饭 #detailsName {
+    color: var(--mgf-wingedlion-primary-dark);
+}
+.message.received.character-message.AI_WingedLion_迷宫饭 { border-left: 2px solid var(--mgf-wingedlion-primary-dark); background-color: rgba(251,192,45,0.07); }
