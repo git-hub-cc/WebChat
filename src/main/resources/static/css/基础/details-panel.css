@@ -321,11 +321,6 @@
 /* 群组管理 (Group Management) */
 /* ========================================================================== */
 
-#detailsGroupManagement #addGroupMemberArea {
-    margin-top: var(--spacing-4);
-    padding-top: var(--spacing-3);
-    border-top: var(--border-width-standard) solid var(--border-color);
-}
 
 #detailsGroupManagement #addGroupMemberArea h5 {
     margin-bottom: var(--spacing-2);
@@ -448,6 +443,39 @@
 .ai-prompt-editor-item > div:last-child {
     display: flex;
     gap: 10px;
+}
+
+#detailsGroupManagement #contactsDropdownDetails {
+    width: calc(100% - 90px); /* 减去按钮宽度和间距 */
+    margin-right: 10px;
+    padding: 7px 10px;
+    border: var(--border-width-standard) solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--surface-2-bg);
+    font-family: var(--font-family-base), var(--font-family-serif);
+    font-size: 0.9em;
+    transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
+
+    /* 关键：应用自定义外观和箭头 */
+    appearance: none;
+    -webkit-appearance: none;
+    padding-inline-end: 30px;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23757575" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+}
+
+#detailsGroupManagement #contactsDropdownDetails:focus {
+    outline: none;
+    border-color: var(--brand-bg);
+    box-shadow: 0 0 0 var(--border-width-focus) rgba(var(--brand-rgb), 0.2);
+}
+
+#detailsGroupManagement #addGroupMemberArea {
+    /* 微调一下布局，让下拉框和按钮对齐 */
+    display: flex;
+    align-items: center;
 }
 
 /* ========================================================================== */

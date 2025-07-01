@@ -1,0 +1,43 @@
+# 工作流名称
+name: Deploy Static Website to GitHub Pages
+
+# 触发条件：当推送到 main 分支时触发
+on:
+  push:
+    branches:
+      - main  # 如果你的主分支是 master，请修改为 master
+
+# 权限设置，允许 Action 写入 gh-pages 分支
+permissions:
+  contents: write
+
+# 工作任务
+jobs:
+  build-and-deploy:
+    # 运行环境
+    runs-on: ubuntu-latest
+
+    # 步骤
+    steps:
+      # 第一步：检出你的代码
+      - name: Checkout 🛎️
+        uses: actions/checkout@v4
+
+      # 第二步：部署到 GitHub Pages
+      # 这个 Action 会把指定目录的内容推送到 gh-pages 分支
+      - name: Deploy 🚀
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          # 用于部署的 GitHub Token，Action 会自动创建
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+          # 【最关键的一步】
+          # 指定要发布到网站根目录的文件夹
+          # 这里我们指向你的 static 文件夹
+          publish_dir: ./src/main/resources/static
+
+          # （可选）如果你想在部署时保留 .github 这样的文件夹，可以设置为 true
+          # keep_files: true
+
+          # （可选）如果你想添加自定义域名，可以在这里指定
+          # cname: example.com

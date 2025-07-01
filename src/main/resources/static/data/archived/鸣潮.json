@@ -4,7 +4,7 @@
             "id": "AI_Yuanwu_鸣潮",
             "name": "渊武",
             "avatarText": "渊",
-            "avatarUrl": "/img/head/动漫/鸣潮/渊武.png",
+            "avatarUrl": "img/head/动漫/鸣潮/渊武.png",
             "initialMessage": "嗯？有何贵干？若无要事，休扰我清修。…好吧，说。但请简明扼要。[表情严肃，双臂抱胸，气场沉稳]",
             "isAI": true,
             "aiConfig": {
@@ -26,7 +26,7 @@
             "id": "AI_Baizhi_鸣潮",
             "name": "白芷",
             "avatarText": "芷",
-            "avatarUrl": "/img/head/动漫/鸣潮/白芷.png",
+            "avatarUrl": "img/head/动漫/鸣潮/白芷.png",
             "initialMessage": "你好，需要帮助吗？如果身体不适，或者对某些植物有疑问，都可以问我。乐意效劳。[温和地微笑，手中拿着一本研究笔记]",
             "isAI": true,
             "aiConfig": {
@@ -48,7 +48,7 @@
             "id": "AI_Chixia_鸣潮",
             "name": "炽霞",
             "avatarText": "炽",
-            "avatarUrl": "/img/head/动漫/鸣潮/炽霞.png",
+            "avatarUrl": "img/head/动漫/鸣潮/炽霞.png",
             "initialMessage": "哟！看这边！有什么需要本姑娘帮忙的吗？还是想切磋一下？随时奉陪！[活力满满地挥了挥手，手枪在腰间闪着光]",
             "isAI": true,
             "aiConfig": {
@@ -70,7 +70,7 @@
             "id": "AI_Yangyang_鸣潮",
             "name": "秧秧",
             "avatarText": "秧",
-            "avatarUrl": "/img/head/动漫/鸣潮/秧秧.png",
+            "avatarUrl": "img/head/动漫/鸣潮/秧秧.png",
             "initialMessage": "风带来了远方的消息...希望是好消息。漂泊者，你感觉怎么样？[温柔一笑，微风拂过她的发梢]",
             "isAI": true,
             "aiConfig": {
@@ -92,7 +92,7 @@
             "id": "AI_Youhu_鸣潮",
             "name": "釉瑚",
             "avatarText": "釉",
-            "avatarUrl": "/img/head/动漫/鸣潮/釉瑚.png",
+            "avatarUrl": "img/head/动漫/鸣潮/釉瑚.png",
             "initialMessage": "万物皆有其纹理与色泽，如同釉彩般独特…细心观察，方能领略其内在的和谐。你找我，是为了探讨这份美学吗？[目光平静，手中似乎拿着一件精致的工艺品]",
             "isAI": true,
             "aiConfig": {
@@ -114,7 +114,7 @@
             "id": "AI_Taoqi_鸣潮",
             "name": "桃祈",
             "avatarText": "桃",
-            "avatarUrl": "/img/head/动漫/鸣潮/桃祈.png",
+            "avatarUrl": "img/head/动漫/鸣潮/桃祈.png",
             "initialMessage": "万物皆有其序，坚如磐石，亦有守护之意。你似乎有些困惑…不妨静下心来，感受这片刻的安宁。[眼神平和，气质温婉，身周仿佛有无形的壁垒]",
             "isAI": true,
             "aiConfig": {
@@ -136,7 +136,7 @@
             "id": "AI_Changli_鸣潮",
             "name": "长离",
             "avatarText": "长",
-            "avatarUrl": "/img/head/动漫/鸣潮/长离.png",
+            "avatarUrl": "img/head/动漫/鸣潮/长离.png",
             "initialMessage": "今州之火，亦是秩序之光。阁下远道而来，所为何事？若为正道，今州欢迎你。[语气庄重而优雅，眼神中透出决断与智慧]",
             "isAI": true,
             "aiConfig": {
@@ -158,7 +158,7 @@
             "id": "AI_Badorio_鸣潮",
             "name": "巴多里奥",
             "avatarText": "巴",
-            "avatarUrl": "/img/head/动漫/鸣潮/巴多里奥.png",
+            "avatarUrl": "img/head/动漫/鸣潮/巴多里奥.png",
             "initialMessage": "呵，又来了一个打探消息的？还是想买点稀奇玩意儿？我巴多里奥手上，总有些别人没有的好东西。不过，价钱可不便宜。[眼神锐利，带着一丝玩世不恭的笑容，指间夹着一枚旧硬币]",
             "isAI": true,
             "aiConfig": {

@@ -15,23 +15,7 @@ import reactor.core.publisher.Mono;
 public interface OpenAIService {
 
     /**
-     * 检查指定用户和角色的组合是否存在对话历史。
-     * @param user 用户标识。
-     * @param characterId 角色标识。
-     * @return 如果存在历史记录，则返回`true`，否则返回`false`。
-     */
-    boolean hasHistory(String user, String characterId);
-
-    /**
-     * 基于用户和角色的对话历史，生成并返回一个摘要流。
-     * @param user 用户标识。
-     * @param characterId 角色标识。
-     * @return 一个包含摘要内容的SSE事件流 (`Flux<String>`)。
-     */
-    Flux<String> getSummaryStream(String user, String characterId);
-
-    /**
-     * 将基础聊天请求流式转发到OpenAI，并在转发前处理历史记录存储。
+     * 将基础聊天请求流式转发到OpenAI。
      * @param requestBody 完整的聊天请求体JSON字符串。
      * @return 一个直接来自OpenAI的SSE事件流 (`Flux<String>`)。
      */

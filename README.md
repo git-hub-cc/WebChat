@@ -7,6 +7,9 @@
 
 A feature-rich, modern web chat application built with vanilla JavaScript, HTML, and CSS for the frontend, and Java Spring Boot for the backend. It utilizes WebRTC for direct user-to-user media communication, supporting text, file sharing, voice messages, and real-time audio/video/screen-sharing calls. Initial user discovery and connection negotiation are handled by a WebSocket-based signaling server (implemented in Java Spring Boot). WebRTC communication minimizes reliance on a central server for heavy media data transfer (except for signaling and optional TURN relay services), while AI chat and TTS functionalities interact with external services via a backend proxy. The application deeply integrates themed AI assistant contacts with Text-to-Speech (TTS) capabilities. AI characters possess dynamic context (like daily random events and moods) and support intelligent summarization for long conversations, delivering a more vivid interactive experience.
 
+**Online Demo:**
+https://git-hub-cc.github.io/PPMC/
+
 ## ✨ Features
 
 *   **Core Communication (WebRTC):**

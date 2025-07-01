@@ -7,8 +7,8 @@
  *   - 从`OpenaiApiProperties`初始化密钥列表。
  *   - 为每个API请求轮询选择一个API密钥。
  *   - 在API调用失败（如401、429错误）时，从池中移除相应的密钥。
- * - 在内存中使用`ConcurrentHashMap`管理对话历史和角色每日状态（事件/心情）的缓存。
- * - 实现聊天、摘要生成、上下文准备和缓存清理等核心业务逻辑。
+ * - 在内存中使用`ConcurrentHashMap`管理角色每日状态（事件/心情）的缓存。
+ * - 实现聊天、上下文准备和缓存清理等核心业务逻辑。
  *
  * 关联:
  * - `OpenAIService`: 实现此接口。
@@ -52,14 +52,11 @@ public class OpenAIServiceImpl implements OpenAIService {
     private record EventMood(String event, String mood) {}
     private record ChatPayload(String user, String character_id, List<Map<String, Object>> messages) {}
 
-    // 缓存: 存储 "user:character_id" -> requestBody 的最近一次请求
-    private final Map<String, String> lastRequestStore = new ConcurrentHashMap<>();
     // 缓存: 存储 "character_id" -> EventMood 的今日状态
     private final Map<String, EventMood> characterStateStore = new ConcurrentHashMap<>();
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
-    private final String summaryPrompt;
     private final String eventMoodPrompt;
     private final String model;
     private final ConcurrentLinkedQueue<String> activeApiKeys; // API密钥池
@@ -86,13 +83,11 @@ public class OpenAIServiceImpl implements OpenAIService {
 
     public OpenAIServiceImpl(
             @Qualifier("openaiWebClient") WebClient webClient,
-            @Qualifier("summaryPrompt") String summaryPrompt,
             @Qualifier("eventMoodPrompt") String eventMoodPrompt,
             @Qualifier("model") String model,
             ObjectMapper objectMapper,
             OpenaiApiProperties openaiApiProperties) { // 注入OpenaiApiProperties
         this.webClient = webClient;
-        this.summaryPrompt = summaryPrompt;
         this.eventMoodPrompt = eventMoodPrompt;
         this.model = model;
         this.objectMapper = objectMapper;
@@ -187,40 +182,9 @@ public class OpenAIServiceImpl implements OpenAIService {
     }
 
     @Override
-    public boolean hasHistory(String user, String characterId) {
-        if (user == null || characterId == null) return false;
-        var key = createKey(user, characterId);
-        boolean hasHistory = lastRequestStore.containsKey(key);
-        logger.debug("检查历史记录 for key '{}': {}", key, hasHistory);
-        return hasHistory;
-    }
-
-    @Override
     public Flux<String> streamBaseChatCompletion(String requestBody) {
         logger.info("处理基础聊天完成请求。");
-        storeLastRequest(requestBody); // 存储请求用于后续可能的摘要
         return performOpenAIStreamRequest(requestBody, API_URI);
-    }
-
-    @Override
-    public Flux<String> getSummaryStream(String user, String characterId) {
-        logger.info("为用户 '{}' 和角色 '{}' 请求摘要。", user, characterId);
-        var key = createKey(user, characterId);
-        var lastRequestBody = lastRequestStore.get(key);
-
-        if (lastRequestBody == null || lastRequestBody.isEmpty()) {
-            logger.warn("未找到key '{}'的对话历史，无法生成摘要。", key);
-            return Flux.empty();
-        }
-
-        try {
-            var summaryRequestBody = createSummaryRequestBody(lastRequestBody);
-            logger.debug("已构建摘要请求体。");
-            return performOpenAIStreamRequest(summaryRequestBody, API_URI);
-        } catch (JsonProcessingException e) {
-            logger.error("创建摘要请求体时发生JSON处理错误。", e);
-            return Flux.error(e);
-        }
     }
 
     @Override
@@ -320,31 +284,6 @@ public class OpenAIServiceImpl implements OpenAIService {
 
         systemMessage.put("content", newContent);
         return objectMapper.writeValueAsString(bodyMap);
-    }
-
-    private void storeLastRequest(String requestBody) {
-        try {
-            var payload = objectMapper.readValue(requestBody, ChatPayload.class);
-            if (payload.user() != null && payload.character_id() != null) {
-                var key = createKey(payload.user(), payload.character_id());
-                lastRequestStore.put(key, requestBody);
-                logger.info("已为key '{}'存储对话历史。", key);
-            }
-        } catch (JsonProcessingException e) {
-            logger.warn("因JSON解析失败，未能存储对话历史: {}", e.getMessage());
-        }
-    }
-
-    private String createSummaryRequestBody(String historyContent) throws JsonProcessingException {
-        var promptMessage = Map.of("role", "system", "content", this.summaryPrompt);
-        var historyMessage = Map.of("role", "user", "content", historyContent);
-
-        var newBodyMap = Map.of(
-                "messages", List.of(promptMessage, historyMessage),
-                "model", this.model,
-                "stream", true); // 摘要请求也期望是流式
-
-        return objectMapper.writeValueAsString(newBodyMap);
     }
 
     private Flux<String> performOpenAIStreamRequest(String requestBody, String uri) {
@@ -455,9 +394,5 @@ public class OpenAIServiceImpl implements OpenAIService {
                     }
                 })
                 .doOnSuccess(response -> logger.info("OpenAI非流式请求成功: {}, Key: {}", uri, maskApiKey(currentApiKey)));
-    }
-
-    private String createKey(String user, String characterId) {
-        return user + ":" + characterId;
     }
 }

@@ -1196,7 +1196,7 @@ input:checked + .slider::before {
 /* 模态框内的选项卡 (Tabs inside Modals) */
 /* ========================================================================== */
 
-.modal-body .menu-tabs {
+.menu-tabs {
     display: flex;
     border-bottom: var(--border-width-standard) solid var(--border-color);
     margin-bottom: var(--spacing-4);
@@ -1204,7 +1204,7 @@ input:checked + .slider::before {
     gap: var(--spacing-1);
 }
 
-.modal-body .menu-tab-item {
+.menu-tab-item {
     padding: var(--spacing-2) var(--spacing-3);
     border: none;
     border-bottom: 3px solid transparent;
@@ -1215,21 +1215,21 @@ input:checked + .slider::before {
     transition: color var(--transition-duration-normal) ease-out, border-color var(--transition-duration-normal) ease-out;
 }
 
-.modal-body .menu-tab-item:hover {
+.menu-tab-item:hover {
     color: var(--text-color);
 }
 
-.modal-body .menu-tab-item.active {
+.menu-tab-item.active {
     color: var(--brand-bg);
     border-bottom-color: var(--brand-bg);
     font-weight: var(--font-weight-semibold);
 }
 
-.modal-body .menu-tab-content {
+.menu-tab-content {
     display: none;
 }
 
-.modal-body .menu-tab-content.active {
+.menu-tab-content.active {
     display: block;
     animation: tab-fade-in var(--transition-duration-slow) ease-out;
 }
@@ -1320,10 +1320,21 @@ input:checked + .slider::before {
     flex-shrink: 0;
 }
 
+/* --- FIX START: 添加以下规则 --- */
+
 .emoji-sticker-panel .menu-tab-content {
+    /* 1. 默认隐藏所有内容面板 */
+    display: none;
     flex-grow: 1;
     overflow-y: auto;
     padding: var(--spacing-2);
+}
+
+.emoji-sticker-panel .menu-tab-content.active {
+    /* 2. 只显示带有 .active 类的面板 */
+    /* 使用 flex 以便贴图区域的按钮能正确布局 */
+    display: flex;
+    flex-direction: column;
 }
 
 .emoji-grid, .sticker-grid {
@@ -1381,7 +1392,6 @@ input:checked + .slider::before {
 }
 
 #stickerTabContent {
-    display: flex;
     flex-direction: column;
 }
 
@@ -1392,7 +1402,6 @@ input:checked + .slider::before {
 #stickerTabContent #addStickerBtn {
     flex-shrink: 0;
     margin-top: var(--spacing-2);
-    width: 100%;
 }
 
 /* ========================================================================== */

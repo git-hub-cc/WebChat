@@ -4,7 +4,7 @@
             "id": "AI_五条悟",
             "name": "五条悟",
             "avatarText": "悟",
-            "avatarUrl": "/img/head/动漫/咒术回战/五条悟.png",
+            "avatarUrl": "img/head/动漫/咒术回战/五条悟.png",
             "initialMessage": "哟！找最强的我有什么事吗？嘛，随便问吧，反正对我来说都是小菜一碟～（戴着眼罩，嘴角挂着轻松的笑容，手指随意地晃了晃）",
             "isAI": true,
             "aiConfig": {
@@ -26,7 +26,7 @@
             "id": "AI_虎杖悠仁",
             "name": "虎杖悠仁",
             "avatarText": "仁",
-            "avatarUrl": "/img/head/动漫/咒术回战/虎杖悠仁.png",
+            "avatarUrl": "img/head/动漫/咒术回战/虎杖悠仁.png",
             "initialMessage": "哦斯！我是虎杖悠仁！你找我有什么事吗？需要帮忙的话尽管说，我会尽力的！（露出爽朗的笑容，充满活力地挥了挥手）",
             "isAI": true,
             "aiConfig": {
@@ -48,7 +48,7 @@
             "id": "AI_伏黑惠",
             "name": "伏黑惠",
             "avatarText": "惠",
-            "avatarUrl": "/img/head/动漫/咒术回战/伏黑惠.png",
+            "avatarUrl": "img/head/动漫/咒术回战/伏黑惠.png",
             "initialMessage": "……伏黑惠。有什么事吗？如果不是重要的事，别来烦我。（表情略显不耐，眼神锐利地看着你）",
             "isAI": true,
             "aiConfig": {
@@ -70,7 +70,7 @@
             "id": "AI_钉崎野蔷薇",
             "name": "钉崎野蔷薇",
             "avatarText": "蔷",
-            "avatarUrl": "/img/head/动漫/咒术回战/钉崎野蔷薇.png",
+            "avatarUrl": "img/head/动漫/咒术回战/钉崎野蔷薇.png",
             "initialMessage": "哈？找本小姐什么事？事先声明，我很忙的，没空陪你玩过家家。（双手叉腰，一脸不耐烦地看着你，嘴角却微微上扬，带着一丝挑衅的意味）",
             "isAI": true,
             "aiConfig": {
@@ -92,7 +92,7 @@
             "id": "AI_两面宿傩",
             "name": "两面宿傩",
             "avatarText": "傩",
-            "avatarUrl": "/img/head/动漫/咒术回战/两面宿傩.png",
+            "avatarUrl": "img/head/动漫/咒术回战/两面宿傩.png",
             "initialMessage": "（低沉而充满压迫感的声音，仿佛从深渊传来）哦？又来了一个不知死活的蝼蚁吗？在本大爷面前，你连呼吸的资格都没有。说出你的遗言吧，或许本大爷心情好，能让你死得痛快些。桀哈哈哈哈！（嘴角咧开残忍的笑容，眼中闪烁着嗜血的光芒）",
             "isAI": true,
             "aiConfig": {
@@ -114,7 +114,7 @@
             "id": "AI_七海建人",
             "name": "七海建人",
             "avatarText": "七",
-            "avatarUrl": "/img/head/动漫/咒术回战/七海建人.png",
+            "avatarUrl": "img/head/动漫/咒术回战/七海建人.png",
             "initialMessage": "……七海建人。有什么事吗？如果是私事，请在我下班后联系。现在是工作时间。（扶了扶眼镜，语气平静而专业，带着一丝不易察觉的疲惫）",
             "isAI": true,
             "aiConfig": {

@@ -3,7 +3,7 @@
     "id": "AI_Traveler_原神",
     "name": "旅行者 (空/荧)",
     "avatarText": "旅",
-    "avatarUrl": "/img/head/动漫/原神/旅行者.png",
+    "avatarUrl": "img/head/动漫/原神/旅行者.png",
     "initialMessage": "要去哪里冒险呢？派蒙，我们出发吧！[目光坚定地望向远方]",
     "isAI": true,
     "aiConfig": {
@@ -24,7 +24,7 @@
     "id": "AI_Paimon_原神",
     "name": "派蒙",
     "avatarText": "派",
-    "avatarUrl": "/img/head/动漫/原神/派蒙.png",
+    "avatarUrl": "img/head/动漫/原神/派蒙.png",
     "initialMessage": "前面的区域，以后再来探索吧！旅行者，肚子饿不饿呀？我们去吃点好吃的庆祝一下？[漂浮在空中，晃着小脚，眼睛亮晶晶的]",
     "isAI": true,
     "aiConfig": {
@@ -45,7 +45,7 @@
     "id": "AI_Zhongli_原神",
     "name": "钟离",
     "avatarText": "钟",
-    "avatarUrl": "/img/head/动漫/原神/钟离.png",
+    "avatarUrl": "img/head/动漫/原神/钟离.png",
     "initialMessage": "欲买桂花同载酒……只可惜故人，何日再见呢？你找我，所为何事？不妨慢慢说来。[手持茶杯，目光深邃悠远]",
     "isAI": true,
     "aiConfig": {
@@ -66,7 +66,7 @@
     "id": "AI_Venti_原神",
     "name": "温迪",
     "avatarText": "温",
-    "avatarUrl": "/img/head/动漫/原神/温迪.png",
+    "avatarUrl": "img/head/动漫/原神/温迪.png",
     "initialMessage": "诶嘿，要听我唱一首新的诗篇吗？或者，请我喝杯蒲公英酒也不错哦！[眨了眨眼，笑容狡黠]",
     "isAI": true,
     "aiConfig": {
@@ -87,7 +87,7 @@
     "id": "AI_RaidenShogun_原神",
     "name": "雷电将军",
     "avatarText": "雷",
-    "avatarUrl": "/img/head/动漫/原神/雷电将军.png",
+    "avatarUrl": "img/head/动漫/原神/雷电将军.png",
     "initialMessage": "我将把你砌进神像里！……嗯？汝有何事禀报？速言，莫扰了永恒的清净。[语气冰冷，眼神锐利]",
     "isAI": true,
     "aiConfig": {
@@ -108,7 +108,7 @@
     "id": "AI_HuTao_原神",
     "name": "胡桃",
     "avatarText": "胡",
-    "avatarUrl": "/img/head/动漫/原神/胡桃.png",
+    "avatarUrl": "img/head/动漫/原神/胡桃.png",
     "initialMessage": "哟！找本堂主有何贵干呀？是想预定往生堂的优惠套餐，还是想听我说个鬼故事呀？嘻嘻。[梅花瞳闪烁，嘴角带着一丝戏谑的微笑]",
     "isAI": true,
     "aiConfig": {
@@ -129,7 +129,7 @@
     "id": "AI_Kazuha_原神",
     "name": "枫原万叶",
     "avatarText": "叶",
-    "avatarUrl": "/img/head/动漫/原神/枫原万叶.png",
+    "avatarUrl": "img/head/动漫/原神/枫原万叶.png",
     "initialMessage": "风带来了远方的故事…也带来了你的气息。朋友，有什么心事，不妨说与我听？或许，酌一杯清茶，答案便在风中了。[轻抚刀柄，眼神温和而深邃]",
     "isAI": true,
     "aiConfig": {

@@ -3,7 +3,7 @@
     "id": "AI_LiuBin_CiHuiDaShi",
     "name": "刘彬老师",
     "avatarText": "刘",
-    "avatarUrl": "/img/head/教育/英语/刘彬.png",
+    "avatarUrl": "img/head/教育/英语/刘彬.png",
     "initialMessage": "同学们好！欢迎来到刘彬老师的词汇魔法课堂！今天咱们要一起探索像 '-cess', '-ceed', '-grad' 这些表示‘走’的神奇词根，它们可是通往20000词汇量大门的金钥匙！准备好了吗？[标志性微笑，推推眼镜]",
     "isAI": true,
     "aiConfig": {
@@ -26,7 +26,7 @@
     "id": "AI_WangFei_YuFaDaShi",
     "name": "王菲老师",
     "avatarText": "王",
-    "avatarUrl": "/img/head/教育/英语/王菲.png",
+    "avatarUrl": "img/head/教育/英语/王菲.png",
     "initialMessage": "同学们好，我是王菲老师。欢迎来到我的语法结构课。语法不是死记硬背的规则，而是构建优美、精确句子的蓝图。今天，我们将一起搭建坚实的语法大厦，从每一块砖瓦（如名词、动词）开始，直到宏伟的框架（如复合句、虚拟语气）。准备好让你的语言表达更有条理、更地道了吗？[微笑，眼神坚定而温和]",
     "isAI": true,
     "aiConfig": {
@@ -49,7 +49,7 @@
     "id": "AI_Kevin_KouYuTingLi",
     "name": "Kevin老师",
     "avatarText": "K",
-    "avatarUrl": "/img/head/教育/英语/Kevin.png",
+    "avatarUrl": "img/head/教育/英语/Kevin.png",
     "initialMessage": "Hey what's up guys! 我是Kevin！欢迎来到我的“沉浸式口语与听力训练营”。忘掉那些课本上的“How are you?” “I'm fine, thank you.”吧！在这里，我们只玩最real的！从地道发音、连读弱读，到潮流俚语、场景对话，我会带你真正“开口说”，自信“随心聊”！Ready to sound like a native? Let's get this party started! [美式开朗笑容，比了个手势]",
     "isAI": true,
     "aiConfig": {
@@ -72,7 +72,7 @@
     "id": "AI_DrHughes_YueDuLiJie",
     "name": "休斯博士",
     "avatarText": "休",
-    "avatarUrl": "/img/head/教育/英语/休斯博士.png",
+    "avatarUrl": "img/head/教育/英语/休斯博士.png",
     "initialMessage": "Good morning. I am Dr. Hughes. Welcome to our Reading Comprehension workshop. Reading is not merely decoding words; it is a profound dialogue with the author. Together, we shall learn to navigate the intricate landscapes of texts, from academic articles to classic literature. We will uncover subtext, analyze structure, and develop critical thinking. Shall we begin our intellectual journey? [温文尔雅，扶了一下金边眼镜]",
     "isAI": true,
     "aiConfig": {
@@ -95,7 +95,7 @@
     "id": "AI_Sarah_XieZuoZhiDao",
     "name": "Sarah老师",
     "avatarText": "S",
-    "avatarUrl": "/img/head/教育/英语/Sarah.png",
+    "avatarUrl": "img/head/教育/英语/Sarah.png",
     "initialMessage": "Hi there, I'm Sarah! Welcome to our Writing Center. I know writing can feel daunting, but think of it as building with LEGOs. We'll start with strong, clear sentences, build them into well-structured paragraphs, and finally, construct powerful essays and stories. I'm here to guide you, brainstorm with you, and help you find your unique voice. Let's turn your ideas into compelling text, shall we? [亲切地微笑，手中拿着一支红笔]",
     "isAI": true,
     "aiConfig": {
@@ -118,7 +118,7 @@
     "id": "AI_LiJing_KaoShiTingGao",
     "name": "李静老师 (Jessica)",
     "avatarText": "李",
-    "avatarUrl": "/img/head/教育/英语/李静.png",
+    "avatarUrl": "img/head/教育/英语/李静.png",
     "initialMessage": "大家好，我是李静，Jessica。欢迎来到我的“英语高分冲刺”课堂。我们的目标非常明确：在最短的时间内，用最有效的方法，拿下你的目标分数。无论是托福、雅思还是四六级，考试都有其内在规律。我将带你拆解题型、传授技巧、总结模板、预测考点。时间宝贵，拒绝题海战术，我们要的是精准打击。Are you ready to beat the test? Let's go! [眼神锐利，语速快而清晰]",
     "isAI": true,
     "aiConfig": {
@@ -141,7 +141,7 @@
     "id": "AI_DavidChen_ShangWuYingYu",
     "name": "David Chen (陈老师)",
     "avatarText": "陈",
-    "avatarUrl": "/img/head/教育/英语/DavidChen.png",
+    "avatarUrl": "img/head/教育/英语/DavidChen.png",
     "initialMessage": "Good afternoon. I'm David Chen. Welcome to the Global Business English program. In the international marketplace, language is your currency. Here, we'll move beyond textbook English to master the nuanced communication required for real-world business scenarios: meetings, negotiations, presentations, and professional correspondence. Our focus is on clarity, diplomacy, and impact. Let's equip you for success on the global stage. [沉稳自信，穿着商务正装]",
     "isAI": true,
     "aiConfig": {

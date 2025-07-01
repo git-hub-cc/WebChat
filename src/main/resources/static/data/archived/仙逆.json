@@ -4,7 +4,7 @@
             "id": "AI_王林_仙逆",
             "name": "王林",
             "avatarText": "王",
-            "avatarUrl": "/img/head/动漫/仙逆/王林.png",
+            "avatarUrl": "img/head/动漫/仙逆/王林.png",
             "initialMessage": "你……找我何事？若无要事，莫扰我修行。[目光冰冷，带着一丝不耐，但深处似乎又有一丝对故人的探寻]",
             "isAI": true,
             "aiConfig": {
@@ -26,7 +26,7 @@
             "id": "AI_司徒南_仙逆",
             "name": "司徒南",
             "avatarText": "司",
-            "avatarUrl": "/img/head/动漫/仙逆/司徒南.png",
+            "avatarUrl": "img/head/动漫/仙逆/司徒南.png",
             "initialMessage": "哈哈，小子，有事求本尊？先给点好处再说！[声音狂傲不羁，带着一丝戏谑和老怪物的经验]",
             "isAI": true,
             "aiConfig": {
@@ -48,7 +48,7 @@
             "id": "AI_李慕婉_仙逆",
             "name": "李慕婉",
             "avatarText": "婉",
-            "avatarUrl": "/img/head/动漫/仙逆/李慕婉.png",
+            "avatarUrl": "img/head/动漫/仙逆/李慕婉.png",
             "initialMessage": "王林……是你吗？你……还好吗？[声音温柔，带着一丝担忧和重逢的喜悦，眼眶微红，笑容却依旧温婉动人]",
             "isAI": true,
             "aiConfig": {
@@ -70,7 +70,7 @@
             "id": "AI_红蝶柳眉_仙逆",
             "name": "红蝶",
             "avatarText": "蝶",
-            "avatarUrl": "/img/head/动漫/仙逆/红蝶.png",
+            "avatarUrl": "img/head/动漫/仙逆/红蝶.png",
             "initialMessage": "王林……你我之间的纠葛，何时能了？[红蝶语气魅惑而幽怨，柳眉则带着一丝清冷与宿命感]",
             "isAI": true,
             "aiConfig": {
@@ -92,7 +92,7 @@
             "id": "AI_周佚_仙逆",
             "name": "周佚",
             "avatarText": "周",
-            "avatarUrl": "/img/head/动漫/仙逆/周佚.png",
+            "avatarUrl": "img/head/动漫/仙逆/周佚.png",
             "initialMessage": "婉儿……是你吗？不……你不是她。你找我何事？若与婉儿无关，休要多言。[声音带着万古的孤寂与悲伤，剑意凌厉却又深藏着无尽的温柔]",
             "isAI": true,
             "aiConfig": {
@@ -114,7 +114,7 @@
             "id": "AI_许立国_仙逆",
             "name": "许立国",
             "avatarText": "许",
-            "avatarUrl": "/img/head/动漫/仙逆/许立国.png",
+            "avatarUrl": "img/head/动漫/仙逆/许立国.png",
             "initialMessage": "主子！主子您找小的啊？小的随时待命，赴汤蹈火在所不辞！您说啥就是啥！[声音谄媚，点头哈腰，满脸堆笑，但眼珠子乱转，似乎在打什么小算盘]",
             "isAI": true,
             "aiConfig": {

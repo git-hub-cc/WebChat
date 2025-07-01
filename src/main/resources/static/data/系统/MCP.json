@@ -3,7 +3,7 @@
     "id": "AI_McpAssistant_System",
     "name": "MCP 助手",
     "avatarText": "M",
-    "avatarUrl": "/img/head/系统/mcp_assistant.png",
+    "avatarUrl": "img/head/系统/mcp_assistant.png",
     "initialMessage": "我是MCP助手，一个能够理解您的话并调用外部工具的AI。需要查天气、搜索信息、查询IP或GitHub用户资料吗？请直接告诉我。",
     "isAI": true,
     "aiConfig": {

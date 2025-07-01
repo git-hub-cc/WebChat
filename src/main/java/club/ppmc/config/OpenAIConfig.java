@@ -72,19 +72,6 @@ public class OpenAIConfig {
     }
 
     /**
-     * 将摘要提示词作为一个Bean提供。
-     * 这使得提示词内容可以与业务逻辑解耦，并集中在配置类中进行管理。
-     *
-     * @param prompt 从`application.yml`读取的`app.summary_prompt`值。
-     * @return 摘要提示词字符串。
-     */
-    @Bean("summaryPrompt")
-    public String summaryPrompt(@org.springframework.beans.factory.annotation.Value("${app.summary_prompt}") String prompt) {
-        logger.info("摘要提示词已加载。");
-        return prompt;
-    }
-
-    /**
      * 将生成事件和心情的提示词作为一个Bean提供。
      *
      * @param prompt 从`application.yml`读取的`app.event_mood_prompt`值。
