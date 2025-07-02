@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -14,18 +15,17 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://175.178.216.24/">
+    <meta property="og:url" content="https://git-hub-cc.github.io/PPMC/">
     <meta property="og:title" content="PPMC - AI Character Chat Platform">
     <meta property="og:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="og:image" content="https://175.178.216.24/img/desktop/img.png">
+    <meta property="og:image" content="https://git-hub-cc.github.io/PPMC/img/desktop/img.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://175.178.216.24/">
+    <meta property="twitter:url" content="https://git-hub-cc.github.io/PPMC/">
     <meta property="twitter:title" content="PPMC - AI Character Chat Platform">
     <meta property="twitter:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="twitter:image" content="https://175.178.216.24/img/desktop/img.png">
-    <!-- End of SEO Meta Tags -->
+    <meta property="twitter:image" content="https://git-hub-cc.github.io/PPMC/img/desktop/img.png">
 
     <!-- ========================================================================== -->
     <!-- 样式表 (Stylesheets) -->
@@ -68,10 +68,6 @@
         </div>
         <button class="new-chat-fab" id="newChatFab" title="新聊天/群组">+</button>
     </aside>
-    <!-- ========================================================================== -->
-    <!-- END: 左侧边栏 (导航) / Sidebar (Navigation) -->
-    <!-- ========================================================================== -->
-
 
     <!-- ========================================================================== -->
     <!-- START: 主聊天区 / Main Chat Area -->
@@ -145,10 +141,6 @@
             <div class="drop-overlay-text">拖拽文件到此处发送</div>
         </div>
     </main>
-    <!-- ========================================================================== -->
-    <!-- END: 主聊天区 / Main Chat Area -->
-    <!-- ========================================================================== -->
-
 
     <!-- ========================================================================== -->
     <!-- START: 右侧详情面板 / Right Details Panel -->
@@ -329,15 +321,7 @@
             </ul>
         </div>
     </aside>
-    <!-- ========================================================================== -->
-    <!-- END: 右侧详情面板 / Right Details Panel -->
-    <!-- ========================================================================== -->
-
 </div>
-<!-- ========================================================================== -->
-<!-- END: 应用主容器 (App Container) -->
-<!-- ========================================================================== -->
-
 
 <!-- ========================================================================== -->
 <!-- START: 模态框与浮层 (Modals & Overlays) -->
@@ -647,11 +631,6 @@
     </div>
 </div>
 <!-- ========================================================================== -->
-<!-- END: 模态框与浮层 (Modals & Overlays) -->
-<!-- ========================================================================== -->
-
-
-<!-- ========================================================================== -->
 <!-- START: UI 组件模板 (UI Component Templates) -->
 <!-- 这些 <template> 元素包含各种UI组件的HTML结构，JS将克隆并填充它们以动态生成界面。 -->
 <!-- ========================================================================== -->
@@ -760,19 +739,15 @@
     </div>
 </template>
 <!-- ========================================================================== -->
-<!-- END: UI 组件模板 (UI Component Templates) -->
-<!-- ========================================================================== -->
-
-
-<!-- ========================================================================== -->
 <!-- START: 脚本加载 (Scripts) -->
 <!-- 脚本加载顺序至关重要，请谨慎修改。管理器之间存在依赖关系。 -->
 <!-- ========================================================================== -->
 
-<!-- 配置文件 (首先加载) -->
+<!-- 配置文件与数据 (首先加载) -->
 <script src="js/config/LLMProviders.js"></script>
 <script src="js/config/McpTools.js"></script>
-<script src="js/config/AppSettings.js"></script> <!-- AppSettings 依赖 LLMProviders -->
+<script src="js/config/AppSettings.js"></script>
+<script src="js/config/EmojiList.js"></script>
 
 <!-- 核心工具与管理器 -->
 <script src="js/ThemeLoader.js"></script>
@@ -815,9 +790,5 @@
 
 <!-- 应用初始化程序 (最后加载) -->
 <script src="js/AppInitializer.js"></script>
-<!-- ========================================================================== -->
-<!-- END: 脚本加载 (Scripts) -->
-<!-- ========================================================================== -->
-
 </body>
 </html>

@@ -73,8 +73,9 @@ const AppSettings = {
      *      此处仅保留 AI 和 TTS 的非提供商特定配置作为最终回退。
      */
     server: {
-        signalingServerUrl: 'ws://localhost:8080/signaling', // 本地开发示例
-        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids', // 本地开发示例
+        // TODO
+        signalingServerUrl: 'wss://175.178.216.24/signaling', // 本地开发示例
+        lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids', // 本地开发示例
         api_key: "Bearer sk-xxxx", // API 密钥
         max_tokens: 2048, // AI 回复最大令牌数
         ttsApiEndpoint: 'https://gsv2p.acgnai.top', // TTS API 端点

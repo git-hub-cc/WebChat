@@ -10,7 +10,7 @@ const LLMProviders = {
     // TODO
     "ppmc": {
         "label": "PPMC",
-        "defaultEndpoint": "http://localhost:8080/v1/chat/completions",
+        "defaultEndpoint": "https://175.178.216.24/v1/chat/completions",
         "defaultModel": "qwen-turbo",
         "models": [
             { "key": "qwen-turbo", "label": "Qwen Turbo" },
@@ -33,32 +33,21 @@ const LLMProviders = {
         "defaultEndpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
         "defaultModel": "qwen-turbo",
         "models": [
-            // --- 主力模型 (Aliases) ---
             { "key": "qwen-turbo", "label": "Qwen Turbo" },
             { "key": "qwen-plus", "label": "Qwen Plus" },
             { "key": "qwen-max", "label": "Qwen Max" },
             { "key": "qwen-long", "label": "Qwen Long" },
-
-            // --- Qwen3 系列 ---
             { "key": "qwen3-32b", "label": "Qwen3 32B" },
             { "key": "qwen3-14b", "label": "Qwen3 14B" },
             { "key": "qwen3-8b", "label": "Qwen3 8B" },
-
-            // --- Qwen2 系列 ---
             { "key": "qwen2-72b-instruct", "label": "Qwen2 72B Instruct" },
             { "key": "qwen2-57b-a14b-instruct", "label": "Qwen2 57B Instruct" },
             { "key": "qwen2-7b-instruct", "label": "Qwen2 7B Instruct" },
-
-            // --- Qwen1.5 系列 ---
             { "key": "qwen1.5-110b-chat", "label": "Qwen1.5 110B Chat" },
             { "key": "qwen1.5-72b-chat", "label": "Qwen1.5 72B Chat" },
             { "key": "qwen1.5-32b-chat", "label": "Qwen1.5 32B Chat" },
-
-            // --- 多模态系列 (Vision) ---
             { "key": "qwen-vl-max", "label": "Qwen VL Max" },
             { "key": "qwen-vl-plus", "label": "Qwen VL Plus" },
-
-            // --- 第三方模型 (Third-party) ---
             { "key": "deepseek-v3", "label": "DeepSeek V3" },
             { "key": "deepseek-r1", "label": "DeepSeek R1" }
         ]
