@@ -217,13 +217,17 @@ const Store = {
         // 1. 根据筛选条件，收集联系人
         if (filter === 'all' || filter === 'contacts') {
             Object.values(UserManager.contacts).forEach(contact => {
-                if (contact.name.toLowerCase().includes(lowerCaseQuery)) {
-                    items.push({
-                        id: contact.id, name: contact.name, avatarText: contact.avatarText, avatarUrl: contact.avatarUrl,
-                        lastMessage: ChatManager._formatLastMessagePreview(contact.id, contact.lastMessage, '暂无消息'),
-                        lastTime: contact.lastTime, unread: contact.unread || 0, type: 'contact',
-                        online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id), isSpecial: contact.isSpecial
-                    });
+               // BUGFIX: 只显示非AI联系人或属于当前主题的特殊(AI)联系人
+                const isThemeContact = UserManager.isSpecialContactInCurrentTheme(contact.id);
+                if (!contact.isAI || isThemeContact) {
+                    if (contact.name.toLowerCase().includes(lowerCaseQuery)) {
+                        items.push({
+                            id: contact.id, name: contact.name, avatarText: contact.avatarText, avatarUrl: contact.avatarUrl,
+                            lastMessage: ChatManager._formatLastMessagePreview(contact.id, contact.lastMessage, '暂无消息'),
+                            lastTime: contact.lastTime, unread: contact.unread || 0, type: 'contact',
+                            online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id), isSpecial: contact.isSpecial
+                        });
+                    }
                 }
             });
         }
