@@ -740,12 +740,6 @@
 </template>
 
 <!-- index.html (新增部分) -->
-<template id="message-sticker-template">
-    <div class="file-info sticker-info">
-        <div class="thumbnail-placeholder"></div>
-    </div>
-</template>
-
 <template id="group-ai-prompt-editor-template">
     <div class="ai-prompt-editor-item">
         <h5 class="ai-name-header">AI角色: <span class="ai-name"></span></h5>
@@ -819,6 +813,13 @@
 <script src="js/config/McpTools.js"></script>
 <script src="js/config/AppSettings.js"></script>
 <script src="js/config/EmojiList.js"></script>
+<script src="js/config/ThemeList.js"></script>
+
+<!-- 专用处理器/处理器 -->
+<script src="js/handler/DataChannelHandler.js"></script>
+<script src="js/handler/AiApiHandler.js"></script>
+<script src="js/handler/TtsApiHandler.js"></script>
+<script src="js/handler/VideoCallHandler.js"></script>
 
 <!-- 核心工具与管理器 -->
 <script src="js/ThemeLoader.js"></script>
@@ -838,11 +839,6 @@
 <script src="js/CharacterCardManager.js"></script>
 <script src="js/MemoryBookManager.js"></script>
 <script src="js/PeopleLobbyManager.js"></script>
-
-<!-- 专用处理器/处理器 -->
-<script src="js/handler/DataChannelHandler.js"></script>
-<script src="js/handler/AiApiHandler.js"></script>
-<script src="js/handler/TtsApiHandler.js"></script>
 
 <!-- UI 组件管理器 -->
 <script src="js/UI/EmojiStickerUIManager.js"></script>

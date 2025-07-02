@@ -170,18 +170,6 @@ ${conversationTranscript}
     sendAiMessage: async function(targetId, contact, messageText) {
         const chatBox = document.getElementById('chatBox');
 
-        const thinkingMsgId = `thinking_${Date.now()}`;
-        const thinkingMessage = { id: thinkingMsgId, type: 'system', content: `${contact.name} 正在思考...`, timestamp: new Date().toISOString(), sender: targetId, isThinking: true };
-        MessageManager.displayMessage(thinkingMessage, false);
-        let thinkingElement = chatBox.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
-
-        const removeThinkingMessage = () => {
-            if (thinkingElement && thinkingElement.parentNode) {
-                thinkingElement.remove();
-                thinkingElement = null;
-            }
-        };
-
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
@@ -237,21 +225,12 @@ ${conversationTranscript}
                         toolCall = parsedContent.tool_call;
                     }
                 } catch (e) {
-                    removeThinkingMessage();
                     const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
                     return;
                 }
                 if (toolCall) {
-                    removeThinkingMessage();
-                    const toolUseMsgId = `system_tool_${Date.now()}`;
-                    const toolUseMsg = { id: toolUseMsgId, type: 'system', content: `正在调用工具: ${toolCall.name}...`, timestamp: new Date().toISOString(), sender: targetId, isThinking: true };
-                    MessageManager.displayMessage(toolUseMsg, false);
-                    let toolUseMsgElement = chatBox.querySelector(`.message[data-message-id="${toolUseMsgId}"]`);
                     const toolResult = await this._executeMcpTool(toolCall.name, toolCall.arguments);
-                    if (toolUseMsgElement && toolUseMsgElement.parentNode) {
-                        toolUseMsgElement.remove();
-                    }
                     if (toolResult.error) {
                         throw new Error(`工具调用错误: ${toolResult.error}`);
                     }
@@ -286,14 +265,11 @@ ${conversationTranscript}
                     );
                     return;
                 } else {
-                    removeThinkingMessage();
                     const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
                     return;
                 }
             }
-
-            removeThinkingMessage();
 
             const recentMessages = chatHistory;
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
@@ -364,7 +340,6 @@ ${conversationTranscript}
             );
 
         } catch (error) {
-            removeThinkingMessage();
             Utils.log(`与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
@@ -383,16 +358,6 @@ ${conversationTranscript}
         }
 
         const chatBox = document.getElementById('chatBox');
-        const thinkingMsgId = `group_thinking_${aiContactId}_${Date.now()}`;
-        const thinkingMessage = {
-            id: thinkingMsgId, type: 'system',
-            content: `${aiContact.name} (在群组 ${group.name} 中) 正在思考...`,
-            timestamp: new Date().toISOString(),
-            sender: aiContactId,
-            groupId: groupId,
-            isThinking: true
-        };
-        ChatManager.addMessage(groupId, thinkingMessage);
 
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
@@ -425,8 +390,7 @@ ${conversationTranscript}
 
             const recentMessages = groupChatHistory.filter(msg =>
                 new Date(msg.timestamp).getTime() > timeThreshold &&
-                (msg.type === 'text' || (msg.type === 'system' && !msg.isThinking)) &&
-                msg.id !== thinkingMsgId &&
+                (msg.type === 'text' || (msg.type === 'system')) &&
                 msg.id !== triggeringMessageId
             );
 
@@ -466,9 +430,6 @@ ${conversationTranscript}
                 character_id: aiContactId
             };
             Utils.log(`发送到群组 AI (${aiContact.name} in ${group.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
-
-            const thinkingElementToRemove = document.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
-            if (thinkingElementToRemove && thinkingElementToRemove.parentNode) thinkingElementToRemove.remove();
 
             const aiResponseMessageId = `group_ai_msg_${aiContactId}_${Date.now()}`;
             let fullAiResponseContent = "";
@@ -521,9 +482,6 @@ ${conversationTranscript}
             );
 
         } catch (error) {
-            const thinkingElementToRemove = document.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
-            if (thinkingElementToRemove && thinkingElementToRemove.parentNode) thinkingElementToRemove.remove();
-
             Utils.log(`在群组 (${group.name}) 中与 AI (${aiContact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`错误: 无法从 ${aiContact.name} (群组内) 获取回复。 ${error.message}`, 'error');
             const errorResponseMessage = {
@@ -573,7 +531,7 @@ ${conversationTranscript}
                 () => {
                     const trimmedContent = fullStreamedContent.trim();
                     Utils.log(`AI 健康检查流式响应内容: "${trimmedContent}" (长度: ${trimmedContent.length})`, Utils.logLevels.DEBUG);
-                    if (trimmedContent.toLowerCase().includes("ok") && trimmedContent.length < 10) {
+                    if (trimmedContent.toLowerCase().includes("ok") && trimmedContent.length < 200) {
                         Utils.log("AiApiHandler: AI 服务健康检查成功 (流式)。", Utils.logLevels.INFO);
                         healthCheckPassed = true;
                     } else {
@@ -588,14 +546,21 @@ ${conversationTranscript}
             return false;
         }
     },
-    handleAiConfigChange: async function() {
+    handleAiConfigChange: async function () {
         Utils.log("AiApiHandler: AI 配置已更改，正在重新检查服务健康状况...", Utils.logLevels.INFO);
+        NotificationUIManager.showNotification("AI 配置已更新，正在检查服务状态...", "info");
         try {
             const isHealthy = await this.checkAiServiceHealth();
             UserManager.updateAiServiceStatus(isHealthy);
+            if (isHealthy) {
+                NotificationUIManager.showNotification("AI 服务连接成功！", "success");
+            } else {
+                NotificationUIManager.showNotification("AI 服务连接失败。请检查您的设置。", "error");
+            }
         } catch (e) {
             Utils.log("处理 AI 配置变更时，健康检查出错: " + e.message, Utils.logLevels.ERROR);
             UserManager.updateAiServiceStatus(false);
+            NotificationUIManager.showNotification("检查 AI 服务状态时发生错误。", "error");
         }
     }
 };

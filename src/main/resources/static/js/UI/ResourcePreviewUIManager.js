@@ -31,6 +31,7 @@ const ResourcePreviewUIManager = {
     _isResourceLoading: false,
     _resourceScrollListenerAttached: false,
     _boundHandleResourceGridScroll: null,
+    _scrollableContainerEl: null, // 新增：存储可滚动的父容器
     _lastFetchWasEmptySearch: false,
 
     /**
@@ -268,7 +269,21 @@ const ResourcePreviewUIManager = {
         itemEl.dataset.messageId = message.id;
         timestampEl.textContent = Utils.formatDate(new Date(message.timestamp), false);
 
-        itemEl.addEventListener('click', () => { /* ... (点击事件逻辑不变) ... */ });
+        itemEl.addEventListener('click', () => {
+            if (typeof ChatAreaUIManager !== 'undefined' && ChatAreaUIManager.scrollToMessage) {
+                ChatAreaUIManager.scrollToMessage(message.id);
+            }
+            // On mobile, also hide details panel and show chat area for better UX
+            const isMobileView = window.innerWidth <= 768;
+            if (isMobileView) {
+                if (typeof DetailsPanelUIManager !== 'undefined') {
+                    DetailsPanelUIManager.hideSidePanel();
+                }
+                if (typeof LayoutUIManager !== 'undefined') {
+                    LayoutUIManager.showChatAreaLayout();
+                }
+            }
+        });
 
         if (this._currentResourceType === 'imagery') {
             const placeholderDiv = document.createElement('div');
@@ -312,9 +327,14 @@ const ResourcePreviewUIManager = {
      * 处理资源网格的滚动事件。
      */
     _handleResourceGridScroll: function() {
-        if (!this.resourceGridContainerEl || this._isResourceLoading || this._currentResourceType === 'date') return;
-        const { scrollTop, scrollHeight, clientHeight } = this.resourceGridContainerEl;
-        if (scrollHeight - scrollTop - clientHeight < 100) {
+        if (!this._scrollableContainerEl || !this.resourceGridContainerEl || this._isResourceLoading || this._currentResourceType === 'date') return;
+
+        const scrollableAreaRect = this._scrollableContainerEl.getBoundingClientRect();
+        const gridRect = this.resourceGridContainerEl.getBoundingClientRect();
+        const threshold = AppSettings.ui.resourcePreviewScrollThreshold || 150;
+
+        // 当网格的底部距离可滚动区域的底部小于阈值时，加载更多
+        if (gridRect.bottom <= scrollableAreaRect.bottom + threshold) {
             this._loadMoreResources(false);
         }
     },
@@ -324,9 +344,16 @@ const ResourcePreviewUIManager = {
      * 附加资源网格的滚动事件监听器。
      */
     _attachResourceScrollListener: function() {
-        if (this.resourceGridContainerEl && !this._resourceScrollListenerAttached && this._currentResourceType !== 'date') {
-            this.resourceGridContainerEl.addEventListener('scroll', this._boundHandleResourceGridScroll);
+        if (this._resourceScrollListenerAttached) return;
+
+        // 找到正确的滚动容器
+        this._scrollableContainerEl = document.getElementById('detailsPanelContent');
+
+        if (this._scrollableContainerEl && this._currentResourceType !== 'date') {
+            this._scrollableContainerEl.addEventListener('scroll', this._boundHandleResourceGridScroll);
             this._resourceScrollListenerAttached = true;
+        } else if (!this._scrollableContainerEl) {
+            Utils.log("ResourcePreviewUIManager: _attachResourceScrollListener 未能找到滚动容器 #detailsPanelContent。", Utils.logLevels.WARN);
         }
     },
 
@@ -335,9 +362,10 @@ const ResourcePreviewUIManager = {
      * 解绑资源网格的滚动事件监听器。
      */
     _detachResourceScrollListener: function() {
-        if (this.resourceGridContainerEl && this._resourceScrollListenerAttached) {
-            this.resourceGridContainerEl.removeEventListener('scroll', this._boundHandleResourceGridScroll);
+        if (this._scrollableContainerEl && this._resourceScrollListenerAttached) {
+            this._scrollableContainerEl.removeEventListener('scroll', this._boundHandleResourceGridScroll);
             this._resourceScrollListenerAttached = false;
+            this._scrollableContainerEl = null; // 清理引用
         }
     },
 
