@@ -225,99 +225,80 @@ const TtsUIManager = {
      * @returns {HTMLElement} - 可搜索下拉选择组件的主容器div。
      */
     _createSearchableSelect: function(idBase, optionsArray, selectedValue, placeholderText, onSelectionChange) {
-        const container = document.createElement('div');
-        container.className = 'searchable-select-tts'; // 特定CSS类
-        container.id = idBase; // 主容器ID
-        container.dataset.ttsParam = idBase.substring(idBase.lastIndexOf('_') + 1); // 存储字段键名
+        const template = document.getElementById('searchable-select-template').content.cloneNode(true);
+        const container = template.querySelector('.searchable-select-tts');
+        const input = container.querySelector('.searchable-select-input-tts');
+        const optionsContainer = container.querySelector('.searchable-select-options-container-tts');
 
-        const input = document.createElement('input'); // 搜索输入框
-        input.type = 'text';
-        input.className = 'searchable-select-input-tts';
+        container.id = idBase;
+        container.dataset.ttsParam = idBase.substring(idBase.lastIndexOf('_') + 1);
         input.placeholder = placeholderText;
-        input.autocomplete = 'off'; // 关闭浏览器自动完成
 
-        const optionsContainer = document.createElement('div'); // 选项容器
-        optionsContainer.className = 'searchable-select-options-container-tts';
-        optionsContainer.style.display = 'none'; // 默认隐藏
+        let currentFullOptions = [...optionsArray];
 
-        container.appendChild(input);
-        container.appendChild(optionsContainer);
-
-        let currentFullOptions = [...optionsArray]; // 存储所有可用选项，用于过滤
-
-        // 填充选项列表的函数
         const populateOptions = (filterText = '') => {
-            optionsContainer.innerHTML = ''; // 清空旧选项
-            // 根据输入文本过滤选项
+            optionsContainer.innerHTML = '';
             const filteredOptions = currentFullOptions.filter(opt =>
                 opt.text.toLowerCase().includes(filterText.toLowerCase())
             );
 
-            // 处理无结果或加载中状态
-            if (filteredOptions.length === 0 && filterText) { // 有过滤文本但无结果
+            if (filteredOptions.length === 0 && filterText) {
                 const noResultOpt = document.createElement('div');
                 noResultOpt.className = 'searchable-select-option-tts no-results';
                 noResultOpt.textContent = '无匹配项';
                 optionsContainer.appendChild(noResultOpt);
-            } else if (currentFullOptions.length === 0 && !filterText) { // 无过滤文本且无选项（加载中）
+            } else if (currentFullOptions.length === 0 && !filterText) {
                 const loadingOpt = document.createElement('div');
                 loadingOpt.className = 'searchable-select-option-tts no-results';
                 loadingOpt.textContent = placeholderText || '加载中...';
                 optionsContainer.appendChild(loadingOpt);
             }
 
-            // 创建并添加过滤后的选项
             filteredOptions.forEach(opt => {
                 const optionDiv = document.createElement('div');
                 optionDiv.className = 'searchable-select-option-tts';
                 optionDiv.textContent = opt.text;
                 optionDiv.dataset.value = opt.value;
-                optionDiv.addEventListener('click', () => { // 点击选项
-                    input.value = opt.text; // 更新输入框显示
-                    container.dataset.selectedValue = opt.value; // 在主容器上存储实际值
-                    optionsContainer.style.display = 'none'; // 关闭选项列表
+                optionDiv.addEventListener('click', () => {
+                    input.value = opt.text;
+                    container.dataset.selectedValue = opt.value;
+                    optionsContainer.style.display = 'none';
                     if (typeof onSelectionChange === 'function') {
-                        onSelectionChange(opt.value); // 调用回调
+                        onSelectionChange(opt.value);
                     }
                 });
                 optionsContainer.appendChild(optionDiv);
             });
-            // 根据是否有内容决定是否显示选项容器
             optionsContainer.style.display = (filteredOptions.length > 0 || (filterText && filteredOptions.length === 0) || (currentFullOptions.length === 0 && !filterText) ) ? 'block' : 'none';
         };
 
-        // 外部更新选项列表的方法
         container.updateOptions = (newOptions, newSelectedValue) => {
             currentFullOptions = [...newOptions];
             const selectedOpt = currentFullOptions.find(opt => opt.value === newSelectedValue);
-            if (selectedOpt) { // 如果有预选值且在选项中
+            if (selectedOpt) {
                 input.value = selectedOpt.text;
                 container.dataset.selectedValue = selectedOpt.value;
-            } else if (newOptions.length > 0 && !newSelectedValue) { // 有选项但无预选值
-                if (!input.value && placeholderText) input.placeholder = placeholderText; // 显示占位符
-            } else if (newOptions.length === 0) { // 无选项
+            } else if (newOptions.length > 0 && !newSelectedValue) {
+                if (!input.value && placeholderText) input.placeholder = placeholderText;
+            } else if (newOptions.length === 0) {
                 input.value = '';
                 input.placeholder = placeholderText || '无可用选项';
                 delete container.dataset.selectedValue;
             }
-            // 重新填充/过滤选项
             populateOptions(input.value === (selectedOpt ? selectedOpt.text : '') ? '' : input.value);
         };
 
-        // 初始化时，如果提供了选中值，则设置输入框的显示
         const initialSelectedOption = optionsArray.find(opt => opt.value === selectedValue);
         if (initialSelectedOption) {
             input.value = initialSelectedOption.text;
             container.dataset.selectedValue = initialSelectedOption.value;
-        } else if (selectedValue && placeholderText.startsWith('加载')) { // 如果值存在但选项仍在加载
-            input.value = selectedValue; // 先显示保存的值
+        } else if (selectedValue && placeholderText.startsWith('加载')) {
+            input.value = selectedValue;
             container.dataset.selectedValue = selectedValue;
         }
 
-        // 输入框输入事件
         input.addEventListener('input', () => {
-            populateOptions(input.value); // 根据输入过滤选项
-            // 如果用户输入的内容与任何选项的文本不完全匹配，则清除已选值
+            populateOptions(input.value);
             const currentOptionByText = currentFullOptions.find(opt => opt.text === input.value);
             if (!currentOptionByText) {
                 delete container.dataset.selectedValue;
@@ -326,35 +307,30 @@ const TtsUIManager = {
             }
         });
 
-        // 输入框聚焦事件
         input.addEventListener('focus', () => {
-            populateOptions(input.value); // 显示匹配的选项或所有选项
+            populateOptions(input.value);
         });
 
-        // 输入框点击事件，阻止冒泡到全局关闭监听器
         input.addEventListener('click', (event) => {
             event.stopPropagation();
             populateOptions(input.value);
         });
 
-        // 全局点击监听器，用于在点击可搜索下拉框外部时关闭选项列表
-        // 只附加一次
         if (!TtsUIManager._searchableSelectGlobalListenerAttached) {
             document.addEventListener('click', (e) => {
                 document.querySelectorAll('.searchable-select-tts').forEach(sSelect => {
-                    if (!sSelect.contains(e.target)) { // 如果点击在外部
+                    if (!sSelect.contains(e.target)) {
                         const optsContainer = sSelect.querySelector('.searchable-select-options-container-tts');
-                        if (optsContainer) optsContainer.style.display = 'none'; // 关闭选项列表
+                        if (optsContainer) optsContainer.style.display = 'none';
                     }
                 });
             });
             TtsUIManager._searchableSelectGlobalListenerAttached = true;
         }
 
-        container.updateOptions(optionsArray, selectedValue); // 初始填充选项
+        container.updateOptions(optionsArray, selectedValue);
         return container;
     },
-
 
     /**
      * @private

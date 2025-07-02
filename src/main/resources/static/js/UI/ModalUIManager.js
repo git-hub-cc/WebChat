@@ -347,6 +347,8 @@ const ModalUIManager = {
         if (!this.memorySetListContainerModal) return;
         this.memorySetListContainerModal.innerHTML = '';
         const sets = MemoryBookManager.getElementSets();
+        const fragment = document.createDocumentFragment();
+        const template = document.getElementById('memory-set-list-item-modal-template').content;
 
         if (sets.length === 0) {
             this.memorySetListContainerModal.innerHTML = `<p class="text-center text-muted">还没有记忆书。点击下方按钮添加一个吧！</p>`;
@@ -354,24 +356,25 @@ const ModalUIManager = {
         }
 
         sets.forEach(set => {
-            const item = document.createElement('div');
-            item.className = 'memory-set-list-item-modal';
-            item.innerHTML = `
-<span class="memory-set-name-modal">${Utils.escapeHtml(set.name)}</span>
-<div class="memory-set-actions-modal">
-    <button class="btn btn-secondary btn-sm edit-btn" title="编辑">编辑</button>
-    <button class="btn btn-danger btn-sm delete-btn" title="删除">删除</button>
-</div>
-    `;
-            item.querySelector('.edit-btn').addEventListener('click', () => this._showMemorySetForm(set));
-            item.querySelector('.delete-btn').addEventListener('click', () => {
+            const itemClone = template.cloneNode(true);
+            const nameEl = itemClone.querySelector('.memory-set-name-modal');
+            const editBtn = itemClone.querySelector('.edit-btn');
+            const deleteBtn = itemClone.querySelector('.delete-btn');
+
+            nameEl.textContent = Utils.escapeHtml(set.name);
+
+            editBtn.addEventListener('click', () => this._showMemorySetForm(set));
+            deleteBtn.addEventListener('click', () => {
                 this.showConfirmationModal(
                     `确定要删除记忆书 "${Utils.escapeHtml(set.name)}" 吗？这将删除所有已记录的记忆，且无法撤销。`,
                     () => MemoryBookManager.deleteElementSet(set.id)
                 );
             });
-            this.memorySetListContainerModal.appendChild(item);
+
+            fragment.appendChild(itemClone.firstElementChild);
         });
+
+        this.memorySetListContainerModal.appendChild(fragment);
     },
 
     /**
@@ -383,22 +386,23 @@ const ModalUIManager = {
         if (!this.memorySetFormContainerModal || !this.showAddMemorySetFormBtn) return;
 
         this._editingMemorySetId = set ? set.id : null;
-        this.memorySetFormContainerModal.innerHTML = `
-<h4 style="margin-bottom: 10px;">${set ? '编辑' : '添加'}记忆书</h4>
-<input type="text" id="modalMemorySetName" class="form-control" placeholder="记忆书名称 (例如: '个人喜好')" value="${set ? Utils.escapeHtml(set.name) : ''}">
-    <input type="text" id="modalMemorySetElements" class="form-control" placeholder="关键要素, 用逗号分隔 (例如: '喜欢的颜色, 喜欢的食物')" value="${set ? Utils.escapeHtml(set.elements.join(', ')) : ''}">
-        <div class="modal-footer" style="border-top: none; padding-top: 10px; margin-top: 0;">
-            <button id="cancelMemorySetFormBtn" class="btn btn-secondary">取消</button>
-            <button id="saveMemorySetFormBtn" class="btn btn-primary">${set ? '保存修改' : '确认添加'}</button>
-        </div>
-        `;
 
-        this.memorySetFormContainerModal.style.display = 'block';
-        this.showAddMemorySetFormBtn.style.display = 'none';
+        const template = document.getElementById('memory-set-form-template').content.cloneNode(true);
+        const formEl = template.querySelector('.memory-set-form-inner');
+        const titleEl = formEl.querySelector('.form-title');
+        const nameInput = formEl.querySelector('.memory-set-name-input');
+        const elementsInput = formEl.querySelector('.memory-set-elements-input');
+        const saveBtn = formEl.querySelector('.save-btn');
+        const cancelBtn = formEl.querySelector('.cancel-btn');
 
-        document.getElementById('saveMemorySetFormBtn').addEventListener('click', async () => {
-            const name = document.getElementById('modalMemorySetName').value.trim();
-            const elements = document.getElementById('modalMemorySetElements').value.split(/[,，、\s]+/).map(e => e.trim()).filter(Boolean);
+        titleEl.textContent = set ? '编辑记忆书' : '添加记忆书';
+        saveBtn.textContent = set ? '保存修改' : '确认添加';
+        nameInput.value = set ? Utils.escapeHtml(set.name) : '';
+        elementsInput.value = set ? Utils.escapeHtml(set.elements.join(', ')) : '';
+
+        saveBtn.addEventListener('click', async () => {
+            const name = nameInput.value.trim();
+            const elements = elementsInput.value.split(/[,，、\s]+/).map(e => e.trim()).filter(Boolean);
             let success;
             if (this._editingMemorySetId) {
                 success = await MemoryBookManager.updateElementSet(this._editingMemorySetId, name, elements);
@@ -409,7 +413,14 @@ const ModalUIManager = {
                 this._hideMemorySetForm();
             }
         });
-        document.getElementById('cancelMemorySetFormBtn').addEventListener('click', () => this._hideMemorySetForm());
+
+        cancelBtn.addEventListener('click', () => this._hideMemorySetForm());
+
+        this.memorySetFormContainerModal.innerHTML = '';
+        this.memorySetFormContainerModal.appendChild(formEl);
+        this.memorySetFormContainerModal.style.display = 'block';
+        this.showAddMemorySetFormBtn.style.display = 'none';
+        nameInput.focus();
     },
 
     /**

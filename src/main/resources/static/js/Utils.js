@@ -10,15 +10,12 @@
  * @module Utils
  * @exports {object} Utils - 对外暴露的单例对象，包含所有工具函数。
  */
-const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3}; // 定义日志级别
-
 const Utils = {
-    logLevels: _Utils_logLevels, // 暴露日志级别常量
-    currentLogLevel: _Utils_logLevels.DEBUG, // 默认日志级别
+    // 移除本地日志级别定义，直接引用 AppSettings
+    logLevels: AppSettings.logLevels, // 暴露日志级别常量
+    currentLogLevel: AppSettings.logLevels.DEBUG, // 默认日志级别
 
-    // 定义用于 sendInChunks 的常量
-    BUFFERED_AMOUNT_HIGH_THRESHOLD: 2 * 1024 * 1024, // 缓冲量高水位阈值 (2MB)
-    BUFFER_CHECK_INTERVAL: 200, // 缓冲量检查间隔 (200ms)
+    // 移除本地数据通道缓冲常量定义
 
     /**
      * 从全局配置 `AppSettings.logLevel` 中设置当前的日志级别。
@@ -153,9 +150,9 @@ const Utils = {
             // 3. 循环发送二进制分片
             for (let i = 0; i < totalChunks; i++) {
                 // 背压控制
-                while (dataChannel.bufferedAmount > this.BUFFERED_AMOUNT_HIGH_THRESHOLD) {
-                    Utils.log(`Utils.sendInChunks: 到 ${peerId} 的缓冲区已满 (${dataChannel.bufferedAmount} > ${this.BUFFERED_AMOUNT_HIGH_THRESHOLD}). 文件 ${fileName} 的分片 ${i+1}/${totalChunks}。等待 ${this.BUFFER_CHECK_INTERVAL}ms。`, Utils.logLevels.DEBUG);
-                    await new Promise(resolve => setTimeout(resolve, this.BUFFER_CHECK_INTERVAL));
+                while (dataChannel.bufferedAmount > AppSettings.network.dataChannelHighThreshold) {
+                    Utils.log(`Utils.sendInChunks: 到 ${peerId} 的缓冲区已满 (${dataChannel.bufferedAmount} > ${AppSettings.network.dataChannelHighThreshold}). 文件 ${fileName} 的分片 ${i+1}/${totalChunks}。等待 ${AppSettings.network.dataChannelBufferCheckInterval}ms。`, Utils.logLevels.DEBUG);
+                    await new Promise(resolve => setTimeout(resolve, AppSettings.network.dataChannelBufferCheckInterval));
                     if (dataChannel.readyState !== 'open') {
                         Utils.log(`Utils.sendInChunks: 数据通道到 ${peerId} 在发送分片 ${i+1} 期间关闭。中止发送。`, Utils.logLevels.WARN);
                         if (ConnectionManager.pendingSentChunks[fileHash]) delete ConnectionManager.pendingSentChunks[fileHash];

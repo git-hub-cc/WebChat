@@ -1,39 +1,13 @@
 /**
  * @file DetailsPanelUIManager.js
- * @description 管理应用右侧详情面板的 UI 元素和交互。此面板可以显示当前选定聊天的详细信息（包括联系人信息、群组成员、AI配置）或人员大厅。资源预览功能已移至 ResourcePreviewUIManager。
- *              新增: 群主可查看和编辑群内 AI 的特定提示词。AI联系人现在可以支持选择不同的“词汇篇章”来改变其行为 (使用可搜索下拉框)。
- *              优化: 当群主修改AI提示词后，会向群内发送系统消息通知。
- *              修复: 主题切换后，添加成员下拉列表现在能正确反映当前主题的AI角色。
- *              更新: 群组成员列表现在显示在线状态和与当前用户的连接状态，并提供重连按钮。
- *              新增: 定期自动刷新群成员状态，并对在线但未连接的成员尝试自动连接。 (定时器逻辑移至 TimerManager)
- *              优化：详情页的群成员顺序调整为：群主第一（无论在线状态），然后是在线人类成员，接着是AI成员，最后是离线人类成员。
- *              更新：群组详情页现在会显示资源预览模块，方便用户跳转到相关的媒体内容，该模块位于所有群组设置之后。
- *              更新：群组详情页的“群成员列表”和“群内AI行为指示”部分现在默认折叠，并可展开/收起。
- *              修复(BUG): _setupAiTtsConfigSection 现在会正确初始化动态生成的嵌套折叠项（如高级选项）。
- *              修复(BUG): 更新了显示折叠容器的逻辑，使用 display: grid 替代 display: block，以确保高性能的折叠动画正常工作，解决折叠后仍占据空间的问题。
- *              修复(BUG): _makeElementCollapsible 现在使用 parentElement 替代 closest()，以正确处理嵌套的折叠项。
- *              FIXED: 增加了在与AI角色对话时显示记忆书模块的逻辑。
- *              FEATURE: 为记忆书添加了编辑功能。
- *              BUGFIX: 为记忆书的“启用记忆”复选框添加了唯一的ID和label的for属性，解决了多个复选框表现得像单选按钮的问题。
- * @module DetailsPanelUIManager
- * @exports {object} DetailsPanelUIManager - 对外暴露的单例对象，包含管理右侧详情面板的所有方法。
- * @property {function} init - 初始化模块，获取DOM元素引用并绑定基础事件。
- * @property {function} showMainDetailsContent - 显示聊天详情视图。
- * @property {function} showPeopleLobbyContent - 显示人员大厅视图。
- * @property {function} toggleChatDetailsView - 切换聊天详情视图的显示/隐藏状态。
- * @property {function} togglePeopleLobbyView - 切换人员大厅视图的显示/隐藏状态。
- * @property {function} hideSidePanel - 隐藏整个右侧面板区域。
- * @property {function} updateDetailsPanel - 根据当前聊天ID和类型更新聊天详情面板的内容。
- * @property {function} updateDetailsPanelMembers - 更新群组详情中的成员列表和添加成员下拉框。
- * @property {function} handleAddMemberToGroupDetails - 处理从详情面板添加成员到当前群组的逻辑。
+ * @description 管理应用右侧详情面板的 UI 元素和交互。
  * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationUIManager, Utils, ConnectionManager, PeopleLobbyManager, AppSettings, LayoutUIManager, EventEmitter, DBManager, ResourcePreviewUIManager, TimerManager, MemoryBookManager, ModalUIManager
  */
 const DetailsPanelUIManager = {
+    // ... (属性定义不变) ...
     isPanelAreaVisible: false,
     currentView: null,
     currentChatId: null,
-
-    // DOM Element References
     detailsPanelEl: null,
     detailsPanelTitleEl: null,
     closeDetailsBtnMainEl: null,
@@ -78,10 +52,12 @@ const DetailsPanelUIManager = {
     memoryBookSectionEl: null,
     memoryBookListEl: null,
 
-    GROUP_MEMBER_REFRESH_INTERVAL_MS: 3000,
+    // 移除本地常量
+    // GROUP_MEMBER_REFRESH_INTERVAL_MS: 3000,
     _GROUP_MEMBER_REFRESH_TASK_NAME: 'groupMemberStatusRefresh',
 
     init: function() {
+        // ... (init 方法内部逻辑不变) ...
         this.detailsPanelEl = document.getElementById('detailsPanel');
         this.detailsPanelTitleEl = document.getElementById('detailsPanelTitle');
         this.closeDetailsBtnMainEl = document.getElementById('closeDetailsBtnMain');
@@ -145,6 +121,7 @@ const DetailsPanelUIManager = {
         Utils.log("DetailsPanelUIManager 初始化完成。", Utils.logLevels.INFO);
     },
 
+    // ... (其他方法保持不变) ...
     _makeElementCollapsible: function(headerEl) {
         if (!headerEl) return;
         const containerEl = headerEl.parentElement;
@@ -166,7 +143,6 @@ const DetailsPanelUIManager = {
             headerEl.classList.toggle('active');
         });
     },
-
     bindEvents: function() {
         if (this.closeDetailsBtnMainEl) {
             this.closeDetailsBtnMainEl.addEventListener('click', () => this.hideSidePanel());
@@ -178,12 +154,7 @@ const DetailsPanelUIManager = {
         this._makeElementCollapsible(this.ttsAttributionHeaderEl);
         this._makeElementCollapsible(this.groupMemberListHeaderEl);
         this._makeElementCollapsible(this.groupAiPromptsHeaderEl);
-
-        // REMOVED: Event bindings for moved elements
-        // if (this.addMemorySetBtn) { ... }
-        // if (this.confirmAddMemorySetBtn) { ... }
     },
-
     _updateForContact: function(contactId) {
         const contact = UserManager.contacts[contactId];
         if (!contact || !this.detailsPanelEl) return;
@@ -282,11 +253,6 @@ const DetailsPanelUIManager = {
         }
     },
 
-    /**
-     * @private
-     * Renders the entire Memory Book section UI.
-     * REFACTORED: Removed set management buttons (add, edit, delete). This UI now only handles *using* the sets for the current chat.
-     */
     _renderMemoryBookSection: function(chatId) {
         if (!this.memoryBookListEl || !chatId) {
             this.memoryBookListEl.innerHTML = '';
@@ -294,6 +260,8 @@ const DetailsPanelUIManager = {
         }
         this.memoryBookListEl.innerHTML = '';
         const elementSets = MemoryBookManager.getElementSets();
+        const fragment = document.createDocumentFragment();
+        const template = document.getElementById('memory-book-item-template').content;
 
         if (elementSets.length === 0) {
             this.memoryBookListEl.innerHTML = `<p style="font-size: 0.9em; color: var(--text-color-light); text-align: center;">请先在“交互管理”菜单的“记忆书”标签页中添加要记忆书。</p>`;
@@ -301,55 +269,37 @@ const DetailsPanelUIManager = {
         }
 
         elementSets.forEach(set => {
-            const setContainer = document.createElement('div');
-            setContainer.className = 'memory-set-item';
+            const itemClone = template.cloneNode(true);
+            const setContainer = itemClone.querySelector('.memory-set-item');
+            const nameEl = itemClone.querySelector('.memory-set-name');
+            const recordBtn = itemClone.querySelector('.record-btn');
+            const textareaEl = itemClone.querySelector('.memory-book-textarea');
+            const radioEl = itemClone.querySelector('.enable-memory-book-toggle');
+            const radioLabel = radioEl.parentElement;
+            const saveBtn = itemClone.querySelector('.save-memory-book-btn');
+
+            const uniqueRadioId = `enable-memory-book-radio-${set.id}-${chatId}`;
+
             setContainer.dataset.setId = set.id;
+            nameEl.textContent = Utils.escapeHtml(set.name);
+            textareaEl.value = Utils.escapeHtml(set.books?.[chatId]?.content || '尚未记录。');
 
-            const header = document.createElement('div');
-            header.className = 'memory-set-header';
+            radioEl.id = uniqueRadioId;
+            radioEl.name = `memory-book-enabled-group-${chatId}`;
+            radioEl.checked = set.books?.[chatId]?.enabled || false;
+            radioLabel.htmlFor = uniqueRadioId;
 
-            // MODIFIED: Removed edit and delete buttons
-            header.innerHTML = `
-                <span>${Utils.escapeHtml(set.name)}</span>
-                <div class="memory-set-actions">
-                    <button class="record-btn" title="记录本次对话">记录</button>
-                </div>
-            `;
-
-            const bookContainer = document.createElement('div');
-            bookContainer.className = 'memory-book-container';
-            const bookContent = set.books?.[chatId]?.content || '尚未记录。';
-            const isEnabled = set.books?.[chatId]?.enabled || false;
-
-            const radioId = `enable-memory-book-radio-${set.id}`;
-            const radioName = `memory-book-enabled-group-${chatId}`;
-
-            bookContainer.innerHTML = `
-                <textarea class="memory-book-textarea" rows="4" placeholder="点击“记录”以生成，或在此手动编辑...">${Utils.escapeHtml(bookContent)}</textarea>
-                <div class="memory-book-controls">
-                    <label for="${radioId}">
-                        <input type="radio" id="${radioId}" name="${radioName}" class="enable-memory-book-toggle" ${isEnabled ? 'checked' : ''}> 启用记忆
-                    </label>
-                    <button class="save-memory-book-btn">保存修改</button>
-                </div>
-            `;
-
-            setContainer.appendChild(header);
-            setContainer.appendChild(bookContainer);
-            this.memoryBookListEl.appendChild(setContainer);
-
-            // MODIFIED: Event listeners for edit/delete are removed.
-            header.querySelector('.record-btn').addEventListener('click', () => MemoryBookManager.generateMemoryBook(set.id, chatId));
-
-            bookContainer.querySelector('.enable-memory-book-toggle').addEventListener('change', (e) => {
-                MemoryBookManager.setMemoryBookEnabled(set.id, chatId, e.target.checked);
-            });
-
-            bookContainer.querySelector('.save-memory-book-btn').addEventListener('click', () => {
-                const newContent = bookContainer.querySelector('.memory-book-textarea').value;
+            recordBtn.addEventListener('click', () => MemoryBookManager.generateMemoryBook(set.id, chatId));
+            radioEl.addEventListener('change', (e) => MemoryBookManager.setMemoryBookEnabled(set.id, chatId, e.target.checked));
+            saveBtn.addEventListener('click', () => {
+                const newContent = textareaEl.value;
                 MemoryBookManager.saveMemoryBookContent(set.id, chatId, newContent);
             });
+
+            fragment.appendChild(setContainer);
         });
+
+        this.memoryBookListEl.appendChild(fragment);
     },
 
     _tryRefreshGroupMembersView: function(peerId) {
@@ -699,7 +649,7 @@ const DetailsPanelUIManager = {
             this.detailsAvatarEl.innerHTML = '👥';
             this.detailsAvatarEl.className = 'details-avatar group';
         }
-        if (this.detailsStatusEl) this.detailsStatusEl.textContent = `${group.members.length} 名成员 (上限 ${GroupManager.MAX_GROUP_MEMBERS})`;
+        if (this.detailsStatusEl) this.detailsStatusEl.textContent = `${group.members.length} 名成员 (上限 ${AppSettings.chat.maxGroupMembers})`;
 
         if (this.detailsGroupManagementEl) {
             this.detailsGroupManagementEl.style.display = 'grid';
@@ -762,17 +712,22 @@ const DetailsPanelUIManager = {
             return;
         }
         this.groupAiPromptsListContainerEl.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        const template = document.getElementById('group-ai-prompt-editor-template').content;
+
         aiMemberIds.forEach(aiId => {
             const aiContact = UserManager.contacts[aiId];
             if (!aiContact || !aiContact.isAI) return;
 
-            const itemDiv = document.createElement('div');
-            itemDiv.className = 'ai-prompt-editor-item';
-            itemDiv.dataset.aiId = aiId;
+            const itemClone = template.cloneNode(true);
+            const itemDiv = itemClone.querySelector('.ai-prompt-editor-item');
+            const nameEl = itemClone.querySelector('.ai-name');
+            const promptTextarea = itemClone.querySelector('.group-ai-prompt-textarea');
+            const saveBtn = itemClone.querySelector('.save-prompt-btn');
+            const resetBtn = itemClone.querySelector('.reset-prompt-btn');
 
-            const nameHeader = document.createElement('h5');
-            nameHeader.textContent = `AI角色: ${aiContact.name}`;
-            itemDiv.appendChild(nameHeader);
+            itemDiv.dataset.aiId = aiId;
+            nameEl.textContent = aiContact.name;
 
             let currentPromptText = "";
             if (group.aiPrompts && group.aiPrompts[aiId] !== undefined) {
@@ -780,22 +735,8 @@ const DetailsPanelUIManager = {
             } else if (aiContact.aiConfig && aiContact.aiConfig.systemPrompt !== undefined) {
                 currentPromptText = aiContact.aiConfig.systemPrompt;
             }
-
-            const promptTextarea = document.createElement('textarea');
             promptTextarea.value = currentPromptText;
-            promptTextarea.placeholder = "输入此AI在群组中的特定行为指示...";
-            promptTextarea.rows = 3;
-            promptTextarea.className = 'group-ai-prompt-textarea';
-            itemDiv.appendChild(promptTextarea);
 
-            const buttonContainer = document.createElement('div');
-            buttonContainer.style.marginTop = '8px';
-            buttonContainer.style.display = 'flex';
-            buttonContainer.style.gap = '8px';
-
-            const saveBtn = document.createElement('button');
-            saveBtn.textContent = '保存指示';
-            saveBtn.className = 'btn btn-primary btn-sm';
             saveBtn.addEventListener('click', async () => {
                 const newPrompt = promptTextarea.value.trim();
                 let promptChanged = false;
@@ -817,11 +758,7 @@ const DetailsPanelUIManager = {
                     NotificationUIManager.showNotification('行为指示未发生变化。', 'info');
                 }
             });
-            buttonContainer.appendChild(saveBtn);
 
-            const resetBtn = document.createElement('button');
-            resetBtn.textContent = '重置为默认';
-            resetBtn.className = 'btn btn-secondary btn-sm';
             resetBtn.addEventListener('click', async () => {
                 const defaultPrompt = (aiContact.aiConfig && aiContact.aiConfig.systemPrompt) ? aiContact.aiConfig.systemPrompt : "";
                 let promptChanged = false;
@@ -834,7 +771,6 @@ const DetailsPanelUIManager = {
                     promptChanged = true;
                 }
 
-
                 promptTextarea.value = defaultPrompt;
                 if (promptChanged) {
                     await GroupManager.saveGroup(groupId);
@@ -846,75 +782,56 @@ const DetailsPanelUIManager = {
                     NotificationUIManager.showNotification(`AI "${aiContact.name}" 已在使用默认指示或无变化。`, 'info');
                 }
             });
-            buttonContainer.appendChild(resetBtn);
-            itemDiv.appendChild(buttonContainer);
-            this.groupAiPromptsListContainerEl.appendChild(itemDiv);
+
+            fragment.appendChild(itemClone);
         });
+
+        this.groupAiPromptsListContainerEl.appendChild(fragment);
     },
 
-    /**
-     * 更新群组详情中的成员列表和添加成员下拉框。
-     * (已使用 template 方案重构)
-     * @param {string} groupId - 群组ID。
-     */
     updateDetailsPanelMembers: function (groupId) {
         const group = GroupManager.groups[groupId];
         if (!group || !this.groupMemberListDetailsEl || !this.groupMemberCountEl || !this.contactsDropdownDetailsEl || !document.getElementById('leftMemberListDetails')) return;
 
         const leftMemberListDetailsEl = document.getElementById('leftMemberListDetails');
-
-        // 1. 清空旧列表并更新成员数量
         this.groupMemberListDetailsEl.innerHTML = '';
         this.groupMemberCountEl.textContent = group.members.length;
-
-        // 2. 获取排序后的成员数据
         const membersWithSortInfo = this._getSortedMembers(group);
-
-        // 3. 获取模板并准备 DocumentFragment 以提高性能
         const template = document.getElementById('group-member-item-template');
         if (!template) {
             Utils.log('DetailsPanelUIManager Error: #group-member-item-template not found in HTML.', Utils.logLevels.ERROR);
             return;
         }
         const fragment = document.createDocumentFragment();
-
-        // 4. 遍历成员数据，克隆模板并填充
         membersWithSortInfo.forEach(memberData => {
             const memberId = memberData.id;
             const itemClone = template.content.cloneNode(true);
-
-            // 获取模板中的元素
             const nameEl = itemClone.querySelector('.member-name');
             const ownerBadge = itemClone.querySelector('.owner-badge');
             const statusEl = itemClone.querySelector('.member-status');
             const reconnectBtn = itemClone.querySelector('.reconnect-member-btn-detail');
             const removeBtn = itemClone.querySelector('.remove-member-btn-detail');
 
-            // 填充名称
             nameEl.textContent = `${Utils.escapeHtml(memberData.name)} ${memberId === UserManager.userId ? '(您)' : ''} ${memberData.isAI ? '(AI)' : ''}`;
 
-            // 处理群主徽章和移除按钮的可见性
             if (memberId === group.owner) {
                 ownerBadge.style.display = 'inline-block';
-                removeBtn.remove(); // 群主不能被移除
+                removeBtn.remove();
             } else {
-                ownerBadge.remove(); // 不是群主则移除徽章
+                ownerBadge.remove();
                 if (group.owner === UserManager.userId) {
                     removeBtn.dataset.memberId = memberId;
                     removeBtn.addEventListener('click', () => GroupManager.removeMemberFromGroup(groupId, memberId));
                 } else {
-                    removeBtn.remove(); // 非群主不能移除成员
+                    removeBtn.remove();
                 }
             }
 
-            // 处理非AI、非自己的成员状态和连接按钮
             if (memberId !== UserManager.userId && !memberData.isAI) {
                 const isConnected = ConnectionManager.isConnectedTo(memberId);
                 const isActuallyOnline = PeopleLobbyManager.onlineUserIds ? PeopleLobbyManager.onlineUserIds.includes(memberId) : false;
-
                 statusEl.textContent = isActuallyOnline ? (isConnected ? '(已连接)' : '(在线)') : '(离线)';
                 statusEl.className = 'member-status ' + (isActuallyOnline ? (isConnected ? 'connected' : 'online-not-connected') : 'offline');
-
                 if (isActuallyOnline && !isConnected) {
                     reconnectBtn.dataset.memberId = memberId;
                     reconnectBtn.addEventListener('click', () => ConnectionManager.createOffer(memberId, { isSilent: false }));
@@ -924,17 +841,13 @@ const DetailsPanelUIManager = {
             } else {
                 statusEl.remove();
                 reconnectBtn.remove();
-                // 如果是自己，也移除移除按钮（虽然上面已处理，双重保险）
                 if (memberId === UserManager.userId) removeBtn.remove();
             }
 
             fragment.appendChild(itemClone);
         });
-
-        // 5. 一次性将所有新列表项添加到 DOM
         this.groupMemberListDetailsEl.appendChild(fragment);
 
-        // 6. 更新“添加成员”下拉框（这部分逻辑不涉及复杂模板，可以保留）
         this.contactsDropdownDetailsEl.innerHTML = '<option value="">选择要添加的联系人...</option>';
         Object.values(UserManager.contacts).forEach(contact => {
             const isAlreadyMember = group.members.includes(contact.id);
@@ -949,8 +862,6 @@ const DetailsPanelUIManager = {
                 this.contactsDropdownDetailsEl.appendChild(option);
             }
         });
-
-        // 7. 更新“已离开成员”列表（这部分逻辑也不涉及复杂模板，可以保留）
         leftMemberListDetailsEl.innerHTML = '';
         if (group.owner === UserManager.userId && group.leftMembers && group.leftMembers.length > 0 && this.leftMembersAreaEl) {
             group.leftMembers.forEach(leftMember => {
@@ -986,13 +897,18 @@ const DetailsPanelUIManager = {
         }
     },
 
+    /**
+     * @private
+     * 启动群成员刷新定时器。
+     */
     _startGroupMemberRefreshTimer: function() {
         if (typeof TimerManager !== 'undefined') {
             TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
             TimerManager.addPeriodicTask(
                 this._GROUP_MEMBER_REFRESH_TASK_NAME,
                 this._refreshGroupMembersAndAutoConnect.bind(this),
-                this.GROUP_MEMBER_REFRESH_INTERVAL_MS,
+                // 使用 AppSettings 中的常量
+                AppSettings.ui.detailsPanelRefreshInterval,
                 false
             );
         } else {
@@ -1001,6 +917,7 @@ const DetailsPanelUIManager = {
     },
 
     _refreshGroupMembersAndAutoConnect: async function() {
+        // ... (方法内部逻辑不变) ...
         const groupId = ChatManager.currentChatId;
         if (!groupId || !groupId.startsWith('group_')) {
             if (typeof TimerManager !== 'undefined') TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
@@ -1036,13 +953,8 @@ const DetailsPanelUIManager = {
         });
     },
 
-    /**
-     * @private
-     * 辅助方法：获取排序后的群组成员列表，包含渲染所需的信息。
-     * @param {object} group - 群组对象。
-     * @returns {Array<object>} - 排序后的成员信息数组。
-     */
     _getSortedMembers: function(group) {
+        // ... (方法内部逻辑不变) ...
         return group.members.map(memberId => {
             const member = UserManager.contacts[memberId] || { id: memberId, name: `用户 ${memberId.substring(0, 4)}`, isAI: false };
             let sortCategory;
@@ -1062,6 +974,5 @@ const DetailsPanelUIManager = {
             }
             return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
         });
-    },
-
+    }
 };

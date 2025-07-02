@@ -371,6 +371,8 @@ const ResourcePreviewUIManager = {
             const monthYearSpan = document.createElement('span');
             monthYearSpan.className = 'calendar-monthyear-rps';
 
+            const dayCellTemplate = document.getElementById('calendar-day-cell-template').content;
+
             const renderMonthView = (month, year) => {
                 this.calendarContainerEl.dataset.currentDisplayMonth = month;
                 this.calendarContainerEl.dataset.currentDisplayYear = year;
@@ -382,24 +384,26 @@ const ResourcePreviewUIManager = {
                 if (calendarGrid) calendarGrid.remove();
                 calendarGrid = document.createElement('div');
                 calendarGrid.className = 'calendar-grid-rps';
+                const fragment = document.createDocumentFragment();
 
                 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
                 weekdays.forEach(wd => {
                     const dayHeaderEl = document.createElement('div');
                     dayHeaderEl.className = 'calendar-day-header-rps';
                     dayHeaderEl.textContent = wd;
-                    calendarGrid.appendChild(dayHeaderEl);
+                    fragment.appendChild(dayHeaderEl);
                 });
 
                 for (let i = 0; i < firstDayOfMonth; i++) {
-                    const emptyCell = document.createElement('div');
-                    emptyCell.className = 'calendar-day-rps empty';
-                    calendarGrid.appendChild(emptyCell);
+                    const emptyCellClone = dayCellTemplate.cloneNode(true);
+                    const emptyCell = emptyCellClone.querySelector('.calendar-day-rps');
+                    emptyCell.classList.add('empty');
+                    fragment.appendChild(emptyCell);
                 }
 
                 for (let day = 1; day <= daysInMonth; day++) {
-                    const dayCell = document.createElement('div');
-                    dayCell.className = 'calendar-day-rps';
+                    const dayCellClone = dayCellTemplate.cloneNode(true);
+                    const dayCell = dayCellClone.querySelector('.calendar-day-rps');
                     dayCell.textContent = day;
                     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
@@ -420,8 +424,9 @@ const ResourcePreviewUIManager = {
                     } else {
                         dayCell.classList.add('no-messages-rps');
                     }
-                    calendarGrid.appendChild(dayCell);
+                    fragment.appendChild(dayCell);
                 }
+                calendarGrid.appendChild(fragment);
                 this.calendarContainerEl.appendChild(calendarGrid);
             };
 

@@ -9,30 +9,55 @@
  */
 const AppSettings = {
     /**
-     * 日志级别配置
-     * 可选值: 'DEBUG', 'INFO', 'WARN', 'ERROR'
-     * 'DEBUG' 用于开发时详细排查问题，'INFO' 或 'ERROR' 用于生产环境。
+     * @description 日志级别配置。
+     * @property {object} logLevels - 定义了不同日志级别的数值。
+     * @property {number} logLevel - 当前应用的日志级别，可通过修改此值来控制日志输出。
      */
     logLevel: 'DEBUG',
+    logLevels: { // 新增：日志级别常量
+        DEBUG: 0,
+        INFO: 1,
+        WARN: 2,
+        ERROR: 3
+    },
+
     /**
-     * WebRTC 连接断开后的自动重连配置
+     * @description 连接断开后的自动重连配置。
+     * @property {object} reconnect.webrtc - WebRTC 的重连策略。
+     * @property {object} reconnect.websocket - WebSocket 的重连策略。
      */
     reconnect: {
-        maxAttempts: 3,      // 最大尝试次数
-        delay: 3000,         // 初始延迟（毫秒）
-        backoffFactor: 1.5   // 延迟时间的指数增长因子 (0 表示不增长)
+        maxAttempts: 3,      // WebRTC: 最大尝试次数
+        delay: 3000,         // WebRTC: 初始延迟（毫秒）
+        backoffFactor: 1.5,  // WebRTC: 延迟时间的指数增长因子 (0 表示不增长)
+        websocket: { // 新增：WebSocket重连策略
+            maxAttempts: 3,
+            backoffBase: 2000 // 初始延迟（毫秒）
+        }
     },
+
     /**
-     * 各种操作的超时时间配置（毫秒）
+     * @description 各种操作的超时时间配置（毫秒）。
      */
     timeouts: {
         iceGathering: 3000,  // ICE 候选者收集超时。现在 SDP 会在此之前发送。
         connection: 5000,   // WebRTC 连接建立总超时
         networkCheck: 5000, // 网络类型检查超时
-        signalingResponse: 5000 // 等待信令服务器响应的超时
+        signalingResponse: 5000, // 等待信令服务器响应的超时
+        callRequest: 30000, // 新增：呼叫请求超时
     },
+
     /**
-     * 媒体相关配置
+     * @description 网络相关配置。
+     */
+    network: { // 新增：网络相关配置
+        websocketHeartbeatInterval: 25000, // WebSocket心跳间隔 (毫秒)
+        dataChannelHighThreshold: 16 * 1024 * 1024, // 数据通道高水位阈值 (16MB)
+        dataChannelBufferCheckInterval: 100 // 缓冲检查间隔 (毫秒)
+    },
+
+    /**
+     * @description 媒体相关配置。
      */
     media: {
         music: '/music/call.mp3', // 呼叫音乐文件路径
@@ -47,18 +72,37 @@ const AppSettings = {
             autoGainControl: true,
         }
     },
+
     /**
-     * UI 行为相关配置
+     * @description UI 行为相关配置。
      */
     ui: {
         messageRenderBatchSize: 30, // 初始加载消息批次大小 (ChatAreaUIManager未使用，可考虑移除或整合)
-        virtualScrollBatchSize: 20, // 虚拟滚动时加载的批次大小 (ChatAreaUIManager未使用，可考虑移除或整合)
         virtualScrollThreshold: 150, // 触发虚拟滚动的阈值 (像素)
         typingIndicatorTimeout: 3000, // “正在输入”指示器超时时间
-        messageRetractionWindow: 5 * 60 * 1000 // 消息可撤回时间窗口 (5分钟)
+        messageRetractionWindow: 5 * 60 * 1000, // 消息可撤回时间窗口 (5分钟)
+        contextMenuAutoHide: 3000, // 新增：右键菜单自动隐藏时间 (毫秒)
+        detailsPanelRefreshInterval: 5000, // 新增：详情面板（群成员）刷新间隔 (毫秒)
+        virtualScroll: { // 优化：将虚拟滚动相关配置整合
+            batchSize: 15,
+            contextLoadSize: 10
+        },
+        screenshotEditor: { // 新增：截图编辑器配置
+            minCropSize: 20,
+            defaultMarkColor: '#FF0000',
+            defaultMarkLineWidth: 3
+        }
     },
+
     /**
-     * AI 相关配置
+     * @description 聊天和群组配置。
+     */
+    chat: { // 新增：聊天和群组配置
+        maxGroupMembers: 20
+    },
+
+    /**
+     * @description AI 相关配置。
      */
     ai: {
         sessionTime: 10 * 60 * 1000, // AI 对话上下文的有效时间窗口（10分钟） - 单独聊天
@@ -66,24 +110,22 @@ const AppSettings = {
         promptSuffix: "一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示）。",
         groupPromptSuffix: "当前情境说明：你现在处于一个群聊环境中，**冒号（:）之前的是用户名，冒号（:）之后的是该用户的发言内容。一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示），小概率触发调侃其它用户。",
     },
+
     /**
-     * 服务器相关配置。
-     * 这些是默认值，UI 管理器将从 localStorage 加载用户配置的值来覆盖它们。
-     * 注意：AI 的 apiEndpoint 和 model 的默认值现在由 LLMProviders.js 管理。
-     *      此处仅保留 AI 和 TTS 的非提供商特定配置作为最终回退。
+     * @description 服务器相关配置。
      */
     server: {
-        signalingServerUrl: 'ws://localhost:8080/signaling', // 本地开发示例
-        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids', // 本地开发示例
+        signalingServerUrl: 'wss://175.178.216.24/signaling', // 本地开发示例
+        lobbyApiEndpoint: 'https://175.178.216.24/api/monitor/online-user-ids', // 本地开发示例
         api_key: "Bearer sk-xxxx", // API 密钥
         max_tokens: 2048, // AI 回复最大令牌数
         ttsApiEndpoint: 'https://gsv2p.acgnai.top', // TTS API 端点
     },
+
     /**
-     * WebRTC RTCPeerConnection 的详细配置
+     * @description WebRTC RTCPeerConnection 的详细配置。
      */
     peerConnectionConfig: {
-        // TODO
         iceServers: [
             {
                 urls: [
@@ -92,7 +134,6 @@ const AppSettings = {
                 username: "test",
                 credential: "123456"
             },
-            // 可以添加更多 STUN/TURN 服务器
         ],
         iceTransportPolicy: 'all', // 'all' 或 'relay'
         bundlePolicy: 'max-bundle', // 'balanced', 'max-compat', 'max-bundle'
@@ -102,7 +143,7 @@ const AppSettings = {
     },
 
     /**
-     * @description 自适应音频质量配置
+     * @description 自适应音频质量配置。
      */
     adaptiveAudioQuality: {
         interval: 5000, // 检查间隔 (毫秒)
