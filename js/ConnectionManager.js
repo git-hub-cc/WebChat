@@ -2,6 +2,7 @@
  * @file ConnectionManager.js
  * @description 核心连接管理器，协调 WebSocket, WebRTC 和数据通道处理。
  *              为群组管理提供关键的连接状态检查 (isConnectedTo) 和点对点消息发送 (sendTo) 功能。
+ *              REFACTORED: (第2阶段) 不再直接调用 ChatManager 打开聊天，而是通过 Store 分发 Action。
  * @module ConnectionManager
  * @exports {object} ConnectionManager - 对外暴露的单例对象。
  * @property {function} initialize - 初始化所有底层连接管理器。
@@ -10,14 +11,14 @@
  * @property {function} close - 关闭与指定对等端的连接。
  * @property {boolean} isWebSocketConnected - WebSocket 连接状态。
  * @property {function} isConnectedTo - 检查与指定对等方的数据通道是否已连接。
- * @dependencies UserManager, WebSocketManager, WebRTCManager, DataChannelHandler, Utils, AppSettings, LayoutUIManager, NotificationUIManager, ChatManager, ChatAreaUIManager, GroupManager, PeopleLobbyManager, ModalUIManager, EventEmitter
+ * @dependencies UserManager, WebSocketManager, WebRTCManager, DataChannelHandler, Utils, AppSettings, LayoutUIManager, NotificationUIManager, ChatManager, ChatAreaUIManager, GroupManager, PeopleLobbyManager, ModalUIManager, EventEmitter, Store
  */
 const ConnectionManager = {
     // 状态 pendingSentChunks 和 pendingReceivedChunks 仍然保留在这里，因为 Utils.sendInChunks/reassembleChunk 依赖它们。
     // 这是一个可以后续优化的点，将分片状态和逻辑完全内聚到 DataChannelHandler。
     pendingSentChunks: {},
     pendingReceivedChunks: {},
-    MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_', // 与 WebRTCManager 保持一致
+    MANUAL_PLACEHOLDER_PEER_ID: AppSettings.constants.manualPlaceholderPeerId, // 与 WebRTCManager 保持一致
 
     /**
      * @private
@@ -89,6 +90,15 @@ const ConnectionManager = {
                 // 这在 handleRemoteOffer/Answer 中可能已处理，但在此处再次确保是安全的
                 this._ensureContactExistsForPeer(peerId, isManualPlaceholderOrigin).then(() => {
                     DataChannelHandler.setupChannel(channel, peerId, isManualPlaceholderOrigin, connectionEntry);
+
+                    // REFACTORED:
+                    const isPlaceholderOriginChan = !!channel._isManualPlaceholderOrigin;
+                    if (isPlaceholderOriginChan && peerId === AppSettings.constants.manualPlaceholderPeerId) {
+                        const resolvedId = ConnectionManager.resolvePeerIdForChannel(channel);
+                        if (resolvedId && (Store.getState().currentChatId === null || Store.getState().currentChatId === AppSettings.constants.manualPlaceholderPeerId)) {
+                            Store.dispatch('OPEN_CHAT', { chatId: resolvedId });
+                        }
+                    }
                 });
             }
         );
@@ -128,7 +138,7 @@ const ConnectionManager = {
 
         switch (message.type) {
             case 'SUCCESS': // 通常是注册成功的响应
-                            // REFACTORED (Phase 1): 使用 Store 更新状态
+                // REFACTORED (Phase 1): 使用 Store 更新状态
                 Store.dispatch('UPDATE_CONNECTION_STATUS', {
                     isConnected: true,
                     statusText: `用户注册成功: ${UserManager.userId.substring(0, 8)}...`
@@ -180,7 +190,7 @@ const ConnectionManager = {
         let finalTargetPeerId = targetPeerId;
 
         if (isManual) {
-            finalTargetPeerId = WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID; // 手动模式使用占位符ID
+            finalTargetPeerId = AppSettings.constants.manualPlaceholderPeerId; // 手动模式使用占位符ID
         } else {
             // 自动模式下，如果未提供目标ID，则尝试从当前聊天获取，或提示用户输入
             if (UserManager.isSpecialContact(targetPeerId) && UserManager.contacts[targetPeerId]?.isAI) {
@@ -330,7 +340,7 @@ const ConnectionManager = {
 
             const fromUserId = answerData.userId;
             // 获取手动占位符连接
-            const placeholderConn = WebRTCManager.connections[WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID];
+            const placeholderConn = WebRTCManager.connections[AppSettings.constants.manualPlaceholderPeerId];
             if (!placeholderConn?.peerConnection) {
                 NotificationUIManager.showNotification(`错误: 未找到待处理的手动提议。`, "error");
                 return;
@@ -338,12 +348,12 @@ const ConnectionManager = {
 
             // 将占位符连接替换为真实用户ID的连接
             WebRTCManager.connections[fromUserId] = placeholderConn;
-            delete WebRTCManager.connections[WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID];
+            delete WebRTCManager.connections[AppSettings.constants.manualPlaceholderPeerId];
             // 迁移相关的ICE候选者、重连尝试等状态
             ['iceCandidates', 'reconnectAttempts', 'iceTimers', 'iceGatheringStartTimes', 'connectionTimeouts'].forEach(storeKey => {
-                if (WebRTCManager[storeKey]?.[WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID]) {
-                    WebRTCManager[storeKey][fromUserId] = WebRTCManager[storeKey][WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID];
-                    delete WebRTCManager[storeKey][WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID];
+                if (WebRTCManager[storeKey]?.[AppSettings.constants.manualPlaceholderPeerId]) {
+                    WebRTCManager[storeKey][fromUserId] = WebRTCManager[storeKey][AppSettings.constants.manualPlaceholderPeerId];
+                    delete WebRTCManager[storeKey][AppSettings.constants.manualPlaceholderPeerId];
                 }
             });
 
@@ -469,7 +479,7 @@ const ConnectionManager = {
     resolvePeerIdForChannel: function (channel) {
         // 遍历 WebRTCManager 中的连接，查找与给定通道匹配的非占位符ID
         for (const peerId in WebRTCManager.connections) {
-            if (WebRTCManager.connections[peerId]?.dataChannel === channel && peerId !== WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID) {
+            if (WebRTCManager.connections[peerId]?.dataChannel === channel && peerId !== AppSettings.constants.manualPlaceholderPeerId) {
                 return peerId;
             }
         }

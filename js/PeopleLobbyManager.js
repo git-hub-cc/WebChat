@@ -19,12 +19,11 @@ const PeopleLobbyManager = {
     peopleLobbyListEl: null,   // 显示用户列表的 ul 元素 (#peopleLobbyList)
     refreshButtonEl: null,     // 刷新按钮的引用
     isLoading: false,          // 标记是否正在加载数据
-    _AUTO_REFRESH_INTERVAL: 5 * 1000, // 自动刷新间隔：5秒 (毫秒)
     _AUTO_REFRESH_TASK_NAME: 'peopleLobbyAutoRefresh', // 定时任务名称
 
     // 新增：用于自动连接逻辑的属性
     _autoConnectCounters: new Map(), // 存储联系人连续在线检测次数, key: userId, value: count
-    _AUTO_CONNECT_THRESHOLD: 2, // 连续检测到2次后触发自动连接
+    _AUTO_CONNECT_THRESHOLD: 2, // 连续检测到2次后触发自动连接 (This could be moved to AppSettings as well)
 
     /**
      * 初始化人员大厅管理器，并启动定期刷新在线用户列表的任务。
@@ -49,10 +48,10 @@ const PeopleLobbyManager = {
                         this.renderLobby();
                     }
                 },
-                this._AUTO_REFRESH_INTERVAL,
+                AppSettings.timers.lobbyAutoRefresh || 5000,
                 false
             );
-            Utils.log(`PeopleLobbyManager: 已启动在线用户列表自动刷新任务，间隔 ${this._AUTO_REFRESH_INTERVAL / 1000} 秒。`, Utils.logLevels.INFO);
+            Utils.log(`PeopleLobbyManager: 已启动在线用户列表自动刷新任务，间隔 ${AppSettings.timers.lobbyAutoRefresh / 1000 || 5} 秒。`, Utils.logLevels.INFO);
         } else {
             Utils.log('PeopleLobbyManager: TimerManager 未定义，无法启动自动刷新任务。', Utils.logLevels.WARN);
         }

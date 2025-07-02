@@ -6,6 +6,9 @@
  *              2. Store 根据 action 类型，在 reducer 中计算出新的 state。
  *              3. Store 保存新 state，并通知所有订阅者 (listeners)。
  *              4. UI 模块接收到通知，从 Store 获取最新 state，并更新自身视图。
+ *              REFACTORED: 增强了 State 结构和 Reducers，以支持更全面的 UI 状态解耦。
+ *              REFACTORED (Phase 1): Reducers 现在是纯函数，所有副作用都已移至 ActionCreators.js。
+ *              REFACTORED (Phase 3): 状态树更加完善，包含了驱动所有 UI 组件渲染所需的数据。
  * @module Store
  * @exports {object} Store - 全局单例的 Store 对象。
  */
@@ -23,10 +26,16 @@ const Store = {
         isDetailsPanelVisible: false,
         detailsPanelContent: null, // 'details' 或 'lobby'
 
-        // REFACTORED (Phase 2): 新增更多UI状态
-        activeSidebarTab: 'all', // 'all', 'contacts', 'groups'
-        contactStatuses: {}, // { contactId: 'online' | 'offline' | 'connected' }
-        currentChatInfo: { // 存储当前聊天头部所需的信息
+        // REFACTORED (Phase 3): 状态树现在包含了直接驱动列表渲染的数据
+        sidebar: {
+            activeTab: 'all', // 'all', 'contacts', 'groups'
+            listItems: [], // 侧边栏要渲染的条目数组
+            searchQuery: '',
+        },
+
+        // REFACTORED (Phase 2): 新增更多UI状态以实现解耦
+        contactStatuses: {}, // 联系人连接状态: { contactId: 'online' | 'offline' | 'connected' }
+        currentChatInfo: { // 当前聊天头部所需的所有信息
             title: '选择一个聊天',
             statusText: '',
             avatarUrl: null,
@@ -34,53 +43,39 @@ const Store = {
             entityType: null, // 'contact' 或 'group'
             entity: null, // 完整的联系人或群组对象
         },
+        // REFACTORED: 新增用于媒体预览的状态
+        filePreview: null, // { blob, hash, name, type, size, previewUrl }
+        audioPreview: null, // { dataUrl, duration }
+        // REFACTORED: 用于通知UI消息更新
+        lastMessageUpdate: { chatId: null, timestamp: 0 },
     },
-    _listeners: new Set(), // 存储所有订阅回调函数的集合
-    _reducers: {},         // 存储所有 action 类型对应的 reducer 函数
+    _listeners: new Set(),
+    _reducers: {},
 
     // --- 公开方法 ---
 
-    /**
-     * 订阅 state 的变化。
-     * @param {Function} listener - 当 state 改变时要执行的回调函数。
-     * @returns {Function} 一个用于取消订阅的函数。
-     */
     subscribe(listener) {
         this._listeners.add(listener);
-        // 返回一个取消订阅的函数，方便组件在销毁时清理
         return () => this._listeners.delete(listener);
     },
 
-    /**
-     * 获取当前的 state 对象。
-     * @returns {object} 当前的应用状态。
-     */
     getState() {
-        // 返回 state 的一个浅拷贝，防止外部直接修改
         return { ...this._state };
     },
 
-    /**
-     * 分发一个 action。这是改变 state 的唯一方式。
-     * @param {string} actionType - Action 的类型 (例如 'OPEN_CHAT')。
-     * @param {object} [payload] - 与 action 相关的数据。
-     */
     dispatch(actionType, payload) {
         if (typeof Utils !== 'undefined') {
             Utils.log(`Store: 分发 Action -> ${actionType}`, Utils.logLevels.DEBUG);
         }
-
-        // 查找并执行对应的 reducer
         const reducer = this._reducers[actionType];
         if (reducer) {
+            const oldState = this._state;
             const newState = reducer(this._state, payload);
-            // 检查 state 是否真的发生了变化
-            if (newState !== this._state) {
-                this._state = newState; // 更新 state
-                // 通知所有订阅者
+            if (newState !== oldState) {
+                this._state = newState;
                 this._listeners.forEach(listener => {
                     try {
-                        listener(this._state);
+                        listener(this._state, oldState);
                     } catch (e) {
                         if (typeof Utils !== 'undefined') {
                             Utils.log(`Store: 执行监听器时出错: ${e.message}`, Utils.logLevels.ERROR);
@@ -100,157 +95,141 @@ const Store = {
     // --- 内部初始化，注册所有的 Reducers ---
     init() {
         this._reducers = {
-            /**
-             * 应用初始化完成
-             */
+            // ==========================================================================
+            // 应用与连接状态
+            // ==========================================================================
             APP_INITIALIZED: (state, payload) => {
-                // 初始化时，聊天区和详情面板都不可见
-                return {
-                    ...state,
-                    isChatAreaVisible: false,
-                    isDetailsPanelVisible: false,
-                };
+                const newSidebarState = { ...state.sidebar, listItems: this._collectSidebarItems(state.sidebar.activeTab, state.sidebar.searchQuery) };
+                return { ...state, isChatAreaVisible: false, isDetailsPanelVisible: false, sidebar: newSidebarState };
             },
-
-            /**
-             * 更新WebSocket连接状态
-             */
             UPDATE_CONNECTION_STATUS: (state, payload) => {
-                return {
-                    ...state,
-                    isWebSocketConnected: payload.isConnected,
-                    connectionStatusText: payload.statusText,
-                };
+                if (state.isWebSocketConnected === payload.isConnected && state.connectionStatusText === payload.statusText) return state;
+                return { ...state, isWebSocketConnected: payload.isConnected, connectionStatusText: payload.statusText };
             },
-
-            /**
-             * 更新AI服务健康状态
-             */
             UPDATE_AI_SERVICE_STATUS: (state, payload) => {
-                return {
-                    ...state,
-                    isAiServiceHealthy: payload.isHealthy,
-                };
+                if (state.isAiServiceHealthy === payload.isHealthy) return state;
+                const newChatInfo = this._calculateChatInfo(state.currentChatId, payload.isHealthy);
+                return { ...state, isAiServiceHealthy: payload.isHealthy, currentChatInfo: newChatInfo };
             },
-
-            /**
-             * REFACTORED (Phase 2): 新增 Reducer，用于更新联系人状态
-             */
             UPDATE_CONTACT_STATUS: (state, payload) => {
-                const { contactId, status } = payload; // status: 'online', 'offline', 'connected'
+                const { contactId, status } = payload;
+                if (state.contactStatuses[contactId] === status) return state;
                 const newStatuses = { ...state.contactStatuses, [contactId]: status };
-
-                // 检查当前聊天头是否需要更新
-                if (state.currentChatId === contactId) {
-                    const newChatInfo = this._calculateChatInfo(contactId, state.isAiServiceHealthy);
-                    return { ...state, contactStatuses: newStatuses, currentChatInfo: newChatInfo };
-                }
-
-                return { ...state, contactStatuses: newStatuses };
+                const newChatInfo = this._calculateChatInfo(state.currentChatId, state.isAiServiceHealthy);
+                const newSidebarState = { ...state.sidebar, listItems: this._collectSidebarItems(state.sidebar.activeTab, state.sidebar.searchQuery) };
+                return { ...state, contactStatuses: newStatuses, currentChatInfo: newChatInfo, sidebar: newSidebarState };
             },
 
-            /**
-             * REFACTORED (Phase 2): 新增 Reducer，用于设置侧边栏活动标签
-             */
-            SET_ACTIVE_TAB: (state, payload) => {
-                const { tab } = payload;
-                if (state.activeSidebarTab === tab) return state;
-                return { ...state, activeSidebarTab: tab };
+            // ==========================================================================
+            // UI 布局与导航
+            // ==========================================================================
+            SET_SIDEBAR_FILTER: (state, payload) => {
+                const { tab, query } = payload;
+                const newTab = tab !== undefined ? tab : state.sidebar.activeTab;
+                const newQuery = query !== undefined ? query : state.sidebar.searchQuery;
+                if (state.sidebar.activeTab === newTab && state.sidebar.searchQuery === newQuery) return state;
+                const newSidebarState = { ...state.sidebar, activeTab: newTab, searchQuery: newQuery, listItems: this._collectSidebarItems(newTab, newQuery) };
+                return { ...state, sidebar: newSidebarState };
             },
-
-            /**
-             * 打开一个聊天
-             */
             OPEN_CHAT: (state, payload) => {
                 const { chatId } = payload;
-                if (state.currentChatId === chatId && state.isChatAreaVisible) {
+                if (state.currentChatId === chatId && window.innerWidth > 768) {
                     return state;
                 }
-
                 const newChatInfo = this._calculateChatInfo(chatId, state.isAiServiceHealthy);
-
-                return {
-                    ...state,
-                    currentChatId: chatId,
-                    isChatAreaVisible: !!chatId,
-                    isDetailsPanelVisible: false,
-                    detailsPanelContent: null,
-                    currentChatInfo: newChatInfo, // 同时更新聊天头部信息
-                };
+                return { ...state, currentChatId: chatId, isChatAreaVisible: !!chatId, isDetailsPanelVisible: false, detailsPanelContent: null, currentChatInfo: newChatInfo };
             },
-
-            /**
-             * (移动端) 返回聊天列表视图
-             */
             SHOW_CHAT_LIST: (state, payload) => {
-                return {
-                    ...state,
-                    isChatAreaVisible: false,
-                    isDetailsPanelVisible: false,
-                };
+                if (!state.isChatAreaVisible) return state;
+                return { ...state, isChatAreaVisible: false, isDetailsPanelVisible: false };
             },
-
-            /**
-             * 切换详情面板的显示/隐藏状态
-             */
             TOGGLE_DETAILS_PANEL: (state, payload) => {
-                const { content } = payload; // 'details' 或 'lobby'
+                const { content } = payload;
                 const isCurrentlyVisible = state.isDetailsPanelVisible && state.detailsPanelContent === content;
-
-                return {
-                    ...state,
-                    isDetailsPanelVisible: !isCurrentlyVisible,
-                    detailsPanelContent: isCurrentlyVisible ? null : content,
-                };
+                return { ...state, isDetailsPanelVisible: !isCurrentlyVisible, detailsPanelContent: isCurrentlyVisible ? null : content };
+            },
+            HIDE_DETAILS_PANEL: (state, payload) => {
+                if (!state.isDetailsPanelVisible) return state;
+                return { ...state, isDetailsPanelVisible: false, detailsPanelContent: null };
             },
 
-            /**
-             * 强制隐藏详情面板
-             */
-            HIDE_DETAILS_PANEL: (state, payload) => {
-                if (!state.isDetailsPanelVisible) {
-                    return state;
-                }
-                return {
-                    ...state,
-                    isDetailsPanelVisible: false,
-                    detailsPanelContent: null,
-                };
+            // ==========================================================================
+            // 数据模型更新 (由 Manager 触发，用于通知 UI)
+            // ==========================================================================
+            DATA_MODIFIED: (state, payload) => {
+                // 这个 action 表明底层数据 (contacts, groups, chats) 已变，需要重新计算派生状态
+                const newSidebarState = { ...state.sidebar, listItems: this._collectSidebarItems(state.sidebar.activeTab, state.sidebar.searchQuery) };
+                const newChatInfo = this._calculateChatInfo(state.currentChatId, state.isAiServiceHealthy);
+                return { ...state, sidebar: newSidebarState, currentChatInfo: newChatInfo };
+            },
+            MESSAGES_UPDATED: (state, payload) => {
+                const { chatId } = payload;
+                const newSidebarState = { ...state.sidebar, listItems: this._collectSidebarItems(state.sidebar.activeTab, state.sidebar.searchQuery) };
+                return { ...state, lastMessageUpdate: { chatId, timestamp: Date.now() }, sidebar: newSidebarState };
             },
         };
     },
 
     /**
      * @private
-     * REFACTORED (Phase 2): 新增私有辅助函数，用于计算当前聊天的头部信息
-     * @param {string|null} chatId - 当前聊天ID
-     * @param {boolean} isAiServiceHealthy - AI服务健康状态
-     * @returns {object} - 计算出的 currentChatInfo 对象
+     * @description 根据过滤器和搜索查询，从 UserManager 和 GroupManager 收集并格式化侧边栏列表项。
+     *              这个函数是 Store 的一部分，因为它直接从数据源计算 State 的一部分。
+     * @param {string} filter - 'all', 'contacts', 'groups'
+     * @param {string} query - 搜索查询
+     * @returns {Array<object>}
      */
+    _collectSidebarItems(filter, query) {
+        let items = [];
+        const lowerCaseQuery = query.toLowerCase();
+
+        if (filter === 'all' || filter === 'contacts') {
+            Object.values(UserManager.contacts).forEach(contact => {
+                if (((!contact.isSpecial && !contact.isAI) || contact.isSpecial) && contact.name.toLowerCase().includes(lowerCaseQuery)) {
+                    items.push({
+                        id: contact.id, name: contact.name, avatarText: contact.avatarText, avatarUrl: contact.avatarUrl,
+                        lastMessage: ChatManager._formatLastMessagePreview(contact.id, contact.lastMessage, (contact.isSpecial && contact.isAI) ? '准备好聊天！' : '暂无消息'),
+                        lastTime: contact.lastTime, unread: contact.unread || 0, type: 'contact',
+                        online: contact.isSpecial ? true : ConnectionManager.isConnectedTo(contact.id), isSpecial: contact.isSpecial
+                    });
+                }
+            });
+        }
+        if (filter === 'all' || filter === 'groups') {
+            Object.values(GroupManager.groups).forEach(group => {
+                if (group.name.toLowerCase().includes(lowerCaseQuery)) {
+                    items.push({
+                        id: group.id, name: group.name, avatarText: '👥', avatarUrl: null,
+                        lastMessage: ChatManager._formatLastMessagePreview(group.id, group.lastMessage, `成员: ${group.members.length}`),
+                        lastTime: group.lastTime, unread: group.unread || 0, type: 'group'
+                    });
+                }
+            });
+        }
+        items.sort((a, b) => (b.lastTime && a.lastTime) ? new Date(b.lastTime) - new Date(a.lastTime) : (b.lastTime ? 1 : -1));
+        return items;
+    },
+
     _calculateChatInfo(chatId, isAiServiceHealthy) {
         if (!chatId) {
             return {
                 title: '选择一个聊天', statusText: '', avatarUrl: null, avatarText: '?', entityType: null, entity: null
             };
         }
-
         const isGroup = chatId.startsWith('group_');
-        const entity = isGroup ? GroupManager.groups[chatId] : UserManager.contacts[chatId];
-
+        const entity = isGroup ? (GroupManager.groups[chatId] || null) : (UserManager.contacts[chatId] || null);
         if (!entity) {
             return {
                 title: '未知聊天', statusText: '错误：找不到聊天对象', avatarUrl: null, avatarText: '?', entityType: null, entity: null
             };
         }
-
         let info = {
             title: entity.name,
             avatarUrl: entity.avatarUrl || null,
-            avatarText: entity.avatarText || '?',
+            avatarText: entity.avatarText || (entity.name ? entity.name.charAt(0) : '?'),
             entityType: isGroup ? 'group' : 'contact',
-            entity: entity
+            entity: entity,
+            statusText: ''
         };
-
         if (isGroup) {
             info.statusText = `${entity.members.length} 名成员 (上限 ${GroupManager.MAX_GROUP_MEMBERS})`;
             info.avatarText = '👥';
@@ -262,7 +241,6 @@ const Store = {
             } else if (contact.isSpecial) {
                 info.statusText = '特殊联系人';
             } else {
-                // 连接状态现在从Store获取，但这里暂时用旧方式，因为contactStatuses可能还没更新
                 const isConnected = ConnectionManager.isConnectedTo(chatId);
                 info.statusText = isConnected ? '已连接' : `ID: ${contact.id.substring(0,8)}... (离线)`;
             }

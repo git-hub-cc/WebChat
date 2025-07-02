@@ -9,18 +9,39 @@
  */
 const AppSettings = {
     /**
+     * @description 通用常量，在多个模块中使用。
+     */
+    constants: {
+        /**
+         * 日志级别定义。
+         */
+        logLevels: { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 },
+        /**
+         * 手动连接时使用的内部占位符ID。
+         */
+        manualPlaceholderPeerId: '_manual_placeholder_peer_id_',
+    },
+    /**
      * 日志级别配置
      * 可选值: 'DEBUG', 'INFO', 'WARN', 'ERROR'
      * 'DEBUG' 用于开发时详细排查问题，'INFO' 或 'ERROR' 用于生产环境。
      */
     logLevel: 'DEBUG',
     /**
-     * WebRTC 连接断开后的自动重连配置
+     * WebRTC 和 WebSocket 连接断开后的自动重连配置
      */
     reconnect: {
-        maxAttempts: 3,      // 最大尝试次数
-        delay: 3000,         // 初始延迟（毫秒）
-        backoffFactor: 1.5   // 延迟时间的指数增长因子 (0 表示不增长)
+        webrtc: { // MODIFIED: Renamed to webrtc
+            maxAttempts: 3,      // 最大尝试次数
+            delay: 3000,         // 初始延迟（毫秒）
+            backoffFactor: 1.5   // 延迟时间的指数增长因子 (0 表示不增长)
+        },
+        websocket: { // ADDED
+            maxAttempts: 3,        // 最大尝试次数
+            initialDelay: 2000,    // 初始延迟 (毫秒)
+            backoffFactor: 2,      // 指数退避因子
+            maxDelay: 30000        // 最大延迟 (毫秒)
+        }
     },
     /**
      * 各种操作的超时时间配置（毫秒）
@@ -32,15 +53,29 @@ const AppSettings = {
         signalingResponse: 5000 // 等待信令服务器响应的超时
     },
     /**
+     * 定时器间隔配置 (毫秒)
+     */
+    timers: { // ADDED
+        websocketHeartbeat: 25000, // WebSocket 心跳间隔
+        groupMemberRefresh: 3000   // 群组成员详情页自动刷新间隔
+    },
+    /**
      * 媒体相关配置
      */
     media: {
         music: 'music/call.mp3', // 呼叫音乐文件路径
         chunkSize: 64 * 1024, // 文件/消息分片传输时每个分片的大小（字节）
+        dataChannelBufferThreshold: 2 * 1024 * 1024, // ADDED: 数据通道缓冲高水位阈值 (2MB)
+        dataChannelBufferCheckInterval: 200, // ADDED: 缓冲区检查间隔 (200ms)
         maxAudioDuration: 60, // 语音消息最大录制时长（秒）
         imageCompression: 0.8, // 图片压缩质量 (0-1)
         maxFileSize: 50 * 1024 * 1024, // 最大上传文件大小 (50 MB)
         maxStickerSize: 3 * 1024 * 1024, // ADDED: 3 MB for stickers
+        screenshotEditor: { // ADDED
+            minCropSize: 20,           // 裁剪框最小尺寸 (px)
+            defaultMarkColor: '#FF0000', // 默认标记颜色
+            defaultMarkLineWidth: 3    // 默认标记线宽
+        },
         audioConstraints: {    // 音频采集约束，用于提高通话质量
             echoCancellation: true,
             noiseSuppression: true,
@@ -48,14 +83,27 @@ const AppSettings = {
         }
     },
     /**
+     * 群组相关配置
+     */
+    group: { // ADDED
+        maxMembers: 20 // 群组成员上限
+    },
+    /**
      * UI 行为相关配置
      */
     ui: {
         messageRenderBatchSize: 30, // 初始加载消息批次大小 (ChatAreaUIManager未使用，可考虑移除或整合)
-        virtualScrollBatchSize: 20, // 虚拟滚动时加载的批次大小 (ChatAreaUIManager未使用，可考虑移除或整合)
+        chatContextLoadCount: 10, // ADDED: 点击跳转到消息时，上下文加载数量
+        chatScrollLoadBatchSize: 15, // ADDED: 虚拟滚动时加载的批次大小
         virtualScrollThreshold: 150, // 触发虚拟滚动的阈值 (像素)
         typingIndicatorTimeout: 3000, // “正在输入”指示器超时时间
-        messageRetractionWindow: 5 * 60 * 1000 // 消息可撤回时间窗口 (5分钟)
+        messageRetractionWindow: 5 * 60 * 1000, // 消息可撤回时间窗口 (5分钟)
+        contextMenuAutoHideDuration: 3000, // ADDED: 消息上下文菜单自动隐藏时间
+        unconnectedMemberNotificationCooldown: 30000, // ADDED: 群聊未连接成员通知冷却时间
+        notificationDefaultDuration: 5000, // ADDED: 默认通知显示时长
+        notificationErrorDuration: 8000, // ADDED: 错误通知显示时长
+        resourceGridLoadBatchSize: 15, // ADDED: 资源预览网格加载批次大小
+        resourceGridScrollThreshold: 100 // ADDED: 资源预览网格滚动加载阈值
     },
     /**
      * AI 相关配置

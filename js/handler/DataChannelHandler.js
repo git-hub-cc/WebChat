@@ -61,7 +61,7 @@ const DataChannelHandler = {
             let finalPeerId = currentContextPeerId;
             const isPlaceholderOriginChan = !!channel._isManualPlaceholderOrigin;
 
-            if (isPlaceholderOriginChan && currentContextPeerId === WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID) {
+            if (isPlaceholderOriginChan && currentContextPeerId === AppSettings.constants.manualPlaceholderPeerId) {
                 let resolved = false;
                 const resolvedId = ConnectionManager.resolvePeerIdForChannel(channel);
                 if (resolvedId) {
@@ -81,8 +81,8 @@ const DataChannelHandler = {
             ConnectionManager._ensureContactExistsForPeer(finalPeerId, isPlaceholderOriginChan);
 
 
-            if (isPlaceholderOriginChan && logPeerIdForOpen !== UserManager.userId && logPeerIdForOpen !== WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID &&
-                (ChatManager.currentChatId === null || ChatManager.currentChatId === WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID )) {
+            if (isPlaceholderOriginChan && logPeerIdForOpen !== UserManager.userId && logPeerIdForOpen !== AppSettings.constants.manualPlaceholderPeerId &&
+                (ChatManager.currentChatId === null || ChatManager.currentChatId === AppSettings.constants.manualPlaceholderPeerId )) {
                 ChatManager.openChat(logPeerIdForOpen, 'contact');
             }
             EventEmitter.emit('connectionEstablished', logPeerIdForOpen);

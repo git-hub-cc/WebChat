@@ -1,4 +1,3 @@
-
 /**
  * @file WebRTCManager.js
  * @description 管理 WebRTC RTCPeerConnection 的生命周期和协商过程。
@@ -15,7 +14,7 @@ const WebRTCManager = {
     reconnectAttempts: {}, // { peerId: number }
     iceTimers: {}, // { peerId: timeoutId } for ICE gathering
     iceGatheringStartTimes: {}, // { peerId: timestamp }
-    MANUAL_PLACEHOLDER_PEER_ID: '_manual_placeholder_peer_id_', // 与 ConnectionManager 保持一致
+    MANUAL_PLACEHOLDER_PEER_ID: AppSettings.constants.manualPlaceholderPeerId, // 与 ConnectionManager 保持一致
 
     _signalingSender: null, // 用于发送信令消息的回调
     _onDataChannelReadyHandler: null, // 数据通道就绪时的回调
@@ -493,8 +492,9 @@ const WebRTCManager = {
         const conn = this.connections[peerId];
         if (!conn || conn.isVideoCall || this.isConnectedTo(peerId) || conn.peerConnection?.connectionState === 'connecting') return;
         this.reconnectAttempts[peerId] = (this.reconnectAttempts[peerId] || 0) + 1;
-        if (this.reconnectAttempts[peerId] <= AppSettings.reconnect.maxAttempts) {
-            const delay = AppSettings.reconnect.delay * Math.pow(AppSettings.reconnect.backoffFactor, this.reconnectAttempts[peerId] - 1);
+        const webrtcReconnectConfig = AppSettings.reconnect.webrtc;
+        if (this.reconnectAttempts[peerId] <= webrtcReconnectConfig.maxAttempts) {
+            const delay = webrtcReconnectConfig.delay * Math.pow(webrtcReconnectConfig.backoffFactor, this.reconnectAttempts[peerId] - 1);
             if (this.connectionTimeouts[peerId]) clearTimeout(this.connectionTimeouts[peerId]);
             this.connectionTimeouts[peerId] = setTimeout(async () => {
                 delete this.connectionTimeouts[peerId];

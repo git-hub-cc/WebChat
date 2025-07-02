@@ -5,7 +5,7 @@
  * @module NotificationManager
  * @exports {object} NotificationUIManager - 对外暴露的单例对象，包含显示通知的方法。
  * @property {function} showNotification - 显示一个指定类型和消息的通知。
- * @dependencies Utils
+ * @dependencies Utils, AppSettings
  * @dependents 几乎所有其他管理器，在需要向用户提供反馈时调用。
  */
 const NotificationUIManager = {
@@ -13,7 +13,7 @@ const NotificationUIManager = {
      * 显示一个通知。
      * @param {string} message - 要显示的通知消息。
      * @param {string} [type='info'] - 通知类型...
-     * @param {number} [duration=...] - 显示时长...
+     * @param {number} [duration] - 显示时长...
      */
     showNotification: function (message, type = 'info', duration) {
         const container = document.querySelector('.notification-container') || this._createNotificationContainer();
@@ -38,7 +38,9 @@ const NotificationUIManager = {
 
         container.appendChild(notification);
 
-        const displayDuration = duration !== undefined ? duration : (type === 'error' ? 8000 : 5000);
+        const displayDuration = duration !== undefined
+            ? duration
+            : (type === 'error' ? AppSettings.ui.notificationErrorDuration : AppSettings.ui.notificationDefaultDuration);
         setTimeout(removeNotification, displayDuration);
     },
     /**

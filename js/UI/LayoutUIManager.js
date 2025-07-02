@@ -2,7 +2,8 @@
  * @file LayoutUIManager.js
  * @description 布局管理器，负责处理应用的响应式 UI 布局。
  *              它根据窗口大小（移动端 vs. 桌面端）动态调整主要区域（如侧边栏和聊天区）的显示和隐藏。
- *              REFACTORED: (第1阶段) 不再有公开的 showChatArea/showChatListArea 方法，而是订阅 Store 并根据 state 自动更新布局。
+ *              REFACTORED: (第2阶段) 不再有公开的 showChatArea/showChatListArea 方法，而是订阅 Store 并根据 state 自动更新布局。
+ *              REFACTORED (Phase 1): 事件监听器现在调用 ActionCreators.js 中的函数，而不是直接 dispatch action。（本文件在此阶段无此类变更）
  * @module LayoutManager
  * @exports {object} LayoutUIManager - 对外暴露的单例对象，包含布局管理方法。
  * @dependencies DetailsPanelUIManager, Store

@@ -11,6 +11,8 @@
  *              修改: _getEffectiveAiConfig 现在支持从多种大模型提供商配置中获取设置，并移除了对“覆盖”状态的检查。
  *              FIXED: 增加了 extractMemoryElements 方法以支持记忆书功能。
  *              FIXED: sendAiMessage 现在会注入已启用的记忆书内容。
+ *              BUGFIX: 移除了所有与 "正在思考..." 状态消息相关的逻辑。
+ *              REFACTORED: 将 extractMemoryElements 和 MCP 分析请求改为流式请求，统一 API 调用方式。
  * @dependencies UserManager, MessageManager, ChatManager, NotificationUIManager, Utils, AppSettings, ConnectionManager, LLMProviders, MemoryBookManager
  */
 const AiApiHandler = {
@@ -146,41 +148,39 @@ ${conversationTranscript}
         const requestBody = {
             model: effectiveConfig.model,
             messages: [{ role: "user", content: prompt }],
-            stream: false, // This is a single, non-streaming request
+            // MODIFIED: 将 stream 设置为 true
+            stream: true,
             temperature: 0.1,
             max_tokens: 1024
         };
 
-        const response = await fetch(effectiveConfig.apiEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-            body: JSON.stringify(requestBody)
+        // REFACTORED: 使用 Utils.fetchApiStream 替换原来的 fetch 逻辑，并使用 Promise 包装以符合原函数签名
+        return new Promise((resolve, reject) => {
+            Utils.fetchApiStream(
+                effectiveConfig.apiEndpoint,
+                requestBody,
+                { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                () => {
+                    // onChunkReceived: 提取记忆要素时，我们不需要实时显示，所以此回调为空
+                },
+                (finalContent) => {
+                    // onStreamEnd: 当流结束时，用完整的响应内容 resolve Promise
+                    resolve(finalContent);
+                }
+            ).catch(error => {
+                // 如果 fetchApiStream 内部出错，则 reject Promise
+                const errorMessage = `记忆提取请求失败: ${error.message}`;
+                Utils.log(errorMessage, Utils.logLevels.ERROR);
+                reject(new Error(errorMessage));
+            });
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`记忆提取请求失败: ${response.status} - ${errorText.substring(0, 100)}`);
-        }
-        const result = await response.json();
-        return result.choices[0].message.content;
     },
     // --- END OF ADDED FUNCTION ---
 
     sendAiMessage: async function(targetId, contact, messageText) {
         const chatBox = document.getElementById('chatBox');
 
-        const thinkingMsgId = `thinking_${Date.now()}`;
-        const thinkingMessage = { id: thinkingMsgId, type: 'system', content: `${contact.name} 正在思考...`, timestamp: new Date().toISOString(), sender: targetId, isThinking: true };
-        MessageManager.displayMessage(thinkingMessage, false);
-        let thinkingElement = chatBox.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
-
-        const removeThinkingMessage = () => {
-            if (thinkingElement && thinkingElement.parentNode) {
-                thinkingElement.remove();
-                thinkingElement = null;
-            }
-        };
-
+        // BUGFIX: Removed all "thinking" message logic.
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
@@ -191,7 +191,7 @@ ${conversationTranscript}
                 ? AppSettings.ai.sessionTime
                 : (10 * 60 * 1000);
             const timeThreshold = new Date().getTime() - contextWindow;
-            const chatHistory = (ChatManager.chats[targetId] || []).filter(msg => new Date(msg.timestamp).getTime() > timeThreshold && msg.type === 'text');
+            const chatHistory = (ChatManager.chats[targetId] || []).filter(msg => new Date(msg.timestamp).getTime() > timeThreshold && msg.type === 'text' && !msg.isThinking);
 
             if (chatHistory.length > 0) {
                 const lastMessageInHistory = chatHistory[chatHistory.length - 1];
@@ -206,22 +206,27 @@ ${conversationTranscript}
                 // MCP logic here...
                 const analysisMessages = this._buildMcpAnalysisPrompt(contact, chatHistory, messageText);
                 const analysisRequestBody = {
-                    model: effectiveConfig.model, messages: analysisMessages, stream: false,
+                    model: effectiveConfig.model, messages: analysisMessages,
+                    // MODIFIED: 将 stream 设置为 true
+                    stream: true,
                     temperature: 0.0, max_tokens: 512
                 };
-                const analysisResponse = await fetch(effectiveConfig.apiEndpoint, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-                    body: JSON.stringify(analysisRequestBody)
+
+                // REFACTORED: 使用 Utils.fetchApiStream 替换原来的 fetch 逻辑以处理工具调用分析
+                const aiContent = await new Promise((resolve, reject) => {
+                    Utils.fetchApiStream(
+                        effectiveConfig.apiEndpoint,
+                        analysisRequestBody,
+                        { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                        () => {}, // onChunkReceived: MCP分析时不需要实时显示，回调为空
+                        (finalContent) => resolve(finalContent) // onStreamEnd: 流结束后用完整内容 resolve
+                    ).catch(error => {
+                        const errorMessage = `MCP分析请求失败: ${error.message}`;
+                        Utils.log(errorMessage, Utils.logLevels.ERROR);
+                        reject(new Error(errorMessage));
+                    });
                 });
 
-                if (!analysisResponse.ok) {
-                    const errorText = await analysisResponse.text();
-                    throw new Error(`MCP分析请求失败: ${analysisResponse.status} - ${errorText.substring(0, 150)}`);
-                }
-
-                // 直接使用 .json() 方法进行解析，更健壮
-                const analysisResult = await analysisResponse.json();
-                const aiContent = analysisResult.choices[0].message.content;
                 let toolCall;
                 try {
                     const parsedContent = JSON.parse(aiContent);
@@ -229,15 +234,15 @@ ${conversationTranscript}
                         toolCall = parsedContent.tool_call;
                     }
                 } catch (e) {
-                    removeThinkingMessage();
+                    // 如果解析失败，说明AI直接回复了自然语言，而不是工具调用JSON
                     const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
                     return;
                 }
+
                 if (toolCall) {
-                    removeThinkingMessage();
                     const toolUseMsgId = `system_tool_${Date.now()}`;
-                    const toolUseMsg = { id: toolUseMsgId, type: 'system', content: `正在调用工具: ${toolCall.name}...`, timestamp: new Date().toISOString(), sender: targetId, isThinking: true };
+                    const toolUseMsg = { id: toolUseMsgId, type: 'system', content: `正在调用工具: ${toolCall.name}...`, timestamp: new Date().toISOString(), sender: targetId };
                     MessageManager.displayMessage(toolUseMsg, false);
                     let toolUseMsgElement = chatBox.querySelector(`.message[data-message-id="${toolUseMsgId}"]`);
                     const toolResult = await this._executeMcpTool(toolCall.name, toolCall.arguments);
@@ -278,15 +283,12 @@ ${conversationTranscript}
                     );
                     return;
                 } else {
-                    removeThinkingMessage();
                     const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
                     return;
                 }
             }
-
-            removeThinkingMessage();
-
+            // BUGFIX: No "thinking" message to remove
             const recentMessages = chatHistory;
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
 
@@ -356,17 +358,13 @@ ${conversationTranscript}
             );
 
         } catch (error) {
-            removeThinkingMessage();
+            // BUGFIX: No "thinking" message to remove
             Utils.log(`与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
         }
     },
 
-    /**
-     * The following methods remain unchanged from your provided code...
-     * sendGroupAiMessage, checkAiServiceHealth, handleAiConfigChange
-     */
     sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId, triggeringMessageId = null) {
         const aiContact = UserManager.contacts[aiContactId];
         if (!aiContact || !aiContact.isAI) {
@@ -375,17 +373,8 @@ ${conversationTranscript}
         }
 
         const chatBox = document.getElementById('chatBox');
-        const thinkingMsgId = `group_thinking_${aiContactId}_${Date.now()}`;
-        const thinkingMessage = {
-            id: thinkingMsgId, type: 'system',
-            content: `${aiContact.name} (在群组 ${group.name} 中) 正在思考...`,
-            timestamp: new Date().toISOString(),
-            sender: aiContactId,
-            groupId: groupId,
-            isThinking: true
-        };
-        ChatManager.addMessage(groupId, thinkingMessage);
 
+        // BUGFIX: Removed all "thinking" message logic.
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
@@ -418,7 +407,6 @@ ${conversationTranscript}
             const recentMessages = groupChatHistory.filter(msg =>
                 new Date(msg.timestamp).getTime() > timeThreshold &&
                 (msg.type === 'text' || (msg.type === 'system' && !msg.isThinking)) &&
-                msg.id !== thinkingMsgId &&
                 msg.id !== triggeringMessageId
             );
 
@@ -459,8 +447,7 @@ ${conversationTranscript}
             };
             Utils.log(`发送到群组 AI (${aiContact.name} in ${group.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
-            const thinkingElementToRemove = document.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
-            if (thinkingElementToRemove && thinkingElementToRemove.parentNode) thinkingElementToRemove.remove();
+            // BUGFIX: No "thinking" message to remove
 
             const aiResponseMessageId = `group_ai_msg_${aiContactId}_${Date.now()}`;
             let fullAiResponseContent = "";
@@ -513,9 +500,7 @@ ${conversationTranscript}
             );
 
         } catch (error) {
-            const thinkingElementToRemove = document.querySelector(`.message[data-message-id="${thinkingMsgId}"]`);
-            if (thinkingElementToRemove && thinkingElementToRemove.parentNode) thinkingElementToRemove.remove();
-
+            // BUGFIX: No "thinking" message to remove
             Utils.log(`在群组 (${group.name}) 中与 AI (${aiContact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`错误: 无法从 ${aiContact.name} (群组内) 获取回复。 ${error.message}`, 'error');
             const errorResponseMessage = {
@@ -534,6 +519,7 @@ ${conversationTranscript}
         }
     },
     checkAiServiceHealth: async function() {
+        // ... (this method remains the same)
         const effectiveConfig = this._getEffectiveAiConfig();
 
         if (!effectiveConfig.apiEndpoint) {
@@ -581,6 +567,7 @@ ${conversationTranscript}
         }
     },
     handleAiConfigChange: async function() {
+        // ... (this method remains the same)
         Utils.log("AiApiHandler: AI 配置已更改，正在重新检查服务健康状况...", Utils.logLevels.INFO);
         try {
             const isHealthy = await this.checkAiServiceHealth();

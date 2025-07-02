@@ -740,7 +740,88 @@
         <div class="resource-timestamp"></div>
     </div>
 </template>
+<!-- 用于 DetailsPanelUIManager - 已离开成员列表项 -->
+<template id="left-member-item-template">
+    <div class="left-member-item-detail">
+        <span class="js-left-member-name">成员名称</span>
+        <button class="re-add-member-btn-detail js-re-add-btn" title="重新添加成员">+</button>
+    </div>
+</template>
 
+<!-- 用于 DetailsPanelUIManager - 记忆书详情展示 -->
+<template id="memory-set-item-details-template">
+    <div class="memory-set-item">
+        <div class="memory-set-header">
+            <span class="js-set-name">记忆书名称</span>
+            <div class="memory-set-actions">
+                <button class="record-btn js-record-btn" title="记录本次对话">记录</button>
+            </div>
+        </div>
+        <div class="memory-book-container">
+            <textarea class="memory-book-textarea js-memory-textarea" rows="4" placeholder="点击“记录”以生成，或在此手动编辑..."></textarea>
+            <div class="memory-book-controls">
+                <label>
+                    <input type="checkbox" class="enable-memory-book-toggle js-enable-toggle"> 启用记忆
+                </label>
+                <button class="save-memory-book-btn js-save-btn">保存修改</button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- 用于 DetailsPanelUIManager - 群组AI提示词编辑器 -->
+<template id="group-ai-prompt-editor-template">
+    <div class="ai-prompt-editor-item">
+        <h5 class="js-ai-name-header">AI角色: AI名称</h5>
+        <textarea class="group-ai-prompt-textarea js-prompt-textarea" placeholder="输入此AI在群组中的特定行为指示..." rows="3"></textarea>
+        <div class="ai-prompt-actions-container">
+            <button class="btn btn-primary btn-sm js-save-prompt-btn">保存指示</button>
+            <button class="btn btn-secondary btn-sm js-reset-prompt-btn">重置为默认</button>
+        </div>
+    </div>
+</template>
+
+<!-- 用于 ModalUIManager - 通用确认对话框 -->
+<template id="confirmation-modal-template">
+    <div id="genericConfirmationModal" class="modal-like confirmation-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="js-modal-title">确认操作</h2>
+            </div>
+            <div class="modal-body">
+                <p class="js-modal-message">消息文本</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary js-modal-cancel-btn">取消</button>
+                <button class="btn btn-danger js-modal-confirm-btn">确认</button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<!-- 用于 ModalUIManager - 记忆书列表项 (模态框内) -->
+<template id="memory-set-list-item-modal-template">
+    <div class="memory-set-list-item-modal">
+        <span class="memory-set-name-modal js-set-name">记忆书名称</span>
+        <div class="memory-set-actions-modal">
+            <button class="btn btn-secondary btn-sm js-edit-btn" title="编辑">编辑</button>
+            <button class="btn btn-danger btn-sm js-delete-btn" title="删除">删除</button>
+        </div>
+    </div>
+</template>
+
+<!-- 用于 ModalUIManager - 记忆书添加/编辑表单 -->
+<template id="memory-set-form-modal-template">
+    <div class="memory-set-form-inner">
+        <h4 style="margin-bottom: 10px;" class="js-form-title">添加记忆书</h4>
+        <input type="text" class="form-control js-set-name-input" placeholder="记忆书名称 (例如: '个人喜好')">
+        <input type="text" class="form-control js-set-elements-input" placeholder="关键要素, 用逗号分隔 (例如: '喜欢的颜色, 喜欢的食物')">
+        <div class="modal-footer" style="border-top: none; padding-top: 10px; margin-top: 0;">
+            <button class="btn btn-secondary js-cancel-form-btn">取消</button>
+            <button class="btn btn-primary js-save-form-btn">确认添加</button>
+        </div>
+    </div>
+</template>
 
 <!-- ========================================================================== -->
 <!-- 脚本加载 (Scripts) -->
@@ -757,6 +838,8 @@
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>
 <script src="js/Store.js"></script>
+<script src="js/ActionCreators.js"></script>
+
 <script src="js/DBManager.js"></script>
 <script src="js/UserManager.js"></script>
 <script src="js/WebRTCManager.js"></script>
@@ -794,6 +877,5 @@
 
 <!-- 应用初始化程序 (最后加载) -->
 <script src="js/AppInitializer.js"></script>
-
 </body>
 </html>

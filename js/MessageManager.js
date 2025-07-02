@@ -14,6 +14,8 @@
  *              FIXED: 修复了渲染旧版文件消息（缺少fileHash）时，因参数不足导致渲染失败的bug。
  *              FIXED: 修复了非媒体文件无法下载的问题，确保下载按钮能正确获取文件信息。
  *              FIXED: 只有当文件/贴图数据完全接收并缓存后，才将消息添加到聊天UI，避免缩略图渲染失败。
+ *              BUGFIX: 修复了在群聊中@AI时，用户消息在AI思考和回复之后才显示的顺序问题。
+ *              BUGFIX: 移除了所有与 "正在思考..." 状态消息相关的逻辑。
  * @module MessageManager
  * @exports {object} MessageManager - 对外暴露的单例对象，包含消息处理的所有核心方法。
  */
@@ -22,7 +24,6 @@ const MessageManager = {
     audioData: null,    // 当前录制的音频数据 (Data URL)
     audioDuration: 0,   // 当前录制的音频时长
     _lastUnconnectedNotificationTime: 0, // 上次显示未连接成员通知的时间戳
-    _UNCONNECTED_NOTIFICATION_COOLDOWN: 30000, // 30秒冷却时间
 
     /**
      * 发送消息。
@@ -49,7 +50,7 @@ const MessageManager = {
         // 检查群聊中是否有未连接的在线成员
         if (isGroup && group && (messageText || currentSelectedFile || currentAudioData)) {
             const currentTime = Date.now();
-            if (currentTime - this._lastUnconnectedNotificationTime > this._UNCONNECTED_NOTIFICATION_COOLDOWN) {
+            if (currentTime - this._lastUnconnectedNotificationTime > AppSettings.ui.unconnectedMemberNotificationCooldown) {
                 const unconnectedOnlineMembersInfo = [];
                 for (const memberId of group.members) {
                     if (memberId === UserManager.userId || UserManager.contacts[memberId]?.isAI) continue;
@@ -96,10 +97,21 @@ const MessageManager = {
         let messageSent = false;
         let userTextMessageForChat = null;
 
+        // --- BUGFIX: Move user's text message handling to the beginning ---
+        // First, handle and display the user's own text message.
         if (messageText) {
             userTextMessageForChat = { id: `${messageIdBase}_text`, type: 'text', content: messageText, timestamp: nowTimestamp, sender: UserManager.userId };
+            if (isGroup) {
+                GroupManager.broadcastToGroup(targetId, userTextMessageForChat);
+            } else {
+                ConnectionManager.sendTo(targetId, userTextMessageForChat);
+            }
+            await ChatManager.addMessage(targetId, userTextMessageForChat);
+            messageSent = true;
         }
+        // --- END OF BUGFIX ---
 
+        // Now, after the user's message is sent and displayed, check for AI mentions.
         if (isGroup && group && messageText) {
             for (const memberId of group.members) {
                 const memberContact = UserManager.contacts[memberId];
@@ -181,13 +193,6 @@ const MessageManager = {
                 MessageManager.cancelFileData();
                 return;
             }
-        }
-
-        if (userTextMessageForChat) {
-            if (isGroup) GroupManager.broadcastToGroup(targetId, userTextMessageForChat);
-            else ConnectionManager.sendTo(targetId, userTextMessageForChat);
-            await ChatManager.addMessage(targetId, userTextMessageForChat);
-            messageSent = true;
         }
 
         if (messageSent) {
@@ -366,7 +371,7 @@ const MessageManager = {
 
         if (message.type === 'system' || message.isRetracted) msgDiv.classList.add('system');
         if (message.type === 'sticker') msgDiv.classList.add('sticker');
-        if (message.isThinking) msgDiv.classList.add('thinking');
+        // BUGFIX: Removed 'thinking' class logic
         if (message.isRetracted) msgDiv.classList.add('retracted');
 
         if (!isSentByMe && senderContact?.isAI && senderContact.id) {
@@ -472,10 +477,10 @@ const MessageManager = {
     },
 
     _removeEmptyPlaceholder: function(chatBox, message) {
-        //... (method remains the same)
-        const noMsgPlaceholder = chatBox.querySelector('.system-message:not(.thinking)');
+        // BUGFIX: Exclude 'thinking' messages from removing the placeholder.
+        const noMsgPlaceholder = chatBox.querySelector('.system-message:not(.message.system)');
         if (noMsgPlaceholder && (noMsgPlaceholder.textContent.includes("暂无消息") || noMsgPlaceholder.textContent.includes("您创建了此群组") || noMsgPlaceholder.textContent.includes("开始对话"))) {
-            if (!message.isThinking && !message.isStreaming && !message.isRetracted) {
+            if (!message.isStreaming && !message.isRetracted) {
                 noMsgPlaceholder.remove();
             }
         }
@@ -578,8 +583,8 @@ const MessageManager = {
                 mediaElement.onerror = () => {
                     URL.revokeObjectURL(objectURL);
                     mediaElement.remove();
-                    buttonElement.style.display = '';
-                    NotificationUIManager.showNotification(`播放音频 "${fileName}" 失败。`, 'error');
+                    buttonElement.style.display = '⚠️';
+                    setTimeout(() => {buttonElement.innerHTML = '▶'; audio.remove();}, 2000);
                 };
             } else {
                 NotificationUIManager.showNotification("无法播放：文件未在缓存中找到。", "error");
@@ -591,6 +596,7 @@ const MessageManager = {
     },
 
     _handleDownloadFileClick: async function(buttonElement) {
+        //... (method remains the same)
         const fileHash = buttonElement.dataset.hash;
         const fileName = buttonElement.dataset.filename;
 

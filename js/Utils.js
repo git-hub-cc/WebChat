@@ -10,42 +10,50 @@
  * @module Utils
  * @exports {object} Utils - 对外暴露的单例对象，包含所有工具函数。
  */
-const _Utils_logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3}; // 定义日志级别
-
 const Utils = {
-    logLevels: _Utils_logLevels, // 暴露日志级别常量
-    currentLogLevel: _Utils_logLevels.DEBUG, // 默认日志级别
-
-    // 定义用于 sendInChunks 的常量
-    BUFFERED_AMOUNT_HIGH_THRESHOLD: 2 * 1024 * 1024, // 缓冲量高水位阈值 (2MB)
-    BUFFER_CHECK_INTERVAL: 200, // 缓冲量检查间隔 (200ms)
+    // MODIFIED: 移除了本地日志级别定义，现在将从 AppSettings 获取。
+    logLevels: {}, // Will be populated from AppSettings
+    currentLogLevel: null, // Will be populated from AppSettings
 
     /**
-     * 从全局配置 `AppSettings.logLevel` 中设置当前的日志级别。
+     * 从全局配置 `AppSettings.constants.logLevels` 中设置日志级别。
      */
     setLogLevelFromConfig: function() {
-        if (typeof AppSettings !== 'undefined' && AppSettings.logLevel && typeof AppSettings.logLevel === 'string') {
-            this.currentLogLevel = this.logLevels[AppSettings.logLevel.toUpperCase()] || this.logLevels.DEBUG;
+        // MODIFIED: 从 AppSettings.constants 获取日志级别定义和当前级别设置
+        if (typeof AppSettings !== 'undefined' && AppSettings.constants && AppSettings.constants.logLevels) {
+            this.logLevels = AppSettings.constants.logLevels;
+            const logLevelName = AppSettings.logLevel || 'DEBUG';
+            this.currentLogLevel = this.logLevels[logLevelName.toUpperCase()] !== undefined ? this.logLevels[logLevelName.toUpperCase()] : this.logLevels.DEBUG;
+        } else {
+            // Fallback if AppSettings is not available
+            this.logLevels = { DEBUG: 0, INFO: 1, WARN: 2, ERROR: 3 };
+            this.currentLogLevel = this.logLevels.DEBUG;
         }
     },
 
     /**
      * 根据设置的日志级别在控制台打印日志。
      * @param {string} message - 要打印的日志消息。
-     * @param {number} [level=this.logLevels.DEBUG] - 日志级别 (DEBUG, INFO, WARN, ERROR)。
+     * @param {number} [level] - 日志级别 (DEBUG, INFO, WARN, ERROR)。
      */
-    log: function (message, level = this.logLevels.DEBUG) {
-        if (level >= this.currentLogLevel) { // 只打印高于或等于当前级别的日志
+    log: function (message, level) {
+        // MODIFIED: 确保 currentLogLevel 和 logLevels 已被初始化
+        if (this.currentLogLevel === null) {
+            this.setLogLevelFromConfig();
+        }
+        const logLevel = level !== undefined ? level : this.logLevels.DEBUG;
+
+        if (logLevel >= this.currentLogLevel) { // 只打印高于或等于当前级别的日志
             const timestamp = new Date().toLocaleTimeString(); // 获取当前时间
-            const prefixes = { 0: '[DBG]', 1: '[INF]', 2: '[WRN]', 3: '[ERR]' }; // 日志级别前缀
-            const prefix = prefixes[level] || '[LOG]'; // 默认前缀
+            const prefixes = { [this.logLevels.DEBUG]: '[DBG]', [this.logLevels.INFO]: '[INF]', [this.logLevels.WARN]: '[WRN]', [this.logLevels.ERROR]: '[ERR]' }; // 日志级别前缀
+            const prefix = prefixes[logLevel] || '[LOG]'; // 默认前缀
             const logMessage = `[${timestamp}] ${prefix} ${message}`; // 构建日志消息
 
             // 根据级别选择合适的 console 方法
-            if (level === this.logLevels.ERROR) console.error(logMessage);
-            else if (level === this.logLevels.DEBUG) console.debug(logMessage);
-            else if (level === this.logLevels.WARN) console.warn(logMessage);
-            else if (level === this.logLevels.INFO) console.info(logMessage);
+            if (logLevel === this.logLevels.ERROR) console.error(logMessage);
+            else if (logLevel === this.logLevels.DEBUG) console.debug(logMessage);
+            else if (logLevel === this.logLevels.WARN) console.warn(logMessage);
+            else if (logLevel === this.logLevels.INFO) console.info(logMessage);
         }
     },
 
@@ -121,7 +129,7 @@ const Utils = {
      * @param {string} fileHash - 文件的唯一哈希，用作分片 ID。
      * @param {number} [chunkSize=AppSettings.media.chunkSize] - 每个分片的大小。
      */
-    sendInChunks: async function (fileBlob, fileName, dataChannel, peerId, fileHash, chunkSize = AppSettings.media.chunkSize || 64 * 1024) {
+    sendInChunks: async function (fileBlob, fileName, dataChannel, peerId, fileHash, chunkSize = AppSettings.media.chunkSize) {
         if (!(fileBlob instanceof Blob)) {
             Utils.log("Utils.sendInChunks: 提供的不是一个 Blob 对象。", Utils.logLevels.ERROR);
             return;
@@ -153,9 +161,9 @@ const Utils = {
             // 3. 循环发送二进制分片
             for (let i = 0; i < totalChunks; i++) {
                 // 背压控制
-                while (dataChannel.bufferedAmount > this.BUFFERED_AMOUNT_HIGH_THRESHOLD) {
-                    Utils.log(`Utils.sendInChunks: 到 ${peerId} 的缓冲区已满 (${dataChannel.bufferedAmount} > ${this.BUFFERED_AMOUNT_HIGH_THRESHOLD}). 文件 ${fileName} 的分片 ${i+1}/${totalChunks}。等待 ${this.BUFFER_CHECK_INTERVAL}ms。`, Utils.logLevels.DEBUG);
-                    await new Promise(resolve => setTimeout(resolve, this.BUFFER_CHECK_INTERVAL));
+                while (dataChannel.bufferedAmount > AppSettings.media.dataChannelBufferThreshold) {
+                    Utils.log(`Utils.sendInChunks: 到 ${peerId} 的缓冲区已满 (${dataChannel.bufferedAmount} > ${AppSettings.media.dataChannelBufferThreshold}). 文件 ${fileName} 的分片 ${i+1}/${totalChunks}。等待 ${AppSettings.media.dataChannelBufferCheckInterval}ms。`, Utils.logLevels.DEBUG);
+                    await new Promise(resolve => setTimeout(resolve, AppSettings.media.dataChannelBufferCheckInterval));
                     if (dataChannel.readyState !== 'open') {
                         Utils.log(`Utils.sendInChunks: 数据通道到 ${peerId} 在发送分片 ${i+1} 期间关闭。中止发送。`, Utils.logLevels.WARN);
                         if (ConnectionManager.pendingSentChunks[fileHash]) delete ConnectionManager.pendingSentChunks[fileHash];

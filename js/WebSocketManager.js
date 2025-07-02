@@ -91,12 +91,16 @@ const WebSocketManager = {
                         this._onStatusChangeHandler(false);
                     }
 
-                    if (this.wsReconnectAttempts <= 3) { // 最多尝试3次
-                        const delay = Math.min(30000, 1000 * Math.pow(2, this.wsReconnectAttempts)); // 指数退避
+                    const wsReconnectConfig = AppSettings.reconnect.websocket;
+                    if (this.wsReconnectAttempts <= wsReconnectConfig.maxAttempts) {
+                        const delay = Math.min(
+                            wsReconnectConfig.maxDelay,
+                            wsReconnectConfig.initialDelay * Math.pow(wsReconnectConfig.backoffFactor, this.wsReconnectAttempts - 1)
+                        );
                         Utils.log(`WebSocketManager: 下一次重连将在 ${delay / 1000} 秒后。`, Utils.logLevels.WARN);
                         setTimeout(() => this.connect().catch(err => Utils.log(`WebSocketManager: 重连尝试失败: ${err.message || err}`, Utils.logLevels.ERROR)), delay);
                     } else {
-                        Utils.log('WebSocketManager: 已达到最大重连次数 (3)，停止自动重连。', Utils.logLevels.ERROR);
+                        Utils.log(`WebSocketManager: 已达到最大重连次数 (${wsReconnectConfig.maxAttempts})，停止自动重连。`, Utils.logLevels.ERROR);
                     }
 
                     // 仅当状态实际发生变化时才触发事件
@@ -142,7 +146,7 @@ const WebSocketManager = {
                         Utils.log('WebSocketManager: 发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
                     }
                 },
-                25000 // 每25秒发送一次
+                AppSettings.timers.websocketHeartbeat
             );
         } else {
             Utils.log("WebSocketManager: TimerManager 未定义，无法启动心跳。", Utils.logLevels.ERROR);

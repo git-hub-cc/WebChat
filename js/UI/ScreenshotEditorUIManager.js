@@ -21,6 +21,7 @@
  *  - Utils: 提供通用的工具函数，例如日志记录。
  *  - NotificationUIManager: 用于向用户显示通知信息（例如，操作成功、错误提示）。
  *  - EventEmitter: 用于模块间的事件发布和订阅机制，例如监听 `rawScreenshotCaptured` 事件以及发出 `screenshotEditingComplete` 或 `screenshotEditingCancelled` 事件。
+ *  - AppSettings: 提供截图编辑器的配置常量。
  *
  * @listens {rawScreenshotCaptured} - 从 EventEmitter 监听此事件，以接收原始截图数据和媒体流。
  * @fires {screenshotEditingComplete} - 当编辑完成并确认后，通过 EventEmitter 发出此事件，携带编辑后的图像文件对象 (包含 blob, hash, name, type, size, previewUrl)。
@@ -53,7 +54,6 @@ const ScreenshotEditorUIManager = {
     cropRect: null,           // 当前裁剪矩形 {x, y, w, h}
     cropHandles: [],          // 裁剪矩形的控制点数组
     activeCropHandle: null,   // 当前活动的裁剪控制点ID
-    minCropSize: 20,          // 裁剪矩形的最小尺寸 (宽/高)
     cropMoveOffsetX: 0,       // 移动裁剪框时，鼠标相对于裁剪框左上角的X轴偏移
     cropMoveOffsetY: 0,       // 移动裁剪框时，鼠标相对于裁剪框左上角的Y轴偏移
 
@@ -68,10 +68,8 @@ const ScreenshotEditorUIManager = {
     mouseX: 0,                // 当前鼠标X坐标
     mouseY: 0,                // 当前鼠标Y坐标
 
-    // 标记样式常量和状态
-    DEFAULT_MARK_COLOR: '#FF0000',      // 默认标记颜色 (红色)
-    DEFAULT_MARK_LINE_WIDTH: 3,         // 默认标记线条宽度
-    currentMarkColor: '#FF0000',        // 当前选中的标记颜色
+    // 标记样式状态
+    currentMarkColor: '#FF0000', // 当前选中的标记颜色
 
     /**
      * 初始化截图编辑器UI管理器。
@@ -101,7 +99,7 @@ const ScreenshotEditorUIManager = {
             return;
         }
         // 初始化标记颜色为颜色选择器的当前值或默认值
-        this.currentMarkColor = this.markColorPickerEl.value || this.DEFAULT_MARK_COLOR;
+        this.currentMarkColor = this.markColorPickerEl.value || AppSettings.media.screenshotEditor.defaultMarkColor;
 
         this._bindEvents(); // 绑定事件
         Utils.log('ScreenshotEditorUIManager initialized.', Utils.logLevels.INFO);
@@ -186,8 +184,8 @@ const ScreenshotEditorUIManager = {
 
         // 重置颜色选择器为默认颜色
         if (this.markColorPickerEl) {
-            this.markColorPickerEl.value = this.DEFAULT_MARK_COLOR;
-            this.currentMarkColor = this.DEFAULT_MARK_COLOR;
+            this.markColorPickerEl.value = AppSettings.media.screenshotEditor.defaultMarkColor;
+            this.currentMarkColor = AppSettings.media.screenshotEditor.defaultMarkColor;
         }
 
         // 加载图像
@@ -264,8 +262,8 @@ const ScreenshotEditorUIManager = {
         // 绘制所有已确认的标记。标记存储的是全局坐标。
         this.marks.forEach(mark => {
             if (mark.type === 'rect') { // 如果是矩形标记
-                this.ctx.strokeStyle = mark.color || this.DEFAULT_MARK_COLOR;
-                this.ctx.lineWidth = mark.lineWidth || this.DEFAULT_MARK_LINE_WIDTH;
+                this.ctx.strokeStyle = mark.color || AppSettings.media.screenshotEditor.defaultMarkColor;
+                this.ctx.lineWidth = mark.lineWidth || AppSettings.media.screenshotEditor.defaultMarkLineWidth;
                 this.ctx.strokeRect(mark.x, mark.y, mark.w, mark.h);
             }
         });
@@ -293,7 +291,7 @@ const ScreenshotEditorUIManager = {
             // 仅当矩形有效且有尺寸时绘制。
             if (rectToDrawPreview && rectToDrawPreview.w > 0 && rectToDrawPreview.h > 0) {
                 this.ctx.strokeStyle = this.currentMarkColor;
-                this.ctx.lineWidth = this.DEFAULT_MARK_LINE_WIDTH;
+                this.ctx.lineWidth = AppSettings.media.screenshotEditor.defaultMarkLineWidth;
                 this.ctx.strokeRect(rectToDrawPreview.x, rectToDrawPreview.y, rectToDrawPreview.w, rectToDrawPreview.h);
             }
         }
@@ -393,8 +391,8 @@ const ScreenshotEditorUIManager = {
                 // 确保标记在最终输出图像的边界内
                 if (markXInFinal + mark.w > 0 && markXInFinal < outputWidth &&
                     markYInFinal + mark.h > 0 && markYInFinal < outputHeight) {
-                    finalCtx.strokeStyle = mark.color || this.DEFAULT_MARK_COLOR;
-                    finalCtx.lineWidth = mark.lineWidth || this.DEFAULT_MARK_LINE_WIDTH;
+                    finalCtx.strokeStyle = mark.color || AppSettings.media.screenshotEditor.defaultMarkColor;
+                    finalCtx.lineWidth = mark.lineWidth || AppSettings.media.screenshotEditor.defaultMarkLineWidth;
                     finalCtx.strokeRect(markXInFinal, markYInFinal, mark.w, mark.h);
                 }
             }
@@ -640,18 +638,19 @@ const ScreenshotEditorUIManager = {
      */
     _handleCanvasMouseUp: function(e) {
         if (!this.isEditorActive) return;
+        const minCropSize = AppSettings.media.screenshotEditor.minCropSize;
 
         if (this.currentTool === 'crop' && (this.isCropping || this.isMovingCrop || this.isResizingCrop)) {
             if (this.cropRect) { // 标准化裁剪框并检查最小尺寸
                 if (this.cropRect.w < 0) { this.cropRect.x += this.cropRect.w; this.cropRect.w *= -1; }
                 if (this.cropRect.h < 0) { this.cropRect.y += this.cropRect.h; this.cropRect.h *= -1; }
-                if (this.cropRect.w < this.minCropSize || this.cropRect.h < this.minCropSize) {
+                if (this.cropRect.w < minCropSize || this.cropRect.h < minCropSize) {
                     if (this.isCropping) { // 新绘制的过小
                         if (this.rawImage && (this.cropRect.w < this.rawImage.width || this.cropRect.h < this.rawImage.height)) NotificationUIManager.showNotification('裁剪区域过小，请重新选择。', 'warn');
                         this.cropRect = null; this.cropHandles = [];
                     } else { // 调整后过小
-                        this.cropRect.w = Math.max(this.minCropSize, this.cropRect.w);
-                        this.cropRect.h = Math.max(this.minCropSize, this.cropRect.h);
+                        this.cropRect.w = Math.max(minCropSize, this.cropRect.w);
+                        this.cropRect.h = Math.max(minCropSize, this.cropRect.h);
                         this.cropRect.x = Math.max(0, Math.min(this.cropRect.x, this.canvasEl.width - this.cropRect.w));
                         this.cropRect.y = Math.max(0, Math.min(this.cropRect.y, this.canvasEl.height - this.cropRect.h));
                     }
@@ -661,7 +660,7 @@ const ScreenshotEditorUIManager = {
         } else if (this.currentTool === 'drawRect' && this.isDrawingMark && this.currentMarkRect) {
             if (this.currentMarkRect.w < 0) { this.currentMarkRect.x += this.currentMarkRect.w; this.currentMarkRect.w *= -1; }
             if (this.currentMarkRect.h < 0) { this.currentMarkRect.y += this.currentMarkRect.h; this.currentMarkRect.h *= -1; }
-            let markToAdd = { ...this.currentMarkRect, color: this.currentMarkColor, lineWidth: this.DEFAULT_MARK_LINE_WIDTH, type: 'rect' };
+            let markToAdd = { ...this.currentMarkRect, color: this.currentMarkColor, lineWidth: AppSettings.media.screenshotEditor.defaultMarkLineWidth, type: 'rect' };
             if (this.cropRect) { // 如果有裁剪区，将标记裁剪到区域内
                 const clippedMark = Utils.clipRectToArea(markToAdd, this.cropRect);
                 markToAdd = clippedMark ? { ...clippedMark, color: markToAdd.color, lineWidth: markToAdd.lineWidth, type: 'rect' } : null;
@@ -809,6 +808,7 @@ const ScreenshotEditorUIManager = {
         if (!this.activeCropHandle || !this.cropRect) return;
         const { x: oX, y: oY, w: oW, h: oH } = this.cropRect; // 原始矩形
         let nX = oX, nY = oY, nW = oW, nH = oH; // 新矩形，初始为原始值
+        const minCropSize = AppSettings.media.screenshotEditor.minCropSize;
 
         // 根据控制点调整
         switch (this.activeCropHandle) {
@@ -826,13 +826,13 @@ const ScreenshotEditorUIManager = {
         let tX = nX, tY = nY, tW = nW, tH = nH;
         if (tW < 0) { tX += tW; tW = Math.abs(tW); }
         if (tH < 0) { tY += tH; tH = Math.abs(tH); }
-        tW = Math.max(this.minCropSize, tW); tH = Math.max(this.minCropSize, tH);
+        tW = Math.max(minCropSize, tW); tH = Math.max(minCropSize, tH);
         tX = Math.max(0, Math.min(tX, this.canvasEl.width - tW)); // 先限制X, 再限制Y
         tY = Math.max(0, Math.min(tY, this.canvasEl.height - tH));
         // 再次确保宽高，因为X/Y的限制可能导致宽高变化
         tW = Math.min(tW, this.canvasEl.width - tX);
         tH = Math.min(tH, this.canvasEl.height - tY);
-        tW = Math.max(this.minCropSize, tW); tH = Math.max(this.minCropSize, tH);
+        tW = Math.max(minCropSize, tW); tH = Math.max(minCropSize, tH);
         // 如果由于最小尺寸导致超出边界，则反向调整X/Y
         if (tX + tW > this.canvasEl.width) tX = this.canvasEl.width - tW;
         if (tY + tH > this.canvasEl.height) tY = this.canvasEl.height - tH;

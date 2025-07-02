@@ -8,7 +8,7 @@
  * @property {function} init - 初始化模块，获取DOM元素引用并绑定基础事件。
  * @property {function} loadResourcesForChat - 为指定的聊天加载并显示资源。
  * @property {function} hide - 隐藏资源预览区域并清理状态。
- * @dependencies ChatManager, ChatAreaUIManager, MediaUIManager, Utils, NotificationUIManager, DBManager, LayoutUIManager
+ * @dependencies ChatManager, ChatAreaUIManager, MediaUIManager, Utils, NotificationUIManager, DBManager, LayoutUIManager, AppSettings
  * @dependents DetailsPanelUIManager (调用以显示和更新), AppInitializer (进行初始化)
  */
 const ResourcePreviewUIManager = {
@@ -188,7 +188,7 @@ const ResourcePreviewUIManager = {
             const newRawItems = await ChatManager.getMessagesWithResources(
                 this._currentChatId, this._currentResourceType,
                 this._rawItemsFetchedCount,
-                15 // Batch size
+                AppSettings.ui.resourceGridLoadBatchSize
             );
 
             if (newRawItems && newRawItems.length > 0) {
@@ -314,7 +314,7 @@ const ResourcePreviewUIManager = {
     _handleResourceGridScroll: function() {
         if (!this.resourceGridContainerEl || this._isResourceLoading || this._currentResourceType === 'date') return;
         const { scrollTop, scrollHeight, clientHeight } = this.resourceGridContainerEl;
-        if (scrollHeight - scrollTop - clientHeight < 100) {
+        if (scrollHeight - scrollTop - clientHeight < AppSettings.ui.resourceGridScrollThreshold) {
             this._loadMoreResources(false);
         }
     },
