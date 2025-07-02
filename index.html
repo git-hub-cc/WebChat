@@ -738,6 +738,77 @@
         <div class="resource-timestamp"></div>
     </div>
 </template>
+
+<!-- index.html (新增部分) -->
+<template id="message-sticker-template">
+    <div class="file-info sticker-info">
+        <div class="thumbnail-placeholder"></div>
+    </div>
+</template>
+
+<template id="group-ai-prompt-editor-template">
+    <div class="ai-prompt-editor-item">
+        <h5 class="ai-name-header">AI角色: <span class="ai-name"></span></h5>
+        <textarea class="group-ai-prompt-textarea" rows="3" placeholder="输入此AI在群组中的特定行为指示..."></textarea>
+        <div class="ai-prompt-actions">
+            <button class="btn btn-primary btn-sm save-prompt-btn">保存指示</button>
+            <button class="btn btn-secondary btn-sm reset-prompt-btn">重置为默认</button>
+        </div>
+    </div>
+</template>
+
+<template id="memory-book-item-template">
+    <div class="memory-set-item">
+        <header class="memory-set-header">
+            <span class="memory-set-name"></span>
+            <div class="memory-set-actions">
+                <button class="record-btn" title="记录本次对话">记录</button>
+            </div>
+        </header>
+        <div class="memory-book-container">
+            <textarea class="memory-book-textarea" rows="4" placeholder="点击“记录”以生成，或在此手动编辑..."></textarea>
+            <div class="memory-book-controls">
+                <label>
+                    <input type="radio" class="enable-memory-book-toggle"> 启用记忆
+                </label>
+                <button class="save-memory-book-btn">保存修改</button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="memory-set-list-item-modal-template">
+    <div class="memory-set-list-item-modal">
+        <span class="memory-set-name-modal"></span>
+        <div class="memory-set-actions-modal">
+            <button class="btn btn-secondary btn-sm edit-btn" title="编辑">编辑</button>
+            <button class="btn btn-danger btn-sm delete-btn" title="删除">删除</button>
+        </div>
+    </div>
+</template>
+
+<template id="memory-set-form-template">
+    <div class="memory-set-form-inner">
+        <h4 class="form-title"></h4>
+        <input type="text" class="form-control memory-set-name-input" placeholder="记忆书名称 (例如: '个人喜好')">
+        <input type="text" class="form-control memory-set-elements-input" placeholder="关键要素, 用逗号分隔 (例如: '喜欢的颜色, 喜欢的食物')">
+        <div class="modal-footer form-actions">
+            <button class="btn btn-secondary cancel-btn">取消</button>
+            <button class="btn btn-primary save-btn"></button>
+        </div>
+    </div>
+</template>
+
+<template id="calendar-day-cell-template">
+    <div class="calendar-day-rps"></div>
+</template>
+
+<template id="searchable-select-template">
+    <div class="searchable-select-tts">
+        <input type="text" class="searchable-select-input-tts" autocomplete="off">
+        <div class="searchable-select-options-container-tts" style="display: none;"></div>
+    </div>
+</template>
 <!-- ========================================================================== -->
 <!-- START: 脚本加载 (Scripts) -->
 <!-- 脚本加载顺序至关重要，请谨慎修改。管理器之间存在依赖关系。 -->
