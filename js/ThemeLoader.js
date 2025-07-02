@@ -1,27 +1,17 @@
 /**
- * @file ThemeLoader.js
- * @description 主题加载器。这是一个在应用初始化早期执行的关键脚本，
- *              负责根据用户的本地存储偏好和系统设置（浅色/深色模式）来决定并应用正确的主题。
- *              它会加载相应的主题 CSS 文件和与主题相关的数据 JSON 文件（如特殊联系人定义，包括词汇篇章）。
- *              现在支持无刷新切换主题和动态加载数据。
- *              更新：AI 联系人的词汇篇章数据现在可以从其定义中的 `chaptersFilePath` 指定的单独 JSON 文件加载。
- *              新增：支持从缓存加载和应用自定义背景图片。
- *              MODIFIED: 支持为浅色和深色模式分别设置、缓存和应用自定义背景图片。
+ * @file 主题加载器
+ * @description 负责在应用初始化早期，根据用户本地存储偏好和系统设置来决定并应用正确的主题。
+ *              它会动态加载主题 CSS 文件、主题数据（如特殊联系人定义），并支持无刷新切换。
+ *              同时，它还管理浅色和深色模式下自定义背景图片的加载、缓存和应用。
  * @module ThemeLoader
  * @exports {object} ThemeLoader - 主要通过其 `applyTheme` 方法和几个 getter 与其他模块交互。
- * @property {function} init - 初始化主题加载器，加载初始主题和数据，并应用缓存的背景图。
- * @property {function} applyTheme - 应用一个新主题，动态切换CSS并加载新数据，然后触发事件。
- * @property {function} setBackgroundImage - 设置并缓存一个新的背景图片。
- * @property {function} removeBackgroundImage - 移除并清除缓存的背景图片。
- * @property {function} updateColorSchemePreference - 当用户在设置中更改配色方案时调用。
- * @property {function} getCurrentEffectiveColorScheme - 获取当前生效的配色方案 ('light' 或 'dark')。
- * @property {function} getCurrentThemeKey - 获取当前应用的主题键名。
- * @property {function} getCurrentSpecialContactsDefinitions - 获取当前主题的特殊联系人定义。
- * @dependencies Utils, EventEmitter, DBManager
- * @dependents AppInitializer (确保其早期执行), SettingsUIManager (用于主题切换和背景设置), UserManager (依赖其加载的数据)
+ * @dependency Utils, EventEmitter, DBManager
  */
 const ThemeLoader = {
-    // 定义所有可用的主题及其配置
+    // ==========================================================================
+    // 常量与配置
+    // ==========================================================================
+    // 定义所有可用的主题及其 CSS 和数据文件路径
     themes: {
         "原神-浅色": { name: "原神", css: "css/动漫/原神-浅色.css", dataJs: "data/动漫/原神.json", defaultSpecialContacts: true  },
         "原神-深色": { name: "原神", css: "css/动漫/原神-深色.css", dataJs: "data/动漫/原神.json" },
@@ -39,243 +29,96 @@ const ThemeLoader = {
         "计算机科学-浅色": { name: "计算机科学", css: "css/教育/计算机科学-浅色.css", dataJs: "data/教育/计算机科学.json" },
         "MCP-深色": { name: "MCP", css: "css/系统/MCP-深色.css", dataJs: "data/系统/MCP.json" },
         "MCP-浅色": { name: "MCP", css: "css/系统/MCP-浅色.css", dataJs: "data/系统/MCP.json" },
+        // NOTE: 以下为注释掉的主题，未来可启用
         // "鸣潮-浅色": { name: "鸣潮", css: "css/动漫/鸣潮-浅色.css", dataJs: "data/动漫/鸣潮.json" },
         // "鸣潮-深色": { name: "鸣潮", css: "css/动漫/鸣潮-深色.css", dataJs: "data/动漫/鸣潮.json" },
-        // "星穹铁道-浅色": { name: "星穹铁道", css: "css/动漫/星穹铁道-浅色.css", dataJs: "data/动漫/星穹铁道.json" },
-        // "星穹铁道-深色": { name: "星穹铁道", css: "css/动漫/星穹铁道-深色.css", dataJs: "data/动漫/星穹铁道.json" },
-        // "仙逆-浅色": { name: "仙逆", css: "css/动漫/仙逆-浅色.css", dataJs: "data/动漫/仙逆.json" },
-        // "仙逆-深色": { name: "仙逆", css: "css/动漫/仙逆-深色.css", dataJs: "data/动漫/仙逆.json" },
-        // "咒术回战-深色": { name: "咒术回战", css: "css/动漫/咒术回战-深色.css", dataJs: "data/动漫/咒术回战.json" },
-        // "咒术回战-浅色": { name: "咒术回战", css: "css/动漫/咒术回战-浅色.css", dataJs: "data/动漫/咒术回战.json" },
-        // "遮天-浅色": { name: "遮天", css: "css/动漫/遮天-浅色.css", dataJs: "data/动漫/遮天.json" },
-        // "遮天-深色": { name: "遮天", css: "css/动漫/遮天-深色.css", dataJs: "data/动漫/遮天.json" },
-        // "完美世界-浅色": { name: "完美世界", css: "css/动漫/完美世界-浅色.css", dataJs: "data/动漫/完美世界.json" },
-        // "完美世界-深色": { name: "完美世界", css: "css/动漫/完美世界-深色.css", dataJs: "data/动漫/完美世界.json" },
-        // "吞噬星空-浅色": { name: "吞噬星空", css: "css/动漫/吞噬星空-浅色.css", dataJs: "data/动漫/吞噬星空.json" },
-        // "吞噬星空-深色": { name: "吞噬星空", css: "css/动漫/吞噬星空-深色.css", dataJs: "data/动漫/吞噬星空.json" }
     },
-    COLOR_SCHEME_KEY: 'selectedColorScheme', // localStorage 中存储配色方案偏好的键
-    DEFAULT_COLOR_SCHEME: 'light', // 默认配色方案
-    _currentEffectiveColorScheme: 'light', // 当前生效的配色方案 (light/dark)
-    _currentThemeKey: null, // 当前应用的主题键名
-    _systemColorSchemeListener: null, // 系统配色方案变化监听器
-    _currentSpecialContactsDefinitions: [], // 存储当前主题的特殊联系人定义
-    _currentInjectedBackgroundUrl: null, // MODIFIED: 存储当前注入背景的 Object URL，以便释放
+    // localStorage 中存储用户配色方案偏好('auto', 'light', 'dark')的键名
+    COLOR_SCHEME_KEY: 'selectedColorScheme',
+    // 当用户未指定时，默认的配色方案
+    DEFAULT_COLOR_SCHEME: 'light',
+
+    // ==========================================================================
+    // 内部状态变量
+    // ==========================================================================
+    _currentEffectiveColorScheme: 'light', // 当前实际生效的配色方案 ('light' 或 'dark')
+    _currentThemeKey: null, // 当前已应用的主题的键名 (例如："原神-浅色")
+    _systemColorSchemeListener: null, // 系统配色方案变化的媒体查询监听器引用
+    _currentSpecialContactsDefinitions: [], // 存储当前主题加载的特殊联系人定义数组
+    _currentInjectedBackgroundUrl: null, // 存储当前注入背景图的 Object URL，用于后续释放内存
 
     /**
-     * @private
-     * @description 将背景图样式注入到页面中。
-     * @param {string} imageUrl - 要应用的图片的 URL (通常是 Object URL)。
-     */
-    _injectBackgroundStyle(imageUrl) {
-        if (this._currentInjectedBackgroundUrl) {
-            URL.revokeObjectURL(this._currentInjectedBackgroundUrl); // 释放旧的 URL
-        }
-        this._currentInjectedBackgroundUrl = imageUrl; // 存储新的 URL
-
-        const styleId = 'custom-background-style';
-        let styleTag = document.getElementById(styleId);
-        if (!styleTag) {
-            styleTag = document.createElement('style');
-            styleTag.id = styleId;
-            document.head.appendChild(styleTag);
-        }
-
-        // 注入 CSS 规则
-        styleTag.textContent = `
-            body {
-                background-image: url(${imageUrl}) !important;
-                backdrop-filter: blur(10px) !important;
-                background-repeat: no-repeat !important;
-                background-size: cover !important;
-                background-attachment: fixed !important;
-                background-position-x: center !important;
-            }
-        `;
-    },
-
-    /**
-     * @private
-     * @description 移除自定义背景图样式。
-     */
-    _removeBackgroundStyle() {
-        if (this._currentInjectedBackgroundUrl) {
-            URL.revokeObjectURL(this._currentInjectedBackgroundUrl);
-            this._currentInjectedBackgroundUrl = null;
-        }
-        const styleTag = document.getElementById('custom-background-style');
-        if (styleTag) {
-            styleTag.remove();
-        }
-    },
-
-    /**
-     * @private
-     * @description 根据当前生效的配色方案，从 IndexedDB 加载并应用对应的背景图。
-     */
-    async _updateCustomBackground() {
-        const scheme = this.getCurrentEffectiveColorScheme();
-        const dbKey = `background_image_${scheme}`;
-        try {
-            const backgroundItem = await DBManager.getItem('appStateCache', dbKey);
-            if (backgroundItem && backgroundItem.imageBlob instanceof Blob) {
-                const imageUrl = URL.createObjectURL(backgroundItem.imageBlob);
-                this._injectBackgroundStyle(imageUrl);
-                (Utils?.log || console.log)(`ThemeLoader: 已为 ${scheme} 模式应用自定义背景。`, Utils?.logLevels?.INFO || 1);
-            } else {
-                this._removeBackgroundStyle(); // 如果没有找到对应模式的背景，则移除
-            }
-        } catch (error) {
-            (Utils?.log || console.log)(`ThemeLoader: 从缓存加载 ${scheme} 背景图片失败: ${error}`, Utils?.logLevels?.ERROR || 3);
-            this._removeBackgroundStyle();
-        }
-    },
-
-
-    /**
-     * @private 异步加载并解析 data JSON 文件内容。
-     *          现在会处理 `chaptersFilePath` 来动态加载词汇篇章数据。
-     * @param {string|null} dataJsonUrl - data JSON 文件的 URL。
-     * @returns {Promise<Array<object>>} - 解析后的特殊联系人定义数组。
-     */
-    _parseDataJson: async function(dataJsonUrl) {
-        if (!dataJsonUrl) return [];
-        try {
-            const response = await fetch(dataJsonUrl);
-            if (!response.ok) {
-                (Utils?.log || console.log)(`ThemeLoader: 获取 data JSON 失败 ${dataJsonUrl}: ${response.statusText}`, Utils?.logLevels?.WARN || 2);
-                return [];
-            }
-            const definitions = await response.json();
-
-            if (!Array.isArray(definitions)) {
-                (Utils?.log || console.log)(`ThemeLoader: 从 ${dataJsonUrl} 解析的内容不是数组。`, Utils?.logLevels?.WARN || 2);
-                return [];
-            }
-
-            // 为每个定义处理词汇篇章
-            for (const def of definitions) {
-                if (def.isAI && def.chaptersFilePath) {
-                    try {
-                        const chaptersResponse = await fetch(def.chaptersFilePath);
-                        if (chaptersResponse.ok) {
-                            def.chapters = await chaptersResponse.json();
-                            if (!Array.isArray(def.chapters)) {
-                                (Utils?.log || console.log)(`ThemeLoader: 从 ${def.chaptersFilePath} 解析的词汇篇章不是数组。`, Utils?.logLevels?.WARN || 2);
-                                def.chapters = [];
-                            }
-                        } else {
-                            (Utils?.log || console.log)(`ThemeLoader: 获取词汇篇章文件 ${def.chaptersFilePath} 失败: ${chaptersResponse.statusText}`, Utils?.logLevels?.WARN || 2);
-                            def.chapters = [];
-                        }
-                    } catch (chapError) {
-                        (Utils?.log || console.log)(`ThemeLoader: 加载或解析词汇篇章文件 ${def.chaptersFilePath} 时出错: ${chapError}`, Utils?.logLevels?.ERROR || 3);
-                        def.chapters = [];
-                    }
-                    delete def.chaptersFilePath; // 移除路径属性，因为它已被处理
-                }
-
-                // 确保每个定义都有 chapters 数组，即使是空的
-                if (!def.chapters || !Array.isArray(def.chapters)) {
-                    def.chapters = [];
-                }
-                // 对每个 chapter 进行校验和标准化
-                def.chapters = def.chapters.map(chapter => ({
-                    id: chapter.id || `chapter_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`, // 提供回退ID
-                    name: chapter.name || "未命名篇章",
-                    promptModifier: chapter.promptModifier || ""
-                }));
-            }
-            return definitions;
-
-        } catch (error) {
-            (Utils?.log || console.log)(`ThemeLoader: 加载或解析 data JSON ${dataJsonUrl} 时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
-            return [];
-        }
-    },
-
-    /**
-     * @private 实际加载主题 CSS 和数据的核心逻辑。
-     * @param {string} themeKey - 要加载的主题键名。
-     * @returns {Promise<void>}
-     */
-    async _loadThemeCore(themeKey) {
-        const themeConfig = this.themes[themeKey];
-        if (!themeConfig) {
-            console.error(`ThemeLoader: 未找到键为 "${themeKey}" 的主题。`);
-            return;
-        }
-
-        const themeStylesheet = document.getElementById('theme-stylesheet');
-        if (themeStylesheet && themeConfig.css) {
-            themeStylesheet.setAttribute('href', themeConfig.css);
-        } else if (!themeStylesheet) {
-            console.error("ThemeLoader: 严重错误 - 未找到 'theme-stylesheet' 元素。");
-        } else if (!themeConfig.css) {
-            (Utils?.log || console.log)(`ThemeLoader: 主题 "${themeKey}" 未定义 CSS。`, Utils?.logLevels?.WARN || 2);
-            themeStylesheet.setAttribute('href', '');
-        }
-
-        this._currentSpecialContactsDefinitions = await this._parseDataJson(themeConfig.dataJs);
-        this._currentThemeKey = themeKey;
-        localStorage.setItem('selectedTheme', themeKey);
-    },
-
-    /**
-     * 初始化主题加载器。此函数应在应用初始化早期（AppInitializer.init 中）被 await 调用。
+     * 初始化主题加载器
+     * @description 此函数应在应用启动的早期被调用，它会完成主题和背景的首次加载。
+     * @function init
      * @returns {Promise<void>}
      */
     async init() {
-        // --- 主题和配色方案初始化 ---
+        // --- 流程如下 ---
+        // 1. 确定并设置初始的有效配色方案（light/dark）
         const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
         this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
 
+        // 2. 根据存储的偏好和当前配色方案，决定要加载的主题
         let savedThemeKey = localStorage.getItem('selectedTheme');
         let themeToLoadKey;
 
         if (savedThemeKey && this.themes[savedThemeKey] && this._isThemeCompatible(savedThemeKey, this._currentEffectiveColorScheme)) {
+            // 如果存在已保存的主题，且该主题与当前配色方案兼容，则直接使用
             themeToLoadKey = savedThemeKey;
         } else {
+            // 否则，需要寻找一个合适的新主题
             let newThemeKey;
             if (savedThemeKey && this.themes[savedThemeKey]) {
+                // 尝试找到当前主题的“反色”版本
                 const baseName = this._getBaseThemeName(savedThemeKey);
                 const suffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
                 const counterpartKey = `${baseName}-${suffix}`;
-                if (this.themes[counterpartKey] && this._isThemeCompatible(counterpartKey, this._currentEffectiveColorScheme)) {
+                if (this.themes[counterpartKey]) {
                     newThemeKey = counterpartKey;
                 }
             }
+            // 如果找不到对应版本，或从未保存过主题，则查找一个默认的备用主题
             if (!newThemeKey) {
                 newThemeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
             }
             themeToLoadKey = newThemeKey;
         }
+
+        // 3. 加载主题的 CSS 和数据
         await this._loadThemeCore(themeToLoadKey);
+
+        // 4. 设置系统颜色方案变化的监听器 (如果用户选择'auto')
         this._setupSystemColorSchemeListener(preferredColorScheme);
 
-        // --- MODIFIED: 背景图片初始化 ---
+        // 5. 加载并应用缓存的自定义背景图片
         await this._updateCustomBackground();
 
         (Utils?.log || console.log)("ThemeLoader: 初始化完成。", Utils?.logLevels?.INFO || 1);
     },
 
     /**
-     * 应用一个新主题（无刷新）。
+     * 应用一个新主题 (无刷新切换)
+     * @description 动态切换主题的 CSS 和数据，并发出 'themeChanged' 事件。
+     * @function applyTheme
      * @param {string} themeKey - 要应用的主题的键名。
      * @returns {Promise<void>}
      */
     async applyTheme(themeKey) {
+        // 1. 验证主题键的有效性，无效则回退到备用主题
         if (!this.themes[themeKey]) {
             (Utils?.log || console.log)(`ThemeLoader: 尝试应用无效的主题键: ${themeKey}。正在回退。`, Utils?.logLevels?.ERROR || 3);
             themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
         }
 
+        // 2. 加载新主题的核心资源 (CSS 和数据)
         await this._loadThemeCore(themeKey);
 
+        // 3. 发出事件，通知其他模块主题已变更
         if (typeof EventEmitter !== 'undefined') {
             EventEmitter.emit('themeChanged', {
                 newThemeKey: themeKey,
-                newDefinitions: [...this._currentSpecialContactsDefinitions]
+                newDefinitions: [...this._currentSpecialContactsDefinitions] // 传递新数据的副本
             });
             (Utils?.log || console.log)(`ThemeLoader: 已为 ${themeKey} 触发 themeChanged 事件。`, Utils?.logLevels?.INFO || 1);
         } else {
@@ -284,12 +127,15 @@ const ThemeLoader = {
     },
 
     /**
-     * MODIFIED: 设置并缓存一个新的背景图片（区分浅色/深色）。
+     * 设置并缓存自定义背景图片
+     * @description 为指定的配色方案设置背景图，存入 IndexedDB，并立即应用（如果适用）。
+     * @function setBackgroundImage
      * @param {Blob} imageBlob - 用户选择的图片 Blob 对象。
      * @param {'light'|'dark'} colorSchemeType - 该背景图适用的配色方案。
      * @returns {Promise<void>}
      */
     async setBackgroundImage(imageBlob, colorSchemeType) {
+        // 1. 参数校验
         if (!(imageBlob instanceof Blob)) {
             (Utils?.log || console.log)("ThemeLoader.setBackgroundImage: 提供的不是 Blob 对象。", Utils?.logLevels?.ERROR || 3);
             return;
@@ -300,10 +146,11 @@ const ThemeLoader = {
         }
 
         try {
+            // 2. 将图片 Blob 存入 IndexedDB
             const dbKey = `background_image_${colorSchemeType}`;
             await DBManager.setItem('appStateCache', { id: dbKey, imageBlob: imageBlob });
 
-            // 如果设置的背景与当前模式匹配，则立即更新
+            // 3. 如果设置的背景与当前生效的配色方案匹配，则立即更新背景
             if (colorSchemeType === this.getCurrentEffectiveColorScheme()) {
                 await this._updateCustomBackground();
             }
@@ -318,7 +165,9 @@ const ThemeLoader = {
     },
 
     /**
-     * MODIFIED: 移除背景图片并从缓存中清除（区分浅色/深色）。
+     * 移除自定义背景图片
+     * @description 从 IndexedDB 中删除指定配色方案的背景图，并移除页面样式。
+     * @function removeBackgroundImage
      * @param {'light'|'dark'} colorSchemeType - 要移除背景图的配色方案。
      * @returns {Promise<void>}
      */
@@ -328,10 +177,11 @@ const ThemeLoader = {
             return;
         }
         try {
+            // 1. 从 IndexedDB 移除数据
             const dbKey = `background_image_${colorSchemeType}`;
             await DBManager.removeItem('appStateCache', dbKey);
 
-            // 如果移除的背景与当前模式匹配，则立即更新（移除）
+            // 2. 如果移除的背景与当前生效的配色方案匹配，则立即更新（即移除）背景
             if (colorSchemeType === this.getCurrentEffectiveColorScheme()) {
                 await this._updateCustomBackground();
             }
@@ -346,49 +196,248 @@ const ThemeLoader = {
     },
 
     /**
-     * @description 当用户在设置中更改配色方案时调用。
-     *              此方法会更新内部的有效配色方案，应用兼容的主题，并更新背景图。
-     * @param {string} newSchemeKeyFromUser - 用户选择的配色方案键 ('auto', 'light', 'dark')。
+     * 更新用户的配色方案偏好
+     * @description 当用户在设置中更改配色方案（如从'light'切换到'auto'）时调用此方法。
+     * @function updateColorSchemePreference
+     * @param {string} newSchemeKeyFromUser - 用户选择的新配色方案键 ('auto', 'light', 'dark')。
      * @returns {Promise<void>}
      */
     async updateColorSchemePreference(newSchemeKeyFromUser) {
         const newEffectiveColorScheme = this._getEffectiveColorScheme(newSchemeKeyFromUser);
         const currentStoredScheme = localStorage.getItem(this.COLOR_SCHEME_KEY);
 
+        // 1. 检查新旧配置是否有变化，无变化则不执行任何操作
         if (newEffectiveColorScheme !== this._currentEffectiveColorScheme || newSchemeKeyFromUser !== currentStoredScheme) {
+            // 2. 更新内部状态和 localStorage
             this._currentEffectiveColorScheme = newEffectiveColorScheme;
             localStorage.setItem(this.COLOR_SCHEME_KEY, newSchemeKeyFromUser);
             (Utils?.log || console.log)(`ThemeLoader: 配色方案偏好已更新为 '${newSchemeKeyFromUser}'。生效方案: '${this._currentEffectiveColorScheme}'`, Utils?.logLevels?.INFO || 1);
 
+            // 3. 寻找与新配色方案兼容的主题
             let themeToApplyKey;
             const currentBaseName = this._getBaseThemeName(this._currentThemeKey);
             const targetSuffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
             const candidateThemeKey = `${currentBaseName}-${targetSuffix}`;
 
-            if (this.themes[candidateThemeKey] && this._isThemeCompatible(candidateThemeKey, this._currentEffectiveColorScheme)) {
-                themeToApplyKey = candidateThemeKey;
+            if (this.themes[candidateThemeKey]) {
+                themeToApplyKey = candidateThemeKey; // 优先使用当前主题的对应版本
             } else {
-                themeToApplyKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
+                themeToApplyKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme); // 否则查找备用
             }
 
+            // 4. 应用新主题，更新背景图，并重设系统监听器
             await this.applyTheme(themeToApplyKey);
-            await this._updateCustomBackground(); // MODIFIED: 更新背景
+            await this._updateCustomBackground();
             this._setupSystemColorSchemeListener(newSchemeKeyFromUser);
         }
     },
 
     /**
-     * 获取当前主题的特殊联系人定义数组的副本。
-     * @returns {Array<object>}
+     * 获取当前主题的特殊联系人定义
+     * @description 返回当前已加载主题所包含的特殊联系人数据数组的副本。
+     * @function getCurrentSpecialContactsDefinitions
+     * @returns {Array<object>} - 特殊联系人定义的数组。
      */
     getCurrentSpecialContactsDefinitions() {
+        // 返回副本以防止外部直接修改内部状态
         return [...this._currentSpecialContactsDefinitions];
     },
 
     /**
-     * @private 从完整的主题键名中提取基础名称。
-     * @param {string} themeKey - 完整的主题键名。
-     * @returns {string} - 主题的基础名称。
+     * 获取当前生效的配色方案
+     * @function getCurrentEffectiveColorScheme
+     * @returns {string} - 返回 'light' 或 'dark'。
+     */
+    getCurrentEffectiveColorScheme: function() {
+        return this._currentEffectiveColorScheme;
+    },
+
+    /**
+     * 获取当前应用的主题键名
+     * @function getCurrentThemeKey
+     * @returns {string|null} - 返回当前主题的键名，例如 "原神-深色"。
+     */
+    getCurrentThemeKey: function() {
+        return this._currentThemeKey;
+    },
+
+    // --------------------------------------------------------------------------
+    // 内部辅助函数 (Private)
+    // --------------------------------------------------------------------------
+
+    /**
+     * 实际加载主题 CSS 和数据的核心逻辑 (内部函数)
+     * @function _loadThemeCore
+     * @param {string} themeKey - 要加载的主题键名。
+     * @returns {Promise<void>}
+     * @private
+     */
+    async _loadThemeCore(themeKey) {
+        const themeConfig = this.themes[themeKey];
+        if (!themeConfig) {
+            console.error(`ThemeLoader: 未找到键为 "${themeKey}" 的主题。`);
+            return;
+        }
+
+        // 1. 动态更新页面中的主题 CSS 文件链接
+        const themeStylesheet = document.getElementById('theme-stylesheet');
+        if (themeStylesheet && themeConfig.css) {
+            themeStylesheet.setAttribute('href', themeConfig.css);
+        } else if (!themeStylesheet) {
+            console.error("ThemeLoader: 严重错误 - 未找到 'theme-stylesheet' 元素。");
+        } else {
+            themeStylesheet.setAttribute('href', ''); // 如果主题没有CSS，则清空链接
+        }
+
+        // 2. 异步加载并解析与主题关联的数据文件
+        this._currentSpecialContactsDefinitions = await this._parseDataJson(themeConfig.dataJs);
+
+        // 3. 更新内部状态并持久化到 localStorage
+        this._currentThemeKey = themeKey;
+        localStorage.setItem('selectedTheme', themeKey);
+    },
+
+    /**
+     * 异步加载并解析数据 JSON 文件 (内部函数)
+     * @description 会处理 `chaptersFilePath` 字段，以动态加载 AI 联系人的词汇篇章数据。
+     * @function _parseDataJson
+     * @param {string|null} dataJsonUrl - 数据 JSON 文件的 URL。
+     * @returns {Promise<Array<object>>} - 解析后的特殊联系人定义数组。
+     * @private
+     */
+    _parseDataJson: async function(dataJsonUrl) {
+        if (!dataJsonUrl) return [];
+        try {
+            // 1. 获取主数据文件
+            const response = await fetch(dataJsonUrl);
+            if (!response.ok) {
+                (Utils?.log || console.log)(`ThemeLoader: 获取 data JSON 失败 ${dataJsonUrl}: ${response.statusText}`, Utils?.logLevels?.WARN || 2);
+                return [];
+            }
+            const definitions = await response.json();
+
+            if (!Array.isArray(definitions)) {
+                (Utils?.log || console.log)(`ThemeLoader: 从 ${dataJsonUrl} 解析的内容不是数组。`, Utils?.logLevels?.WARN || 2);
+                return [];
+            }
+
+            // 2. 遍历每个联系人定义，处理其词汇篇章
+            for (const def of definitions) {
+                if (def.isAI && def.chaptersFilePath) {
+                    // 2.1 如果是 AI 联系人且定义了篇章文件路径，则异步获取篇章数据
+                    try {
+                        const chaptersResponse = await fetch(def.chaptersFilePath);
+                        if (chaptersResponse.ok) {
+                            def.chapters = await chaptersResponse.json();
+                        } else {
+                            def.chapters = [];
+                        }
+                    } catch (chapError) {
+                        def.chapters = [];
+                    }
+                    delete def.chaptersFilePath; // 移除路径属性，因为它已被处理
+                }
+
+                // 2.2 确保每个定义都有 chapters 数组，并对每个篇章进行校验和标准化
+                if (!def.chapters || !Array.isArray(def.chapters)) {
+                    def.chapters = [];
+                }
+                def.chapters = def.chapters.map(chapter => ({
+                    id: chapter.id || `chapter_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                    name: chapter.name || "未命名篇章",
+                    promptModifier: chapter.promptModifier || ""
+                }));
+            }
+            return definitions;
+
+        } catch (error) {
+            (Utils?.log || console.log)(`ThemeLoader: 加载或解析 data JSON ${dataJsonUrl} 时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
+            return [];
+        }
+    },
+
+    /**
+     * 将背景图样式注入到页面中 (内部函数)
+     * @function _injectBackgroundStyle
+     * @param {string} imageUrl - 要应用的图片的 URL (通常是 Object URL)。
+     * @private
+     */
+    _injectBackgroundStyle(imageUrl) {
+        // 1. 释放之前可能存在的 Object URL，防止内存泄漏
+        if (this._currentInjectedBackgroundUrl) {
+            URL.revokeObjectURL(this._currentInjectedBackgroundUrl);
+        }
+        this._currentInjectedBackgroundUrl = imageUrl; // 存储新的 URL
+
+        // 2. 查找或创建用于注入背景样式的 <style> 标签
+        const styleId = 'custom-background-style';
+        let styleTag = document.getElementById(styleId);
+        if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = styleId;
+            document.head.appendChild(styleTag);
+        }
+
+        // 3. 注入 CSS 规则
+        styleTag.textContent = `
+            body {
+                background-image: url(${imageUrl}) !important;
+                backdrop-filter: blur(10px) !important;
+                background-repeat: no-repeat !important;
+                background-size: cover !important;
+                background-attachment: fixed !important;
+                background-position-x: center !important;
+            }
+        `;
+    },
+
+    /**
+     * 移除自定义背景图样式 (内部函数)
+     * @function _removeBackgroundStyle
+     * @private
+     */
+    _removeBackgroundStyle() {
+        if (this._currentInjectedBackgroundUrl) {
+            URL.revokeObjectURL(this._currentInjectedBackgroundUrl);
+            this._currentInjectedBackgroundUrl = null;
+        }
+        const styleTag = document.getElementById('custom-background-style');
+        if (styleTag) {
+            styleTag.remove();
+        }
+    },
+
+    /**
+     * 根据当前配色方案更新自定义背景 (内部函数)
+     * @description 从 IndexedDB 加载并应用对应配色方案的背景图。
+     * @function _updateCustomBackground
+     * @private
+     */
+    async _updateCustomBackground() {
+        const scheme = this.getCurrentEffectiveColorScheme();
+        const dbKey = `background_image_${scheme}`;
+        try {
+            // 1. 从 IndexedDB 读取背景图数据
+            const backgroundItem = await DBManager.getItem('appStateCache', dbKey);
+            if (backgroundItem && backgroundItem.imageBlob instanceof Blob) {
+                // 2. 如果找到数据，创建 Object URL 并注入样式
+                const imageUrl = URL.createObjectURL(backgroundItem.imageBlob);
+                this._injectBackgroundStyle(imageUrl);
+            } else {
+                // 3. 如果未找到，则移除任何现有的自定义背景
+                this._removeBackgroundStyle();
+            }
+        } catch (error) {
+            this._removeBackgroundStyle();
+        }
+    },
+
+    /**
+     * 从完整主题键名中提取基础名称 (内部函数)
+     * @function _getBaseThemeName
+     * @param {string} themeKey - 完整的主题键名 (如 "原神-浅色")。
+     * @returns {string} - 主题的基础名称 (如 "原神")。
+     * @private
      */
     _getBaseThemeName: function(themeKey) {
         if (!themeKey) return "unknown";
@@ -396,10 +445,12 @@ const ThemeLoader = {
     },
 
     /**
-     * @private 检查指定主题是否与给定的配色方案兼容。
+     * 检查主题是否与配色方案兼容 (内部函数)
+     * @function _isThemeCompatible
      * @param {string} themeKey - 要检查的主题键名。
      * @param {string} colorScheme - 配色方案 ('light' 或 'dark')。
      * @returns {boolean} - 是否兼容。
+     * @private
      */
     _isThemeCompatible: function(themeKey, colorScheme) {
         if (!this.themes[themeKey]) return false;
@@ -409,98 +460,83 @@ const ThemeLoader = {
     },
 
     /**
-     * @private 根据用户的偏好确定实际生效的配色方案。
+     * 根据用户偏好确定实际生效的配色方案 (内部函数)
+     * @function _getEffectiveColorScheme
      * @param {string} preferredScheme - 用户的偏好设置 ('auto', 'light', 'dark')。
      * @returns {string} - 'light' 或 'dark'。
+     * @private
      */
     _getEffectiveColorScheme: function(preferredScheme) {
         if (preferredScheme === 'light') return 'light';
         if (preferredScheme === 'dark') return 'dark';
-        // Check if window and matchMedia are available (they should be in a browser context)
+        // 对于 'auto'，检测系统设置
         if (typeof window !== 'undefined' && window.matchMedia) {
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                return 'dark';
-            }
-        } else {
-            // Fallback for non-browser environments or very old browsers
-            (Utils?.log || console.log)("ThemeLoader: window.matchMedia not available. Defaulting color scheme.", Utils?.logLevels?.WARN || 2);
+            return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
-        return 'light'; // Default to light if 'auto' and system is light or detection fails
+        return 'light'; // 默认回退到浅色模式
     },
 
-
     /**
-     * @private 为给定的配色方案查找一个备用主题。
+     * 为给定的配色方案查找一个备用主题 (内部函数)
+     * @function _findFallbackThemeKeyForScheme
      * @param {string} colorScheme - 'light' 或 'dark'。
      * @returns {string} - 找到的备用主题的键名。
+     * @private
      */
     _findFallbackThemeKeyForScheme: function(colorScheme) {
         const suffix = colorScheme === 'light' ? '-浅色' : '-深色';
+        // 1. 遍历所有主题，寻找第一个匹配后缀的主题
         for (const key in this.themes) {
             if (key.endsWith(suffix)) return key;
         }
+        // 2. 如果找不到，回退到列表中的第一个主题
         const firstKey = Object.keys(this.themes)[0];
         if (firstKey) {
-            (Utils?.log || console.log)(`ThemeLoader: 未找到方案 '${colorScheme}' 的主题，回退到第一个可用的主题: ${firstKey}`, Utils?.logLevels?.WARN || 2);
             return firstKey;
         }
+        // 3. 极端情况，如果一个主题都没有，返回一个硬编码的最终备用项
         console.error("ThemeLoader: 严重错误 - ThemeLoader.themes 中未定义任何主题。");
-        // Provide a hardcoded ultimate fallback if absolutely no themes are defined,
-        // though this state indicates a severe configuration issue.
         return '原神-浅色';
     },
 
     /**
-     * @private 如果用户偏好为 'auto'，则设置一个监听器来响应系统配色方案的变化。
+     * 设置系统配色方案变化监听器 (内部函数)
+     * @description 如果用户偏好为 'auto'，则监听系统变化并自动切换主题。
+     * @function _setupSystemColorSchemeListener
      * @param {string} preferredScheme - 用户的偏好设置。
+     * @private
      */
     _setupSystemColorSchemeListener: function(preferredScheme) {
-        if (typeof window === 'undefined' || !window.matchMedia) {
-            (Utils?.log || console.log)("ThemeLoader: window.matchMedia not available. Skipping system color scheme listener.", Utils?.logLevels?.WARN || 2);
-            return;
-        }
+        if (typeof window === 'undefined' || !window.matchMedia) return;
 
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        // 1. 移除旧的监听器以防重复
         if (this._systemColorSchemeListener) {
             mediaQuery.removeEventListener('change', this._systemColorSchemeListener);
             this._systemColorSchemeListener = null;
         }
 
+        // 2. 如果用户设置为 'auto'，则添加新的监听器
         if (preferredScheme === 'auto') {
             this._systemColorSchemeListener = async (e) => {
                 const newSystemEffectiveColorScheme = e.matches ? 'dark' : 'light';
+                // 3. 当系统方案变化且与当前应用方案不同时，触发更新
                 if (newSystemEffectiveColorScheme !== this._currentEffectiveColorScheme) {
-                    (Utils?.log || console.log)(`ThemeLoader: 系统配色方案变更为: ${newSystemEffectiveColorScheme}。更新应用主题。`, Utils?.logLevels?.INFO || 1);
                     this._currentEffectiveColorScheme = newSystemEffectiveColorScheme;
 
+                    // 4. 寻找并应用新方案下的兼容主题
                     const currentBaseName = this._getBaseThemeName(this._currentThemeKey);
                     const newSuffix = newSystemEffectiveColorScheme === 'light' ? '浅色' : '深色';
                     let newThemeToApplyKey = `${currentBaseName}-${newSuffix}`;
 
-                    if (!this.themes[newThemeToApplyKey] || !this._isThemeCompatible(newThemeToApplyKey, newSystemEffectiveColorScheme)) {
+                    if (!this.themes[newThemeToApplyKey]) {
                         newThemeToApplyKey = this._findFallbackThemeKeyForScheme(newSystemEffectiveColorScheme);
                     }
                     await this.applyTheme(newThemeToApplyKey);
-                    await this._updateCustomBackground(); // MODIFIED: 更新背景
+                    await this._updateCustomBackground();
                 }
             };
             mediaQuery.addEventListener('change', this._systemColorSchemeListener);
         }
     },
-
-    /**
-     * 获取当前生效的配色方案。
-     * @returns {string} - 'light' 或 'dark'。
-     */
-    getCurrentEffectiveColorScheme: function() {
-        return this._currentEffectiveColorScheme;
-    },
-
-    /**
-     * 获取当前应用的主题的键名。
-     * @returns {string|null} - 当前主题的键名。
-     */
-    getCurrentThemeKey: function() {
-        return this._currentThemeKey;
-    }
 };

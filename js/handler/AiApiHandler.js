@@ -1,186 +1,41 @@
 /**
- * @file AiApiHandler.js
- * @description 负责处理与后端 AI API 的所有通信，包括构建上下文、发送请求以及处理流式响应。
- *              现在会优先使用用户在设置中配置的 API 参数。
- *              更新：在群聊中处理对 AI 的提及，提示词获取逻辑调整为支持非当前主题定义的AI角色。
- *              修复：在 sendGroupAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
- *              重构：通用 API 请求逻辑已移至 Utils.fetchApiStream。
- *              新增：在向AI发送消息时，会检查并应用用户为该AI选择的词汇篇章特定提示词。
- *              修复：在 sendAiMessage 中，从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
- *              移除：删除了所有与对话摘要相关的功能，因为后端不再支持。
- *              修改: _getEffectiveAiConfig 现在支持从多种大模型提供商配置中获取设置，并移除了对“覆盖”状态的检查。
- *              FIXED: 增加了 extractMemoryElements 方法以支持记忆书功能。
- *              FIXED: sendAiMessage 现在会注入已启用的记忆书内容。
- *              BUGFIX: 移除了所有与 "正在思考..." 状态消息相关的逻辑。
- *              REFACTORED: 将 extractMemoryElements 和 MCP 分析请求改为流式请求，统一 API 调用方式。
- * @dependencies UserManager, MessageManager, ChatManager, NotificationUIManager, Utils, AppSettings, ConnectionManager, LLMProviders, MemoryBookManager
+ * @file AI API 处理器
+ * @description 负责处理与后端 AI API 的所有通信。
+ *              包括构建上下文、发送请求以及处理流式响应。
+ *              此模块支持多种大模型提供商，并优先使用用户在设置中配置的 API 参数。
+ *              它还处理私聊和群聊中对 AI 的调用，并能注入“记忆书”内容以增强上下文。
+ * @module AiApiHandler
+ * @exports {object} AiApiHandler - 包含所有 AI API 通信方法的单例对象。
+ * @dependency UserManager, MessageManager, ChatManager, NotificationUIManager, Utils, AppSettings, ConnectionManager, LLMProviders, MemoryBookManager
  */
 const AiApiHandler = {
 
-    _getEffectiveAiConfig: function() {
-        const config = {};
-        const fallbackConfig = (typeof AppSettings !== 'undefined' && AppSettings && AppSettings.server) ? AppSettings.server : {};
-        const llmProviders = (typeof LLMProviders !== 'undefined') ? LLMProviders : {};
-
-        const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
-        const providerConfig = llmProviders[providerKey] || llmProviders.ppmc || {};
-
-        config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint')
-            || providerConfig.defaultEndpoint
-            || fallbackConfig.apiEndpoint;
-
-        config.model = localStorage.getItem('aiSetting_model')
-            || providerConfig.defaultModel
-            || fallbackConfig.model;
-
-        config.apiKey = localStorage.getItem('aiSetting_api_key') || fallbackConfig.api_key || '';
-
-        const maxTokensStored = localStorage.getItem('aiSetting_max_tokens');
-        let parsedMaxTokens = parseInt(maxTokensStored, 10);
-
-        if (maxTokensStored !== null && !isNaN(parsedMaxTokens)) {
-            config.maxTokens = parsedMaxTokens;
-        } else if (fallbackConfig.max_tokens !== undefined) {
-            config.maxTokens = fallbackConfig.max_tokens;
-        } else {
-            config.maxTokens = 2048;
-        }
-
-        config.ttsApiEndpoint = localStorage.getItem('aiSetting_ttsApiEndpoint') || fallbackConfig.ttsApiEndpoint || '';
-
-        Utils.log(`_getEffectiveAiConfig: 生效的 AI 配置已使用。提供商: ${providerKey}, 端点: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, 密钥存在: ${!!config.apiKey}, 模型: ${config.model}, TTS 端点: ${config.ttsApiEndpoint ? String(config.ttsApiEndpoint).substring(0,30) + '...' : 'N/A'}`, Utils.logLevels.DEBUG);
-        return config;
-    },
+    // =========================================================================
+    //                            公开方法 (Public Methods)
+    // =========================================================================
 
     /**
-     * @private
-     * @description 为MCP流程构建第一次请求的提示。包含工具定义和指示。
-     * ... (this method remains the same as your provided code) ...
+     * 向 AI 发送消息并处理流式响应 (用于私聊)。
+     * @function sendAiMessage
+     * @param {string} targetId - 目标 AI 联系人的 ID。
+     * @param {object} contact - 目标 AI 联系人对象。
+     * @param {string} messageText - 用户发送的消息文本。
+     * @returns {Promise<void>}
      */
-    _buildMcpAnalysisPrompt: function(contact, chatHistory, userMessage) {
-        const messages = [];
-        let mcpSystemPrompt = "你是一个能够理解并使用工具的智能助手。\n";
-        mcpSystemPrompt += "可用的工具列表如下 (JSON格式):\n```json\n" + JSON.stringify(MCP_TOOLS, null, 2) + "\n```\n";
-        mcpSystemPrompt += "根据用户的提问，如果可以使用工具，你必须只回复一个JSON对象，格式如下: {\"tool_call\": {\"name\": \"工具名称\", \"arguments\": {\"参数1\": \"值1\"}}}. 不要添加任何其他解释或文本。\n";
-        mcpSystemPrompt += "如果任何工具都不适用，或者你需要用户提供更多信息，请像平常一样自然地回复用户，不要提及工具。\n\n";
-
-        messages.push({ role: "system", content: mcpSystemPrompt });
-
-        const contextMessagesForAIHistory = chatHistory.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
-        messages.push(...contextMessagesForAIHistory);
-        messages.push({ role: "user", content: userMessage });
-
-        return messages;
-    },
-
-    /**
-     * @private
-     * @description 为MCP流程构建第二次请求的提示。包含工具调用结果。
-     * ... (this method remains the same as your provided code) ...
-     */
-    _buildMcpFinalPrompt: function(contact, originalUserMessage, toolCall, toolResult) {
-        const messages = [];
-        const baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "你是一个乐于助人的助手。";
-        messages.push({ role: "system", content: baseSystemPrompt });
-
-        const combinedPrompt = `${originalUserMessage}\n\n[系统提示：你已调用工具“${toolCall.name}”并获得以下结果，请基于此结果，用自然语言回复用户。]\n工具结果: ${toolResult}`;
-        messages.push({ role: "user", content: combinedPrompt });
-
-        return messages;
-    },
-
-    /**
-     * @private
-     * @description 执行MCP工具调用。
-     * ... (this method remains the same as your provided code) ...
-     */
-    _executeMcpTool: async function(toolName, args) {
-        if (typeof MCP_TOOLS === 'undefined' || !MCP_TOOLS[toolName]) {
-            return { error: `未知的工具: ${toolName}` };
-        }
-        const toolDef = MCP_TOOLS[toolName];
-        let url = toolDef.url_template;
-
-        for (const key in args) {
-            if (Object.prototype.hasOwnProperty.call(args, key)) {
-                url = url.replace(`{${key}}`, encodeURIComponent(args[key]));
-            }
-        }
-        Utils.log(`MCP: 正在执行工具 "${toolName}"，请求URL: ${url}`, Utils.logLevels.INFO);
-
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                return { error: `工具API请求失败，状态码: ${response.status}` };
-            }
-            const data = await response.text();
-            return { data: data };
-        } catch (e) {
-            return { error: `网络请求失败: ${e.message}` };
-        }
-    },
-
-    /**
-     * NEW: Sends a conversation transcript to the AI to extract key elements.
-     * @param {Array<string>} elements - The list of key elements to extract.
-     * @param {string} conversationTranscript - The full conversation text.
-     * @returns {Promise<string>} - The AI-generated summary/extraction.
-     */
-    extractMemoryElements: async function(elements, conversationTranscript) {
-        Utils.log(`AiApiHandler: 请求提取记忆要素: ${elements.join(', ')}`, Utils.logLevels.INFO);
-        const effectiveConfig = this._getEffectiveAiConfig();
-        if (!effectiveConfig.apiEndpoint) {
-            throw new Error("AI API 端点未配置。");
-        }
-
-        const prompt = `你是一个对话分析和信息提取专家。请仔细阅读以下对话记录，并根据预设的关键要素列表，简洁、清晰地总结出相关信息。
-
-关键要素列表:
-${elements.map(e => `- ${e}`).join('\n')}
-
-对话记录:
----
-${conversationTranscript}
----
-
-请根据以上对话，生成一份“记忆书”，清晰地列出每个关键要素对应的内容。如果对话中没有某个要素的信息，请注明“未提及”。`;
-
-        const requestBody = {
-            model: effectiveConfig.model,
-            messages: [{ role: "user", content: prompt }],
-            // MODIFIED: 将 stream 设置为 true
-            stream: true,
-            temperature: 0.1,
-            max_tokens: 1024
-        };
-
-        // REFACTORED: 使用 Utils.fetchApiStream 替换原来的 fetch 逻辑，并使用 Promise 包装以符合原函数签名
-        return new Promise((resolve, reject) => {
-            Utils.fetchApiStream(
-                effectiveConfig.apiEndpoint,
-                requestBody,
-                { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-                () => {
-                    // onChunkReceived: 提取记忆要素时，我们不需要实时显示，所以此回调为空
-                },
-                (finalContent) => {
-                    // onStreamEnd: 当流结束时，用完整的响应内容 resolve Promise
-                    resolve(finalContent);
-                }
-            ).catch(error => {
-                // 如果 fetchApiStream 内部出错，则 reject Promise
-                const errorMessage = `记忆提取请求失败: ${error.message}`;
-                Utils.log(errorMessage, Utils.logLevels.ERROR);
-                reject(new Error(errorMessage));
-            });
-        });
-    },
-    // --- END OF ADDED FUNCTION ---
-
     sendAiMessage: async function(targetId, contact, messageText) {
+        // 处理流程如下：
+        // 1. 获取生效的 AI 配置 (优先使用用户设置)。
+        // 2. 构建上下文，包括历史消息、记忆书内容、篇章提示词修正等。
+        // 3. 检查是否启用了 MCP (工具调用)，如果启用则先进行工具分析。
+        //    3a. (MCP) 构建并发送工具分析请求。
+        //    3b. (MCP) 如果 AI 决定调用工具，则执行工具并获取结果。
+        //    3c. (MCP) 将工具结果与原始问题结合，发送最终请求。
+        // 4. (非MCP) 构建标准请求体。
+        // 5. 使用 Utils.fetchApiStream 发送流式请求。
+        // 6. 实时更新 UI 上的 AI 回复，并在流结束后将完整消息存入 ChatManager。
+        // 7. 处理所有潜在的错误，并向用户显示通知。
         const chatBox = document.getElementById('chatBox');
 
-        // BUGFIX: Removed all "thinking" message logic.
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
@@ -193,6 +48,7 @@ ${conversationTranscript}
             const timeThreshold = new Date().getTime() - contextWindow;
             const chatHistory = (ChatManager.chats[targetId] || []).filter(msg => new Date(msg.timestamp).getTime() > timeThreshold && msg.type === 'text' && !msg.isThinking);
 
+            // 从历史记录中排除触发AI调用的用户消息本身，以避免AI上下文中该消息重复。
             if (chatHistory.length > 0) {
                 const lastMessageInHistory = chatHistory[chatHistory.length - 1];
                 if (lastMessageInHistory.sender === UserManager.userId && lastMessageInHistory.content === messageText) {
@@ -201,25 +57,22 @@ ${conversationTranscript}
                 }
             }
 
-            // ... (MCP logic remains the same) ...
+            // MCP 工具调用逻辑
             if (contact.aiConfig?.mcp_enabled && typeof MCP_TOOLS !== 'undefined') {
-                // MCP logic here...
                 const analysisMessages = this._buildMcpAnalysisPrompt(contact, chatHistory, messageText);
                 const analysisRequestBody = {
                     model: effectiveConfig.model, messages: analysisMessages,
-                    // MODIFIED: 将 stream 设置为 true
                     stream: true,
                     temperature: 0.0, max_tokens: 512
                 };
 
-                // REFACTORED: 使用 Utils.fetchApiStream 替换原来的 fetch 逻辑以处理工具调用分析
                 const aiContent = await new Promise((resolve, reject) => {
                     Utils.fetchApiStream(
                         effectiveConfig.apiEndpoint,
                         analysisRequestBody,
                         { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-                        () => {}, // onChunkReceived: MCP分析时不需要实时显示，回调为空
-                        (finalContent) => resolve(finalContent) // onStreamEnd: 流结束后用完整内容 resolve
+                        () => {},
+                        (finalContent) => resolve(finalContent)
                     ).catch(error => {
                         const errorMessage = `MCP分析请求失败: ${error.message}`;
                         Utils.log(errorMessage, Utils.logLevels.ERROR);
@@ -234,13 +87,14 @@ ${conversationTranscript}
                         toolCall = parsedContent.tool_call;
                     }
                 } catch (e) {
-                    // 如果解析失败，说明AI直接回复了自然语言，而不是工具调用JSON
+                    // 如果解析失败，说明AI直接回复了自然语言
                     const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
                     ChatManager.addMessage(targetId, finalAiMessage);
                     return;
                 }
 
                 if (toolCall) {
+                    // 工具调用流程
                     const toolUseMsgId = `system_tool_${Date.now()}`;
                     const toolUseMsg = { id: toolUseMsgId, type: 'system', content: `正在调用工具: ${toolCall.name}...`, timestamp: new Date().toISOString(), sender: targetId };
                     MessageManager.displayMessage(toolUseMsg, false);
@@ -288,21 +142,22 @@ ${conversationTranscript}
                     return;
                 }
             }
-            // BUGFIX: No "thinking" message to remove
+
+            // 标准聊天流程
             const recentMessages = chatHistory;
             const contextMessagesForAIHistory = recentMessages.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
 
             const messagesForRequestBody = [];
             let baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "";
 
-            // --- FIXED: INJECT MEMORY BOOK CONTENT ---
+            // 注入记忆书内容
             const memoryBookContent = (typeof MemoryBookManager !== 'undefined') ? MemoryBookManager.getEnabledMemoryBookContentForChat(targetId) : "";
             if (memoryBookContent) {
                 baseSystemPrompt = `[背景记忆]\n${memoryBookContent}\n\n[角色设定]\n${baseSystemPrompt}`;
                 Utils.log(`AiApiHandler: 为 AI ${targetId} 注入了记忆书内容。`, Utils.logLevels.INFO);
             }
-            // --- END OF FIX ---
 
+            // 应用篇章提示词修正
             const selectedChapterId = UserManager.getSelectedChapterForAI(targetId);
             let chapterPromptModifier = "";
             if (selectedChapterId && contact.chapters && contact.chapters.length > 0) {
@@ -358,14 +213,33 @@ ${conversationTranscript}
             );
 
         } catch (error) {
-            // BUGFIX: No "thinking" message to remove
             Utils.log(`与 AI (${contact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`错误: 无法从 ${contact.name} 获取回复。 ${error.message}`, 'error');
             ChatManager.addMessage(targetId, { type: 'text', content: `抱歉，发生了一个错误: ${error.message}`, timestamp: new Date().toISOString(), sender: targetId });
         }
     },
 
+    /**
+     * 向群聊中的 AI 发送被 @ 提及的消息并处理响应。
+     * @function sendGroupAiMessage
+     * @param {string} groupId - 目标群组的 ID。
+     * @param {object} group - 目标群组对象。
+     * @param {string} aiContactId - 被提及的 AI 联系人的 ID。
+     * @param {string} mentionedMessageText - 提及 AI 的完整消息文本。
+     * @param {string} originalSenderId - 发送此消息的原始用户 ID。
+     * @param {string|null} [triggeringMessageId=null] - 触发此次调用的消息ID，用于从上下文中排除。
+     * @returns {Promise<void>}
+     */
     sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId, triggeringMessageId = null) {
+        // 处理流程如下：
+        // 1. 校验 AI 联系人有效性并获取生效的 AI 配置。
+        // 2. 构建系统提示词，优先使用群内特定提示词，否则使用 AI 默认提示词，最后拼接群聊后缀。
+        // 3. 筛选群聊历史记录作为上下文，并排除触发消息本身。
+        // 4. 将历史消息格式化为 AI 可理解的 "用户: 内容" 格式。
+        // 5. 构建最终请求体。
+        // 6. 使用 Utils.fetchApiStream 发送流式请求。
+        // 7. 实时更新 UI 中的 AI 回复，并在流结束后将完整消息存入 ChatManager。
+        // 8. 将 AI 的最终回复广播给群内其他人类成员。
         const aiContact = UserManager.contacts[aiContactId];
         if (!aiContact || !aiContact.isAI) {
             Utils.log(`AiApiHandler.sendGroupAiMessage: 目标 ${aiContactId} 不是有效的AI联系人。`, Utils.logLevels.WARN);
@@ -374,7 +248,6 @@ ${conversationTranscript}
 
         const chatBox = document.getElementById('chatBox');
 
-        // BUGFIX: Removed all "thinking" message logic.
         try {
             const effectiveConfig = this._getEffectiveAiConfig();
             if (!effectiveConfig.apiEndpoint) {
@@ -447,8 +320,6 @@ ${conversationTranscript}
             };
             Utils.log(`发送到群组 AI (${aiContact.name} in ${group.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
-            // BUGFIX: No "thinking" message to remove
-
             const aiResponseMessageId = `group_ai_msg_${aiContactId}_${Date.now()}`;
             let fullAiResponseContent = "";
             const initialAiResponseMessage = {
@@ -500,7 +371,6 @@ ${conversationTranscript}
             );
 
         } catch (error) {
-            // BUGFIX: No "thinking" message to remove
             Utils.log(`在群组 (${group.name}) 中与 AI (${aiContact.name}) 通信时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification(`错误: 无法从 ${aiContact.name} (群组内) 获取回复。 ${error.message}`, 'error');
             const errorResponseMessage = {
@@ -518,8 +388,66 @@ ${conversationTranscript}
             });
         }
     },
+
+    /**
+     * 请求 AI 从对话记录中提取关键要素，用于填充记忆书。
+     * @function extractMemoryElements
+     * @param {Array<string>} elements - 需要提取的关键要素列表 (例如：["姓名", "爱好"])。
+     * @param {string} conversationTranscript - 完整的对话记录文本。
+     * @returns {Promise<string>} - AI 生成的包含提取信息的文本。
+     * @throws {Error} 如果 AI 端点未配置或请求失败。
+     */
+    extractMemoryElements: async function(elements, conversationTranscript) {
+        Utils.log(`AiApiHandler: 请求提取记忆要素: ${elements.join(', ')}`, Utils.logLevels.INFO);
+        const effectiveConfig = this._getEffectiveAiConfig();
+        if (!effectiveConfig.apiEndpoint) {
+            throw new Error("AI API 端点未配置。");
+        }
+
+        const prompt = `你是一个对话分析和信息提取专家。请仔细阅读以下对话记录，并根据预设的关键要素列表，简洁、清晰地总结出相关信息。
+
+关键要素列表:
+    ${elements.map(e => `- ${e}`).join('\n')}
+
+对话记录:
+    ---
+        ${conversationTranscript}
+---
+
+    请根据以上对话，生成一份“记忆书”，清晰地列出每个关键要素对应的内容。如果对话中没有某个要素的信息，请注明“未提及”。`;
+
+        const requestBody = {
+            model: effectiveConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            stream: true,
+            temperature: 0.1,
+            max_tokens: 1024
+        };
+
+        // 使用 Utils.fetchApiStream 替换原来的 fetch 逻辑，并使用 Promise 包装以符合原函数签名
+        return new Promise((resolve, reject) => {
+            Utils.fetchApiStream(
+                effectiveConfig.apiEndpoint,
+                requestBody,
+                { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                () => {}, // onChunkReceived: 提取记忆要素时，我们不需要实时显示
+                (finalContent) => {
+                    resolve(finalContent);
+                }
+            ).catch(error => {
+                const errorMessage = `记忆提取请求失败: ${error.message}`;
+                Utils.log(errorMessage, Utils.logLevels.ERROR);
+                reject(new Error(errorMessage));
+            });
+        });
+    },
+
+    /**
+     * 检查 AI 服务（API 端点）的健康状况。
+     * @function checkAiServiceHealth
+     * @returns {Promise<boolean>} - 如果服务健康则返回 true，否则返回 false。
+     */
     checkAiServiceHealth: async function() {
-        // ... (this method remains the same)
         const effectiveConfig = this._getEffectiveAiConfig();
 
         if (!effectiveConfig.apiEndpoint) {
@@ -566,8 +494,13 @@ ${conversationTranscript}
             return false;
         }
     },
+
+    /**
+     * 当 AI 配置发生变化时（例如，在设置中更改了 API 端点），重新检查服务健康状况。
+     * @function handleAiConfigChange
+     * @returns {Promise<void>}
+     */
     handleAiConfigChange: async function() {
-        // ... (this method remains the same)
         Utils.log("AiApiHandler: AI 配置已更改，正在重新检查服务健康状况...", Utils.logLevels.INFO);
         try {
             const isHealthy = await this.checkAiServiceHealth();
@@ -576,5 +509,126 @@ ${conversationTranscript}
             Utils.log("处理 AI 配置变更时，健康检查出错: " + e.message, Utils.logLevels.ERROR);
             UserManager.updateAiServiceStatus(false);
         }
-    }
+    },
+
+    // =========================================================================
+    //                            内部方法 (Internal Methods)
+    // =========================================================================
+
+    /**
+     * 获取生效的 AI 配置，优先使用 localStorage 中的用户设置，否则回退到 AppSettings 中的默认值。
+     * @private
+     * @returns {object} - 包含 apiEndpoint, model, apiKey, maxTokens, ttsApiEndpoint 的配置对象。
+     */
+    _getEffectiveAiConfig: function() {
+        const config = {};
+        const fallbackConfig = (typeof AppSettings !== 'undefined' && AppSettings && AppSettings.server) ? AppSettings.server : {};
+        const llmProviders = (typeof LLMProviders !== 'undefined') ? LLMProviders : {};
+
+        const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
+        const providerConfig = llmProviders[providerKey] || llmProviders.ppmc || {};
+
+        config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint')
+            || providerConfig.defaultEndpoint
+            || fallbackConfig.apiEndpoint;
+
+        config.model = localStorage.getItem('aiSetting_model')
+            || providerConfig.defaultModel
+            || fallbackConfig.model;
+
+        config.apiKey = localStorage.getItem('aiSetting_api_key') || fallbackConfig.api_key || '';
+
+        const maxTokensStored = localStorage.getItem('aiSetting_max_tokens');
+        let parsedMaxTokens = parseInt(maxTokensStored, 10);
+
+        if (maxTokensStored !== null && !isNaN(parsedMaxTokens)) {
+            config.maxTokens = parsedMaxTokens;
+        } else if (fallbackConfig.max_tokens !== undefined) {
+            config.maxTokens = fallbackConfig.max_tokens;
+        } else {
+            config.maxTokens = 2048;
+        }
+
+        config.ttsApiEndpoint = localStorage.getItem('aiSetting_ttsApiEndpoint') || fallbackConfig.ttsApiEndpoint || '';
+
+        Utils.log(`_getEffectiveAiConfig: 生效的 AI 配置已使用。提供商: ${providerKey}, 端点: ${config.apiEndpoint ? String(config.apiEndpoint).substring(0,30) + '...' : 'N/A'}, 密钥存在: ${!!config.apiKey}, 模型: ${config.model}, TTS 端点: ${config.ttsApiEndpoint ? String(config.ttsApiEndpoint).substring(0,30) + '...' : 'N/A'}`, Utils.logLevels.DEBUG);
+        return config;
+    },
+
+    /**
+     * 为 MCP 工具调用流程构建第一次请求的提示。
+     * @private
+     * @param {object} contact - 目标 AI 联系人对象。
+     * @param {Array<object>} chatHistory - 聊天历史记录。
+     * @param {string} userMessage - 用户的原始消息。
+     * @returns {Array<object>} - 用于发送到 AI API 的消息数组。
+     */
+    _buildMcpAnalysisPrompt: function(contact, chatHistory, userMessage) {
+        const messages = [];
+        let mcpSystemPrompt = "你是一个能够理解并使用工具的智能助手。\n";
+        mcpSystemPrompt += "可用的工具列表如下 (JSON格式):\n```json\n" + JSON.stringify(MCP_TOOLS, null, 2) + "\n```\n";
+        mcpSystemPrompt += "根据用户的提问，如果可以使用工具，你必须只回复一个JSON对象，格式如下: {\"tool_call\": {\"name\": \"工具名称\", \"arguments\": {\"参数1\": \"值1\"}}}. 不要添加任何其他解释或文本。\n";
+        mcpSystemPrompt += "如果任何工具都不适用，或者你需要用户提供更多信息，请像平常一样自然地回复用户，不要提及工具。\n\n";
+
+        messages.push({ role: "system", content: mcpSystemPrompt });
+
+        const contextMessagesForAIHistory = chatHistory.map(msg => ({role: (msg.sender === UserManager.userId) ? 'user' : 'assistant', content: msg.content}));
+        messages.push(...contextMessagesForAIHistory);
+        messages.push({ role: "user", content: userMessage });
+
+        return messages;
+    },
+
+    /**
+     * 为 MCP 工具调用流程构建第二次（最终）请求的提示。
+     * @private
+     * @param {object} contact - 目标 AI 联系人对象。
+     * @param {string} originalUserMessage - 用户的原始消息。
+     * @param {object} toolCall - AI 决定的工具调用对象。
+     * @param {string} toolResult - 工具执行后的结果。
+     * @returns {Array<object>} - 用于发送到 AI API 的消息数组。
+     */
+    _buildMcpFinalPrompt: function(contact, originalUserMessage, toolCall, toolResult) {
+        const messages = [];
+        const baseSystemPrompt = (contact.aiConfig && contact.aiConfig.systemPrompt) ? contact.aiConfig.systemPrompt : "你是一个乐于助人的助手。";
+        messages.push({ role: "system", content: baseSystemPrompt });
+
+        const combinedPrompt = `${originalUserMessage}\n\n[系统提示：你已调用工具“${toolCall.name}”并获得以下结果，请基于此结果，用自然语言回复用户。]\n工具结果: ${toolResult}`;
+        messages.push({ role: "user", content: combinedPrompt });
+
+        return messages;
+    },
+
+    /**
+     * 执行 MCP 工具调用。
+     * @private
+     * @param {string} toolName - 要执行的工具名称。
+     * @param {object} args - 工具所需的参数。
+     * @returns {Promise<object>} - 包含 { data } 或 { error } 的结果对象。
+     */
+    _executeMcpTool: async function(toolName, args) {
+        if (typeof MCP_TOOLS === 'undefined' || !MCP_TOOLS[toolName]) {
+            return { error: `未知的工具: ${toolName}` };
+        }
+        const toolDef = MCP_TOOLS[toolName];
+        let url = toolDef.url_template;
+
+        for (const key in args) {
+            if (Object.prototype.hasOwnProperty.call(args, key)) {
+                url = url.replace(`{${key}}`, encodeURIComponent(args[key]));
+            }
+        }
+        Utils.log(`MCP: 正在执行工具 "${toolName}"，请求URL: ${url}`, Utils.logLevels.INFO);
+
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                return { error: `工具API请求失败，状态码: ${response.status}` };
+            }
+            const data = await response.text();
+            return { data: data };
+        } catch (e) {
+            return { error: `网络请求失败: ${e.message}` };
+        }
+    },
 };

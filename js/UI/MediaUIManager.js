@@ -1,46 +1,40 @@
 /**
- * @file MediaUIManager.js
- * @description 媒体 UI 管理器，负责处理与媒体相关的用户界面元素，如录音和文件选择的预览。
- *              它将 UI 展示逻辑与 MediaManager 的核心功能逻辑分离。
- *              文件名过长时，在预览和消息中会进行截断显示。
- *              修改: displayFilePreview 现在使用 fileObj.previewUrl (一个Object URL) 来显示预览。
- *              新增: renderMediaThumbnail 用于在指定占位符中渲染图片或视频的缩略图。
+ * @file 媒体 UI 管理器
+ * @description 负责处理与媒体相关的用户界面元素，例如录音和文件选择后的预览界面。它将 UI 展示逻辑与核心功能逻辑分离，实现关注点分离。
  * @module MediaUIManager
- * @exports {object} MediaUIManager - 对外暴露的单例对象，包含管理媒体 UI 的方法。
- * @property {function} init - 初始化模块，获取 DOM 元素。
- * @property {function} displayAudioPreview - 显示录制完成的音频预览。
- * @property {function} displayFilePreview - 显示用户选择的文件的预览。
- * @property {function} setRecordingButtonActive - 设置录音按钮的激活（录制中）状态和 UI。
- * @property {function} renderMediaThumbnail - (新增) 通用方法，在提供的占位符中渲染图片或视频缩略图。
- * @dependencies Utils, MessageManager, MediaManager, NotificationUIManager, EventEmitter, DBManager
- * @dependents AppInitializer (进行初始化), MediaManager (调用以更新 UI), EventEmitter (监听截图事件), MessageManager, ResourcePreviewUIManager (使用 renderMediaThumbnail)
+ * @exports {object} MediaUIManager - 对外暴露的单例对象，包含所有管理媒体 UI 的方法。
+ * @dependency Utils, MessageManager, MediaManager, NotificationUIManager, DBManager, EventEmitter
  */
 const MediaUIManager = {
-    audioPreviewContainerEl: null, // 音频预览容器元素
-    filePreviewContainerEl: null,  // 文件预览容器元素
+    // 音频预览 UI 的容器元素
+    audioPreviewContainerEl: null,
+    // 文件预览 UI 的容器元素
+    filePreviewContainerEl: null,
 
     /**
-     * 初始化模块，获取 UI 元素的引用。
+     * 初始化模块，获取并缓存必要的 DOM 元素引用。
+     * @function init
+     * @returns {void}
      */
     init: function() {
         this.audioPreviewContainerEl = document.getElementById('audioPreviewContainer');
         this.filePreviewContainerEl = document.getElementById('filePreviewContainer');
-        // 预览中的播放/取消事件监听器在创建预览时动态添加。
-
-        // 监听截图完成事件以更新预览 (注意: 这个事件现在由MediaManager在 'screenshotEditingComplete' 后触发，并传递处理好的fileObject)
-        // EventEmitter.on('screenshotTakenForPreview', (fileObject) => { // 这个事件可能不再需要，或者语义已变
-        //     this.displayFilePreview(fileObject); // 显示文件预览
-        // });
+        // NOTE: 预览界面中的播放/取消等事件监听器，在各自的预览创建函数中动态添加。
     },
 
     /**
-     * 在输入区域显示录制完成的音频预览。
-     * @param {string} audioDataUrl - 音频数据的 Base64 URL。
-     * @param {number} duration - 音频时长（秒）。
+     * 显示录制完成的音频预览界面。
+     * @function displayAudioPreview
+     * @param {string} audioDataUrl - 音频数据的 Base64 格式 URL。
+     * @param {number} duration - 音频的总时长（单位：秒）。
+     * @returns {void}
      */
     displayAudioPreview: function (audioDataUrl, duration) {
         if (!this.audioPreviewContainerEl) return;
-        this.clearFilePreview(); // 确保文件预览被清除
+        // 清理流程：
+        // 1. 清除任何已存在的文件预览
+        // 2. 重置 MessageManager 中的文件选择状态
+        this.clearFilePreview();
         MessageManager.selectedFile = null;
 
         const template = document.getElementById('audio-preview-template').content.cloneNode(true);
@@ -71,11 +65,16 @@ const MediaUIManager = {
     },
 
     /**
-     * 在输入区域显示用户选择的文件的预览。
-     * @param {object} fileObj - 包含文件信息...的对象。
+     * 显示用户所选文件的预览界面。
+     * @function displayFilePreview
+     * @param {object} fileObj - 包含文件详情（name, type, size, previewUrl等）的对象。
+     * @returns {void}
      */
     displayFilePreview: function(fileObj) {
         if (!this.filePreviewContainerEl) return;
+        // 清理流程：
+        // 1. 清除任何已存在的音频预览
+        // 2. 重置 MessageManager 中的音频数据状态
         this.clearAudioPreview();
         MessageManager.audioData = null;
 
@@ -85,20 +84,23 @@ const MediaUIManager = {
 
         const originalFileName = fileObj.name;
         const escapedFileName = Utils.escapeHtml(originalFileName);
-        const displayFileName = Utils.truncateFileName(escapedFileName, 25);
+        const displayFileName = Utils.truncateFileName(escapedFileName, 25); // 截断过长的文件名以优化显示
 
+        // 根据文件类型决定预览样式
         if (fileObj.type.startsWith('image/') && fileObj.previewUrl) {
+            // 对于图片类型，创建并显示图片缩略图
             const img = document.createElement('img');
             img.src = fileObj.previewUrl;
-            img.alt = "预览";
+            img.alt = "文件预览";
             img.style.maxHeight = '50px';
             img.style.borderRadius = '4px';
             img.style.marginRight = '8px';
-            img.title = escapedFileName;
+            img.title = escapedFileName; // 鼠标悬停时显示完整文件名
             img.loading = "lazy";
             contentEl.appendChild(img);
             contentEl.appendChild(document.createTextNode(displayFileName));
         } else {
+            // 对于非图片文件（如视频、普通文件），显示图标和文件名
             const icon = fileObj.type.startsWith('video/') ? '🎬' : '📄';
             const fileTypeText = fileObj.type.startsWith('video/') ? ' (视频)' : ` (${MediaManager.formatFileSize(fileObj.size)})`;
             contentEl.innerHTML = `${icon} <span title="${escapedFileName}">${displayFileName}</span>${fileTypeText}`;
@@ -111,36 +113,44 @@ const MediaUIManager = {
     },
 
     /**
-     * 清除音频预览 UI。
+     * 清除音频预览的 UI 显示。
+     * @function clearAudioPreview
+     * @returns {void}
      */
     clearAudioPreview: function() {
         if (this.audioPreviewContainerEl) this.audioPreviewContainerEl.innerHTML = '';
     },
 
     /**
-     * 清除文件预览 UI。
+     * 清除文件预览的 UI 显示。
+     * @function clearFilePreview
+     * @returns {void}
      */
     clearFilePreview: function() {
         if (this.filePreviewContainerEl) this.filePreviewContainerEl.innerHTML = '';
     },
 
     /**
-     * 重置录音按钮到其默认状态。
+     * 将录音按钮的 UI 重置到默认（非录制）状态。
+     * @function resetRecordingButtonUI
+     * @returns {void}
      */
     resetRecordingButtonUI: function() {
         const voiceButton = document.getElementById('voiceButtonMain');
         if (voiceButton) {
-            voiceButton.classList.remove('recording'); // 移除录制中样式
-            voiceButton.innerHTML = '🎙️'; // 重置图标
-            const timerEl = document.getElementById('recordingVoiceTimer'); // 移除计时器
-            if(timerEl) timerEl.remove();
+            voiceButton.classList.remove('recording');
+            voiceButton.innerHTML = '🎙️'; // 重置为麦克风图标
+            const timerEl = document.getElementById('recordingVoiceTimer');
+            if(timerEl) timerEl.remove(); // 移除计时器显示
         }
     },
 
     /**
-     * 更新录音按钮上的计时器显示。
-     * @param {number} elapsedSeconds - 已录制的秒数。
-     * @param {number} maxDuration - 最大录制秒数。
+     * 在录音按钮上更新计时器显示。
+     * @function updateRecordingButtonTimerUI
+     * @param {number} elapsedSeconds - 当前已录制的秒数。
+     * @param {number} maxDuration - 最大允许的录制秒数。
+     * @returns {void}
      */
     updateRecordingButtonTimerUI: function(elapsedSeconds, maxDuration) {
         const voiceButton = document.getElementById('voiceButtonMain');
@@ -148,52 +158,54 @@ const MediaUIManager = {
 
         if (!voiceButton) return;
 
-        // 如果计时器不存在且按钮处于录制状态，则创建计时器元素
+        // 如果计时器元素不存在且当前处于录制状态，则创建它
         if (!voiceTimerEl && voiceButton.classList.contains('recording')) {
             voiceTimerEl = document.createElement('span');
             voiceTimerEl.id = 'recordingVoiceTimer';
             voiceTimerEl.className = 'audio-timer-indicator';
             voiceButton.appendChild(voiceTimerEl);
         } else if (!voiceButton?.classList.contains('recording') && voiceTimerEl) {
-            // 如果按钮不再是录音状态，则清理计时器
+            // 如果已退出录制状态，则移除计时器
             voiceTimerEl.remove();
             return;
         }
 
-        if (voiceTimerEl) { // 更新计时器文本
+        if (voiceTimerEl) {
             voiceTimerEl.textContent = Utils.formatTime(elapsedSeconds);
         }
 
-        // 如果达到最大录制时间，显示通知
+        // 当达到最大录制时间时，发出通知
         if (elapsedSeconds >= maxDuration) {
             NotificationUIManager.showNotification(`已达到最大录制时间 ${maxDuration}秒。`, 'info');
         }
     },
 
     /**
-     * 设置录音按钮的激活（录制中）状态和 UI。
-     * @param {boolean} isActive - 是否处于激活状态。
+     * 设置录音按钮的激活状态（录制中或非录制中）。
+     * @function setRecordingButtonActive
+     * @param {boolean} isActive - true 表示进入录制状态，false 表示退出。
+     * @returns {void}
      */
     setRecordingButtonActive: function(isActive) {
         const voiceButton = document.getElementById('voiceButtonMain');
         if (voiceButton) {
-            if (isActive) { // 如果激活
-                voiceButton.classList.add('recording'); // 添加录制中样式
-                voiceButton.innerHTML = '🛑'; // 显示停止图标
-            } else { // 如果非激活
-                this.resetRecordingButtonUI(); // 重置按钮UI
+            if (isActive) {
+                voiceButton.classList.add('recording');
+                voiceButton.innerHTML = '🛑'; // 切换为停止图标
+            } else {
+                this.resetRecordingButtonUI(); // 恢复为默认状态
             }
         }
     },
 
     /**
-     * @description (新增) 通用方法，在提供的占位符中渲染图片或视频缩略图。
-     *              它会尝试从 IndexedDB (DBManager) 获取文件 Blob，然后创建对象URL并设置到 img/video 元素。
-     * @param {HTMLElement} placeholderDiv - 用于显示缩略图或加载状态的占位符元素。
-     * @param {string} fileHash - 文件哈希，用作缓存键。
-     * @param {string} fileType - 文件MIME类型。
-     * @param {string} [altText='媒体预览'] - 图片或视频的 alt 文本。
-     * @param {boolean} [isForResourceGrid=false] - 指示此缩略图是否用于资源预览网格，会应用不同样式。
+     * 在指定的占位符中渲染图片或视频的缩略图。
+     * @function renderMediaThumbnail
+     * @param {HTMLElement} placeholderDiv - 用于显示缩略图或加载状态的容器元素。
+     * @param {string} fileHash - 文件的唯一哈希值，用作 IndexedDB 的键。
+     * @param {string} fileType - 文件的 MIME 类型 (例如 'image/jpeg')。
+     * @param {string} [altText='媒体预览'] - 媒体元素的 'alt' 属性文本。
+     * @param {boolean} [isForResourceGrid=false] - 标识是否用于资源网格，以应用不同的样式。
      * @returns {Promise<void>}
      */
     renderMediaThumbnail: async function(placeholderDiv, fileHash, fileType, altText = '媒体预览', isForResourceGrid = false) {
@@ -203,6 +215,15 @@ const MediaUIManager = {
             return;
         }
 
+        // 渲染流程如下：
+        // 1. 尝试从 IndexedDB (fileCache) 中根据文件哈希获取缓存的 Blob 数据。
+        // 2. 如果缓存不存在，显示错误图标并终止。
+        // 3. 根据文件类型 (image/* 或 video/*) 创建对应的 HTML 媒体元素 (<img> 或 <video>)。
+        // 4. 使用 URL.createObjectURL() 为 Blob 创建一个临时的本地 URL。
+        // 5. 监听媒体元素的加载事件 (load/loadedmetadata) 以确保资源已准备好。
+        // 6. 加载成功后，计算并设置合适的缩略图尺寸，然后将其插入到占位符中。
+        // 7. 存储 Object URL，以便在元素被销毁时能够手动释放内存。
+        // 8. 统一捕获并处理数据库读取或媒体加载过程中发生的任何错误。
         try {
             const cachedItem = await DBManager.getItem('fileCache', fileHash);
             if (!cachedItem || !cachedItem.fileBlob) {
@@ -254,29 +275,31 @@ const MediaUIManager = {
 
             try {
                 const dimensions = await loadPromise;
-                if (!isForResourceGrid) { // 仅为聊天消息中的缩略图设置尺寸
+                // NOTE: 仅为聊天消息中的缩略图设置动态尺寸，资源网格中的尺寸由 CSS 控制。
+                if (!isForResourceGrid) {
                     let { width, height } = dimensions;
                     if (width === 0 || height === 0) {
                         Utils.log(`renderMediaThumbnail: 无法获取媒体尺寸 (hash: ${fileHash})`, Utils.logLevels.WARN);
-                        width = 150; height = 100; // Default fallback
+                        width = 150; height = 100; // 提供一个默认的回退尺寸
                     }
                     const aspectRatio = width / height;
                     const MAX_WIDTH = 150; const MAX_HEIGHT = 150;
                     if (aspectRatio > 1) { mediaElement.style.width = `${MAX_WIDTH}px`; mediaElement.style.height = 'auto'; }
                     else { mediaElement.style.height = `${MAX_HEIGHT}px`; mediaElement.style.width = 'auto'; }
-                    mediaElement.style.maxWidth = `${MAX_WIDTH}px`; mediaElement.style.maxHeight = `${MAX_HEIGHT}px`;
+                    mediaElement.style.maxWidth = `${MAX_WIDTH}px`;
+                    mediaElement.style.maxHeight = `${MAX_HEIGHT}px`;
                 }
 
                 placeholderDiv.innerHTML = '';
                 placeholderDiv.appendChild(mediaElement);
-                // 存储 Object URL 以便后续由 MessageManager (deleteMessageLocally) 或 ResourcePreviewUIManager (清理时) 释放
+                // NOTE: 将 Object URL 存储在 dataset 中，以便后续可以由其他模块（如 MessageManager）在删除消息时统一释放。
                 placeholderDiv.dataset.objectUrlForRevoke = objectURL;
 
             } catch (loadError) {
                 Utils.log(`加载媒体缩略图尺寸失败 (hash: ${fileHash}): ${loadError.message}`, Utils.logLevels.ERROR);
                 placeholderDiv.innerHTML = '⚠️';
                 placeholderDiv.title = '预览加载失败。';
-                URL.revokeObjectURL(objectURL); // 释放 URL
+                URL.revokeObjectURL(objectURL); // 发生错误时，立即释放 URL
             }
         } catch (dbError) {
             Utils.log(`从DB获取媒体用于缩略图失败 (hash: ${fileHash}): ${dbError.message}`, Utils.logLevels.ERROR);
