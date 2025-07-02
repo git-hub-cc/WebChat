@@ -1,20 +1,16 @@
 /**
- * @file 数据通道处理器
+ * @file DataChannelHandler.js
  * @description 处理 RTCDataChannel 的消息收发、分片和重组逻辑。
- *              原生支持二进制文件传输的分片和重组。
- *              修复了并发文件传输时，文件元数据被覆盖导致接收失败的严重bug。
+ *              现在原生支持二进制文件传输的分片和重组。
  * @module DataChannelHandler
- * @exports {object} DataChannelHandler - 包含所有数据通道处理方法的单例对象。
- * @dependency Utils, AppSettings, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager, DBManager
+ * @exports {object} DataChannelHandler
+ * @dependencies Utils, AppSettings, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager
  */
 const DataChannelHandler = {
-    // BUGFIX: _chunkMetaBuffer 现在为每个文件哈希 (chunkId) 存储元数据，以支持并发传输。
-    // 结构: { peerId: { chunkId1: metadata1, chunkId2: metadata2 } }
-    _chunkMetaBuffer: {},
+    _chunkMetaBuffer: {}, // { peerId: metadataObject }
 
     /**
      * 为给定的 RTCDataChannel 设置事件处理器。
-     * @function setupChannel
      * @param {RTCDataChannel} channel - 数据通道实例。
      * @param {string} peerId - 与此通道关联的对方 ID。
      * @param {boolean} isManualPlaceholderOrigin - 指示此通道是否源自手动连接的占位符。
@@ -41,7 +37,7 @@ const DataChannelHandler = {
             return;
         }
 
-        // 设置二进制类型为 'arraybuffer' 以实现高效的二进制传输
+        // NEW: Set binaryType to 'arraybuffer' for efficient binary transfer
         channel.binaryType = 'arraybuffer';
 
         connectionEntry.dataChannel = channel;
@@ -50,8 +46,7 @@ const DataChannelHandler = {
 
         Utils.log(`DataChannelHandler.setupChannel: 正在为通道 ${channel.label} (for ${currentContextPeerId}) 设置事件监听器。`, Utils.logLevels.DEBUG);
 
-        // 数据通道打开事件
-        channel.onopen = async () => {
+        channel.onopen = async () => { /* ... onopen logic remains the same ... */
             if (channel._dchHasOpened) {
                 Utils.log(`DataChannelHandler.setupChannel: 通道 ${channel.label} (for ${currentContextPeerId}) onopen 已处理。忽略。`, Utils.logLevels.DEBUG);
                 return;
@@ -61,7 +56,7 @@ const DataChannelHandler = {
             let finalPeerId = currentContextPeerId;
             const isPlaceholderOriginChan = !!channel._isManualPlaceholderOrigin;
 
-            if (isPlaceholderOriginChan && currentContextPeerId === AppSettings.constants.manualPlaceholderPeerId) {
+            if (isPlaceholderOriginChan && currentContextPeerId === WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID) {
                 let resolved = false;
                 const resolvedId = ConnectionManager.resolvePeerIdForChannel(channel);
                 if (resolvedId) {
@@ -78,21 +73,27 @@ const DataChannelHandler = {
             const connFromWebRTC = WebRTCManager.connections[logPeerIdForOpen];
             Utils.log(`DataChannelHandler: 与 ${logPeerIdForOpen} 的数据通道 ("${channel.label}") 已打开。(静默: ${connFromWebRTC?.wasInitiatedSilently || false}, 占位符源: ${isPlaceholderOriginChan})`, Utils.logLevels.INFO);
 
+            const contactName = UserManager.contacts[logPeerIdForOpen]?.name || logPeerIdForOpen.substring(0, 8) + '...';
+            if (connFromWebRTC && (!connFromWebRTC.wasInitiatedSilently || ChatManager.currentChatId === logPeerIdForOpen) && typeof ChatAreaUIManager !== 'undefined') {
+                ChatAreaUIManager.updateChatHeaderStatus(`已连接到 ${contactName}`);
+            }
             ConnectionManager._ensureContactExistsForPeer(finalPeerId, isPlaceholderOriginChan);
 
-            if (isPlaceholderOriginChan && logPeerIdForOpen !== UserManager.userId && logPeerIdForOpen !== AppSettings.constants.manualPlaceholderPeerId &&
-                (ChatManager.currentChatId === null || ChatManager.currentChatId === AppSettings.constants.manualPlaceholderPeerId )) {
+
+            if (isPlaceholderOriginChan && logPeerIdForOpen !== UserManager.userId && logPeerIdForOpen !== WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID &&
+                (ChatManager.currentChatId === null || ChatManager.currentChatId === WebRTCManager.MANUAL_PLACEHOLDER_PEER_ID )) {
                 ChatManager.openChat(logPeerIdForOpen, 'contact');
             }
             EventEmitter.emit('connectionEstablished', logPeerIdForOpen);
-
+            if (connFromWebRTC && ChatManager.currentChatId === logPeerIdForOpen && !connFromWebRTC.isVideoCall && typeof ChatAreaUIManager !== 'undefined') {
+                ChatAreaUIManager.setCallButtonsState(true, logPeerIdForOpen);
+            }
             if (WebRTCManager.reconnectAttempts[logPeerIdForOpen] !== undefined) {
                 WebRTCManager.reconnectAttempts[logPeerIdForOpen] = 0;
             }
         };
 
-        // 数据通道关闭事件
-        channel.onclose = () => {
+        channel.onclose = () => { /* ... onclose logic remains the same ... */
             let finalPeerId = currentContextPeerId;
             const isPlaceholderOriginChan = !!channel._isManualPlaceholderOrigin;
             if (isPlaceholderOriginChan) {
@@ -102,22 +103,23 @@ const DataChannelHandler = {
             Utils.log(`DataChannelHandler.setupChannel: 通道 ${channel.label} (for ${finalPeerId}) onclose 触发。`, Utils.logLevels.DEBUG);
             channel._dchHasOpened = false; channel._dchListenersAttached = false;
 
-            // 在通道关闭时清理此对等方的元数据缓冲区
-            delete this._chunkMetaBuffer[finalPeerId];
-
             const connFromWebRTC = WebRTCManager.connections[finalPeerId];
             const pcState = connFromWebRTC?.peerConnection?.connectionState;
             if (pcState !== 'closed' && pcState !== 'failed') {
                 EventEmitter.emit('connectionDisconnected', finalPeerId);
             }
-
+            if (ChatManager.currentChatId === finalPeerId && typeof ChatAreaUIManager !== 'undefined') {
+                ChatAreaUIManager.setCallButtonsState(false);
+                if (connFromWebRTC && !connFromWebRTC.wasInitiatedSilently) {
+                    ChatAreaUIManager.updateChatHeaderStatus(`已断开连接`);
+                }
+            }
             if (connFromWebRTC?.dataChannel === channel) {
                 connFromWebRTC.dataChannel = null;
             }
         };
 
-        // 数据通道错误事件
-        channel.onerror = (errorEvent) => {
+        channel.onerror = (errorEvent) => { /* ... onerror logic remains the same ... */
             let finalPeerId = currentContextPeerId;
             if (channel._isManualPlaceholderOrigin) {
                 const resolvedId = ConnectionManager.resolvePeerIdForChannel(channel);
@@ -126,113 +128,61 @@ const DataChannelHandler = {
             Utils.log(`DataChannelHandler.setupChannel: 通道 ${channel.label} (for ${finalPeerId}) onerror 触发。Error: ${JSON.stringify(errorEvent, Object.getOwnPropertyNames(errorEvent))}. State: ${channel.readyState}`, Utils.logLevels.ERROR);
         };
 
-        // 数据通道消息事件
-        channel.onmessage = async (event) => {
-            // 消息处理流程如下:
-            // 1. 解析对等方 ID (peerId)，处理手动连接的占位符情况。
-            // 2. 检查通道状态，如果不是 'open' 则忽略消息。
-            // 3. 判断消息类型：
-            //    3a. 如果是 ArrayBuffer (二进制数据)，则将其视为文件分片。
-            //        - 查找并使用对应的文件元数据。
-            //        - 将分片存入重组缓冲区。
-            //        - 如果文件所有分片已接收完毕：
-            //          - 重组文件为 Blob。
-            //          - 将文件 Blob 存入 IndexedDB 缓存 (fileCache)。
-            //          - 清理元数据和重组缓冲区。
-            //          - (关键修复) 此时才将文件/贴图消息添加到聊天 UI。
-            //    3b. 如果是字符串 (JSON)，则解析为消息对象。
-            //        - 如果是 'chunk-meta' (文件元数据)，则创建并存储重组缓冲区。
-            //        - 如果是 'file' 或 'sticker' 消息，(关键修复) 忽略它，等待二进制数据完成。
-            //        - 如果是其他类型 (text, audio, video-call-*, group-*, retract-message-*)，则路由到相应的管理器处理。
+        channel.onmessage = async (event) => { // MODIFIED to be async
             let finalPeerId = currentContextPeerId;
-            if (channel._isManualPlaceholderOrigin) {
+            if (channel._isManualPlaceholderOrigin) { /* ... placeholder resolution logic remains the same ... */
                 const resolvedId = ConnectionManager.resolvePeerIdForChannel(channel);
                 if (!resolvedId) { Utils.log(`DataChannelHandler.onmessage (通道源 ${currentContextPeerId}): 无法解析真实 peerId。忽略。`, Utils.logLevels.WARN); return; }
                 finalPeerId = resolvedId;
             }
-            if (channel.readyState !== 'open') {
+            if (channel.readyState !== 'open') { /* ... state check remains the same ... */
                 Utils.log(`DataChannelHandler.onmessage: 通道 ${channel.label} (for ${finalPeerId}) 收到消息，但状态为 ${channel.readyState}。忽略。`, Utils.logLevels.WARN); return;
             }
 
             try {
                 const rawData = event.data;
 
-                // --- 处理二进制和字符串数据 ---
+                // --- MODIFICATION START: Handle binary and string data separately ---
                 if (rawData instanceof ArrayBuffer) {
-                    // 这是文件的一个二进制分片
-                    const pendingChunksForPeer = ConnectionManager.pendingReceivedChunks?.[finalPeerId];
-                    if (!pendingChunksForPeer) {
-                        Utils.log(`收到来自 ${finalPeerId} 的二进制块，但没有待处理的文件传输。忽略。`, Utils.logLevels.WARN);
-                        return;
-                    }
-
-                    const activeChunkIds = Object.keys(pendingChunksForPeer);
-                    if (activeChunkIds.length === 0) {
-                        Utils.log(`收到来自 ${finalPeerId} 的二进制块，但 pendingReceivedChunks 为空。忽略。`, Utils.logLevels.WARN);
-                        return;
-                    }
-                    if (activeChunkIds.length > 1) {
-                        Utils.log(`[严重警告] 正在处理来自 ${finalPeerId} 的并发文件传输。文件接收可能失败。协议限制。`, Utils.logLevels.ERROR);
-                    }
-
-                    const chunkId = activeChunkIds[activeChunkIds.length - 1]; // 假设它是最新的一个
-                    const meta = this._chunkMetaBuffer[finalPeerId]?.[chunkId];
-
+                    // This is a binary chunk (part of a file)
+                    const meta = this._chunkMetaBuffer[finalPeerId];
                     if (!meta) {
-                        Utils.log(`收到来自 ${finalPeerId} 的二进制块，但没有元数据 (chunkId: ${chunkId})。忽略。`, Utils.logLevels.WARN);
+                        Utils.log(`收到来自 ${finalPeerId} 的二进制块，但没有元数据。忽略。`, Utils.logLevels.WARN);
                         return;
                     }
+                    if (!ConnectionManager.pendingReceivedChunks) ConnectionManager.pendingReceivedChunks = {};
+                    if (!ConnectionManager.pendingReceivedChunks[finalPeerId]) ConnectionManager.pendingReceivedChunks[finalPeerId] = {};
 
-                    const assembly = pendingChunksForPeer[chunkId];
+                    const assembly = ConnectionManager.pendingReceivedChunks[finalPeerId][meta.chunkId];
                     if (assembly) {
+                        // Store the received ArrayBuffer
                         assembly.chunks[assembly.received] = rawData;
                         assembly.received++;
 
-                        // 检查重组是否完成
+                        // Check if reassembly is complete
                         if (assembly.received === assembly.total) {
                             const fileBlob = new Blob(assembly.chunks, { type: meta.fileType });
-
-                            // 清理元数据缓冲区
-                            delete this._chunkMetaBuffer[finalPeerId][meta.chunkId];
-                            if (Object.keys(this._chunkMetaBuffer[finalPeerId]).length === 0) {
-                                delete this._chunkMetaBuffer[finalPeerId];
-                            }
                             delete ConnectionManager.pendingReceivedChunks[finalPeerId][meta.chunkId];
+                            delete this._chunkMetaBuffer[finalPeerId];
+
                             Utils.log(`文件 "${meta.fileName}" (ID: ${meta.chunkId}) 从 ${finalPeerId} 接收完毕。`, Utils.logLevels.INFO);
 
-                            // 存入IndexedDB缓存
+                            // Reassembly is complete, now cache the file.
+                            // The corresponding JSON message (file, sticker, etc.) will trigger the display.
                             await DBManager.setItem('fileCache', {
                                 id: meta.chunkId,
                                 fileBlob: fileBlob,
                                 metadata: { name: meta.fileName, type: meta.fileType, size: meta.fileSize }
                             });
-
-                            // 文件缓存后，将消息添加到聊天UI
-                            const messageToDisplay = {
-                                id: meta.originalMessageId || `msg_${Date.now()}_${Utils.generateId(4)}`,
-                                type: (meta.fileType.startsWith('image/') && meta.fileName.startsWith('sticker_')) ? 'sticker' : 'file',
-                                fileId: meta.chunkId,
-                                fileName: meta.fileName,
-                                fileType: meta.fileType,
-                                size: meta.fileSize,
-                                fileHash: meta.chunkId,
-                                timestamp: meta.timestamp || new Date().toISOString(),
-                                sender: finalPeerId
-                            };
-                            ChatManager.addMessage(finalPeerId, messageToDisplay);
                         }
                     }
                 } else if (typeof rawData === 'string') {
-                    // 这是 JSON 消息
+                    // This is a JSON message
                     const messageObject = JSON.parse(rawData);
 
                     if (messageObject.type === 'chunk-meta') {
-                        // 这是传入文件的元数据，存储它
-                        if (!this._chunkMetaBuffer[finalPeerId]) {
-                            this._chunkMetaBuffer[finalPeerId] = {};
-                        }
-                        this._chunkMetaBuffer[finalPeerId][messageObject.chunkId] = messageObject;
-
+                        // This is metadata for an incoming file. Store it.
+                        this._chunkMetaBuffer[finalPeerId] = messageObject;
                         if (!ConnectionManager.pendingReceivedChunks) ConnectionManager.pendingReceivedChunks = {};
                         if (!ConnectionManager.pendingReceivedChunks[finalPeerId]) ConnectionManager.pendingReceivedChunks[finalPeerId] = {};
                         ConnectionManager.pendingReceivedChunks[finalPeerId][messageObject.chunkId] = {
@@ -242,23 +192,10 @@ const DataChannelHandler = {
                             chunks: new Array(messageObject.totalChunks)
                         };
                         Utils.log(`收到来自 ${finalPeerId} 的文件元数据: "${messageObject.fileName}" (ID: ${messageObject.chunkId})`, Utils.logLevels.INFO);
-                        return; // 等待二进制分片
+                        return; // Wait for binary chunks
                     }
 
-                    // BUGFIX: 不在此处将文件/贴图消息添加到聊天UI
-                    // 这是为了防止在文件数据完全接收前就尝试渲染缩略图而导致的竞争条件。
-                    // 我们现在忽略这些消息，让二进制分片完成逻辑来处理UI添加。
-                    if (messageObject.type === 'file' || messageObject.type === 'sticker') {
-                        Utils.log(`DataChannelHandler: 收到 ${messageObject.type} 类型消息 for ${messageObject.fileHash}。等待文件块完成。`, Utils.logLevels.DEBUG);
-                        const meta = this._chunkMetaBuffer[finalPeerId]?.[messageObject.fileHash];
-                        if (meta) {
-                            meta.originalMessageId = messageObject.id;
-                            meta.timestamp = messageObject.timestamp;
-                        }
-                        return; // 重要：在此停止处理
-                    }
-
-                    // 处理其他非分片的JSON消息
+                    // Handle other non-chunked JSON messages
                     messageObject.sender = messageObject.sender || finalPeerId;
                     if (!messageObject.id) messageObject.id = `msg_${Date.now()}_${Utils.generateId(4)}`;
 
@@ -269,12 +206,13 @@ const DataChannelHandler = {
                         MessageManager._updateMessageToRetractedState(messageObject.originalMessageId, messageObject.sender, false, senderName);
                         ConnectionManager.sendTo(messageObject.sender, { type: 'retract-message-confirm', originalMessageId: messageObject.originalMessageId, sender: UserManager.userId });
                     } else if (messageObject.type === 'retract-message-confirm') {
-                        // 如果需要，记录或处理确认
+                        // Log or handle confirmation if needed
                     } else {
-                        // 处理文本、音频等消息
+                        // This now handles text, audio, file, and the new sticker type
                         ChatManager.addMessage(finalPeerId, messageObject);
                     }
                 }
+                // --- MODIFICATION END ---
             } catch (e) {
                 Utils.log(`DataChannelHandler: 来自 ${finalPeerId} 的 onmessage 严重错误: ${e.message}. 数据: ${String(event.data).substring(0, 100)} 堆栈: ${e.stack}`, Utils.logLevels.ERROR);
             }
@@ -282,8 +220,7 @@ const DataChannelHandler = {
     },
 
     /**
-     * 通过数据通道向指定对等端发送消息（仅处理字符串化的JSON消息）。
-     * @function sendData
+     * 通过数据通道向指定对等端发送消息。现在只处理字符串消息。
      * @param {string} peerId - 接收方的 ID。
      * @param {object} messageObject - 要发送的 JSON 消息对象。
      * @returns {boolean} - 消息是否成功（排入）发送。

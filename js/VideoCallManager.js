@@ -1,59 +1,47 @@
 /**
- * @file 视频通话核心逻辑管理器
- * @description 负责处理视频/音频通话和屏幕共享的所有核心功能，包括媒体流的获取、信令交换、连接协商以及通话状态管理。基于网络状况进行自适应音频质量调整，并支持动态修改音频参数以优化弱网环境下的表现。
+ * @file VideoCallManager.js
+ * @description 视频通话核心逻辑管理器。负责处理视频/音频通话和屏幕共享的所有核心功能，
+ *              包括媒体流的获取、信令交换、连接协商以及通话状态管理。
+ *              通话中基于网络状况进行自适应音频质量调整及控制台日志。
+ *              默认采用单声道 Opus，优化差网络下表现，并支持动态调整音频参数。
+ *              新增：当 setRemoteDescription 遇到 m-line 顺序错误时，中止通话。
  * @module VideoCallManager
  * @exports {object} VideoCallManager - 对外暴露的单例对象，包含所有通话管理方法。
- * @dependency AppSettings, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter, TimerManager
+ * @property {function} init - 初始化模块，包括音乐播放器。
+ * @property {function} initiateCall - 发起一个视频或音频通话。
+ * @property {function} initiateScreenShare - 发起屏幕共享。
+ * @property {function} acceptCall - 接听来电。
+ * @property {function} rejectCall - 拒绝来电。
+ * @property {function} hangUpMedia - 挂断当前通话的媒体流（不关闭连接）。
+ * @property {function} handleMessage - 处理与通话相关的  消息。
+ * @dependencies AppSettings, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter, TimerManager
+ * @dependents AppInitializer (进行初始化), ChatAreaUIManager (绑定通话按钮事件)
  */
 const VideoCallManager = {
-    // =================================================================
-    // 状态变量 (State Variables)
-    // =================================================================
-
-    // 本地媒体流
     localStream: null,
-    // 远端媒体流
     remoteStream: null,
-    // 当前通话的对方ID
     currentPeerId: null,
-    // 标识通话是否处于活动状态
     isCallActive: false,
-    // 标识当前客户端是否为呼叫发起方（对重新协商控制至关重要）
-    isCaller: false,
-
-    // 标识是否存在一个等待接听或响应的通话请求
+    isCaller: false, //  Indicates if this client initiated the current call (important for renegotiation control)
     isCallPending: false,
-    // 标识音频是否静音
     isAudioMuted: false,
-    // 标识视频是否启用
     isVideoEnabled: true,
-    // 标识是否为纯音频通话
     isAudioOnly: false,
-    // 呼叫请求的超时计时器ID
     callRequestTimeout: null,
-    // 标识是否正在进行屏幕共享
     isScreenSharing: false,
-    // 音乐播放器实例
+    // statsInterval: null, // Deprecated, adaptive audio uses its own timer via TimerManager
     musicPlayer: null,
-    // 标识音乐是否正在播放
     isMusicPlaying: false,
-    // 用于处理浏览器自动播放策略的绑定函数引用
     _boundEnableMusicPlay: null,
 
-    // =================================================================
-    // 配置常量 (Configuration Constants)
-    // =================================================================
-
-    // 获取音频流时的约束条件
     audioConstraints: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
-        channelCount: 1 // 强制使用单声道，优化性能
+        channelCount: 1
     },
-    // WebRTC 编解码器优先级配置
     codecPreferences: {
-        audio: [{ // 此为默认/备用配置，实际使用的 sdpFmtpLine 来自自适应音频质量配置
+        audio: [{ // This is a fallback/default, actual sdpFmtpLine will come from adaptive profiles
             mimeType: 'audio/opus',
             clockRate: 48000,
             channels: 1,
@@ -62,33 +50,18 @@ const VideoCallManager = {
         video: [{mimeType: 'video/VP9'}, {mimeType: 'video/VP8'}, {mimeType: 'video/H264'}]
     },
 
-    // =================================================================
-    // 自适应音频内部状态 (Adaptive Audio Internal State)
-    // =================================================================
-
-    // 存储每个对方当前的音频质量配置索引, e.g., { peerId: 1 }
+    // _adaptiveAudioIntervalId: null, // Moved to TimerManager
     _currentAudioProfileIndex: {},
-    // 存储每个对方上次切换配置的时间戳, e.g., { peerId: 1678886400000 }
     _lastProfileSwitchTime: {},
-    // 存储每个对方连续网络良好的检查次数, e.g., { peerId: 3 }
     _consecutiveGoodChecks: {},
-    // 存储每个对方连续网络差的检查次数, e.g., { peerId: 1 }
     _consecutiveBadChecks: {},
-    // 存储每个对方上次成功协商的 sdpFmtpLine
-    _lastNegotiatedSdpFmtpLine: {},
-
-
-    // =================================================================
-    // 公开方法 (Public Methods)
-    // =================================================================
+    _lastNegotiatedSdpFmtpLine: {}, // Stores the sdpFmtpLine used in the last successful negotiation for a peer
 
     /**
-     * 初始化视频通话管理器，包括设置音乐播放器。
-     * @function init
+     * 初始化视频通话管理器。
      * @returns {boolean} - 初始化是否成功。
      */
     init: function () {
-        // 1. 初始化音乐播放器
         try {
             this.musicPlayer = new Audio(AppSettings.media.music);
             this.musicPlayer.loop = true;
@@ -100,20 +73,78 @@ const VideoCallManager = {
             this.musicPlayer = null;
         }
 
-        // 2. 检查浏览器是否支持媒体设备 API
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             Utils.log('浏览器不支持媒体设备。通话功能已禁用。', Utils.logLevels.ERROR);
             return false;
         }
-
-        // 3. 确保内部状态被清空
-        this._lastNegotiatedSdpFmtpLine = {};
+        this._lastNegotiatedSdpFmtpLine = {}; // Ensure clean state on init
         return true;
     },
 
     /**
+     * 播放呼叫音乐。处理浏览器自动播放策略。
+     * @param {boolean} [isRetry=false] - 是否为用户交互后的重试播放。
+     */
+    playMusic: function (isRetry = false) {
+        if (this.musicPlayer && this.musicPlayer.paused && !this.isMusicPlaying) {
+            Utils.log("正在尝试播放音乐...", Utils.logLevels.DEBUG);
+            this.musicPlayer.play().then(() => {
+                this.isMusicPlaying = true;
+                Utils.log("音乐正在播放。", Utils.logLevels.INFO);
+                if (isRetry && this._boundEnableMusicPlay) {
+                    document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
+                    document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
+                    delete this._boundEnableMusicPlay;
+                }
+            }).catch(error => {
+                Utils.log(`播放音乐时出错: ${error.name} - ${error.message}`, Utils.logLevels.ERROR);
+                if (error.name === 'NotAllowedError' && !isRetry) {
+                    NotificationUIManager.showNotification("音乐播放被阻止。请点击/触摸以启用。", "warning");
+                    this._boundEnableMusicPlay = () => this.playMusic(true);
+                    document.body.addEventListener('click', this._boundEnableMusicPlay, {once: true, capture: true});
+                    document.body.addEventListener('touchstart', this._boundEnableMusicPlay, {
+                        once: true,
+                        capture: true
+                    });
+                }
+            });
+        }
+    },
+
+    /**
+     * 停止播放呼叫音乐。
+     */
+    stopMusic: function () {
+        if (this.musicPlayer && (!this.musicPlayer.paused || this.isMusicPlaying)) {
+            this.musicPlayer.pause();
+            this.musicPlayer.currentTime = 0;
+            this.isMusicPlaying = false;
+            Utils.log("音乐已停止。", Utils.logLevels.INFO);
+            if (this._boundEnableMusicPlay) {
+                document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
+                document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
+                delete this._boundEnableMusicPlay;
+            }
+        }
+    },
+
+    /**
+     * 更新当前通话的 UI 状态。
+     */
+    updateCurrentCallUIState: function () {
+        if (typeof VideoCallUIManager !== 'undefined') {
+            VideoCallUIManager.updateUIForCallState({
+                isCallActive: this.isCallActive,
+                isAudioOnly: this.isAudioOnly,
+                isScreenSharing: this.isScreenSharing,
+                isVideoEnabled: this.isVideoEnabled,
+                isAudioMuted: this.isAudioMuted,
+            });
+        }
+    },
+
+    /**
      * 发起一个纯音频通话。
-     * @function initiateAudioCall
      * @param {string} peerId - 目标对方的 ID。
      */
     initiateAudioCall: function (peerId) {
@@ -122,12 +153,10 @@ const VideoCallManager = {
 
     /**
      * 发起屏幕共享。
-     * @function initiateScreenShare
      * @param {string} peerId - 目标对方的 ID。
      * @returns {Promise<void>}
      */
     initiateScreenShare: async function (peerId) {
-        // 1. 检查通话状态，防止重复发起
         if (this.isCallActive || this.isCallPending) {
             NotificationUIManager.showNotification('已有通话/共享正在进行或等待中。', 'warning');
             return;
@@ -142,16 +171,13 @@ const VideoCallManager = {
             return;
         }
 
-        // 2. 设置屏幕共享状态
         this.isScreenSharing = true;
         this.isAudioOnly = false;
         this.isVideoEnabled = true;
         this.isAudioMuted = false;
-
         try {
-            // 3. 发送屏幕共享请求
             this.currentPeerId = peerId;
-            this.isCaller = true; // 当前客户端是发起方
+            this.isCaller = true; // This client is initiating the call/share
             this.isCallPending = true;
             ConnectionManager.sendTo(peerId, {
                 type: 'video-call-request',
@@ -159,12 +185,8 @@ const VideoCallManager = {
                 isScreenShare: this.isScreenSharing,
                 sender: UserManager.userId
             });
-
-            // 4. 显示呼叫中界面并播放音乐
             ModalUIManager.showCallingModal(UserManager.contacts[peerId]?.name || '对方', () => this.hangUpMedia(), () => this.stopMusic(), '屏幕共享');
             this.playMusic();
-
-            // 5. 设置30秒超时，若对方未响应则自动取消
             this.callRequestTimeout = setTimeout(() => {
                 if (this.isCallPending) {
                     ConnectionManager.sendTo(this.currentPeerId, {
@@ -183,13 +205,11 @@ const VideoCallManager = {
 
     /**
      * 发起一个通话（视频或纯音频）。
-     * @function initiateCall
      * @param {string} peerId - 目标对方的 ID。
      * @param {boolean} [audioOnly=false] - 是否为纯音频通话。
      * @returns {Promise<void>}
      */
     initiateCall: async function (peerId, audioOnly = false) {
-        // 1. 检查通话状态，防止重复发起
         if (this.isCallActive || this.isCallPending) {
             NotificationUIManager.showNotification('已有通话正在进行或等待中。', 'warning');
             return;
@@ -204,15 +224,13 @@ const VideoCallManager = {
             return;
         }
 
-        // 2. 设置通话状态
         this.isAudioOnly = audioOnly;
         this.isScreenSharing = false;
         this.isVideoEnabled = !audioOnly;
         this.isAudioMuted = false;
         try {
-            // 3. 发送通话请求
             this.currentPeerId = peerId;
-            this.isCaller = true; // 当前客户端是发起方
+            this.isCaller = true; // This client is initiating the call
             this.isCallPending = true;
             ConnectionManager.sendTo(peerId, {
                 type: 'video-call-request',
@@ -220,12 +238,8 @@ const VideoCallManager = {
                 isScreenShare: this.isScreenSharing,
                 sender: UserManager.userId
             });
-
-            // 4. 显示呼叫中界面并播放音乐
             ModalUIManager.showCallingModal(UserManager.contacts[peerId]?.name || '对方', () => this.hangUpMedia(), () => this.stopMusic(), this.isAudioOnly ? '语音通话' : '视频通话');
             this.playMusic();
-
-            // 5. 设置30秒超时，若对方未响应则自动取消
             this.callRequestTimeout = setTimeout(() => {
                 if (this.isCallPending) {
                     ConnectionManager.sendTo(this.currentPeerId, {
@@ -244,7 +258,6 @@ const VideoCallManager = {
 
     /**
      * 显示来电请求界面。
-     * @function showCallRequest
      * @param {string} peerId - 来电方的 ID。
      * @param {boolean} [audioOnly=false] - 是否为纯音频通话。
      * @param {boolean} [isScreenShare=false] - 是否为屏幕共享。
@@ -255,14 +268,13 @@ const VideoCallManager = {
         this.isScreenSharing = isScreenShare;
         this.isVideoEnabled = !audioOnly;
         this.isAudioMuted = false;
-        this.isCaller = false; // 当前客户端是接收方
+        this.isCaller = false; // This client is receiving the call request
         ModalUIManager.showCallRequest(peerId, audioOnly, isScreenShare);
         this.playMusic();
     },
 
     /**
      * 接听来电。
-     * @function acceptCall
      * @returns {Promise<void>}
      */
     acceptCall: async function () {
@@ -275,11 +287,10 @@ const VideoCallManager = {
         try {
             if (this.isScreenSharing) this.isVideoEnabled = false;
 
-            // 作为接听方，等待对方（Caller）发起媒体协商 Offer
-            // 因此 isOfferCreatorForMedia 为 false
+            // isCaller is already false (set in showCallRequest)
+            // The offer will come from the caller. We will handleOffer.
+            // So, isOfferCreatorForMedia will be false.
             await this.startLocalStreamAndSignal(false);
-
-            // 发送接听成功的消息给对方
             ConnectionManager.sendTo(this.currentPeerId, {
                 type: 'video-call-accepted',
                 audioOnly: this.isAudioOnly,
@@ -300,7 +311,6 @@ const VideoCallManager = {
 
     /**
      * 拒绝来电。
-     * @function rejectCall
      */
     rejectCall: function () {
         ModalUIManager.hideCallRequest();
@@ -311,357 +321,12 @@ const VideoCallManager = {
             reason: 'user_rejected',
             sender: UserManager.userId
         });
-        this.cleanupCallMediaAndState(false); // 清理状态，但不关闭底层连接
+        this.cleanupCallMediaAndState(false);
         Utils.log('已拒绝通话请求。', Utils.logLevels.INFO);
     },
 
     /**
-     * 切换本地摄像头的启用/禁用状态。
-     * @function toggleCamera
-     */
-    toggleCamera: function () {
-        if (!this.isCallActive || !this.localStream) {
-            NotificationUIManager.showNotification("通话未激活或本地流不存在。", "warning");
-            return;
-        }
-        if (this.isAudioOnly) {
-            NotificationUIManager.showNotification("纯音频通话中摄像头不可用。", "warning");
-            return;
-        }
-        if (this.isScreenSharing && this.isCaller) {
-            NotificationUIManager.showNotification("屏幕共享期间摄像头不可用。", "warning");
-            return;
-        }
-
-        const videoTrack = this.localStream.getVideoTracks().find(t => t.kind === 'video' && t.readyState === 'live');
-
-        if (!videoTrack && !this.isScreenSharing) {
-            NotificationUIManager.showNotification('本地视频轨道不可用。', 'warning');
-            this.isVideoEnabled = false;
-            this.updateCurrentCallUIState();
-            return;
-        }
-        if (videoTrack) {
-            this.isVideoEnabled = !this.isVideoEnabled;
-            videoTrack.enabled = this.isVideoEnabled;
-        } else {
-            this.isVideoEnabled = false;
-        }
-
-        this.updateCurrentCallUIState();
-    },
-
-    /**
-     * 切换本地麦克风的静音/取消静音状态。
-     * @function toggleAudio
-     */
-    toggleAudio: function () {
-        if (!this.isCallActive || !this.localStream || !this.localStream.getAudioTracks()[0]) {
-            NotificationUIManager.showNotification("通话未激活或本地音频轨道不存在。", "warning");
-            return;
-        }
-        this.isAudioMuted = !this.isAudioMuted;
-        this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
-        this.updateCurrentCallUIState();
-    },
-
-    /**
-     * 在通话开始前，切换纯音频模式。
-     * @function toggleAudioOnly
-     * @returns {Promise<void>}
-     */
-    toggleAudioOnly: async function () {
-        if (this.isCallActive || this.isCallPending) {
-            NotificationUIManager.showNotification("通话中或等待时无法切换模式。", "warning");
-            return;
-        }
-        this.isAudioOnly = !this.isAudioOnly;
-        Utils.log("已切换纯音频模式 (通话前): " + this.isAudioOnly, Utils.logLevels.INFO);
-        this.isVideoEnabled = !this.isAudioOnly;
-        this.updateCurrentCallUIState();
-    },
-
-    /**
-     * 挂断当前通话的媒体流，但不关闭底层的 RTCPeerConnection (除非是完整结束)。
-     * @function hangUpMedia
-     * @param {boolean} [notifyPeer=true] - 是否通知对方媒体已结束。
-     */
-    hangUpMedia: function (notifyPeer = true) {
-        const peerIdToHangUp = this.currentPeerId;
-        Utils.log(`正在为对方 ${peerIdToHangUp || '未知'} 挂断媒体。通知: ${notifyPeer}`, Utils.logLevels.INFO);
-        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-        this.callRequestTimeout = null;
-
-        this._stopAdaptiveAudioCheck(peerIdToHangUp);
-
-        if (notifyPeer && (this.isCallActive || this.isCallPending) && peerIdToHangUp) {
-            ConnectionManager.sendTo(peerIdToHangUp, {type: 'video-call-end', sender: UserManager.userId});
-        }
-        this.cleanupCallMediaAndState(false);
-    },
-
-    /**
-     * 取消一个等待对方响应的通话。
-     * @function cancelPendingCall
-     */
-    cancelPendingCall: function () {
-        const peerIdToCancel = this.currentPeerId;
-        Utils.log(`正在为对方 ${peerIdToCancel || '未知'} 取消等待中的通话。`, Utils.logLevels.INFO);
-        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-        this.callRequestTimeout = null;
-        this._stopAdaptiveAudioCheck(peerIdToCancel);
-        this.cleanupCallMediaAndState(false);
-    },
-
-    /**
-     * 清理所有与通话相关的媒体资源和状态。
-     * @function cleanupCallMediaAndState
-     * @param {boolean} [closePeerConnectionIfUnused=true] - 是否在没有其他用途（如数据通道）时关闭底层的 RTCPeerConnection。
-     */
-    cleanupCallMediaAndState: function (closePeerConnectionIfUnused = true) {
-        const peerIdCleaned = this.currentPeerId;
-        Utils.log(`正在清理通话媒体和状态 (for ${peerIdCleaned || '未知'})。关闭 PC (如果未使用): ${closePeerConnectionIfUnused}`, Utils.logLevels.INFO);
-
-        // 1. 停止音乐并隐藏所有通话相关的模态框
-        this.stopMusic();
-        ModalUIManager.hideCallingModal();
-        ModalUIManager.hideCallRequest();
-
-        // 2. 停止自适应音频检测
-        this._stopAdaptiveAudioCheck(peerIdCleaned);
-        if (peerIdCleaned) {
-            delete this._lastNegotiatedSdpFmtpLine[peerIdCleaned];
-        } else {
-            this._lastNegotiatedSdpFmtpLine = {};
-        }
-
-        // 3. 释放媒体资源（摄像头/麦克风）
-        this.releaseMediaResources();
-
-        // 4. 从 PeerConnection 中移除轨道
-        if (peerIdCleaned) {
-            const conn = typeof WebRTCManager !== 'undefined' ? WebRTCManager.connections[peerIdCleaned] : null;
-            if (conn && conn.peerConnection) {
-                conn.peerConnection.getSenders().forEach(sender => {
-                    if (sender.track) {
-                        try {
-                            conn.peerConnection.removeTrack(sender);
-                            Utils.log(`已从 ${peerIdCleaned} 的 PC 中移除轨道 ${sender.track.kind}`, Utils.logLevels.DEBUG);
-                        } catch (e) {
-                            Utils.log(`从 ${peerIdCleaned} 的 PC 中移除轨道时出错: ${e.message}`, Utils.logLevels.WARN);
-                        }
-                    }
-                });
-            }
-        }
-
-        // 5. 重置 UI 状态
-        if (typeof VideoCallUIManager !== 'undefined') {
-            VideoCallUIManager.setLocalStream(null);
-            VideoCallUIManager.setRemoteStream(null);
-            VideoCallUIManager.showCallContainer(false);
-            VideoCallUIManager.resetPipVisuals();
-        }
-        this.remoteStream = null;
-
-        // 6. 重置所有状态变量
-        this.isCallActive = false;
-        this.isCallPending = false;
-        this.isAudioMuted = false;
-        this.isAudioOnly = false;
-        this.isScreenSharing = false;
-        this.isVideoEnabled = true;
-
-        const previousPeerId = this.currentPeerId;
-        this.currentPeerId = null;
-
-        // 7. 根据参数决定是否关闭底层 PeerConnection
-        if (closePeerConnectionIfUnused && previousPeerId) {
-            Utils.log(`作为通话清理的一部分，考虑关闭与 ${previousPeerId} 的 RTCPeerConnection。`, Utils.logLevels.INFO);
-            ConnectionManager.close(previousPeerId); // <-- 正确的调用
-        } else if (previousPeerId) {
-            Utils.log(`与 ${previousPeerId} 的 RTCPeerConnection 已保留。媒体已挂断。`, Utils.logLevels.INFO);
-        }
-
-        Utils.log('通话媒体和状态已清理。', Utils.logLevels.INFO);
-        this.updateCurrentCallUIState();
-    },
-
-    /**
-     * 释放本地媒体资源（摄像头和麦克风）。
-     * @function releaseMediaResources
-     */
-    releaseMediaResources: function () {
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(track => {
-                track.stop();
-                Utils.log(`已停止本地轨道: ${track.kind} id: ${track.id}`, Utils.logLevels.DEBUG);
-            });
-            this.localStream = null;
-        }
-    },
-
-    /**
-     * 处理与通话相关的信令消息。
-     * @function handleMessage
-     * @param {object} message - 从数据通道接收到的消息对象。
-     * @param {string} peerId - 发送方的 ID。
-     */
-    handleMessage: function (message, peerId) {
-        switch (message.type) {
-            // 收到通话请求
-            case 'video-call-request':
-                if (!this.isCallActive && !this.isCallPending) {
-                    this.isCallPending = true;
-                    this.showCallRequest(peerId, message.audioOnly || false, message.isScreenShare || false);
-                } else {
-                    // 如果正忙，则自动拒绝
-                    ConnectionManager.sendTo(peerId, {
-                        type: 'video-call-rejected',
-                        reason: 'busy',
-                        sender: UserManager.userId
-                    });
-                }
-                break;
-            // 对方接听了通话
-            case 'video-call-accepted':
-                if (this.isCallPending && this.isCaller && this.currentPeerId === peerId) {
-                    this.stopMusic();
-                    ModalUIManager.hideCallingModal();
-                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-                    this.callRequestTimeout = null;
-                    // 作为呼叫方，在对方接听后，开始获取媒体流并创建 Offer
-                    this.startLocalStreamAndSignal(true);
-                }
-                break;
-            // 对方拒绝了通话
-            case 'video-call-rejected':
-                if (this.isCallPending && this.currentPeerId === peerId) {
-                    if (this.isCaller) {
-                        this.stopMusic();
-                        ModalUIManager.hideCallingModal();
-                    } else {
-                        ModalUIManager.hideCallRequest();
-                    }
-                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-                    this.callRequestTimeout = null;
-                    NotificationUIManager.showNotification(`通话被 ${UserManager.contacts[peerId]?.name || '对方'} 拒绝。原因: ${message.reason || 'N/A'}`, 'warning');
-                    this.cleanupCallMediaAndState(false);
-                }
-                break;
-            // 对方取消了通话请求
-            case 'video-call-cancel':
-                if (this.isCallPending && !this.isCaller && this.currentPeerId === peerId) {
-                    this.stopMusic();
-                    ModalUIManager.hideCallRequest();
-                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-                    this.callRequestTimeout = null;
-                    NotificationUIManager.showNotification(`通话被 ${UserManager.contacts[peerId]?.name || '对方'} 取消。`, 'warning');
-                    this.cleanupCallMediaAndState(false);
-                }
-                break;
-            // 收到媒体协商的 Offer
-            case 'video-call-offer':
-                if ((!this.isCallActive && !this.isCallPending) || (this.isCallActive && this.currentPeerId === peerId)) {
-                    if (!this.isCallActive) this.isCallPending = true;
-                    this.handleOffer(message.sdp, peerId, message.audioOnly || false, message.isScreenShare || false);
-                } else {
-                    Utils.log(`收到来自 ${peerId} 的 offer，但当前状态冲突. 忽略。`, Utils.logLevels.WARN);
-                }
-                break;
-            // 收到媒体协商的 Answer
-            case 'video-call-answer':
-                if (this.isCallActive && this.currentPeerId === peerId) {
-                    this.handleAnswer(message.sdp, peerId, message.audioOnly || false, message.isScreenShare || false);
-                } else {
-                    Utils.log(`收到来自 ${peerId} 的 answer，但当前状态不匹配。忽略。`, Utils.logLevels.WARN);
-                }
-                break;
-            // 对方结束了通话
-            case 'video-call-end':
-                if ((this.isCallActive || this.isCallPending) && this.currentPeerId === peerId) {
-                    NotificationUIManager.showNotification(`${UserManager.contacts[peerId]?.name || '对方'} 结束了通话媒体。`, 'info');
-                    this.cleanupCallMediaAndState(false);
-                }
-                break;
-        }
-    },
-
-    // =================================================================
-    // 内部逻辑和工具方法 (Internal & Utility Methods)
-    // =================================================================
-
-    /**
-     * 播放呼叫音乐。处理浏览器自动播放策略。
-     * @function playMusic
-     * @param {boolean} [isRetry=false] - 是否为用户交互后的重试播放。
-     */
-    playMusic: function (isRetry = false) {
-        if (this.musicPlayer && this.musicPlayer.paused && !this.isMusicPlaying) {
-            Utils.log("正在尝试播放音乐...", Utils.logLevels.DEBUG);
-            this.musicPlayer.play().then(() => {
-                this.isMusicPlaying = true;
-                Utils.log("音乐正在播放。", Utils.logLevels.INFO);
-                // 如果是重试播放成功，移除之前添加的事件监听器
-                if (isRetry && this._boundEnableMusicPlay) {
-                    document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
-                    document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
-                    delete this._boundEnableMusicPlay;
-                }
-            }).catch(error => {
-                Utils.log(`播放音乐时出错: ${error.name} - ${error.message}`, Utils.logLevels.ERROR);
-                // NOTE: 处理浏览器自动播放策略，需要用户交互才能播放音频
-                if (error.name === 'NotAllowedError' && !isRetry) {
-                    NotificationUIManager.showNotification("音乐播放被阻止。请点击/触摸以启用。", "warning");
-                    this._boundEnableMusicPlay = () => this.playMusic(true);
-                    document.body.addEventListener('click', this._boundEnableMusicPlay, {once: true, capture: true});
-                    document.body.addEventListener('touchstart', this._boundEnableMusicPlay, {
-                        once: true,
-                        capture: true
-                    });
-                }
-            });
-        }
-    },
-
-    /**
-     * 停止播放呼叫音乐。
-     * @function stopMusic
-     */
-    stopMusic: function () {
-        if (this.musicPlayer && (!this.musicPlayer.paused || this.isMusicPlaying)) {
-            this.musicPlayer.pause();
-            this.musicPlayer.currentTime = 0;
-            this.isMusicPlaying = false;
-            Utils.log("音乐已停止。", Utils.logLevels.INFO);
-            // 清理可能存在的事件监听器
-            if (this._boundEnableMusicPlay) {
-                document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
-                document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
-                delete this._boundEnableMusicPlay;
-            }
-        }
-    },
-
-    /**
-     * 更新当前通话的 UI 状态。
-     * @function updateCurrentCallUIState
-     */
-    updateCurrentCallUIState: function () {
-        if (typeof VideoCallUIManager !== 'undefined') {
-            VideoCallUIManager.updateUIForCallState({
-                isCallActive: this.isCallActive,
-                isAudioOnly: this.isAudioOnly,
-                isScreenSharing: this.isScreenSharing,
-                isVideoEnabled: this.isVideoEnabled,
-                isAudioMuted: this.isAudioMuted,
-            });
-        }
-    },
-
-    /**
      * 获取本地媒体流并开始信令交换。
-     * @function startLocalStreamAndSignal
      * @param {boolean} isOfferCreatorForMedia - 当前用户是否为媒体协商的发起方。
      * @returns {Promise<void>}
      * @throws {Error} 如果获取媒体设备失败。
@@ -670,8 +335,6 @@ const VideoCallManager = {
         let attemptLocalCameraVideoSending = !this.isAudioOnly && !this.isScreenSharing;
 
         try {
-            // 流程：根据通话类型（屏幕共享/视频/音频）获取合适的媒体流
-            // 1. 如果是发起方的屏幕共享
             if (this.isScreenSharing && this.isCaller) {
                 this.localStream = await navigator.mediaDevices.getDisplayMedia({video: { cursor: "always" }, audio: true});
                 this.isVideoEnabled = true;
@@ -680,7 +343,6 @@ const VideoCallManager = {
                     Utils.log("用户已结束屏幕共享。", Utils.logLevels.INFO);
                     this.hangUpMedia();
                 };
-                // 如果屏幕共享未包含音频，尝试获取麦克风音频
                 if (this.localStream.getAudioTracks().length === 0) {
                     try {
                         const micStream = await navigator.mediaDevices.getUserMedia({ audio: this.audioConstraints, video: false });
@@ -689,7 +351,7 @@ const VideoCallManager = {
                         Utils.log(`无法为屏幕共享获取麦克风: ${micError.message}`, Utils.logLevels.WARN);
                     }
                 }
-            } else { // 2. 如果是普通视频或音频通话
+            } else {
                 if (attemptLocalCameraVideoSending) {
                     const devices = await navigator.mediaDevices.enumerateDevices();
                     if (!devices.some(d => d.kind === 'videoinput')) {
@@ -705,10 +367,9 @@ const VideoCallManager = {
                     this.isAudioOnly = true;
                 }
             }
-        } catch (getUserMediaError) { // 3. 媒体获取失败处理
+        } catch (getUserMediaError) {
             Utils.log(`getUserMedia/getDisplayMedia 错误: ${getUserMediaError.name}`, Utils.logLevels.ERROR);
             this.isVideoEnabled = false;
-            // 如果是屏幕共享发起失败，则直接中止
             if (this.isScreenSharing && this.isCaller) {
                 NotificationUIManager.showNotification(`屏幕共享错误: ${getUserMediaError.name}。`, 'error');
                 this.cleanupCallMediaAndState();
@@ -716,7 +377,6 @@ const VideoCallManager = {
             } else if (!this.isScreenSharing && attemptLocalCameraVideoSending && !this.isAudioOnly) {
                 NotificationUIManager.showNotification(`摄像头错误: ${getUserMediaError.name}。切换到纯音频通话。`, 'error');
             }
-            // 尝试回退到纯音频模式
             try {
                 if (this.localStream) this.localStream.getTracks().forEach(t => t.stop());
                 this.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: this.audioConstraints });
@@ -730,11 +390,10 @@ const VideoCallManager = {
             }
         }
 
-        // 根据当前状态设置轨道启用状态
         if (this.localStream.getAudioTracks()[0]) this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
         if (this.localStream.getVideoTracks()[0]) this.localStream.getVideoTracks()[0].enabled = this.isVideoEnabled;
 
-        // 设置UI并激活通话
+
         if (typeof VideoCallUIManager !== 'undefined') {
             VideoCallUIManager.setLocalStream(this.localStream);
             VideoCallUIManager.showCallContainer(true);
@@ -747,7 +406,6 @@ const VideoCallManager = {
 
     /**
      * 设置 RTCPeerConnection，添加轨道和事件监听器。
-     * @function setupPeerConnection
      * @param {boolean} isOfferCreatorForMedia - 当前用户是否为媒体协商的发起方。
      * @returns {Promise<void>}
      */
@@ -755,10 +413,8 @@ const VideoCallManager = {
         const conn = WebRTCManager.connections[this.currentPeerId];
         if (!conn || !conn.peerConnection) { Utils.log("setupPeerConnection: 没有 PeerConnection。", Utils.logLevels.ERROR); this.hangUpMedia(); return; }
         const pc = conn.peerConnection;
-        // 清理旧的发送器
         pc.getSenders().forEach(sender => { if (sender.track) try {pc.removeTrack(sender);}catch(e){Utils.log("移除旧轨道时出错: "+e,Utils.logLevels.WARN);}});
 
-        // 监听连接状态变化
         pc.addEventListener('connectionstatechange', () => {
             if (pc.connectionState === 'closed' || pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
                 Utils.log(`通话 ${this.currentPeerId} 连接已 ${pc.connectionState}。正在挂断通话。`, Utils.logLevels.INFO);
@@ -766,7 +422,6 @@ const VideoCallManager = {
             }
         });
 
-        // 添加本地媒体轨道到 PeerConnection
         this.localStream.getTracks().forEach(track => {
             if (track.kind === 'audio' ||
                 (track.kind === 'video' && this.isVideoEnabled && (!this.isScreenSharing || (this.isScreenSharing && this.isCaller)))) {
@@ -779,10 +434,8 @@ const VideoCallManager = {
         });
         this.setCodecPreferences(pc);
 
-        // 处理接收到的远程轨道
         pc.ontrack = (event) => {
             const trackHandler = (track) => {
-                // NOTE: 防止重复添加监听器
                 if (!track._videoManagerListenersAttached) {
                     track.onunmute = () => { Utils.log(`远程轨道 ${track.id} (${track.kind}) 已取消静音。`, Utils.logLevels.DEBUG); this.updateCurrentCallUIState(); if (track.kind === 'video' && VideoCallUIManager.remoteVideo?.paused) VideoCallUIManager.remoteVideo.play().catch(e => Utils.log(`播放远程视频时出错: ${e}`,Utils.logLevels.WARN)); };
                     track.onmute = () => { Utils.log(`远程轨道 ${track.id} (${track.kind}) 已静音。`, Utils.logLevels.DEBUG); this.updateCurrentCallUIState(); };
@@ -804,7 +457,6 @@ const VideoCallManager = {
                 }
             };
 
-            // 将轨道附加到远程流
             if (event.streams && event.streams[0]) {
                 if (VideoCallUIManager.remoteVideo?.srcObject !== event.streams[0]) {
                     if (typeof VideoCallUIManager !== 'undefined') VideoCallUIManager.setRemoteStream(event.streams[0]);
@@ -834,191 +486,18 @@ const VideoCallManager = {
     },
 
     /**
-     * 创建并发送一个媒体协商的提议 (offer)。
-     * @function createAndSendOffer
-     * @returns {Promise<void>}
-     */
-    createAndSendOffer: async function () {
-        if (!this.currentPeerId || !this.isCallActive) return;
-        const conn = WebRTCManager.connections[this.currentPeerId];
-        if (!conn || !conn.peerConnection) {
-            Utils.log("没有 PC 用于创建提议", Utils.logLevels.ERROR);
-            this.hangUpMedia();
-            return;
-        }
-        try {
-            // 1. 应用当前选择的音频配置
-            this._applyAudioProfileToSender(this.currentPeerId,
-                this._currentAudioProfileIndex[this.currentPeerId] !== undefined
-                    ? this._currentAudioProfileIndex[this.currentPeerId]
-                    : AppSettings.adaptiveAudioQuality.initialProfileIndex);
-
-            // 2. 创建 Offer
-            const offerOptions = {
-                offerToReceiveAudio: true,
-                offerToReceiveVideo: !this.isAudioOnly || (this.isScreenSharing && this.isCaller)
-            };
-            const offer = await conn.peerConnection.createOffer(offerOptions);
-
-            // 3. 修改 SDP 以包含 Opus 音频参数
-            const modifiedOffer = new RTCSessionDescription({type: 'offer', sdp: this.modifySdpForOpus(offer.sdp, this.currentPeerId)});
-            await conn.peerConnection.setLocalDescription(modifiedOffer);
-
-            // 4. 记录当前协商的 SDP 参数
-            const offerProfileIndex = (this._currentAudioProfileIndex[this.currentPeerId] !== undefined)
-                ? this._currentAudioProfileIndex[this.currentPeerId]
-                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
-            const offerAudioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[offerProfileIndex];
-            if (offerAudioProfile && offerAudioProfile.sdpFmtpLine) {
-                this._lastNegotiatedSdpFmtpLine[this.currentPeerId] = offerAudioProfile.sdpFmtpLine;
-            } else {
-                const defaultOpusPreference = this.codecPreferences.audio.find(p => p.mimeType.toLowerCase() === 'audio/opus');
-                this._lastNegotiatedSdpFmtpLine[this.currentPeerId] = defaultOpusPreference ? defaultOpusPreference.sdpFmtpLine : 'minptime=10;useinbandfec=1;stereo=0';
-            }
-            Utils.log(`Offer for ${this.currentPeerId} created with sdpFmtpLine: ${this._lastNegotiatedSdpFmtpLine[this.currentPeerId]} (isCaller=${this.isCaller})`, Utils.logLevels.DEBUG);
-
-            // 5. 发送 Offer 给对方
-            ConnectionManager.sendTo(this.currentPeerId, {
-                type: 'video-call-offer',
-                sdp: conn.peerConnection.localDescription,
-                audioOnly: this.isAudioOnly,
-                isScreenShare: this.isScreenSharing,
-                sender: UserManager.userId
-            });
-        } catch (e) {
-            Utils.log("创建/发送提议时出错: " + e, Utils.logLevels.ERROR);
-            this.hangUpMedia();
-        }
-    },
-
-    /**
-     * 处理远程媒体提议 (offer)。
-     * @function handleOffer
-     * @param {RTCSessionDescriptionInit} sdpOffer - 远程 SDP 提议。
-     * @param {string} peerId - 发送方的 ID。
-     * @param {boolean} remoteIsAudioOnly - 对方是否为纯音频模式。
-     * @param {boolean} [remoteIsScreenShare=false] - 对方是否在共享屏幕。
-     * @returns {Promise<void>}
-     */
-    handleOffer: async function (sdpOffer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
-        const conn = WebRTCManager.connections[peerId];
-        if (!conn || !conn.peerConnection) {
-            Utils.log("没有 PC 来处理提议", Utils.logLevels.ERROR);
-            return;
-        }
-        try {
-            const isInitialOffer = !this.isCallActive;
-
-            // 1. 如果是初始 Offer，设置通话状态
-            if (isInitialOffer) {
-                this.isScreenSharing = remoteIsScreenShare;
-                this.isAudioOnly = remoteIsAudioOnly && !remoteIsScreenShare;
-                this.currentPeerId = peerId;
-                this.isCaller = false; // 收到 Offer，所以是接收方
-                this.isVideoEnabled = !this.isAudioOnly && !this.isScreenSharing;
-                await this.startLocalStreamAndSignal(false);
-            }
-
-            // 2. 设置远程 SDP 描述
-            await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpOffer));
-
-            // 3. 应用音频配置
-            this._applyAudioProfileToSender(peerId,
-                this._currentAudioProfileIndex[peerId] !== undefined
-                    ? this._currentAudioProfileIndex[peerId]
-                    : AppSettings.adaptiveAudioQuality.initialProfileIndex);
-
-            // 4. 创建 Answer
-            const answer = await conn.peerConnection.createAnswer();
-            const modifiedAnswer = new RTCSessionDescription({type: 'answer', sdp: this.modifySdpForOpus(answer.sdp, peerId)});
-            await conn.peerConnection.setLocalDescription(modifiedAnswer);
-
-            // 5. 记录协商的 SDP 参数
-            const answerProfileIndex = (this._currentAudioProfileIndex[peerId] !== undefined)
-                ? this._currentAudioProfileIndex[peerId]
-                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
-            const answerAudioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[answerProfileIndex];
-            if (answerAudioProfile && answerAudioProfile.sdpFmtpLine) {
-                this._lastNegotiatedSdpFmtpLine[peerId] = answerAudioProfile.sdpFmtpLine;
-            } else {
-                const defaultOpusPreference = this.codecPreferences.audio.find(p => p.mimeType.toLowerCase() === 'audio/opus');
-                this._lastNegotiatedSdpFmtpLine[peerId] = defaultOpusPreference ? defaultOpusPreference.sdpFmtpLine : 'minptime=10;useinbandfec=1;stereo=0';
-            }
-            Utils.log(`Answer for ${peerId} created with sdpFmtpLine: ${this._lastNegotiatedSdpFmtpLine[peerId]} (isCaller=${this.isCaller})`, Utils.logLevels.DEBUG);
-
-            // 6. 发送 Answer 给对方
-            ConnectionManager.sendTo(peerId, {
-                type: 'video-call-answer',
-                sdp: conn.peerConnection.localDescription,
-                audioOnly: this.isAudioOnly,
-                isScreenShare: this.isScreenSharing && this.isCaller,
-                sender: UserManager.userId
-            });
-
-            // 7. 启动自适应音频检测
-            this._startAdaptiveAudioCheck(peerId);
-
-        } catch (e) {
-            Utils.log(`处理来自 ${peerId} 的提议时出错: ${e.message}`, Utils.logLevels.ERROR);
-            // NOTE: m-line 顺序错误是一个常见的 WebRTC 协商问题，通常无法恢复，需要中止通话。
-            if (e.message && e.message.includes("The order of m-lines")) {
-                NotificationUIManager.showNotification("通话协商失败 (媒体描述不匹配)，通话已结束。", "error");
-                Utils.log(`M-line 顺序错误，为 ${peerId} 中止通话。`, Utils.logLevels.ERROR);
-            }
-            this.hangUpMedia(true); // 发生错误时，通知对方并挂断
-        }
-    },
-
-    /**
-     * 处理远程媒体应答 (answer)。
-     * @function handleAnswer
-     * @param {RTCSessionDescriptionInit} sdpAnswer - 远程 SDP 应答。
-     * @param {string} peerId - 发送方的 ID。
-     * @param {boolean} remoteIsAudioOnly - 对方是否为纯音频模式。
-     * @param {boolean} [remoteIsScreenShare=false] - 对方是否在共享屏幕。
-     * @returns {Promise<void>}
-     */
-    handleAnswer: async function (sdpAnswer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
-        if (this.currentPeerId !== peerId || !this.isCallActive) {
-            Utils.log(`收到来自 ${peerId} 的应答，但当前通话不匹配或未激活。忽略。`, Utils.logLevels.WARN);
-            return;
-        }
-        const conn = WebRTCManager.connections[peerId];
-        if (!conn || !conn.peerConnection) {
-            Utils.log(`处理来自 ${peerId} 的应答时没有 PeerConnection。忽略。`, Utils.logLevels.ERROR);
-            return;
-        }
-        try {
-            await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpAnswer));
-            Utils.log(`来自 ${peerId} 的应答已处理。 Last negotiated sdpFmtpLine for this peer was: ${this._lastNegotiatedSdpFmtpLine[peerId]}`, Utils.logLevels.INFO);
-
-            // 作为 Offer 发起方，在收到 Answer 后启动自适应音频检测
-            this._startAdaptiveAudioCheck(peerId);
-        } catch (e) {
-            Utils.log("处理应答时出错: " + e, Utils.logLevels.ERROR);
-            if (e.message && e.message.includes("The order of m-lines")) {
-                NotificationUIManager.showNotification("通话协商失败 (媒体描述不匹配)，通话已结束。", "error");
-                Utils.log(`M-line 顺序错误，为 ${peerId} 中止通话。`, Utils.logLevels.ERROR);
-            }
-            this.hangUpMedia(true);
-        }
-    },
-
-    /**
      * 监控 ICE 连接状态的变化。
-     * @function setupConnectionMonitoring
      * @param {RTCPeerConnection} pc - 要监控的 PeerConnection 实例。
      */
     setupConnectionMonitoring: function (pc) {
         pc.oniceconnectionstatechange = () => {
             Utils.log(`通话 ICE 状态: ${pc.iceConnectionState} (for ${this.currentPeerId})`, Utils.logLevels.DEBUG);
-            // NOTE: 'failed', 'disconnected', 'closed' 状态由 'connectionstatechange' 事件处理，更为可靠
+            // 'failed', 'disconnected', 'closed' states are handled by 'connectionstatechange'
         };
     },
 
     /**
      * 为 PeerConnection 设置首选的音视频编解码器。
-     * @function setCodecPreferences
      * @param {RTCPeerConnection} pc - 目标 PeerConnection 实例。
      */
     setCodecPreferences: function (pc) {
@@ -1074,7 +553,6 @@ const VideoCallManager = {
 
     /**
      * 修改 SDP 字符串以包含特定音频配置档案的 Opus 编解码器参数 (如 ptime, FEC, stereo)。
-     * @function modifySdpForOpus
      * @param {string} sdp - 原始 SDP 字符串。
      * @param {string} peerId - 当前操作关联的对方ID，用于获取该对方的音频配置。
      * @returns {string} - 修改后的 SDP 字符串。
@@ -1087,17 +565,15 @@ const VideoCallManager = {
 
         const audioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[profileIndex];
 
-        // 1. 确定要使用的 sdpFmtpLine
         if (audioProfile && audioProfile.sdpFmtpLine) {
             targetSdpFmtpLine = audioProfile.sdpFmtpLine;
-            Utils.log(`modifySdpForOpus for ${peerId}: 使用来自配置 ${profileIndex} ('${audioProfile.levelName}') 的 sdpFmtpLine: ${targetSdpFmtpLine}`, Utils.logLevels.DEBUG);
+            Utils.log(`modifySdpForOpus for ${peerId}: Using sdpFmtpLine from profile ${profileIndex} ('${audioProfile.levelName}'): ${targetSdpFmtpLine}`, Utils.logLevels.DEBUG);
         } else {
             const defaultOpusPreference = this.codecPreferences.audio.find(p => p.mimeType.toLowerCase() === 'audio/opus');
-            targetSdpFmtpLine = defaultOpusPreference ? defaultOpusPreference.sdpFmtpLine : 'minptime=10;useinbandfec=1;stereo=0'; // 备用方案
-            Utils.log(`modifySdpForOpus for ${peerId}: 回退到 ${audioProfile ? '无配置' : '默认'} sdpFmtpLine: ${targetSdpFmtpLine}`, Utils.logLevels.DEBUG);
+            targetSdpFmtpLine = defaultOpusPreference ? defaultOpusPreference.sdpFmtpLine : 'minptime=10;useinbandfec=1;stereo=0'; // Fallback
+            Utils.log(`modifySdpForOpus for ${peerId}: Falling back to ${audioProfile ? 'profile-less' : 'default'} sdpFmtpLine: ${targetSdpFmtpLine}`, Utils.logLevels.DEBUG);
         }
 
-        // 2. 在 SDP 中找到 Opus 编解码器并修改其 a=fmtp 行
         const opusRegex = /a=rtpmap:(\d+) opus\/48000(\/2)?/gm;
         let match;
         let modifiedSdp = sdp;
@@ -1109,11 +585,9 @@ const VideoCallManager = {
             const existingFmtpRegex = new RegExp(`^a=fmtp:${opusPayloadType} .*(\\r\\n)?`, 'm');
 
             if (existingFmtpRegex.test(modifiedSdp)) {
-                // 如果已存在，则替换
                 modifiedSdp = modifiedSdp.replace(existingFmtpRegex, fmtpLineForPayload + (RegExp.$1 || '\r\n'));
                 Utils.log(`SDP 修改：为 Opus (PT ${opusPayloadType}, Peer ${peerId}) 更新 fmtp: ${opusTargetParams}`, Utils.logLevels.DEBUG);
             } else {
-                // 如果不存在，则在 rtpmap 行后插入
                 const rtpmapLineSignature = `a=rtpmap:${opusPayloadType} opus/48000${match[2] || ''}`;
                 const rtpmapLineIndex = modifiedSdp.indexOf(rtpmapLineSignature);
                 if (rtpmapLineIndex !== -1) {
@@ -1127,35 +601,461 @@ const VideoCallManager = {
         return modifiedSdp;
     },
 
+    /**
+     * 创建并发送一个媒体协商的提议 (offer)。
+     * @returns {Promise<void>}
+     */
+    createAndSendOffer: async function () {
+        if (!this.currentPeerId || !this.isCallActive) return; // Check if call is active, not just pending
+        const conn = WebRTCManager.connections[this.currentPeerId];
+        if (!conn || !conn.peerConnection) {
+            Utils.log("没有 PC 用于创建提议", Utils.logLevels.ERROR);
+            this.hangUpMedia();
+            return;
+        }
+        try {
+            this._applyAudioProfileToSender(this.currentPeerId,
+                this._currentAudioProfileIndex[this.currentPeerId] !== undefined
+                    ? this._currentAudioProfileIndex[this.currentPeerId]
+                    : AppSettings.adaptiveAudioQuality.initialProfileIndex);
+
+            const offerOptions = {
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: !this.isAudioOnly || (this.isScreenSharing && this.isCaller)
+            };
+            // For renegotiation, ensure ICE restart is handled if needed (usually not for simple codec param changes)
+            // offerOptions.iceRestart = (conn.peerConnection.signalingState === 'stable'); // Example if restart needed
+
+            const offer = await conn.peerConnection.createOffer(offerOptions);
+            const modifiedOffer = new RTCSessionDescription({type: 'offer', sdp: this.modifySdpForOpus(offer.sdp, this.currentPeerId)});
+            await conn.peerConnection.setLocalDescription(modifiedOffer);
+
+            const offerProfileIndex = (this._currentAudioProfileIndex[this.currentPeerId] !== undefined)
+                ? this._currentAudioProfileIndex[this.currentPeerId]
+                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
+            const offerAudioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[offerProfileIndex];
+            if (offerAudioProfile && offerAudioProfile.sdpFmtpLine) {
+                this._lastNegotiatedSdpFmtpLine[this.currentPeerId] = offerAudioProfile.sdpFmtpLine;
+            } else {
+                const defaultOpusPreference = this.codecPreferences.audio.find(p => p.mimeType.toLowerCase() === 'audio/opus');
+                this._lastNegotiatedSdpFmtpLine[this.currentPeerId] = defaultOpusPreference ? defaultOpusPreference.sdpFmtpLine : 'minptime=10;useinbandfec=1;stereo=0';
+            }
+            Utils.log(`Offer for ${this.currentPeerId} created with sdpFmtpLine: ${this._lastNegotiatedSdpFmtpLine[this.currentPeerId]} (isCaller=${this.isCaller})`, Utils.logLevels.DEBUG);
+
+            ConnectionManager.sendTo(this.currentPeerId, {
+                type: 'video-call-offer',
+                sdp: conn.peerConnection.localDescription,
+                audioOnly: this.isAudioOnly,
+                isScreenShare: this.isScreenSharing,
+                sender: UserManager.userId
+            });
+        } catch (e) {
+            Utils.log("创建/发送提议时出错: " + e, Utils.logLevels.ERROR);
+            this.hangUpMedia();
+        }
+    },
+
+    /**
+     * 处理远程媒体提议 (offer)。
+     * @param {RTCSessionDescriptionInit} sdpOffer - 远程 SDP 提议。
+     * @param {string} peerId - 发送方的 ID。
+     * @param {boolean} remoteIsAudioOnly - 对方是否为纯音频模式。
+     * @param {boolean} [remoteIsScreenShare=false] - 对方是否在共享屏幕。
+     * @returns {Promise<void>}
+     */
+    handleOffer: async function (sdpOffer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
+        const conn = WebRTCManager.connections[peerId];
+        if (!conn || !conn.peerConnection) {
+            Utils.log("没有 PC 来处理提议", Utils.logLevels.ERROR);
+            return;
+        }
+        try {
+            const isInitialOffer = !this.isCallActive; // True if this is the first offer establishing the call for us
+            if (isInitialOffer) {
+                this.isScreenSharing = remoteIsScreenShare;
+                this.isAudioOnly = remoteIsAudioOnly && !remoteIsScreenShare;
+                this.currentPeerId = peerId;
+                this.isCaller = false; // We are receiving an offer, so we are not the initial caller of this media session
+                this.isVideoEnabled = !this.isAudioOnly && !this.isScreenSharing;
+                await this.startLocalStreamAndSignal(false);
+            }
+            // For re-offers, current state (isAudioOnly, etc.) should already be set.
+
+            await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpOffer));
+
+            this._applyAudioProfileToSender(peerId,
+                this._currentAudioProfileIndex[peerId] !== undefined
+                    ? this._currentAudioProfileIndex[peerId]
+                    : AppSettings.adaptiveAudioQuality.initialProfileIndex);
+
+            const answer = await conn.peerConnection.createAnswer();
+            const modifiedAnswer = new RTCSessionDescription({type: 'answer', sdp: this.modifySdpForOpus(answer.sdp, peerId)});
+            await conn.peerConnection.setLocalDescription(modifiedAnswer);
+
+            const answerProfileIndex = (this._currentAudioProfileIndex[peerId] !== undefined)
+                ? this._currentAudioProfileIndex[peerId]
+                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
+            const answerAudioProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[answerProfileIndex];
+            if (answerAudioProfile && answerAudioProfile.sdpFmtpLine) {
+                this._lastNegotiatedSdpFmtpLine[peerId] = answerAudioProfile.sdpFmtpLine;
+            } else {
+                const defaultOpusPreference = this.codecPreferences.audio.find(p => p.mimeType.toLowerCase() === 'audio/opus');
+                this._lastNegotiatedSdpFmtpLine[peerId] = defaultOpusPreference ? defaultOpusPreference.sdpFmtpLine : 'minptime=10;useinbandfec=1;stereo=0';
+            }
+            Utils.log(`Answer for ${peerId} created with sdpFmtpLine: ${this._lastNegotiatedSdpFmtpLine[peerId]} (isCaller=${this.isCaller})`, Utils.logLevels.DEBUG);
+
+
+            ConnectionManager.sendTo(peerId, {
+                type: 'video-call-answer',
+                sdp: conn.peerConnection.localDescription,
+                audioOnly: this.isAudioOnly,
+                isScreenShare: this.isScreenSharing && this.isCaller,
+                sender: UserManager.userId
+            });
+
+            // If this was an initial offer, start adaptive audio check.
+            // If it's a re-offer, the check might already be running. _startAdaptiveAudioCheck handles this.
+            this._startAdaptiveAudioCheck(peerId);
+
+        } catch (e) {
+            Utils.log(`处理来自 ${peerId} 的提议时出错: ${e.message}`, Utils.logLevels.ERROR);
+            if (e.message && e.message.includes("The order of m-lines")) {
+                NotificationUIManager.showNotification("通话协商失败 (媒体描述不匹配)，通话已结束。", "error");
+                Utils.log(`M-line 顺序错误，为 ${peerId} 中止通话。`, Utils.logLevels.ERROR);
+            }
+            this.hangUpMedia(true); // 发生错误时，通知对方并挂断
+        }
+    },
+
+    /**
+     * 处理远程媒体应答 (answer)。
+     * @param {RTCSessionDescriptionInit} sdpAnswer - 远程 SDP 应答。
+     * @param {string} peerId - 发送方的 ID。
+     * @param {boolean} remoteIsAudioOnly - 对方是否为纯音频模式。
+     * @param {boolean} [remoteIsScreenShare=false] - 对方是否在共享屏幕。
+     * @returns {Promise<void>}
+     */
+    handleAnswer: async function (sdpAnswer, peerId, remoteIsAudioOnly, remoteIsScreenShare = false) {
+        if (this.currentPeerId !== peerId || !this.isCallActive) {
+            Utils.log(`收到来自 ${peerId} 的应答，但当前通话不匹配或未激活。忽略。`, Utils.logLevels.WARN);
+            return;
+        }
+        const conn = WebRTCManager.connections[peerId];
+        if (!conn || !conn.peerConnection) {
+            Utils.log(`处理来自 ${peerId} 的应答时没有 PeerConnection。忽略。`, Utils.logLevels.ERROR);
+            return;
+        }
+        try {
+            await conn.peerConnection.setRemoteDescription(new RTCSessionDescription(sdpAnswer));
+            Utils.log(`来自 ${peerId} 的应答已处理。 Last negotiated sdpFmtpLine for this peer was: ${this._lastNegotiatedSdpFmtpLine[peerId]}`, Utils.logLevels.INFO);
+            // The _lastNegotiatedSdpFmtpLine was set when this client (caller) created the offer.
+            // The answer confirms this negotiation.
+
+            // For the offer initiator (caller), start adaptive audio check after answer is received.
+            this._startAdaptiveAudioCheck(peerId);
+        } catch (e) {
+            Utils.log("处理应答时出错: " + e, Utils.logLevels.ERROR);
+            if (e.message && e.message.includes("The order of m-lines")) {
+                NotificationUIManager.showNotification("通话协商失败 (媒体描述不匹配)，通话已结束。", "error");
+                Utils.log(`M-line 顺序错误，为 ${peerId} 中止通话。`, Utils.logLevels.ERROR);
+            }
+            this.hangUpMedia(true); // 发生错误时，通知对方并挂断
+        }
+    },
+
+    /**
+     * 切换本地摄像头的启用/禁用状态。
+     */
+    toggleCamera: function () {
+        if (!this.isCallActive || !this.localStream) {
+            NotificationUIManager.showNotification("通话未激活或本地流不存在。", "warning");
+            return;
+        }
+        if (this.isAudioOnly) {
+            NotificationUIManager.showNotification("纯音频通话中摄像头不可用。", "warning");
+            return;
+        }
+        if (this.isScreenSharing && this.isCaller) {
+            NotificationUIManager.showNotification("屏幕共享期间摄像头不可用。", "warning");
+            return;
+        }
+
+        const videoTrack = this.localStream.getVideoTracks().find(t => t.kind === 'video' && t.readyState === 'live');
+
+        if (!videoTrack && !this.isScreenSharing) {
+            NotificationUIManager.showNotification('本地视频轨道不可用。', 'warning');
+            this.isVideoEnabled = false;
+            this.updateCurrentCallUIState();
+            return;
+        }
+        if (videoTrack) {
+            this.isVideoEnabled = !this.isVideoEnabled;
+            videoTrack.enabled = this.isVideoEnabled;
+        } else {
+            this.isVideoEnabled = false;
+        }
+
+        this.updateCurrentCallUIState();
+    },
+
+    /**
+     * 切换本地麦克风的静音/取消静音状态。
+     */
+    toggleAudio: function () {
+        if (!this.isCallActive || !this.localStream || !this.localStream.getAudioTracks()[0]) {
+            NotificationUIManager.showNotification("通话未激活或本地音频轨道不存在。", "warning");
+            return;
+        }
+        this.isAudioMuted = !this.isAudioMuted;
+        this.localStream.getAudioTracks()[0].enabled = !this.isAudioMuted;
+        this.updateCurrentCallUIState();
+    },
+
+    /**
+     * 在通话开始前，切换纯音频模式。
+     * @returns {Promise<void>}
+     */
+    toggleAudioOnly: async function () {
+        if (this.isCallActive || this.isCallPending) {
+            NotificationUIManager.showNotification("通话中或等待时无法切换模式。", "warning");
+            return;
+        }
+        this.isAudioOnly = !this.isAudioOnly;
+        Utils.log("已切换纯音频模式 (通话前): " + this.isAudioOnly, Utils.logLevels.INFO);
+        this.isVideoEnabled = !this.isAudioOnly;
+        this.updateCurrentCallUIState();
+    },
+
+    /**
+     * 挂断当前通话的媒体流，但不关闭底层的 RTCPeerConnection (除非是完整结束)。
+     * @param {boolean} [notifyPeer=true] - 是否通知对方媒体已结束。
+     */
+    hangUpMedia: function (notifyPeer = true) {
+        const peerIdToHangUp = this.currentPeerId;
+        Utils.log(`正在为对方 ${peerIdToHangUp || '未知'} 挂断媒体。通知: ${notifyPeer}`, Utils.logLevels.INFO);
+        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
+        this.callRequestTimeout = null;
+
+        this._stopAdaptiveAudioCheck(peerIdToHangUp);
+
+        if (notifyPeer && (this.isCallActive || this.isCallPending) && peerIdToHangUp) {
+            ConnectionManager.sendTo(peerIdToHangUp, {type: 'video-call-end', sender: UserManager.userId});
+        }
+        this.cleanupCallMediaAndState(false);
+    },
+
+    /**
+     * 取消一个等待对方响应的通话。
+     */
+    cancelPendingCall: function () {
+        const peerIdToCancel = this.currentPeerId;
+        Utils.log(`正在为对方 ${peerIdToCancel || '未知'} 取消等待中的通话。`, Utils.logLevels.INFO);
+        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
+        this.callRequestTimeout = null;
+        this._stopAdaptiveAudioCheck(peerIdToCancel);
+        this.cleanupCallMediaAndState(false);
+    },
+
+    /**
+     * 清理所有与通话相关的媒体资源和状态。
+     * @param {boolean} [closePeerConnectionIfUnused=true] - 是否在没有其他用途（如数据通道）时关闭底层的 RTCPeerConnection。
+     */
+    cleanupCallMediaAndState: function (closePeerConnectionIfUnused = true) {
+        const peerIdCleaned = this.currentPeerId;
+        Utils.log(`正在清理通话媒体和状态 (for ${peerIdCleaned || '未知'})。关闭 PC (如果未使用): ${closePeerConnectionIfUnused}`, Utils.logLevels.INFO);
+
+        this.stopMusic();
+        ModalUIManager.hideCallingModal();
+        ModalUIManager.hideCallRequest();
+
+        // statsInterval is deprecated and adaptive audio timer handled by TimerManager
+        // if (this.statsInterval) clearInterval(this.statsInterval);
+        // this.statsInterval = null;
+
+        this._stopAdaptiveAudioCheck(peerIdCleaned);
+        if (peerIdCleaned) {
+            delete this._lastNegotiatedSdpFmtpLine[peerIdCleaned];
+        } else { // Should ideally not happen without a peerId if a call was active
+            this._lastNegotiatedSdpFmtpLine = {};
+        }
+
+        this.releaseMediaResources();
+
+        Utils.log(`peerIdCleaned ${peerIdCleaned}`, Utils.logLevels.INFO);
+        Utils.log(`WebRTCManager.connections ${typeof WebRTCManager !== 'undefined' ? WebRTCManager.connections : 'WebRTCManager undefined'}`, Utils.logLevels.INFO);
+        if (peerIdCleaned) {
+            const conn = typeof WebRTCManager !== 'undefined' ? WebRTCManager.connections[peerIdCleaned] : null;
+            if (conn && conn.peerConnection) {
+                conn.peerConnection.getSenders().forEach(sender => {
+                    if (sender.track) {
+                        try {
+                            conn.peerConnection.removeTrack(sender);
+                            Utils.log(`已从 ${peerIdCleaned} 的 PC 中移除轨道 ${sender.track.kind}`, Utils.logLevels.DEBUG);
+                        } catch (e) {
+                            Utils.log(`从 ${peerIdCleaned} 的 PC 中移除轨道时出错: ${e.message}`, Utils.logLevels.WARN);
+                        }
+                    }
+                });
+            }
+        }
+
+        if (typeof VideoCallUIManager !== 'undefined') {
+            VideoCallUIManager.setLocalStream(null);
+            VideoCallUIManager.setRemoteStream(null);
+            VideoCallUIManager.showCallContainer(false);
+            VideoCallUIManager.resetPipVisuals();
+        }
+        this.remoteStream = null;
+
+        this.isCallActive = false;
+        this.isCallPending = false;
+        // Do not reset isCaller here, as it might be needed for a quick follow-up action or log.
+        // It will be set correctly when a new call is initiated or received.
+        this.isAudioMuted = false;
+        this.isAudioOnly = false;
+        this.isScreenSharing = false;
+        this.isVideoEnabled = true;
+
+        const previousPeerId = this.currentPeerId;
+        this.currentPeerId = null;
+
+        if (closePeerConnectionIfUnused && previousPeerId) {
+            Utils.log(`作为通话清理的一部分，考虑关闭与 ${previousPeerId} 的 RTCPeerConnection。`, Utils.logLevels.INFO);
+            ConnectionManager.closePeerConnection(previousPeerId);
+        } else if (previousPeerId) {
+            Utils.log(`与 ${previousPeerId} 的 RTCPeerConnection 已保留。媒体已挂断。`, Utils.logLevels.INFO);
+        }
+
+        Utils.log('通话媒体和状态已清理。', Utils.logLevels.INFO);
+        this.updateCurrentCallUIState();
+    },
+
+    /**
+     * 释放本地媒体资源（摄像头和麦克风）。
+     */
+    releaseMediaResources: function () {
+        if (this.localStream) {
+            this.localStream.getTracks().forEach(track => {
+                track.stop();
+                Utils.log(`已停止本地轨道: ${track.kind} id: ${track.id}`, Utils.logLevels.DEBUG);
+            });
+            this.localStream = null;
+        }
+    },
+
+    /**
+     * 处理与通话相关的信令消息。
+     * @param {object} message - 从数据通道接收到的消息对象。
+     * @param {string} peerId - 发送方的 ID。
+     */
+    handleMessage: function (message, peerId) {
+        switch (message.type) {
+            case 'video-call-request':
+                if (!this.isCallActive && !this.isCallPending) {
+                    this.isCallPending = true;
+                    // isCaller will be set to false in showCallRequest
+                    this.showCallRequest(peerId, message.audioOnly || false, message.isScreenShare || false);
+                } else {
+                    ConnectionManager.sendTo(peerId, {
+                        type: 'video-call-rejected',
+                        reason: 'busy',
+                        sender: UserManager.userId
+                    });
+                }
+                break;
+            case 'video-call-accepted':
+                if (this.isCallPending && this.isCaller && this.currentPeerId === peerId) {
+                    this.stopMusic();
+                    ModalUIManager.hideCallingModal();
+                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
+                    this.callRequestTimeout = null;
+                    // isCaller is already true.
+                    // The client that sent 'video-call-request' (this.isCaller=true) will now
+                    // create an offer. So isOfferCreatorForMedia is true.
+                    this.startLocalStreamAndSignal(true);
+                }
+                break;
+            case 'video-call-rejected':
+                if (this.isCallPending && this.currentPeerId === peerId) {
+                    if (this.isCaller) {
+                        this.stopMusic();
+                        ModalUIManager.hideCallingModal();
+                    } else {
+                        ModalUIManager.hideCallRequest();
+                    }
+                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
+                    this.callRequestTimeout = null;
+                    NotificationUIManager.showNotification(`通话被 ${UserManager.contacts[peerId]?.name || '对方'} 拒绝。原因: ${message.reason || 'N/A'}`, 'warning');
+                    this.cleanupCallMediaAndState(false);
+                }
+                break;
+            case 'video-call-cancel':
+                if (this.isCallPending && !this.isCaller && this.currentPeerId === peerId) {
+                    this.stopMusic();
+                    ModalUIManager.hideCallRequest();
+                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
+                    this.callRequestTimeout = null;
+                    NotificationUIManager.showNotification(`通话被 ${UserManager.contacts[peerId]?.name || '对方'} 取消。`, 'warning');
+                    this.cleanupCallMediaAndState(false);
+                }
+                break;
+            case 'video-call-offer':
+                // `this.isCaller` will be set to false in `handleOffer` if it's an initial offer.
+                // For re-offers, `this.isCaller` reflects the *original* call initiator.
+                if ((!this.isCallActive && !this.isCallPending) || (this.isCallActive && this.currentPeerId === peerId)) {
+                    if (!this.isCallActive) this.isCallPending = true;
+                    this.handleOffer(message.sdp, peerId, message.audioOnly || false, message.isScreenShare || false);
+                } else {
+                    Utils.log(`收到来自 ${peerId} 的 offer，但当前状态冲突. 忽略。`, Utils.logLevels.WARN);
+                }
+                break;
+            case 'video-call-answer':
+                if (this.isCallActive && this.currentPeerId === peerId) {
+                    // `this.isCaller` should be true if this client sent the offer.
+                    this.handleAnswer(message.sdp, peerId, message.audioOnly || false, message.isScreenShare || false);
+                } else {
+                    Utils.log(`收到来自 ${peerId} 的 answer，但当前状态不匹配。忽略。`, Utils.logLevels.WARN);
+                }
+                break;
+            case 'video-call-end':
+                if ((this.isCallActive || this.isCallPending) && this.currentPeerId === peerId) {
+                    NotificationUIManager.showNotification(`${UserManager.contacts[peerId]?.name || '对方'} 结束了通话媒体。`, 'info');
+                    this.cleanupCallMediaAndState(false);
+                }
+                break;
+        }
+    },
 
     // --- 自适应音频质量相关方法 ---
 
     /**
      * @private
-     * @description 由呼叫发起方 (caller) 启动 WebRTC 重新协商流程。通常在需要更改 SDP 参数 (如 sdpFmtpLine) 时调用。
-     * @function _initiateRenegotiation
+     * @description 由呼叫发起方 (caller) 启动 WebRTC 重新协商流程。
+     *              通常在需要更改 SDP 参数 (如 sdpFmtpLine) 时调用。
      * @param {string} peerId - 需要重新协商的对方ID。
      */
     _initiateRenegotiation: function(peerId) {
-        Utils.log(`呼叫方 (this.isCaller=${this.isCaller}) 尝试与 ${peerId} 发起重新协商以更改 sdpFmtpLine。`, Utils.logLevels.INFO);
+        Utils.log(`Caller (this.isCaller=${this.isCaller}) attempting to initiate renegotiation with ${peerId} for sdpFmtpLine change.`, Utils.logLevels.INFO);
         const conn = WebRTCManager.connections[peerId];
 
-        // NOTE: 确保只有原始呼叫方在稳定状态下才能发起重新协商
+        // Ensure this client is the original caller, the call is active, it's the correct peer,
+        // and the PeerConnection is in a stable state for sending a new offer.
         if (this.isCaller && this.isCallActive && this.currentPeerId === peerId &&
             conn && conn.peerConnection && conn.peerConnection.signalingState === 'stable') {
 
-            Utils.log(`正在为 ${peerId} 继续重新协商。创建新的提议。`, Utils.logLevels.INFO);
-            // createAndSendOffer 会使用更新后的 _currentAudioProfileIndex 来获取新的 sdpFmtpLine
+            Utils.log(`Proceeding with renegotiation for ${peerId}. Creating new offer.`, Utils.logLevels.INFO);
+            // createAndSendOffer will use the updated _currentAudioProfileIndex[peerId]
+            // to get the new sdpFmtpLine via the modified modifySdpForOpus.
+            // It will also update this._lastNegotiatedSdpFmtpLine after setLocalDescription.
             this.createAndSendOffer();
         } else {
-            Utils.log(`无法与 ${peerId} 发起重新协商。条件不满足: isCaller=${this.isCaller}, isCallActive=${this.isCallActive}, currentPeerId=${this.currentPeerId}, peerConnection 存在=${!!(conn && conn.peerConnection)}, signalingState=${conn?.peerConnection?.signalingState}`, Utils.logLevels.WARN);
+            Utils.log(`Cannot initiate renegotiation with ${peerId}. Conditions not met: isCaller=${this.isCaller}, isCallActive=${this.isCallActive}, currentPeerId=${this.currentPeerId}, peerConnection exists=${!!(conn && conn.peerConnection)}, signalingState=${conn?.peerConnection?.signalingState}`, Utils.logLevels.WARN);
         }
     },
 
     /**
      * @private
      * @description 启动周期性的网络状况检查以调整音频质量。
-     * @function _startAdaptiveAudioCheck
      * @param {string} peerId - 当前通话的对方ID。
      */
     _startAdaptiveAudioCheck: function(peerId) {
@@ -1165,19 +1065,19 @@ const VideoCallManager = {
         }
         const taskName = `adaptiveAudio_${peerId}`;
         if (typeof TimerManager !== 'undefined' && TimerManager.hasTask(taskName)) {
-            return; // 任务已在运行
+            // Already running for this peer
+            return;
         }
 
-        // 初始化该对方的自适应音频状态
         this._currentAudioProfileIndex[peerId] = AppSettings.adaptiveAudioQuality.initialProfileIndex;
         this._lastProfileSwitchTime[peerId] = 0;
         this._consecutiveGoodChecks[peerId] = 0;
         this._consecutiveBadChecks[peerId] = 0;
+        // _lastNegotiatedSdpFmtpLine[peerId] is set during offer/answer, not here.
 
-        // 应用初始码率
+        // Apply initial bitrate, sdpFmtpLine will be handled by initial negotiation
         this._applyAudioProfileToSender(peerId, AppSettings.adaptiveAudioQuality.initialProfileIndex);
 
-        // 使用 TimerManager 添加周期性任务
         if (typeof TimerManager !== 'undefined') {
             TimerManager.addPeriodicTask(
                 taskName,
@@ -1193,12 +1093,10 @@ const VideoCallManager = {
     /**
      * @private
      * @description 停止自适应音频质量检测。
-     * @function _stopAdaptiveAudioCheck
      * @param {string} [peerId] - (可选) 如果提供，则仅清理特定对方的状态和定时器。
      */
     _stopAdaptiveAudioCheck: function(peerId) {
         if (peerId && typeof TimerManager !== 'undefined') {
-            // 停止并清理指定对方的任务和状态
             const taskName = `adaptiveAudio_${peerId}`;
             TimerManager.removePeriodicTask(taskName);
             Utils.log(`已停止对 ${peerId} 的自适应音频质量检测 (via TimerManager)。`, Utils.logLevels.INFO);
@@ -1206,9 +1104,10 @@ const VideoCallManager = {
             delete this._lastProfileSwitchTime[peerId];
             delete this._consecutiveGoodChecks[peerId];
             delete this._consecutiveBadChecks[peerId];
-        } else if (!peerId && typeof TimerManager !== 'undefined') { // 如果未提供 peerId，则停止所有任务
+            // Do not delete _lastNegotiatedSdpFmtpLine[peerId] here, cleanupCallMediaAndState handles it
+        } else if (!peerId && typeof TimerManager !== 'undefined') { // Stop all adaptive audio tasks
             Utils.log(`正在停止所有自适应音频质量检测 (via TimerManager)...`, Utils.logLevels.INFO);
-            for (const id in this._currentAudioProfileIndex) {
+            for (const id in this._currentAudioProfileIndex) { // Iterate over peers we were tracking
                 if (this._currentAudioProfileIndex.hasOwnProperty(id)) {
                     TimerManager.removePeriodicTask(`adaptiveAudio_${id}`);
                 }
@@ -1220,110 +1119,9 @@ const VideoCallManager = {
             Utils.log(`所有自适应音频质量检测已停止并清理状态 (via TimerManager)。`, Utils.logLevels.INFO);
         }
     },
-
-    /**
-     * @private
-     * @description 周期性检查网络状况并决定是否调整音频质量。
-     * @function _checkAndAdaptAudioQuality
-     * @param {string} peerId - 当前通话的对方ID。
-     */
-    _checkAndAdaptAudioQuality: async function(peerId) {
-        if (!peerId || typeof WebRTCManager === 'undefined' || !WebRTCManager.connections[peerId]) {
-            Utils.log(`AdaptiveAudioCheck: 对方 ${peerId || '未知'} 的连接信息不存在。跳过。`, Utils.logLevels.WARN);
-            return;
-        }
-        const pc = WebRTCManager.connections[peerId].peerConnection;
-        if (!pc || pc.signalingState === 'closed' || pc.connectionState === 'closed' || pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-            Utils.log(`AdaptiveAudioCheck for ${peerId}: PeerConnection 不存在或已关闭/失败/断开. 跳过。`, Utils.logLevels.DEBUG);
-            return;
-        }
-
-        try {
-            // 1. 获取 WebRTC 统计数据
-            const stats = await pc.getStats();
-            let currentRtt = Infinity, currentPacketLoss = 1, currentJitter = Infinity;
-
-            // 2. 从统计报告中解析出 RTT、丢包率和抖动
-            stats.forEach(report => {
-                if (report.type === 'outbound-rtp' && report.kind === 'audio' && report.remoteId) {
-                    const remoteInboundReport = stats.get(report.remoteId);
-                    if (remoteInboundReport) {
-                        if (remoteInboundReport.roundTripTime !== undefined) currentRtt = Math.min(currentRtt, remoteInboundReport.roundTripTime * 1000);
-                        if (remoteInboundReport.packetsLost !== undefined && remoteInboundReport.packetsReceived !== undefined) {
-                            const totalPackets = remoteInboundReport.packetsLost + remoteInboundReport.packetsReceived + (remoteInboundReport.packetsDiscarded || 0);
-                            if (totalPackets > 0) currentPacketLoss = Math.min(currentPacketLoss, (remoteInboundReport.packetsLost + (remoteInboundReport.packetsDiscarded || 0)) / totalPackets);
-                        }
-                        if (remoteInboundReport.jitter !== undefined) currentJitter = Math.min(currentJitter, remoteInboundReport.jitter * 1000);
-                    }
-                }
-                if (report.type === 'candidate-pair' && report.state === 'succeeded' && report.currentRoundTripTime !== undefined) {
-                    currentRtt = Math.min(currentRtt, report.currentRoundTripTime * 1000);
-                }
-                if (report.type === 'inbound-rtp' && report.kind === 'audio') {
-                    if (report.jitter !== undefined) currentJitter = Math.min(currentJitter, report.jitter * 1000);
-                    if (report.packetsLost !== undefined && report.packetsReceived !== undefined) {
-                        const totalPackets = report.packetsLost + report.packetsReceived + (report.packetsDiscarded || 0);
-                        if (totalPackets > 0) currentPacketLoss = Math.min(currentPacketLoss, (report.packetsLost + (report.packetsDiscarded || 0)) / totalPackets);
-                    }
-                }
-            });
-
-            // 3. 处理统计数据无效的情况
-            if (!isFinite(currentRtt) && currentPacketLoss === 1 && !isFinite(currentJitter)) {
-                Utils.log(`AdaptiveAudioCheck for ${peerId}: 未能获取有效的网络统计数据。跳过调整。`, Utils.logLevels.WARN);
-                return;
-            }
-            if (!isFinite(currentRtt)) currentRtt = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.rtt * 3;
-            if (currentPacketLoss === 1 && isFinite(stats.size)) currentPacketLoss = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.packetLoss + 0.1;
-            else if (currentPacketLoss === 1) currentPacketLoss = 0.5;
-            if (!isFinite(currentJitter)) currentJitter = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.jitter * 3;
-
-            // 4. 根据网络状况决定最佳质量等级
-            const currentStats = { rtt: currentRtt, packetLoss: currentPacketLoss, jitter: currentJitter };
-            const currentProfileIndex = this._currentAudioProfileIndex[peerId] !== undefined
-                ? this._currentAudioProfileIndex[peerId]
-                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
-
-            const optimalLevelIndex = this._determineOptimalQualityLevel(peerId, currentStats);
-
-            const currentProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[currentProfileIndex];
-            const optimalProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[optimalLevelIndex];
-            const currentProfileName = currentProfile ? currentProfile.levelName : `索引 ${currentProfileIndex}`;
-            const optimalProfileName = optimalProfile ? optimalProfile.levelName : `索引 ${optimalLevelIndex}`;
-
-            if (AppSettings.adaptiveAudioQuality.logStatsToConsole) {
-                Utils.log(`[AudioQualityEval for ${peerId} (Caller: ${this.isCaller})]: Stats(RTT: ${currentRtt.toFixed(0)}ms, Loss: ${(currentPacketLoss*100).toFixed(2)}%, Jitter: ${currentJitter.toFixed(0)}ms) -> 当前: Lvl ${currentProfileIndex} ('${currentProfileName}'), 目标: Lvl ${optimalLevelIndex} ('${optimalProfileName}')`, Utils.logLevels.INFO);
-            }
-
-            // 5. 检查是否需要切换以及是否满足冷却时间
-            const { switchToHigherCooldown, switchToLowerCooldown } = AppSettings.adaptiveAudioQuality;
-            const lastSwitchTime = this._lastProfileSwitchTime[peerId] || 0;
-            const now = Date.now();
-
-            if (optimalLevelIndex !== currentProfileIndex) {
-                if (optimalLevelIndex > currentProfileIndex) { // 提升质量
-                    if (now - lastSwitchTime > switchToHigherCooldown) {
-                        this._switchToAudioProfile(peerId, optimalLevelIndex);
-                    } else {
-                        Utils.log(`[AudioQualityEval for ${peerId}]: 尝试提升至 '${optimalProfileName}'，但提升冷却期未结束。`, Utils.logLevels.DEBUG);
-                    }
-                } else { // 降低质量
-                    if (now - lastSwitchTime > switchToLowerCooldown) {
-                        this._switchToAudioProfile(peerId, optimalLevelIndex);
-                    } else {
-                        Utils.log(`[AudioQualityEval for ${peerId}]: 尝试降低至 '${optimalProfileName}'，但降低冷却期未结束。`, Utils.logLevels.DEBUG);
-                    }
-                }
-            }
-        } catch (error) {
-            Utils.log(`在 _checkAndAdaptAudioQuality (for ${peerId}) 中出错: ${error.message || error}`, Utils.logLevels.ERROR);
-        }
-    },
-
     /**
      * @private
      * @description 根据当前网络统计数据决定最佳的音频质量等级索引。
-     * @function _determineOptimalQualityLevel
      * @param {string} peerId - 对方ID。
      * @param {object} currentStats - 包含 {rtt, packetLoss, jitter} 的对象。
      * @returns {number} - 目标音质等级的索引。
@@ -1357,7 +1155,6 @@ const VideoCallManager = {
             currentStats.packetLoss > baseGoodConnectionThresholds.packetLoss + 0.03 ||
             currentStats.jitter > baseGoodConnectionThresholds.jitter * veryPoorFactor;
 
-        // 1. 更新连续好/坏网络计数
         if (meetsBaseline) {
             this._consecutiveGoodChecks[peerId] = (this._consecutiveGoodChecks[peerId] || 0) + 1;
             this._consecutiveBadChecks[peerId] = 0;
@@ -1366,27 +1163,25 @@ const VideoCallManager = {
             this._consecutiveGoodChecks[peerId] = 0;
         }
 
-        // 2. 决定是否提升质量（网络持续良好）
         if (this._consecutiveGoodChecks[peerId] >= stabilityCountForUpgrade) {
             if (isSignificantlyBetter && targetLevelIndex < profiles.length - 1) {
-                targetLevelIndex = Math.min(targetLevelIndex + 2, profiles.length - 1); // 大幅提升
+                targetLevelIndex = Math.min(targetLevelIndex + 2, profiles.length - 1);
             } else if (meetsBaseline && targetLevelIndex < profiles.length - 1) {
-                targetLevelIndex = Math.min(targetLevelIndex + 1, profiles.length - 1); // 小幅提升
+                targetLevelIndex = Math.min(targetLevelIndex + 1, profiles.length - 1);
             }
             if (targetLevelIndex > currentLevelIndex) {
-                this._consecutiveGoodChecks[peerId] = 0; // 重置计数
+                this._consecutiveGoodChecks[peerId] = 0;
             }
         }
 
-        // 3. 决定是否降低质量（网络持续不佳）
         if (this._consecutiveBadChecks[peerId] >= badQualityDowngradeThreshold) {
             if (isVeryPoor && targetLevelIndex > 0) {
-                targetLevelIndex = Math.max(targetLevelIndex - 2, 0); // 大幅降低
+                targetLevelIndex = Math.max(targetLevelIndex - 2, 0);
             } else if (isSlightlyWorse && targetLevelIndex > 0) {
-                targetLevelIndex = Math.max(targetLevelIndex - 1, 0); // 小幅降低
+                targetLevelIndex = Math.max(targetLevelIndex - 1, 0);
             }
             if (targetLevelIndex < currentLevelIndex) {
-                this._consecutiveBadChecks[peerId] = 0; // 重置计数
+                this._consecutiveBadChecks[peerId] = 0;
             }
         }
         return Math.max(0, Math.min(targetLevelIndex, profiles.length - 1));
@@ -1394,8 +1189,104 @@ const VideoCallManager = {
 
     /**
      * @private
+     * @description 周期性检查网络状况并决定是否调整音频质量。
+     * @param {string} peerId - 当前通话的对方ID。
+     */
+    _checkAndAdaptAudioQuality: async function(peerId) {
+        if (!peerId || typeof WebRTCManager === 'undefined' || !WebRTCManager.connections[peerId]) {
+            Utils.log(`AdaptiveAudioCheck: 对方 ${peerId || '未知'} 的连接信息不存在。跳过。`, Utils.logLevels.WARN);
+            return;
+        }
+        const pc = WebRTCManager.connections[peerId].peerConnection;
+        if (!pc || pc.signalingState === 'closed' || pc.connectionState === 'closed' || pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+            Utils.log(`AdaptiveAudioCheck for ${peerId}: PeerConnection 不存在或已关闭/失败/断开. 跳过。`, Utils.logLevels.DEBUG);
+            // If connection is down, TimerManager should remove this task eventually if the component managing it (e.g., VideoCallManager during hangUpMedia) does so.
+            // Or TimerManager itself could have logic to stop tasks for non-existent/closed connections if it had access to that state.
+            return;
+        }
+
+        try {
+            const stats = await pc.getStats();
+            let currentRtt = Infinity, currentPacketLoss = 1, currentJitter = Infinity;
+
+            stats.forEach(report => {
+                if (report.type === 'outbound-rtp' && report.kind === 'audio' && report.remoteId) {
+                    const remoteInboundReport = stats.get(report.remoteId);
+                    if (remoteInboundReport) {
+                        if (remoteInboundReport.roundTripTime !== undefined) currentRtt = Math.min(currentRtt, remoteInboundReport.roundTripTime * 1000);
+                        if (remoteInboundReport.packetsLost !== undefined && remoteInboundReport.packetsReceived !== undefined) {
+                            const totalPackets = remoteInboundReport.packetsLost + remoteInboundReport.packetsReceived + (remoteInboundReport.packetsDiscarded || 0);
+                            if (totalPackets > 0) currentPacketLoss = Math.min(currentPacketLoss, (remoteInboundReport.packetsLost + (remoteInboundReport.packetsDiscarded || 0)) / totalPackets);
+                        }
+                        if (remoteInboundReport.jitter !== undefined) currentJitter = Math.min(currentJitter, remoteInboundReport.jitter * 1000);
+                    }
+                }
+                if (report.type === 'candidate-pair' && report.state === 'succeeded' && report.currentRoundTripTime !== undefined) {
+                    currentRtt = Math.min(currentRtt, report.currentRoundTripTime * 1000);
+                }
+                if (report.type === 'inbound-rtp' && report.kind === 'audio') {
+                    if (report.jitter !== undefined) currentJitter = Math.min(currentJitter, report.jitter * 1000);
+                    if (report.packetsLost !== undefined && report.packetsReceived !== undefined) {
+                        const totalPackets = report.packetsLost + report.packetsReceived + (report.packetsDiscarded || 0);
+                        if (totalPackets > 0) currentPacketLoss = Math.min(currentPacketLoss, (report.packetsLost + (report.packetsDiscarded || 0)) / totalPackets);
+                    }
+                }
+            });
+
+            if (!isFinite(currentRtt) && currentPacketLoss === 1 && !isFinite(currentJitter)) {
+                Utils.log(`AdaptiveAudioCheck for ${peerId}: 未能获取有效的网络统计数据。跳过调整。`, Utils.logLevels.WARN);
+                return;
+            }
+            if (!isFinite(currentRtt)) currentRtt = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.rtt * 3;
+            if (currentPacketLoss === 1 && isFinite(stats.size)) currentPacketLoss = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.packetLoss + 0.1;
+            else if (currentPacketLoss === 1) currentPacketLoss = 0.5;
+            if (!isFinite(currentJitter)) currentJitter = AppSettings.adaptiveAudioQuality.baseGoodConnectionThresholds.jitter * 3;
+
+
+            const currentStats = { rtt: currentRtt, packetLoss: currentPacketLoss, jitter: currentJitter };
+            const currentProfileIndex = this._currentAudioProfileIndex[peerId] !== undefined
+                ? this._currentAudioProfileIndex[peerId]
+                : AppSettings.adaptiveAudioQuality.initialProfileIndex;
+
+            const optimalLevelIndex = this._determineOptimalQualityLevel(peerId, currentStats);
+
+            const currentProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[currentProfileIndex];
+            const optimalProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[optimalLevelIndex];
+            const currentProfileName = currentProfile ? currentProfile.levelName : `索引 ${currentProfileIndex}`;
+            const optimalProfileName = optimalProfile ? optimalProfile.levelName : `索引 ${optimalLevelIndex}`;
+
+
+            if (AppSettings.adaptiveAudioQuality.logStatsToConsole) {
+                Utils.log(`[AudioQualityEval for ${peerId} (Caller: ${this.isCaller})]: Stats(RTT: ${currentRtt.toFixed(0)}ms, Loss: ${(currentPacketLoss*100).toFixed(2)}%, Jitter: ${currentJitter.toFixed(0)}ms) -> 当前: Lvl ${currentProfileIndex} ('${currentProfileName}'), 目标: Lvl ${optimalLevelIndex} ('${optimalProfileName}')`, Utils.logLevels.INFO);
+            }
+
+            const { switchToHigherCooldown, switchToLowerCooldown } = AppSettings.adaptiveAudioQuality;
+            const lastSwitchTime = this._lastProfileSwitchTime[peerId] || 0;
+            const now = Date.now();
+
+            if (optimalLevelIndex !== currentProfileIndex) {
+                if (optimalLevelIndex > currentProfileIndex) {
+                    if (now - lastSwitchTime > switchToHigherCooldown) {
+                        this._switchToAudioProfile(peerId, optimalLevelIndex);
+                    } else {
+                        Utils.log(`[AudioQualityEval for ${peerId}]: 尝试提升至 '${optimalProfileName}'，但提升冷却期未结束。`, Utils.logLevels.DEBUG);
+                    }
+                } else {
+                    if (now - lastSwitchTime > switchToLowerCooldown) {
+                        this._switchToAudioProfile(peerId, optimalLevelIndex);
+                    } else {
+                        Utils.log(`[AudioQualityEval for ${peerId}]: 尝试降低至 '${optimalProfileName}'，但降低冷却期未结束。`, Utils.logLevels.DEBUG);
+                    }
+                }
+            }
+        } catch (error) {
+            Utils.log(`在 _checkAndAdaptAudioQuality (for ${peerId}) 中出错: ${error.message || error}`, Utils.logLevels.ERROR);
+        }
+    },
+
+    /**
+     * @private
      * @description 切换到指定的音频配置档案，并根据需要触发重新协商。
-     * @function _switchToAudioProfile
      * @param {string} peerId - 目标对方ID。
      * @param {number} newLevelIndex - 要切换到的配置档案的索引。
      */
@@ -1405,7 +1296,6 @@ const VideoCallManager = {
             return;
         }
 
-        // 1. 更新内部状态
         const oldLevelIndex = this._currentAudioProfileIndex[peerId];
         this._currentAudioProfileIndex[peerId] = newLevelIndex;
         this._lastProfileSwitchTime[peerId] = Date.now();
@@ -1419,23 +1309,20 @@ const VideoCallManager = {
         const oldProfile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[oldLevelIndex];
         const currentNegotiatedSdpLine = this._lastNegotiatedSdpFmtpLine[peerId] || (oldProfile ? oldProfile.sdpFmtpLine : oldProfileFallbackSdpLine);
 
-        // 2. 检查是否需要通过重新协商来改变 SDP 参数
         if (this.isCallActive && newSdpFmtpLine && newSdpFmtpLine !== currentNegotiatedSdpLine) {
-            if (this.isCaller) { // NOTE: 只有原始呼叫方能发起重新协商
-                Utils.log(`[AudioQuality for ${peerId}]: 呼叫方需要将 sdpFmtpLine 从 '${currentNegotiatedSdpLine}' 更改为 '${newSdpFmtpLine}'。正在发起重新协商。`, Utils.logLevels.INFO);
+            if (this.isCaller) { // Only the original caller of the call initiates renegotiation
+                Utils.log(`[AudioQuality for ${peerId}]: Caller needs to change sdpFmtpLine from '${currentNegotiatedSdpLine}' to '${newSdpFmtpLine}'. Initiating renegotiation.`, Utils.logLevels.INFO);
                 this._initiateRenegotiation(peerId);
             } else {
-                Utils.log(`[AudioQuality for ${peerId}]: 接收方检测到需要将 sdpFmtpLine 更改为 '${newProfile.levelName}'。等待呼叫方发起协商。`, Utils.logLevels.INFO);
+                Utils.log(`[AudioQuality for ${peerId}]: Callee detected need for sdpFmtpLine change to '${newProfile.levelName}' (new: '${newSdpFmtpLine}', current_negotiated: '${currentNegotiatedSdpLine}'). Waiting for caller to initiate.`, Utils.logLevels.INFO);
             }
         }
 
-        // 3. 应用新的码率等参数
         this._applyAudioProfileToSender(peerId, newLevelIndex);
 
         const profileName = newProfile ? newProfile.levelName : "未知等级";
         const description = newProfile ? newProfile.description : "无描述";
 
-        // 4. 发出事件并通知用户
         if (typeof EventEmitter !== 'undefined') {
             EventEmitter.emit('audioProfileChanged', { peerId: peerId, profileName: profileName, profileIndex: newLevelIndex, description: description });
         }
@@ -1446,7 +1333,6 @@ const VideoCallManager = {
     /**
      * @private
      * @description 将指定的音频配置应用到与对方的音频发送器。
-     * @function _applyAudioProfileToSender
      * @param {string} peerId - 目标对方ID。
      * @param {number} levelIndex - 要应用的配置档案的索引。
      */
@@ -1475,12 +1361,13 @@ const VideoCallManager = {
                 }
 
                 let changed = false;
-                // 应用最大码率
                 if (audioProfile.maxAverageBitrate && parameters.encodings[0].maxBitrate !== audioProfile.maxAverageBitrate) {
                     parameters.encodings[0].maxBitrate = audioProfile.maxAverageBitrate;
                     changed = true;
                 }
-                // NOTE: DTX 和 FEC 主要通过 SDP (sdpFmtpLine) 在协商时处理。通过 setParameters 直接控制的标准化程度较低。
+                // DTX and FEC are primarily handled via SDP (sdpFmtpLine)
+                // Direct control via setParameters for these is less common/standardized.
+                // If sdpFmtpLine changes, renegotiation handles it.
 
                 if (changed) {
                     sender.setParameters(parameters)

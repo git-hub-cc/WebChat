@@ -1,35 +1,30 @@
 /**
- * @file 消息管理器 (MessageManager.js)
- * @description 负责消息的发送、接收和显示。协调文本、文件和语音消息的发送流程，并调用相应模块处理特定类型的消息。
- *              支持消息的本地删除和撤回，在群聊中检测对AI的@提及，并对过长的文件名进行截断显示。
- *              文件消息会正确显示文件大小，发送时将 Blob 存入 fileCache，消息体中存储 fileHash，并通过分片传输。
- *              支持图片/视频缩略图预览和视频全屏播放。新增对贴图消息的支持。
- *              新增：在私聊中，若对方不在线，会提示并阻止消息发送；在群聊中，会提示有哪些在线成员未连接。
- *              修复：解决了渲染缺少 fileHash 的旧版文件消息时导致渲染失败的 bug。
- *              修复：确保只有当文件/贴图数据完全接收并缓存后，才将消息添加到聊天 UI，避免缩略图渲染失败。
- *              修复：修复了群聊中 @AI 时，用户消息在 AI 回复之后才显示的顺序问题。
- *              注意：已移除所有与“正在思考...”状态消息相关的逻辑。
+ * @file MessageManager.js
+ * @description 消息管理器，负责处理消息的发送、接收和显示。
+ *              它协调文本、文件和语音消息的发送流程，并调用相应的模块（如 AiApiHandler）来处理特定类型的消息。
+ *              同时，它也负责将消息渲染到聊天窗口中。
+ *              支持消息的本地删除和撤回请求。
+ *              在群聊中检测对AI的@提及，并触发AI响应。文件名过长时，在预览和消息中会进行截断显示。
+ *              文件消息现在能正确显示文件大小。文件发送时，将Blob存入DB的fileCache，消息体中存储fileHash。
+ *              实际文件数据现在通过高效的二进制分片传输。视频文件消息现在点击后全屏播放。
+ *              图片和视频文件消息现在显示缩略图预览。
+ *              新增：在群聊中发送消息时，会检查并提醒用户是否有在线但未连接的群成员。
+ *              私聊时，如果对方不在线，则提示用户消息无法发送，并阻止消息发送。
+ *              新增：支持发送贴图消息。
  * @module MessageManager
  * @exports {object} MessageManager - 对外暴露的单例对象，包含消息处理的所有核心方法。
- * @dependency AppSettings, Utils, NotificationUIManager, ChatManager, ConnectionManager, WebRTCManager, AiApiHandler, TtsApiHandler, UserManager, GroupManager, PeopleLobbyManager, ModalUIManager, MediaManager, DBManager
  */
 const MessageManager = {
-    // 当前选择的文件对象 { blob, hash, name, type, size, previewUrl }
-    selectedFile: null,
-    // 当前录制的音频数据 (Data URL)
-    audioData: null,
-    // 当前录制的音频时长（秒）
-    audioDuration: 0,
-    // 上次显示“群成员未连接”通知的时间戳，用于节流
-    _lastUnconnectedNotificationTime: 0,
+    selectedFile: null, // 当前选择的文件 { blob, hash, name, type, size, previewUrl }
+    audioData: null,    // 当前录制的音频数据 (Data URL)
+    audioDuration: 0,   // 当前录制的音频时长
+    _lastUnconnectedNotificationTime: 0, // 上次显示未连接成员通知的时间戳
+    _UNCONNECTED_NOTIFICATION_COOLDOWN: 30000, // 30秒冷却时间
 
     /**
-     * 发送消息，根据当前状态（文本、文件、音频）构造并发送一个或多个消息。
-     * @function sendMessage
-     * @returns {Promise<void>}
+     * 发送消息。
      */
     sendMessage: async function () {
-        // --- 1. 准备阶段：获取所有需要的数据 ---
         const input = document.getElementById('messageInput');
         const originalMessageText = input.value;
         const messageText = originalMessageText.trim();
@@ -48,11 +43,10 @@ const MessageManager = {
         const nowTimestamp = new Date().toISOString();
         const messageIdBase = `msg_${Date.now()}_${Utils.generateId(4)}`;
 
-        // --- 2. 前置检查与特殊处理 ---
-        // 检查群聊中是否有未连接的在线成员，并进行节流提示
+        // 检查群聊中是否有未连接的在线成员
         if (isGroup && group && (messageText || currentSelectedFile || currentAudioData)) {
             const currentTime = Date.now();
-            if (currentTime - this._lastUnconnectedNotificationTime > AppSettings.ui.unconnectedMemberNotificationCooldown) {
+            if (currentTime - this._lastUnconnectedNotificationTime > this._UNCONNECTED_NOTIFICATION_COOLDOWN) {
                 const unconnectedOnlineMembersInfo = [];
                 for (const memberId of group.members) {
                     if (memberId === UserManager.userId || UserManager.contacts[memberId]?.isAI) continue;
@@ -71,7 +65,6 @@ const MessageManager = {
             }
         }
 
-        // 处理与特殊联系人（如单聊AI）的交互
         if (contact && contact.isSpecial && contact.isAI && !isGroup) {
             if (currentAudioData || currentSelectedFile) {
                 NotificationUIManager.showNotification(`不支持向 ${contact.name} 发送音频/文件消息。`, 'warning');
@@ -88,7 +81,6 @@ const MessageManager = {
             return;
         }
 
-        // 检查私聊对方是否在线
         if (!isGroup && !ConnectionManager.isConnectedTo(targetId)) {
             if (messageText || currentSelectedFile || currentAudioData) {
                 const contactName = UserManager.contacts[targetId]?.name || `用户 ${targetId.substring(0,4)}`;
@@ -101,21 +93,10 @@ const MessageManager = {
         let messageSent = false;
         let userTextMessageForChat = null;
 
-        // --- 3. 消息发送流程 ---
-        // 3.1. 处理并发送文本消息（如果有）
-        // NOTE: 优先处理并显示用户自己的文本消息，修复了@AI时消息顺序错乱的问题。
         if (messageText) {
             userTextMessageForChat = { id: `${messageIdBase}_text`, type: 'text', content: messageText, timestamp: nowTimestamp, sender: UserManager.userId };
-            if (isGroup) {
-                GroupManager.broadcastToGroup(targetId, userTextMessageForChat);
-            } else {
-                ConnectionManager.sendTo(targetId, userTextMessageForChat);
-            }
-            await ChatManager.addMessage(targetId, userTextMessageForChat);
-            messageSent = true;
         }
 
-        // 3.2. 在发送完文本消息后，检查群聊中的 AI @提及
         if (isGroup && group && messageText) {
             for (const memberId of group.members) {
                 const memberContact = UserManager.contacts[memberId];
@@ -123,7 +104,7 @@ const MessageManager = {
                     const mentionTag = '@' + memberContact.name;
                     const mentionRegex = new RegExp(mentionTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:\\s|$|\\p{P})', 'u');
                     if (messageText.match(mentionRegex)) {
-                        Utils.log(`检测到对群内AI ${memberContact.name} 的提及。`, Utils.logLevels.INFO);
+                        Utils.log(`MessageManager: 检测到对群内AI ${memberContact.name} (${memberContact.id}) 的提及。`, Utils.logLevels.INFO);
                         const triggeringMsgId = userTextMessageForChat ? userTextMessageForChat.id : null;
                         AiApiHandler.sendGroupAiMessage(targetId, group, memberContact.id, messageText, UserManager.userId, triggeringMsgId).catch(err => Utils.log(`处理群内AI提及 (${memberContact.name}) 时出错: ${err}`, Utils.logLevels.ERROR));
                     }
@@ -131,7 +112,6 @@ const MessageManager = {
             }
         }
 
-        // 3.3. 处理并发送音频消息（如果有）
         if (currentAudioData) {
             const audioMessage = { id: `${messageIdBase}_audio`, type: 'audio', data: currentAudioData, duration: currentAudioDuration, timestamp: nowTimestamp, sender: UserManager.userId };
             if (isGroup) GroupManager.broadcastToGroup(targetId, audioMessage);
@@ -140,10 +120,10 @@ const MessageManager = {
             messageSent = true; MessageManager.cancelAudioData();
         }
 
-        // 3.4. 处理并发送文件消息（如果有）
+        // --- REFACTORED AND FIXED FILE SENDING LOGIC ---
         if (currentSelectedFile) {
             try {
-                // 将文件存入本地 IndexedDB 缓存
+                // 1. Cache the file locally
                 await DBManager.setItem('fileCache', {
                     id: currentSelectedFile.hash,
                     fileBlob: currentSelectedFile.blob,
@@ -151,34 +131,44 @@ const MessageManager = {
                 });
                 Utils.log(`文件 ${currentSelectedFile.name} (hash: ${currentSelectedFile.hash.substring(0,8)}...) 已存入本地 fileCache。`, Utils.logLevels.INFO);
 
+                // 2. Create the file message object
                 const fileMessageObject = {
-                    id: `${messageIdBase}_file`, type: 'file', fileId: currentSelectedFile.hash,
-                    fileName: currentSelectedFile.name, fileType: currentSelectedFile.type, size: currentSelectedFile.size,
-                    fileHash: currentSelectedFile.hash, timestamp: nowTimestamp, sender: UserManager.userId
+                    id: `${messageIdBase}_file`,
+                    type: 'file', // This remains 'file' for regular files/images
+                    fileId: currentSelectedFile.hash,
+                    fileName: currentSelectedFile.name,
+                    fileType: currentSelectedFile.type,
+                    size: currentSelectedFile.size,
+                    fileHash: currentSelectedFile.hash,
+                    timestamp: nowTimestamp,
+                    sender: UserManager.userId
                 };
 
-                // NOTE: 立即在本地UI添加消息。远程对等方将在完全接收文件后才添加。
+                // 3. Add the message to the local chat UI immediately
                 await ChatManager.addMessage(targetId, fileMessageObject);
 
-                // 定义发送函数，用于分片传输文件Blob
+                // 4. Send the JSON instruction message AND the binary data
                 const sendFunction = (peerId) => {
                     const conn = WebRTCManager.connections[peerId];
                     if (conn?.dataChannel?.readyState === 'open') {
-                        // 先发送文件元信息消息对象
+                        // Send the JSON "instruction" message first
                         ConnectionManager.sendTo(peerId, fileMessageObject);
-                        // 再通过分片发送文件实体
+                        // Then send the binary data chunks
                         Utils.sendInChunks(currentSelectedFile.blob, currentSelectedFile.name, conn.dataChannel, peerId, currentSelectedFile.hash);
                     } else {
                         Utils.log(`无法向 ${peerId} 发送文件，数据通道未打开。`, Utils.logLevels.WARN);
                     }
                 };
 
-                // 根据聊天类型（群聊/私聊）执行发送
                 if (isGroup) {
+                    // For groups, broadcast the JSON instruction, then send binary to each member
                     GroupManager.broadcastToGroup(targetId, fileMessageObject);
                     group.members.forEach(memberId => {
                         if (memberId !== UserManager.userId && !UserManager.contacts[memberId]?.isAI) {
-                            sendFunction(memberId);
+                            const conn = WebRTCManager.connections[memberId];
+                            if (conn?.dataChannel?.readyState === 'open') {
+                                Utils.sendInChunks(currentSelectedFile.blob, currentSelectedFile.name, conn.dataChannel, memberId, currentSelectedFile.hash);
+                            }
                         }
                     });
                 } else {
@@ -195,8 +185,15 @@ const MessageManager = {
                 return;
             }
         }
+        // --- END OF REFACTORED LOGIC ---
 
-        // --- 4. 清理阶段 ---
+        if (userTextMessageForChat) {
+            if (isGroup) GroupManager.broadcastToGroup(targetId, userTextMessageForChat);
+            else ConnectionManager.sendTo(targetId, userTextMessageForChat);
+            await ChatManager.addMessage(targetId, userTextMessageForChat);
+            messageSent = true;
+        }
+
         if (messageSent) {
             if (messageText && originalMessageText === input.value) {
                 input.value = '';
@@ -208,9 +205,7 @@ const MessageManager = {
 
     /**
      * 发送贴图消息。
-     * @function sendSticker
      * @param {object} stickerData - 包含贴图信息的对象 { id, name, blob }。
-     * @returns {Promise<void>}
      */
     sendSticker: async function (stickerData) {
         if (!ChatManager.currentChatId) {
@@ -228,9 +223,9 @@ const MessageManager = {
         }
 
         try {
-            // 1. 将贴图文件存入本地缓存
+            // 1. Cache sticker blob in fileCache for unified access
             await DBManager.setItem('fileCache', {
-                id: stickerData.id,
+                id: stickerData.id, // stickerData.id is the hash
                 fileBlob: stickerData.blob,
                 metadata: { name: stickerData.name, type: stickerData.blob.type, size: stickerData.blob.size }
             });
@@ -238,21 +233,29 @@ const MessageManager = {
             const nowTimestamp = new Date().toISOString();
             const messageId = `msg_${Date.now()}_${Utils.generateId(4)}`;
 
-            // 2. 构建贴图消息对象
+            // 2. Create the sticker message object
             const stickerMessage = {
-                id: messageId, type: 'sticker', fileId: stickerData.id, fileName: stickerData.name,
-                fileType: stickerData.blob.type, size: stickerData.blob.size, fileHash: stickerData.id,
-                timestamp: nowTimestamp, sender: UserManager.userId
+                id: messageId,
+                type: 'sticker', // The special type
+                fileId: stickerData.id,
+                fileName: stickerData.name,
+                fileType: stickerData.blob.type,
+                size: stickerData.blob.size,
+                fileHash: stickerData.id,
+                timestamp: nowTimestamp,
+                sender: UserManager.userId
             };
 
-            // 3. 立即在本地 UI 显示
+            // 3. Add to local UI
             await ChatManager.addMessage(targetId, stickerMessage);
 
-            // 4. 定义并执行发送逻辑（元信息 + 分片传输）
+            // 4. Send JSON and binary data to peer(s)
             const sendStickerFunction = (peerId) => {
                 const conn = WebRTCManager.connections[peerId];
                 if (conn?.dataChannel?.readyState === 'open') {
+                    // Send the JSON "instruction"
                     ConnectionManager.sendTo(peerId, stickerMessage);
+                    // Send the binary data
                     Utils.sendInChunks(stickerData.blob, stickerData.name, conn.dataChannel, peerId, stickerData.id);
                 } else {
                     Utils.log(`无法向 ${peerId} 发送贴图，数据通道未打开。`, Utils.logLevels.WARN);
@@ -260,10 +263,15 @@ const MessageManager = {
             };
 
             if (isGroup) {
+                // Broadcast the JSON "instruction"
                 GroupManager.broadcastToGroup(targetId, stickerMessage);
+                // Send binary data to each connected member
                 group.members.forEach(memberId => {
                     if (memberId !== UserManager.userId && !UserManager.contacts[memberId]?.isAI) {
-                        sendStickerFunction(memberId);
+                        const conn = WebRTCManager.connections[memberId];
+                        if (conn?.dataChannel?.readyState === 'open') {
+                            Utils.sendInChunks(stickerData.blob, stickerData.name, conn.dataChannel, memberId, stickerData.id);
+                        }
                     }
                 });
             } else {
@@ -274,39 +282,42 @@ const MessageManager = {
             NotificationUIManager.showNotification('发送贴图失败。', 'error');
         }
     },
-
     /**
      * 在聊天窗口中显示或更新一条消息。
-     * @function displayMessage
      * @param {object} message - 要显示的消息对象。
      * @param {boolean} [prepend=false] - 是否将消息前置插入（用于加载历史记录）。
-     * @returns {void}
      */
     displayMessage: function (message, prepend = false) {
         const chatBox = document.getElementById('chatBox');
         if (!chatBox) return;
 
-        // 检查消息是否已存在于 DOM 中
         let msgDiv = message.id ? chatBox.querySelector(`.message[data-message-id="${message.id}"]`) : null;
         const isUpdate = !!msgDiv;
 
-        // 针对 AI 流式响应的特殊更新逻辑
         if (isUpdate) {
+            // 更新逻辑：如果只是流式文本更新，则直接修改内容
             if (message.type === 'text' && message.isStreaming) {
                 const contentEl = msgDiv.querySelector('.message-content');
-                if (contentEl) contentEl.innerHTML = Utils.formatMessageText(message.content + "▍");
-                return;
+                if (contentEl) {
+                    contentEl.innerHTML = Utils.formatMessageText(message.content + "▍");
+                }
+                return; // 快速返回，不重新渲染整个消息
             }
+            // 如果是更新完成状态
             if(message.type === 'text' && !message.isStreaming && !message.isNewlyCompletedAIResponse) {
                 const contentEl = msgDiv.querySelector('.message-content');
-                if (contentEl) contentEl.innerHTML = Utils.formatMessageText(message.content);
+                if (contentEl) {
+                    contentEl.innerHTML = Utils.formatMessageText(message.content);
+                }
                 const timestampEl = msgDiv.querySelector('.timestamp');
-                if (timestampEl) timestampEl.textContent = Utils.formatDate(new Date(message.timestamp), true);
+                if (timestampEl) {
+                    timestampEl.textContent = Utils.formatDate(new Date(message.timestamp), true);
+                }
                 return;
             }
         }
 
-        // 创建新的消息元素
+        // --- 创建或完整重绘消息 ---
         const messageTpl = document.getElementById('message-template').content.cloneNode(true);
         const newMsgDiv = messageTpl.querySelector('.message');
         const contentWrapper = messageTpl.querySelector('.message-content-wrapper');
@@ -314,10 +325,10 @@ const MessageManager = {
         const senderEl = messageTpl.querySelector('.message-sender');
         const timestampEl = messageTpl.querySelector('.timestamp');
 
-        // 设置消息元素属性（如 class, data-*）
+        // 设置通用属性
         this._setMessageAttributes(newMsgDiv, message);
 
-        // 设置发送者名称
+        // 设置发送者
         const senderContact = UserManager.contacts[message.sender];
         const isSentByMe = message.sender === UserManager.userId || (message.originalSender && message.originalSender === UserManager.userId);
         if (!isSentByMe && message.type !== 'system' && !message.isRetracted) {
@@ -334,10 +345,10 @@ const MessageManager = {
         // 设置时间戳
         timestampEl.textContent = message.timestamp ? Utils.formatDate(new Date(message.timestamp), true) : '正在发送...';
 
-        // 填充消息内容
+        // 根据消息类型填充内容
         this._fillMessageContent(contentEl, message);
 
-        // 为新完成的 AI 消息触发 TTS
+        // 处理TTS
         const isAIMessage = !isSentByMe && senderContact?.isAI;
         if (isAIMessage && senderContact.aiConfig?.tts?.enabled && message.isNewlyCompletedAIResponse && message.type === 'text') {
             const textForTts = TtsApiHandler.cleanTextForTts(message.content);
@@ -348,7 +359,7 @@ const MessageManager = {
             }
         }
 
-        // 将消息元素插入到 DOM
+        // 将新消息插入DOM
         if (isUpdate) {
             msgDiv.replaceWith(newMsgDiv);
         } else {
@@ -359,16 +370,15 @@ const MessageManager = {
             }
         }
 
-        // 移除“暂无消息”等占位提示
+        // 移除"无消息"占位符
         this._removeEmptyPlaceholder(chatBox, message);
     },
 
     /**
-     * 内部方法：为消息DOM元素设置各种属性（class, data-*）。
-     * @function _setMessageAttributes
-     * @param {HTMLElement} msgDiv - 消息的DOM元素。
+     * @private
+     * 为消息DOM元素设置通用属性和类。
+     * @param {HTMLElement} msgDiv - 消息的div元素。
      * @param {object} message - 消息对象。
-     * @returns {void}
      */
     _setMessageAttributes: function(msgDiv, message) {
         const isSentByMe = message.sender === UserManager.userId || (message.originalSender && message.originalSender === UserManager.userId);
@@ -381,6 +391,7 @@ const MessageManager = {
 
         if (message.type === 'system' || message.isRetracted) msgDiv.classList.add('system');
         if (message.type === 'sticker') msgDiv.classList.add('sticker');
+        if (message.isThinking) msgDiv.classList.add('thinking');
         if (message.isRetracted) msgDiv.classList.add('retracted');
 
         if (!isSentByMe && senderContact?.isAI && senderContact.id) {
@@ -389,11 +400,10 @@ const MessageManager = {
     },
 
     /**
-     * 内部方法：根据消息类型填充消息内容区域。
-     * @function _fillMessageContent
-     * @param {HTMLElement} contentEl - 消息内容的DOM容器。
+     * @private
+     * 根据消息类型填充消息内容区域。
+     * @param {HTMLElement} contentEl - 消息内容的容器元素。
      * @param {object} message - 消息对象。
-     * @returns {void}
      */
     _fillMessageContent: function(contentEl, message) {
         if (message.isRetracted) {
@@ -441,11 +451,10 @@ const MessageManager = {
     },
 
     /**
-     * 内部方法：设置文件或贴图消息的显示内容（缩略图、文件名、大小、按钮等）。
-     * @function _setupFileMessage
+     * @private
+     * 设置文件或贴图消息的DOM元素。
      * @param {HTMLElement} fileInfoDiv - 文件信息的容器元素。
-     * @param {object} message - 文件或贴图消息对象。
-     * @returns {void}
+     * @param {object} message - 消息对象。
      */
     _setupFileMessage: function(fileInfoDiv, message) {
         const { fileHash, fileName, fileType, size } = message;
@@ -454,20 +463,11 @@ const MessageManager = {
         fileInfoDiv.dataset.filetype = fileType;
 
         const thumbnailPlaceholder = fileInfoDiv.querySelector('.thumbnail-placeholder');
-
-        // 渲染媒体缩略图
-        if (fileHash && fileType && thumbnailPlaceholder && typeof MediaUIManager !== 'undefined' && MediaUIManager.renderMediaThumbnail) {
+        if (MediaUIManager.renderMediaThumbnail) {
             MediaUIManager.renderMediaThumbnail(thumbnailPlaceholder, fileHash, fileType, fileName, false);
-        } else if (thumbnailPlaceholder) {
-            // NOTE: 为旧版消息或缓存丢失的情况提供回退显示
-            const icon = fileType?.startsWith('video/') ? '🎬' : (fileType?.startsWith('image/') ? '🖼️' : '📄');
-            thumbnailPlaceholder.innerHTML = `<div class="file-icon-fallback">${icon}</div>`;
-            thumbnailPlaceholder.title = "无法加载预览 (旧消息格式或缓存丢失)";
-            Utils.log(`消息 ${message.id} 缺少 fileHash 或依赖项，使用回退预览。`, Utils.logLevels.DEBUG);
         }
 
-        // 为图片和视频添加点击全屏查看/播放的事件
-        if (fileType && (fileType.startsWith('image/') || fileType.startsWith('video/'))) {
+        if (fileType.startsWith('image/') || fileType.startsWith('video/')) {
             fileInfoDiv.style.cursor = 'pointer';
             fileInfoDiv.addEventListener('click', (e) => {
                 const target = e.currentTarget;
@@ -476,55 +476,44 @@ const MessageManager = {
             });
         }
 
-        // 设置文件名（截断）和文件大小
+        // 文件详情和操作按钮 (贴图类型没有这些)
         const fileNameEl = fileInfoDiv.querySelector('.file-name');
-        if(fileNameEl && fileName) fileNameEl.textContent = Utils.truncateFileName(fileName, 10);
+        if(fileNameEl) fileNameEl.textContent = Utils.truncateFileName(fileName, 10);
 
         const fileMetaEl = fileInfoDiv.querySelector('.file-meta');
-        if(fileMetaEl && size !== undefined) fileMetaEl.textContent = MediaManager.formatFileSize(size);
+        if(fileMetaEl) fileMetaEl.textContent = MediaManager.formatFileSize(size);
 
-        // 设置操作按钮（如播放、下载）
         const actionBtn = fileInfoDiv.querySelector('.media-action-btn');
         if (actionBtn) {
-            if (fileHash) actionBtn.dataset.hash = fileHash;
-            if (fileName) actionBtn.dataset.filename = fileName;
-
-            const isPlayableAudio = fileType && fileType.startsWith('audio/');
-            const isDownloadable = fileType && !fileType.startsWith('image/') && !fileType.startsWith('video/') && !isPlayableAudio;
-
-            if (isPlayableAudio) {
+            if (fileType.startsWith('audio/')) {
                 actionBtn.textContent = '播放';
-                actionBtn.addEventListener('click', (e) => { e.stopPropagation(); this._handlePlayMediaClick(e.currentTarget); });
-            } else if (isDownloadable) {
+                actionBtn.addEventListener('click', (e) => { e.stopPropagation(); this._handlePlayMediaClick(actionBtn); });
+            } else if (!fileType.startsWith('image/') && !fileType.startsWith('video/')) {
                 actionBtn.textContent = '下载';
-                actionBtn.addEventListener('click', (e) => { e.stopPropagation(); this._handleDownloadFileClick(e.currentTarget); });
+                actionBtn.addEventListener('click', (e) => { e.stopPropagation(); this._handleDownloadFileClick(actionBtn); });
             } else {
-                actionBtn.remove();
+                actionBtn.remove(); // 图片和视频直接点击容器，不需要按钮
             }
         }
     },
 
     /**
-     * 内部方法：如果聊天框中不再有实际消息，则移除“暂无消息”等占位符。
-     * @function _removeEmptyPlaceholder
+     * @private
+     * 移除聊天框中的 "暂无消息" 占位符。
      * @param {HTMLElement} chatBox - 聊天框元素。
-     * @param {object} message - 刚添加的消息对象。
-     * @returns {void}
+     * @param {object} message - 新增的消息对象。
      */
     _removeEmptyPlaceholder: function(chatBox, message) {
-        const noMsgPlaceholder = chatBox.querySelector('.system-message:not(.message.system)');
+        const noMsgPlaceholder = chatBox.querySelector('.system-message:not(.thinking)');
         if (noMsgPlaceholder && (noMsgPlaceholder.textContent.includes("暂无消息") || noMsgPlaceholder.textContent.includes("您创建了此群组") || noMsgPlaceholder.textContent.includes("开始对话"))) {
-            if (!message.isStreaming && !message.isRetracted) {
+            if (!message.isThinking && !message.isStreaming && !message.isRetracted) {
                 noMsgPlaceholder.remove();
             }
         }
     },
-
     /**
-     * 内部方法：处理点击查看图片文件的操作。
-     * @function _handleViewFileClick
-     * @param {HTMLElement} buttonOrContainerElement - 触发事件的元素。
-     * @returns {Promise<void>}
+     * @private
+     * 处理文件消息中“查看”按钮（通常是图片）的点击事件。
      */
     _handleViewFileClick: async function(buttonOrContainerElement) {
         const fileHash = buttonOrContainerElement.dataset.hash;
@@ -549,10 +538,8 @@ const MessageManager = {
     },
 
     /**
-     * 内部方法：处理点击全屏播放视频的操作。
-     * @function _handlePlayVideoFullScreenClick
-     * @param {HTMLElement} previewContainerElement - 视频预览容器元素。
-     * @returns {Promise<void>}
+     * @private
+     * 处理视频预览容器的点击事件，用于全屏播放视频。
      */
     _handlePlayVideoFullScreenClick: async function(previewContainerElement) {
         const fileHash = previewContainerElement.dataset.hash;
@@ -578,16 +565,15 @@ const MessageManager = {
         }
     },
 
+
     /**
-     * 内部方法：处理点击播放音频文件的操作。
-     * @function _handlePlayMediaClick
-     * @param {HTMLElement} buttonElement - 播放按钮元素。
-     * @returns {Promise<void>}
+     * @private
+     * 处理文件消息中“播放”按钮（目前主要是音频文件）的点击事件。
      */
     _handlePlayMediaClick: async function(buttonElement) {
         const fileHash = buttonElement.dataset.hash;
         const fileName = buttonElement.dataset.filename;
-        const fileType = buttonElement.closest('.file-info')?.dataset.filetype;
+        const fileType = buttonElement.dataset.filetype;
 
         if (!fileType || !fileType.startsWith('audio/')) {
             Utils.log(`_handlePlayMediaClick: 非音频类型 (${fileType})，不处理。`, Utils.logLevels.WARN);
@@ -632,8 +618,8 @@ const MessageManager = {
                 mediaElement.onerror = () => {
                     URL.revokeObjectURL(objectURL);
                     mediaElement.remove();
-                    buttonElement.style.display = '⚠️';
-                    setTimeout(() => {buttonElement.innerHTML = '▶'; audio.remove();}, 2000);
+                    buttonElement.style.display = '';
+                    NotificationUIManager.showNotification(`播放音频 "${fileName}" 失败。`, 'error');
                 };
             } else {
                 NotificationUIManager.showNotification("无法播放：文件未在缓存中找到。", "error");
@@ -645,10 +631,8 @@ const MessageManager = {
     },
 
     /**
-     * 内部方法：处理点击下载文件的操作。
-     * @function _handleDownloadFileClick
-     * @param {HTMLElement} buttonElement - 下载按钮元素。
-     * @returns {Promise<void>}
+     * @private
+     * 处理文件消息中“下载”按钮的点击事件。
      */
     _handleDownloadFileClick: async function(buttonElement) {
         const fileHash = buttonElement.dataset.hash;
@@ -685,9 +669,7 @@ const MessageManager = {
     },
 
     /**
-     * 取消待发送的文件，并清理预览。
-     * @function cancelFileData
-     * @returns {void}
+     * 取消当前已选择但未发送的文件。
      */
     cancelFileData: function () {
         if (MessageManager.selectedFile && MessageManager.selectedFile.previewUrl) {
@@ -700,9 +682,7 @@ const MessageManager = {
     },
 
     /**
-     * 取消待发送的音频，并清理预览和录音资源。
-     * @function cancelAudioData
-     * @returns {void}
+     * 取消当前已录制但未发送的语音。
      */
     cancelAudioData: function () {
         MessageManager.audioData = null;
@@ -717,9 +697,7 @@ const MessageManager = {
     },
 
     /**
-     * 清空当前聊天的所有消息。
-     * @function clearChat
-     * @returns {void}
+     * 触发清空当前聊天记录的确认流程。
      */
     clearChat: function () {
         if (!ChatManager.currentChatId) {
@@ -738,10 +716,7 @@ const MessageManager = {
     },
 
     /**
-     * 在本地删除一条消息。
-     * @function deleteMessageLocally
-     * @param {string} messageId - 要删除的消息 ID。
-     * @returns {void}
+     * 本地删除一条消息。
      */
     deleteMessageLocally: function(messageId) {
         const chatId = ChatManager.currentChatId;
@@ -750,7 +725,6 @@ const MessageManager = {
         if (messageIndex !== -1) {
             const messageElement = document.querySelector(`.message[data-message-id="${messageId}"]`);
             if (messageElement) {
-                // NOTE: 如果是媒体消息，释放其缩略图的 Object URL
                 const mediaThumbnailPlaceholder = messageElement.querySelector('.thumbnail-placeholder');
                 if (mediaThumbnailPlaceholder && mediaThumbnailPlaceholder.dataset.objectUrlForRevoke) {
                     URL.revokeObjectURL(mediaThumbnailPlaceholder.dataset.objectUrlForRevoke);
@@ -762,8 +736,6 @@ const MessageManager = {
 
             ChatManager.chats[chatId].splice(messageIndex, 1);
             ChatManager.saveCurrentChat();
-
-            // 更新联系人列表中的最后一条消息预览
             const remainingMessages = ChatManager.chats[chatId];
             let newPreview;
             if (remainingMessages.length > 0) {
@@ -779,11 +751,9 @@ const MessageManager = {
         }
     },
 
+
     /**
      * 请求撤回一条消息。
-     * @function requestRetractMessage
-     * @param {string} messageId - 要撤回的消息 ID。
-     * @returns {void}
      */
     requestRetractMessage: function(messageId) {
         const chatId = ChatManager.currentChatId;
@@ -820,13 +790,8 @@ const MessageManager = {
     },
 
     /**
-     * 内部方法：将指定消息更新为“已撤回”状态。
-     * @function _updateMessageToRetractedState
-     * @param {string} messageId - 要撤回的消息 ID。
-     * @param {string} chatId - 聊天 ID。
-     * @param {boolean} isOwnRetraction - 是否是自己撤回。
-     * @param {string|null} [retractedByName=null] - 撤回者的名称。
-     * @returns {void}
+     * @private
+     * 将指定消息更新为撤回状态。
      */
     _updateMessageToRetractedState: function(messageId, chatId, isOwnRetraction, retractedByName = null) {
         if (!ChatManager.chats[chatId]) return;

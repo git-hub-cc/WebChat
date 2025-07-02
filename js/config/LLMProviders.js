@@ -1,23 +1,19 @@
 /**
- * @file 大语言模型提供商配置
+ * @file LLMProviders.js
  * @description 存储所有支持的大语言模型（LLM）提供商的静态配置数据。
  *              该文件从 AppSettings.js 中分离出来，以提高模块化和可维护性。
  * @module LLMProviders
  * @exports {object} LLMProviders - 包含所有大模型提供商配置的全局常量对象。
- * @dependency SettingsUIManager (使用此数据填充UI), AiApiHandler (使用此数据获取默认配置)
+ * @dependents SettingsUIManager, AiApiHandler
  */
 const LLMProviders = {
-    // TODO: 应从服务器动态获取或根据环境配置
+    // TODO
     "ppmc": {
         "label": "PPMC",
-        "defaultEndpoint": "https://175.178.216.24/v1/chat/completions",
-        "defaultModel": "THUDM/GLM-4-32B-0414",
+        "defaultEndpoint": "http://localhost:8080/v1/chat/completions",
+        "defaultModel": "qwen-turbo",
         "models": [
-            { "key": "Qwen/Qwen3-14B", "label": "Qwen3 14B" },
-            { "key": "Qwen/Qwen3-30B-A3B", "label": "Qwen3 30B" },
-            { "key": "THUDM/GLM-4-32B-0414", "label": "GLM-4 32B" },
-            { "key": "THUDM/GLM-Z1-Rumination-32B-0414", "label": "GLM-Z1 Rumination 32B" },
-            { "key": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", "label": "DeepSeek-R1 Qwen3 8B" }
+            { "key": "qwen-turbo", "label": "Qwen Turbo" },
         ]
     },
     "siliconflow": {
@@ -37,21 +33,32 @@ const LLMProviders = {
         "defaultEndpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
         "defaultModel": "qwen-turbo",
         "models": [
+            // --- 主力模型 (Aliases) ---
             { "key": "qwen-turbo", "label": "Qwen Turbo" },
             { "key": "qwen-plus", "label": "Qwen Plus" },
             { "key": "qwen-max", "label": "Qwen Max" },
             { "key": "qwen-long", "label": "Qwen Long" },
+
+            // --- Qwen3 系列 ---
             { "key": "qwen3-32b", "label": "Qwen3 32B" },
             { "key": "qwen3-14b", "label": "Qwen3 14B" },
             { "key": "qwen3-8b", "label": "Qwen3 8B" },
+
+            // --- Qwen2 系列 ---
             { "key": "qwen2-72b-instruct", "label": "Qwen2 72B Instruct" },
             { "key": "qwen2-57b-a14b-instruct", "label": "Qwen2 57B Instruct" },
             { "key": "qwen2-7b-instruct", "label": "Qwen2 7B Instruct" },
+
+            // --- Qwen1.5 系列 ---
             { "key": "qwen1.5-110b-chat", "label": "Qwen1.5 110B Chat" },
             { "key": "qwen1.5-72b-chat", "label": "Qwen1.5 72B Chat" },
             { "key": "qwen1.5-32b-chat", "label": "Qwen1.5 32B Chat" },
+
+            // --- 多模态系列 (Vision) ---
             { "key": "qwen-vl-max", "label": "Qwen VL Max" },
             { "key": "qwen-vl-plus", "label": "Qwen VL Plus" },
+
+            // --- 第三方模型 (Third-party) ---
             { "key": "deepseek-v3", "label": "DeepSeek V3" },
             { "key": "deepseek-r1", "label": "DeepSeek R1" }
         ]
@@ -107,11 +114,10 @@ const LLMProviders = {
             { "key": "claude-sonnet-4-20250514", "label": "Claude Sonnet 4 (20250514)" },
         ]
     },
-    // 自定义提供商配置，允许用户输入任意端点和模型
     "custom": {
         "label": "自定义",
         "defaultEndpoint": "",
         "defaultModel": "",
-        "models": [] // models 为空数组，表示需要用户手动输入模型名称
+        "models": []
     }
 };

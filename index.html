@@ -14,21 +14,23 @@
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://git-hub-cc.github.io/PPMC/">
+    <meta property="og:url" content="https://175.178.216.24/">
     <meta property="og:title" content="PPMC - AI Character Chat Platform">
     <meta property="og:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="og:image" content="https://git-hub-cc.github.io/PPMC/img/desktop/img.png">
+    <meta property="og:image" content="https://175.178.216.24/img/desktop/img.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://git-hub-cc.github.io/PPMC/">
+    <meta property="twitter:url" content="https://175.178.216.24/">
     <meta property="twitter:title" content="PPMC - AI Character Chat Platform">
     <meta property="twitter:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="twitter:image" content="https://git-hub-cc.github.io/PPMC/img/desktop/img.png">
+    <meta property="twitter:image" content="https://175.178.216.24/img/desktop/img.png">
+    <!-- End of SEO Meta Tags -->
 
     <!-- ========================================================================== -->
     <!-- 样式表 (Stylesheets) -->
     <!-- ========================================================================== -->
+    <!-- !!! IMPORTANT: variables.css 必须首先加载 !!! -->
     <link rel="stylesheet" href="css/基础/variables.css">
     <link rel="stylesheet" href="css/基础/core.css">
     <link rel="stylesheet" href="css/基础/sidebar.css">
@@ -46,7 +48,7 @@
 <div class="app-container">
 
     <!-- ========================================================================== -->
-    <!-- 左侧边栏 (导航) / Sidebar (Navigation) -->
+    <!-- START: 左侧边栏 (导航) / Sidebar (Navigation) -->
     <!-- ========================================================================== -->
     <aside class="sidebar-nav" id="sidebarNav">
         <header class="sidebar-header">
@@ -66,9 +68,13 @@
         </div>
         <button class="new-chat-fab" id="newChatFab" title="新聊天/群组">+</button>
     </aside>
+    <!-- ========================================================================== -->
+    <!-- END: 左侧边栏 (导航) / Sidebar (Navigation) -->
+    <!-- ========================================================================== -->
+
 
     <!-- ========================================================================== -->
-    <!-- 主聊天区 / Main Chat Area -->
+    <!-- START: 主聊天区 / Main Chat Area -->
     <!-- ========================================================================== -->
     <main class="chat-area" id="chatArea">
         <div class="chat-area-content">
@@ -139,10 +145,13 @@
             <div class="drop-overlay-text">拖拽文件到此处发送</div>
         </div>
     </main>
+    <!-- ========================================================================== -->
+    <!-- END: 主聊天区 / Main Chat Area -->
+    <!-- ========================================================================== -->
 
 
     <!-- ========================================================================== -->
-    <!-- 右侧详情面板 / Right Details Panel -->
+    <!-- START: 右侧详情面板 / Right Details Panel -->
     <!-- ========================================================================== -->
     <aside class="details-panel" id="detailsPanel">
         <header class="details-header">
@@ -232,7 +241,7 @@
                                 如果 PPMC 给你带来了哪怕一丝丝的快乐或便利，或者你只是单纯觉得本项目的猫猫开发者很可爱，不妨考虑请我们喝杯咖啡？<br>
                                 您的每一份支持，都是我们继续爆肝更新、添加更多神奇（蛇皮）功能的动力！(づ｡◕‿‿◕｡)づ
                             </p>
-                            <img src="img/wechat/pay.png" alt="请作者喝杯咖啡" class="wechat-pay" loading="lazy">
+                            <img src="/img/wechat/pay.png" alt="请作者喝杯咖啡" class="wechat-pay" loading="lazy">
                             <p>感谢您的慷慨！(〃'▽'〃)</p>
                         </div>
                     </div>
@@ -320,11 +329,18 @@
             </ul>
         </div>
     </aside>
+    <!-- ========================================================================== -->
+    <!-- END: 右侧详情面板 / Right Details Panel -->
+    <!-- ========================================================================== -->
+
 </div>
+<!-- ========================================================================== -->
+<!-- END: 应用主容器 (App Container) -->
+<!-- ========================================================================== -->
 
 
 <!-- ========================================================================== -->
-<!-- 模态框与浮层 (Modals & Overlays) -->
+<!-- START: 模态框与浮层 (Modals & Overlays) -->
 <!-- ========================================================================== -->
 
 <!-- 全局加载遮罩 -->
@@ -605,7 +621,7 @@
             <p>
                 如有紧急事宜，您可以通过微信联系我们：
             </p>
-            <img src="img/wechat/contact.png" alt="微信二维码" loading="lazy">
+            <img src="/img/wechat/contact.png" alt="微信二维码" loading="lazy">
             <p>
                 此消息将在 <span id="openSourceModalTimer">8</span> 秒后自动关闭。
             </p>
@@ -630,10 +646,13 @@
         <canvas id="screenshotEditorCanvas"></canvas>
     </div>
 </div>
+<!-- ========================================================================== -->
+<!-- END: 模态框与浮层 (Modals & Overlays) -->
+<!-- ========================================================================== -->
 
 
 <!-- ========================================================================== -->
-<!-- UI 组件模板 (UI Component Templates) -->
+<!-- START: UI 组件模板 (UI Component Templates) -->
 <!-- 这些 <template> 元素包含各种UI组件的HTML结构，JS将克隆并填充它们以动态生成界面。 -->
 <!-- ========================================================================== -->
 <template id="message-template">
@@ -740,91 +759,13 @@
         <div class="resource-timestamp"></div>
     </div>
 </template>
-<!-- 用于 DetailsPanelUIManager - 已离开成员列表项 -->
-<template id="left-member-item-template">
-    <div class="left-member-item-detail">
-        <span class="js-left-member-name">成员名称</span>
-        <button class="re-add-member-btn-detail js-re-add-btn" title="重新添加成员">+</button>
-    </div>
-</template>
+<!-- ========================================================================== -->
+<!-- END: UI 组件模板 (UI Component Templates) -->
+<!-- ========================================================================== -->
 
-<!-- 用于 DetailsPanelUIManager - 记忆书详情展示 -->
-<template id="memory-set-item-details-template">
-    <div class="memory-set-item">
-        <div class="memory-set-header">
-            <span class="js-set-name">记忆书名称</span>
-            <div class="memory-set-actions">
-                <button class="record-btn js-record-btn" title="记录本次对话">记录</button>
-            </div>
-        </div>
-        <div class="memory-book-container">
-            <textarea class="memory-book-textarea js-memory-textarea" rows="4" placeholder="点击“记录”以生成，或在此手动编辑..."></textarea>
-            <div class="memory-book-controls">
-                <label>
-                    <input type="checkbox" class="enable-memory-book-toggle js-enable-toggle"> 启用记忆
-                </label>
-                <button class="save-memory-book-btn js-save-btn">保存修改</button>
-            </div>
-        </div>
-    </div>
-</template>
-
-<!-- 用于 DetailsPanelUIManager - 群组AI提示词编辑器 -->
-<template id="group-ai-prompt-editor-template">
-    <div class="ai-prompt-editor-item">
-        <h5 class="js-ai-name-header">AI角色: AI名称</h5>
-        <textarea class="group-ai-prompt-textarea js-prompt-textarea" placeholder="输入此AI在群组中的特定行为指示..." rows="3"></textarea>
-        <div class="ai-prompt-actions-container">
-            <button class="btn btn-primary btn-sm js-save-prompt-btn">保存指示</button>
-            <button class="btn btn-secondary btn-sm js-reset-prompt-btn">重置为默认</button>
-        </div>
-    </div>
-</template>
-
-<!-- 用于 ModalUIManager - 通用确认对话框 -->
-<template id="confirmation-modal-template">
-    <div id="genericConfirmationModal" class="modal-like confirmation-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="js-modal-title">确认操作</h2>
-            </div>
-            <div class="modal-body">
-                <p class="js-modal-message">消息文本</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary js-modal-cancel-btn">取消</button>
-                <button class="btn btn-danger js-modal-confirm-btn">确认</button>
-            </div>
-        </div>
-    </div>
-</template>
-
-<!-- 用于 ModalUIManager - 记忆书列表项 (模态框内) -->
-<template id="memory-set-list-item-modal-template">
-    <div class="memory-set-list-item-modal">
-        <span class="memory-set-name-modal js-set-name">记忆书名称</span>
-        <div class="memory-set-actions-modal">
-            <button class="btn btn-secondary btn-sm js-edit-btn" title="编辑">编辑</button>
-            <button class="btn btn-danger btn-sm js-delete-btn" title="删除">删除</button>
-        </div>
-    </div>
-</template>
-
-<!-- 用于 ModalUIManager - 记忆书添加/编辑表单 -->
-<template id="memory-set-form-modal-template">
-    <div class="memory-set-form-inner">
-        <h4 style="margin-bottom: 10px;" class="js-form-title">添加记忆书</h4>
-        <input type="text" class="form-control js-set-name-input" placeholder="记忆书名称 (例如: '个人喜好')">
-        <input type="text" class="form-control js-set-elements-input" placeholder="关键要素, 用逗号分隔 (例如: '喜欢的颜色, 喜欢的食物')">
-        <div class="modal-footer" style="border-top: none; padding-top: 10px; margin-top: 0;">
-            <button class="btn btn-secondary js-cancel-form-btn">取消</button>
-            <button class="btn btn-primary js-save-form-btn">确认添加</button>
-        </div>
-    </div>
-</template>
 
 <!-- ========================================================================== -->
-<!-- 脚本加载 (Scripts) -->
+<!-- START: 脚本加载 (Scripts) -->
 <!-- 脚本加载顺序至关重要，请谨慎修改。管理器之间存在依赖关系。 -->
 <!-- ========================================================================== -->
 
@@ -837,9 +778,6 @@
 <script src="js/ThemeLoader.js"></script>
 <script src="js/Utils.js"></script>
 <script src="js/EventEmitter.js"></script>
-<script src="js/Store.js"></script>
-<script src="js/ActionCreators.js"></script>
-
 <script src="js/DBManager.js"></script>
 <script src="js/UserManager.js"></script>
 <script src="js/WebRTCManager.js"></script>
@@ -877,5 +815,9 @@
 
 <!-- 应用初始化程序 (最后加载) -->
 <script src="js/AppInitializer.js"></script>
+<!-- ========================================================================== -->
+<!-- END: 脚本加载 (Scripts) -->
+<!-- ========================================================================== -->
+
 </body>
 </html>

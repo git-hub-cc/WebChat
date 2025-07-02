@@ -1,20 +1,18 @@
 /**
- * @file 记忆书管理器 (MemoryBookManager.js)
- * @description 管理记忆书（Memory Book）相关功能，包括定义核心要素集、触发 AI 提炼、存储和检索生成的记忆。
- *              注意：所有数据修改方法现已修正，会正确调用 DBManager 将变更持久化到 IndexedDB。
+ * @file MemoryBookManager.js
+ * @description Manages Memory Book functionalities, including defining key element sets,
+ *              triggering AI extraction, and storing/retrieving generated memories.
+ *              FIXED: All data modification methods now correctly call DBManager to persist changes to IndexedDB.
  * @module MemoryBookManager
- * @exports {object} MemoryBookManager - 导出的单例对象，用于管理所有记忆书功能。
- * @dependency DBManager, UserManager, ChatManager, AiApiHandler, NotificationUIManager, Utils, EventEmitter
+ * @exports {object} MemoryBookManager
+ * @dependencies DBManager, UserManager, ChatManager, AiApiHandler, NotificationUIManager, Utils, EventEmitter
  */
 const MemoryBookManager = {
-    // 用于 IndexedDB 的存储对象名称
-    _DB_STORE_NAME: 'memoryBooks',
-    // 记忆书要素集的内存缓存，结构为 {id, name, elements, books}
-    _elementSets: [],
+    _DB_STORE_NAME: 'memoryBooks', // Store for element sets and generated books
+    _elementSets: [], // In-memory cache of {id, name, elements, books}
 
     /**
-     * 初始化管理器，从数据库加载所有记忆书要素集。
-     * @function init
+     * Initializes the manager by loading element sets from the database.
      * @returns {Promise<void>}
      */
     init: async function() {
@@ -23,8 +21,7 @@ const MemoryBookManager = {
     },
 
     /**
-     * 从 IndexedDB 加载所有记忆书要素集定义到内存中。
-     * @function loadElementSets
+     * Loads all element set definitions from IndexedDB into memory.
      * @returns {Promise<void>}
      */
     loadElementSets: async function() {
@@ -38,20 +35,18 @@ const MemoryBookManager = {
     },
 
     /**
-     * 返回当前已加载的记忆书要素集的副本。
-     * @function getElementSets
-     * @returns {Array<object>} 一个包含所有记忆书要素集对象的数组。
+     * Returns a copy of the currently loaded element sets.
+     * @returns {Array<object>}
      */
     getElementSets: function() {
         return [...this._elementSets];
     },
 
     /**
-     * 添加一个新的记忆书要素集到数据库和内存。
-     * @function addElementSet
-     * @param {string} name - 新要素集的名称。
-     * @param {Array<string>} elements - 核心要素的字符串数组。
-     * @returns {Promise<boolean>} 如果成功添加则返回 true。
+     * Adds a new element set to the database and memory.
+     * @param {string} name - The name of the new set.
+     * @param {Array<string>} elements - An array of key elements.
+     * @returns {Promise<boolean>} - True if successful.
      */
     addElementSet: async function(name, elements) {
         if (!name || !Array.isArray(elements) || elements.length === 0) {
@@ -62,14 +57,14 @@ const MemoryBookManager = {
             id: `mem_set_${Utils.generateId(12)}`,
             name: name,
             elements: elements,
-            books: {} // 结构: { chatId: { content: '...', enabled: false } }
+            books: {} // { chatId: { content: '...', enabled: false } }
         };
         try {
-            // NOTE: 将新数据持久化到数据库
+            // FIXED: Persist to database
             await DBManager.setItem(this._DB_STORE_NAME, newSet);
-            // 更新内存缓存
+            // Update in-memory cache
             this._elementSets.push(newSet);
-            // 通知 UI 更新
+            // Notify UI
             EventEmitter.emit('memorySetsUpdated');
             NotificationUIManager.showNotification(`记忆书 "${name}" 已创建。`, 'success');
             Utils.log(`已创建并保存新的记忆书: ${newSet.id}`, Utils.logLevels.INFO);
@@ -82,18 +77,17 @@ const MemoryBookManager = {
     },
 
     /**
-     * 从数据库和内存中删除一个记忆书要素集。
-     * @function deleteElementSet
-     * @param {string} setId - 要删除的要素集的 ID。
+     * Deletes an element set from the database and memory.
+     * @param {string} setId - The ID of the set to delete.
      * @returns {Promise<void>}
      */
     deleteElementSet: async function(setId) {
         try {
-            // NOTE: 从数据库中移除
+            // FIXED: Remove from database
             await DBManager.removeItem(this._DB_STORE_NAME, setId);
-            // 更新内存缓存
+            // Update in-memory cache
             this._elementSets = this._elementSets.filter(s => s.id !== setId);
-            // 通知 UI 更新
+            // Notify UI
             EventEmitter.emit('memorySetsUpdated');
             NotificationUIManager.showNotification('记忆书已删除。', 'success');
             Utils.log(`已删除记忆书: ${setId}`, Utils.logLevels.INFO);
@@ -104,10 +98,10 @@ const MemoryBookManager = {
     },
 
     /**
-     * 触发为指定聊天和要素集生成记忆书，并保存结果。
-     * @function generateMemoryBook
-     * @param {string} setId - 用于提炼的要素集的 ID。
-     * @param {string} chatId - 要处理的聊天的 ID。
+     * Triggers the generation of a memory book for a specific chat and element set,
+     * then saves the result.
+     * @param {string} setId - The ID of the element set to use for extraction.
+     * @param {string} chatId - The ID of the chat to process.
      * @returns {Promise<void>}
      */
     generateMemoryBook: async function(setId, chatId) {
@@ -127,8 +121,6 @@ const MemoryBookManager = {
         EventEmitter.emit('memoryBookGenerationStarted', { setId, chatId });
 
         try {
-            // 处理流程如下：
-            // 1. 格式化聊天记录，将有效文本消息拼接成对话脚本。
             const conversationTranscript = chatHistory
                 .filter(msg => msg.type === 'text' && !msg.isRetracted && !msg.isThinking)
                 .map(msg => {
@@ -136,23 +128,22 @@ const MemoryBookManager = {
                     return `${senderName}: ${msg.content}`;
                 }).join('\n');
 
-            // 2. 调用 AI 接口，根据要素集提炼内容。
             const extractedContent = await AiApiHandler.extractMemoryElements(set.elements, conversationTranscript);
 
-            // 3. 更新内存中的对象。
+            // Update in-memory object
             if (!set.books) set.books = {};
-            // NOTE: 保留已有的 'enabled' 状态，若不存在则默认为 false。
+            // Preserve the 'enabled' state if it exists, otherwise default to false
             set.books[chatId] = {
                 content: extractedContent.trim(),
                 enabled: set.books[chatId]?.enabled || false
             };
 
-            // 4. 将整个更新后的要素集对象持久化到数据库。
+            // FIXED: Persist the entire updated set object to the database
             await DBManager.setItem(this._DB_STORE_NAME, set);
 
-            // 5. 通知用户和 UI 操作已完成。
             NotificationUIManager.showNotification(`记忆书已为 "${set.name}" 生成！`, 'success');
             Utils.log(`已为记忆书 ${setId} 生成并保存记忆书 (Chat: ${chatId})`, Utils.logLevels.INFO);
+            // Notify UI of the update
             EventEmitter.emit('memoryBookUpdated', { setId, chatId, content: set.books[chatId].content });
 
         } catch (error) {
@@ -163,20 +154,19 @@ const MemoryBookManager = {
     },
 
     /**
-     * 保存用户编辑后的记忆书内容。
-     * @function saveMemoryBookContent
-     * @param {string} setId - 要素集的 ID。
-     * @param {string} chatId - 聊天的 ID。
-     * @param {string} newContent - 要保存的新内容。
+     * Saves user-edited content for a memory book.
+     * @param {string} setId - The ID of the element set.
+     * @param {string} chatId - The ID of the chat.
+     * @param {string} newContent - The new content to save.
      * @returns {Promise<void>}
      */
     saveMemoryBookContent: async function(setId, chatId, newContent) {
         const set = this._elementSets.find(s => s.id === setId);
         if (set && set.books && set.books[chatId]) {
-            // 更新内存对象
+            // Update in-memory object
             set.books[chatId].content = newContent;
 
-            // NOTE: 将整个更新后的要素集对象持久化到数据库
+            // FIXED: Persist the entire updated set object to the database
             await DBManager.setItem(this._DB_STORE_NAME, set);
 
             NotificationUIManager.showNotification('记忆书已修改并保存。', 'success');
@@ -187,10 +177,9 @@ const MemoryBookManager = {
     },
 
     /**
-     * 检索指定聊天中所有已启用的记忆书内容。
-     * @function getEnabledMemoryBookContentForChat
-     * @param {string} chatId - 聊天的 ID。
-     * @returns {string} - 一个格式化后的字符串，包含所有已启用记忆书的内容。
+     * Retrieves the content of all enabled memory books for a given chat.
+     * @param {string} chatId - The ID of the chat.
+     * @returns {string} - A formatted string containing the content of all enabled books.
      */
     getEnabledMemoryBookContentForChat: function(chatId) {
         let combinedContent = "";
@@ -203,12 +192,11 @@ const MemoryBookManager = {
     },
 
     /**
-     * 更新一个已存在的记忆书要素集。
-     * @function updateElementSet
-     * @param {string} setId - 要更新的要素集的 ID。
-     * @param {string} newName - 集合的新名称。
-     * @param {Array<string>} newElements - 新的核心要素数组。
-     * @returns {Promise<boolean>} - 如果成功更新则返回 true。
+     * Updates an existing element set.
+     * @param {string} setId - The ID of the set to update.
+     * @param {string} newName - The new name for the set.
+     * @param {Array<string>} newElements - The new array of key elements.
+     * @returns {Promise<boolean>} - True if successful.
      */
     updateElementSet: async function(setId, newName, newElements) {
         if (!setId || !newName || !Array.isArray(newElements) || newElements.length === 0) {
@@ -224,17 +212,13 @@ const MemoryBookManager = {
 
         const setToUpdate = this._elementSets[setIndex];
 
-        // 更新属性
+        // Update properties
         setToUpdate.name = newName;
         setToUpdate.elements = newElements;
 
         try {
-            // 处理流程如下：
-            // 1. 将更新后的对象保存到数据库。
             await DBManager.setItem(this._DB_STORE_NAME, setToUpdate);
-            // 2. 更新内存缓存。
-            this._elementSets[setIndex] = setToUpdate;
-            // 3. 通知 UI 更新。
+            this._elementSets[setIndex] = setToUpdate; // Update in-memory cache
             EventEmitter.emit('memorySetsUpdated');
             NotificationUIManager.showNotification(`记忆书 "${newName}" 已更新。`, 'success');
             Utils.log(`已更新并保存记忆书: ${setId}`, Utils.logLevels.INFO);
@@ -242,7 +226,7 @@ const MemoryBookManager = {
         } catch (error) {
             Utils.log(`更新记忆书 ${setId} 失败: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification('更新记忆书失败。', 'error');
-            // NOTE: 如果更新失败，从数据库重新加载数据以回滚内存中的更改。
+            // Revert in-memory changes on failure
             await this.loadElementSets();
             EventEmitter.emit('memorySetsUpdated');
             return false;
@@ -250,35 +234,31 @@ const MemoryBookManager = {
     },
 
     /**
-     * 设置特定聊天中某个记忆书的启用状态。
-     * @function setMemoryBookEnabled
-     * @param {string} setId - 要素集的 ID。
-     * @param {string} chatId - 聊天的 ID。
-     * @param {boolean} isEnabled - 新的启用状态。
+     * Sets the enabled state of a memory book for a specific chat,
+     * ensuring only one book can be enabled at a time for that chat.
+     * @param {string} setId - The ID of the element set.
+     * @param {string} chatId - The ID of the chat.
+     * @param {boolean} isEnabled - The new enabled state.
      * @returns {Promise<void>}
      */
     setMemoryBookEnabled: async function(setId, chatId, isEnabled) {
-        // 追踪被修改的要素集，以便后续统一保存
-        let changedSets = [];
+        let changedSets = []; // Track which sets are modified to save them
 
-        // 处理流程如下：
-        // 1. 遍历所有要素集，处理其在指定聊天中的启用状态。
         this._elementSets.forEach(set => {
             if (!set.books) set.books = {};
             if (!set.books[chatId]) {
-                // 如果记忆书条目不存在，则初始化以存储 'enabled' 状态
+                // Initialize book entry if it doesn't exist to store 'enabled' state
                 set.books[chatId] = { content: '', enabled: false };
             }
 
             if (set.id === setId) {
-                // 这是当前被操作的记忆书
+                // This is the one being clicked
                 if (set.books[chatId].enabled !== isEnabled) {
                     set.books[chatId].enabled = isEnabled;
                     changedSets.push(set);
                 }
             } else if (isEnabled) {
-                // 如果正在启用一个记忆书，则禁用此聊天中的所有其他记忆书。
-                // NOTE: 此处逻辑确保了单选效果。
+                // If we are enabling a book, disable all others for this chat
                 if (set.books[chatId].enabled) {
                     set.books[chatId].enabled = false;
                     changedSets.push(set);
@@ -286,18 +266,17 @@ const MemoryBookManager = {
             }
         });
 
-        // 2. 如果有任何状态变更，则持久化到数据库。
         if (changedSets.length > 0) {
             try {
-                // 3. 将所有被修改的要素集保存到数据库。
+                // Save all modified sets to the database
                 await Promise.all(changedSets.map(set => DBManager.setItem(this._DB_STORE_NAME, set)));
                 Utils.log(`记忆书启用状态已更新 (Chat: ${chatId}, Enabled Set: ${isEnabled ? setId : 'None'})`, Utils.logLevels.INFO);
-                // 4. 通知UI完全重绘，以反映所有相关状态的变化。
+                // We need to re-render the whole section to reflect the changes in other radio buttons
                 EventEmitter.emit('memorySetsUpdated');
             } catch (error) {
                 Utils.log(`更新记忆书启用状态时出错: ${error}`, Utils.logLevels.ERROR);
                 NotificationUIManager.showNotification('更新记忆书状态失败。', 'error');
-                // NOTE: 若出错，则从数据库重新加载以回滚内存状态。
+                // On error, reload from DB to revert in-memory state
                 await this.loadElementSets();
                 EventEmitter.emit('memorySetsUpdated');
             }

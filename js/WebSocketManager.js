@@ -1,56 +1,37 @@
 /**
- * @file WebSocket 通信管理器
- * @description 管理与信令服务器的 WebSocket 通信。负责连接、断开、重连、心跳以及原始信令消息的收发。通过事件和回调与上层模块解耦。
+ * @file WebSocketManager.js
+ * @description 管理与信令服务器的 WebSocket 通信。
+ *              负责连接、断开、重连、心跳以及原始信令消息的发送和接收。
  * @module WebSocketManager
- * @exports {object} WebSocketManager - 对外暴露的 WebSocket 管理器单例。
- * @dependency Utils, AppSettings, EventEmitter, TimerManager
+ * @exports {object} WebSocketManager
+ * @dependencies Utils, AppSettings, LayoutUIManager, EventEmitter, TimerManager
  */
 const WebSocketManager = {
-    // =================================================================
-    // 常量与配置 (Constants & Config)
-    // =================================================================
+    websocket: null, // WebSocket 实例
+    isWebSocketConnected: false, // WebSocket 是否已连接
+    signalingServerUrl: AppSettings.server.signalingServerUrl, // 信令服务器 URL
+    wsReconnectAttempts: 0, // WebSocket 重连尝试次数
+    // heartbeatInterval: null, // Moved to TimerManager
+    _HEARTBEAT_TASK_NAME: 'webSocketHeartbeat', // Unique name for heartbeat task
 
-    // 信令服务器 URL
-    signalingServerUrl: AppSettings.server.signalingServerUrl,
-    // 心跳任务在 TimerManager 中的唯一名称
-    _HEARTBEAT_TASK_NAME: 'webSocketHeartbeat',
-
-    // =================================================================
-    // 状态变量 (State Variables)
-    // =================================================================
-
-    // WebSocket 实例
-    websocket: null,
-    // WebSocket 是否已连接
-    isWebSocketConnected: false,
-    // WebSocket 重连尝试次数
-    wsReconnectAttempts: 0,
-    // 外部设置的消息处理回调函数
-    _onMessageHandler: null,
-    // 外部设置的状态变更回调函数
-    _onStatusChangeHandler: null,
-
-    // =================================================================
-    // 公开方法 (Public Methods)
-    // =================================================================
+    _onMessageHandler: null, // 外部设置的消息处理回调
+    _onStatusChangeHandler: null, // 外部设置的状态变更回调
 
     /**
      * 初始化 WebSocketManager 并尝试连接。
-     * @function init
      * @param {function} onMessage - 接收到消息时的回调函数 (参数: parsedMessage)。
      * @param {function} onStatusChange - WebSocket 连接状态改变时的回调函数 (参数: isConnected)。
-     * @returns {Promise<void>} - 一个在初次尝试连接时解析的 Promise。
+     * @returns {Promise<void>} - A promise that resolves when connection is attempted.
      */
     init: function(onMessage, onStatusChange) {
         this._onMessageHandler = onMessage;
         this._onStatusChangeHandler = onStatusChange;
-        return this.connect();
+        return this.connect(); // 尝试连接并返回 Promise
     },
 
     /**
      * 连接到 WebSocket 信令服务器。
-     * @function connect
-     * @returns {Promise<void>} - 在连接成功时 resolve，在初次连接失败时 reject。
+     * @returns {Promise<void>}
      */
     connect: function() {
         // 如果已连接或正在连接，则直接返回
@@ -59,39 +40,35 @@ const WebSocketManager = {
             return Promise.resolve();
         }
 
+        LayoutUIManager.updateConnectionStatusIndicator('正在连接信令服务器...');
         Utils.log('WebSocketManager: 尝试连接到 WebSocket: ' + this.signalingServerUrl, Utils.logLevels.INFO);
 
         return new Promise((resolve, reject) => {
             try {
                 this.websocket = new WebSocket(this.signalingServerUrl);
 
-                // 1. 连接成功时的处理
                 this.websocket.onopen = () => {
                     this.isWebSocketConnected = true;
                     this.wsReconnectAttempts = 0; // 重置重连次数
+                    LayoutUIManager.updateConnectionStatusIndicator('信令服务器已连接。');
                     Utils.log('WebSocketManager: WebSocket 连接已建立。', Utils.logLevels.INFO);
 
                     this.startHeartbeat(); // 启动心跳
-
-                    // 通过回调和事件通知外部
                     if (typeof this._onStatusChangeHandler === 'function') {
-                        this._onStatusChangeHandler(true);
+                        this._onStatusChangeHandler(true); // 通知状态变更
                     }
-                    EventEmitter.emit('websocketStatusUpdate');
-
+                    EventEmitter.emit('websocketStatusUpdate'); // 触发全局事件
                     resolve();
                 };
 
-                // 2. 收到消息时的处理
                 this.websocket.onmessage = (event) => {
                     try {
                         const message = JSON.parse(event.data);
-                        // 处理心跳回复，不传递给上层
-                        if (message.type === 'PONG') {
+                        if (message.type === 'PONG') { // 处理心跳回复
                             Utils.log('WebSocketManager: 收到 WebSocket 心跳回复 (PONG)', Utils.logLevels.DEBUG);
                             return;
                         }
-                        // 调用外部注册的消息处理器
+                        // 调用外部消息处理器
                         if (typeof this._onMessageHandler === 'function') {
                             this._onMessageHandler(message);
                         }
@@ -100,7 +77,6 @@ const WebSocketManager = {
                     }
                 };
 
-                // 3. 连接关闭时的处理（包含自动重连逻辑）
                 this.websocket.onclose = () => {
                     const oldStatus = this.isWebSocketConnected;
                     this.isWebSocketConnected = false;
@@ -108,44 +84,39 @@ const WebSocketManager = {
                     this.wsReconnectAttempts++;
                     Utils.log(`WebSocketManager: WebSocket 连接已关闭。正在进行第 ${this.wsReconnectAttempts} 次重连尝试...`, Utils.logLevels.WARN);
 
-                    // 通知外部状态变更
                     if (typeof this._onStatusChangeHandler === 'function' && oldStatus) {
-                        this._onStatusChangeHandler(false);
+                        this._onStatusChangeHandler(false); // 通知状态变更
                     }
-                    if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
 
-                    // 自动重连逻辑
-                    const wsReconnectConfig = AppSettings.reconnect.websocket;
-                    if (this.wsReconnectAttempts <= wsReconnectConfig.maxAttempts) {
-                        // 计算指数退避延迟
-                        const delay = Math.min(
-                            wsReconnectConfig.maxDelay,
-                            wsReconnectConfig.initialDelay * Math.pow(wsReconnectConfig.backoffFactor, this.wsReconnectAttempts - 1)
-                        );
+                    if (this.wsReconnectAttempts <= 3) { // 最多尝试3次
+                        const delay = Math.min(30000, 1000 * Math.pow(2, this.wsReconnectAttempts)); // 指数退避
+                        LayoutUIManager.updateConnectionStatusIndicator(`信令服务器已断开。${delay / 1000}秒后尝试重连...`);
                         Utils.log(`WebSocketManager: 下一次重连将在 ${delay / 1000} 秒后。`, Utils.logLevels.WARN);
                         setTimeout(() => this.connect().catch(err => Utils.log(`WebSocketManager: 重连尝试失败: ${err.message || err}`, Utils.logLevels.ERROR)), delay);
                     } else {
-                        Utils.log(`WebSocketManager: 已达到最大重连次数 (${wsReconnectConfig.maxAttempts})，停止自动重连。`, Utils.logLevels.ERROR);
+                        LayoutUIManager.updateConnectionStatusIndicator('信令服务器连接失败。自动重连已停止。');
+                        NotificationUIManager.showNotification('无法连接到信令服务器。请检查您的网络并手动刷新或重新连接。', 'error');
+                        Utils.log('WebSocketManager: 已达到最大重连次数 (3)，停止自动重连。', Utils.logLevels.ERROR);
                     }
+                    if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
+                    // For onclose, we don't reject the promise from the initial connect call,
+                    // as that promise might have already resolved. This is for subsequent disconnections.
                 };
 
-                // 4. 连接发生错误时的处理
-                this.websocket.onerror = (errorEvent) => {
+                this.websocket.onerror = (errorEvent) => { // Changed 'error' to 'errorEvent' to avoid conflict
                     Utils.log('WebSocketManager: WebSocket 错误: ' + JSON.stringify(errorEvent), Utils.logLevels.ERROR);
+                    LayoutUIManager.updateConnectionStatusIndicator('信令服务器连接错误。');
                     const oldStatus = this.isWebSocketConnected;
                     this.isWebSocketConnected = false;
-
-                    // 通知外部状态变更
                     if (typeof this._onStatusChangeHandler === 'function' && oldStatus) {
                         this._onStatusChangeHandler(false);
                     }
                     if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
-
-                    // 对于初始连接，在出错时 reject Promise
-                    reject(new Error("WebSocket connection error."));
+                    reject(new Error("WebSocket connection error.")); // For initial connect, reject on error.
                 };
             } catch (error) {
                 Utils.log('WebSocketManager: 创建 WebSocket 连接失败: ' + error, Utils.logLevels.ERROR);
+                LayoutUIManager.updateConnectionStatusIndicator('连接信令服务器失败。');
                 const oldStatus = this.isWebSocketConnected;
                 this.isWebSocketConnected = false;
                 if (typeof this._onStatusChangeHandler === 'function' && oldStatus) {
@@ -158,11 +129,41 @@ const WebSocketManager = {
     },
 
     /**
+     * 启动 WebSocket 心跳机制。
+     */
+    startHeartbeat: function() {
+        this.stopHeartbeat(); // 先停止可能存在的旧心跳
+        if (typeof TimerManager !== 'undefined') {
+            TimerManager.addPeriodicTask(
+                this._HEARTBEAT_TASK_NAME,
+                () => {
+                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+                        this.sendRawMessage({ type: 'PING' }); // 发送 PING 消息
+                        Utils.log('WebSocketManager: 发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
+                    }
+                },
+                25000 // 每25秒发送一次
+            );
+        } else {
+            Utils.log("WebSocketManager: TimerManager 未定义，无法启动心跳。", Utils.logLevels.ERROR);
+        }
+    },
+
+    /**
+     * 停止 WebSocket 心跳定时器。
+     */
+    stopHeartbeat: function() {
+        if (typeof TimerManager !== 'undefined') {
+            TimerManager.removePeriodicTask(this._HEARTBEAT_TASK_NAME);
+            Utils.log('WebSocketManager: 已停止 WebSocket 心跳 (via TimerManager)', Utils.logLevels.DEBUG);
+        }
+    },
+
+    /**
      * 发送原始的 JSON 对象作为信令消息。
-     * @function sendRawMessage
      * @param {object} messageObject - 要发送的消息对象。
      * @param {boolean} [isInternalSilentFlag=false] - 是否为内部静默操作 (影响错误通知)。
-     * @returns {boolean} - 是否成功发送 (或排队等待发送)。
+     * @returns {boolean} - 是否成功发送 (或排队发送)。
      */
     sendRawMessage: function(messageObject, isInternalSilentFlag = false) {
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
@@ -177,9 +178,12 @@ const WebSocketManager = {
             }
         } else {
             Utils.log('WebSocketManager: WebSocket 未连接，无法发送信令消息。', Utils.logLevels.ERROR);
-            // NOTE: 不再直接调用UI，上层逻辑(如ConnectionManager)应处理错误通知。
             if (!isInternalSilentFlag) {
-                // 上层模块负责通知用户
+                if (window.location.protocol === 'file:') {
+                    NotificationUIManager.showNotification('正从本地文件系统运行。信令服务器可能不可用。消息未发送。', 'warning');
+                } else {
+                    NotificationUIManager.showNotification('未连接到信令服务器。消息未发送。', 'error');
+                }
             }
             return false;
         }
@@ -187,12 +191,12 @@ const WebSocketManager = {
 
     /**
      * 断开 WebSocket 连接。
-     * @function disconnect
      */
     disconnect: function() {
         this.stopHeartbeat();
         if (this.websocket) {
-            // NOTE: 临时移除 onclose 回调，以防止在手动断开时触发自动重连逻辑
+            // Remove onclose temporarily to prevent auto-reconnect logic during manual disconnect
+            const originalOnClose = this.websocket.onclose;
             this.websocket.onclose = null;
 
             this.websocket.close();
@@ -200,48 +204,14 @@ const WebSocketManager = {
             this.isWebSocketConnected = false;
             Utils.log('WebSocketManager: WebSocket 连接已手动断开。', Utils.logLevels.INFO);
 
-            // 通知外部状态变更
+            // Restore onclose if needed, or ensure it's cleared if not
+            // For a full disconnect, probably best to leave it null or reassign if an external handler exists
+            // this.websocket.onclose = originalOnClose; // Or set to a default if re-init is expected
+
             if (typeof this._onStatusChangeHandler === 'function') {
                 this._onStatusChangeHandler(false);
             }
             EventEmitter.emit('websocketStatusUpdate');
         }
-    },
-
-    // =================================================================
-    // 内部和工具方法 (Internal & Utility Methods)
-    // =================================================================
-
-    /**
-     * 启动 WebSocket 心跳机制。
-     * @function startHeartbeat
-     */
-    startHeartbeat: function() {
-        this.stopHeartbeat(); // 先停止可能存在的旧心跳
-        if (typeof TimerManager !== 'undefined') {
-            TimerManager.addPeriodicTask(
-                this._HEARTBEAT_TASK_NAME,
-                () => {
-                    if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-                        this.sendRawMessage({ type: 'PING' }); // 发送 PING 消息
-                        Utils.log('WebSocketManager: 发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
-                    }
-                },
-                AppSettings.timers.websocketHeartbeat
-            );
-        } else {
-            Utils.log("WebSocketManager: TimerManager 未定义，无法启动心跳。", Utils.logLevels.ERROR);
-        }
-    },
-
-    /**
-     * 停止 WebSocket 心跳定时器。
-     * @function stopHeartbeat
-     */
-    stopHeartbeat: function() {
-        if (typeof TimerManager !== 'undefined') {
-            TimerManager.removePeriodicTask(this._HEARTBEAT_TASK_NAME);
-            Utils.log('WebSocketManager: 已停止 WebSocket 心跳 (via TimerManager)', Utils.logLevels.DEBUG);
-        }
-    },
+    }
 };

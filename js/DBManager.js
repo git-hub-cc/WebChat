@@ -1,101 +1,85 @@
 /**
- * @file 数据库管理器 (DBManager.js)
- * @description 封装对 IndexedDB 的所有操作，提供一个基于 Promise 的简洁 API 进行数据持久化。
- *              此模块包含对用户、联系人、聊天记录、群组等核心数据的存取，并新增了对文件（Blob）、TTS 音频和应用状态（如背景图）的缓存支持。
+ * @file DBManager.js
+ * @description 数据库管理器，封装了对 IndexedDB 的所有操作，提供了一个简单的 Promise-based API 来进行数据持久化。
+ *              新增: fileCache 对象存储用于缓存文件Blob数据。
+ *              新增: appStateCache 对象存储用于缓存应用级别的状态，如背景图。
  * @module DBManager
- * @exports {object} DBManager - 对外暴露的单例对象，包含所有数据库操作方法。
- * @dependency Utils - 引入工具模块，主要用于日志记录。
+ * @exports {object} DBManager - 对外暴露的单例对象，包含数据库操作方法。
+ * @property {function} init - 初始化并打开数据库连接。
+ * @property {function} setItem - 在指定的对象存储中设置（添加或更新）一个项目。
+ * @property {function} getItem - 从指定的对象存储中获取一个项目。
+ * @property {function} getAllItems - 获取指定对象存储中的所有项目。
+ * @property {function} removeItem - 从指定的对象存储中移除一个项目。
+ * @property {function} clearStore - 清空指定的对象存储。
+ * @property {function} clearAllData - 清空数据库中所有对象存储的数据。
+ * @dependencies Utils
+ * @dependents AppInitializer (初始化), UserManager, ChatManager, GroupManager (进行数据读写), TtsApiHandler (TTS 缓存), ThemeLoader (背景图缓存)
  */
 const DBManager = {
-    // 数据库实例，初始化成功后持有该对象
     db: null,
-    // 数据库名称
     dbName: 'ModernChatDB',
-    // 数据库版本号。当需要新增或修改表结构（ObjectStore）时，必须递增此版本号。
-    // 版本 7 -> 新增 'memoryBooks' 对象存储
-    dbVersion: 7,
+    dbVersion: 7, // MODIFIED: 数据库版本号 (为 memoryBooks 增加版本)
 
     /**
-     * 初始化并打开 IndexedDB 数据库。
-     * 如果数据库尚不存在或版本较低，此方法会触发 onupgradeneeded 事件来创建或升级表（ObjectStore）结构。
-     * @function init
-     * @returns {Promise<IDBDatabase>} 操作成功时，返回数据库实例的 Promise。
-     * @throws {string} 数据库打开失败时，Promise 会被拒绝并返回错误信息。
-     * @example
-     * DBManager.init().then(db => {
-     *   console.log('数据库已准备就绪');
-     * }).catch(error => {
-     *   console.error('数据库初始化失败:', error);
-     * });
+     * 初始化并打开 IndexedDB 数据库。如果数据库不存在或版本较低，会触发 onupgradeneeded 来创建或升级表结构。
+     * @returns {Promise<IDBDatabase>} 解析为数据库实例的 Promise。
      */
     init: function() {
         return new Promise((resolve, reject) => {
-            // 1. 检查数据库是否已经初始化，避免重复连接
+            // 如果数据库已初始化，直接返回实例
             if (this.db) {
                 resolve(this.db);
                 return;
             }
-
-            // 2. 发起连接数据库的请求
-            const request = indexedDB.open(this.dbName, this.dbVersion);
-
-            // 3. 处理错误事件
-            request.onerror = (event) => {
+            const request = indexedDB.open(this.dbName, this.dbVersion); // 打开数据库
+            request.onerror = (event) => { // 打开失败
                 Utils.log('数据库打开错误: ' + event.target.errorCode, Utils.logLevels.ERROR);
                 reject('数据库打开错误: ' + event.target.errorCode);
             };
-
-            // 4. 处理成功事件
-            request.onsuccess = (event) => {
+            request.onsuccess = (event) => { // 打开成功
                 this.db = event.target.result;
                 Utils.log('数据库已成功打开。', Utils.logLevels.INFO);
                 resolve(this.db);
             };
-
-            // 5. 处理数据库升级或首次创建事件
+            // 首次创建或版本升级时调用
             request.onupgradeneeded = (event) => {
                 const db = event.target.result;
-                Utils.log(`需要升级数据库。旧版本: ${event.oldVersion}, 新版本: ${event.newVersion}`, Utils.logLevels.INFO);
-
-                // 根据版本迭代，检查并创建所需的对象存储（表）
-                if (!db.objectStoreNames.contains('user')) {
-                    // 用户信息表，存储当前用户信息
+                Utils.log('需要升级数据库。旧版本: ' + event.oldVersion + ', 新版本: ' + event.newVersion, Utils.logLevels.INFO);
+                // 检查并创建需要的对象存储（表）
+                if (!db.objectStoreNames.contains('user')) { // 用户信息表
                     db.createObjectStore('user', { keyPath: 'id' });
                 }
-                if (!db.objectStoreNames.contains('contacts')) {
-                    // 联系人表，存储好友和AI联系人信息
+                if (!db.objectStoreNames.contains('contacts')) { // 联系人表
                     db.createObjectStore('contacts', { keyPath: 'id' });
                 }
-                if (!db.objectStoreNames.contains('chats')) {
-                    // 聊天记录表，存储所有对话的消息
+                if (!db.objectStoreNames.contains('chats')) { // 聊天记录表
                     db.createObjectStore('chats', { keyPath: 'id' });
                 }
-                if (!db.objectStoreNames.contains('groups')) {
-                    // 群组信息表
+                if (!db.objectStoreNames.contains('groups')) { // 群组信息表
                     db.createObjectStore('groups', { keyPath: 'id' });
                 }
+                // 添加 TTS 缓存表
                 if (!db.objectStoreNames.contains('ttsCache')) {
-                    // TTS（文本转语音）音频缓存表，key 为文本内容的哈希值
-                    db.createObjectStore('ttsCache', { keyPath: 'id' });
+                    db.createObjectStore('ttsCache', { keyPath: 'id' }); // 'id' 将存储哈希值
                     Utils.log('对象存储 ttsCache 已创建。', Utils.logLevels.INFO);
                 }
+                // 新增：文件缓存表
                 if (!db.objectStoreNames.contains('fileCache')) {
-                    // 文件缓存表，用于存储图片、视频等 Blob 数据，key 为文件内容的哈希值
-                    db.createObjectStore('fileCache', { keyPath: 'id' });
+                    db.createObjectStore('fileCache', { keyPath: 'id' }); // 'id' 将存储文件内容的哈希值
                     Utils.log('对象存储 fileCache 已创建。', Utils.logLevels.INFO);
                 }
+                // 新增：应用状态缓存表 (用于背景图等)
                 if (!db.objectStoreNames.contains('appStateCache')) {
-                    // 应用状态缓存表，例如用于存储自定义背景图
                     db.createObjectStore('appStateCache', { keyPath: 'id' }); // id: 'background_image'
                     Utils.log('对象存储 appStateCache 已创建。', Utils.logLevels.INFO);
                 }
+                // ADDED: 贴图缓存表
                 if (!db.objectStoreNames.contains('stickers')) {
-                    // 贴图缓存表，key 为文件哈希值
-                    db.createObjectStore('stickers', { keyPath: 'id' });
+                    db.createObjectStore('stickers', { keyPath: 'id' }); // 'id' is the file hash
                     Utils.log('对象存储 stickers 已创建。', Utils.logLevels.INFO);
                 }
+                // ADDED: 记忆书缓存表
                 if (!db.objectStoreNames.contains('memoryBooks')) {
-                    // 记忆书缓存表
                     db.createObjectStore('memoryBooks', { keyPath: 'id' });
                     Utils.log('对象存储 memoryBooks 已创建。', Utils.logLevels.INFO);
                 }
@@ -105,19 +89,30 @@ const DBManager = {
     },
 
     /**
-     * 在指定对象存储中添加或更新一个项目。
-     * @function setItem
-     * @param {string} storeName - 对象存储的名称（表名）。
-     * @param {object} item - 要存储的项目，必须包含与表 keyPath 对应的属性。
-     * @returns {Promise<IDBValidKey>} 操作成功时，返回被存储项的键。
+     * @private
+     * 获取一个事务中的对象存储实例。
+     * @param {string} storeName - 对象存储的名称。
+     * @param {IDBTransactionMode} [mode='readonly'] - 事务模式 ('readonly' 或 'readwrite')。
+     * @returns {IDBObjectStore}
+     * @throws {Error} 如果数据库未初始化。
+     */
+    _getStore: function(storeName, mode = 'readonly') {
+        if (!this.db) throw new Error('数据库未初始化。');
+        return this.db.transaction(storeName, mode).objectStore(storeName);
+    },
+
+    /**
+     * 在指定的对象存储中添加或更新一个项目。
+     * @param {string} storeName - 对象存储的名称。
+     * @param {object} item - 要存储的项目。Item 必须包含与其 keyPath 对应的属性。
+     * @returns {Promise<IDBValidKey>} 解析为存储项目的键的 Promise。
      */
     setItem: function(storeName, item) {
         return new Promise((resolve, reject) => {
             try {
-                // 使用 'put' 方法，如果键已存在则更新，否则添加
                 const request = this._getStore(storeName, 'readwrite').put(item);
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(request.result); // 成功时返回键
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`在 ${storeName} 中设置项目时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -126,18 +121,17 @@ const DBManager = {
     },
 
     /**
-     * 根据键名从指定的对象存储中获取一个项目。
-     * @function getItem
-     * @param {string} storeName - 对象存储的名称（表名）。
+     * 根据键从指定的对象存储中获取一个项目。
+     * @param {string} storeName - 对象存储的名称。
      * @param {IDBValidKey} key - 要获取的项目的键。
-     * @returns {Promise<object|undefined>} 操作成功时，返回找到的项目；如果未找到，则返回 undefined。
+     * @returns {Promise<object|undefined>} 解析为找到的项目或 undefined 的 Promise。
      */
     getItem: function(storeName, key) {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName).get(key);
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(request.result); // 成功时返回结果
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`从 ${storeName} 获取项目时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -147,16 +141,15 @@ const DBManager = {
 
     /**
      * 获取指定对象存储中的所有项目。
-     * @function getAllItems
-     * @param {string} storeName - 对象存储的名称（表名）。
-     * @returns {Promise<Array<object>>} 操作成功时，返回包含所有项目的数组。
+     * @param {string} storeName - 对象存储的名称。
+     * @returns {Promise<Array<object>>} 解析为包含所有项目的数组的 Promise。
      */
     getAllItems: function(storeName) {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName).getAll();
-                request.onsuccess = () => resolve(request.result);
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(request.result); // 成功时返回结果数组
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`从 ${storeName} 获取所有项目时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -165,9 +158,8 @@ const DBManager = {
     },
 
     /**
-     * 根据键名从指定的对象存储中移除一个项目。
-     * @function removeItem
-     * @param {string} storeName - 对象存储的名称（表名）。
+     * 根据键从指定的对象存储中移除一个项目。
+     * @param {string} storeName - 对象存储的名称。
      * @param {IDBValidKey} key - 要移除的项目的键。
      * @returns {Promise<void>} 操作完成时解析的 Promise。
      */
@@ -175,8 +167,8 @@ const DBManager = {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName, 'readwrite').delete(key);
-                request.onsuccess = () => resolve();
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(); // 成功时 resolve
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`从 ${storeName} 移除项目时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -186,16 +178,15 @@ const DBManager = {
 
     /**
      * 清空指定的对象存储中的所有项目。
-     * @function clearStore
-     * @param {string} storeName - 要清空的对象存储的名称（表名）。
+     * @param {string} storeName - 要清空的对象存储的名称。
      * @returns {Promise<void>} 操作完成时解析的 Promise。
      */
     clearStore: function(storeName) {
         return new Promise((resolve, reject) => {
             try {
                 const request = this._getStore(storeName, 'readwrite').clear();
-                request.onsuccess = () => resolve();
-                request.onerror = (event) => {
+                request.onsuccess = () => resolve(); // 成功时 resolve
+                request.onerror = (event) => { // 失败时记录错误并 reject
                     Utils.log(`清空存储区 ${storeName} 时出错: ${event.target.error}`, Utils.logLevels.ERROR);
                     reject(event.target.error);
                 };
@@ -204,29 +195,21 @@ const DBManager = {
     },
 
     /**
-     * 清空数据库中所有对象存储的数据。
-     * @function clearAllData
-     * @returns {Promise<void>} 当所有存储区都被清空后解析的 Promise。
+     * 清空数据库中的所有对象存储的数据。
+     * @returns {Promise<void>} 当所有存储区都被清空后解析。
      */
     clearAllData: function() {
         return new Promise(async (resolve, reject) => {
-            if (!this.db) {
-                const err = new Error("数据库未初始化。");
+            if (!this.db) { // 检查数据库是否已初始化
                 Utils.log("数据库未初始化，无法清空数据。", Utils.logLevels.ERROR);
-                reject(err);
+                reject(new Error("数据库未初始化。"));
                 return;
             }
             try {
-                // 1. 获取所有对象存储（表）的名称
-                const storeNames = Array.from(this.db.objectStoreNames);
+                const storeNames = Array.from(this.db.objectStoreNames); // 获取所有表名
                 Utils.log(`准备清空以下存储区: ${storeNames.join(', ')}`, Utils.logLevels.INFO);
-
-                // 2. 为每个表创建一个清空操作的 Promise
-                const clearPromises = storeNames.map(storeName => this.clearStore(storeName));
-
-                // 3. 等待所有清空操作完成
-                await Promise.all(clearPromises);
-
+                const clearPromises = storeNames.map(storeName => this.clearStore(storeName)); // 创建清空每个表的 Promise
+                await Promise.all(clearPromises); // 等待所有表清空完成
                 Utils.log("所有数据库存储区已清空。", Utils.logLevels.INFO);
                 resolve();
             } catch (error) {
@@ -234,20 +217,5 @@ const DBManager = {
                 reject(error);
             }
         });
-    },
-
-    /**
-     * (内部方法) 获取一个事务中的对象存储实例。
-     * @private
-     * @function _getStore
-     * @param {string} storeName - 对象存储的名称。
-     * @param {IDBTransactionMode} [mode='readonly'] - 事务模式 ('readonly' 或 'readwrite')。
-     * @returns {IDBObjectStore} 返回对象存储的实例。
-     * @throws {Error} 如果数据库未初始化，则抛出错误。
-     */
-    _getStore: function(storeName, mode = 'readonly') {
-        if (!this.db) throw new Error('数据库未初始化。');
-        const transaction = this.db.transaction(storeName, mode);
-        return transaction.objectStore(storeName);
-    },
+    }
 };

@@ -1,92 +1,87 @@
 /**
- * @file 管理主聊天区域的UI元素和交互
- * @description 该文件负责管理主聊天区域的全部UI逻辑，包括聊天头部、消息列表（支持虚拟滚动）、输入框、以及各类功能按钮（如通话、截图、发送等）。它还实现了消息的上下文菜单、@提及、文件拖拽与粘贴上传等高级交互功能。通过订阅Store的状态变化，自动更新UI，实现数据与视图的单向绑定。
+ * @file ChatAreaUIManager.js
+ * @description 管理主聊天区域的 UI 元素和交互，包括聊天头部、消息框、输入区以及通话和截图按钮。
+ *              支持消息的右键/双击上下文菜单，用于删除或撤回消息。
+ *              支持消息列表的虚拟滚动，以及从资源预览跳转到特定消息。
+ *              加载更晚的消息现在使用与加载更早消息相同的阈值 (AppSettings.ui.virtualScrollThreshold)，并实现滚动回弹。
+ *              新增逻辑以防止用户在还有更多未加载消息时将滚动条停留在绝对底部。
+ *              新增：在群聊输入框中输入 @ 时，显示 AI 成员提及建议。
+ *              优化：AI提及建议列表现在精确显示在输入框上方。
+ *              修复: 正则表达式 @-提及 现在限制较少。
+ *              功能增强：当用户复制文件后，在输入框ctrl+v时，将用户剪切板的文件，当作需要上传的文件，在预览文件中显示，用户点击发送后能将文件进行发送。
+ *              新增：聊天头部的状态文本现在会根据连接或AI服务状态显示一个彩色圆点指示器。
+ *              新增：scrollToDate 方法，用于从资源预览的日期导航跳转到指定日期的第一条消息。
  * @module ChatAreaUIManager
- * @exports {object} ChatAreaUIManager - 对外暴露的单例对象，包含管理聊天区域UI的所有方法。
- * @dependency LayoutUIManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationUIManager, Utils, MediaManager, PeopleLobbyManager, EventEmitter, UIManager, AppSettings, Store, ActionCreators
+ * @exports {object} ChatAreaUIManager - 对外暴露的单例对象，包含管理聊天区域 UI 的所有方法。
+ * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
+ * @property {function} showChatArea - 显示聊天区域并隐藏“未选择聊天”的占位屏幕。
+ * @property {function} showNoChatSelected - 显示“未选择聊天”的占位视图并重置相关UI状态。
+ * @property {function} updateChatHeader - 更新聊天头部的标题、状态（包括彩色圆点指示器）和头像。
+ * @property {function} updateChatHeaderStatus - 更新聊天头部的状态文本（不改变彩色圆点指示器）。
+ * @property {function} enableChatInterface - 启用或禁用聊天输入框和相关按钮。
+ * @property {function} setCallButtonsState - 根据连接状态和聊天类型设置通话按钮的可用性。
+ * @property {function} setCallButtonsStateForPeer - 为特定对方ID更新通话按钮状态（仅当其为当前聊天时）。
+ * @property {function} setupForChat - 为指定聊天设置聊天区域，包括初始化虚拟滚动。
+ * @property {function} handleNewMessageForCurrentChat - 处理当前聊天的新消息，将其添加到虚拟滚动列表。
+ * @property {function} scrollToMessage - 滚动到指定的消息ID并加载其上下文。
+ * @property {function} scrollToDate - 滚动到指定日期的第一条消息。
+ * @dependencies LayoutUIManager, MessageManager, VideoCallManager, ChatManager, ConnectionManager, UserManager, DetailsPanelUIManager, NotificationUIManager, Utils, MediaManager, PeopleLobbyManager, EventEmitter, UIManager, AppSettings
+ * @dependents AppInitializer (进行初始化)
  */
 const ChatAreaUIManager = {
-    // --- 变量排序：1. DOM 引用 ---
-    // 主要聊天区容器
-    chatAreaEl: null,
-    // 聊天头部 - 标题元素
-    chatHeaderTitleEl: null,
-    // 聊天头部 - 状态文本元素
-    chatHeaderStatusEl: null,
-    // 聊天头部 - 头像元素
-    chatHeaderAvatarEl: null,
-    // 聊天头部 - 主容器
-    chatHeaderMainEl: null,
-    // 消息显示盒子
-    chatBoxEl: null,
-    // “未选择聊天”的占位界面
-    noChatSelectedScreenEl: null,
-    // 消息输入框
-    messageInputEl: null,
-    // 发送按钮
-    sendButtonEl: null,
-    // 附件按钮
-    attachButtonEl: null,
-    // 语音消息按钮
-    voiceButtonEl: null,
-    // 视频通话按钮
-    videoCallButtonEl: null,
-    // 音频通话按钮
-    audioCallButtonEl: null,
-    // 屏幕共享按钮
-    screenShareButtonEl: null,
-    // 群成员（大厅）按钮
-    peopleLobbyButtonEl: null,
-    // 截图按钮
-    screenshotMainBtnEl: null,
-    // Emoji和贴纸按钮
-    emojiStickerBtnEl: null,
-    // 聊天头部 - 可点击的信息区域
-    chatInfoMainEl: null,
+    // DOM 元素引用
+    chatAreaEl: null, // 主聊天区域元素
+    chatHeaderTitleEl: null, // 聊天头部标题元素
+    chatHeaderStatusEl: null, // 聊天头部状态文本元素
+    chatHeaderAvatarEl: null, // 聊天头部头像元素
+    chatHeaderMainEl: null, // 聊天头部主容器元素
+    chatBoxEl: null, // 消息显示框元素
+    noChatSelectedScreenEl: null, // “未选择聊天”占位屏幕元素
+    messageInputEl: null, // 消息输入框元素
+    sendButtonEl: null, // 发送按钮元素
+    attachButtonEl: null, // 附件按钮元素
+    voiceButtonEl: null, // 语音按钮元素
+    videoCallButtonEl: null, // 视频通话按钮元素
+    audioCallButtonEl: null, // 语音通话按钮元素
+    screenShareButtonEl: null, // 屏幕共享按钮元素
+    peopleLobbyButtonEl: null, // 人员大厅按钮元素
+    screenshotMainBtnEl: null, // 截图按钮元素
+    emojiStickerBtnEl: null, // ADDED: 表情/贴图按钮元素
 
-    // --- 变量排序：2. 上下文菜单与提及建议相关UI ---
-    // 消息右键上下文菜单元素
-    contextMenuEl: null,
-    // 当前激活上下文菜单的消息DOM元素
-    activeContextMenuMessageElement: null,
-    // 上下文菜单自动隐藏的定时器
-    contextMenuAutoHideTimer: null,
-    // AI @提及 建议列表的容器
-    aiMentionSuggestionsEl: null,
+    chatInfoMainEl: null, // .chat-info-main element for click to show details
+    // 上下文菜单相关
+    contextMenuEl: null, // 自定义右键菜单元素
+    activeContextMenuMessageElement: null, // 当前显示上下文菜单的消息元素
+    contextMenuAutoHideTimer: null, // 上下文菜单自动隐藏的定时器
+    aiMentionSuggestionsEl: null, // AI @提及建议列表元素
 
-    // --- 变量排序：3. 状态变量（虚拟滚动、UI状态等） ---
-    // 当前聊天窗口的ID
-    _currentChatId: null,
-    // 当前聊天窗口加载的所有消息数组
-    _allMessagesForCurrentChat: [],
-    // 已渲染消息中，最旧一条消息在数组中的索引
-    _renderedOldestMessageArrayIndex: -1,
-    // 已渲染消息中，最新一条消息在数组中的索引
-    _renderedNewestMessageArrayIndex: -1,
-    // 标记是否正在加载更旧的消息
-    _isLoadingOlderMessages: false,
-    // 标记是否正在加载更新的消息
-    _isLoadingNewerMessages: false,
-    // “正在加载”指示器的DOM元素
-    _loadingIndicatorEl: null,
-    // 标记滚动事件监听器是否已附加
-    _scrollListenerAttached: false,
-    // 滚动事件的防抖定时器
-    _debounceScrollTimer: null,
-    // 绑定了this的滚动处理函数
-    _boundHandleChatScroll: null,
-    // 上次记录的滚动条位置
-    _lastScrollTop: 0,
-    // “滚动到最新消息”按钮的DOM元素
-    _scrollToLatestBtnEl: null,
+    // 常量
+    MESSAGE_RETRACTION_WINDOW: 5 * 60 * 1000, // 消息可撤回时间窗口 (5分钟，毫秒数)
+    CONTEXT_MENU_AUTOHIDE_DURATION: 3000, // 右键菜单自动隐藏延迟 (3秒，毫秒数)
+
+    // 虚拟滚动相关状态
+    _currentChatIdForVirtualScroll: null, // 当前用于虚拟滚动的聊天ID
+    _allMessagesForCurrentChat: [],       // 当前聊天的所有消息数组（内存中的副本）
+    _renderedOldestMessageArrayIndex: -1, // 已渲染消息中，在 _allMessagesForCurrentChat 中最旧消息的索引
+    _renderedNewestMessageArrayIndex: -1, // 已渲染消息中，在 _allMessagesForCurrentChat 中最新消息的索引
+    _isLoadingOlderMessages: false,       // 标记是否正在加载更早的消息
+    _isLoadingNewerMessages: false,       // 标记是否正在加载更新的消息
+    _loadingIndicatorEl: null,            // 消息加载指示器元素 (通常用于加载更早消息时显示在顶部)
+    _scrollListenerAttached: false,       // 标记滚动事件监听器是否已附加到 chatBoxEl
+    _debounceScrollTimer: null,           // 滚动事件的防抖定时器
+    _boundHandleChatScroll: null,         // 绑定的滚动处理函数 (为了方便移除监听器)
+    _lastScrollTop: 0,                    // 上一次的滚动位置 (scrollTop)
+
+    // 其他UI状态
+    _scrollToLatestBtnEl: null,           // “滚动到最新消息”按钮元素
+    CONTEXT_LOAD_COUNT: 10,               // 通过资源预览跳转到某条消息时，其上下文加载的消息数量 (前后各加载此数量)
+    MESSAGES_TO_LOAD_ON_SCROLL: 15,       // 滚动到顶部或底部时，每次加载的消息数量
 
     /**
      * 初始化模块，获取所有需要的 DOM 元素引用并绑定核心事件。
-     * @function init
-     * @returns {void}
      */
     init: function () {
-        // 1. 获取所有DOM元素
+        // 获取聊天区域核心 DOM 元素的引用
         this.chatAreaEl = document.getElementById('chatArea');
         this.chatHeaderTitleEl = document.getElementById('currentChatTitleMain');
         this.chatHeaderStatusEl = document.getElementById('currentChatStatusMain');
@@ -103,94 +98,56 @@ const ChatAreaUIManager = {
         this.screenShareButtonEl = document.getElementById('screenShareButtonMain');
         this.peopleLobbyButtonEl = document.getElementById('peopleLobbyButtonMain');
         this.screenshotMainBtnEl = document.getElementById('screenshotMainBtn');
-        this.emojiStickerBtnEl = document.getElementById('emojiStickerBtn');
+        this.emojiStickerBtnEl = document.getElementById('emojiStickerBtn'); // ADDED
+
         this.chatInfoMainEl = document.querySelector('.chat-header-main .chat-info-main');
+        this._initContextMenu(); // 初始化消息右键上下文菜单
+        this._initAiMentionSuggestions(); // 初始化AI提及建议的UI
 
-        // 2. 初始化UI组件
-        this._initContextMenu();
-        this._initAiMentionSuggestions();
-
-        // 3. 创建加载指示器元素
+        // 如果聊天框存在，创建加载指示器元素
         if (this.chatBoxEl) {
             this._loadingIndicatorEl = document.createElement('div');
-            this._loadingIndicatorEl.className = 'loading-indicator-older-messages';
-            this._loadingIndicatorEl.innerHTML = '<div class="spinner"></div>';
+            this._loadingIndicatorEl.className = 'loading-indicator-older-messages'; // 加载旧消息的指示器
+            this._loadingIndicatorEl.innerHTML = '<div class="spinner"></div>'; // 加载动画
         }
-
-        // 4. 绑定滚动处理函数并绑定事件
+        // 绑定 `this` 上下文到滚动处理函数，以便在事件监听器中正确使用
         this._boundHandleChatScroll = this._debouncedHandleChatScroll.bind(this);
-        this.bindEvents();
-
-        // 5. 订阅 Store 的状态变化以自动更新UI
-        Store.subscribe(this.handleStateChange.bind(this));
+        this.bindEvents(); // 绑定所有相关的UI事件
     },
 
     /**
-     * 处理从 Store 传来的状态变化，根据新旧状态差异更新UI。
-     * @function handleStateChange
-     * @param {object} newState - 最新的应用状态。
-     * @param {object} oldState - 变化前的应用状态。
-     * @returns {void}
-     */
-    handleStateChange: function(newState, oldState) {
-        // 1. 检查当前聊天ID是否发生变化
-        if (newState.currentChatId !== this._currentChatId) {
-            // BUGFIX: 必须先更新内部的 _currentChatId，因为 setupForChat 依赖它
-            this._currentChatId = newState.currentChatId;
-
-            if (this._currentChatId) {
-                // 打开新聊天
-                this._showChatArea();
-                this.setupForChat(this._currentChatId);
-                this.enableChatInterface(true);
-            } else {
-                // 关闭当前聊天，显示占位图
-                this._showNoChatSelected();
-            }
-        }
-
-        // 2. 无论聊天ID是否变化，都根据最新状态更新头部信息
-        this._updateChatHeaderBasedOnState(newState);
-
-        // 3. 检查是否有新消息需要处理
-        // NOTE: 此处为简化逻辑，未来可优化为仅增量渲染新消息
-        if (newState.lastMessageUpdate.timestamp > oldState.lastMessageUpdate.timestamp &&
-            newState.lastMessageUpdate.chatId === this._currentChatId) {
-            const latestMessage = ChatManager.chats[this._currentChatId]?.slice(-1)[0];
-            this.handleNewMessageForCurrentChat(latestMessage);
-        }
-    },
-
-    /**
-     * 初始化AI提及建议的UI元素并附加到DOM。
      * @private
-     * @function _initAiMentionSuggestions
-     * @returns {void}
+     * 初始化AI提及建议的UI元素。
+     * 它将被添加到聊天输入区域的父容器中，以便能正确定位在输入框上方。
      */
     _initAiMentionSuggestions: function() {
+        // 创建建议列表的 div 元素
         this.aiMentionSuggestionsEl = document.createElement('div');
         this.aiMentionSuggestionsEl.id = 'aiMentionSuggestions';
-        this.aiMentionSuggestionsEl.className = 'ai-mention-suggestions';
-        this.aiMentionSuggestionsEl.style.display = 'none';
-        this.aiMentionSuggestionsEl.style.position = 'absolute';
+        this.aiMentionSuggestionsEl.className = 'ai-mention-suggestions'; // 设置 CSS 类名
+        this.aiMentionSuggestionsEl.style.display = 'none'; // 默认隐藏
+        this.aiMentionSuggestionsEl.style.position = 'absolute'; // 使用绝对定位
 
+        // 尝试将建议列表附加到输入框的父容器 `.chat-input-container`
+        // 这是为了更好地控制建议列表相对于整个输入区域的定位
         const chatInputContainer = this.messageInputEl ? this.messageInputEl.closest('.chat-input-container') : null;
         if (chatInputContainer) {
-            // 将建议列表添加到输入框的父容器，以便精确定位
-            chatInputContainer.style.position = 'relative'; // 确保父容器是定位基准
+            chatInputContainer.style.position = 'relative'; // 确保父容器是相对定位的，以便绝对定位的子元素正确显示
             chatInputContainer.appendChild(this.aiMentionSuggestionsEl);
         } else if (this.messageInputEl && this.messageInputEl.parentNode) {
-            // 降级方案
-            Utils.log("ChatAreaUIManager: 无法找到 .chat-input-container，尝试添加到输入框的父级。", Utils.logLevels.WARN);
-            this.messageInputEl.parentNode.style.position = 'relative';
+            // 如果找不到 `.chat-input-container`，则作为备选方案，附加到输入框的直接父级
+            Utils.log("ChatAreaUIManager: 无法找到理想的 .chat-input-container 来附加提及建议。尝试添加到输入框的父级。", Utils.logLevels.WARN);
+            this.messageInputEl.parentNode.style.position = 'relative'; // 同样确保父容器是相对定位
             this.messageInputEl.parentNode.appendChild(this.aiMentionSuggestionsEl);
         } else {
+            // 如果连输入框的父级都找不到，则记录错误并退出，因为无法附加建议列表
             Utils.log("ChatAreaUIManager: 无法找到附加提及建议列表的合适位置。", Utils.logLevels.ERROR);
             return;
         }
 
-        // 添加全局点击事件，用于在点击外部区域时隐藏建议列表
+        // 添加全局点击事件监听器，用于在点击建议列表外部时隐藏它
         document.addEventListener('click', (event) => {
+            // 如果建议列表已显示，并且点击的目标不是建议列表本身，也不是输入框，则隐藏建议列表
             if (this.aiMentionSuggestionsEl && this.aiMentionSuggestionsEl.style.display === 'block' &&
                 !this.aiMentionSuggestionsEl.contains(event.target) && event.target !== this.messageInputEl) {
                 this.aiMentionSuggestionsEl.style.display = 'none';
@@ -198,253 +155,264 @@ const ChatAreaUIManager = {
         });
     },
 
+
     /**
-     * 绑定所有UI元素的事件监听器。
-     * @function bindEvents
-     * @returns {void}
+     * 绑定聊天区域内的所有 UI 事件监听器。
      */
     bindEvents: function () {
         // 消息输入框事件
         if (this.messageInputEl) {
+            // 监听键盘按下事件
             this.messageInputEl.addEventListener('keydown', (e) => {
-                // Enter键发送消息
+                // 如果按下 Enter 键，且没有同时按下 Shift 或 Ctrl 键，则发送消息
                 if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
-                    e.preventDefault();
-                    ActionCreators.sendMessageRequest();
-                    if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none';
-                } else if (e.key === 'Escape') {
-                    // Esc键隐藏提及建议
-                    if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none';
+                    e.preventDefault(); // 阻止默认的回车换行行为
+                    MessageManager.sendMessage(); // 调用消息发送逻辑
+                    if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none'; // 发送后隐藏提及建议
+                } else if (e.key === 'Escape') { // 如果按下 Escape 键
+                    if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none'; // 隐藏提及建议
                 }
             });
+            // 监听输入事件，用于处理 @ 提及
             this.messageInputEl.addEventListener('input', this._handleMessageInputForMentions.bind(this));
+            // 新增：监听粘贴事件，用于处理从剪贴板粘贴文件
             this.messageInputEl.addEventListener('paste', this._handlePasteEvent.bind(this));
         }
-
         // 发送按钮点击事件
         if (this.sendButtonEl) {
             this.sendButtonEl.addEventListener('click', () => {
-                ActionCreators.sendMessageRequest();
-                if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none';
+                MessageManager.sendMessage(); // 调用消息发送逻辑
+                if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none'; // 发送后隐藏提及建议
             });
         }
-
         // 附件按钮点击事件
         if (this.attachButtonEl) {
             this.attachButtonEl.addEventListener('click', () => {
-                const fileInput = document.getElementById('fileInput');
-                if (fileInput) fileInput.click();
+                const fileInput = document.getElementById('fileInput'); // 获取隐藏的文件输入框
+                if (fileInput) fileInput.click(); // 触发文件输入框的点击事件，打开文件选择对话框
             });
         }
-
-        // 语音按钮事件（兼容触摸和鼠标）
+        // 语音按钮事件 (支持触摸和鼠标)
         if (this.voiceButtonEl) {
-            if ('ontouchstart' in window) { // 触摸设备
-                this.voiceButtonEl.addEventListener('touchstart', (e) => { e.preventDefault(); if (!this.voiceButtonEl.disabled) ActionCreators.startRecordingRequest(); });
-                this.voiceButtonEl.addEventListener('touchend', (e) => { e.preventDefault(); if (!this.voiceButtonEl.disabled) ActionCreators.stopRecordingRequest(); });
-            } else { // 桌面设备
-                this.voiceButtonEl.addEventListener('mousedown', () => { if (!this.voiceButtonEl.disabled) ActionCreators.startRecordingRequest(); });
-                this.voiceButtonEl.addEventListener('mouseup', () => { if (!this.voiceButtonEl.disabled) ActionCreators.stopRecordingRequest(); });
-                this.voiceButtonEl.addEventListener('mouseleave', () => { // 鼠标移开时也停止录音
+            if ('ontouchstart' in window) { // 判断是否为触摸设备
+                // 触摸开始事件：开始录音
+                this.voiceButtonEl.addEventListener('touchstart', (e) => { e.preventDefault(); if (!this.voiceButtonEl.disabled) MediaManager.startRecording(); });
+                // 触摸结束事件：停止录音
+                this.voiceButtonEl.addEventListener('touchend', (e) => { e.preventDefault(); if (!this.voiceButtonEl.disabled) MediaManager.stopRecording(); });
+            } else { // 鼠标设备
+                // 鼠标按下事件：开始录音
+                this.voiceButtonEl.addEventListener('mousedown', () => { if (!this.voiceButtonEl.disabled) MediaManager.startRecording(); });
+                // 鼠标松开事件：停止录音
+                this.voiceButtonEl.addEventListener('mouseup', () => { if (!this.voiceButtonEl.disabled) MediaManager.stopRecording(); });
+                // 鼠标移开按钮事件：如果仍在录音，则停止
+                this.voiceButtonEl.addEventListener('mouseleave', () => {
                     if (!this.voiceButtonEl.disabled && MediaManager.mediaRecorder && MediaManager.mediaRecorder.state === 'recording') {
-                        ActionCreators.stopRecordingRequest();
+                        MediaManager.stopRecording();
                     }
                 });
             }
         }
-
         // 截图按钮点击事件
         if (this.screenshotMainBtnEl) {
-            this.screenshotMainBtnEl.addEventListener('click', () => ActionCreators.captureScreenRequest());
+            this.screenshotMainBtnEl.addEventListener('click', () => MediaManager.captureScreen()); // 调用截图逻辑
         }
-
-        // 通话相关按钮点击事件
+        // 视频通话按钮点击事件
         if (this.videoCallButtonEl) {
-            this.videoCallButtonEl.addEventListener('click', () => { if (!this.videoCallButtonEl.disabled) ActionCreators.initiateCallRequest({ peerId: ChatManager.currentChatId, type: 'video' }); });
+            this.videoCallButtonEl.addEventListener('click', () => { if (!this.videoCallButtonEl.disabled) VideoCallManager.initiateCall(ChatManager.currentChatId); });
         }
+        // 语音通话按钮点击事件
         if (this.audioCallButtonEl) {
-            this.audioCallButtonEl.addEventListener('click', () => { if (!this.audioCallButtonEl.disabled) ActionCreators.initiateCallRequest({ peerId: ChatManager.currentChatId, type: 'audio' }); });
+            this.audioCallButtonEl.addEventListener('click', () => { if (!this.audioCallButtonEl.disabled) VideoCallManager.initiateAudioCall(ChatManager.currentChatId); });
         }
+        // 屏幕共享按钮点击事件
         if (this.screenShareButtonEl) {
-            this.screenShareButtonEl.addEventListener('click', () => { if (!this.screenShareButtonEl.disabled) ActionCreators.initiateCallRequest({ peerId: ChatManager.currentChatId, type: 'screen' }); });
+            this.screenShareButtonEl.addEventListener('click', () => { if (!this.screenShareButtonEl.disabled) VideoCallManager.initiateScreenShare(ChatManager.currentChatId); });
         }
-
-        // 群成员（大厅）按钮点击事件
+        // 人员大厅按钮点击事件
         if (this.peopleLobbyButtonEl) {
-            this.peopleLobbyButtonEl.addEventListener('click', () => {
-                Store.dispatch('TOGGLE_DETAILS_PANEL', { content: 'lobby' });
-            });
+            this.peopleLobbyButtonEl.addEventListener('click', () => { if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.togglePeopleLobbyView(); });
         }
 
-        // 聊天信息区域点击事件
+        // 点击聊天头部头像或标题区域，显示详情面板
         if (this.chatInfoMainEl) {
             this.chatInfoMainEl.addEventListener('click', () => {
-                const state = Store.getState();
-                if (state.currentChatId) {
-                    Store.dispatch('TOGGLE_DETAILS_PANEL', { content: 'details' });
+                if (ChatManager.currentChatId && typeof DetailsPanelUIManager !== 'undefined') {
+                    DetailsPanelUIManager.toggleChatDetailsView();
                 }
             });
         }
-
-        // 文件拖拽上传逻辑
+        // 聊天区域的拖放事件，用于文件上传
         if (this.chatAreaEl) {
-            let dragCounter = 0; // 计数器防止子元素触发dragleave
-            // 文件拖入区域
+            let dragCounter = 0; // 用于正确处理嵌套元素的 dragenter 和 dragleave 事件
+            // 文件拖入聊天区域
             this.chatAreaEl.addEventListener('dragenter', (e) => {
-                e.preventDefault(); e.stopPropagation();
+                e.preventDefault(); e.stopPropagation(); // 阻止默认行为和事件冒泡
+                // 只有在当前有选定聊天，并且拖入的是文件时才响应
                 if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) {
                     dragCounter++;
-                    if (dragCounter === 1) this.chatAreaEl.classList.add('drag-over');
+                    if (dragCounter === 1) this.chatAreaEl.classList.add('drag-over'); // 显示拖放遮罩层
                 }
             });
-            // 文件在区域内移动
+            // 文件在聊天区域上方移动
             this.chatAreaEl.addEventListener('dragover', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 if (ChatManager.currentChatId && e.dataTransfer && e.dataTransfer.types.includes('Files')) {
-                    e.dataTransfer.dropEffect = 'copy';
+                    e.dataTransfer.dropEffect = 'copy'; // 设置拖放效果为复制
                 } else {
-                    e.dataTransfer.dropEffect = 'none';
+                    e.dataTransfer.dropEffect = 'none'; // 否则不允许拖放
                 }
             });
-            // 文件拖离区域
+            // 文件拖离聊天区域
             this.chatAreaEl.addEventListener('dragleave', (e) => {
                 e.preventDefault(); e.stopPropagation();
                 dragCounter--;
-                if (dragCounter === 0) this.chatAreaEl.classList.remove('drag-over');
+                if (dragCounter === 0) this.chatAreaEl.classList.remove('drag-over'); // 隐藏拖放遮罩层
             });
-            // 文件在区域内释放
+            // 文件在聊天区域释放（放下）
             this.chatAreaEl.addEventListener('drop', (e) => {
                 e.preventDefault(); e.stopPropagation();
-                dragCounter = 0;
-                this.chatAreaEl.classList.remove('drag-over');
-                if (!ChatManager.currentChatId) {
+                dragCounter = 0; this.chatAreaEl.classList.remove('drag-over'); // 隐藏遮罩
+                if (!ChatManager.currentChatId) { // 如果未选择聊天
                     NotificationUIManager.showNotification('发送文件前请先选择一个聊天。', 'warning');
                     return;
                 }
-                if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-                    const file = e.dataTransfer.files[0];
-                    MediaManager.processFile(file);
+                if (e.dataTransfer && e.dataTransfer.files.length > 0) { // 如果有拖放的文件
+                    const file = e.dataTransfer.files[0]; // 通常只处理第一个文件
+                    MediaManager.processFile(file); // 交给 MediaManager 处理文件
                 }
             });
         }
-
-        // 消息盒子事件（用于上下文菜单）
+        // 聊天框内的消息交互事件 (右键和双击)
         if (this.chatBoxEl) {
+            // 右键点击消息，显示上下文菜单
             this.chatBoxEl.addEventListener('contextmenu', this._handleMessageInteraction.bind(this));
+            // 双击消息，也显示上下文菜单 (除非双击的是消息内的可交互元素)
             this.chatBoxEl.addEventListener('dblclick', function (event) {
-                const messageElement = event.target.closest('.message:not(.system):not(.retracted)');
+                const messageElement = event.target.closest('.message:not(.system):not(.retracted)'); // 找到非系统消息、非已撤回消息的元素
                 if (messageElement) {
-                    // 避免在链接、按钮等可交互元素上触发
+                    // 如果双击的目标是链接、按钮、输入框、图片、音视频控件等，则不显示菜单
                     if (event.target.closest('a, button, input, textarea, select, .file-preview-img, .play-voice-btn, .download-btn, video[controls], audio[controls]')) return;
-                    this._showContextMenu(event, messageElement);
+                    this._showContextMenu(event, messageElement); // 显示自定义上下文菜单
                 }
-            }.bind(this));
+            }.bind(this)); // 绑定 this 上下文
         }
     },
 
     /**
-     * 处理粘贴事件，用于从剪贴板获取并处理文件。
      * @private
-     * @function _handlePasteEvent
+     * 处理粘贴事件，用于从剪贴板获取文件。
      * @param {ClipboardEvent} event - 粘贴事件对象。
-     * @returns {Promise<void>}
      */
     _handlePasteEvent: async function(event) {
+        // 如果当前没有选定聊天，或者输入框被禁用，则忽略粘贴操作
         if (!ChatManager.currentChatId || (this.messageInputEl && this.messageInputEl.disabled)) {
-            return; // 聊天未激活或输入框禁用，则忽略
-        }
-
-        const items = (event.clipboardData || event.originalEvent?.clipboardData)?.items;
-        if (!items) {
-            return; // 无法访问剪贴板
-        }
-
-        // 处理流程如下：
-        // 1. 遍历剪贴板中的所有项目
-        // 2. 如果项目是文件类型 (kind === 'file')，则获取文件对象
-        // 3. 阻止默认的粘贴行为（如粘贴文本路径）
-        // 4. 检查当前是否已有待发送的文件或语音，如有则提示用户
-        // 5. 调用 MediaManager 处理文件，生成预览
-        // 6. 标记已处理并跳出循环
-        let fileFoundAndProcessed = false;
-        for (let i = 0; i < items.length; i++) {
-            const item = items[i];
-            if (item.kind === 'file') {
-                const file = item.getAsFile();
-                if (file) {
-                    event.preventDefault();
-                    Utils.log(`ChatAreaUIManager: 从剪贴板粘贴文件: ${file.name}`, Utils.logLevels.INFO);
-
-                    if (MessageManager.selectedFile || MessageManager.audioData) {
-                        NotificationUIManager.showNotification('已有待发送的内容，请先发送或取消。', 'warning');
-                        return;
-                    }
-
-                    await MediaManager.processFile(file);
-                    fileFoundAndProcessed = true;
-                    break;
-                }
-            }
-        }
-    },
-
-    /**
-     * 处理消息输入框的输入事件，用于检测和显示 @ 提及建议。
-     * @private
-     * @function _handleMessageInputForMentions
-     * @returns {void}
-     */
-    _handleMessageInputForMentions: function() {
-        // 1. 检查是否满足显示提及的条件（在群聊中）
-        if (!this.messageInputEl || !this.aiMentionSuggestionsEl || !ChatManager.currentChatId || !ChatManager.currentChatId.startsWith('group_')) {
-            if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none';
+            Utils.log("ChatAreaUIManager._handlePasteEvent: 聊天未激活或输入框禁用，粘贴操作忽略。", Utils.logLevels.DEBUG);
             return;
         }
 
-        const text = this.messageInputEl.value;
-        const cursorPos = this.messageInputEl.selectionStart;
-        const textBeforeCursor = text.substring(0, cursorPos);
+        // 获取剪贴板中的项目
+        const items = (event.clipboardData || event.originalEvent?.clipboardData)?.items;
+        if (!items) {
+            Utils.log("ChatAreaUIManager._handlePasteEvent: 无法访问剪贴板项目。", Utils.logLevels.WARN);
+            return;
+        }
 
-        // 2. 查找光标前最后一个'@'符号
+        let fileFoundAndProcessed = false; // 标记是否找到并处理了文件
+        // 遍历剪贴板中的所有项目
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            if (item.kind === 'file') { // 如果项目类型是文件
+                const file = item.getAsFile(); // 获取文件对象
+                if (file) {
+                    // 只有当我们确定要处理一个文件时，才阻止默认的文本粘贴行为
+                    event.preventDefault(); // 阻止默认的粘贴行为（如粘贴文本）
+                    Utils.log(`ChatAreaUIManager: 从剪贴板粘贴文件: ${file.name}, 类型: ${file.type}, 大小: ${file.size}`, Utils.logLevels.INFO);
+
+                    // 检查是否已有待发送的文件或语音，如果有，则提示用户并返回
+                    if (MessageManager.selectedFile) {
+                        NotificationUIManager.showNotification('已有待发送的文件，请先发送或取消。', 'warning');
+                        return; // 停止处理后续项目
+                    }
+                    if (MessageManager.audioData) {
+                        NotificationUIManager.showNotification('已有待发送的语音，请先发送或取消。', 'warning');
+                        return; // 停止处理后续项目
+                    }
+
+                    // 委托给 MediaManager 处理文件（例如显示预览）
+                    await MediaManager.processFile(file);
+                    fileFoundAndProcessed = true;
+                    break; // 通常只处理剪贴板中的第一个文件项
+                }
+            }
+        }
+
+        if (fileFoundAndProcessed) {
+            Utils.log("ChatAreaUIManager: 剪贴板中的文件已处理并设置预览。", Utils.logLevels.DEBUG);
+        } else {
+            Utils.log("ChatAreaUIManager: 在粘贴事件中未找到文件，或文件无法检索。将执行默认粘贴行为（文本）。", Utils.logLevels.DEBUG);
+            // 如果没有文件被处理，不调用 event.preventDefault()，允许正常的文本粘贴
+        }
+    },
+
+
+    /**
+     * @private
+     * 处理消息输入框的输入事件，用于检测和显示 @ 提及建议。
+     * 仅在群聊中且输入 `@` 符号后触发。
+     */
+    _handleMessageInputForMentions: function() {
+        // 检查是否满足显示提及建议的条件：
+        // 1. 消息输入框存在
+        // 2. AI提及建议的UI元素存在
+        // 3. 当前已选定一个聊天
+        // 4. 当前聊天是群聊 (ID以 'group_' 开头)
+        if (!this.messageInputEl || !this.aiMentionSuggestionsEl || !ChatManager.currentChatId || !ChatManager.currentChatId.startsWith('group_')) {
+            if (this.aiMentionSuggestionsEl) this.aiMentionSuggestionsEl.style.display = 'none'; // 如果不满足条件，隐藏建议列表 (如果已显示)
+            return;
+        }
+
+        const text = this.messageInputEl.value; // 获取当前输入框的完整文本
+        const cursorPos = this.messageInputEl.selectionStart; // 获取光标在文本中的位置
+        const textBeforeCursor = text.substring(0, cursorPos); // 获取光标前的文本内容
+
+        // 在光标前的文本中查找最后一个 '@' 符号的位置
         const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
 
-        if (lastAtSymbolIndex !== -1) {
-            // 3. 获取@符号后的查询词
+        if (lastAtSymbolIndex !== -1) { // 如果找到了 '@' 符号
+            // 提取 '@' 符号之后到光标位置的文本作为查询词，并转换为小写
             const query = textBeforeCursor.substring(lastAtSymbolIndex + 1).toLowerCase();
+            // 计算从 '@' 符号开始到当前光标位置的子字符串长度 (包括 '@' 本身)
+            // 这个长度用于后续替换选中的提及项
             const lengthOfAtAndQuery = textBeforeCursor.length - lastAtSymbolIndex;
 
-            // 4. 在当前群成员中查找匹配的AI成员
-            const group = GroupManager.groups[ChatManager.currentChatId];
-            if (group && group.members) {
+            const group = GroupManager.groups[ChatManager.currentChatId]; // 获取当前群组的详细信息
+            if (group && group.members) { // 如果群组信息和成员列表存在
+                // 从群成员中筛选出 AI 角色，并且其名称包含查询词
                 const aiMembers = group.members.reduce((acc, memberId) => {
-                    const contact = UserManager.contacts[memberId];
+                    const contact = UserManager.contacts[memberId]; // 获取成员的联系人信息
+                    // 条件：是AI角色 (contact.isAI)，并且其名称 (转小写后) 包含查询词
                     if (contact && contact.isAI && contact.name.toLowerCase().includes(query)) {
-                        acc.push(contact);
+                        acc.push(contact); // 将匹配的AI角色添加到结果数组
                     }
                     return acc;
                 }, []);
 
-                // 5. 如果找到匹配项，则填充并显示建议列表
-                if (aiMembers.length > 0) {
-                    this._populateAiMentionSuggestions(aiMembers, lengthOfAtAndQuery);
+                if (aiMembers.length > 0) { // 如果有匹配的AI成员
+                    this._populateAiMentionSuggestions(aiMembers, lengthOfAtAndQuery); // 填充并显示提及建议列表
                 } else {
-                    this.aiMentionSuggestionsEl.style.display = 'none';
+                    this.aiMentionSuggestionsEl.style.display = 'none'; // 没有匹配项则隐藏建议列表
                 }
             } else {
-                this.aiMentionSuggestionsEl.style.display = 'none';
+                this.aiMentionSuggestionsEl.style.display = 'none'; // 群组信息不存在则隐藏建议列表
             }
         } else {
-            this.aiMentionSuggestionsEl.style.display = 'none';
+            this.aiMentionSuggestionsEl.style.display = 'none'; // 如果光标前没有 '@' 符号，则隐藏建议列表
         }
     },
 
     /**
-     * 根据匹配的AI联系人，填充并显示提及建议列表。
      * @private
-     * @function _populateAiMentionSuggestions
-     * @param {Array<object>} aiContacts - 匹配的AI联系人对象数组。
-     * @param {number} lengthOfAtAndQuery - `@`符号加上查询词的长度，用于后续文本替换。
-     * @returns {void}
+     * 填充 AI @ 提及建议列表...
      */
     _populateAiMentionSuggestions: function(aiContacts, lengthOfAtAndQuery) {
         if (!this.aiMentionSuggestionsEl || !this.messageInputEl) return;
@@ -453,14 +421,13 @@ const ChatAreaUIManager = {
         const fragment = document.createDocumentFragment();
         const template = document.getElementById('ai-mention-suggestion-item-template').content;
 
-        // 1. 遍历联系人，为每人创建一个建议项
         aiContacts.forEach(contact => {
             const itemClone = template.cloneNode(true);
             const itemEl = itemClone.querySelector('.mention-suggestion-item');
             const avatarEl = itemClone.querySelector('.mention-suggestion-avatar');
             const nameEl = itemClone.querySelector('.mention-suggestion-name');
 
-            // 设置头像和名称
+            // Avatar
             if (contact.avatarUrl) {
                 const img = document.createElement('img');
                 img.src = contact.avatarUrl;
@@ -470,19 +437,19 @@ const ChatAreaUIManager = {
             } else {
                 avatarEl.textContent = contact.name.charAt(0).toUpperCase();
             }
+
+            // Name
             nameEl.textContent = contact.name;
 
-            // 2. 为建议项绑定点击事件
+            // Click Event
             itemEl.addEventListener('click', () => {
                 const currentText = this.messageInputEl.value;
                 const cursorPos = this.messageInputEl.selectionStart;
                 const textBefore = currentText.substring(0, cursorPos - lengthOfAtAndQuery);
                 const textAfter = currentText.substring(cursorPos);
                 const mentionText = '@' + contact.name + ' ';
-                // 替换@查询词为完整的@用户名
                 this.messageInputEl.value = textBefore + mentionText + textAfter;
                 this.messageInputEl.focus();
-                // 将光标移动到提及文本之后
                 const newCursorPos = textBefore.length + mentionText.length;
                 this.messageInputEl.setSelectionRange(newCursorPos, newCursorPos);
                 this.aiMentionSuggestionsEl.style.display = 'none';
@@ -492,254 +459,337 @@ const ChatAreaUIManager = {
 
         this.aiMentionSuggestionsEl.appendChild(fragment);
 
-        // 3. 定位建议列表，使其显示在输入框上方
+        // 3. 定位建议列表
+        // 关键：将列表的 bottom 设置为输入行的高度，使其精确地显示在输入框上方。
         const inputRow = this.messageInputEl.closest('.input-row');
         if (inputRow) {
+            // 动态计算输入区域的高度，这样即使输入框因多行文本而变高，列表位置也能自适应
             const inputRowHeight = inputRow.offsetHeight;
             this.aiMentionSuggestionsEl.style.bottom = `${inputRowHeight}px`;
         } else {
+            // 如果找不到 .input-row，提供一个合理的备选方案
             this.aiMentionSuggestionsEl.style.bottom = '100%';
         }
+
+        // 4. 显示列表
+        // 其他定位样式保持不变（假设父容器 .chat-input-container 是 position: relative）
         this.aiMentionSuggestionsEl.style.left = '0';
         this.aiMentionSuggestionsEl.style.right = '0';
-        this.aiMentionSuggestionsEl.style.width = '300px';
+        this.aiMentionSuggestionsEl.style.width = '300px'; // 宽度由 left 和 right 决定，自动拉伸
         this.aiMentionSuggestionsEl.style.display = 'block';
     },
 
     /**
-     * 初始化消息的右键/双击上下文菜单。
      * @private
-     * @function _initContextMenu
-     * @returns {void}
+     * 初始化消息的右键上下文菜单。
      */
     _initContextMenu: function () {
+        // 创建上下文菜单的 div 元素
         this.contextMenuEl = document.createElement('div');
-        this.contextMenuEl.id = 'customMessageContextMenu';
-        this.contextMenuEl.className = 'custom-context-menu';
-        this.contextMenuEl.style.display = 'none';
-        document.body.appendChild(this.contextMenuEl);
+        this.contextMenuEl.id = 'customMessageContextMenu'; // 设置 ID
+        this.contextMenuEl.className = 'custom-context-menu'; // 设置 CSS 类名
+        this.contextMenuEl.style.display = 'none'; // 默认隐藏
+        document.body.appendChild(this.contextMenuEl); // 将菜单添加到 body 中，确保在最顶层显示
 
-        // 全局点击时隐藏菜单
+        // 添加全局点击事件监听器，用于在点击菜单外部时隐藏菜单
         document.addEventListener('click', function (event) {
+            // 如果菜单已显示，并且点击的目标不是菜单本身或其子元素
             if (this.contextMenuEl && this.contextMenuEl.style.display === 'block' && !this.contextMenuEl.contains(event.target)) {
-                this._hideContextMenu();
+                this._hideContextMenu(); // 隐藏菜单
             }
-        }.bind(this));
+        }.bind(this)); // 绑定 this 上下文
 
-        // 按下Esc键时隐藏菜单
+        // 添加全局键盘按下事件监听器，用于通过 Esc 键隐藏菜单
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape' && this.contextMenuEl && this.contextMenuEl.style.display === 'block') {
-                this._hideContextMenu();
+                this._hideContextMenu(); // 隐藏菜单
             }
-        }.bind(this));
+        }.bind(this)); // 绑定 this 上下文
     },
 
     /**
-     * 处理消息元素的交互事件（右键点击或双击）。
      * @private
-     * @function _handleMessageInteraction
+     * 处理消息元素的交互事件（当前主要用于右键点击）。
      * @param {MouseEvent} event - 鼠标事件对象。
-     * @returns {void}
      */
     _handleMessageInteraction: function (event) {
-        // 确保点击的是一个有效的消息元素
+        // 查找事件目标最近的父级消息元素，排除系统消息和已撤回消息
         const messageElement = event.target.closest('.message:not(.system):not(.retracted)');
-        if (!messageElement) return;
+        if (!messageElement) return; // 如果没有找到相关的消息元素，则不做任何操作
 
-        if (event.type === 'contextmenu') {
-            event.preventDefault();
-            this._showContextMenu(event, messageElement);
+        if (event.type === 'contextmenu') { // 如果是右键点击事件
+            event.preventDefault(); // 阻止浏览器默认的右键菜单
+            this._showContextMenu(event, messageElement); // 显示自定义的上下文菜单
         }
+        // 双击逻辑已在 bindEvents 中单独处理，因为它有不同的触发条件（不应在链接等元素上触发）
     },
 
     /**
-     * 在指定位置显示消息的上下文菜单。
      * @private
-     * @function _showContextMenu
-     * @param {MouseEvent} event - 触发菜单的事件对象，用于定位。
+     * 显示消息的上下文菜单。
+     * @param {MouseEvent} event - 触发菜单的事件对象 (用于获取点击位置以定位菜单)。
      * @param {HTMLElement} messageElement - 被操作的消息元素。
-     * @returns {void}
      */
     _showContextMenu: function (event, messageElement) {
+        // 确保上下文菜单元素和消息元素都存在
         if (!this.contextMenuEl || !messageElement) return;
-        this._clearContextMenuAutoHideTimer(); // 清除旧的隐藏定时器
-        this.contextMenuEl.innerHTML = '';
-        this.activeContextMenuMessageElement = messageElement;
 
+        this._clearContextMenuAutoHideTimer(); // 清除可能存在的上一个菜单的自动隐藏定时器
+
+        // 如果当前有图片查看器模态框打开，先将其移除，避免菜单被遮挡或交互冲突
+        const imageViewerModal = document.querySelector('.modal-like.image-viewer');
+        if (imageViewerModal) imageViewerModal.remove();
+
+
+        this.contextMenuEl.innerHTML = ''; // 清空菜单的现有内容
+        this.activeContextMenuMessageElement = messageElement; // 记录当前激活上下文菜单的消息元素
+
+        // 从消息元素的数据属性中获取消息ID和时间戳
         const messageId = messageElement.dataset.messageId;
         const messageTimestamp = parseInt(messageElement.dataset.timestamp, 10);
+        // 判断消息是否由当前用户发送 (通过 'sent' 类名)
         const isMyMessage = messageElement.classList.contains('sent');
+
+        // 如果消息ID不存在，则无法进行操作，隐藏菜单并返回
         if (!messageId) {
             this._hideContextMenu();
             return;
         }
 
-        // 1. 创建“删除”按钮
+        // 创建“删除”按钮
         const deleteBtn = document.createElement('button');
         deleteBtn.textContent = '删除';
-        deleteBtn.className = 'context-menu-button';
+        deleteBtn.className = 'context-menu-button'; // CSS类名
         deleteBtn.onclick = function () {
-            this._clearContextMenuAutoHideTimer();
-            MessageManager.deleteMessageLocally(messageId);
-            this._hideContextMenu();
-        }.bind(this);
+            this._clearContextMenuAutoHideTimer(); // 点击后清除自动隐藏定时器
+            MessageManager.deleteMessageLocally(messageId); // 调用消息管理器进行本地删除
+            this._hideContextMenu(); // 操作完成后隐藏菜单
+        }.bind(this); // 绑定this上下文
         this.contextMenuEl.appendChild(deleteBtn);
 
-        // 2. 如果是自己的消息且在可撤回时间内，创建“撤回”按钮
-        if (isMyMessage && !isNaN(messageTimestamp) && (Date.now() - messageTimestamp < AppSettings.ui.messageRetractionWindow)) {
+        // 如果是自己发送的消息，并且消息时间戳有效，且在可撤回时间窗口内，则添加“撤回”按钮
+        if (isMyMessage && !isNaN(messageTimestamp) && (Date.now() - messageTimestamp < this.MESSAGE_RETRACTION_WINDOW)) {
             const retractBtn = document.createElement('button');
             retractBtn.textContent = '撤回';
-            retractBtn.className = 'context-menu-button';
+            retractBtn.className = 'context-menu-button'; // CSS类名
             retractBtn.onclick = function () {
-                this._clearContextMenuAutoHideTimer();
-                MessageManager.requestRetractMessage(messageId);
-                this._hideContextMenu();
-            }.bind(this);
+                this._clearContextMenuAutoHideTimer(); // 点击后清除自动隐藏定时器
+                MessageManager.requestRetractMessage(messageId); // 调用消息管理器请求撤回消息
+                this._hideContextMenu(); // 操作完成后隐藏菜单
+            }.bind(this); // 绑定this上下文
             this.contextMenuEl.appendChild(retractBtn);
         }
 
-        // 如果没有任何可操作按钮，则不显示菜单
+        // 如果菜单中没有任何操作项 (例如，非自己的消息且已过撤回时间)，则不显示菜单
         if (this.contextMenuEl.children.length === 0) {
             this._hideContextMenu();
             return;
         }
 
-        // 3. 计算并设置菜单位置，防止菜单超出窗口边界
-        this.contextMenuEl.style.display = 'block'; // 先显示以计算尺寸
-        const menuRect = this.contextMenuEl.getBoundingClientRect();
-        this.contextMenuEl.style.display = 'none'; // 计算后隐藏
-        let x = event.clientX;
-        let y = event.clientY;
-        if (x + menuRect.width > window.innerWidth) x = window.innerWidth - menuRect.width - 5;
-        if (y + menuRect.height > window.innerHeight) y = window.innerHeight - menuRect.height - 5;
-        if (x < 0) x = 5;
-        if (y < 0) y = 5;
-        this.contextMenuEl.style.top = y + 'px';
-        this.contextMenuEl.style.left = x + 'px';
-        this.contextMenuEl.style.display = 'block';
+        // 定位并显示菜单
+        this.contextMenuEl.style.display = 'block'; // 先设为block以获取其尺寸
+        const menuRect = this.contextMenuEl.getBoundingClientRect(); // 获取菜单的尺寸
+        const menuWidth = menuRect.width;
+        const menuHeight = menuRect.height;
+        this.contextMenuEl.style.display = 'none'; // 获取尺寸后先隐藏，再进行定位
 
-        // 4. 设置自动隐藏定时器
-        this.contextMenuAutoHideTimer = setTimeout(this._hideContextMenu.bind(this), AppSettings.ui.contextMenuAutoHideDuration);
+        let x = event.clientX; // 菜单的初始X坐标 (鼠标点击位置)
+        let y = event.clientY; // 菜单的初始Y坐标 (鼠标点击位置)
+
+        // 调整菜单位置，防止其超出窗口边界
+        if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 5; // 如果右侧超出，向左移
+        if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 5; // 如果底部超出，向上移
+        if (x < 0) x = 5; // 如果左侧超出 (不太可能)，向右移
+        if (y < 0) y = 5; // 如果顶部超出 (不太可能)，向下移
+
+        this.contextMenuEl.style.top = y + 'px'; // 设置菜单的最终top位置
+        this.contextMenuEl.style.left = x + 'px'; // 设置菜单的最终left位置
+        this.contextMenuEl.style.display = 'block'; // 显示菜单
+
+        // 设置定时器，在一段时间后自动隐藏菜单 (如果用户未进行操作)
+        this.contextMenuAutoHideTimer = setTimeout(this._hideContextMenu.bind(this), this.CONTEXT_MENU_AUTOHIDE_DURATION);
     },
 
     /**
-     * 隐藏消息的上下文菜单。
      * @private
-     * @function _hideContextMenu
-     * @returns {void}
+     * 隐藏消息的上下文菜单。
      */
     _hideContextMenu: function () {
-        this._clearContextMenuAutoHideTimer();
-        if (this.contextMenuEl) this.contextMenuEl.style.display = 'none';
-        this.activeContextMenuMessageElement = null;
+        this._clearContextMenuAutoHideTimer(); // 清除自动隐藏定时器
+        if (this.contextMenuEl) this.contextMenuEl.style.display = 'none'; // 隐藏菜单元素
+        this.activeContextMenuMessageElement = null; // 清除对当前激活菜单的消息元素的引用
     },
 
     /**
-     * 清除上下文菜单的自动隐藏定时器。
      * @private
-     * @function _clearContextMenuAutoHideTimer
-     * @returns {void}
+     * 清除上下文菜单的自动隐藏定时器。
      */
     _clearContextMenuAutoHideTimer: function() {
         if (this.contextMenuAutoHideTimer) {
-            clearTimeout(this.contextMenuAutoHideTimer);
-            this.contextMenuAutoHideTimer = null;
+            clearTimeout(this.contextMenuAutoHideTimer); // 清除定时器
+            this.contextMenuAutoHideTimer = null; // 重置定时器ID
         }
     },
 
     /**
      * 显示聊天区域，并隐藏“未选择聊天”的占位屏幕。
-     * @private
-     * @function _showChatArea
-     * @returns {void}
      */
-    _showChatArea: function () {
+    showChatArea: function () {
+        // 如果 LayoutUIManager 存在，则调用其方法来调整布局 (主要用于移动端响应式)
+        if (typeof LayoutUIManager !== 'undefined') LayoutUIManager.showChatAreaLayout();
+        // 隐藏“未选择聊天”的占位屏幕
         if (this.noChatSelectedScreenEl) this.noChatSelectedScreenEl.style.display = 'none';
+        // 显示聊天消息框 (使用 flex 布局)
         if (this.chatBoxEl) this.chatBoxEl.style.display = 'flex';
+        // 切换到聊天区域时，隐藏可能存在的上下文菜单
         this._hideContextMenu();
     },
 
     /**
      * 显示“未选择聊天”的占位视图，并重置相关UI状态。
-     * @private
-     * @function _showNoChatSelected
-     * @returns {void}
      */
-    _showNoChatSelected: function () {
-        // NOTE: 头部的更新现在由 `_updateChatHeaderBasedOnState` 统一处理
-        if (this.chatBoxEl) {
-            this.chatBoxEl.innerHTML = '';
-            this.chatBoxEl.style.display = 'none';
+    showNoChatSelected: function () {
+        // 重置聊天头部信息
+        if (this.chatHeaderTitleEl) this.chatHeaderTitleEl.textContent = '选择一个聊天'; // 设置默认标题
+        if (this.chatHeaderStatusEl) {
+            this.chatHeaderStatusEl.textContent = ''; // 清空状态文本
+            this.chatHeaderStatusEl.className = 'chat-status-main status-indicator-neutral'; // 重置状态指示器为中性
         }
+        if (this.chatHeaderAvatarEl) {
+            this.chatHeaderAvatarEl.innerHTML = ''; // 清空头像内容
+            this.chatHeaderAvatarEl.className = 'chat-avatar-main'; // 重置头像样式
+        }
+        if (this.chatHeaderMainEl) this.chatHeaderMainEl.className = 'chat-header-main'; // 重置头部主容器样式
+
+        // 清空并隐藏聊天消息框
+        if (this.chatBoxEl) {
+            this.chatBoxEl.innerHTML = ''; // 清空消息
+            this.chatBoxEl.style.display = 'none'; // 隐藏消息框
+        }
+        // 显示“未选择聊天”的占位屏幕
         if (this.noChatSelectedScreenEl) this.noChatSelectedScreenEl.style.display = 'flex';
 
-        this.enableChatInterface(false);
-        this._hideContextMenu();
+        this.enableChatInterface(false); // 禁用聊天输入框和相关按钮
+        // 如果详情面板UI管理器存在，则隐藏侧边面板
+        if (typeof DetailsPanelUIManager !== 'undefined') DetailsPanelUIManager.hideSidePanel();
+        // 如果布局UI管理器存在，则显示聊天列表区域 (主要用于移动端)
+        if (typeof LayoutUIManager !== 'undefined') LayoutUIManager.showChatListArea();
 
-        // 清理虚拟滚动状态
-        this._detachScrollListener();
-        this._currentChatId = null;
+        // 控制人员大厅按钮和聊天详情按钮的显隐与可用状态
+        if (this.peopleLobbyButtonEl) {
+            this.peopleLobbyButtonEl.style.display = 'block'; // 显示人员大厅按钮
+            this.peopleLobbyButtonEl.disabled = false;    // 启用人员大厅按钮
+        }
+
+        this._hideContextMenu(); // 隐藏可能存在的上下文菜单
+
+        // Ensure chatInfoMainEl is not clickable when no chat is selected
+        if (this.chatInfoMainEl) {
+            this.chatInfoMainEl.style.cursor = 'default';
+            this.chatInfoMainEl.removeAttribute('title');
+            this.chatInfoMainEl.classList.remove('clickable-chat-header');
+        }
+
+
+        this._detachScrollListener(); // 解绑聊天框的滚动事件监听器
+        // 重置虚拟滚动相关的状态变量
+        this._currentChatIdForVirtualScroll = null;
         this._allMessagesForCurrentChat = [];
         this._renderedOldestMessageArrayIndex = -1;
         this._renderedNewestMessageArrayIndex = -1;
-        this._hideScrollToLatestButton();
+        this._hideScrollToLatestButton(); // 隐藏“滚动到最新消息”按钮
     },
 
     /**
-     * 根据应用状态更新聊天头部的标题、状态和头像。
-     * @private
-     * @function _updateChatHeaderBasedOnState
-     * @param {object} state - 当前的应用状态对象 (来自Store)。
-     * @returns {void}
+     * 更新聊天头部的标题、状态（包括状态指示圆点）和头像。
+     * @param {string} title - 聊天标题。
+     * @param {string} statusText - 状态文本 (如 "在线", "离线", "AI 服务正常" 等)。
+     * @param {string} avatarTextParam - 用于头像的文本（通常是名称首字母，在没有头像URL时使用）。
+     * @param {boolean} [isGroup=false] - 指示当前聊天是否为群组聊天。
      */
-    _updateChatHeaderBasedOnState: function (state) {
-        const { currentChatInfo } = state;
+    updateChatHeader: function (title, statusText, avatarTextParam, isGroup = false) {
+        // 更新聊天标题，进行HTML转义以防XSS
+        if (this.chatHeaderTitleEl) this.chatHeaderTitleEl.textContent = Utils.escapeHtml(title);
 
-        if (this.chatHeaderTitleEl) this.chatHeaderTitleEl.textContent = Utils.escapeHtml(currentChatInfo.title);
+        // 更新聊天状态文本和指示圆点
         if (this.chatHeaderStatusEl) {
-            this.chatHeaderStatusEl.textContent = Utils.escapeHtml(currentChatInfo.statusText);
+            this.chatHeaderStatusEl.textContent = Utils.escapeHtml(statusText); // 设置状态文本
+
+            // 首先移除所有可能的状态指示器CSS类
             this.chatHeaderStatusEl.classList.remove('status-indicator-active', 'status-indicator-inactive', 'status-indicator-neutral');
 
-            // 根据实体类型和状态设置状态指示器圆点的颜色
-            if (currentChatInfo.entityType === 'group') {
-                this.chatHeaderStatusEl.classList.add('status-indicator-neutral');
-            } else if (currentChatInfo.entityType === 'contact') {
-                const contact = currentChatInfo.entity;
-                if (contact.isAI) {
-                    this.chatHeaderStatusEl.classList.add(state.isAiServiceHealthy ? 'status-indicator-active' : 'status-indicator-inactive');
-                } else if (contact.isSpecial) {
-                    this.chatHeaderStatusEl.classList.add('status-indicator-active');
-                } else {
-                    this.chatHeaderStatusEl.classList.add(ConnectionManager.isConnectedTo(contact.id) ? 'status-indicator-active' : 'status-indicator-inactive');
+            const currentId = ChatManager.currentChatId; // 获取当前聊天对象的ID
+
+            if (!currentId) { // 如果没有选中任何聊天 (理论上此时应显示 showNoChatSelected 视图)
+                this.chatHeaderStatusEl.classList.add('status-indicator-neutral'); // 中性状态 (无颜色圆点)
+            } else if (isGroup) { // 如果是群聊
+                this.chatHeaderStatusEl.classList.add('status-indicator-neutral'); // 群聊通常不显示单一的在线/离线状态，设为中性
+            } else { // 如果是单聊 (联系人)
+                const contact = UserManager.contacts[currentId]; // 获取联系人信息
+                if (contact) {
+                    if (contact.isAI) { // 如果是AI联系人
+                        // AI的状态取决于AI服务的健康状况
+                        if (UserManager.isAiServiceHealthy) {
+                            this.chatHeaderStatusEl.classList.add('status-indicator-active'); // AI服务正常 (绿色圆点)
+                        } else {
+                            this.chatHeaderStatusEl.classList.add('status-indicator-inactive'); // AI服务异常 (红色圆点)
+                        }
+                    } else if (contact.isSpecial) { // 如果是特殊类型的非AI联系人 (例如某些内置角色)
+                        this.chatHeaderStatusEl.classList.add('status-indicator-active'); // 特殊联系人通常视为“活跃” (绿色圆点)
+                    } else { // 普通人类联系人
+                        // 状态取决于与该联系人的连接状况
+                        if (ConnectionManager.isConnectedTo(currentId)) {
+                            this.chatHeaderStatusEl.classList.add('status-indicator-active'); // 已连接 (绿色圆点)
+                        } else {
+                            this.chatHeaderStatusEl.classList.add('status-indicator-inactive'); // 未连接/离线 (红色圆点)
+                        }
+                    }
+                } else { // 如果找不到联系人信息 (异常情况)
+                    this.chatHeaderStatusEl.classList.add('status-indicator-neutral'); // 设为中性
                 }
-            } else {
-                this.chatHeaderStatusEl.classList.add('status-indicator-neutral');
             }
         }
 
-        // 更新头像和容器的CSS类
+        // 重置聊天头部和头像的特定主题类名 (如有)
         if (this.chatHeaderMainEl) this.chatHeaderMainEl.className = 'chat-header-main';
         if (this.chatHeaderAvatarEl) this.chatHeaderAvatarEl.className = 'chat-avatar-main';
-        if (currentChatInfo.entityType === 'group' && this.chatHeaderAvatarEl) {
+
+        // 如果是群聊，为头像添加 'group' 类以应用群组特定样式
+        if (isGroup && this.chatHeaderAvatarEl) {
             this.chatHeaderAvatarEl.classList.add('group');
         }
 
-        let avatarContentHtml = Utils.escapeHtml(currentChatInfo.avatarText);
-        if (currentChatInfo.avatarUrl) {
-            avatarContentHtml = `<img src="${currentChatInfo.avatarUrl}" alt="${avatarContentHtml}" class="avatar-image" data-fallback-text="${avatarContentHtml}" data-entity-id="${currentChatInfo.entity?.id}">`;
-        }
+        // 更新头像内容
+        const currentContactForAvatar = UserManager.contacts[ChatManager.currentChatId]; // 获取当前聊天联系人的信息
+        // 决定头像的文本内容：优先使用传入的 avatarTextParam，其次是标题首字母，最后是 '?'
+        let finalAvatarText = avatarTextParam ? Utils.escapeHtml(avatarTextParam) : (title && title.length > 0) ? Utils.escapeHtml(title.charAt(0).toUpperCase()) : '?';
+        let avatarContentHtml; // 用于存储头像的HTML内容
 
-        if (currentChatInfo.entity?.isSpecial && this.chatHeaderAvatarEl) {
-            this.chatHeaderAvatarEl.classList.add('special-avatar', currentChatInfo.entity.id);
-        }
-        if (currentChatInfo.entity?.isSpecial && this.chatHeaderMainEl) {
-            this.chatHeaderMainEl.classList.add('character-active', `current-chat-${currentChatInfo.entity.id}`);
-        }
+        if (currentContactForAvatar && currentContactForAvatar.avatarUrl) { // 如果联系人有头像URL
+            // 设置图片加载失败时的后备文本
+            let imgFallback = (currentContactForAvatar.avatarText) ? Utils.escapeHtml(currentContactForAvatar.avatarText) :
+                (currentContactForAvatar.name && currentContactForAvatar.name.length > 0) ? Utils.escapeHtml(currentContactForAvatar.name.charAt(0).toUpperCase()) : '?';
+            avatarContentHtml = `<img src="${currentContactForAvatar.avatarUrl}" alt="${imgFallback}" class="avatar-image" data-fallback-text="${imgFallback}" data-entity-id="${currentContactForAvatar.id}">`;
 
-        if (this.chatHeaderAvatarEl) this.chatHeaderAvatarEl.innerHTML = avatarContentHtml;
+            // 如果是特殊联系人，并且应用了主题，添加特殊头像和头部样式
+            if (currentContactForAvatar.isSpecial) {
+                if(this.chatHeaderAvatarEl) this.chatHeaderAvatarEl.classList.add('special-avatar', currentContactForAvatar.id);
+                if(this.chatHeaderMainEl) this.chatHeaderMainEl.classList.add('character-active', `current-chat-${currentContactForAvatar.id}`);
+            }
+        } else { // 如果没有头像URL，使用文本头像
+            avatarContentHtml = finalAvatarText;
+            // 即使是文本头像，如果联系人是特殊类型且应用了主题，也添加特殊样式
+            if (currentContactForAvatar && currentContactForAvatar.isSpecial) {
+                if(this.chatHeaderAvatarEl) this.chatHeaderAvatarEl.classList.add('special-avatar', currentContactForAvatar.id);
+                if(this.chatHeaderMainEl) this.chatHeaderMainEl.classList.add('character-active', `current-chat-${currentContactForAvatar.id}`);
+            }
+        }
+        if (this.chatHeaderAvatarEl) this.chatHeaderAvatarEl.innerHTML = avatarContentHtml; // 设置头像内容
 
-        // 根据是否选中聊天，决定头部信息区域是否可点击
-        const chatSelected = !!state.currentChatId;
+
+        // 根据是否选中了聊天，更新聊天详情按钮的显隐和可用状态
+        // The dedicated button is removed. The chatInfoMainEl clickability handles this.
+        const chatSelected = !!ChatManager.currentChatId;
         if (this.chatInfoMainEl) {
             if (chatSelected) {
                 this.chatInfoMainEl.style.cursor = 'pointer';
@@ -751,338 +801,421 @@ const ChatAreaUIManager = {
                 this.chatInfoMainEl.classList.remove('clickable-chat-header');
             }
         }
-    },
-
-    /**
-     * 启用或禁用聊天界面的交互元素（输入框、按钮等）。
-     * @function enableChatInterface
-     * @param {boolean} enabled - true为启用，false为禁用。
-     * @returns {void}
-     */
-    enableChatInterface: function (enabled) {
-        const elementsToToggle = [
-            this.messageInputEl, this.sendButtonEl, this.attachButtonEl,
-            this.voiceButtonEl, this.screenshotMainBtnEl, this.emojiStickerBtnEl
-        ];
-        elementsToToggle.forEach(el => {
-            if (el) el.disabled = !enabled;
-        });
-
-        // NOTE: 群成员按钮始终可用
-        if (this.peopleLobbyButtonEl) this.peopleLobbyButtonEl.disabled = false;
-
-        this.setCallButtonsState(enabled && ChatManager.currentChatId ? ConnectionManager.isConnectedTo(ChatManager.currentChatId) : false, ChatManager.currentChatId);
-
-        // 启用时自动聚焦到输入框
-        if (enabled && this.messageInputEl) {
-            setTimeout(() => {
-                if (this.messageInputEl) this.messageInputEl.focus();
-            }, 100);
+        // 人员大厅按钮通常保持可见和可用
+        if (this.peopleLobbyButtonEl) {
+            this.peopleLobbyButtonEl.style.display = 'block';
+            this.peopleLobbyButtonEl.disabled = false;
         }
     },
 
     /**
-     * 设置通话相关按钮（视频、音频、共享）的可用状态。
-     * @function setCallButtonsState
-     * @param {boolean} enabled - 是否启用。
-     * @param {string|null} peerIdContext - 上下文关联的对端ID。
-     * @returns {void}
+     * 更新聊天头部的状态文本。此方法仅更新文本，不改变状态指示圆点。
+     * 主要用于显示如 "对方正在输入..." 这类临时的、次要的状态信息。
+     * @param {string} statusText - 要显示的状态文本。
+     */
+    updateChatHeaderStatus: function (statusText) {
+        if (this.chatHeaderStatusEl) {
+            // 设置状态文本，进行HTML转义
+            this.chatHeaderStatusEl.textContent = Utils.escapeHtml(statusText);
+            // 注意: 此方法不修改状态指示圆点的CSS类。
+            // 圆点的状态（在线/离线/AI服务状态）由 `updateChatHeader` 方法管理，
+            // 该方法在打开新聊天或发生需要重新评估圆点状态的重大状态变更时调用。
+            // 此函数 `updateChatHeaderStatus` 仅用于更新次要的、动态的状态文本，
+            // 如输入状态提示，而不影响主要的连接/服务状态指示。
+        }
+    },
+
+
+    /**
+     * 启用或禁用聊天输入框和相关按钮。
+     * @param {boolean} enabled - true 表示启用，false 表示禁用。
+     */
+    enableChatInterface: function (enabled) {
+        // 定义需要切换启用/禁用状态的元素列表
+        const elementsToToggle = [
+            this.messageInputEl, this.sendButtonEl, this.attachButtonEl,
+            this.voiceButtonEl, this.screenshotMainBtnEl, this.emojiStickerBtnEl // ADDED
+        ];
+        // 遍历列表，设置各元素的 disabled 属性
+        elementsToToggle.forEach(el => {
+            if (el) el.disabled = !enabled; // 如果 enabled 为 true，则 disabled 为 false (启用)；反之亦然
+        });
+
+        // 人员大厅按钮通常保持可用状态，不受此函数影响（除非有特殊逻辑）
+        if (this.peopleLobbyButtonEl) this.peopleLobbyButtonEl.disabled = false;
+
+        // 设置通话相关按钮（视频、音频、屏幕共享）的可用状态
+        // 通话按钮的可用性取决于：
+        // 1. 聊天界面是否启用 (enabled 参数)
+        // 2. 当前是否有选中的聊天 (ChatManager.currentChatId)
+        // 3. 与当前聊天对象的连接状态 (ConnectionManager.isConnectedTo)
+        this.setCallButtonsState(enabled && ChatManager.currentChatId ? ConnectionManager.isConnectedTo(ChatManager.currentChatId) : false, ChatManager.currentChatId);
+
+        // 如果是启用操作，并且消息输入框存在，则尝试聚焦到输入框
+        if (enabled && this.messageInputEl) {
+            setTimeout(() => { // 使用 setTimeout 确保在UI更新和元素变为可用后再聚焦
+                if (this.messageInputEl) this.messageInputEl.focus();
+            }, 100); // 延迟100毫秒
+        }
+    },
+
+    /**
+     * 根据连接状态和聊天类型设置通话按钮（视频、音频、屏幕共享）的可用性。
+     * @param {boolean} enabled - 指示是否已连接到对方 (对于非特殊联系人)。
+     * @param {string|null} [peerIdContext=null] - 当前聊天对象的ID。如果为null，则使用 ChatManager.currentChatId。
      */
     setCallButtonsState: function (enabled, peerIdContext = null) {
+        // 确定通话的目标对方ID
         const targetPeerForCall = peerIdContext || ChatManager.currentChatId;
+        // 判断是否为群聊 (群聊ID通常有特定前缀，如 'group_')
         const isGroupChat = targetPeerForCall?.startsWith('group_');
+        // 获取当前聊天对象的联系人信息
         const currentContact = UserManager.contacts[targetPeerForCall];
+        // 判断是否为特殊类型的联系人 (例如AI助手，它们通常不支持P2P通话)
         const isSpecialChat = currentContact && currentContact.isSpecial;
+        // 检查浏览器是否支持屏幕共享API
         const canShareScreen = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
 
-        // 最终状态：必须启用，且目标是已连接的非群聊、非特殊联系人
+        // 通话按钮最终的启用条件：
+        // 1. 传入的 enabled 参数为 true (通常表示已连接或聊天界面已启用)
+        // 2. 有有效的 targetPeerForCall (即当前有选中的聊天对象)
+        // 3. 不是群聊 (isGroupChat 为 false)
+        // 4. 不是特殊联系人 (isSpecialChat 为 false)
         const finalEnabledState = enabled && targetPeerForCall && !isGroupChat && !isSpecialChat;
 
+        // 设置视频通话按钮的禁用状态
         if (this.videoCallButtonEl) this.videoCallButtonEl.disabled = !finalEnabledState;
+        // 设置语音通话按钮的禁用状态
         if (this.audioCallButtonEl) this.audioCallButtonEl.disabled = !finalEnabledState;
+        // 设置屏幕共享按钮的禁用状态 (除了上述条件，还需浏览器支持屏幕共享)
         if (this.screenShareButtonEl) this.screenShareButtonEl.disabled = !finalEnabledState || !canShareScreen;
     },
 
     /**
-     * 当特定对端连接状态变化时，更新通话按钮状态。
-     * @function setCallButtonsStateForPeer
-     * @param {string} peerId - 对端ID。
-     * @param {boolean} enabled - 是否已连接。
-     * @returns {void}
+     * 为特定对方ID更新通话按钮状态（仅当该对方是当前正在进行的聊天时）。
+     * @param {string} peerId - 对方的ID。
+     * @param {boolean} enabled - 是否已连接到该对方。
      */
     setCallButtonsStateForPeer: function (peerId, enabled) {
-        // 仅当状态变化的对端是当前聊天对象时，才更新UI
+        // 仅当传入的 peerId 是当前正在聊天的对象时，才更新通话按钮状态
         if (ChatManager.currentChatId === peerId) {
             this.setCallButtonsState(enabled, peerId);
         }
     },
 
     /**
-     * 为指定的聊天ID设置聊天区域，重置并初始化虚拟滚动。
-     * @function setupForChat
+     * 为指定聊天设置聊天区域，包括初始化虚拟滚动。
+     * 当用户切换到另一个聊天时调用此方法。
      * @param {string} chatId - 要设置的聊天ID。
-     * @returns {void}
      */
     setupForChat: function (chatId) {
-        // 1. 清理旧状态
-        this._detachScrollListener();
-
-        // 2. 初始化新聊天的状态
+        this._detachScrollListener(); // 首先，如果之前有附加的滚动监听器，则移除它
+        this.showChatArea(); // 确保聊天区域是可见的
+        this._currentChatIdForVirtualScroll = chatId; // 设置当前用于虚拟滚动的聊天ID
+        // 从 ChatManager 获取该聊天的所有消息，并创建副本存储在本模块中
         this._allMessagesForCurrentChat = [...(ChatManager.chats[chatId] || [])];
+        // 重置加载状态标记
         this._isLoadingOlderMessages = false;
         this._isLoadingNewerMessages = false;
+        // 重置已渲染消息的边界索引
         this._renderedOldestMessageArrayIndex = -1;
         this._renderedNewestMessageArrayIndex = -1;
-        this._lastScrollTop = 0;
-
-        // 3. 渲染初始消息批次并附加滚动监听
-        this._renderInitialMessageBatch();
-        this._attachScrollListener();
-        this._hideScrollToLatestButton();
+        this._lastScrollTop = 0; // 重置上一次的滚动位置
+        this._renderInitialMessageBatch(); // 渲染初始的一批消息 (通常是最新的消息)
+        this._attachScrollListener(); // 为新的聊天内容附加滚动事件监听器
+        this._hideScrollToLatestButton(); // 初始时，通常已滚动到底部，所以隐藏“滚动到最新消息”按钮
     },
 
     /**
-     * 附加消息区域的滚动事件监听器。
      * @private
-     * @function _attachScrollListener
-     * @returns {void}
+     * 附加聊天框的滚动事件监听器。
      */
     _attachScrollListener: function () {
+        // 如果聊天框元素存在，且尚未附加滚动监听器
         if (this.chatBoxEl && !this._scrollListenerAttached) {
+            // 添加滚动事件监听器，使用已绑定的防抖处理函数
             this.chatBoxEl.addEventListener('scroll', this._boundHandleChatScroll);
-            this._scrollListenerAttached = true;
+            this._scrollListenerAttached = true; // 标记监听器已附加
         }
     },
 
     /**
-     * 移除消息区域的滚动事件监听器。
      * @private
-     * @function _detachScrollListener
-     * @returns {void}
+     * 解绑聊天框的滚动事件监听器。
      */
     _detachScrollListener: function () {
+        // 如果聊天框元素存在，已附加滚动监听器，并且绑定的处理函数存在
         if (this.chatBoxEl && this._scrollListenerAttached && this._boundHandleChatScroll) {
-            this.chatBoxEl.removeEventListener('scroll', this._boundHandleChatScroll);
-            this._scrollListenerAttached = false;
-            clearTimeout(this._debounceScrollTimer);
-            this._debounceScrollTimer = null;
+            this.chatBoxEl.removeEventListener('scroll', this._boundHandleChatScroll); // 移除监听器
+            this._scrollListenerAttached = false; // 标记监听器已解绑
+            clearTimeout(this._debounceScrollTimer); // 清除可能存在的防抖定时器
+            this._debounceScrollTimer = null; // 重置防抖定时器ID
         }
     },
 
     /**
-     * 使用防抖技术包装的滚动事件处理函数。
      * @private
-     * @function _debouncedHandleChatScroll
-     * @returns {void}
+     * 滚动事件的防抖处理函数。
+     * 目的是在用户连续滚动时，只在滚动停止一段时间后才执行实际的滚动处理逻辑，以提高性能。
      */
     _debouncedHandleChatScroll: function () {
-        clearTimeout(this._debounceScrollTimer);
+        clearTimeout(this._debounceScrollTimer); // 清除上一个防抖定时器 (如果存在)
+        // 设置新的定时器，在 150ms 后执行 _handleChatScroll
         this._debounceScrollTimer = setTimeout(() => {
             this._handleChatScroll();
         }, 150);
     },
 
     /**
-     * 核心的滚动事件处理函数，用于触发加载更多消息。
      * @private
-     * @function _handleChatScroll
-     * @returns {void}
+     * 处理聊天框的滚动事件，用于触发加载更多消息（虚拟滚动）和管理“滚动到最新”按钮的显隐。
      */
     _handleChatScroll: function () {
-        if (!this.chatBoxEl) return;
-        const { scrollTop, scrollHeight, clientHeight } = this.chatBoxEl;
-        this._lastScrollTop = scrollTop;
+        if (!this.chatBoxEl) return; // 如果聊天框不存在，则不执行任何操作
 
-        // 1. 检查是否滚动到顶部附近，触发加载更旧的消息
+        const { scrollTop, scrollHeight, clientHeight } = this.chatBoxEl; // 获取滚动相关属性
+        this._lastScrollTop = scrollTop; // 记录当前的滚动位置
+
+        // 检查是否滚动到顶部附近，需要加载更早的消息
+        // 条件：滚动条位置小于阈值，当前没有正在加载旧消息，并且还有更早的消息未渲染
         if (scrollTop < AppSettings.ui.virtualScrollThreshold && !this._isLoadingOlderMessages && this._renderedOldestMessageArrayIndex > 0) {
-            this._loadOlderMessages();
-            // 如果还有未渲染的新消息，显示“滚动到最新”按钮
+            this._loadOlderMessages(); // 调用加载更早消息的函数
+            // 如果加载了旧消息，且当前并非显示所有最新消息 (即用户向上滚动了)，则显示“滚动到最新消息”按钮
             if (this._allMessagesForCurrentChat.length > 0 && this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1) {
                 this._showScrollToLatestButton();
             }
         }
 
-        // 2. 检查是否滚动到底部附近，触发加载更新的消息
-        const distanceToBottom = scrollHeight - scrollTop - clientHeight;
-        const hasMoreNewerMessages = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
+        const distanceToBottom = scrollHeight - scrollTop - clientHeight; // 计算滚动条距离底部的距离
+        const hasMoreNewerMessages = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1; // 判断是否还有更新的消息未渲染
+
+        // 检查是否滚动到底部附近，需要加载更新的消息
+        // 条件：还有更新的消息未渲染，当前没有正在加载新消息，并且滚动条距离底部小于阈值
         if (hasMoreNewerMessages && !this._isLoadingNewerMessages && distanceToBottom < AppSettings.ui.virtualScrollThreshold) {
-            this._loadNewerMessages();
+            this._loadNewerMessages(); // 调用加载更新消息的函数
         }
 
-        // 3. 在下一帧检查并处理UI状态
+        // 使用 requestAnimationFrame 确保在浏览器下一次重绘前执行以下逻辑
+        // 这有助于获取滚动操作完成后的最终状态，并进行相应的UI调整
         requestAnimationFrame(() => {
-            if (!this.chatBoxEl) return;
+            if (!this.chatBoxEl) return; // 再次检查聊天框是否存在
+            // 获取最新的滚动状态
             const finalScrollTop = this.chatBoxEl.scrollTop;
             const finalScrollHeight = this.chatBoxEl.scrollHeight;
             const finalClientHeight = this.chatBoxEl.clientHeight;
             const finalDistanceToBottom = finalScrollHeight - finalScrollTop - finalClientHeight;
             const stillHasMoreNewerMessages = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
 
-            // NOTE: 特殊逻辑，防止在仍有新消息时滚动条停在最底部，强制向上回弹一点
+            // 新增逻辑：防止用户在还有更多未加载的较新消息时，将滚动条停留在绝对底部
+            // 如果还有更新的消息未加载，且当前没有在加载新消息，并且滚动条已到达绝对底部 (距离 < 1px)
             if (stillHasMoreNewerMessages && !this._isLoadingNewerMessages && finalDistanceToBottom < 1) {
+                // 计算一个目标滚动位置，使其稍微离开底部 (例如向上20px)
                 const targetScrollTop = finalScrollHeight - finalClientHeight - 20;
+                // 仅当当前滚动位置确实低于目标位置时才调整，避免不必要的滚动
                 if (this.chatBoxEl.scrollTop < targetScrollTop) {
-                    this.chatBoxEl.scrollTop = targetScrollTop;
+                    this.chatBoxEl.scrollTop = targetScrollTop; // 执行微调
+                    Utils.log("ChatAreaUIManager: _handleChatScroll 防止停留在底部，强制向上微调。", Utils.logLevels.DEBUG);
                 }
             }
 
-            // 更新“滚动到最新”按钮的显示状态
-            const isEffectivelyAtBottom = finalDistanceToBottom < 1;
-            if (isEffectivelyAtBottom && !stillHasMoreNewerMessages) {
-                this._hideScrollToLatestButton();
-            } else if (stillHasMoreNewerMessages && !isEffectivelyAtBottom) {
-                this._showScrollToLatestButton();
+            // 根据最终的滚动状态和是否有更多新消息，决定“滚动到最新消息”按钮的显隐
+            const isEffectivelyAtBottom = finalScrollHeight - finalScrollTop - finalClientHeight < 1; // 是否已滚动到有效底部
+            if (isEffectivelyAtBottom && !stillHasMoreNewerMessages) { // 如果在底部且没有更多新消息了
+                this._hideScrollToLatestButton(); // 隐藏按钮
+            } else if (stillHasMoreNewerMessages && !isEffectivelyAtBottom) { // 如果还有新消息且不在底部
+                this._showScrollToLatestButton(); // 显示按钮
             }
         });
     },
 
+
     /**
-     * 渲染初始批次的消息，通常是最新的一部分。
      * @private
-     * @function _renderInitialMessageBatch
-     * @returns {void}
+     * 渲染初始批次的消息到聊天框 (通常是最新的消息)。
+     * 在 `setupForChat` 或点击“滚动到最新消息”按钮时调用。
      */
     _renderInitialMessageBatch: function () {
-        if (!this.chatBoxEl || !this._currentChatId) return;
-        this.chatBoxEl.innerHTML = '';
-        this._hideLoadingIndicator();
+        // 确保聊天框元素存在且当前有选定的聊天ID
+        if (!this.chatBoxEl || !this._currentChatIdForVirtualScroll) return;
 
-        const totalMessages = this._allMessagesForCurrentChat.length;
-        // 如果没有消息，显示占位符文本
-        if (totalMessages === 0) {
+        this.chatBoxEl.innerHTML = ''; // 清空聊天框的现有内容
+        this._hideLoadingIndicator(); // 隐藏可能正在显示的加载指示器
+
+        const totalMessages = this._allMessagesForCurrentChat.length; // 获取当前聊天的总消息数
+        if (totalMessages === 0) { // 如果没有消息
+            // 显示占位提示信息
             const placeholder = document.createElement('div');
-            placeholder.className = "system-message";
-            // 根据聊天类型显示不同的提示
-            const contact = UserManager.contacts[this._currentChatId];
-            if (contact && contact.isSpecial) {
+            placeholder.className = "system-message"; // 使用系统消息样式
+            const contact = UserManager.contacts[this._currentChatIdForVirtualScroll]; // 获取当前聊天对象的信息
+            // 根据聊天类型设置不同的提示文本
+            if (contact && contact.isSpecial) { // 特殊联系人
                 placeholder.textContent = `与 ${contact.name} 开始对话吧！`;
-            } else if (this._currentChatId.startsWith('group_') && GroupManager.groups[this._currentChatId]?.members.length === 1) {
+            } else if (this._currentChatIdForVirtualScroll.startsWith('group_') && // 群聊
+                GroupManager.groups[this._currentChatIdForVirtualScroll]?.owner === UserManager.userId && // 且当前用户是群主
+                GroupManager.groups[this._currentChatIdForVirtualScroll]?.members.length === 1) { // 且群里只有群主自己
                 placeholder.textContent = "您创建了此群组。邀请成员开始聊天吧！";
-            } else {
+            } else { // 其他情况 (普通联系人或已有成员的群聊)
                 placeholder.textContent = "暂无消息。开始对话吧！";
             }
-            this.chatBoxEl.appendChild(placeholder);
+            this.chatBoxEl.appendChild(placeholder); // 添加占位提示到聊天框
+            // 重置已渲染消息的边界索引
             this._renderedOldestMessageArrayIndex = -1;
             this._renderedNewestMessageArrayIndex = -1;
             return;
         }
 
-        // 计算并渲染最新的一批消息
+        // 计算要渲染的最新一批消息的起始和结束索引
+        // 结束索引是消息数组的最后一个元素
         const endIndexInArray = totalMessages - 1;
-        const startIndexInArray = Math.max(0, endIndexInArray - AppSettings.ui.chatScrollLoadBatchSize + 1);
+        // 起始索引是从结束索引向前数 `MESSAGES_TO_LOAD_ON_SCROLL` 条，但不小于0
+        const startIndexInArray = Math.max(0, endIndexInArray - this.MESSAGES_TO_LOAD_ON_SCROLL + 1);
+
+        // 遍历并渲染这批消息
         for (let i = startIndexInArray; i <= endIndexInArray; i++) {
+            // 调用 MessageManager 的 displayMessage 方法来渲染单条消息
+            // `false` 表示消息是追加到底部 (对于初始加载，虽然是清空后添加，但逻辑上是新消息)
             MessageManager.displayMessage(this._allMessagesForCurrentChat[i], false);
         }
 
-        // 更新渲染索引并滚动到底部
+        // 更新已渲染消息的边界索引
         this._renderedOldestMessageArrayIndex = startIndexInArray;
         this._renderedNewestMessageArrayIndex = endIndexInArray;
+        // 将聊天框滚动到底部，以显示最新的消息
         this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight;
     },
 
     /**
-     * 加载并渲染更旧的一批消息。
      * @private
-     * @function _loadOlderMessages
-     * @returns {Promise<void>}
+     * 异步加载并渲染更早的一批消息。
+     * 当用户向上滚动到聊天框顶部附近时触发。
      */
     _loadOlderMessages: async function () {
+        // 如果正在加载旧消息，或者已渲染到最旧的消息 (索引为0)，或者聊天框不存在，则直接返回
         if (this._isLoadingOlderMessages || this._renderedOldestMessageArrayIndex === 0 || !this.chatBoxEl) return;
-        this._isLoadingOlderMessages = true;
-        this._showLoadingIndicatorAtTop();
 
-        // 1. 计算要加载的旧消息的索引范围
-        const newBatchEndIndexInArray = this._renderedOldestMessageArrayIndex - 1;
-        const newBatchStartIndexInArray = Math.max(0, newBatchEndIndexInArray - AppSettings.ui.chatScrollLoadBatchSize + 1);
-        if (newBatchEndIndexInArray < 0) { // 已无更多旧消息
-            this._hideLoadingIndicator();
-            this._isLoadingOlderMessages = false;
-            this._renderedOldestMessageArrayIndex = 0;
+        this._isLoadingOlderMessages = true; // 标记开始加载旧消息
+        this._showLoadingIndicatorAtTop(); // 在聊天框顶部显示加载指示器
+
+        const currentOldestLoadedIndex = this._renderedOldestMessageArrayIndex; // 当前已渲染的最旧消息的索引
+        // 计算新一批要加载的旧消息的结束索引 (即当前最旧消息的前一条)
+        const newBatchEndIndexInArray = currentOldestLoadedIndex - 1;
+        // 计算新一批旧消息的起始索引 (从结束索引向前数 `MESSAGES_TO_LOAD_ON_SCROLL` 条，但不小于0)
+        const newBatchStartIndexInArray = Math.max(0, newBatchEndIndexInArray - this.MESSAGES_TO_LOAD_ON_SCROLL + 1);
+
+        // 如果计算出的结束索引小于0，说明没有更早的消息了
+        if (newBatchEndIndexInArray < 0) {
+            this._hideLoadingIndicator(); // 隐藏加载指示器
+            this._isLoadingOlderMessages = false; // 标记加载结束
+            this._renderedOldestMessageArrayIndex = 0; // 确保索引正确标记为已到最顶
             return;
         }
 
+        // 记录加载前的滚动高度和滚动位置，以便在加载后恢复视图，防止跳动
         const oldScrollHeight = this.chatBoxEl.scrollHeight;
         const oldScrollTop = this.chatBoxEl.scrollTop;
 
-        // 2. 从后往前渲染，将新消息插入到顶部
+        // 从后往前遍历新一批旧消息 (即从较新的旧消息到更旧的旧消息)
+        // 并将它们插入到聊天框的顶部
         for (let i = newBatchEndIndexInArray; i >= newBatchStartIndexInArray; i--) {
-            MessageManager.displayMessage(this._allMessagesForCurrentChat[i], true); // true表示插入到顶部
+            // 调用 MessageManager 的 displayMessage 方法渲染消息
+            // `true` 表示消息是前置插入 (即添加到聊天框顶部)
+            MessageManager.displayMessage(this._allMessagesForCurrentChat[i], true);
         }
+        // 更新已渲染的最旧消息的索引
         this._renderedOldestMessageArrayIndex = newBatchStartIndexInArray;
 
-        // 3. 在下一帧调整滚动条位置，保持用户视觉位置不变
+        // 使用 requestAnimationFrame 确保在DOM更新完成后再调整滚动位置
         requestAnimationFrame(() => {
-            const newScrollHeight = this.chatBoxEl.scrollHeight;
+            const newScrollHeight = this.chatBoxEl.scrollHeight; // 获取加载新消息后的滚动总高度
+            // 调整滚动位置：新的 scrollTop = 原 scrollTop + (新总高度 - 旧总高度)
+            // 这样可以保持用户之前看到的旧消息在屏幕上的相对位置不变
             this.chatBoxEl.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
-            this._hideLoadingIndicator();
-            this._isLoadingOlderMessages = false;
+            this._hideLoadingIndicator(); // 隐藏加载指示器
+            this._isLoadingOlderMessages = false; // 标记加载结束
         });
     },
 
     /**
-     * 加载并渲染更新的一批消息。
      * @private
-     * @function _loadNewerMessages
-     * @returns {Promise<void>}
+     * 异步加载并渲染更新的一批消息。
+     * 当用户向下滚动到聊天框底部附近，且仍有未显示的更新消息时触发。
      */
     _loadNewerMessages: async function () {
+        // 如果正在加载新消息，或者已渲染到最新的消息，或者聊天框不存在，则直接返回
         if (this._isLoadingNewerMessages || this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 1 || !this.chatBoxEl) return;
-        this._isLoadingNewerMessages = true;
+        this._isLoadingNewerMessages = true; // 标记开始加载新消息
 
+        // 记录加载前的滚动状态
         const oldScrollHeight = this.chatBoxEl.scrollHeight;
         const oldScrollTop = this.chatBoxEl.scrollTop;
         const clientHeight = this.chatBoxEl.clientHeight;
-        const wasAtBottomBeforeLoad = (oldScrollHeight - oldScrollTop - clientHeight) < 5;
+        // 判断在加载前，用户是否已滚动到接近底部的位置
+        const wasAtBottomBeforeLoad = (oldScrollHeight - oldScrollTop - clientHeight) < 5; // 阈值设为5px
 
-        // 1. 计算要加载的新消息的索引范围
-        const newBatchStartIndexInArray = this._renderedNewestMessageArrayIndex + 1;
-        const newBatchEndIndexInArray = Math.min(this._allMessagesForCurrentChat.length - 1, newBatchStartIndexInArray + AppSettings.ui.chatScrollLoadBatchSize - 1);
+        const currentNewestLoadedIndex = this._renderedNewestMessageArrayIndex; // 当前已渲染的最新消息的索引
+        // 计算新一批要加载的新消息的起始索引 (即当前最新消息的后一条)
+        const newBatchStartIndexInArray = currentNewestLoadedIndex + 1;
+        // 计算新一批新消息的结束索引 (从起始索引向后数 `MESSAGES_TO_LOAD_ON_SCROLL` 条，但不超过数组末尾)
+        const newBatchEndIndexInArray = Math.min(this._allMessagesForCurrentChat.length - 1, newBatchStartIndexInArray + this.MESSAGES_TO_LOAD_ON_SCROLL - 1);
+
+        // 如果计算出的起始索引已超出消息数组范围，说明没有更新的消息了
         if (newBatchStartIndexInArray >= this._allMessagesForCurrentChat.length) {
-            this._isLoadingNewerMessages = false;
+            this._isLoadingNewerMessages = false; // 标记加载结束
             return;
         }
 
-        // 2. 渲染新消息到列表底部
+        // 遍历并渲染新一批新消息 (追加到聊天框底部)
         for (let i = newBatchStartIndexInArray; i <= newBatchEndIndexInArray; i++) {
+            // `false` 表示消息是追加到底部
             MessageManager.displayMessage(this._allMessagesForCurrentChat[i], false);
         }
+        // 更新已渲染的最新消息的索引
         this._renderedNewestMessageArrayIndex = newBatchEndIndexInArray;
+        const newScrollHeight = this.chatBoxEl.scrollHeight; // 获取加载新消息后的滚动总高度
 
-        // 3. 调整滚动条位置
-        if (wasAtBottomBeforeLoad) {
-            this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight; // 如果之前在底部，则继续保持在底部
-        } else {
-            // 否则保持原位
+        // 调整滚动位置
+        if (wasAtBottomBeforeLoad) { // 如果加载前就在底部，则保持在底部 (滚动到新的底部)
+            this.chatBoxEl.scrollTop = newScrollHeight;
+        } else { // 否则，保持原来的滚动位置 (用户可能正在向上看历史消息)
+            this.chatBoxEl.scrollTop = oldScrollTop;
         }
 
-        // NOTE: 滚动回弹逻辑
+        // 实现滚动回弹逻辑：如果加载了新消息后，滚动条仍然非常接近底部，
+        // 并且还有更多更新的消息未加载，则将滚动条稍微向上移动一点，
+        // 以避免用户无法察觉到新消息的加载，并防止卡在“绝对底部”。
         const currentScrollTopAfterInitialAdjust = this.chatBoxEl.scrollTop;
-        const currentDistanceToBottom = this.chatBoxEl.scrollHeight - currentScrollTopAfterInitialAdjust - clientHeight;
+        const currentDistanceToBottom = newScrollHeight - currentScrollTopAfterInitialAdjust - clientHeight;
         const stillHasMoreNewerMessagesAfterLoad = this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1;
+
         if (stillHasMoreNewerMessagesAfterLoad && currentDistanceToBottom < AppSettings.ui.virtualScrollThreshold) {
-            let targetReboundScrollTop = this.chatBoxEl.scrollHeight - clientHeight - (AppSettings.ui.virtualScrollThreshold + 10);
-            this.chatBoxEl.scrollTop = Math.max(0, targetReboundScrollTop);
+            // 计算一个目标回弹位置，使其离开底部一段距离 (阈值 + 10px)
+            let targetReboundScrollTop = newScrollHeight - clientHeight - (AppSettings.ui.virtualScrollThreshold + 10);
+            targetReboundScrollTop = Math.max(0, targetReboundScrollTop); // 确保不滚动到负值
+            // 只有当目标回弹位置比当前位置更靠上 (即确实需要向上回弹)，或者加载前就在底部时，才执行回弹
+            if (wasAtBottomBeforeLoad || targetReboundScrollTop > currentScrollTopAfterInitialAdjust) {
+                this.chatBoxEl.scrollTop = targetReboundScrollTop;
+                Utils.log(`ChatAreaUIManager: _loadNewerMessages 执行了滚动回弹。目标 scrollTop: ${targetReboundScrollTop.toFixed(0)}`, Utils.logLevels.DEBUG);
+            }
         }
 
-        this._isLoadingNewerMessages = false;
-
-        // 4. 更新“滚动到最新”按钮状态
+        this._isLoadingNewerMessages = false; // 标记加载结束
+        // 根据是否已加载完所有最新消息，更新“滚动到最新”按钮的显隐状态
         if (this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 1) {
-            this._hideScrollToLatestButton();
+            this._hideScrollToLatestButton(); // 已到最新，隐藏按钮
         } else {
-            this._showScrollToLatestButton();
+            this._showScrollToLatestButton(); // 还有更新的，显示按钮
         }
     },
 
     /**
-     * 在消息列表顶部显示“正在加载”指示器。
      * @private
-     * @function _showLoadingIndicatorAtTop
-     * @returns {void}
+     * 在聊天框顶部显示加载指示器 (通常用于加载更早的消息时)。
      */
     _showLoadingIndicatorAtTop: function () {
+        // 确保聊天框和加载指示器元素都存在
         if (this.chatBoxEl && this._loadingIndicatorEl) {
-            this._loadingIndicatorEl.style.display = 'block';
+            this._loadingIndicatorEl.style.display = 'block'; // 显示指示器
+            // 确保加载指示器是聊天框的第一个子元素
             if (this.chatBoxEl.firstChild !== this._loadingIndicatorEl) {
                 this.chatBoxEl.insertBefore(this._loadingIndicatorEl, this.chatBoxEl.firstChild);
             }
@@ -1090,14 +1223,13 @@ const ChatAreaUIManager = {
     },
 
     /**
-     * 隐藏“正在加载”指示器。
      * @private
-     * @function _hideLoadingIndicator
-     * @returns {void}
+     * 隐藏加载指示器。
      */
     _hideLoadingIndicator: function () {
         if (this._loadingIndicatorEl) {
-            this._loadingIndicatorEl.style.display = 'none';
+            this._loadingIndicatorEl.style.display = 'none'; // 隐藏指示器
+            // 从DOM中移除，而不仅仅是隐藏，以避免影响布局或后续的 firstChild 判断
             if (this._loadingIndicatorEl.parentNode === this.chatBoxEl) {
                 this.chatBoxEl.removeChild(this._loadingIndicatorEl);
             }
@@ -1105,136 +1237,164 @@ const ChatAreaUIManager = {
     },
 
     /**
-     * 处理当前聊天窗口接收到的新消息。
-     * @function handleNewMessageForCurrentChat
-     * @param {object} message - 新的消息对象。
-     * @returns {void}
+     * 处理当前聊天的新消息，将其添加到虚拟滚动列表并显示。
+     * @param {object} message - 新接收到的消息对象。
      */
     handleNewMessageForCurrentChat: function (message) {
-        if (!message || !this.chatBoxEl || this._currentChatId !== ChatManager.currentChatId) return;
+        // 防御性检查：确保聊天框存在，当前有选定的虚拟滚动聊天ID，且该ID与当前活动聊天ID一致
+        if (!this.chatBoxEl || !this._currentChatIdForVirtualScroll || this._currentChatIdForVirtualScroll !== ChatManager.currentChatId) return;
 
-        // 1. 将新消息添加到内部数组
+        // 将新消息添加到内存中的消息数组
         this._allMessagesForCurrentChat.push(message);
 
-        // 2. 判断用户当前是否在底部附近
+        // 判断在添加新消息之前，用户是否已滚动到接近聊天框底部的位置
+        // 阈值设为150px，如果距离底部小于此值，则认为用户正在查看最新消息
         const isNearBottom = this.chatBoxEl.scrollHeight - this.chatBoxEl.scrollTop - this.chatBoxEl.clientHeight < 150;
 
-        // 3. 显示消息
+        // 调用 MessageManager 显示新消息 (false 表示追加到聊天框底部)
         MessageManager.displayMessage(message, false);
 
-        // 4. 根据用户位置决定行为
-        if (isNearBottom) {
-            // 如果在底部，自动滚动到底部
-            this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight;
+        if (isNearBottom) { // 如果用户之前接近底部
+            this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight; // 自动滚动到新的底部，以显示新消息
+            // 更新已渲染的最新消息的索引为新消息的索引
             this._renderedNewestMessageArrayIndex = this._allMessagesForCurrentChat.length - 1;
-            this._hideScrollToLatestButton();
-        } else {
-            // 如果不在底部，显示“滚动到最新”按钮
-            this._showScrollToLatestButton();
+            this._hideScrollToLatestButton(); // 由于已滚动到底部，隐藏“滚动到最新消息”按钮
+        } else { // 如果用户之前不在底部 (例如正在向上查看历史消息)
+            this._showScrollToLatestButton(); // 显示“滚动到最新消息”按钮，提示用户有新消息
         }
 
-        // 确保渲染索引正确更新
+        // 维护 _renderedNewestMessageArrayIndex 的准确性：
+        // 如果在收到这条新消息之前，已渲染的最新消息是数组的倒数第二条
+        // (即 this._allMessagesForCurrentChat.length - 2，因为数组长度刚因新消息增加了1)
+        // 那么现在这条新消息已显示，它就是最新的已渲染消息。
         if (this._renderedNewestMessageArrayIndex === this._allMessagesForCurrentChat.length - 2) {
             this._renderedNewestMessageArrayIndex = this._allMessagesForCurrentChat.length - 1;
         }
     },
 
     /**
-     * 滚动到指定的消息ID，并加载其上下文消息。
-     * @function scrollToMessage
+     * 滚动到指定的消息ID并加载其上下文。
+     * 此方法会处理消息可能在不同聊天中的情况。
      * @param {string} targetMessageId - 目标消息的ID。
-     * @returns {void}
      */
     scrollToMessage: function (targetMessageId) {
-        if (!this._currentChatId || !this.chatBoxEl) {
+        // 如果没有当前聊天或聊天框元素，则提示用户并返回
+        if (!this._currentChatIdForVirtualScroll || !this.chatBoxEl) {
             NotificationUIManager.showNotification("请先打开一个聊天。", "warning");
             return;
         }
 
-        // 检查消息是否在当前聊天中
-        let chatIdForMessage = this._currentChatId;
+        let chatIdForMessage = this._currentChatIdForVirtualScroll; // 默认假设消息在当前聊天中
+        // 检查目标消息是否存在于当前聊天的消息数组中
         let messageExistsInCurrentChat = ChatManager.chats[chatIdForMessage]?.some(m => m.id === targetMessageId);
 
-        // 如果不在，则查找该消息所在的聊天
+        // 如果消息不在当前聊天中，则遍历所有聊天记录查找该消息
         if (!messageExistsInCurrentChat) {
             const foundChatId = Object.keys(ChatManager.chats).find(cid =>
                 ChatManager.chats[cid].some(m => m.id === targetMessageId)
             );
-            if (!foundChatId) {
+            if (foundChatId) { // 如果找到了包含该消息的聊天
+                chatIdForMessage = foundChatId; // 更新为目标消息所在的聊天ID
+            } else { // 如果在所有聊天中都未找到该消息
                 NotificationUIManager.showNotification("未找到目标消息。", "error");
                 return;
             }
-            chatIdForMessage = foundChatId;
         }
 
-        // 如果需要切换聊天，则先切换再滚动
-        if (this._currentChatId !== chatIdForMessage) {
-            Store.dispatch('OPEN_CHAT', { chatId: chatIdForMessage });
+        // 如果目标消息所在的聊天 (chatIdForMessage) 不是当前正在显示的聊天
+        if (this._currentChatIdForVirtualScroll !== chatIdForMessage) {
+            // 调用 ChatManager 打开目标聊天
+            ChatManager.openChat(chatIdForMessage, chatIdForMessage.startsWith('group_') ? 'group' : 'contact');
+            // 延迟执行实际的滚动操作，以等待聊天切换和初始消息渲染完成
             setTimeout(() => {
                 this._performScrollToMessage(targetMessageId);
-            }, 100); // 等待UI切换完成
+            }, 100); // 100ms 延迟，可根据实际情况调整，原150ms，尝试减少
             return;
         }
 
-        // 如果就在当前聊天，直接滚动
+        // 如果目标消息就在当前聊天中，直接执行滚动操作
         this._performScrollToMessage(targetMessageId);
     },
 
     /**
-     * 执行实际的滚动到指定消息的操作。
      * @private
-     * @function _performScrollToMessage
+     * 执行实际的滚动到指定消息的操作。
+     * 此方法假设当前聊天已是包含目标消息的聊天。
      * @param {string} targetMessageId - 目标消息的ID。
-     * @returns {void}
      */
     _performScrollToMessage: function (targetMessageId) {
-        // 处理流程如下：
-        // 1. 重新获取当前聊天的所有消息
-        this._allMessagesForCurrentChat = [...(ChatManager.chats[this._currentChatId] || [])];
+        // 确保使用最新的消息列表副本
+        this._allMessagesForCurrentChat = [...(ChatManager.chats[this._currentChatIdForVirtualScroll] || [])];
+        // 在当前聊天的消息列表中查找目标消息的索引
         const targetMessageIndex = this._allMessagesForCurrentChat.findIndex(msg => msg.id === targetMessageId);
-        if (targetMessageIndex === -1) {
+
+        if (targetMessageIndex === -1) { // 如果在当前聊天中未找到目标消息 (理论上不应发生，因为上层已检查)
             NotificationUIManager.showNotification("在当前聊天中未找到目标消息。", "error");
             return;
         }
 
-        // 2. 清理当前消息列表和虚拟滚动状态
+        // 清空聊天框，准备重新渲染包含目标消息及其上下文的批次
         this.chatBoxEl.innerHTML = '';
-        this._detachScrollListener();
-        this._hideLoadingIndicator();
+        this._detachScrollListener(); // 临时移除滚动监听器，避免在渲染过程中触发不必要的加载
+        this._hideLoadingIndicator(); // 隐藏加载指示器
+        // 重置加载状态标记
         this._isLoadingOlderMessages = false;
         this._isLoadingNewerMessages = false;
 
-        // 3. 计算要渲染的消息窗口（目标消息及其前后若干条消息）
-        let startIndex = Math.max(0, targetMessageIndex - AppSettings.ui.chatContextLoadCount);
-        let endIndex = Math.min(this._allMessagesForCurrentChat.length - 1, targetMessageIndex + AppSettings.ui.chatContextLoadCount);
-        // NOTE: 确保加载的消息数量至少达到一个批次的大小，以提供更好的滚动体验
-        let currentBatchSize = endIndex - startIndex + 1;
-        if (currentBatchSize < AppSettings.ui.chatScrollLoadBatchSize) {
-            const diff = AppSettings.ui.chatScrollLoadBatchSize - currentBatchSize;
-            startIndex = Math.max(0, startIndex - Math.ceil(diff / 2));
-            endIndex = Math.min(this._allMessagesForCurrentChat.length - 1, endIndex + Math.floor(diff / 2));
-        }
+        // 计算要渲染的消息范围 (目标消息及其前后各 CONTEXT_LOAD_COUNT 条消息)
+        let startIndex = Math.max(0, targetMessageIndex - this.CONTEXT_LOAD_COUNT);
+        let endIndex = Math.min(this._allMessagesForCurrentChat.length - 1, targetMessageIndex + this.CONTEXT_LOAD_COUNT);
+        let currentBatchSize = endIndex - startIndex + 1; // 当前计算出的批次大小
 
-        // 4. 渲染计算出的消息批次
+        // 如果计算出的批次大小小于虚拟滚动的标准加载量 (MESSAGES_TO_LOAD_ON_SCROLL)，
+        // 则尝试扩展批次，使其达到标准加载量，以提供更好的滚动体验。
+        if (currentBatchSize < this.MESSAGES_TO_LOAD_ON_SCROLL) {
+            const diff = this.MESSAGES_TO_LOAD_ON_SCROLL - currentBatchSize; // 需要额外加载的数量
+            let extendForward = Math.ceil(diff / 2);  // 尝试向前扩展的数量
+            let extendBackward = Math.floor(diff / 2); // 尝试向后扩展的数量
+
+            const potentialStart = Math.max(0, startIndex - extendForward);
+            const potentialEnd = Math.min(this._allMessagesForCurrentChat.length - 1, endIndex + extendBackward);
+
+            // 调整逻辑：如果扩展后到达了消息列表的任一端，则优先从另一端补齐数量
+            if (potentialStart === 0 && potentialEnd < this._allMessagesForCurrentChat.length - 1) { // 已到顶部，向后扩展满
+                endIndex = Math.min(this._allMessagesForCurrentChat.length - 1, startIndex + (this.MESSAGES_TO_LOAD_ON_SCROLL - 1));
+            } else if (potentialEnd === this._allMessagesForCurrentChat.length - 1 && potentialStart > 0) { // 已到底部，向前扩展满
+                startIndex = Math.max(0, endIndex - (this.MESSAGES_TO_LOAD_ON_SCROLL - 1));
+            } else { // 正常双向扩展
+                startIndex = potentialStart;
+                endIndex = potentialEnd;
+            }
+        }
+        // 再次确保索引不越界
+        startIndex = Math.max(0, startIndex);
+        endIndex = Math.min(this._allMessagesForCurrentChat.length - 1, endIndex);
+
+        // 渲染选定范围的消息
         for (let i = startIndex; i <= endIndex; i++) {
-            MessageManager.displayMessage(this._allMessagesForCurrentChat[i], false);
+            MessageManager.displayMessage(this._allMessagesForCurrentChat[i], false); // false表示追加
         }
-
-        // 5. 更新渲染索引
+        // 更新已渲染消息的边界索引
         this._renderedOldestMessageArrayIndex = startIndex;
         this._renderedNewestMessageArrayIndex = endIndex;
 
-        // 6. 将目标消息滚动到视图中央
+        // 查找目标消息的DOM元素
         const targetElement = this.chatBoxEl.querySelector(`.message[data-message-id="${targetMessageId}"]`);
         if (targetElement) {
+            // 延迟执行滚动，确保DOM元素已完全渲染并计算好布局
             setTimeout(() => {
+                // 将目标消息滚动到视图中央
                 targetElement.scrollIntoView({ behavior: 'auto', block: 'center' });
-                this._lastScrollTop = this.chatBoxEl.scrollTop;
-            }, 50);
+                this._lastScrollTop = this.chatBoxEl.scrollTop; // 更新上次滚动位置的记录
+            }, 50); // 50ms 延迟
+        } else { // 如果目标元素未找到 (异常情况)
+            // 将聊天框滚动到大致中间位置作为后备
+            this.chatBoxEl.scrollTop = this.chatBoxEl.scrollHeight / 2;
+            this._lastScrollTop = this.chatBoxEl.scrollTop;
         }
 
-        // 7. 重新附加滚动监听并更新UI按钮
-        this._attachScrollListener();
+        this._attachScrollListener(); // 重新附加滚动监听器
+        // 根据是否还有未加载的最新消息，决定是否显示“滚动到最新消息”按钮
         if (this._renderedNewestMessageArrayIndex < this._allMessagesForCurrentChat.length - 1) {
             this._showScrollToLatestButton();
         } else {
@@ -1243,116 +1403,125 @@ const ChatAreaUIManager = {
     },
 
     /**
-     * 滚动到指定日期的第一条消息。
-     * @function scrollToDate
-     * @param {string} chatId - 聊天的ID。
-     * @param {string} dateString - 日期字符串 (格式: YYYY-MM-DD)。
-     * @returns {void}
+     * 新增：滚动到指定日期的第一条消息。
+     * @param {string} chatId - 聊天ID。
+     * @param {string} dateString - YYYY-MM-DD格式的日期字符串。
      */
     scrollToDate: function(chatId, dateString) {
-        if (!this._currentChatId || !this.chatBoxEl) {
+        Utils.log(`ChatAreaUIManager: scrollToDate 调用， chatId: ${chatId}, date: ${dateString}`, Utils.logLevels.DEBUG);
+        // 如果没有当前聊天或聊天框元素，则提示用户并返回
+        if (!this._currentChatIdForVirtualScroll || !this.chatBoxEl) {
             NotificationUIManager.showNotification("请先打开一个聊天。", "warning");
             return;
         }
 
-        // 如果需要，先切换到目标聊天
-        if (this._currentChatId !== chatId) {
-            Store.dispatch('OPEN_CHAT', { chatId: chatId });
+        let targetChatId = chatId;
+        // 检查是否需要切换聊天：如果请求的 chatId 与当前显示的聊天不同
+        if (this._currentChatIdForVirtualScroll !== targetChatId) {
+            // 调用 ChatManager 打开目标聊天
+            ChatManager.openChat(targetChatId, targetChatId.startsWith('group_') ? 'group' : 'contact');
+            // 延迟执行实际的滚动到日期操作，以等待聊天切换和初始消息渲染完成
             setTimeout(() => {
-                this._performScrollToDate(chatId, dateString);
-            }, 100);
+                this._performScrollToDate(targetChatId, dateString);
+            }, 100); // 100ms 延迟，原150ms，尝试减少
             return;
         }
-
-        this._performScrollToDate(chatId, dateString);
+        // 如果目标日期所在的聊天已是当前聊天，直接执行滚动到日期操作
+        this._performScrollToDate(targetChatId, dateString);
     },
 
     /**
-     * 执行实际的滚动到指定日期的操作。
      * @private
-     * @function _performScrollToDate
-     * @param {string} chatId - 聊天的ID。
-     * @param {string} dateString - 日期字符串 (格式: YYYY-MM-DD)。
-     * @returns {void}
+     * 执行实际的滚动到指定日期第一条消息的操作。
+     * @param {string} chatId - 聊天ID。
+     * @param {string} dateString - YYYY-MM-DD格式的日期字符串。
      */
     _performScrollToDate: function(chatId, dateString) {
-        // 1. 获取该聊天的所有消息
+        // 确保使用最新的消息列表副本
         this._allMessagesForCurrentChat = [...(ChatManager.chats[chatId] || [])];
-        let firstMessageOfDate = null;
+        let firstMessageOfDate = null; // 用于存储找到的当天第一条消息
 
-        // 2. 计算目标日期的起止时间戳
-        const targetDate = new Date(dateString + "T00:00:00.000Z");
-        const targetDateStart = targetDate.getTime();
-        targetDate.setUTCDate(targetDate.getUTCDate() + 1);
-        const targetDateEnd = targetDate.getTime() - 1;
+        // 将目标日期字符串 (YYYY-MM-DD) 转换为当天的开始和结束时间戳 (UTC)
+        // 消息时间戳通常是ISO格式，可以方便地转换为UTC毫秒数进行比较
+        const targetDate = new Date(dateString + "T00:00:00.000Z"); // 指定日期当天的 UTC 午夜零点
+        const targetDateStart = targetDate.getTime(); // 当天开始的毫秒数 (UTC)
+        targetDate.setUTCDate(targetDate.getUTCDate() + 1); // 将日期对象移到下一天
+        const targetDateEnd = targetDate.getTime() -1; // 下一天开始的前一毫秒，即指定日期的最后一毫秒 (UTC)
 
-        // 3. 遍历消息，查找在时间范围内的第一条消息
+        // 遍历当前聊天的所有消息，查找在指定日期范围内的第一条消息
         for (let i = 0; i < this._allMessagesForCurrentChat.length; i++) {
             const msg = this._allMessagesForCurrentChat[i];
+            // 跳过正在发送中 (isThinking) 或已撤回 (isRetracted) 的消息
+            if (msg.isThinking || msg.isRetracted) continue;
+            // 将消息的时间戳 (通常是ISO字符串) 转换为毫秒数进行比较
             const msgTimestamp = new Date(msg.timestamp).getTime();
+            // 如果消息时间戳在目标日期的开始和结束时间戳之间
             if (msgTimestamp >= targetDateStart && msgTimestamp <= targetDateEnd) {
-                firstMessageOfDate = msg;
-                break;
+                firstMessageOfDate = msg; // 找到了当天的第一条消息
+                break; // 停止查找
             }
         }
 
-        // 4. 如果找到，则调用 scrollToMessage 进行跳转
-        if (firstMessageOfDate) {
-            Utils.log(`正在滚动到 ${dateString} 的第一条消息, ID: ${firstMessageOfDate.id}`, Utils.logLevels.DEBUG);
-            this._performScrollToMessage(firstMessageOfDate.id);
-        } else {
+        if (!firstMessageOfDate) { // 如果未找到指定日期的任何消息
             NotificationUIManager.showNotification(`日期 ${dateString} 没有消息。`, "info");
+            return;
         }
+
+        Utils.log(`正在滚动到 ${dateString} 的第一条消息, ID: ${firstMessageOfDate.id}`, Utils.logLevels.DEBUG);
+        // 复用现有的 `_performScrollToMessage` 逻辑，通过找到的消息ID来滚动到该消息及其上下文
+        this._performScrollToMessage(firstMessageOfDate.id);
     },
 
     /**
-     * 显示“滚动到最新消息”按钮。
      * @private
-     * @function _showScrollToLatestButton
-     * @returns {void}
+     * 显示“滚动到最新消息”按钮。
+     * 此按钮通常在用户向上滚动查看历史消息，且有未显示的更新消息时出现。
      */
     _showScrollToLatestButton: function () {
+        // 确保聊天框及其父元素存在
         if (!this.chatBoxEl || !this.chatBoxEl.parentElement) return;
+
+        // 如果按钮元素尚未创建，则创建它
         if (!this._scrollToLatestBtnEl) {
-            // 如果按钮不存在，则创建并附加到DOM
             this._scrollToLatestBtnEl = document.createElement('button');
-            this._scrollToLatestBtnEl.id = 'scrollToLatestBtn';
-            this._scrollToLatestBtnEl.className = 'scroll-to-latest-btn';
-            this._scrollToLatestBtnEl.innerHTML = '▼';
-            this._scrollToLatestBtnEl.title = '滚动到最新消息';
+            this._scrollToLatestBtnEl.id = 'scrollToLatestBtn'; // 设置ID
+            this._scrollToLatestBtnEl.className = 'scroll-to-latest-btn'; // 设置CSS类名
+            this._scrollToLatestBtnEl.innerHTML = '▼'; // 按钮内显示的图标或文本
+            this._scrollToLatestBtnEl.title = '滚动到最新消息'; // 鼠标悬停提示
+            // 绑定点击事件，调用 scrollToLatestMessages 方法
             this._scrollToLatestBtnEl.onclick = this.scrollToLatestMessages.bind(this);
+            // 将按钮添加到聊天框的父容器中 (通常是包含聊天框和输入区的区域)
             this.chatBoxEl.parentElement.appendChild(this._scrollToLatestBtnEl);
         }
+        // 显示按钮 (使用 flex 布局可以方便地垂直居中按钮内的图标/文本)
         this._scrollToLatestBtnEl.style.display = 'flex';
     },
 
     /**
-     * 隐藏“滚动到最新消息”按钮。
      * @private
-     * @function _hideScrollToLatestButton
-     * @returns {void}
+     * 隐藏“滚动到最新消息”按钮。
+     * 当用户已滚动到聊天底部，或没有更多新消息时调用。
      */
     _hideScrollToLatestButton: function () {
-        if (this._scrollToLatestBtnEl) {
-            this._scrollToLatestBtnEl.style.display = 'none';
+        if (this._scrollToLatestBtnEl) { // 如果按钮元素存在
+            this._scrollToLatestBtnEl.style.display = 'none'; // 隐藏按钮
         }
     },
 
     /**
-     * 滚动到最新的消息列表。
-     * @function scrollToLatestMessages
-     * @returns {void}
+     * 滚动到最新的消息。
+     * 用户点击“滚动到最新消息”按钮时调用此方法。
      */
     scrollToLatestMessages: function () {
-        if (!this.chatBoxEl) return;
-
-        // 重置虚拟滚动状态，并重新渲染初始（最新）的消息批次
-        this._detachScrollListener();
+        Utils.log("ChatAreaUIManager: 滚动到最新消息...", Utils.logLevels.DEBUG);
+        if (!this.chatBoxEl) return; // 添加检查，确保 chatBoxEl 存在
+        this._detachScrollListener(); // 临时移除滚动监听器
+        // 重置加载状态标记
         this._isLoadingOlderMessages = false;
         this._isLoadingNewerMessages = false;
-        this._renderInitialMessageBatch();
-        this._lastScrollTop = this.chatBoxEl.scrollTop;
-        this._attachScrollListener();
-        this._hideScrollToLatestButton();
+        this._renderInitialMessageBatch(); // 重新渲染最新的消息批次 (这将自动滚动到底部)
+        this._lastScrollTop = this.chatBoxEl.scrollTop; // 更新上次滚动位置的记录
+        this._attachScrollListener(); // 重新附加滚动监听器
+        this._hideScrollToLatestButton(); // 操作完成后隐藏按钮
     }
 };
