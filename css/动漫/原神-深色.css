@@ -73,6 +73,17 @@
     --box-shadow-md: 0 3px 6px -1px rgba(var(--gi-dark-black-rgb), 0.3);
     --box-shadow-lg: 0 0 40px rgba(var(--gi-dark-black-rgb), 0.3), 0 0 0 1px rgba(var(--gi-dark-gold-primary-rgb), 0.1);
 }
+/* ------------------------- 🌍 全局与基础样式 ------------------------ */
+body {
+    background-color: rgb(var(--gi-dark-night-deep-rgb));
+    background-image:
+        /* Golden constellation glow */
+            radial-gradient(ellipse at top right, rgba(var(--gi-dark-gold-primary-rgb), 0.1) 0%, transparent 60%),
+                /* Faint Dendro nebula */
+            radial-gradient(circle at bottom left, rgba(var(--gi-dark-dendro-rgb), 0.05) 0%, transparent 50%),
+                /* Deep night sky depth */
+            linear-gradient(to bottom, rgb(var(--gi-dark-night-medium-rgb)), rgb(var(--gi-dark-night-deep-rgb)));
+}
 
 /*
 ================================================================================

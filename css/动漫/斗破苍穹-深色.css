@@ -84,13 +84,14 @@
 ================================================================================
 */
 body {
-    background-color: var(--chat-bg-color);
+    background-color: rgb(var(--dq-dark-nightsky-black-rgb));
     background-image:
-            radial-gradient(ellipse at center, rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.12) 0%, transparent 75%),
-            linear-gradient(to bottom right, rgba(var(--dq-dark-nightsky-black-rgb), 0.9), rgba(var(--dq-dark-obsidian-panel-rgb), 0.8)),
-            radial-gradient(ellipse at top right, rgba(var(--dq-dark-soul-purple-rgb), 0.15) 0%, transparent 60%),
-            radial-gradient(ellipse at bottom left, rgba(var(--dq-dark-demonic-cyan-flame-rgb), 0.1) 0%, transparent 70%);
-    background-blend-mode: overlay, normal, soft-light, soft-light;
+        /* Heavenly Flame aura */
+            radial-gradient(ellipse at top right, rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.15) 0%, transparent 60%),
+                /* Soul Purple energy */
+            radial-gradient(ellipse at bottom left, rgba(var(--dq-dark-soul-purple-rgb), 0.12) 0%, transparent 70%),
+                /* Demonic Cyan Flame hint */
+            radial-gradient(circle at top left, rgba(var(--dq-dark-demonic-cyan-flame-rgb), 0.08) 0%, transparent 50%);
 }
 
 .app-container {

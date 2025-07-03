@@ -455,10 +455,8 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background-color: var(--loading-overlay-bg);
+    background-color: var(--chat-bg-color);
     color: var(--text-color-inverted);
-    opacity: 0;
-    visibility: hidden;
     transition: opacity var(--transition-duration-slow) ease-in-out, visibility 0s linear var(--transition-duration-slow);
 }
 

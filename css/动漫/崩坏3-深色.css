@@ -75,13 +75,14 @@
 
 /* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    font-family: var(--font-family-base);
-    background-color: var(--chat-bg-color);
-    color: rgb(var(--text-primary-rgb));
+    background-color: rgb(var(--hi3-deep-space-bg-rgb));
     background-image:
-            linear-gradient(rgba(var(--hi3-tech-border-rgb), 0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(var(--hi3-tech-border-rgb), 0.03) 1px, transparent 1px);
-    animation: hi3-scanlines 60s linear infinite;
+        /* Cyan energy stream glow */
+            radial-gradient(ellipse at top left, rgba(var(--hi3-energy-stream-cyan-rgb), 0.12) 0%, transparent 50%),
+                /* Herrscher purple void rift */
+            radial-gradient(ellipse at bottom right, rgba(var(--hi3-herrscher-purple-rgb), 0.1) 0%, transparent 60%),
+                /* Deep space backdrop */
+            linear-gradient(135deg, rgb(var(--hi3-deep-space-bg-rgb)), rgb(var(--hi3-void-panel-bg-rgb)));
 }
 
 @keyframes hi3-scanlines {

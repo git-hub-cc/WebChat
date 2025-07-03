@@ -79,11 +79,14 @@
 
 /* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    background:
-            linear-gradient(135deg, rgba(var(--dq-light-misty-scroll-bg-rgb),0.95), rgba(var(--dq-light-ancient-jade-panel-rgb),0.85)),
+    background-color: rgb(var(--dq-light-misty-scroll-bg-rgb));
+    background-image:
+        /* Green Lotus Flame aura */
             radial-gradient(ellipse at top left, rgba(var(--dq-light-qinglian-flame-rgb),0.15) 0%, transparent 60%),
-            radial-gradient(ellipse at bottom right, rgba(var(--dq-light-luminous-gold-rgb),0.1) 0%, transparent 70%);
-    background-blend-mode: normal, soft-light, soft-light;
+                /* Luminous Gold Dou Qi glow */
+            radial-gradient(ellipse at bottom right, rgba(var(--dq-light-luminous-gold-rgb),0.1) 0%, transparent 70%),
+                /* Ancient scroll texture */
+            linear-gradient(135deg, rgba(var(--dq-light-misty-scroll-bg-rgb),0.95), rgba(var(--dq-light-ancient-jade-panel-rgb),0.85));
 }
 
 ::-webkit-scrollbar-track {

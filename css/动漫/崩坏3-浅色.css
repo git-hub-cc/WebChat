@@ -86,11 +86,14 @@
 
 /* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    background-color: rgb(var(--surface-1-rgb));
+    background-color: rgb(var(--hi3-control-deck-panel-rgb));
     background-image:
-            radial-gradient(circle at 1px 1px, rgba(var(--border-subtle-rgb), 0.3) 1px, transparent 0),
-            radial-gradient(circle at 15px 15px, rgba(var(--border-subtle-rgb), 0.3) 1px, transparent 0);
-    background-size: 30px 30px;
+        /* Tech Blue Glow from a corner UI */
+            radial-gradient(ellipse at top left, rgba(var(--hi3-tech-blue-rgb), 0.15) 0%, transparent 60%),
+                /* Valkyrie Orange subtle highlight */
+            radial-gradient(ellipse at bottom right, rgba(var(--hi3-valkyrie-orange-rgb), 0.08) 0%, transparent 70%),
+                /* Base clean gradient */
+            linear-gradient(to bottom, rgb(var(--hi3-hyperion-hull-bg-rgb)), rgb(var(--hi3-control-deck-panel-rgb)));
 }
 
 ::-webkit-scrollbar-track { background: rgba(var(--surface-1-rgb), 0.8); }
