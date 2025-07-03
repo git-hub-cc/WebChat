@@ -135,6 +135,7 @@ body {
 .chat-header-main.character-active.AI_Paimon_原神 .chat-title-main, .details-panel.character-active.AI_Paimon_原神 #detailsName { color: var(--paimon-accent); }
 .message.received.character-message.AI_Paimon_原神 { background: var(--paimon-msg-bg); border-color: var(--paimon-accent); }
 .message.received.character-message.AI_Paimon_原神 .message-sender { color: var(--paimon-accent); }
+.message .timestamp { color: var(--text-color); }
 
 
 /* --- ⚖️ Zhongli - 钟离 --- */

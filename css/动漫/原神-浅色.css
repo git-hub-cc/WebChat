@@ -133,6 +133,7 @@ body {
 .chat-header-main.character-active.AI_Template .chat-title-main, .details-panel.character-active.AI_Template #detailsName { color: var(--template-avatar-bg); }
 .message.received.character-message.AI_Template { background: var(--template-msg-bg); border-color: var(--template-accent); }
 .message.received.character-message.AI_Template .message-sender { color: var(--template-avatar-bg); }
+.message .timestamp { color: var(--text-color); }
 
 
 /* --- 💠 Paimon - 派蒙 --- */
