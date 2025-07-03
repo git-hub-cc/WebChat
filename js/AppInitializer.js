@@ -125,61 +125,6 @@ const AppInitializer = {
         } catch (error) {
             Utils.log(`应用初始化失败: ${error.stack || error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification('应用初始化失败，部分功能可能无法使用。', 'error');
-
-            // --- 回退模式初始化 ---
-            if (!UserManager.userId) {
-                UserManager.userId = Utils.generateId(8);
-                UserManager.userSettings.autoConnectEnabled = false;
-                const userIdEl = document.getElementById('modalUserIdValue');
-                if(userIdEl) userIdEl.textContent = UserManager.userId;
-            }
-
-            // ADDED: Fallback initialization for MemoryBookManager
-            if (typeof MemoryBookManager !== 'undefined' && typeof MemoryBookManager.init === 'function') {
-                await MemoryBookManager.init().catch(err => Utils.log(`回退模式下 MemoryBookManager 初始化失败: ${err}`, Utils.logLevels.ERROR));
-            }
-
-            // ... (rest of the fallback initializations)
-            if (typeof ModalUIManager !== 'undefined' && ModalUIManager.init) ModalUIManager.init();
-            if (typeof SettingsUIManager !== 'undefined' && SettingsUIManager.init) SettingsUIManager.init();
-            if (typeof LayoutUIManager !== 'undefined' && LayoutUIManager.init) LayoutUIManager.init();
-            if (typeof ChatAreaUIManager !== 'undefined' && ChatAreaUIManager.init) ChatAreaUIManager.init();
-            if (typeof SidebarUIManager !== 'undefined' && SidebarUIManager.init) SidebarUIManager.init();
-            if (typeof DetailsPanelUIManager !== 'undefined' && DetailsPanelUIManager.init) DetailsPanelUIManager.init();
-            if (typeof ResourcePreviewUIManager !== 'undefined' && ResourcePreviewUIManager.init) ResourcePreviewUIManager.init();
-            if (typeof VideoCallUIManager !== 'undefined' && VideoCallUIManager.init) VideoCallUIManager.init();
-            if (typeof MediaUIManager !== 'undefined' && MediaUIManager.init) MediaUIManager.init();
-            if (typeof PeopleLobbyManager !== 'undefined' && PeopleLobbyManager.init) PeopleLobbyManager.init();
-            if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
-                ScreenshotEditorUIManager.init();
-            }
-            if (typeof CharacterCardManager !== 'undefined' && CharacterCardManager.init) CharacterCardManager.init();
-
-            if (typeof this.refreshNetworkStatusUI === 'function') await this.refreshNetworkStatusUI();
-            if (typeof this.startNetworkMonitoring === 'function') this.startNetworkMonitoring();
-            if (typeof MediaManager !== 'undefined' && typeof MediaManager.initVoiceRecording === 'function') MediaManager.initVoiceRecording();
-            if (typeof VideoCallManager !== 'undefined' && typeof VideoCallManager.init === 'function') VideoCallManager.init();
-            if (typeof this.setupCoreEventListeners === 'function') this.setupCoreEventListeners();
-            if (typeof this.smartBackToChatList === 'function') this.smartBackToChatList();
-
-            if (typeof ConnectionManager !== 'undefined' && typeof ConnectionManager.initialize === 'function') {
-                const cmInitPromiseFallback = ConnectionManager.initialize();
-                if (cmInitPromiseFallback && typeof cmInitPromiseFallback.catch === 'function') {
-                    cmInitPromiseFallback.catch(wsError => {
-                        Utils.log(`AppInitializer (fallback): WebSocket 连接尝试失败: ${wsError.message || wsError}`, Utils.logLevels.WARN);
-                    });
-                } else {
-                    Utils.log('AppInitializer (fallback): ConnectionManager.initialize() did not return a valid Promise.', Utils.logLevels.WARN);
-                }
-            }
-
-            const loadingOverlay = document.getElementById('loadingOverlay');
-            if (loadingOverlay && loadingOverlay.style.display !== 'none') {
-                loadingOverlay.style.display = 'none';
-                if (typeof ModalUIManager !== 'undefined' && ModalUIManager.showOpenSourceInfoModal) {
-                    ModalUIManager.showOpenSourceInfoModal();
-                }
-            }
         }
     },
 
