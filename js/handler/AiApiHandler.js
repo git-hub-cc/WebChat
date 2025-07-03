@@ -120,7 +120,6 @@ const AiApiHandler = {
         }
     },
 
-    // --- ADDED: THE MISSING FUNCTION ---
     /**
      * NEW: Sends a conversation transcript to the AI to extract key elements.
      * @param {Array<string>} elements - The list of key elements to extract.
@@ -149,25 +148,28 @@ ${conversationTranscript}
         const requestBody = {
             model: effectiveConfig.model,
             messages: [{ role: "user", content: prompt }],
-            stream: false, // This is a single, non-streaming request
+            stream: true, // UNIFIED: Using streaming for all calls
             temperature: 0.1,
             max_tokens: 1024
         };
 
-        const response = await fetch(effectiveConfig.apiEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
-            body: JSON.stringify(requestBody)
+        // Use a promise to collect the streamed response
+        return new Promise(async (resolve, reject) => {
+            try {
+                await Utils.fetchApiStream(
+                    effectiveConfig.apiEndpoint,
+                    requestBody,
+                    { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                    () => {}, // onChunkReceived - we don't need to process individual chunks here
+                    (finalContent) => { // onStreamEnd - this gives us the full text
+                        resolve(finalContent);
+                    }
+                );
+            } catch (error) {
+                reject(error);
+            }
         });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`记忆提取请求失败: ${response.status} - ${errorText.substring(0, 100)}`);
-        }
-        const result = await response.json();
-        return result.choices[0].message.content;
     },
-    // --- END OF ADDED FUNCTION ---
 
     sendAiMessage: async function(targetId, contact, messageText) {
         const chatBox = document.getElementById('chatBox');
@@ -205,6 +207,8 @@ ${conversationTranscript}
                     body: JSON.stringify(analysisRequestBody)
                 });
                 if (!analysisResponse.ok) throw new Error(`MCP分析请求失败: ${analysisResponse.status}`);
+
+                // --- FIX START: Robust JSON parsing for MCP analysis ---
                 const rawTextResult = await analysisResponse.text();
                 let jsonStringResult = rawTextResult.trim();
                 if (jsonStringResult.startsWith('data: ')) {
@@ -219,6 +223,8 @@ ${conversationTranscript}
                     jsonStringResult = jsonStringResult.substring(firstBraceIndex, lastBraceIndex + 1);
                 }
                 const analysisResult = JSON.parse(jsonStringResult);
+                // --- FIX END ---
+
                 const aiContent = analysisResult.choices[0].message.content;
                 let toolCall;
                 try {
