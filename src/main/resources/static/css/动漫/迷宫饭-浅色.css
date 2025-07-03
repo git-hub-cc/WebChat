@@ -73,10 +73,14 @@
 
 /* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    background: linear-gradient(135deg, rgba(var(--mgf-parchment-bg-rgb),0.9), rgba(var(--mgf-light-stone-panel-rgb),0.8)),
-    radial-gradient(ellipse at top left, rgba(var(--mgf-fresh-herb-green-rgb),0.1) 0%, transparent 50%),
-    radial-gradient(ellipse at bottom right, rgba(var(--mgf-cooked-food-brown-rgb),0.08) 0%, transparent 60%);
-    background-blend-mode: normal, overlay, overlay;
+    background-color: rgb(var(--mgf-parchment-bg-rgb));
+    background-image:
+        /* Warm kitchen/torch light */
+            radial-gradient(ellipse at top, rgba(var(--mgf-cooked-food-brown-rgb), 0.12) 0%, transparent 70%),
+                /* Hint of fresh herbs */
+            radial-gradient(ellipse at bottom, rgba(var(--mgf-fresh-herb-green-rgb), 0.08) 0%, transparent 60%),
+                /* Parchment and stone texture */
+            linear-gradient(to bottom, rgb(var(--mgf-parchment-bg-rgb)), rgb(var(--mgf-light-stone-panel-rgb)));
 }
 
 ::-webkit-scrollbar-track { background: rgba(var(--mgf-light-stone-panel-rgb), 0.6); border-radius: var(--border-radius-md); }

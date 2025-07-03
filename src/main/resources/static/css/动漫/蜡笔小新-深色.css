@@ -95,7 +95,14 @@
 
 /* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    background-color: var(--chat-bg-color);
+    background-color: rgb(var(--cs-night-teal-bg-rgb));
+    background-image:
+        /* Orange crayon moon/planet */
+            radial-gradient(circle at top right, rgba(var(--cs-sunny-orange-rgb), 0.15) 0%, transparent 50%),
+                /* Purple dream nebula */
+            radial-gradient(ellipse at bottom left, rgba(var(--cs-funky-purple-rgb), 0.1) 0%, transparent 60%),
+                /* Night sky depth */
+            linear-gradient(135deg, rgb(var(--cs-night-teal-bg-rgb)), rgb(var(--cs-playtime-blue-panel-rgb)));
 }
 
 ::-webkit-scrollbar-track {

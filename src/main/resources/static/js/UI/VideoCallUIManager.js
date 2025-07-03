@@ -4,6 +4,7 @@
  *              包括本地/远程视频的显示、通话控制按钮的更新，以及画中画 (PiP) 模式的 UI 和拖动功能。
  *              现在能显示五级音频质量状态。
  *              FIX: 修复了 PiP 窗口拖动时因位置计算不当导致的偏移（跳跃）问题。
+ *              FIXED: 修复了 togglePipMode 函数逻辑，确保其能正确进入画中画模式。
  * @module VideoCallUIManager
  * @exports {object} VideoCallUIManager - 对外暴露的单例对象，包含管理视频通话 UI 的方法。
  */
@@ -99,7 +100,7 @@ const VideoCallUIManager = {
      * 更新音频质量指示器。
      */
     _updateAudioQualityDisplay: function(data) {
-        if (!this.audioQualityIndicatorEl || !VideoCallManager.isCallActive || VideoCallManager.currentPeerId !== data.peerId) {
+        if (!this.audioQualityIndicatorEl || !VideoCallManager.state.isCallActive || VideoCallManager.state.currentPeerId !== data.peerId) {
             return;
         }
         const qualityText = data.profileName || `等级 ${data.profileIndex}`;
@@ -127,10 +128,10 @@ const VideoCallUIManager = {
         }
         if (callState.isCallActive) {
             this.showCallContainer(true);
-            if (this.audioQualityIndicatorEl && VideoCallManager.currentPeerId) {
-                const currentProfileIndex = VideoCallManager._currentAudioProfileIndex[VideoCallManager.currentPeerId] !== undefined ? VideoCallManager._currentAudioProfileIndex[VideoCallManager.currentPeerId] : AppSettings.adaptiveAudioQuality.initialProfileIndex;
+            if (this.audioQualityIndicatorEl && VideoCallManager.state.currentPeerId && typeof VideoCallManager._currentAudioProfileIndex !== 'undefined') {
+                const currentProfileIndex = VideoCallManager._currentAudioProfileIndex[VideoCallManager.state.currentPeerId] !== undefined ? VideoCallManager._currentAudioProfileIndex[VideoCallManager.state.currentPeerId] : AppSettings.adaptiveAudioQuality.initialProfileIndex;
                 const profile = AppSettings.adaptiveAudioQuality.audioQualityProfiles[currentProfileIndex];
-                this._updateAudioQualityDisplay({ peerId: VideoCallManager.currentPeerId, profileName: profile ? profile.levelName : "未知", profileIndex: currentProfileIndex, description: profile ? profile.description : "未知状态" });
+                this._updateAudioQualityDisplay({ peerId: VideoCallManager.state.currentPeerId, profileName: profile ? profile.levelName : "未知", profileIndex: currentProfileIndex, description: profile ? profile.description : "未知状态" });
             }
         } else {
             this.showCallContainer(false);
@@ -146,20 +147,23 @@ const VideoCallUIManager = {
             this.callContainer.classList.remove('screen-sharing-mode');
             this.callContainer.classList.toggle('audio-only-mode', callState.isAudioOnly);
         }
+
+        // This line is now the single source of truth for the pip-mode class
         this.callContainer.classList.toggle('pip-mode', this.isPipMode && callState.isCallActive);
-        const showLocalVideo = VideoCallManager.localStream && !callState.isAudioOnly && callState.isVideoEnabled;
+
+        const showLocalVideo = callState.localStream && !callState.isAudioOnly && callState.isVideoEnabled;
         if (callState.isScreenSharing) {
-            if (VideoCallManager.isCaller) {
+            if (callState.isCaller) {
                 this.localVideo.style.display = 'none';
                 this.localVideo.srcObject = null;
             } else {
                 this.localVideo.style.display = showLocalVideo ? 'block' : 'none';
-                if(showLocalVideo) this.localVideo.srcObject = VideoCallManager.localStream;
+                if(showLocalVideo) this.localVideo.srcObject = callState.localStream;
                 else this.localVideo.srcObject = null;
             }
         } else {
             this.localVideo.style.display = showLocalVideo ? 'block' : 'none';
-            if(showLocalVideo) this.localVideo.srcObject = VideoCallManager.localStream;
+            if(showLocalVideo) this.localVideo.srcObject = callState.localStream;
             else this.localVideo.srcObject = null;
         }
         const currentRemoteStream = this.remoteVideo.srcObject;
@@ -182,7 +186,7 @@ const VideoCallUIManager = {
             this.pipButton.innerHTML = this.isPipMode ? '↗️' : '↙️';
             this.pipButton.title = this.isPipMode ? '最大化视频' : '最小化视频 (画中画)';
         }
-        const disableCameraToggle = callState.isAudioOnly || (callState.isScreenSharing && VideoCallManager.isCaller);
+        const disableCameraToggle = callState.isAudioOnly || (callState.isScreenSharing && callState.isCaller);
         this.cameraBtn.style.display = disableCameraToggle ? 'none' : 'inline-block';
         if (!disableCameraToggle) {
             this.cameraBtn.innerHTML = callState.isVideoEnabled ? '📹' : '🚫';
@@ -223,13 +227,18 @@ const VideoCallUIManager = {
     },
 
     /**
-     * 切换画中画 (PiP) 模式。
+     * FIX: 切换画中画 (PiP) 模式，简化逻辑。
      */
     togglePipMode: function () {
-        if (!VideoCallManager.isCallActive || !this.callContainer) return;
-        this.isPipMode = !this.isPipMode;
-        this.callContainer.classList.toggle('pip-mode', this.isPipMode);
+        if (!VideoCallManager.state.isCallActive || !this.callContainer) {
+            Utils.log(`无法切换PiP模式: 通话未激活 (${VideoCallManager.state.isCallActive}) 或容器不存在。`, Utils.logLevels.WARN);
+            return;
+        }
 
+        // 1. 改变状态
+        this.isPipMode = !this.isPipMode;
+
+        // 2. 根据新状态处理UI逻辑
         if (this.isPipMode) {
             this.initPipDraggable(this.callContainer);
             const lastLeft = this.callContainer.dataset.pipLeft;
@@ -246,17 +255,15 @@ const VideoCallUIManager = {
             this.removePipDraggable(this.callContainer);
             if (this.callContainer.style.left && this.callContainer.style.left !== 'auto') this.callContainer.dataset.pipLeft = this.callContainer.style.left;
             if (this.callContainer.style.top && this.callContainer.style.top !== 'auto') this.callContainer.dataset.pipTop = this.callContainer.style.top;
-            this.callContainer.style.left = ''; this.callContainer.style.top = '';
-            this.callContainer.style.right = ''; this.callContainer.style.bottom = '';
+            this.callContainer.style.left = '';
+            this.callContainer.style.top = '';
+            this.callContainer.style.right = '';
+            this.callContainer.style.bottom = '';
             this.callContainer.style.transform = '';
         }
-        this.updateUIForCallState({
-            isCallActive: VideoCallManager.isCallActive,
-            isAudioOnly: VideoCallManager.isAudioOnly,
-            isScreenSharing: VideoCallManager.isScreenSharing,
-            isVideoEnabled: VideoCallManager.isVideoEnabled,
-            isAudioMuted: VideoCallManager.isAudioMuted,
-        });
+
+        // 3. 调用统一的UI更新函数，它会处理 .pip-mode 类的添加/移除
+        this.updateUIForCallState(VideoCallManager.state);
     },
 
     /**
@@ -289,7 +296,7 @@ const VideoCallUIManager = {
      */
     dragStart: function (e) {
         if (e.target.closest('.video-call-button') || e.target.id === 'audioQualityIndicator') return;
-        if (!this.isPipMode || !VideoCallManager.isCallActive || !this.callContainer) return;
+        if (!this.isPipMode || !VideoCallManager.state.isCallActive || !this.callContainer) return;
 
         e.preventDefault();
 

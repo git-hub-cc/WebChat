@@ -510,13 +510,13 @@ const ModalUIManager = {
             const newAcceptBtn = acceptBtn.cloneNode(true);
             acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
             acceptBtn = newAcceptBtn;
-            acceptBtn.addEventListener('click', () => VideoCallManager.acceptCall());
+            acceptBtn.addEventListener('click', () => VideoCallHandler.acceptCall());
         }
         if(rejectBtn) {
             const newRejectBtn = rejectBtn.cloneNode(true);
             rejectBtn.parentNode.replaceChild(newRejectBtn, rejectBtn);
             rejectBtn = newRejectBtn;
-            rejectBtn.addEventListener('click', () => VideoCallManager.rejectCall());
+            rejectBtn.addEventListener('click', () => VideoCallHandler.rejectCall());
         }
 
         this.videoCallRequestModal.style.display = 'flex';

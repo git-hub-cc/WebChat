@@ -2,6 +2,7 @@
  * @file WebSocketManager.js
  * @description 管理与信令服务器的 WebSocket 通信。
  *              负责连接、断开、重连、心跳以及原始信令消息的发送和接收。
+ *              MODIFIED: 增强了离线和连接失败时的用户引导，提示用户可使用手动连接功能。
  * @module WebSocketManager
  * @exports {object} WebSocketManager
  * @dependencies Utils, AppSettings, LayoutUIManager, EventEmitter, TimerManager
@@ -30,9 +31,31 @@ const WebSocketManager = {
 
     /**
      * 连接到 WebSocket 信令服务器。
+     * MODIFIED: 增加了对 file:// 协议的检查，以支持本地离线使用。
      * @returns {Promise<void>}
      */
     connect: function() {
+        // --- MODIFICATION START: Handle local file execution ---
+        // 如果应用作为本地HTML文件运行，则信令服务不可用，直接提示用户。
+        if (window.location.protocol === 'file:') {
+            const localFileMessage = '正从本地文件运行，信令服务不可用。请使用“菜单”>“高级功能”中的手动连接。';
+            Utils.log('WebSocketManager: ' + localFileMessage, Utils.logLevels.WARN);
+            LayoutUIManager.updateConnectionStatusIndicator('离线模式 (本地文件)');
+            NotificationUIManager.showNotification(localFileMessage, 'warning', 15000); // 持续15秒
+
+            // 立即以失败状态结束，避免应用挂起等待连接。
+            // 确保依赖此Promise的后续操作（如自动连接）不会执行。
+            const oldStatus = this.isWebSocketConnected;
+            this.isWebSocketConnected = false;
+            if (typeof this._onStatusChangeHandler === 'function' && oldStatus) {
+                this._onStatusChangeHandler(false);
+            }
+            if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
+
+            return Promise.reject(new Error('Cannot connect to WebSocket from file:// protocol.'));
+        }
+        // --- MODIFICATION END ---
+
         if (this.websocket && (this.websocket.readyState === WebSocket.OPEN || this.websocket.readyState === WebSocket.CONNECTING)) {
             Utils.log('WebSocketManager: WebSocket 已连接或正在连接中。', Utils.logLevels.DEBUG);
             return Promise.resolve();
@@ -84,17 +107,18 @@ const WebSocketManager = {
                         this._onStatusChangeHandler(false);
                     }
 
-                    // 使用 AppSettings 中的重连配置
                     if (this.wsReconnectAttempts <= AppSettings.reconnect.websocket.maxAttempts) {
-                        // 使用指数退避算法计算延迟
                         const delay = Math.min(30000, AppSettings.reconnect.websocket.backoffBase * Math.pow(2, this.wsReconnectAttempts - 1));
                         LayoutUIManager.updateConnectionStatusIndicator(`信令服务器已断开。${delay / 1000}秒后尝试重连...`);
                         Utils.log(`WebSocketManager: 下一次重连将在 ${delay / 1000} 秒后。`, Utils.logLevels.WARN);
                         setTimeout(() => this.connect().catch(err => Utils.log(`WebSocketManager: 重连尝试失败: ${err.message || err}`, Utils.logLevels.ERROR)), delay);
                     } else {
+                        // --- MODIFICATION START: Enhanced user guidance on final failure ---
                         LayoutUIManager.updateConnectionStatusIndicator('信令服务器连接失败。自动重连已停止。');
-                        NotificationUIManager.showNotification('无法连接到信令服务器。请检查您的网络并手动刷新或重新连接。', 'error');
+                        const finalFailureMessage = '无法连接到信令服务器。您仍可通过“菜单” > “高级功能”中的手动方式建立连接。';
+                        NotificationUIManager.showNotification(finalFailureMessage, 'error', 15000); // 持续15秒
                         Utils.log(`WebSocketManager: 已达到最大重连次数 (${AppSettings.reconnect.websocket.maxAttempts})，停止自动重连。`, Utils.logLevels.ERROR);
+                        // --- MODIFICATION END ---
                     }
                     if (oldStatus) EventEmitter.emit('websocketStatusUpdate');
                 };
@@ -138,7 +162,6 @@ const WebSocketManager = {
                         Utils.log('WebSocketManager: 发送 WebSocket 心跳 (PING)', Utils.logLevels.DEBUG);
                     }
                 },
-                // 使用 AppSettings 中的心跳间隔
                 AppSettings.network.websocketHeartbeatInterval
             );
         } else {
@@ -169,7 +192,7 @@ const WebSocketManager = {
             Utils.log('WebSocketManager: WebSocket 未连接，无法发送信令消息。', Utils.logLevels.ERROR);
             if (!isInternalSilentFlag) {
                 if (window.location.protocol === 'file:') {
-                    NotificationUIManager.showNotification('正从本地文件系统运行。信令服务器可能不可用。消息未发送。', 'warning');
+                    NotificationUIManager.showNotification('正从本地文件系统运行。信令服务不可用。消息未发送。', 'warning');
                 } else {
                     NotificationUIManager.showNotification('未连接到信令服务器。消息未发送。', 'error');
                 }

@@ -10,6 +10,7 @@
  *              定时器逻辑已移至 TimerManager。
  *              修改：AI 服务健康检查现在会在其他关键异步任务（如WebSocket初始化）之后执行。
  *              FIXED: Added MemoryBookManager.init() call to ensure memory book data is loaded on startup.
+ *              FIXED: 新增 fileDataReady 事件监听器，以在文件数据接收完毕后异步更新UI预览。
  * @module AppInitializer
  * @exports {object} AppInitializer - 包含 init 方法，现在应由 DOMContentLoaded 事件触发。
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
@@ -131,7 +132,7 @@ const AppInitializer = {
     /**
      * The following methods remain unchanged from your provided code...
      * initializeGlobalImageErrorHandler, refreshNetworkStatusUI, startNetworkMonitoring,
-     * handleNetworkChange, smartBackToChatList, setupCoreEventListeners
+     * handleNetworkChange, smartBackToChatList
      */
     initializeGlobalImageErrorHandler: function() {
         document.addEventListener('error', function(event) {
@@ -266,6 +267,25 @@ const AppInitializer = {
                 }
             }
         });
+
+        // --- MODIFICATION START: Add listener for file data ready ---
+        EventEmitter.on('fileDataReady', ({ fileHash, fileType, fileName }) => {
+            if (!fileHash) return;
+            // Find all placeholders waiting for this specific file hash
+            const placeholders = document.querySelectorAll(`.thumbnail-placeholder[data-awaiting-hash="${fileHash}"]`);
+            if (placeholders.length > 0) {
+                Utils.log(`fileDataReady: 找到 ${placeholders.length} 个占位符 for hash ${fileHash}. 正在渲染缩略图。`);
+                placeholders.forEach(placeholder => {
+                    const isResourceGrid = placeholder.classList.contains('thumbnail-placeholder-resource');
+                    if (typeof MediaUIManager !== 'undefined' && MediaUIManager.renderMediaThumbnail) {
+                        // Re-call renderMediaThumbnail on the now-ready placeholder
+                        MediaUIManager.renderMediaThumbnail(placeholder, fileHash, fileType, fileName, isResourceGrid);
+                    }
+                    placeholder.removeAttribute('data-awaiting-hash'); // Clean up the marker attribute
+                });
+            }
+        });
+        // --- MODIFICATION END ---
 
         if (typeof AiApiHandler !== 'undefined' && typeof AiApiHandler.handleAiConfigChange === 'function') {
             EventEmitter.on('aiConfigChanged', AiApiHandler.handleAiConfigChange.bind(AiApiHandler));

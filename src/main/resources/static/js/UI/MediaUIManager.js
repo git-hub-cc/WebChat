@@ -5,13 +5,9 @@
  *              文件名过长时，在预览和消息中会进行截断显示。
  *              修改: displayFilePreview 现在使用 fileObj.previewUrl (一个Object URL) 来显示预览。
  *              新增: renderMediaThumbnail 用于在指定占位符中渲染图片或视频的缩略图。
+ *              FIXED: renderMediaThumbnail 现在会在缓存未命中时显示加载状态，并等待 'fileDataReady' 事件。
  * @module MediaUIManager
  * @exports {object} MediaUIManager - 对外暴露的单例对象，包含管理媒体 UI 的方法。
- * @property {function} init - 初始化模块，获取 DOM 元素。
- * @property {function} displayAudioPreview - 显示录制完成的音频预览。
- * @property {function} displayFilePreview - 显示用户选择的文件的预览。
- * @property {function} setRecordingButtonActive - 设置录音按钮的激活（录制中）状态和 UI。
- * @property {function} renderMediaThumbnail - (新增) 通用方法，在提供的占位符中渲染图片或视频缩略图。
  * @dependencies Utils, MessageManager, MediaManager, NotificationUIManager, EventEmitter, DBManager
  * @dependents AppInitializer (进行初始化), MediaManager (调用以更新 UI), EventEmitter (监听截图事件), MessageManager, ResourcePreviewUIManager (使用 renderMediaThumbnail)
  */
@@ -205,13 +201,20 @@ const MediaUIManager = {
 
         try {
             const cachedItem = await DBManager.getItem('fileCache', fileHash);
+
+            // --- MODIFICATION START: Handle cache miss ---
             if (!cachedItem || !cachedItem.fileBlob) {
-                placeholderDiv.innerHTML = '⚠️';
-                placeholderDiv.title = '无法加载预览：文件缓存未找到。';
-                Utils.log(`MediaUIManager.renderMediaThumbnail: 文件缓存未找到 (hash: ${fileHash})`, Utils.logLevels.WARN);
+                // If the file is not in the cache, display a loading state and mark the element
+                // to be updated later by the 'fileDataReady' event.
+                placeholderDiv.innerHTML = '<div class="spinner"></div>';
+                placeholderDiv.title = '正在接收文件...';
+                placeholderDiv.dataset.awaitingHash = fileHash; // Mark for later update
+                Utils.log(`MediaUIManager.renderMediaThumbnail: 文件缓存未找到 (hash: ${fileHash})，设置加载状态。`, Utils.logLevels.DEBUG);
                 return;
             }
+            // --- MODIFICATION END ---
 
+            // If we are here, the file is in the cache.
             const blob = cachedItem.fileBlob;
             const objectURL = URL.createObjectURL(blob);
 

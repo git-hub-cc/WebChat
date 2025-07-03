@@ -242,6 +242,7 @@
     border: var(--border-width-standard) solid var(--border-color);
     border-radius: var(--border-radius-md);
     background-color: var(--surface-2-bg);
+    color: var(--text-primary); /* --- FIX: 新增 --- */
     font-family: var(--font-family-base), var(--font-family-serif);
     font-size: 0.9em;
     transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
@@ -426,6 +427,8 @@
     font-size: 0.9em;
     resize: vertical;
     margin-bottom: var(--spacing-2);
+    background-color: var(--input-bg-color); /* --- FIX: 新增 --- */
+    color: var(--text-primary); /* --- FIX: 新增 --- */
     transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
 }
 
@@ -452,6 +455,7 @@
     border: var(--border-width-standard) solid var(--border-color);
     border-radius: var(--border-radius-md);
     background-color: var(--surface-2-bg);
+    color: var(--text-primary); /* --- FIX: 新增 --- */
     font-family: var(--font-family-base), var(--font-family-serif);
     font-size: 0.9em;
     transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
@@ -761,7 +765,7 @@
 }
 
 .calendar-day-rps.has-messages-rps {
-    background-color: var(--sent-bg-color);
+    background: var(--sent-bg-color);
     color: var(--text-on-sent);
     font-weight: var(--font-weight-bold);
     cursor: pointer;

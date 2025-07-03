@@ -1,22 +1,23 @@
 /*
 ================================================================================
 |                                                                              |
-|             🎨 原神 - 浮世摹绘 (浅色主题) - 变量文件 🎨                        |
-|             (Genshin Impact - Ukiyo-e Sketch - Light Theme - Variables)      |
+|             🎨 原神 - 浮世摹绘 (浅色主题) - 优化版 🎨                        |
+|             (Genshin Impact - Ukiyo-e Sketch - Light Theme - Optimized)      |
 |                                                                              |
 ================================================================================
 *
-* 使用方法: 在 HTML 中，用此文件替换 `css/基础/variables.css` 来应用主题。
-* This file overrides the default design tokens.
+* 加载顺序: 此文件应在所有基础CSS (variables.css, core.css 等) 之后加载。
+* Loading Order: This file should be loaded AFTER all base CSS files.
 *
 */
 
 :root {
     /* ========================================================== */
-    /* 1. 色彩系统 (Color System)                                 */
+    /* 1. 颜色变量覆盖 (Color Variable Overrides)                 */
+    /*    - 这些变量直接替换 variables.css 中的同名变量           */
     /* ========================================================== */
 
-    /* --- 1a. 核心原始颜色 (Teyvat Palette) --- */
+    /* --- 1a. 主题色板定义 (Theme Palette Definition) --- */
     --gi-gold-primary-rgb: 222, 178, 111;
     --gi-gold-secondary-rgb: 240, 210, 150;
     --gi-gold-dark-rgb: 160, 120, 65;
@@ -29,121 +30,58 @@
     --gi-dendro-rgb: 153, 204, 51;
     --gi-pyro-rgb: 255, 123, 89;
 
-    /* --- 1b. 语义化颜色变量覆盖 (Semantic Overrides) --- */
-    /* 品牌色 -> 提瓦特金色 */
+    /* --- 1b. 覆盖基础语义变量 (Overriding Base Semantic Variables) --- */
     --brand-rgb: var(--gi-gold-primary-rgb);
     --brand-dark-rgb: var(--gi-gold-dark-rgb);
-    --text-on-brand-rgb: var(--gi-brown-dark-rgb); /* 深棕色文字在金色上更清晰 */
+    --text-on-brand-rgb: var(--gi-brown-dark-rgb);
 
-    /* 表面/背景色 -> 提瓦特羊皮纸色 */
-    --surface-1-rgb: var(--gi-parchment-medium-rgb); /* 侧边栏、面板等主背景 */
-    --surface-2-rgb: var(--gi-white-rgb);            /* 输入框、消息气泡等次背景 */
+    --surface-1-rgb: var(--gi-parchment-medium-rgb);
+    --surface-2-rgb: var(--gi-white-rgb);
     --surface-hover-rgb: var(--gi-parchment-dark-rgb);
-    --surface-active-rgb: var(--gi-gold-secondary-rgb); /* 激活项使用淡金色 */
+    --surface-active-rgb: var(--gi-gold-secondary-rgb);
 
-    /* 文本颜色 -> 提瓦特棕色系 */
     --text-primary-rgb: var(--gi-brown-dark-rgb);
     --text-secondary-rgb: var(--gi-brown-medium-rgb);
-    --text-on-accent-rgb: var(--gi-brown-dark-rgb); /* 强调色上的文字 */
+    --text-on-accent-rgb: var(--gi-brown-dark-rgb);
 
-    /* 边框颜色 */
     --border-subtle-rgb: var(--gi-parchment-dark-rgb);
     --border-strong-rgb: var(--gi-gold-dark-rgb);
 
-    /* 状态/强调色 */
-    --accent-success-rgb: var(--gi-dendro-rgb); /* 草元素绿色代表成功/在线 */
-    --accent-danger-rgb: var(--gi-pyro-rgb);   /* 火元素红色代表危险 */
+    --accent-success-rgb: var(--gi-dendro-rgb);
+    --accent-danger-rgb: var(--gi-pyro-rgb);
 
-    /* --- 1c. 组件级颜色变量覆盖 (Component-level Overrides) --- */
-    /*
-     * 基础 variables.css 会自动根据上面的语义变量计算出大部分颜色。
-     * 这里我们只覆盖那些需要特殊处理的。
-    */
-    --primary-color: rgb(var(--brand-rgb));
-    --primary-color-dark: rgb(var(--brand-dark-rgb));
-
-    --panel-bg-color: rgb(var(--surface-1-rgb));
+    /* --- 1c. 覆盖基础组件级变量 (Overriding Base Component-level Variables) --- */
+    /* 注意: 基础 variables.css 会自动计算大部分颜色，这里只覆盖需要特殊处理的 */
     --header-bg-color: linear-gradient(to bottom, rgba(var(--gi-parchment-medium-rgb),0.8), rgba(var(--gi-parchment-light-rgb),0.8));
     --chat-bg-color: rgb(var(--gi-parchment-light-rgb));
-    --input-bg-color: rgb(var(--surface-2-rgb));
 
     --sent-bg-color: linear-gradient(135deg, rgb(var(--gi-gold-secondary-rgb)), rgba(var(--gi-gold-secondary-rgb), 0.8));
     --text-on-sent: rgb(var(--gi-brown-dark-rgb));
-    --received-bg-color: rgb(var(--surface-2-rgb));
-    --text-on-received: rgb(var(--text-primary-rgb));
 
     --disabled-bg: rgb(var(--gi-parchment-dark-rgb));
-    --disabled-text: rgb(var(--gi-brown-medium-rgb));
+    --disabled-text-rgb: var(--gi-brown-medium-rgb); /* 覆盖 --disabled-text-rgb 而不是 --disabled-text */
 
     /* ========================================================== */
-    /* 2. 排版 (Typography)                                       */
+    /* 2. 排版与布局变量覆盖 (Typography & Layout Overrides)      */
     /* ========================================================== */
     --font-family-base: "HYWenHei-85W", "Noto Serif SC", "Source Han Serif CN", "Cinzel", serif;
     --font-size-base: 15px;
 
-    /* ========================================================== */
-    /* 3. 边框与阴影 (Borders & Shadows)                          */
-    /* ========================================================== */
-    --border-radius-sm: 4px;
     --border-radius-md: 6px;
-    --border-radius-lg: 8px;
 
     --box-shadow-sm: 0 1px 3px 0 rgba(var(--gi-brown-dark-rgb), 0.1), 0 1px 2px 0 rgba(var(--gi-brown-dark-rgb), 0.1);
     --box-shadow-md: 0 3px 6px -1px rgba(var(--gi-brown-dark-rgb), 0.1), 0 2px 4px -1px rgba(var(--gi-brown-dark-rgb), 0.1);
     --box-shadow-lg: 0 0 30px rgba(var(--gi-brown-dark-rgb), 0.15);
-
-    /* ========================================================== */
-    /* 4. 滚动条 (Scrollbar)                                      */
-    /* ========================================================== */
-    --scrollbar-track-color: rgba(var(--gi-parchment-dark-rgb), 0.5);
-    --scrollbar-thumb-color: rgb(var(--gi-gold-dark-rgb));
-    --scrollbar-thumb-hover-color: rgb(var(--gi-gold-primary-rgb));
-    --scrollbar-size: 8px;
 }
-
 /* ------------------------- 🌍 全局与基础样式 ------------------------ */
+
 body {
-    /* 主题独有的背景纹理和渐变 */
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23E4DAC8' fill-opacity='0.2'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"),
-    linear-gradient(to bottom, rgb(var(--gi-parchment-light-rgb)), rgb(var(--gi-parchment-medium-rgb)));
-}
-
-/* 滚动条样式 */
-::-webkit-scrollbar-track {
-    background-color: var(--scrollbar-track-color);
-}
-::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb-color);
-    border: 2px solid transparent;
-    background-clip: content-box;
-}
-::-webkit-scrollbar-thumb:hover {
-    background-color: var(--scrollbar-thumb-hover-color);
-}
-
-/* ------------------------- 🏛️ 页面结构与容器 ------------------------ */
-.app-container {
-    border: 1px solid rgb(var(--border-subtle-rgb));
-}
-
-.sidebar-nav {
-    background-color: rgba(var(--gi-parchment-dark-rgb), 0.5); /* 半透明效果 */
-}
-
-.chat-header-main {
-    box-shadow: 0 1px 3px rgba(var(--gi-brown-dark-rgb), 0.05);
-}
-
-.chat-input-container {
-    box-shadow: 0 -1px 3px rgba(var(--gi-brown-dark-rgb), 0.05);
-}
-
-/* ------------------------- 💬 消息气泡 ------------------------ */
-.message.system {
-    background-color: rgb(var(--gi-parchment-dark-rgb));
-    color: rgb(var(--gi-brown-medium-rgb));
-    border: 1px dashed rgb(var(--gi-gold-dark-rgb));
-    box-shadow: none;
+    background-color: rgb(var(--gi-parchment-light-rgb));
+    background-image:
+        /* Bright Teyvat sky */
+            linear-gradient(to bottom, rgba(135, 206, 235, 0.4), rgb(var(--gi-parchment-light-rgb)) 50%),
+                /* Sun glare */
+            radial-gradient(ellipse at top, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
 }
 
 /*
@@ -151,285 +89,125 @@ body {
 |                            👤 角色专属样式 👤                              |
 ================================================================================
 */
-
-/* --- 角色颜色变量定义 (仅供参考或JS读取) --- */
+/* --- 角色颜色变量定义 --- */
 :root {
-    --gi-char-paimon-primary-rgb: 45, 59, 83;
-    --gi-char-paimon-secondary-rgb: 250, 250, 255;
-    --gi-char-paimon-accent-rgb: 255, 215, 0;
-    --gi-char-paimon-msg-bg: linear-gradient(135deg, #f0f4ff, #e6e9f5);
+    --paimon-avatar-bg: #2d3b53;
+    --paimon-avatar-text: #fafaff;
+    --paimon-accent: #ffd700;
+    --paimon-msg-bg: linear-gradient(135deg, #f0f4ff, #e6e9f5);
 
-    --gi-char-traveler-primary-rgb: 160, 130, 100;
-    --gi-char-traveler-secondary-rgb: 114, 224, 197;
-    --gi-char-traveler-msg-bg: linear-gradient(135deg, #e8f5f3, #d8f0eb);
+    --zhongli-avatar-bg: #3c322d;
+    --zhongli-avatar-text: #ffc343;
+    --zhongli-msg-bg: linear-gradient(135deg, #fff8e8, #fef2d4);
 
-    --gi-char-zhongli-primary-rgb: 60, 50, 45;
-    --gi-char-zhongli-secondary-rgb: 255, 195, 67;
-    --gi-char-zhongli-msg-bg: linear-gradient(135deg, #fff8e8, #fef2d4);
+    --venti-avatar-bg: #72e0c5;
+    --venti-avatar-text: #006450;
+    --venti-msg-bg: linear-gradient(135deg, #e0f8f3, #cff2ea);
 
-    --gi-char-venti-primary-rgb: 114, 224, 197;
-    --gi-char-venti-secondary-rgb: 0, 100, 80;
-    --gi-char-venti-msg-bg: linear-gradient(135deg, #e0f8f3, #cff2ea);
+    --raiden-avatar-bg: #5a468c;
+    --raiden-avatar-text: #b08cff;
+    --raiden-msg-bg: linear-gradient(135deg, #f0eaff, #e6dff5);
 
-    --gi-char-raidenshogun-primary-rgb: 90, 70, 140;
-    --gi-char-raidenshogun-secondary-rgb: 176, 140, 255;
-    --gi-char-raidenshogun-msg-bg: linear-gradient(135deg, #f0eaff, #e6dff5);
+    --hutao-avatar-bg: #8b0000;
+    --hutao-avatar-text: #ffffff;
+    --hutao-accent: #ff7b59;
+    --hutao-msg-bg: linear-gradient(135deg, #ffe8e0, #ffd8cc);
 
-    --gi-char-hutao-primary-rgb: 139, 0, 0;
-    --gi-char-hutao-secondary-rgb: 255, 123, 89;
-    --gi-char-hutao-msg-bg: linear-gradient(135deg, #ffe8e0, #ffd8cc);
+    --kazuha-avatar-bg: #cd5c5c;
+    --kazuha-avatar-text: #ffffff;
+    --kazuha-accent: #72e0c5;
+    --kazuha-msg-bg: linear-gradient(135deg, #ffebe0, #ffddd0);
 
-    --gi-char-kazuha-primary-rgb: 205, 92, 92;
-    --gi-char-kazuha-secondary-rgb: 114, 224, 197;
-    --gi-char-kazuha-msg-bg: linear-gradient(135deg, #ffebe0, #ffddd0);
+    --traveler-avatar-bg: #a08264;
+    --traveler-avatar-text: #ffffff;
+    --traveler-accent: #72e0c5;
+    --traveler-msg-bg: linear-gradient(135deg, #e8f5f3, #d8f0eb);
 }
+
+/* --- 模板 --- */
+.AI_Template .chat-list-avatar, .chat-avatar-main.AI_Template, .details-avatar.AI_Template {
+    background-color: var(--template-avatar-bg); color: var(--template-avatar-text); border: 2px solid var(--template-accent); box-shadow: 0 0 5px color-mix(in srgb, var(--template-accent), transparent 30%);
+}
+.chat-list-item.active.AI_Template { background: var(--template-avatar-bg); }
+.chat-list-item.active.AI_Template .chat-list-name, .chat-list-item.active.AI_Template .chat-list-preview { color: var(--template-avatar-text) !important; }
+.chat-header-main.character-active.AI_Template .chat-title-main, .details-panel.character-active.AI_Template #detailsName { color: var(--template-avatar-bg); }
+.message.received.character-message.AI_Template { background: var(--template-msg-bg); border-color: var(--template-accent); }
+.message.received.character-message.AI_Template .message-sender { color: var(--template-avatar-bg); }
+.message .timestamp { color: var(--text-color); }
 
 
 /* --- 💠 Paimon - 派蒙 --- */
-.AI_Paimon_原神 .chat-list-avatar,
-.chat-avatar-main.AI_Paimon_原神,
-.details-avatar.AI_Paimon_原神 {
-    background-color: rgb(var(--gi-char-paimon-primary-rgb));
-    color: rgb(var(--gi-char-paimon-primary-rgb));
-    border: 2px solid rgb(var(--gi-char-paimon-accent-rgb));
-    box-shadow: 0 0 5px rgba(var(--gi-char-paimon-accent-rgb), 0.7);
+.AI_Paimon_原神 .chat-list-avatar, .chat-avatar-main.AI_Paimon_原神, .details-avatar.AI_Paimon_原神 {
+    background-color: var(--paimon-avatar-bg); color: var(--paimon-avatar-text); border: 2px solid var(--paimon-accent); box-shadow: 0 0 5px color-mix(in srgb, var(--paimon-accent), transparent 30%);
 }
-
-.chat-list-item.active.AI_Paimon_原神 {
-    background: rgb(var(--gi-char-paimon-primary-rgb));
-    border-color: rgb(var(--gi-char-paimon-accent-rgb));
-}
-.chat-list-item.active.AI_Paimon_原神 .chat-list-name,
-.chat-list-item.active.AI_Paimon_原神 .chat-list-preview {
-    color: rgb(var(--gi-char-paimon-secondary-rgb)) !important;
-}
-
-.chat-header-main.character-active.AI_Paimon_原神 .chat-title-main {
-    color: rgb(var(--gi-char-paimon-primary-rgb));
-    text-shadow: 0 0 5px rgba(var(--gi-char-paimon-accent-rgb), 0.5);
-}
-
-.message.received.character-message.AI_Paimon_原神 {
-    background: var(--gi-char-paimon-msg-bg);
-    border-color: rgb(var(--gi-char-paimon-accent-rgb));
-}
-.message.received.character-message.AI_Paimon_原神 .message-sender {
-    color: rgb(var(--gi-char-paimon-primary-rgb));
-}
-
-.details-panel.character-active.AI_Paimon_原神 #detailsName {
-    color: rgb(var(--gi-char-paimon-primary-rgb));
-}
+.chat-list-item.active.AI_Paimon_原神 { background: var(--paimon-avatar-bg); }
+.chat-list-item.active.AI_Paimon_原神 .chat-list-name, .chat-list-item.active.AI_Paimon_原神 .chat-list-preview { color: var(--paimon-avatar-text) !important; }
+.chat-header-main.character-active.AI_Paimon_原神 .chat-title-main, .details-panel.character-active.AI_Paimon_原神 #detailsName { color: var(--paimon-avatar-bg); }
+.message.received.character-message.AI_Paimon_原神 { background: var(--paimon-msg-bg); border-color: var(--paimon-accent); }
+.message.received.character-message.AI_Paimon_原神 .message-sender { color: var(--paimon-avatar-bg); }
 
 
 /* --- ⚖️ Zhongli - 钟离 --- */
-.AI_Zhongli_原神 .chat-list-avatar,
-.chat-avatar-main.AI_Zhongli_原神,
-.details-avatar.AI_Zhongli_原神 {
-    background-color: rgb(var(--gi-char-zhongli-primary-rgb));
-    color: rgb(var(--gi-char-zhongli-secondary-rgb));
-    border: 2px solid rgb(var(--gi-char-zhongli-secondary-rgb));
-    box-shadow: 0 0 5px rgba(var(--gi-char-zhongli-secondary-rgb), 0.7);
+.AI_Zhongli_原神 .chat-list-avatar, .chat-avatar-main.AI_Zhongli_原神, .details-avatar.AI_Zhongli_原神 {
+    background-color: var(--zhongli-avatar-bg); color: var(--zhongli-avatar-text); border: 2px solid var(--zhongli-avatar-text); box-shadow: 0 0 5px color-mix(in srgb, var(--zhongli-avatar-text), transparent 30%);
 }
-
-.chat-list-item.active.AI_Zhongli_原神 {
-    background: rgb(var(--gi-char-zhongli-primary-rgb));
-    border-color: rgb(var(--gi-char-zhongli-secondary-rgb));
-}
-.chat-list-item.active.AI_Zhongli_原神 .chat-list-name,
-.chat-list-item.active.AI_Zhongli_原神 .chat-list-preview {
-    color: rgb(var(--gi-char-zhongli-secondary-rgb)) !important;
-}
-
-.chat-header-main.character-active.AI_Zhongli_原神 .chat-title-main {
-    color: rgb(var(--gi-char-zhongli-primary-rgb));
-    text-shadow: 0 0 5px rgba(var(--gi-char-zhongli-secondary-rgb), 0.3);
-}
-
-.message.received.character-message.AI_Zhongli_原神 {
-    background: var(--gi-char-zhongli-msg-bg);
-    border-color: rgb(var(--gi-char-zhongli-secondary-rgb));
-}
-.message.received.character-message.AI_Zhongli_原神 .message-sender {
-    color: rgb(var(--gi-char-zhongli-primary-rgb));
-}
-
-.details-panel.character-active.AI_Zhongli_原神 #detailsName {
-    color: rgb(var(--gi-char-zhongli-primary-rgb));
-}
+.chat-list-item.active.AI_Zhongli_原神 { background: var(--zhongli-avatar-bg); }
+.chat-list-item.active.AI_Zhongli_原神 .chat-list-name, .chat-list-item.active.AI_Zhongli_原神 .chat-list-preview { color: var(--zhongli-avatar-text) !important; }
+.chat-header-main.character-active.AI_Zhongli_原神 .chat-title-main, .details-panel.character-active.AI_Zhongli_原神 #detailsName { color: var(--zhongli-avatar-bg); }
+.message.received.character-message.AI_Zhongli_原神 { background: var(--zhongli-msg-bg); border-color: var(--zhongli-avatar-text); }
+.message.received.character-message.AI_Zhongli_原神 .message-sender { color: var(--zhongli-avatar-bg); }
 
 
 /* --- 🍃 Venti - 温迪 --- */
-.AI_Venti_原神 .chat-list-avatar,
-.chat-avatar-main.AI_Venti_原神,
-.details-avatar.AI_Venti_原神 {
-    background-color: rgb(var(--gi-char-venti-primary-rgb));
-    color: rgb(var(--gi-char-venti-secondary-rgb));
-    border: 2px solid rgb(var(--gi-char-venti-primary-rgb));
-    box-shadow: 0 0 5px rgba(var(--gi-char-venti-primary-rgb), 0.7);
+.AI_Venti_原神 .chat-list-avatar, .chat-avatar-main.AI_Venti_原神, .details-avatar.AI_Venti_原神 {
+    background-color: var(--venti-avatar-bg); color: var(--venti-avatar-text); border: 2px solid var(--venti-avatar-bg); box-shadow: 0 0 5px color-mix(in srgb, var(--venti-avatar-bg), transparent 30%);
 }
-
-.chat-list-item.active.AI_Venti_原神 {
-    background: rgb(var(--gi-char-venti-secondary-rgb));
-    border-color: rgb(var(--gi-char-venti-primary-rgb));
-}
-.chat-list-item.active.AI_Venti_原神 .chat-list-name,
-.chat-list-item.active.AI_Venti_原神 .chat-list-preview {
-    color: rgb(var(--gi-char-venti-primary-rgb)) !important;
-}
-
-.chat-header-main.character-active.AI_Venti_原神 .chat-title-main {
-    color: rgb(var(--gi-char-venti-secondary-rgb));
-}
-
-.message.received.character-message.AI_Venti_原神 {
-    background: var(--gi-char-venti-msg-bg);
-    border-color: rgb(var(--gi-char-venti-primary-rgb));
-}
-.message.received.character-message.AI_Venti_原神 .message-sender {
-    color: rgb(var(--gi-char-venti-secondary-rgb));
-}
-
-.details-panel.character-active.AI_Venti_原神 #detailsName {
-    color: rgb(var(--gi-char-venti-secondary-rgb));
-}
+.chat-list-item.active.AI_Venti_原神 { background: var(--venti-avatar-text); }
+.chat-list-item.active.AI_Venti_原神 .chat-list-name, .chat-list-item.active.AI_Venti_原神 .chat-list-preview { color: var(--venti-avatar-bg) !important; }
+.chat-header-main.character-active.AI_Venti_原神 .chat-title-main, .details-panel.character-active.AI_Venti_原神 #detailsName { color: var(--venti-avatar-text); }
+.message.received.character-message.AI_Venti_原神 { background: var(--venti-msg-bg); border-color: var(--venti-avatar-bg); }
+.message.received.character-message.AI_Venti_原神 .message-sender { color: var(--venti-avatar-text); }
 
 
 /* --- ⚡ Raiden Shogun - 雷电将军 --- */
-.AI_RaidenShogun_原神 .chat-list-avatar,
-.chat-avatar-main.AI_RaidenShogun_原神,
-.details-avatar.AI_RaidenShogun_原神 {
-    background-color: rgb(var(--gi-char-raidenshogun-primary-rgb));
-    color: rgb(var(--gi-char-raidenshogun-secondary-rgb));
-    border: 2px solid rgb(var(--gi-char-raidenshogun-secondary-rgb));
-    box-shadow: 0 0 5px rgba(var(--gi-char-raidenshogun-secondary-rgb), 0.7);
+.AI_RaidenShogun_原神 .chat-list-avatar, .chat-avatar-main.AI_RaidenShogun_原神, .details-avatar.AI_RaidenShogun_原神 {
+    background-color: var(--raiden-avatar-bg); color: var(--raiden-avatar-text); border: 2px solid var(--raiden-avatar-text); box-shadow: 0 0 5px color-mix(in srgb, var(--raiden-avatar-text), transparent 30%);
 }
-
-.chat-list-item.active.AI_RaidenShogun_原神 {
-    background: rgb(var(--gi-char-raidenshogun-primary-rgb));
-    border-color: rgb(var(--gi-char-raidenshogun-secondary-rgb));
-}
-.chat-list-item.active.AI_RaidenShogun_原神 .chat-list-name,
-.chat-list-item.active.AI_RaidenShogun_原神 .chat-list-preview {
-    color: rgb(var(--gi-char-raidenshogun-secondary-rgb)) !important;
-}
-
-.chat-header-main.character-active.AI_RaidenShogun_原神 .chat-title-main {
-    color: rgb(var(--gi-char-raidenshogun-primary-rgb));
-}
-
-.message.received.character-message.AI_RaidenShogun_原神 {
-    background: var(--gi-char-raidenshogun-msg-bg);
-    border-color: rgb(var(--gi-char-raidenshogun-secondary-rgb));
-}
-.message.received.character-message.AI_RaidenShogun_原神 .message-sender {
-    color: rgb(var(--gi-char-raidenshogun-primary-rgb));
-}
-
-.details-panel.character-active.AI_RaidenShogun_原神 #detailsName {
-    color: rgb(var(--gi-char-raidenshogun-primary-rgb));
-}
+.chat-list-item.active.AI_RaidenShogun_原神 { background: var(--raiden-avatar-bg); }
+.chat-list-item.active.AI_RaidenShogun_原神 .chat-list-name, .chat-list-item.active.AI_RaidenShogun_原神 .chat-list-preview { color: var(--raiden-avatar-text) !important; }
+.chat-header-main.character-active.AI_RaidenShogun_原神 .chat-title-main, .details-panel.character-active.AI_RaidenShogun_原神 #detailsName { color: var(--raiden-avatar-bg); }
+.message.received.character-message.AI_RaidenShogun_原神 { background: var(--raiden-msg-bg); border-color: var(--raiden-avatar-text); }
+.message.received.character-message.AI_RaidenShogun_原神 .message-sender { color: var(--raiden-avatar-bg); }
 
 
 /* --- 🔥 Hu Tao - 胡桃 --- */
-.AI_HuTao_原神 .chat-list-avatar,
-.chat-avatar-main.AI_HuTao_原神,
-.details-avatar.AI_HuTao_原神 {
-    background-color: rgb(var(--gi-char-hutao-primary-rgb));
-    color: white;
-    border: 2px solid rgb(var(--gi-char-hutao-secondary-rgb));
-    box-shadow: 0 0 5px rgba(var(--gi-char-hutao-secondary-rgb), 0.7);
+.AI_HuTao_原神 .chat-list-avatar, .chat-avatar-main.AI_HuTao_原神, .details-avatar.AI_HuTao_原神 {
+    background-color: var(--hutao-avatar-bg); color: var(--hutao-avatar-text); border: 2px solid var(--hutao-accent); box-shadow: 0 0 5px color-mix(in srgb, var(--hutao-accent), transparent 30%);
 }
-
-.chat-list-item.active.AI_HuTao_原神 {
-    background: rgb(var(--gi-char-hutao-primary-rgb));
-    border-color: rgb(var(--gi-char-hutao-secondary-rgb));
-}
-.chat-list-item.active.AI_HuTao_原神 .chat-list-name,
-.chat-list-item.active.AI_HuTao_原神 .chat-list-preview {
-    color: white !important;
-}
-
-.chat-header-main.character-active.AI_HuTao_原神 .chat-title-main {
-    color: rgb(var(--gi-char-hutao-primary-rgb));
-}
-
-.message.received.character-message.AI_HuTao_原神 {
-    background: var(--gi-char-hutao-msg-bg);
-    border-color: rgb(var(--gi-char-hutao-secondary-rgb));
-}
-.message.received.character-message.AI_HuTao_原神 .message-sender {
-    color: rgb(var(--gi-char-hutao-primary-rgb));
-}
-
-.details-panel.character-active.AI_HuTao_原神 #detailsName {
-    color: rgb(var(--gi-char-hutao-primary-rgb));
-}
+.chat-list-item.active.AI_HuTao_原神 { background: var(--hutao-avatar-bg); }
+.chat-list-item.active.AI_HuTao_原神 .chat-list-name, .chat-list-item.active.AI_HuTao_原神 .chat-list-preview { color: var(--hutao-avatar-text) !important; }
+.chat-header-main.character-active.AI_HuTao_原神 .chat-title-main, .details-panel.character-active.AI_HuTao_原神 #detailsName { color: var(--hutao-avatar-bg); }
+.message.received.character-message.AI_HuTao_原神 { background: var(--hutao-msg-bg); border-color: var(--hutao-accent); }
+.message.received.character-message.AI_HuTao_原神 .message-sender { color: var(--hutao-avatar-bg); }
 
 
 /* --- 🍁 Kazuha - 枫原万叶 --- */
-.AI_Kazuha_原神 .chat-list-avatar,
-.chat-avatar-main.AI_Kazuha_原神,
-.details-avatar.AI_Kazuha_原神 {
-    background-color: rgb(var(--gi-char-kazuha-primary-rgb));
-    color: white;
-    border: 2px solid rgb(var(--gi-char-kazuha-secondary-rgb));
-    box-shadow: 0 0 5px rgba(var(--gi-char-kazuha-secondary-rgb), 0.7);
+.AI_Kazuha_原神 .chat-list-avatar, .chat-avatar-main.AI_Kazuha_原神, .details-avatar.AI_Kazuha_原神 {
+    background-color: var(--kazuha-avatar-bg); color: var(--kazuha-avatar-text); border: 2px solid var(--kazuha-accent); box-shadow: 0 0 5px color-mix(in srgb, var(--kazuha-accent), transparent 30%);
 }
+.chat-list-item.active.AI_Kazuha_原神 { background: var(--kazuha-avatar-bg); }
+.chat-list-item.active.AI_Kazuha_原神 .chat-list-name, .chat-list-item.active.AI_Kazuha_原神 .chat-list-preview { color: var(--kazuha-avatar-text) !important; }
+.chat-header-main.character-active.AI_Kazuha_原神 .chat-title-main, .details-panel.character-active.AI_Kazuha_原神 #detailsName { color: var(--kazuha-avatar-bg); }
+.message.received.character-message.AI_Kazuha_原神 { background: var(--kazuha-msg-bg); border-color: var(--kazuha-accent); }
+.message.received.character-message.AI_Kazuha_原神 .message-sender { color: var(--kazuha-avatar-bg); }
 
-.chat-list-item.active.AI_Kazuha_原神 {
-    background: rgb(var(--gi-char-kazuha-primary-rgb));
-    border-color: rgb(var(--gi-char-kazuha-secondary-rgb));
-}
-.chat-list-item.active.AI_Kazuha_原神 .chat-list-name,
-.chat-list-item.active.AI_Kazuha_原神 .chat-list-preview {
-    color: white !important;
-}
-
-.chat-header-main.character-active.AI_Kazuha_原神 .chat-title-main {
-    color: rgb(var(--gi-char-kazuha-primary-rgb));
-}
-
-.message.received.character-message.AI_Kazuha_原神 {
-    background: var(--gi-char-kazuha-msg-bg);
-    border-color: rgb(var(--gi-char-kazuha-secondary-rgb));
-}
-.message.received.character-message.AI_Kazuha_原神 .message-sender {
-    color: rgb(var(--gi-char-kazuha-primary-rgb));
-}
-
-.details-panel.character-active.AI_Kazuha_原神 #detailsName {
-    color: rgb(var(--gi-char-kazuha-primary-rgb));
-}
 
 /* --- 旅 Traveler - 旅行者 (通用) --- */
-/* This is a fallback or general class for both Aether and Lumine if needed */
-.AI_Traveler_原神 .chat-list-avatar,
-.chat-avatar-main.AI_Traveler_原神,
-.details-avatar.AI_Traveler_原神 {
-    background-color: rgb(var(--gi-char-traveler-primary-rgb));
-    color: white;
-    border: 2px solid rgb(var(--gi-char-traveler-secondary-rgb));
-    box-shadow: 0 0 5px rgba(var(--gi-char-traveler-secondary-rgb), 0.7);
+.AI_Traveler_原神 .chat-list-avatar, .chat-avatar-main.AI_Traveler_原神, .details-avatar.AI_Traveler_原神 {
+    background-color: var(--traveler-avatar-bg); color: var(--traveler-avatar-text); border: 2px solid var(--traveler-accent); box-shadow: 0 0 5px color-mix(in srgb, var(--traveler-accent), transparent 30%);
 }
-.chat-list-item.active.AI_Traveler_原神 {
-    background: rgb(var(--gi-char-traveler-primary-rgb));
-    border-color: rgb(var(--gi-char-traveler-secondary-rgb));
-}
-.chat-list-item.active.AI_Traveler_原神 .chat-list-name,
-.chat-list-item.active.AI_Traveler_原神 .chat-list-preview {
-    color: white !important;
-}
-.chat-header-main.character-active.AI_Traveler_原神 .chat-title-main {
-    color: rgb(var(--gi-char-traveler-primary-rgb));
-}
-.message.received.character-message.AI_Traveler_原神 {
-    background: var(--gi-char-traveler-msg-bg);
-    border-color: rgb(var(--gi-char-traveler-secondary-rgb));
-}
-.message.received.character-message.AI_Traveler_原神 .message-sender {
-    color: rgb(var(--gi-char-traveler-primary-rgb));
-}
-.details-panel.character-active.AI_Traveler_原神 #detailsName {
-    color: rgb(var(--gi-char-traveler-primary-rgb));
-}
+.chat-list-item.active.AI_Traveler_原神 { background: var(--traveler-avatar-bg); }
+.chat-list-item.active.AI_Traveler_原神 .chat-list-name, .chat-list-item.active.AI_Traveler_原神 .chat-list-preview { color: var(--traveler-avatar-text) !important; }
+.chat-header-main.character-active.AI_Traveler_原神 .chat-title-main, .details-panel.character-active.AI_Traveler_原神 #detailsName { color: var(--traveler-avatar-bg); }
+.message.received.character-message.AI_Traveler_原神 { background: var(--traveler-msg-bg); border-color: var(--traveler-accent); }
+.message.received.character-message.AI_Traveler_原神 .message-sender { color: var(--traveler-avatar-bg); }

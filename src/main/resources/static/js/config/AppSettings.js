@@ -60,7 +60,7 @@ const AppSettings = {
      * @description 媒体相关配置。
      */
     media: {
-        music: '/music/call.mp3', // 呼叫音乐文件路径
+        music: 'music/call.mp3', // 呼叫音乐文件路径
         chunkSize: 64 * 1024, // 文件/消息分片传输时每个分片的大小（字节）
         maxAudioDuration: 60, // 语音消息最大录制时长（秒）
         imageCompression: 0.8, // 图片压缩质量 (0-1)

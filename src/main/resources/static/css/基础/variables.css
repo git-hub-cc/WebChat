@@ -14,21 +14,23 @@
     --brand-rgb: 0, 136, 204;
     --brand-dark-rgb: 0, 119, 179;
     --accent-success-rgb: 76, 175, 80;
+    --accent-success-dark-rgb: 60, 145, 63;
     --accent-danger-rgb: 244, 67, 54;
     --accent-danger-dark-rgb: 200, 35, 51;
     --accent-warning-rgb: 255, 152, 0;
     --accent-info-rgb: 33, 150, 243;
-    --accent-deep-green-rgb: 76, 175, 80;
+    --accent-deep-green-rgb: 76, 175, 80; /* 旧变量，保留以兼容，新代码应使用 --accent-success-dark-rgb */
 
-    --surface-1-rgb: 248, 249, 250;
-    --surface-2-rgb: 255, 255, 255;
+    --surface-1-rgb: 248, 249, 250; /* e.g., 面板背景 */
+    --surface-2-rgb: 255, 255, 255; /* e.g., 内容背景, 模态框 */
     --surface-hover-rgb: 240, 240, 240;
     --surface-active-rgb: 224, 224, 224;
 
-    --text-primary-rgb: 33, 33, 33;
-    --text-secondary-rgb: 117, 117, 117;
-    --text-on-brand-rgb: 255, 255, 255;
-    --text-on-accent-rgb: 255, 255, 255;
+    --text-primary-rgb: 33, 33, 33;    /* 主要文本 */
+    --text-secondary-rgb: 117, 117, 117; /* 用于元数据等的较浅文本 */
+    --text-on-brand-rgb: 255, 255, 255;  /* 品牌色上的文本 */
+    --text-on-accent-rgb: 255, 255, 255; /* 其他强调色上的文本 */
+    --text-on-sent-rgb: 33, 33, 33; /* 发送消息气泡上的文本 */
 
     --border-subtle-rgb: 224, 224, 224;
     --disabled-rgb: 204, 204, 204;
@@ -38,74 +40,94 @@
 
     /* 特殊用途颜色 */
     --raw-chat-bg-color: #e5ddd5;
-    --raw-sent-bg-color: #e1ffc7;
+    --raw-sent-bg-color: #dcf8c6;
     --raw-secondary-btn-bg: #6c757d;
     --raw-secondary-btn-dark-bg: #5a6268;
 
     /* --- 1b. 语义化颜色变量 (Semantic Color Variables) --- */
     /* 组件将直接使用这些变量 */
+
+    /* 品牌色 */
     --brand-bg: rgb(var(--brand-rgb));
     --brand-bg-dark: rgb(var(--brand-dark-rgb));
     --text-on-brand: rgb(var(--text-on-brand-rgb));
 
+    /* 强调色 (用于状态、操作) */
     --success-bg: rgb(var(--accent-success-rgb));
+    --success-bg-dark: rgb(var(--accent-success-dark-rgb));
     --text-on-success: rgb(var(--text-on-accent-rgb));
+
     --danger-bg: rgb(var(--accent-danger-rgb));
     --danger-bg-dark: rgb(var(--accent-danger-dark-rgb));
     --text-on-danger: rgb(var(--text-on-accent-rgb));
+
     --warning-bg: rgb(var(--accent-warning-rgb));
     --text-on-warning: rgb(var(--text-on-accent-rgb));
+
     --info-bg: rgb(var(--accent-info-rgb));
     --text-on-info: rgb(var(--text-on-accent-rgb));
 
+    /* 界面层级颜色 (用于布局, 面板, 卡片) */
     --surface-1-bg: rgb(var(--surface-1-rgb));
     --surface-2-bg: rgb(var(--surface-2-rgb));
     --surface-hover-bg: rgb(var(--surface-hover-rgb));
     --surface-active-bg: rgb(var(--surface-active-rgb));
 
+    /* 文本颜色 */
     --text-primary: rgb(var(--text-primary-rgb));
     --text-secondary: rgb(var(--text-secondary-rgb));
-    --text-inverted: rgb(var(--text-on-brand-rgb));
+    --text-inverted: rgb(var(--white-rgb)); /* 深色背景上文本的别名 */
     --text-disabled: rgb(var(--disabled-text-rgb));
 
+    /* 边框颜色 */
     --border-color: rgb(var(--border-subtle-rgb));
     --border-color-interactive: rgba(var(--brand-rgb), 0.5);
     --border-color-strong: rgba(var(--text-primary-rgb), 0.5);
 
+    /* 其他状态 */
     --disabled-bg: rgb(var(--disabled-rgb));
 
     /* --- 1c. 组件级颜色变量 (Component-level Color Variables) --- */
+    /* 这些变量将语义颜色应用于特定UI组件 */
+
+    /* 通用 */
     --primary-color: var(--brand-bg);
     --primary-color-dark: var(--brand-bg-dark);
-    --secondary-btn-bg: var(--raw-secondary-btn-bg);
-    --secondary-btn-dark-bg: var(--raw-secondary-btn-dark-bg);
     --text-color: var(--text-primary);
     --text-color-light: var(--text-secondary);
     --text-color-inverted: var(--text-inverted);
 
+    /* 按钮 */
+    --secondary-btn-bg: var(--raw-secondary-btn-bg);
+    --secondary-btn-dark-bg: var(--raw-secondary-btn-dark-bg);
+    --text-on-secondary-btn: var(--text-inverted);
+
+    /* 布局 */
     --panel-bg-color: var(--surface-1-bg);
     --header-bg-color: var(--surface-1-bg);
     --chat-bg-color: var(--raw-chat-bg-color);
     --input-bg-color: var(--surface-2-bg);
 
+    /* 消息 */
     --sent-bg-color: var(--raw-sent-bg-color);
-    --text-on-sent: var(--text-primary);
+    --text-on-sent: rgb(var(--text-on-sent-rgb));
     --received-bg-color: var(--surface-2-bg);
     --text-on-received: var(--text-primary);
 
+    /* 遮罩与模态框 */
     --modal-backdrop-bg: rgba(var(--black-rgb), 0.5);
     --video-call-backdrop-bg: rgba(var(--black-rgb), 0.9);
     --video-call-ui-bg: rgba(var(--black-rgb), 0.3);
     --screenshot-editor-backdrop-bg: rgba(30, 30, 30, 0.9);
-    --screenshot-editor-toolbar-bg: #333; /* kept for specific dark UI */
-
+    --screenshot-editor-toolbar-bg: #333;
     --loading-overlay-bg: rgba(var(--text-primary-rgb), 0.7);
 
+    /* 通话质量指示器 */
     --audio-quality-level-0-bg: var(--danger-bg);
     --audio-quality-level-1-bg: var(--warning-bg);
     --audio-quality-level-2-bg: var(--info-bg);
     --audio-quality-level-3-bg: var(--success-bg);
-    --audio-quality-level-4-bg: rgb(var(--accent-deep-green-rgb));
+    --audio-quality-level-4-bg: var(--success-bg-dark);
 
     /* --- 1d. 角色主题化占位符 (Character Theming Placeholders) --- */
     --character-theme-primary-rgb: var(--brand-rgb);

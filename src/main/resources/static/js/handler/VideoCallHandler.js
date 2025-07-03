@@ -3,6 +3,7 @@
  * @description 视频通话的底层协议和 WebRTC 协商处理器。
  *              负责处理核心的 WebRTC 媒体协商、信令消息响应和自适应音频质量控制。
  *              这是一个内部模块，由 VideoCallManager 管理。
+ *              FIXED: 修复了接收方处理屏幕共享请求时，错误地不请求摄像头的问题。
  * @module VideoCallHandler
  * @exports {object} VideoCallHandler - 对外暴露的单例对象。
  * @dependencies AppSettings, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter, TimerManager
@@ -121,7 +122,7 @@ const VideoCallHandler = {
     showCallRequest: function (peerId, audioOnly = false, isScreenShare = false) {
         this.manager.state.currentPeerId = peerId;
         this.manager.state.isAudioOnly = audioOnly;
-        this.manager.state.isScreenShare = isScreenShare;
+        this.manager.state.isScreenSharing = isScreenShare;
         this.manager.state.isVideoEnabled = !audioOnly;
         this.manager.state.isAudioMuted = false;
         this.manager.state.isCaller = false;
@@ -137,7 +138,10 @@ const VideoCallHandler = {
             return;
         }
         try {
-            if (this.manager.state.isScreenSharing) this.manager.state.isVideoEnabled = false;
+            // This line was causing issues for screen sharing recipient.
+            // When receiving a screen share request, the recipient should still be able to send their video.
+            // The UI can decide whether to show it. The stream should be established.
+            // if (this.manager.state.isScreenSharing) this.manager.state.isVideoEnabled = false;
 
             await this.startLocalStreamAndSignal(false);
             ConnectionManager.sendTo(this.manager.state.currentPeerId, {
@@ -181,10 +185,17 @@ const VideoCallHandler = {
     },
 
     startLocalStreamAndSignal: async function (isOfferCreatorForMedia) {
-        let attemptLocalCameraVideoSending = !this.manager.state.isAudioOnly && !this.manager.state.isScreenSharing;
+        // --- MODIFICATION START: Corrected logic for determining video need ---
+        // The recipient of a screen share should act like they are in a normal video call.
+        // They should try to send video unless the call was initiated as audio-only.
+        let attemptLocalCameraVideoSending = !this.manager.state.isAudioOnly;
+
+        // Only the caller should try to get the display media.
+        const isScreenShareCaller = this.manager.state.isScreenSharing && this.manager.state.isCaller;
+        // --- MODIFICATION END ---
 
         try {
-            if (this.manager.state.isScreenSharing && this.manager.state.isCaller) {
+            if (isScreenShareCaller) {
                 this.manager.state.localStream = await navigator.mediaDevices.getDisplayMedia({video: { cursor: "always" }, audio: true});
                 this.manager.state.isVideoEnabled = true;
                 const screenTrack = this.manager.state.localStream.getVideoTracks()[0];
@@ -219,7 +230,7 @@ const VideoCallHandler = {
         } catch (getUserMediaError) {
             Utils.log(`getUserMedia/getDisplayMedia 错误: ${getUserMediaError.name}`, Utils.logLevels.ERROR);
             this.manager.state.isVideoEnabled = false;
-            if (this.manager.state.isScreenSharing && this.manager.state.isCaller) {
+            if (isScreenShareCaller) {
                 NotificationUIManager.showNotification(`屏幕共享错误: ${getUserMediaError.name}。`, 'error');
                 this.manager.cleanupCallMediaAndState();
                 throw getUserMediaError;
@@ -490,7 +501,7 @@ const VideoCallHandler = {
                 this.manager.state.isAudioOnly = remoteIsAudioOnly && !remoteIsScreenShare;
                 this.manager.state.currentPeerId = peerId;
                 this.manager.state.isCaller = false;
-                this.manager.state.isVideoEnabled = !this.manager.state.isAudioOnly && !this.manager.state.isScreenSharing;
+                this.manager.state.isVideoEnabled = !this.manager.state.isAudioOnly; // Receiver should try to send video
                 await this.startLocalStreamAndSignal(false);
             }
 
@@ -610,7 +621,7 @@ const VideoCallHandler = {
         } else if (!peerId && typeof TimerManager !== 'undefined') {
             Utils.log(`正在停止所有自适应音频质量检测 (via TimerManager)...`, Utils.logLevels.INFO);
             for (const id in this._currentAudioProfileIndex) {
-                if (this._currentAudioProfileIndex.hasOwnProperty(id)) {
+                if (Object.prototype.hasOwnProperty.call(this._currentAudioProfileIndex, id)) {
                     TimerManager.removePeriodicTask(`adaptiveAudio_${id}`);
                 }
             }
@@ -869,4 +880,3 @@ const VideoCallHandler = {
         return Math.max(0, Math.min(targetLevelIndex, profiles.length - 1));
     }
 };
-

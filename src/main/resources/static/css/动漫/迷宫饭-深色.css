@@ -85,9 +85,14 @@
 
 /* ------------------------- 🌍 全局与基础样式 ------------------------ */
 body {
-    background: radial-gradient(ellipse at center, rgba(var(--mgf-dungeon-moss-green-rgb),0.15) 0%, rgb(var(--mgf-deep-cave-bg-rgb)) 70%),
-    linear-gradient(to bottom right, rgba(var(--mgf-deep-cave-bg-rgb),0.92), rgba(var(--mgf-dark-earth-panel-rgb),0.85));
-    background-blend-mode: overlay, normal;
+    background-color: rgb(var(--mgf-deep-cave-bg-rgb));
+    background-image:
+        /* Central torchlight */
+            radial-gradient(ellipse at center, rgba(var(--mgf-torch-flame-orange-rgb), 0.18) 0%, transparent 70%),
+                /* Damp dungeon moss on the floor */
+            radial-gradient(ellipse at bottom, rgba(var(--mgf-dungeon-moss-green-rgb), 0.12) 0%, transparent 60%),
+                /* Dark stone wall texture */
+            linear-gradient(to bottom right, rgb(var(--mgf-deep-cave-bg-rgb)), rgb(var(--mgf-dark-earth-panel-rgb)));
 }
 
 .app-container {

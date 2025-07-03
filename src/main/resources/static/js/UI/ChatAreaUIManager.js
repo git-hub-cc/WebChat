@@ -83,7 +83,7 @@ const ChatAreaUIManager = {
         this.screenshotMainBtnEl = document.getElementById('screenshotMainBtn');
         this.emojiStickerBtnEl = document.getElementById('emojiStickerBtn');
 
-        this.chatInfoMainEl = document.querySelector('.chat-header-main .chat-info-main');
+        this.chatInfoMainEl = document.querySelector('#currentChatAvatarMain');
         this._initContextMenu();
         this._initAiMentionSuggestions();
 
