@@ -167,6 +167,7 @@ const SettingsUIManager = {
         if(modalCopySdpBtn) modalCopySdpBtn.addEventListener('click', () => this.copySdpTextFromModal());
 
 // 手动连接按钮
+        // 以下按钮是实现手动/离线WebRTC连接的关键
         const modalCreateOfferBtn = document.getElementById('modalCreateOfferBtn');
         if(modalCreateOfferBtn) modalCreateOfferBtn.addEventListener('click', () => ConnectionManager.createOffer(null, {isManual: true}));
         const modalCreateAnswerBtn = document.getElementById('modalCreateAnswerBtn');

@@ -2,9 +2,10 @@
  * @file DataChannelHandler.js
  * @description 处理 RTCDataChannel 的消息收发、分片和重组逻辑。
  *              现在原生支持二进制文件传输的分片和重组。
+ *              FIXED: 当文件数据接收并缓存完毕后，触发 'fileDataReady' 事件，以便UI异步更新预览。
  * @module DataChannelHandler
  * @exports {object} DataChannelHandler
- * @dependencies Utils, AppSettings, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager
+ * @dependencies Utils, AppSettings, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager, EventEmitter, DBManager
  */
 const DataChannelHandler = {
     _chunkMetaBuffer: {}, // { peerId: metadataObject }
@@ -168,12 +169,20 @@ const DataChannelHandler = {
                             Utils.log(`文件 "${meta.fileName}" (ID: ${meta.chunkId}) 从 ${finalPeerId} 接收完毕。`, Utils.logLevels.INFO);
 
                             // Reassembly is complete, now cache the file.
-                            // The corresponding JSON message (file, sticker, etc.) will trigger the display.
                             await DBManager.setItem('fileCache', {
                                 id: meta.chunkId,
                                 fileBlob: fileBlob,
                                 metadata: { name: meta.fileName, type: meta.fileType, size: meta.fileSize }
                             });
+
+                            // --- MODIFICATION START: Emit event on completion ---
+                            // Notify the application that this file's data is now ready in the cache.
+                            EventEmitter.emit('fileDataReady', {
+                                fileHash: meta.chunkId,
+                                fileType: meta.fileType,
+                                fileName: meta.fileName
+                            });
+                            // --- MODIFICATION END ---
                         }
                     }
                 } else if (typeof rawData === 'string') {
