@@ -11,9 +11,13 @@ const LLMProviders = {
     "ppmc": {
         "label": "PPMC",
         "defaultEndpoint": "https://175.178.216.24/v1/chat/completions",
-        "defaultModel": "qwen-turbo",
+        "defaultModel": "THUDM/GLM-4-32B-0414",
         "models": [
-            { "key": "qwen-turbo", "label": "Qwen Turbo" },
+            { "key": "Qwen/Qwen3-14B", "label": "Qwen3 14B" },
+            { "key": "Qwen/Qwen3-30B-A3B", "label": "Qwen3 30B" },
+            { "key": "THUDM/GLM-4-32B-0414", "label": "GLM-4 32B" },
+            { "key": "THUDM/GLM-Z1-Rumination-32B-0414", "label": "GLM-Z1 Rumination 32B" },
+            { "key": "deepseek-ai/DeepSeek-R1-0528-Qwen3-8B", "label": "DeepSeek-R1 Qwen3 8B" }
         ]
     },
     "siliconflow": {

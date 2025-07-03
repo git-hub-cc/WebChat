@@ -83,6 +83,7 @@ const AppSettings = {
         messageRetractionWindow: 5 * 60 * 1000, // 消息可撤回时间窗口 (5分钟)
         contextMenuAutoHide: 3000, // 新增：右键菜单自动隐藏时间 (毫秒)
         detailsPanelRefreshInterval: 5000, // 新增：详情面板（群成员）刷新间隔 (毫秒)
+        resourcePreviewScrollThreshold: 150, // 新增：用于资源预览网格的滚动加载阈值
         virtualScroll: { // 优化：将虚拟滚动相关配置整合
             batchSize: 15,
             contextLoadSize: 10
