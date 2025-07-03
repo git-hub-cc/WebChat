@@ -11,7 +11,9 @@
  *              修改: _getEffectiveAiConfig 现在支持从多种大模型提供商配置中获取设置，并移除了对“覆盖”状态的检查。
  *              FIXED: 增加了 extractMemoryElements 方法以支持记忆书功能。
  *              FIXED: sendAiMessage 现在会注入已启用的记忆书内容。
- * @dependencies UserManager, MessageManager, ChatManager, NotificationUIManager, Utils, AppSettings, ConnectionManager, LLMProviders, MemoryBookManager
+ *              MODIFIED: sendGroupAiMessage 现在支持 MCP (工具调用)，并会在使用工具时发送系统提示。
+ *              FIXED: 修复了群聊 MCP 分析请求时因响应格式不标准导致的 JSON 解析错误。
+ * @dependencies UserManager, MessageManager, ChatManager, NotificationUIManager, Utils, AppSettings, ConnectionManager, LLMProviders, MemoryBookManager, GroupManager
  */
 const AiApiHandler = {
 
@@ -346,10 +348,6 @@ ${conversationTranscript}
         }
     },
 
-    /**
-     * The following methods remain unchanged from your provided code...
-     * sendGroupAiMessage, checkAiServiceHealth, handleAiConfigChange
-     */
     sendGroupAiMessage: async function(groupId, group, aiContactId, mentionedMessageText, originalSenderId, triggeringMessageId = null) {
         const aiContact = UserManager.contacts[aiContactId];
         if (!aiContact || !aiContact.isAI) {
@@ -366,59 +364,139 @@ ${conversationTranscript}
                 throw new Error("AI API 端点未配置。请在设置中配置。");
             }
 
-            let systemPromptBase = "";
-            if (group.aiPrompts && group.aiPrompts[aiContactId] !== undefined && group.aiPrompts[aiContactId].trim() !== "") {
-                systemPromptBase = group.aiPrompts[aiContactId];
-                Utils.log(`AiApiHandler.sendGroupAiMessage: 使用群组 ${groupId} 中为 AI ${aiContactId} 设置的特定提示词。`, Utils.logLevels.INFO);
-            }
-            else if (aiContact.aiConfig && aiContact.aiConfig.systemPrompt !== undefined && aiContact.aiConfig.systemPrompt.trim() !== "") {
-                systemPromptBase = aiContact.aiConfig.systemPrompt;
-                Utils.log(`AiApiHandler.sendGroupAiMessage: 使用 AI ${aiContactId} 在群组 ${groupId} 中的默认提示词。`, Utils.logLevels.INFO);
-            }
-            else {
-                Utils.log(`AiApiHandler.sendGroupAiMessage: AI ${aiContactId} 在群组 ${groupId} 中无特定提示词，也无默认提示词。将仅使用基础群聊提示词。`, Utils.logLevels.WARN);
-            }
-            const finalSystemPrompt = systemPromptBase + AppSettings.ai.groupPromptSuffix;
-
-
             const groupContextWindow = (typeof AppSettings !== 'undefined' && AppSettings.ai && AppSettings.ai.groupAiSessionTime !== undefined)
                 ? AppSettings.ai.groupAiSessionTime
                 : (3 * 60 * 1000);
             const timeThreshold = new Date().getTime() - groupContextWindow;
-
-            const groupChatHistory = ChatManager.chats[groupId] || [];
-
-            const recentMessages = groupChatHistory.filter(msg =>
+            const groupChatHistory = (ChatManager.chats[groupId] || []).filter(msg =>
                 new Date(msg.timestamp).getTime() > timeThreshold &&
                 (msg.type === 'text' || (msg.type === 'system')) &&
                 msg.id !== triggeringMessageId
             );
 
-            const contextMessagesForAIHistory = recentMessages.map(msg => {
-                let role = 'system';
-                let content = msg.content;
-                if (msg.sender === aiContactId) {
-                    role = 'assistant';
-                } else if (msg.sender) {
-                    role = 'user';
+            const formattedHistory = groupChatHistory.map(msg => {
+                if (msg.sender && msg.sender !== aiContactId) {
                     const senderName = UserManager.contacts[msg.sender]?.name || `用户 ${String(msg.sender).substring(0,4)}`;
-                    content = `${senderName}: ${msg.content}`;
+                    return { ...msg, content: `${senderName}: ${msg.content}` };
                 }
-                return { role: role, content: content };
+                return msg;
             });
 
-            const messagesForRequestBody = [];
-            messagesForRequestBody.push({ role: "system", content: finalSystemPrompt });
-            messagesForRequestBody.push(...contextMessagesForAIHistory);
-
             const triggeringSenderName = UserManager.contacts[originalSenderId]?.name || `用户 ${String(originalSenderId).substring(0,4)}`;
-            const userTriggerMessage = {
-                role: 'user',
-                content: `${triggeringSenderName}: ${mentionedMessageText} [发送于: ${new Date().toLocaleString()}]`
-            };
-            messagesForRequestBody.push(userTriggerMessage);
+            const userTriggerMessageContent = `${triggeringSenderName}: ${mentionedMessageText}`;
 
-            Utils.log(`AiApiHandler.sendGroupAiMessage: 为 ${aiContact.name} (群组 ${group.name}) 发送 AI 请求。上下文窗口: ${groupContextWindow / 60000} 分钟。`, Utils.logLevels.DEBUG);
+            if (aiContact.aiConfig?.mcp_enabled && typeof MCP_TOOLS !== 'undefined') {
+                const analysisMessages = this._buildMcpAnalysisPrompt(aiContact, formattedHistory, userTriggerMessageContent);
+                const analysisRequestBody = {
+                    model: effectiveConfig.model, messages: analysisMessages, stream: false,
+                    temperature: 0.0, max_tokens: 512
+                };
+
+                const analysisResponse = await fetch(effectiveConfig.apiEndpoint, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                    body: JSON.stringify(analysisRequestBody)
+                });
+
+                if (!analysisResponse.ok) throw new Error(`群聊 MCP 分析请求失败: ${analysisResponse.status}`);
+
+                // --- FIX START: Handle non-standard JSON response ---
+                const rawTextResult = await analysisResponse.text();
+                let jsonStringResult = rawTextResult.trim();
+
+                if (jsonStringResult.startsWith('data: ')) {
+                    jsonStringResult = jsonStringResult.substring('data: '.length).trim();
+                }
+                if (jsonStringResult.endsWith('[DONE]')) {
+                    jsonStringResult = jsonStringResult.substring(0, jsonStringResult.lastIndexOf('[DONE]')).trim();
+                }
+
+                const firstBraceIndex = jsonStringResult.indexOf('{');
+                const lastBraceIndex = jsonStringResult.lastIndexOf('}');
+                if (firstBraceIndex !== -1 && lastBraceIndex > firstBraceIndex) {
+                    jsonStringResult = jsonStringResult.substring(firstBraceIndex, lastBraceIndex + 1);
+                }
+
+                const analysisResult = JSON.parse(jsonStringResult);
+                // --- FIX END ---
+
+                const aiContent = analysisResult.choices[0].message.content;
+
+                let toolCall;
+                try {
+                    const parsedContent = JSON.parse(aiContent);
+                    if (parsedContent.tool_call) {
+                        toolCall = parsedContent.tool_call;
+                    }
+                } catch (e) {
+                    const finalAiMessage = { id: `group_ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: aiContactId, groupId: groupId };
+                    ChatManager.addMessage(groupId, finalAiMessage);
+                    GroupManager.broadcastToGroup(groupId, finalAiMessage);
+                    return;
+                }
+
+                if (toolCall) {
+                    const systemToolMsg = { id: `sys_tool_use_${Date.now()}`, type: 'system', content: `${aiContact.name} 正在使用 [${toolCall.name}] 工具...`, timestamp: new Date().toISOString(), groupId: groupId };
+                    ChatManager.addMessage(groupId, systemToolMsg);
+
+                    const toolResult = await this._executeMcpTool(toolCall.name, toolCall.arguments);
+                    if (toolResult.error) {
+                        throw new Error(`工具调用错误: ${toolResult.error}`);
+                    }
+
+                    const finalMessages = this._buildMcpFinalPrompt(aiContact, userTriggerMessageContent, toolCall, toolResult.data);
+                    const finalRequestBody = {
+                        model: effectiveConfig.model, messages: finalMessages, stream: true,
+                        temperature: 0.1, max_tokens: effectiveConfig.maxTokens || 2048,
+                        user: originalSenderId, character_id: aiContactId, group_id: groupId
+                    };
+
+                    const aiResponseMessageId = `group_ai_msg_${aiContactId}_${Date.now()}`;
+                    let fullAiResponseContent = "";
+                    const initialAiResponseMessage = {
+                        id: aiResponseMessageId, type: 'text', content: "▍",
+                        timestamp: new Date().toISOString(), sender: aiContactId,
+                        groupId: groupId, isStreaming: true,
+                    };
+                    ChatManager.addMessage(groupId, initialAiResponseMessage);
+
+                    await Utils.fetchApiStream(
+                        effectiveConfig.apiEndpoint, finalRequestBody,
+                        { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                        (jsonChunk) => {
+                            const chunkContent = jsonChunk.choices[0].delta.content;
+                            fullAiResponseContent += chunkContent;
+                            ChatManager.addMessage(groupId, { ...initialAiResponseMessage, content: fullAiResponseContent + "▍" });
+                        },
+                        () => {
+                            const finalAiMessage = { ...initialAiResponseMessage, content: fullAiResponseContent, isStreaming: false, isNewlyCompletedAIResponse: true };
+                            ChatManager.addMessage(groupId, finalAiMessage);
+                            const messageForBroadcast = { ...finalAiMessage };
+                            delete messageForBroadcast.isNewlyCompletedAIResponse;
+                            GroupManager.broadcastToGroup(groupId, messageForBroadcast);
+                        }
+                    );
+                    return;
+                }
+            }
+
+            let systemPromptBase = "";
+            if (group.aiPrompts && group.aiPrompts[aiContactId] !== undefined && group.aiPrompts[aiContactId].trim() !== "") {
+                systemPromptBase = group.aiPrompts[aiContactId];
+            } else if (aiContact.aiConfig && aiContact.aiConfig.systemPrompt !== undefined && aiContact.aiConfig.systemPrompt.trim() !== "") {
+                systemPromptBase = aiContact.aiConfig.systemPrompt;
+            }
+            const finalSystemPrompt = systemPromptBase + AppSettings.ai.groupPromptSuffix;
+
+            const contextMessagesForAIHistory = formattedHistory.map(msg => {
+                let role = (msg.sender === aiContactId) ? 'assistant' : 'user';
+                return { role: role, content: msg.content };
+            });
+
+            const messagesForRequestBody = [
+                { role: "system", content: finalSystemPrompt },
+                ...contextMessagesForAIHistory,
+                { role: 'user', content: userTriggerMessageContent }
+            ];
 
             const requestBody = {
                 model: effectiveConfig.model,
@@ -427,57 +505,33 @@ ${conversationTranscript}
                 temperature: 0.1,
                 max_tokens: effectiveConfig.maxTokens || 2048,
                 group_id: groupId,
-                character_id: aiContactId
+                character_id: aiContactId,
+                user: originalSenderId
             };
-            Utils.log(`发送到群组 AI (${aiContact.name} in ${group.name}) (流式): ${JSON.stringify(requestBody.messages.slice(-5))}`, Utils.logLevels.DEBUG);
 
             const aiResponseMessageId = `group_ai_msg_${aiContactId}_${Date.now()}`;
             let fullAiResponseContent = "";
             const initialAiResponseMessage = {
                 id: aiResponseMessageId, type: 'text', content: "▍",
                 timestamp: new Date().toISOString(), sender: aiContactId,
-                groupId: groupId, originalSender: aiContactId,
-                originalSenderName: aiContact.name, isStreaming: true,
-                isNewlyCompletedAIResponse: false
+                groupId: groupId, isStreaming: true,
             };
             ChatManager.addMessage(groupId, initialAiResponseMessage);
-            let aiMessageElement = null;
-            if (ChatManager.currentChatId === groupId) {
-                aiMessageElement = chatBox.querySelector(`.message[data-message-id="${aiResponseMessageId}"] .message-content`);
-            }
 
             await Utils.fetchApiStream(
-                effectiveConfig.apiEndpoint,
-                requestBody,
+                effectiveConfig.apiEndpoint, requestBody,
                 { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
                 (jsonChunk) => {
                     const chunkContent = jsonChunk.choices[0].delta.content;
                     fullAiResponseContent += chunkContent;
-                    if (aiMessageElement) {
-                        aiMessageElement.innerHTML = Utils.formatMessageText(fullAiResponseContent + "▍");
-                        chatBox.scrollTop = chatBox.scrollHeight;
-                    }
-                    ChatManager.addMessage(groupId, {
-                        ...initialAiResponseMessage,
-                        content: fullAiResponseContent + "▍",
-                        isStreaming: true
-                    });
+                    ChatManager.addMessage(groupId, { ...initialAiResponseMessage, content: fullAiResponseContent + "▍" });
                 },
                 () => {
-                    const finalAiResponseMessage = {
-                        id: aiResponseMessageId, type: 'text', content: fullAiResponseContent,
-                        timestamp: initialAiResponseMessage.timestamp, sender: aiContactId,
-                        groupId: groupId, originalSender: aiContactId, originalSenderName: aiContact.name,
-                        isStreaming: false, isNewlyCompletedAIResponse: true
-                    };
-                    ChatManager.addMessage(groupId, finalAiResponseMessage);
-
-                    const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
-                    humanMembers.forEach(memberId => {
-                        if (memberId !== originalSenderId && memberId !== UserManager.userId) {
-                            ConnectionManager.sendTo(memberId, finalAiResponseMessage);
-                        }
-                    });
+                    const finalAiMessage = { ...initialAiResponseMessage, content: fullAiResponseContent, isStreaming: false, isNewlyCompletedAIResponse: true };
+                    ChatManager.addMessage(groupId, finalAiMessage);
+                    const messageForBroadcast = { ...finalAiMessage };
+                    delete messageForBroadcast.isNewlyCompletedAIResponse;
+                    GroupManager.broadcastToGroup(groupId, messageForBroadcast);
                 }
             );
 
@@ -491,12 +545,7 @@ ${conversationTranscript}
                 groupId: groupId, originalSender: aiContactId, originalSenderName: aiContact.name
             };
             ChatManager.addMessage(groupId, errorResponseMessage);
-            const humanMembers = group.members.filter(id => !UserManager.contacts[id]?.isAI);
-            humanMembers.forEach(memberId => {
-                if (memberId !== originalSenderId && memberId !== UserManager.userId) {
-                    ConnectionManager.sendTo(memberId, errorResponseMessage);
-                }
-            });
+            GroupManager.broadcastToGroup(groupId, errorResponseMessage);
         }
     },
     checkAiServiceHealth: async function() {
