@@ -235,7 +235,6 @@ body {
 
 .details-avatar {
     border: 3px solid;
-    border-image: linear-gradient(45deg, rgb(var(--dq-light-luminous-gold-rgb)), rgb(var(--border-subtle-rgb))) 1;
     animation: dq-douqi-border-glow 3s infinite alternate;
 }
 @keyframes dq-douqi-border-glow {

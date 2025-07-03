@@ -9,6 +9,9 @@
 
 html {
     scroll-behavior: smooth;
+    /* --- FIX: 新增，用于 Firefox 浏览器 --- */
+    scrollbar-width: thin;
+    scrollbar-color: var(--brand-bg) var(--surface-1-bg);
 }
 
 body {
@@ -21,6 +24,7 @@ body {
     color: var(--text-color);
     font-family: var(--font-family-base), var(--font-family-serif);
     line-height: var(--line-height-base);
+    background: var(--surface-1-bg);
 }
 
 /* ========================================================================== */
@@ -55,7 +59,7 @@ body {
     display: flex;
     flex-direction: column;
     flex-grow: 1;
-    background-color: var(--chat-bg-color);
+    background: var(--chat-bg-color);
 }
 
 .details-panel {
@@ -82,7 +86,7 @@ body {
     min-height: var(--header-height);
     padding-inline: var(--spacing-4);
     border-bottom: var(--border-width-standard) solid var(--border-color);
-    background-color: var(--header-bg-color);
+    background: var(--header-bg-color);
 }
 
 /* ========================================================================== */
@@ -116,7 +120,7 @@ body {
 
 .btn-secondary {
     background-color: var(--secondary-btn-bg);
-    color: var(--text-color-inverted);
+    color: var(--text-on-secondary-btn);
 }
 
 .btn-danger {
@@ -177,6 +181,7 @@ body {
     border: var(--border-width-standard) solid var(--border-color);
     border-radius: var(--border-radius-pill);
     background-color: var(--input-bg-color);
+    color: var(--text-primary);
     flex-grow: 1;
     padding: var(--spacing-2) var(--spacing-3);
     font-size: var(--font-size-base);
@@ -410,6 +415,7 @@ body {
     border: var(--border-width-standard) solid var(--border-color);
     border-radius: var(--border-radius-sm);
     background-color: var(--surface-2-bg);
+    color: var(--text-primary);
     transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
 }
 
@@ -930,7 +936,7 @@ body {
 }
 
 .btn-success:hover:not(:disabled) {
-    background-color: var(--accent-deep-green-rgb);
+    background-color: var(--success-bg-dark);
 }
 
 .collapsible-header:hover {
@@ -991,7 +997,7 @@ input:checked + .slider::before {
 /* ========================================================================== */
 
 .btn:disabled, .header-action-btn:disabled, .icon-btn:disabled, .screenshot-tool-btn:disabled {
-    background-color: var(--disabled-bg) !important;
+    background: var(--disabled-bg) !important;
     box-shadow: none !important;
     color: var(--text-disabled) !important;
     cursor: not-allowed !important;
@@ -1254,6 +1260,7 @@ input:checked + .slider::before {
     border: var(--border-width-standard) solid var(--border-color);
     border-radius: var(--border-radius-sm);
     background-color: var(--surface-2-bg);
+    color: var(--text-primary);
     transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
     margin-bottom: 0;
 }
@@ -1320,10 +1327,7 @@ input:checked + .slider::before {
     flex-shrink: 0;
 }
 
-/* --- FIX START: 添加以下规则 --- */
-
 .emoji-sticker-panel .menu-tab-content {
-    /* 1. 默认隐藏所有内容面板 */
     display: none;
     flex-grow: 1;
     overflow-y: auto;
@@ -1331,8 +1335,6 @@ input:checked + .slider::before {
 }
 
 .emoji-sticker-panel .menu-tab-content.active {
-    /* 2. 只显示带有 .active 类的面板 */
-    /* 使用 flex 以便贴图区域的按钮能正确布局 */
     display: flex;
     flex-direction: column;
 }
@@ -1455,6 +1457,7 @@ input:checked + .slider::before {
     border: var(--border-width-standard) solid var(--border-color);
     border-radius: var(--border-radius-sm);
     background-color: var(--surface-2-bg);
+    color: var(--text-primary);
     transition: border-color var(--transition-duration-normal) ease-out, box-shadow var(--transition-duration-normal) ease-out;
 }
 
@@ -1463,6 +1466,36 @@ input:checked + .slider::before {
     border-color: var(--brand-bg);
     box-shadow: 0 0 0 var(--border-width-focus) rgba(var(--brand-rgb), 0.2);
 }
+
+/* ========================================================================== */
+/* 滚动条样式 (Scrollbar Styles) - FIX: 全面更新样式 */
+/* ========================================================================== */
+
+/* 适用于 Webkit 内核浏览器, 例如 Chrome, Safari, Edge */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background-color: var(--surface-1-bg); /* 使用面板背景色作为轨道颜色 */
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--brand-bg); /* 使用主题品牌色作为滑块颜色 */
+    border-radius: var(--border-radius-pill);
+    border: 2px solid var(--surface-1-bg); /* 创建内边距效果，让滑块看起来更精致 */
+    transition: background-color var(--transition-duration-fast) ease-out;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--brand-bg-dark); /* 悬停时使用更深的品牌色 */
+}
+
+::-webkit-scrollbar-corner {
+    background-color: transparent; /* 隐藏右下角的交汇处背景 */
+}
+
 
 /* ========================================================================== */
 /* 响应式设计 (Responsive Design) */

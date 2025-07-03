@@ -176,7 +176,7 @@
 .message.sent {
     align-self: flex-end;
     border-bottom-right-radius: 2px;
-    background-color: var(--sent-bg-color);
+    background: var(--sent-bg-color);
     color: var(--text-on-sent);
 }
 
@@ -359,8 +359,8 @@
     border: none;
     border-radius: var(--border-radius-circle);
     background: var(--brand-bg);
-    cursor: pointer;
     color: var(--text-on-brand);
+    cursor: pointer;
     font-size: var(--font-size-base);
     transition: background-color var(--transition-duration-normal) ease-out;
 }
@@ -473,7 +473,7 @@
     flex-direction: column;
     padding: var(--spacing-3) var(--spacing-4);
     border-top: var(--border-width-standard) solid var(--border-color);
-    background-color: var(--header-bg-color);
+    background: var(--header-bg-color);
     position: relative;
 }
 
@@ -487,6 +487,7 @@
     border: var(--border-width-standard) solid var(--border-color);
     border-radius: var(--border-radius-pill);
     background-color: var(--input-bg-color);
+    color: var(--text-primary); /* --- FIX: 新增 --- */
     flex-grow: 1;
     min-height: 24px;
     max-height: 120px;
@@ -551,7 +552,7 @@
 }
 
 .voice-message-preview .btn-play-preview:hover {
-    background-color: rgb(var(--accent-deep-green-rgb));
+    background-color: var(--success-bg-dark);
 }
 
 #voiceButtonMain .audio-timer-indicator {

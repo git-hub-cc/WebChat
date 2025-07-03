@@ -237,7 +237,6 @@ body {
     border: 3px solid transparent;
     box-shadow: 0 0 12px rgba(var(--dq-dark-black-rgb), 0.4);
     transition: border-image 0.4s ease, box-shadow 0.4s ease;
-    border-image: linear-gradient(60deg, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb))) 1;
 }
 .details-panel.character-active .details-avatar {
     animation: dq-dark-power-glow 3s infinite alternate;
