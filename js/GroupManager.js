@@ -1,7 +1,7 @@
 /**
  * @file GroupManager.js
  * @description 核心群组管理器，负责处理所有与群组相关的逻辑，包括创建、加载、成员管理和消息广播。
- *              群组邀请现在要求对方在线。当群成员发生变更时，会通知所有相关群成员。
+ *              MODIFIED: 群组邀请现在会在邀请时主动获取在线用户列表来判断对方是否在线，而不是依赖可能过时的连接状态。
  * @module GroupManager
  * @exports {object} GroupManager - 对外暴露的单例对象，包含所有群组管理功能。
  * @dependencies DBManager, UserManager, ChatManager, ConnectionManager, NotificationUIManager, Utils, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, MessageManager, EventEmitter, AppSettings
@@ -127,10 +127,6 @@ const GroupManager = {
         }
     },
 
-    /**
-     * 打开指定的群组聊天界面。
-     * @param {string} groupId - 要打开的群组 ID。
-     */
     openGroup: function(groupId) {
         this.currentGroupId = groupId;
         const group = this.groups[groupId];
@@ -159,7 +155,6 @@ const GroupManager = {
         if (group.owner !== UserManager.userId) { NotificationUIManager.showNotification("只有群主可以添加成员。", "error"); return false; }
         if (group.members.includes(memberId)) { NotificationUIManager.showNotification("用户已在群组中。", "warning"); return false; }
 
-        // 使用 AppSettings 中的常量
         if (group.members.length >= AppSettings.chat.maxGroupMembers) {
             NotificationUIManager.showNotification(`群组已满 (最多 ${AppSettings.chat.maxGroupMembers} 人)。`, "error");
             return false;
@@ -168,10 +163,16 @@ const GroupManager = {
         const contactToAdd = UserManager.contacts[memberId];
         const newMemberDisplayName = memberName || (contactToAdd ? contactToAdd.name : `用户 ${memberId.substring(0,4)}`);
 
-        if (!(contactToAdd && contactToAdd.isAI) && !ConnectionManager.isConnectedTo(memberId)) {
-            NotificationUIManager.showNotification(`无法添加成员: ${newMemberDisplayName} 当前不在线或未连接。`, 'error');
-            return false;
+        // --- MODIFIED: 在添加时主动获取在线用户列表来判断用户是否在线 ---
+        if (!(contactToAdd && contactToAdd.isAI)) {
+            // 立即获取最新的在线用户列表
+            await PeopleLobbyManager.fetchOnlineUsers(true); // silent fetch
+            if (!PeopleLobbyManager.onlineUserIds.includes(memberId)) {
+                NotificationUIManager.showNotification(`无法添加成员: ${newMemberDisplayName} 当前不在线。`, 'error');
+                return false;
+            }
         }
+        // --- END OF MODIFICATION ---
 
         group.members.push(memberId);
         group.leftMembers = group.leftMembers.filter(lm => lm.id !== memberId);
@@ -305,7 +306,6 @@ const GroupManager = {
         ChatManager.renderChatList(ChatManager.currentFilter);
         return true;
     },
-
     leaveGroup: async function(groupId) {
         const group = this.groups[groupId];
         if (!group) { NotificationUIManager.showNotification("未找到群组。", "error"); return; }
@@ -340,7 +340,6 @@ const GroupManager = {
         ChatManager.renderChatList(ChatManager.currentFilter);
         NotificationUIManager.showNotification(`您已离开群组 "${group.name}"。`, 'success');
     },
-
     dissolveGroup: async function(groupId) {
         const group = this.groups[groupId];
         if (!group) return;
@@ -365,7 +364,6 @@ const GroupManager = {
         ChatManager.renderChatList(ChatManager.currentFilter);
         NotificationUIManager.showNotification(`群组 "${group.name}" 已被解散。`, 'success');
     },
-
     broadcastToGroup: function(groupId, message, excludeIds = []) {
         const group = this.groups[groupId];
         if (!group) {
@@ -402,7 +400,6 @@ const GroupManager = {
         Utils.log(`尝试向群组 ${groupId} 发送消息 (人类成员), 类型: ${message.type}, 排除: ${excludeIds.join(',')}, 目标人数: ${membersToSendTo.length}`, Utils.logLevels.DEBUG);
         return true;
     },
-
     handleGroupMessage: async function(message) {
         const { groupId, type, sender, originalSender } = message;
         let group = this.groups[groupId];
@@ -640,7 +637,6 @@ const GroupManager = {
                 break;
         }
     },
-
     updateGroupLastMessage: async function(groupId, messageText, incrementUnread = false, forceNoUnread = false) {
         const group = this.groups[groupId];
         if (group) {
@@ -655,7 +651,6 @@ const GroupManager = {
             ChatManager.renderChatList(ChatManager.currentFilter);
         }
     },
-
     clearUnread: async function(groupId) {
         const group = this.groups[groupId];
         if (group && group.unread > 0) {
@@ -664,7 +659,6 @@ const GroupManager = {
             ChatManager.renderChatList(ChatManager.currentFilter);
         }
     },
-
     formatMessagePreview: function(message) {
         if (message.isRetracted) { return message.content; }
         let preview;
@@ -684,7 +678,6 @@ const GroupManager = {
         }
         return preview.length > 35 ? preview.substring(0, 32) + "..." : preview;
     },
-
     notifyAiPromptChanged: function(groupId, aiMemberId, newPrompt) {
         if (!this.groups[groupId] || this.groups[groupId].owner !== UserManager.userId) {
             Utils.log(`notifyAiPromptChanged: 操作被拒绝。用户 ${UserManager.userId} 不是群组 ${groupId} 的所有者，或群组不存在。`, Utils.logLevels.WARN);

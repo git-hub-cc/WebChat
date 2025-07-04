@@ -1,8 +1,7 @@
 /**
  * @file DetailsPanelUIManager.js
  * @description 管理应用右侧详情面板的 UI 元素和交互。
- *              FIXED: 修复了群组成员列表定时刷新时，即使状态无变化也重绘UI，从而打断用户操作的问题。
- *              OPTIMIZED: 通过状态缓存避免不必要的群组成员列表重绘。
+ *              REMOVED: 移除了群组成员列表的定时刷新功能，以减少不必要的网络请求。现在面板内容仅在打开或手动操作时更新。
  * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationUIManager, Utils, ConnectionManager, PeopleLobbyManager, AppSettings, LayoutUIManager, EventEmitter, DBManager, ResourcePreviewUIManager, TimerManager, MemoryBookManager, ModalUIManager
  */
 const DetailsPanelUIManager = {
@@ -54,13 +53,9 @@ const DetailsPanelUIManager = {
     memoryBookSectionEl: null,
     memoryBookListEl: null,
 
-    // 移除本地常量
-    _GROUP_MEMBER_REFRESH_TASK_NAME: 'groupMemberStatusRefresh',
-    // OPTIMIZATION: 存储最后渲染的成员状态，避免不必要的重绘
-    _lastRenderedMembersState: null,
 
     init: function() {
-        // ... (init 方法内部逻辑不变) ...
+        // ... (init 方法内部的元素获取逻辑不变) ...
         this.detailsPanelEl = document.getElementById('detailsPanel');
         this.detailsPanelTitleEl = document.getElementById('detailsPanelTitle');
         this.closeDetailsBtnMainEl = document.getElementById('closeDetailsBtnMain');
@@ -107,16 +102,6 @@ const DetailsPanelUIManager = {
 
         this.bindEvents();
 
-        EventEmitter.on('connectionEstablished', (peerId) => this._tryRefreshGroupMembersView(peerId));
-        EventEmitter.on('connectionClosed', (peerId) => this._tryRefreshGroupMembersView(peerId));
-        EventEmitter.on('connectionFailed', (peerId) => this._tryRefreshGroupMembersView(peerId));
-        EventEmitter.on('onlineUsersUpdated', () => {
-            if (this.currentView === 'details' && ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
-                // OPTIMIZATION: 调用智能刷新而不是强制重绘
-                this._refreshGroupMembersAndAutoConnect();
-            }
-        });
-
         EventEmitter.on('memorySetsUpdated', () => this._renderMemoryBookSection(this.currentChatId));
         EventEmitter.on('memoryBookUpdated', ({ setId, chatId, content }) => this._updateMemoryBookUI(setId, chatId, content));
         EventEmitter.on('memoryBookGenerationStarted', ({ setId, chatId }) => this._setMemoryBookLoadingState(setId, chatId, true));
@@ -125,7 +110,6 @@ const DetailsPanelUIManager = {
         Utils.log("DetailsPanelUIManager 初始化完成。", Utils.logLevels.INFO);
     },
 
-    // ... (其他方法保持不变) ...
     _makeElementCollapsible: function(headerEl) {
         if (!headerEl) return;
         const containerEl = headerEl.parentElement;
@@ -234,7 +218,6 @@ const DetailsPanelUIManager = {
         if (this.groupAiPromptsSectionEl) this.groupAiPromptsSectionEl.style.display = 'none';
         if (this.detailsGroupManagementEl) this.detailsGroupManagementEl.style.display = 'none';
     },
-
     _updateMemoryBookUI: function(setId, chatId, content) {
         if (chatId !== this.currentChatId) return;
         const setItem = this.memoryBookListEl.querySelector(`.memory-set-item[data-set-id="${setId}"]`);
@@ -244,7 +227,6 @@ const DetailsPanelUIManager = {
             this._setMemoryBookLoadingState(setId, chatId, false);
         }
     },
-
     _setMemoryBookLoadingState: function(setId, chatId, isLoading) {
         if (chatId !== this.currentChatId) return;
         const setItem = this.memoryBookListEl.querySelector(`.memory-set-item[data-set-id="${setId}"]`);
@@ -256,7 +238,6 @@ const DetailsPanelUIManager = {
             }
         }
     },
-
     _renderMemoryBookSection: function(chatId) {
         if (!this.memoryBookListEl || !chatId) {
             this.memoryBookListEl.innerHTML = '';
@@ -306,27 +287,12 @@ const DetailsPanelUIManager = {
         this.memoryBookListEl.appendChild(fragment);
     },
 
-    _tryRefreshGroupMembersView: function(peerId) {
-        if (this.currentView === 'details' && ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
-            const group = GroupManager.groups[ChatManager.currentChatId];
-            if (group && group.members.includes(peerId)) {
-                Utils.log(`DetailsPanelUIManager: 检测到群成员 ${peerId} 连接状态变化，刷新成员列表。`, Utils.logLevels.DEBUG);
-                // OPTIMIZATION: 调用智能刷新而不是强制重绘
-                this._refreshGroupMembersAndAutoConnect();
-            }
-        }
-    },
-
     _setPanelVisibility: function(show, viewType = null) {
         const appContainer = document.querySelector('.app-container');
         this.isPanelAreaVisible = show;
         if (this.detailsPanelContentEl) this.detailsPanelContentEl.style.display = 'none';
         if (this.peopleLobbyContentEl) this.peopleLobbyContentEl.style.display = 'none';
-        if (!show || (show && viewType === 'details' && !(ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_'))) || (show && viewType === 'lobby') ) {
-            if (typeof TimerManager !== 'undefined') {
-                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            }
-        }
+
         if (show) {
             if (appContainer) appContainer.classList.add('show-details');
             if (viewType === 'details' && this.detailsPanelContentEl) {
@@ -334,9 +300,8 @@ const DetailsPanelUIManager = {
                 if (this.resourcePreviewSectionEl && ChatManager.currentChatId) {
                     ResourcePreviewUIManager.loadResourcesForChat(ChatManager.currentChatId);
                 }
-                if (ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
-                    this._startGroupMemberRefreshTimer();
-                }
+                // REMOVED: 不再在此处启动定时器。
+                // if (ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) { ... }
             } else if (viewType === 'lobby' && this.peopleLobbyContentEl) {
                 this.peopleLobbyContentEl.style.display = 'flex';
                 if (this.resourcePreviewSectionEl) this.resourcePreviewSectionEl.style.display = 'none';
@@ -346,11 +311,9 @@ const DetailsPanelUIManager = {
         } else {
             if (appContainer) appContainer.classList.remove('show-details');
             this.currentView = null;
-            this._lastRenderedMembersState = null; // Clear state when panel closes
             ResourcePreviewUIManager.hide();
         }
     },
-
     showMainDetailsContent: function() {
         if (!ChatManager.currentChatId) {
             Utils.log("DetailsPanelUIManager: 无法显示详情，没有选中的聊天。", Utils.logLevels.INFO);
@@ -361,7 +324,6 @@ const DetailsPanelUIManager = {
         this._setPanelVisibility(true, 'details');
         Utils.log("DetailsPanelUIManager: 显示聊天详情视图。", Utils.logLevels.DEBUG);
     },
-
     showPeopleLobbyContent: async function() {
         if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = '人员大厅';
         if (this.resourcePreviewSectionEl) this.resourcePreviewSectionEl.style.display = 'none';
@@ -373,7 +335,6 @@ const DetailsPanelUIManager = {
         this._setPanelVisibility(true, 'lobby');
         Utils.log("DetailsPanelUIManager: 显示人员大厅视图。", Utils.logLevels.DEBUG);
     },
-
     toggleChatDetailsView: function() {
         if (this.isPanelAreaVisible && this.currentView === 'details') {
             this.hideSidePanel();
@@ -381,7 +342,6 @@ const DetailsPanelUIManager = {
             this.showMainDetailsContent();
         }
     },
-
     togglePeopleLobbyView: function() {
         if (this.isPanelAreaVisible && this.currentView === 'lobby') {
             this.hideSidePanel();
@@ -389,13 +349,11 @@ const DetailsPanelUIManager = {
             this.showPeopleLobbyContent();
         }
     },
-
     hideSidePanel: function () {
         this._setPanelVisibility(false);
         if (this.detailsPanelTitleEl) this.detailsPanelTitleEl.textContent = '聊天信息';
         Utils.log("DetailsPanelUIManager: 右侧面板已隐藏。", Utils.logLevels.DEBUG);
     },
-
     updateDetailsPanel: function (chatId, type) {
         if (!this.detailsPanelEl || !this.detailsPanelContentEl) return;
         this.currentChatId = chatId;
@@ -420,9 +378,7 @@ const DetailsPanelUIManager = {
         }
         if (type === 'contact') {
             this._updateForContact(chatId);
-            if (typeof TimerManager !== 'undefined') {
-                TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            }
+            // REMOVED: 不再需要移除定时器，因为它从一开始就不会被设置。
         } else if (type === 'group') {
             this._updateForGroup(chatId);
         }
@@ -433,7 +389,6 @@ const DetailsPanelUIManager = {
             ResourcePreviewUIManager.hide();
         }
     },
-
     _showEditSetForm: function(setData = null) {
         if (!this.newMemorySetForm) return;
 
@@ -455,7 +410,6 @@ const DetailsPanelUIManager = {
         this.newMemorySetForm.style.display = 'block';
         this.newMemorySetNameInput.focus();
     },
-
     _createSearchableChapterSelect: function(contactId, contactData, targetDiv) {
         targetDiv.innerHTML = '';
         const container = document.createElement('div');
@@ -589,7 +543,6 @@ const DetailsPanelUIManager = {
             }, 150);
         });
     },
-
     _renderChapterSelector: function(contactId, contactData) {
         if (!this.aiChapterSectionEl) {
             Utils.log("DetailsPanelUIManager: aiChapterSectionEl 未找到。", Utils.logLevels.ERROR);
@@ -609,7 +562,6 @@ const DetailsPanelUIManager = {
             this.aiChapterSectionEl.style.display = 'none';
         }
     },
-
     _populateAiAboutSection: function(contact) {
         if (this.aiContactAboutNameEl) this.aiContactAboutNameEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
         if (this.aiContactAboutNameSubEl) this.aiContactAboutNameSubEl.textContent = contact.aboutDetails.nameForAbout || contact.name;
@@ -623,7 +575,6 @@ const DetailsPanelUIManager = {
         }
         if (this.aiContactAboutTextEl) this.aiContactAboutTextEl.textContent = contact.aboutDetails.aboutText;
     },
-
     _setupAiTtsConfigSection: function(contact) {
         const formContainerId = 'ttsConfigFormContainer';
         TtsUIManager.populateAiTtsConfigurationForm(contact, formContainerId);
@@ -635,7 +586,6 @@ const DetailsPanelUIManager = {
             this.saveAiTtsSettingsBtnDetailsEl.addEventListener('click', TtsUIManager._boundSaveTtsListener);
         }
     },
-
     _updateForGroup: function(groupId) {
         const group = GroupManager.groups[groupId];
         if (!group || !this.detailsPanelEl) return;
@@ -707,11 +657,7 @@ const DetailsPanelUIManager = {
             this.detailsPanelContentEl.appendChild(this.resourcePreviewSectionEl);
         }
 
-        if (ChatManager.currentChatId === groupId && this.isPanelAreaVisible && this.currentView === 'details') {
-            this._startGroupMemberRefreshTimer();
-        }
     },
-
     _populateGroupAiPromptsEditor: function(groupId, group, aiMemberIds) {
         if (!this.groupAiPromptsListContainerEl) {
             Utils.log("DetailsPanelUIManager: groupAiPromptsListContainerEl 未找到，无法填充AI提示词编辑器。", Utils.logLevels.ERROR);
@@ -794,7 +740,6 @@ const DetailsPanelUIManager = {
 
         this.groupAiPromptsListContainerEl.appendChild(fragment);
     },
-
     updateDetailsPanelMembers: function (groupId) {
         const group = GroupManager.groups[groupId];
         if (!group || !this.groupMemberListDetailsEl || !this.groupMemberCountEl || !this.contactsDropdownDetailsEl || !document.getElementById('leftMemberListDetails')) return;
@@ -854,11 +799,7 @@ const DetailsPanelUIManager = {
         });
         this.groupMemberListDetailsEl.appendChild(fragment);
 
-        // OPTIMIZATION: Save the new state after rendering
-        const newStateRepresentation = membersWithSortInfo.map(m =>
-            `${m.id}-${m.isAI ? 'ai' : (ConnectionManager.isConnectedTo(m.id) ? 'conn' : (m.isOnlineForSort ? 'online' : 'offline'))}`
-        ).join('|');
-        this._lastRenderedMembersState = newStateRepresentation;
+        // REMOVED: 不再需要保存状态以进行比较。
 
         this.contactsDropdownDetailsEl.innerHTML = '<option value="">选择要添加的联系人...</option>';
         Object.values(UserManager.contacts).forEach(contact => {
@@ -893,7 +834,6 @@ const DetailsPanelUIManager = {
             this.leftMembersAreaEl.style.display = 'none';
         }
     },
-
     handleAddMemberToGroupDetails: function () {
         const groupId = ChatManager.currentChatId;
         if (!this.contactsDropdownDetailsEl) return;
@@ -907,74 +847,6 @@ const DetailsPanelUIManager = {
         } else {
             NotificationUIManager.showNotification("请选择要添加的联系人。", "warning");
         }
-    },
-
-    /**
-     * @private
-     * 启动群成员刷新定时器。
-     */
-    _startGroupMemberRefreshTimer: function() {
-        if (typeof TimerManager !== 'undefined') {
-            TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            TimerManager.addPeriodicTask(
-                this._GROUP_MEMBER_REFRESH_TASK_NAME,
-                this._refreshGroupMembersAndAutoConnect.bind(this),
-                AppSettings.ui.detailsPanelRefreshInterval,
-                false
-            );
-        } else {
-            Utils.log("DetailsPanelUIManager: TimerManager 未定义，无法启动群成员刷新定时器。", Utils.logLevels.ERROR);
-        }
-    },
-
-    /**
-     * OPTIMIZED: 智能刷新群成员列表，仅在状态变更时重绘UI。
-     */
-    _refreshGroupMembersAndAutoConnect: async function() {
-        const groupId = ChatManager.currentChatId;
-        if (!groupId || !groupId.startsWith('group_')) {
-            if (typeof TimerManager !== 'undefined') TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            return;
-        }
-        const group = GroupManager.groups[groupId];
-        if (!group) {
-            if (typeof TimerManager !== 'undefined') TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            return;
-        }
-        if (!this.isPanelAreaVisible || this.currentView !== 'details') {
-            if (typeof TimerManager !== 'undefined') TimerManager.removePeriodicTask(this._GROUP_MEMBER_REFRESH_TASK_NAME);
-            return;
-        }
-
-        if (PeopleLobbyManager && typeof PeopleLobbyManager.fetchOnlineUsers === 'function') {
-            await PeopleLobbyManager.fetchOnlineUsers(true);
-        }
-
-        // OPTIMIZATION: Only re-render if state has changed
-        const newMembersWithSortInfo = this._getSortedMembers(group);
-        const newStateRepresentation = newMembersWithSortInfo.map(m =>
-            `${m.id}-${m.isAI ? 'ai' : (ConnectionManager.isConnectedTo(m.id) ? 'conn' : (m.isOnlineForSort ? 'online' : 'offline'))}`
-        ).join('|');
-
-        if (newStateRepresentation !== this._lastRenderedMembersState) {
-            Utils.log(`DetailsPanelUIManager: 群成员状态已变更，正在刷新UI。`, Utils.logLevels.DEBUG);
-            this.updateDetailsPanelMembers(groupId);
-        } else {
-            // Utils.log(`DetailsPanelUIManager: 群成员状态无变化，跳过UI刷新。`, Utils.logLevels.DEBUG);
-        }
-
-        group.members.forEach(memberId => {
-            if (memberId === UserManager.userId || (UserManager.contacts[memberId] && UserManager.contacts[memberId].isAI)) {
-                return;
-            }
-            const isConnected = ConnectionManager.isConnectedTo(memberId);
-            const isOnline = PeopleLobbyManager.onlineUserIds ? PeopleLobbyManager.onlineUserIds.includes(memberId) : false;
-
-            if (isOnline && !isConnected) {
-                Utils.log(`DetailsPanelUIManager: 自动尝试连接到群成员 ${memberId} (在线但未连接)。`, Utils.logLevels.INFO);
-                ConnectionManager.createOffer(memberId, { isSilent: true });
-            }
-        });
     },
 
     _getSortedMembers: function(group) {

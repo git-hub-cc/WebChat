@@ -19,7 +19,7 @@ const PeopleLobbyManager = {
     peopleLobbyListEl: null,   // 显示用户列表的 ul 元素 (#peopleLobbyList)
     refreshButtonEl: null,     // 刷新按钮的引用
     isLoading: false,          // 标记是否正在加载数据
-    _AUTO_REFRESH_INTERVAL: 5 * 1000, // 自动刷新间隔：5秒 (毫秒)
+    _AUTO_REFRESH_INTERVAL: 60 * 1000, // 自动刷新间隔：60秒 (毫秒)
     _AUTO_REFRESH_TASK_NAME: 'peopleLobbyAutoRefresh', // 定时任务名称
 
     // 新增：用于自动连接逻辑的属性

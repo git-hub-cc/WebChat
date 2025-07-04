@@ -56,12 +56,12 @@ const ThemeLoader = {
         // 注入 CSS 规则
         styleTag.textContent = `
             body {
-                background-image: url(${imageUrl}) !important;
-                backdrop-filter: blur(10px) !important;
-                background-repeat: no-repeat !important;
-                background-size: cover !important;
-                background-attachment: fixed !important;
-                background-position-x: center !important;
+                background-image: url(${imageUrl});
+                backdrop-filter: blur(10px);
+                background-repeat: no-repeat;
+                background-size: cover;
+                background-attachment: fixed;
+                background-position-x: center;
             }
         `;
     },
