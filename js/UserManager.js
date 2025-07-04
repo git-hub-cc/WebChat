@@ -3,7 +3,7 @@
  * @description 核心用户管理器，负责处理当前用户的信息、设置、所有联系人（包括特殊 AI 联系人）的数据管理。
  *              它与数据库交互以持久化用户和联系人数据。AI联系人在主题切换后会被保留，其配置会根据当前主题定义或历史数据进行更新。
  *              在处理群组添加成员事件时，会确保根据收到的详情正确创建新联系人。
- *              新增：支持AI联系人选择不同的词汇篇章，并持久化用户的选择。
+ *              新增：支持AI联系人选择不同的关卡篇章，并持久化用户的选择。
  *              MODIFIED: 增加了对 isImported 标志的支持，以确保导入的角色在主题切换时不会被移除。addContact 方法现在能更好地处理完整的联系人数据对象。
  *              OPTIMIZED: ensureSpecialContacts 现在使用 Promise.all 并行处理数据库写入，以提高性能。
  * @module UserManager
@@ -17,8 +17,8 @@
  * @property {function} updateUserSetting - 更新并保存用户的偏好设置。
  * @property {function} isSpecialContact - 检查一个联系人是否为广义上的特殊联系人（特殊标记或AI）。
  * @property {function} isSpecialContactInCurrentTheme - 检查一个联系人是否由当前主题定义为特殊。
- * @property {function} getSelectedChapterForAI - 获取AI联系人当前选择的词汇篇章ID。
- * @property {function} setSelectedChapterForAI - 设置AI联系人选择的词汇篇章ID，并持久化。
+ * @property {function} getSelectedChapterForAI - 获取AI联系人当前选择的关卡篇章ID。
+ * @property {function} setSelectedChapterForAI - 设置AI联系人选择的关卡篇章ID，并持久化。
  * @dependencies DBManager, Utils, NotificationUIManager, ChatManager, ConnectionManager, ThemeLoader, ModalUIManager, SettingsUIManager, ChatAreaUIManager, EventEmitter, GroupManager
  * @dependents AppInitializer (进行初始化), 几乎所有其他管理器都会直接或间接与之交互以获取用户信息或联系人数据。
  */
@@ -747,7 +747,7 @@ const UserManager = {
     },
 
     /**
-     * 获取指定AI联系人当前选择的词汇篇章ID。
+     * 获取指定AI联系人当前选择的关卡篇章ID。
      * @param {string} contactId - AI联系人的ID。
      * @returns {string|null} 当前选择的篇章ID，如果未选择或联系人非AI则返回null。
      */
@@ -760,7 +760,7 @@ const UserManager = {
     },
 
     /**
-     * 设置AI联系人选择的词汇篇章ID，并持久化。
+     * 设置AI联系人选择的关卡篇章ID，并持久化。
      * @param {string} contactId - AI联系人的ID。
      * @param {string|null} chapterId - 要设置的篇章ID，或null表示清除选择。
      * @returns {Promise<void>}
@@ -770,7 +770,7 @@ const UserManager = {
         if (contact && contact.isAI) {
             contact.selectedChapterId = chapterId;
             await this.saveContact(contactId); // 持久化到数据库
-            Utils.log(`UserManager: AI ${contactId} 的词汇篇章已设置为: ${chapterId || '默认'}`, Utils.logLevels.INFO);
+            Utils.log(`UserManager: AI ${contactId} 的关卡篇章已设置为: ${chapterId || '默认'}`, Utils.logLevels.INFO);
         } else {
             Utils.log(`UserManager: 尝试为非AI联系人 ${contactId} 设置篇章，已忽略。`, Utils.logLevels.WARN);
         }
