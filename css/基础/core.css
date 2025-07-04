@@ -1290,7 +1290,7 @@ input:checked + .slider::before {
 }
 
 #openSourceInfoModal .modal-body {
-    text-align: center;
+    text-align: left;
 }
 
 #openSourceInfoModal img[src$="/contact.png"] {
