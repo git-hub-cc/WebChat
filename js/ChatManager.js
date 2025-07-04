@@ -4,6 +4,7 @@
  *              负责存储和显示来自个人和群组的消息，包括系统消息和用户消息。
  *              与 GroupManager 协作，在群成员变更或群信息更新时刷新UI。
  *              修复：getDatesWithMessages 现在使用UTC日期来生成日期字符串，以解决资源预览日历中因时区导致 scrollToDate 功能失效的问题。
+ *              OPTIMIZED: renderChatList 现在使用增量更新DOM，而不是完全重绘，以提高性能和流畅度。
  * @module ChatManager
  * @exports {object} ChatManager - 对外暴露的单例对象，包含所有聊天管理功能。
  * @dependencies DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationUIManager, Utils, ModalUIManager
@@ -64,8 +65,9 @@ const ChatManager = {
             }
         }
     },
+
     /**
-     * 根据筛选条件渲染侧边栏的聊天列表。
+     * OPTIMIZED: 根据筛选条件渲染侧边栏的聊天列表，使用增量更新以提高性能。
      * @param {string} [filter='all'] - 筛选条件 ('all', 'contacts', 'groups')。
      */
     renderChatList: function(filter = 'all') {
@@ -75,7 +77,7 @@ const ChatManager = {
             Utils.log("ChatManager.renderChatList: 未找到 chatListNav 元素！", Utils.logLevels.ERROR);
             return;
         }
-        chatListEl.innerHTML = '';
+
         if (typeof SidebarUIManager !== 'undefined') SidebarUIManager.setActiveTab(filter);
 
         let itemsToRender = this._collectItemsToRender(filter);
@@ -84,41 +86,103 @@ const ChatManager = {
             itemsToRender = itemsToRender.filter(item => item.name.toLowerCase().includes(searchQuery));
         }
 
-        if (itemsToRender.length === 0) {
-            const filterText = { all: '聊天', contacts: '联系人', groups: '群组' }[filter] || '项目';
-            chatListEl.innerHTML = `<li class="chat-list-item-empty">未找到${filterText}。</li>`;
-            return;
-        }
+        // OPTIMIZATION: 使用增量更新DOM，而不是 innerHTML = ''
+        const existingNodes = new Map();
+        chatListEl.querySelectorAll('.chat-list-item').forEach(node => {
+            existingNodes.set(node.dataset.id, node);
+        });
 
         const fragment = document.createDocumentFragment();
-        const template = document.getElementById('chat-list-item-template').content;
 
         itemsToRender.forEach(item => {
-            const clone = template.cloneNode(true);
-            const li = clone.querySelector('.chat-list-item');
-            const avatarEl = clone.querySelector('.chat-list-avatar');
-            const nameTextEl = clone.querySelector('.name-text');
-            const onlineDotEl = clone.querySelector('.online-dot');
-            const previewEl = clone.querySelector('.chat-list-preview');
-            const timeEl = clone.querySelector('.chat-list-time');
-            const badgeEl = clone.querySelector('.chat-list-badge');
+            const existingNode = existingNodes.get(item.id);
+            if (existingNode) {
+                this._updateChatListItem(existingNode, item);
+                existingNodes.delete(item.id);
+            } else {
+                const template = document.getElementById('chat-list-item-template').content;
+                const clone = template.cloneNode(true);
+                this._populateChatListItem(clone, item);
+                fragment.appendChild(clone);
+            }
+        });
 
-            // Set data attributes and classes
-            li.dataset.id = item.id;
-            li.dataset.type = item.type;
-            if (item.id === this.currentChatId) li.classList.add('active');
-            if (item.type === 'group') li.classList.add('group');
-            if (item.isSpecial) li.classList.add('special-contact', item.id);
-            if (item.isSpecial) avatarEl.classList.add(item.id);
+        // 删除不再需要的节点
+        existingNodes.forEach(node => node.remove());
 
-            // Populate content
-            nameTextEl.textContent = item.name;
-            previewEl.textContent = item.lastMessage;
-            timeEl.textContent = item.lastTime ? Utils.formatDate(new Date(item.lastTime)) : '';
+        // 添加新节点
+        if (fragment.childElementCount > 0) {
+            chatListEl.appendChild(fragment);
+        }
 
-            // Avatar
-            const fallbackText = (item.avatarText) ? Utils.escapeHtml(item.avatarText) : (item.name ? Utils.escapeHtml(item.name.charAt(0).toUpperCase()) : '?');
-            if (item.avatarUrl) {
+        if (chatListEl.children.length === 0) {
+            const filterText = { all: '聊天', contacts: '联系人', groups: '群组' }[filter] || '项目';
+            chatListEl.innerHTML = `<li class="chat-list-item-empty">未找到${filterText}。</li>`;
+        }
+    },
+
+    /**
+     * @private
+     * 辅助函数：填充一个新的聊天列表项。
+     * @param {DocumentFragment} clone - 从模板克隆的文档片段。
+     * @param {object} item - 列表项的数据。
+     */
+    _populateChatListItem(clone, item) {
+        const li = clone.querySelector('.chat-list-item');
+        li.addEventListener('click', () => this.openChat(item.id, item.type));
+        this._updateChatListItem(li, item); // 复用更新逻辑来填充所有内容
+    },
+
+    /**
+     * @private
+     * 辅助函数：更新一个已存在的聊天列表项。
+     * @param {HTMLElement} li - 要更新的列表项元素。
+     * @param {object} item - 新的列表项数据。
+     */
+    _updateChatListItem(li, item) {
+        const nameTextEl = li.querySelector('.name-text');
+        const previewEl = li.querySelector('.chat-list-preview');
+        const timeEl = li.querySelector('.chat-list-time');
+        const badgeEl = li.querySelector('.chat-list-badge');
+        const onlineDotEl = li.querySelector('.online-dot');
+        const avatarEl = li.querySelector('.chat-list-avatar');
+
+        // 更新数据和激活状态
+        li.dataset.id = item.id;
+        li.dataset.type = item.type;
+        li.classList.toggle('active', item.id === this.currentChatId);
+        li.classList.toggle('group', item.type === 'group');
+        li.classList.toggle('special-contact', item.isSpecial);
+        if (item.isSpecial) {
+            li.classList.add(item.id);
+            avatarEl.classList.add(item.id);
+        } else {
+            // 移除可能存在的旧特殊类
+            Array.from(li.classList).forEach(cls => {
+                if(ThemeLoader.themes[cls.replace(/-深色|-浅色/,'')] || cls.startsWith('AI_')){
+                    li.classList.remove(cls);
+                }
+            });
+            Array.from(avatarEl.classList).forEach(cls => {
+                if(ThemeLoader.themes[cls.replace(/-深色|-浅色/,'')] || cls.startsWith('AI_')){
+                    avatarEl.classList.remove(cls);
+                }
+            });
+        }
+
+        // 更新内容 (只在必要时更新以减少重绘)
+        if (nameTextEl.textContent !== item.name) nameTextEl.textContent = item.name;
+        if (previewEl.textContent !== item.lastMessage) previewEl.textContent = item.lastMessage;
+
+        const formattedTime = item.lastTime ? Utils.formatDate(new Date(item.lastTime)) : '';
+        if (timeEl.textContent !== formattedTime) timeEl.textContent = formattedTime;
+
+        // 更新头像
+        const fallbackText = (item.avatarText) ? Utils.escapeHtml(item.avatarText) : (item.name ? Utils.escapeHtml(item.name.charAt(0).toUpperCase()) : '?');
+        const existingImg = avatarEl.querySelector('img');
+        if (item.avatarUrl) {
+            if (!existingImg || existingImg.src !== item.avatarUrl) {
+                avatarEl.innerHTML = '';
                 const img = document.createElement('img');
                 img.src = item.avatarUrl;
                 img.alt = fallbackText;
@@ -127,30 +191,29 @@ const ChatManager = {
                 img.dataset.entityId = item.id;
                 img.loading = "lazy";
                 avatarEl.appendChild(img);
-            } else {
-                avatarEl.textContent = fallbackText;
             }
+        } else {
+            if (existingImg) existingImg.remove();
+            if (avatarEl.textContent !== fallbackText) avatarEl.textContent = fallbackText;
+        }
 
-            // Status indicators
-            if (item.type === 'contact' && item.online && !(item.isSpecial && UserManager.contacts[item.id]?.isAI)) {
-                onlineDotEl.style.display = 'inline-block';
-            } else {
-                onlineDotEl.style.display = 'none';
-            }
+        // 更新状态指示器
+        const shouldShowOnlineDot = item.type === 'contact' && item.online && !(item.isSpecial && UserManager.contacts[item.id]?.isAI);
+        onlineDotEl.style.display = shouldShowOnlineDot ? 'inline-block' : 'none';
 
-            if (item.unread > 0) {
-                badgeEl.textContent = item.unread > 99 ? '99+' : item.unread;
+        const unreadCount = item.unread > 99 ? '99+' : item.unread;
+        if (item.unread > 0) {
+            if (badgeEl.style.display !== 'inline-block' || badgeEl.textContent !== unreadCount) {
+                badgeEl.textContent = unreadCount;
                 badgeEl.style.display = 'inline-block';
-            } else {
+            }
+        } else {
+            if (badgeEl.style.display !== 'none') {
                 badgeEl.style.display = 'none';
             }
-
-            li.addEventListener('click', () => this.openChat(item.id, item.type));
-            fragment.appendChild(li);
-        });
-
-        chatListEl.appendChild(fragment);
+        }
     },
+
 
     /**
      * @private

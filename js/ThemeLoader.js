@@ -7,6 +7,7 @@
  *              更新：AI 联系人的词汇篇章数据现在可以从其定义中的 `chaptersFilePath` 指定的单独 JSON 文件加载。
  *              新增：支持从缓存加载和应用自定义背景图片。
  *              MODIFIED: 支持为浅色和深色模式分别设置、缓存和应用自定义背景图片。
+ *              OPTIMIZED: applyTheme 现在会立即切换CSS，并在后台异步加载数据，以提高UI响应速度。
  * @module ThemeLoader
  * @exports {object} ThemeLoader - 主要通过其 `applyTheme` 方法和几个 getter 与其他模块交互。
  * @property {function} init - 初始化主题加载器，加载初始主题和数据，并应用缓存的背景图。
@@ -230,7 +231,7 @@ const ThemeLoader = {
     },
 
     /**
-     * 应用一个新主题（无刷新）。
+     * OPTIMIZED: 应用一个新主题（无刷新），并优化了加载流程。
      * @param {string} themeKey - 要应用的主题的键名。
      * @returns {Promise<void>}
      */
@@ -240,16 +241,36 @@ const ThemeLoader = {
             themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
         }
 
-        await this._loadThemeCore(themeKey);
+        // --- OPTIMIZATION: 立即切换CSS和更新状态，提供即时视觉反馈 ---
+        const themeConfig = this.themes[themeKey];
+        const themeStylesheet = document.getElementById('theme-stylesheet');
+        if (themeStylesheet && themeConfig.css) {
+            themeStylesheet.setAttribute('href', themeConfig.css);
+        }
+        this._currentThemeKey = themeKey;
+        localStorage.setItem('selectedTheme', themeKey);
 
-        if (typeof EventEmitter !== 'undefined') {
-            EventEmitter.emit('themeChanged', {
-                newThemeKey: themeKey,
-                newDefinitions: [...this._currentSpecialContactsDefinitions]
-            });
-            (Utils?.log || console.log)(`ThemeLoader: 已为 ${themeKey} 触发 themeChanged 事件。`, Utils?.logLevels?.INFO || 1);
-        } else {
-            console.warn("ThemeLoader: EventEmitter 未定义，无法触发 themeChanged 事件。");
+        // --- OPTIMIZATION: 在后台异步加载数据，不阻塞UI ---
+        const dataPromise = this._parseDataJson(themeConfig.dataJs);
+
+        // --- 在数据加载完成后，触发事件以更新依赖数据的UI部分 ---
+        try {
+            const newDefinitions = await dataPromise;
+            this._currentSpecialContactsDefinitions = newDefinitions;
+
+            if (typeof EventEmitter !== 'undefined') {
+                EventEmitter.emit('themeChanged', {
+                    newThemeKey: themeKey,
+                    newDefinitions: [...this._currentSpecialContactsDefinitions]
+                });
+                (Utils?.log || console.log)(`ThemeLoader: 已为 ${themeKey} 触发 themeChanged 事件。`, Utils?.logLevels?.INFO || 1);
+            } else {
+                console.warn("ThemeLoader: EventEmitter 未定义，无法触发 themeChanged 事件。");
+            }
+        } catch (error) {
+            (Utils?.log || console.log)(`ThemeLoader: 在applyTheme期间加载或处理数据失败: ${error}`, Utils?.logLevels?.ERROR || 3);
+            // 即使数据加载失败，也要确保UI不会处于不一致的状态
+            EventEmitter.emit('themeChanged', { newThemeKey: themeKey, newDefinitions: [] });
         }
     },
 

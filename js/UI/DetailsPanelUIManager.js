@@ -2,6 +2,7 @@
  * @file DetailsPanelUIManager.js
  * @description 管理应用右侧详情面板的 UI 元素和交互。
  *              FIXED: 修复了群组成员列表定时刷新时，即使状态无变化也重绘UI，从而打断用户操作的问题。
+ *              OPTIMIZED: 通过状态缓存避免不必要的群组成员列表重绘。
  * @dependencies UserManager, GroupManager, ChatManager, MessageManager, TtsUIManager, NotificationUIManager, Utils, ConnectionManager, PeopleLobbyManager, AppSettings, LayoutUIManager, EventEmitter, DBManager, ResourcePreviewUIManager, TimerManager, MemoryBookManager, ModalUIManager
  */
 const DetailsPanelUIManager = {
@@ -54,9 +55,9 @@ const DetailsPanelUIManager = {
     memoryBookListEl: null,
 
     // 移除本地常量
-    // GROUP_MEMBER_REFRESH_INTERVAL_MS: 3000,
     _GROUP_MEMBER_REFRESH_TASK_NAME: 'groupMemberStatusRefresh',
-    _lastRenderedMembersState: null, // Stores a representation of the last rendered member list to prevent unnecessary re-renders
+    // OPTIMIZATION: 存储最后渲染的成员状态，避免不必要的重绘
+    _lastRenderedMembersState: null,
 
     init: function() {
         // ... (init 方法内部逻辑不变) ...
@@ -111,7 +112,8 @@ const DetailsPanelUIManager = {
         EventEmitter.on('connectionFailed', (peerId) => this._tryRefreshGroupMembersView(peerId));
         EventEmitter.on('onlineUsersUpdated', () => {
             if (this.currentView === 'details' && ChatManager.currentChatId && ChatManager.currentChatId.startsWith('group_')) {
-                this.updateDetailsPanelMembers(ChatManager.currentChatId);
+                // OPTIMIZATION: 调用智能刷新而不是强制重绘
+                this._refreshGroupMembersAndAutoConnect();
             }
         });
 
@@ -309,7 +311,8 @@ const DetailsPanelUIManager = {
             const group = GroupManager.groups[ChatManager.currentChatId];
             if (group && group.members.includes(peerId)) {
                 Utils.log(`DetailsPanelUIManager: 检测到群成员 ${peerId} 连接状态变化，刷新成员列表。`, Utils.logLevels.DEBUG);
-                this.updateDetailsPanelMembers(ChatManager.currentChatId);
+                // OPTIMIZATION: 调用智能刷新而不是强制重绘
+                this._refreshGroupMembersAndAutoConnect();
             }
         }
     },
@@ -851,12 +854,11 @@ const DetailsPanelUIManager = {
         });
         this.groupMemberListDetailsEl.appendChild(fragment);
 
-        // --- FIXED: Save and store the new state after rendering ---
+        // OPTIMIZATION: Save the new state after rendering
         const newStateRepresentation = membersWithSortInfo.map(m =>
             `${m.id}-${m.isAI ? 'ai' : (ConnectionManager.isConnectedTo(m.id) ? 'conn' : (m.isOnlineForSort ? 'online' : 'offline'))}`
         ).join('|');
         this._lastRenderedMembersState = newStateRepresentation;
-
 
         this.contactsDropdownDetailsEl.innerHTML = '<option value="">选择要添加的联系人...</option>';
         Object.values(UserManager.contacts).forEach(contact => {
@@ -917,7 +919,6 @@ const DetailsPanelUIManager = {
             TimerManager.addPeriodicTask(
                 this._GROUP_MEMBER_REFRESH_TASK_NAME,
                 this._refreshGroupMembersAndAutoConnect.bind(this),
-                // 使用 AppSettings 中的常量
                 AppSettings.ui.detailsPanelRefreshInterval,
                 false
             );
@@ -926,6 +927,9 @@ const DetailsPanelUIManager = {
         }
     },
 
+    /**
+     * OPTIMIZED: 智能刷新群成员列表，仅在状态变更时重绘UI。
+     */
     _refreshGroupMembersAndAutoConnect: async function() {
         const groupId = ChatManager.currentChatId;
         if (!groupId || !groupId.startsWith('group_')) {
@@ -946,7 +950,7 @@ const DetailsPanelUIManager = {
             await PeopleLobbyManager.fetchOnlineUsers(true);
         }
 
-        // --- FIXED: Only re-render if state has changed ---
+        // OPTIMIZATION: Only re-render if state has changed
         const newMembersWithSortInfo = this._getSortedMembers(group);
         const newStateRepresentation = newMembersWithSortInfo.map(m =>
             `${m.id}-${m.isAI ? 'ai' : (ConnectionManager.isConnectedTo(m.id) ? 'conn' : (m.isOnlineForSort ? 'online' : 'offline'))}`
@@ -956,7 +960,7 @@ const DetailsPanelUIManager = {
             Utils.log(`DetailsPanelUIManager: 群成员状态已变更，正在刷新UI。`, Utils.logLevels.DEBUG);
             this.updateDetailsPanelMembers(groupId);
         } else {
-            Utils.log(`DetailsPanelUIManager: 群成员状态无变化，跳过UI刷新。`, Utils.logLevels.DEBUG);
+            // Utils.log(`DetailsPanelUIManager: 群成员状态无变化，跳过UI刷新。`, Utils.logLevels.DEBUG);
         }
 
         group.members.forEach(memberId => {
@@ -974,7 +978,6 @@ const DetailsPanelUIManager = {
     },
 
     _getSortedMembers: function(group) {
-        // ... (方法内部逻辑不变) ...
         return group.members.map(memberId => {
             const member = UserManager.contacts[memberId] || { id: memberId, name: `用户 ${memberId.substring(0, 4)}`, isAI: false };
             let sortCategory;
