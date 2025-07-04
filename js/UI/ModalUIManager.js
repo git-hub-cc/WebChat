@@ -1,4 +1,3 @@
-
 /**
  * @file ModalUIManager.js
  * @description 模态框管理器，负责集中处理应用中所有模态框的显示、隐藏和相关逻辑。
@@ -7,6 +6,8 @@
  *              更新：在群组描述中提及人数上限。
  *              MODIFIED: 增加了对角色卡导入/导出标签页的支持。
  *              REFACTORED: 将记忆书(Memory Book Element Set)的管理功能移至此模态框的“要素”标签页下，实现配置的集中化。
+ *              MODIFIED: 所有模态框的显示和隐藏现在都具有平滑的淡入淡出和缩放动画效果，通过JS和CSS结合实现。
+ *              FIX: 修复了在主题切换动画期间，模态框关闭动画不同步导致视觉闪烁的问题。新增了立即隐藏的选项。
  * @module ModalManager
  * @exports {object} ModalUIManager - 对外暴露的单例对象，包含所有模态框管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
@@ -15,20 +16,17 @@
  * @property {function} showCallingModal - 显示“呼叫中”的模态框。
  * @property {function} showCallRequest - 显示来电请求的模态框。
  * @property {function} showOpenSourceInfoModal - 显示开源信息提示模态框。
- * @property {function} showAddContactModalWithId - 显示添加联系人模态框并预填用户ID。
  * @dependencies Utils, NotificationUIManager, UserManager, GroupManager, AppInitializer, VideoCallManager, AppSettings, CharacterCardManager, MemoryBookManager
  * @dependents AppInitializer (进行初始化), 各个模块在需要显示模态框时调用。
  */
 const ModalUIManager = {
-    // 开源信息模态框元素
+    // ... (所有属性保持不变) ...
     openSourceInfoModal: null,
     closeOpenSourceInfoModalBtn: null,
     permanentlyCloseOpenSourceInfoModalBtn: null,
     openSourceModalTimerSpan: null,
     openSourceModalAutoCloseTimer: null,
     openSourceModalCountdownInterval: null,
-
-    // 其他模态框元素
     mainMenuModal: null,
     newContactGroupModal: null,
     callingModal: null,
@@ -37,17 +35,12 @@ const ModalUIManager = {
     callingModalAvatar: null,
     callingModalCancelBtn: null,
     videoCallRequestModal: null,
-
-    // REFACTORED: Memory Set Management elements
     memorySetListContainerModal: null,
     memorySetFormContainerModal: null,
     showAddMemorySetFormBtn: null,
     _editingMemorySetId: null,
 
-
-    /**
-     * 初始化模态框管理器，获取所有模态框的 DOM 引用并绑定其内部的通用事件。
-     */
+    // ... init() 和 _bindOpenSourceInfoModalEvents() 保持不变 ...
     init: function() {
         // --- 开源信息模态框 ---
         this.openSourceInfoModal = document.getElementById('openSourceInfoModal');
@@ -182,11 +175,6 @@ const ModalUIManager = {
         this.callingModalCancelBtn = document.getElementById('callingModalCancelBtn');
         this.videoCallRequestModal = document.getElementById('videoCallRequest');
     },
-
-    /**
-     * @private
-     * 绑定开源信息模态框的内部事件。
-     */
     _bindOpenSourceInfoModalEvents: function () {
         if (this.closeOpenSourceInfoModalBtn) { // 关闭按钮
             this.closeOpenSourceInfoModalBtn.addEventListener('click', () => this.hideOpenSourceInfoModal());
@@ -206,16 +194,49 @@ const ModalUIManager = {
         }
     },
 
+    _showModalWithAnimation: function(modalEl) {
+        if (!modalEl || modalEl.classList.contains('show')) return;
+        modalEl.style.display = 'flex';
+        setTimeout(() => {
+            modalEl.classList.add('show');
+        }, 10);
+    },
+
     /**
-     * 显示开源信息提示模态框，并启动自动关闭倒计时。
-     * 如果用户已选择“不再显示”，则不执行任何操作。
+     * @private
+     * 以动画形式隐藏一个模态框元素。
+     * @param {HTMLElement} modalEl - 要隐藏的模态框元素。
+     * @param {boolean} [immediate=false] - 如果为true，则立即隐藏，不播放动画。
      */
+    _hideModalWithAnimation: function(modalEl, immediate = false) {
+        if (!modalEl) return;
+
+        // 如果是立即隐藏模式
+        if (immediate) {
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            return;
+        }
+
+        // 动画隐藏模式
+        if (!modalEl.classList.contains('show')) return;
+
+        modalEl.classList.remove('show');
+        modalEl.addEventListener('transitionend', function handler() {
+            if (!modalEl.classList.contains('show')) {
+                modalEl.style.display = 'none';
+            }
+        }, { once: true });
+    },
+
+    // ... showOpenSourceInfoModal 不变 ...
     showOpenSourceInfoModal: function () {
         if (localStorage.getItem('hideOpenSourceModalPermanently') === 'true') { // 检查用户偏好
             return;
         }
         if (this.openSourceInfoModal && this.openSourceModalTimerSpan) {
-            this.openSourceInfoModal.style.display = 'flex'; // 显示模态框
+            this._showModalWithAnimation(this.openSourceInfoModal);
+
             let countdown = 8; // 倒计时8秒
             this.openSourceModalTimerSpan.textContent = countdown; // 更新倒计时显示
 
@@ -241,14 +262,10 @@ const ModalUIManager = {
         }
     },
 
-    /**
-     * 隐藏开源信息模态框，并清除相关的定时器。
-     */
     hideOpenSourceInfoModal: function () {
         if (this.openSourceInfoModal) {
-            this.openSourceInfoModal.style.display = 'none'; // 隐藏模态框
+            this._hideModalWithAnimation(this.openSourceInfoModal);
         }
-        // 清除定时器
         if (this.openSourceModalAutoCloseTimer) clearTimeout(this.openSourceModalAutoCloseTimer);
         if (this.openSourceModalCountdownInterval) clearInterval(this.openSourceModalCountdownInterval);
         this.openSourceModalAutoCloseTimer = null;
@@ -259,32 +276,26 @@ const ModalUIManager = {
      * 通用的显示或隐藏模态框的方法。
      * @param {string} modalId - 目标模态框的 DOM ID。
      * @param {boolean} show - true 为显示，false 为隐藏。
+     * @param {boolean} [immediate=false] - 如果为true，则立即隐藏，不播放动画。
      */
-    toggleModal: function (modalId, show) {
+    toggleModal: function (modalId, show, immediate = false) {
         const modal = document.getElementById(modalId);
         if (modal) {
-            modal.style.display = show ? 'flex' : 'none';
-            if (show && modalId === 'newContactGroupModal') {
-                this._renderMemorySetList();
-                this._hideMemorySetForm();
+            if (show) {
+                this._showModalWithAnimation(modal);
+                if (modalId === 'newContactGroupModal') {
+                    this._renderMemorySetList();
+                    this._hideMemorySetForm();
+                }
+            } else {
+                this._hideModalWithAnimation(modal, immediate);
             }
         } else {
             Utils.log(`未找到 ID 为 '${modalId}' 的模态框。`, Utils.logLevels.WARN);
         }
     },
 
-    /**
-     * 动态创建一个通用的确认对话框。
-     * @param {string} message - 对话框中显示的消息文本。
-     * @param {function} onConfirm - 用户点击确认按钮时执行的回调函数。
-     * @param {function|null} [onCancel=null] - 用户点击取消按钮时执行的回调函数。
-     * @param {object} [options={}] - 对话框的自定义选项。
-     * @param {string} [options.title='确认操作'] - 对话框标题。
-     * @param {string} [options.confirmText='确认'] - 确认按钮的文本。
-     * @param {string} [options.cancelText='取消'] - 取消按钮的文本。
-     * @param {string} [options.confirmClass='btn-danger'] - 确认按钮的 CSS 类。
-     * @param {string} [options.cancelClass='btn-secondary'] - 取消按钮的 CSS 类。
-     */
+    // ... (showConfirmationModal, _renderMemorySetList, _showMemorySetForm, _hideMemorySetForm 保持不变) ...
     showConfirmationModal: function (message, onConfirm, onCancel = null, options = {}) {
         // ... (this method is unchanged) ...
         const existingModal = document.getElementById('genericConfirmationModal');
@@ -295,7 +306,7 @@ const ModalUIManager = {
         const modal = document.createElement('div');
         modal.id = modalId;
         modal.className = 'modal-like confirmation-modal';
-        modal.style.display = 'flex';
+        // modal.style.display = 'flex'; // MODIFIED: JS will handle display now
         const modalContent = document.createElement('div');
         modalContent.className = 'modal-content';
         const modalHeader = document.createElement('div');
@@ -310,20 +321,25 @@ const ModalUIManager = {
         modalBody.appendChild(messageParagraph);
         const modalFooter = document.createElement('div');
         modalFooter.className = 'modal-footer';
+
+        const closeModal = (callback) => {
+            modal.classList.remove('show');
+            modal.addEventListener('transitionend', () => {
+                if (callback) callback();
+                modal.remove();
+            }, { once: true });
+        };
+
         const confirmButton = document.createElement('button');
         confirmButton.textContent = options.confirmText || '确认';
         confirmButton.className = `btn ${options.confirmClass || 'btn-danger'}`;
-        confirmButton.addEventListener('click', () => {
-            if (onConfirm) onConfirm();
-            modal.remove();
-        });
+        confirmButton.addEventListener('click', () => closeModal(onConfirm));
+
         const cancelButton = document.createElement('button');
         cancelButton.textContent = options.cancelText || '取消';
         cancelButton.className = `btn ${options.cancelClass || 'btn-secondary'}`;
-        cancelButton.addEventListener('click', () => {
-            if (onCancel) onCancel();
-            modal.remove();
-        });
+        cancelButton.addEventListener('click', () => closeModal(onCancel));
+
         modalFooter.appendChild(cancelButton);
         modalFooter.appendChild(confirmButton);
         modalContent.appendChild(modalHeader);
@@ -332,17 +348,13 @@ const ModalUIManager = {
         modal.appendChild(modalContent);
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
-                if (onCancel) onCancel();
-                modal.remove();
+                closeModal(onCancel);
             }
         });
         document.body.appendChild(modal);
-    },
 
-    /**
-     * @private
-     * Renders the list of memory element sets in the modal.
-     */
+        this._showModalWithAnimation(modal);
+    },
     _renderMemorySetList: function() {
         if (!this.memorySetListContainerModal) return;
         this.memorySetListContainerModal.innerHTML = '';
@@ -376,12 +388,6 @@ const ModalUIManager = {
 
         this.memorySetListContainerModal.appendChild(fragment);
     },
-
-    /**
-     * @private
-     * Shows the form for adding or editing a memory set.
-     * @param {object|null} set - The set data to edit, or null to add a new one.
-     */
     _showMemorySetForm: function(set = null) {
         if (!this.memorySetFormContainerModal || !this.showAddMemorySetFormBtn) return;
 
@@ -422,11 +428,6 @@ const ModalUIManager = {
         this.showAddMemorySetFormBtn.style.display = 'none';
         nameInput.focus();
     },
-
-    /**
-     * @private
-     * Hides the memory set form and resets its state.
-     */
     _hideMemorySetForm: function() {
         if (!this.memorySetFormContainerModal || !this.showAddMemorySetFormBtn) return;
         this.memorySetFormContainerModal.style.display = 'none';
@@ -435,8 +436,7 @@ const ModalUIManager = {
         this._editingMemorySetId = null;
     },
 
-
-    // ... The rest of the methods (showCallingModal, hideCallingModal, etc.) are unchanged ...
+    // ... showCallingModal, hideCallingModal, showCallRequest, hideCallRequest, showAddContactModalWithId 保持不变 ...
     showCallingModal: function (peerName, onCancelCall, onStopMusicOnly, callType) {
         if (!this.callingModal || !this.callingModalTitle || !this.callingModalText || !this.callingModalAvatar || !this.callingModalCancelBtn) {
             Utils.log("呼叫中模态框元素未找到！", Utils.logLevels.ERROR);
@@ -470,15 +470,13 @@ const ModalUIManager = {
         this.callingModalCancelBtn = newCancelBtn; // 更新引用
         this.callingModalCancelBtn.addEventListener('click', onCancelCall); // 绑定新的取消回调
 
-        this.callingModal.style.display = 'flex'; // 显示模态框
+        this._showModalWithAnimation(this.callingModal);
     },
-
     hideCallingModal: function () {
-        if (this.callingModal && this.callingModal.style.display !== 'none') {
-            this.callingModal.style.display = 'none';
+        if (this.callingModal) {
+            this._hideModalWithAnimation(this.callingModal);
         }
     },
-
     showCallRequest: function (peerId, audioOnly = false, isScreenShare = false) {
         if (!this.videoCallRequestModal) return;
 
@@ -519,13 +517,13 @@ const ModalUIManager = {
             rejectBtn.addEventListener('click', () => VideoCallHandler.rejectCall());
         }
 
-        this.videoCallRequestModal.style.display = 'flex';
+        this._showModalWithAnimation(this.videoCallRequestModal);
     },
-
     hideCallRequest: function () {
-        if (this.videoCallRequestModal) this.videoCallRequestModal.style.display = 'none';
+        if (this.videoCallRequestModal) {
+            this._hideModalWithAnimation(this.videoCallRequestModal);
+        }
     },
-
     showAddContactModalWithId: function(userId) {
         this.toggleModal('newContactGroupModal', true);
         const peerIdInput = document.getElementById('newPeerIdInput');

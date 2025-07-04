@@ -11,6 +11,7 @@
  *              修改：移除了 AI & API 配置的“覆盖”复选框，用户的输入将始终生效。
  *              重构：将模型名称选择器从原生 select 改为自定义 div 组件。
  *              MODIFIED: 支持为浅色和深色模式分别设置和移除背景图片。
+ *              FIXED: 在主题切换后，设置模态框现在会立即隐藏，以避免与主题切换动画冲突。
  * @module SettingsUIManager
  * @exports {object} SettingsUIManager - 对外暴露的单例对象，包含所有设置 UI 管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素、加载设置并绑定事件。
@@ -470,7 +471,8 @@ const SettingsUIManager = {
 
                 this.colorSchemeOptionsContainerEl.style.display = 'none';
                 if (typeof ModalUIManager !== 'undefined') {
-                    ModalUIManager.toggleModal('mainMenuModal', false);
+                    // FIX: 添加第三个参数 'true' 来立即隐藏
+                    ModalUIManager.toggleModal('mainMenuModal', false, true);
                 }
             });
             this.colorSchemeOptionsContainerEl.appendChild(optionDiv);
@@ -529,7 +531,8 @@ const SettingsUIManager = {
                     }
                     this.themeOptionsContainerEl.style.display = 'none';
                     if (typeof ModalUIManager !== 'undefined') {
-                        ModalUIManager.toggleModal('mainMenuModal', false);
+                        // FIX: 添加第三个参数 'true' 来立即隐藏
+                        ModalUIManager.toggleModal('mainMenuModal', false, true);
                     }
                 });
                 this.themeOptionsContainerEl.appendChild(optionDiv);

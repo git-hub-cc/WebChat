@@ -303,21 +303,25 @@ body {
     position: fixed;
     z-index: var(--z-index-modal);
     inset: 0;
-    display: none;
+    display: none; /* 默认隐藏，由 JS 控制 */
     align-items: center;
     justify-content: center;
     padding: var(--spacing-5);
     background-color: var(--modal-backdrop-bg);
     overflow-y: auto;
+    /* 动画的初始状态 */
     opacity: 0;
     visibility: hidden;
+    /* transition 定义了哪些属性可以被动画化以及如何动画 */
     transition: opacity var(--transition-duration-slow) ease-in-out, visibility 0s linear var(--transition-duration-slow);
 }
 
-.modal-like[style*="display: flex"], .modal-like[style*="display: block"] {
+.modal-like.show {
+    /* 动画的目标状态 */
     opacity: 1;
     visibility: visible;
-    transition: opacity var(--transition-duration-slow) ease-in-out, visibility 0s linear 0s;
+    /* 当显示时，visibility 的 transition 延迟为0，使其立即生效 */
+    transition-delay: 0s, 0s;
 }
 
 .modal-content {
@@ -329,11 +333,14 @@ body {
     border-radius: var(--border-radius-md);
     background-color: var(--surface-2-bg);
     box-shadow: 0 5px 15px rgba(var(--black-rgb), 0.3);
+    /* 动画的初始状态 (稍微缩小) */
     transform: scale(0.95);
+    /* transform 的动画效果 */
     transition: transform var(--transition-duration-slow) ease-out;
 }
 
-.modal-like[style*="display: flex"] .modal-content, .modal-like[style*="display: block"] .modal-content {
+.modal-like.show .modal-content {
+    /* 动画的目标状态 (恢复正常大小) */
     transform: scale(1);
 }
 
@@ -1133,6 +1140,28 @@ input:checked + .slider::before {
 .modal-close-button.top-right:hover {
     background-color: rgba(var(--accent-danger-rgb), 0.8);
 }
+
+#theme-transition-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998; /* 介于内容和加载/通知层之间 */
+    background-color: var(--surface-2-bg); /* 初始背景色 */
+    opacity: 0;
+    pointer-events: none; /* 不可交互 */
+    transition: opacity 0.25s ease-in-out;
+}
+
+#theme-transition-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+@keyframes tts-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 
 /* ========================================================================== */
 /* 动画 (Animations) */
