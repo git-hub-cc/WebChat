@@ -2,11 +2,13 @@
  * @file ThemeLoader.js
  * @description 主题加载器。这是一个在应用初始化早期执行的关键脚本，
  *              负责根据用户的本地存储偏好和系统设置（浅色/深色模式）来决定并应用正确的主题。
- *              它会加载相应的主题 CSS 文件和与主题相关的数据 JSON 文件（如特殊联系人定义，包括词汇篇章）。
+ *              它会加载相应的主题 CSS 文件和与主题相关的数据 JSON 文件（如特殊联系人定义，包括关卡篇章）。
  *              现在支持无刷新切换主题和动态加载数据。
- *              更新：AI 联系人的词汇篇章数据现在可以从其定义中的 `chaptersFilePath` 指定的单独 JSON 文件加载。
+ *              更新：AI 联系人的关卡篇章数据现在可以从其定义中的 `chaptersFilePath` 指定的单独 JSON 文件加载。
  *              新增：支持从缓存加载和应用自定义背景图片。
  *              MODIFIED: 支持为浅色和深色模式分别设置、缓存和应用自定义背景图片。
+ *              OPTIMIZED: applyTheme 现在会立即切换CSS，并在后台异步加载数据，以提高UI响应速度。
+ *              OPTIMIZED: _parseDataJson现在使用Promise.all并行加载所有关卡篇章文件，以加快主题切换速度。
  * @module ThemeLoader
  * @exports {object} ThemeLoader - 主要通过其 `applyTheme` 方法和几个 getter 与其他模块交互。
  * @property {function} init - 初始化主题加载器，加载初始主题和数据，并应用缓存的背景图。
@@ -104,7 +106,7 @@ const ThemeLoader = {
 
     /**
      * @private 异步加载并解析 data JSON 文件内容。
-     *          现在会处理 `chaptersFilePath` 来动态加载词汇篇章数据。
+     *          OPTIMIZED: 现在使用 Promise.all 并行处理所有 `chaptersFilePath` 的加载。
      * @param {string|null} dataJsonUrl - data JSON 文件的 URL。
      * @returns {Promise<Array<object>>} - 解析后的特殊联系人定义数组。
      */
@@ -123,40 +125,47 @@ const ThemeLoader = {
                 return [];
             }
 
-            // 为每个定义处理词汇篇章
-            for (const def of definitions) {
-                if (def.isAI && def.chaptersFilePath) {
+            // --- OPTIMIZATION START: Parallelize chapter file fetching ---
+            const processingPromises = definitions.map(async (def) => {
+                const processedDef = { ...def }; // Work on a copy
+
+                if (processedDef.isAI && processedDef.chaptersFilePath) {
                     try {
-                        const chaptersResponse = await fetch(def.chaptersFilePath);
+                        const chaptersResponse = await fetch(processedDef.chaptersFilePath);
                         if (chaptersResponse.ok) {
-                            def.chapters = await chaptersResponse.json();
-                            if (!Array.isArray(def.chapters)) {
-                                (Utils?.log || console.log)(`ThemeLoader: 从 ${def.chaptersFilePath} 解析的词汇篇章不是数组。`, Utils?.logLevels?.WARN || 2);
-                                def.chapters = [];
+                            processedDef.chapters = await chaptersResponse.json();
+                            if (!Array.isArray(processedDef.chapters)) {
+                                (Utils?.log || console.log)(`ThemeLoader: 从 ${processedDef.chaptersFilePath} 解析的关卡篇章不是数组。`, Utils?.logLevels?.WARN || 2);
+                                processedDef.chapters = [];
                             }
                         } else {
-                            (Utils?.log || console.log)(`ThemeLoader: 获取词汇篇章文件 ${def.chaptersFilePath} 失败: ${chaptersResponse.statusText}`, Utils?.logLevels?.WARN || 2);
-                            def.chapters = [];
+                            (Utils?.log || console.log)(`ThemeLoader: 获取关卡篇章文件 ${processedDef.chaptersFilePath} 失败: ${chaptersResponse.statusText}`, Utils?.logLevels?.WARN || 2);
+                            processedDef.chapters = [];
                         }
                     } catch (chapError) {
-                        (Utils?.log || console.log)(`ThemeLoader: 加载或解析词汇篇章文件 ${def.chaptersFilePath} 时出错: ${chapError}`, Utils?.logLevels?.ERROR || 3);
-                        def.chapters = [];
+                        (Utils?.log || console.log)(`ThemeLoader: 加载或解析关卡篇章文件 ${processedDef.chaptersFilePath} 时出错: ${chapError}`, Utils?.logLevels?.ERROR || 3);
+                        processedDef.chapters = [];
                     }
-                    delete def.chaptersFilePath; // 移除路径属性，因为它已被处理
+                    delete processedDef.chaptersFilePath; // Clean up the path property
                 }
 
-                // 确保每个定义都有 chapters 数组，即使是空的
-                if (!def.chapters || !Array.isArray(def.chapters)) {
-                    def.chapters = [];
+                // Ensure every definition has a chapters array, even if empty
+                if (!processedDef.chapters || !Array.isArray(processedDef.chapters)) {
+                    processedDef.chapters = [];
                 }
-                // 对每个 chapter 进行校验和标准化
-                def.chapters = def.chapters.map(chapter => ({
-                    id: chapter.id || `chapter_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`, // 提供回退ID
+                // Validate and standardize each chapter
+                processedDef.chapters = processedDef.chapters.map(chapter => ({
+                    id: chapter.id || `chapter_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
                     name: chapter.name || "未命名篇章",
                     promptModifier: chapter.promptModifier || ""
                 }));
-            }
-            return definitions;
+
+                return processedDef;
+            });
+
+            const fullyProcessedDefinitions = await Promise.all(processingPromises);
+            return fullyProcessedDefinitions;
+            // --- OPTIMIZATION END ---
 
         } catch (error) {
             (Utils?.log || console.log)(`ThemeLoader: 加载或解析 data JSON ${dataJsonUrl} 时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
@@ -230,7 +239,7 @@ const ThemeLoader = {
     },
 
     /**
-     * 应用一个新主题（无刷新）。
+     * OPTIMIZED: 应用一个新主题（无刷新），并优化了加载流程。
      * @param {string} themeKey - 要应用的主题的键名。
      * @returns {Promise<void>}
      */
@@ -240,16 +249,36 @@ const ThemeLoader = {
             themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
         }
 
-        await this._loadThemeCore(themeKey);
+        // --- OPTIMIZATION: 立即切换CSS和更新状态，提供即时视觉反馈 ---
+        const themeConfig = this.themes[themeKey];
+        const themeStylesheet = document.getElementById('theme-stylesheet');
+        if (themeStylesheet && themeConfig.css) {
+            themeStylesheet.setAttribute('href', themeConfig.css);
+        }
+        this._currentThemeKey = themeKey;
+        localStorage.setItem('selectedTheme', themeKey);
 
-        if (typeof EventEmitter !== 'undefined') {
-            EventEmitter.emit('themeChanged', {
-                newThemeKey: themeKey,
-                newDefinitions: [...this._currentSpecialContactsDefinitions]
-            });
-            (Utils?.log || console.log)(`ThemeLoader: 已为 ${themeKey} 触发 themeChanged 事件。`, Utils?.logLevels?.INFO || 1);
-        } else {
-            console.warn("ThemeLoader: EventEmitter 未定义，无法触发 themeChanged 事件。");
+        // --- OPTIMIZATION: 在后台异步加载数据，不阻塞UI ---
+        const dataPromise = this._parseDataJson(themeConfig.dataJs);
+
+        // --- 在数据加载完成后，触发事件以更新依赖数据的UI部分 ---
+        try {
+            const newDefinitions = await dataPromise;
+            this._currentSpecialContactsDefinitions = newDefinitions;
+
+            if (typeof EventEmitter !== 'undefined') {
+                EventEmitter.emit('themeChanged', {
+                    newThemeKey: themeKey,
+                    newDefinitions: [...this._currentSpecialContactsDefinitions]
+                });
+                (Utils?.log || console.log)(`ThemeLoader: 已为 ${themeKey} 触发 themeChanged 事件。`, Utils?.logLevels?.INFO || 1);
+            } else {
+                console.warn("ThemeLoader: EventEmitter 未定义，无法触发 themeChanged 事件。");
+            }
+        } catch (error) {
+            (Utils?.log || console.log)(`ThemeLoader: 在applyTheme期间加载或处理数据失败: ${error}`, Utils?.logLevels?.ERROR || 3);
+            // 即使数据加载失败，也要确保UI不会处于不一致的状态
+            EventEmitter.emit('themeChanged', { newThemeKey: themeKey, newDefinitions: [] });
         }
     },
 

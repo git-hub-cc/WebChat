@@ -302,7 +302,7 @@ const WebRTCManager = {
             }
         } catch (error) {
             Utils.log(`WebRTCManager: 处理来自 ${fromUserId} 的远程提议失败: ${error.message}\n堆栈: ${error.stack}`, Utils.logLevels.ERROR);
-            NotificationUIManager.showNotification(`处理提议时出错: ${error.message}`, 'error');
+            NotificationUIManager.showNotification(`处理提议时出错: 对方通话意外中断`, 'error');
             VideoCallManager.hangUpMedia(false);
             this.closeConnection(fromUserId);
         }

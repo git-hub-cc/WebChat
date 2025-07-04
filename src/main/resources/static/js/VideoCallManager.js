@@ -253,7 +253,7 @@ const VideoCallManager = {
         if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
         this.callRequestTimeout = null;
 
-        VideoCallHandler._stopAdaptiveAudioCheck(peerIdToHangUp);
+        VideoCallHandler._stopAdaptiveMediaChecks(peerIdToHangUp); // MODIFIED
 
         if (notifyPeer && (this.state.isCallActive || this.state.isCallPending) && peerIdToHangUp) {
             ConnectionManager.sendTo(peerIdToHangUp, {type: 'video-call-end', sender: UserManager.userId});
@@ -329,7 +329,7 @@ const VideoCallManager = {
         ModalUIManager.hideCallingModal();
         ModalUIManager.hideCallRequest();
 
-        VideoCallHandler._stopAdaptiveAudioCheck(peerIdCleaned);
+        VideoCallHandler._stopAdaptiveMediaChecks(peerIdCleaned); // MODIFIED
         if (peerIdCleaned) {
             delete VideoCallHandler._lastNegotiatedSdpFmtpLine[peerIdCleaned];
         } else {
