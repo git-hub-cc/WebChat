@@ -470,7 +470,7 @@ const SettingsUIManager = {
 
                 this.colorSchemeOptionsContainerEl.style.display = 'none';
                 if (typeof ModalUIManager !== 'undefined') {
-                    ModalUIManager.toggleModal('mainMenuModal', false);
+                    ModalUIManager.toggleModal('mainMenuModal', false, true);
                 }
             });
             this.colorSchemeOptionsContainerEl.appendChild(optionDiv);
@@ -529,7 +529,7 @@ const SettingsUIManager = {
                     }
                     this.themeOptionsContainerEl.style.display = 'none';
                     if (typeof ModalUIManager !== 'undefined') {
-                        ModalUIManager.toggleModal('mainMenuModal', false);
+                        ModalUIManager.toggleModal('mainMenuModal', false, true);
                     }
                 });
                 this.themeOptionsContainerEl.appendChild(optionDiv);

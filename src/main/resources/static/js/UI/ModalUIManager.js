@@ -259,20 +259,57 @@ const ModalUIManager = {
      * 通用的显示或隐藏模态框的方法。
      * @param {string} modalId - 目标模态框的 DOM ID。
      * @param {boolean} show - true 为显示，false 为隐藏。
+     * @param {boolean} [immediate=false] - 如果为true，则立即隐藏，不播放动画。
      */
-    toggleModal: function (modalId, show) {
+    toggleModal: function (modalId, show, immediate = false) {
         const modal = document.getElementById(modalId);
         if (modal) {
-            modal.style.display = show ? 'flex' : 'none';
-            if (show && modalId === 'newContactGroupModal') {
-                this._renderMemorySetList();
-                this._hideMemorySetForm();
+            if (show) {
+                this._showModalWithAnimation(modal);
+                if (modalId === 'newContactGroupModal') {
+                    this._renderMemorySetList();
+                    this._hideMemorySetForm();
+                }
+            } else {
+                this._hideModalWithAnimation(modal, immediate);
             }
         } else {
             Utils.log(`未找到 ID 为 '${modalId}' 的模态框。`, Utils.logLevels.WARN);
         }
     },
+    _showModalWithAnimation: function(modalEl) {
+        if (!modalEl || modalEl.classList.contains('show')) return;
+        modalEl.style.display = 'flex';
+        setTimeout(() => {
+            modalEl.classList.add('show');
+        }, 10);
+    },
+    /**
+     * @private
+     * 以动画形式隐藏一个模态框元素。
+     * @param {HTMLElement} modalEl - 要隐藏的模态框元素。
+     * @param {boolean} [immediate=false] - 如果为true，则立即隐藏，不播放动画。
+     */
+    _hideModalWithAnimation: function(modalEl, immediate = false) {
+        if (!modalEl) return;
 
+        // 如果是立即隐藏模式
+        if (immediate) {
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            return;
+        }
+
+        // 动画隐藏模式
+        if (!modalEl.classList.contains('show')) return;
+
+        modalEl.classList.remove('show');
+        modalEl.addEventListener('transitionend', function handler() {
+            if (!modalEl.classList.contains('show')) {
+                modalEl.style.display = 'none';
+            }
+        }, { once: true });
+    },
     /**
      * 动态创建一个通用的确认对话框。
      * @param {string} message - 对话框中显示的消息文本。

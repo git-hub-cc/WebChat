@@ -9,6 +9,7 @@
  *              MODIFIED: 支持为浅色和深色模式分别设置、缓存和应用自定义背景图片。
  *              OPTIMIZED: applyTheme 现在会立即切换CSS，并在后台异步加载数据，以提高UI响应速度。
  *              OPTIMIZED: _parseDataJson现在使用Promise.all并行加载所有关卡篇章文件，以加快主题切换速度。
+ *              OPTIMIZED: 切换主题时使用全屏遮罩，防止UI闪烁，提升切换体验。
  * @module ThemeLoader
  * @exports {object} ThemeLoader - 主要通过其 `applyTheme` 方法和几个 getter 与其他模块交互。
  * @property {function} init - 初始化主题加载器，加载初始主题和数据，并应用缓存的背景图。
@@ -33,6 +34,7 @@ const ThemeLoader = {
     _systemColorSchemeListener: null, // 系统配色方案变化监听器
     _currentSpecialContactsDefinitions: [], // 存储当前主题的特殊联系人定义
     _currentInjectedBackgroundUrl: null, // MODIFIED: 存储当前注入背景的 Object URL，以便释放
+    transitionOverlayEl: null, // OPTIMIZED: 用于主题切换的遮罩元素
 
     /**
      * @private
@@ -205,64 +207,81 @@ const ThemeLoader = {
      * @returns {Promise<void>}
      */
     async init() {
-        // --- 主题和配色方案初始化 ---
-        const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
-        this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
-
-        let savedThemeKey = localStorage.getItem('selectedTheme');
-        let themeToLoadKey;
-
-        if (savedThemeKey && this.themes[savedThemeKey] && this._isThemeCompatible(savedThemeKey, this._currentEffectiveColorScheme)) {
-            themeToLoadKey = savedThemeKey;
-        } else {
-            let newThemeKey;
-            if (savedThemeKey && this.themes[savedThemeKey]) {
-                const baseName = this._getBaseThemeName(savedThemeKey);
-                const suffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
-                const counterpartKey = `${baseName}-${suffix}`;
-                if (this.themes[counterpartKey] && this._isThemeCompatible(counterpartKey, this._currentEffectiveColorScheme)) {
-                    newThemeKey = counterpartKey;
-                }
-            }
-            if (!newThemeKey) {
-                newThemeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
-            }
-            themeToLoadKey = newThemeKey;
+        this.transitionOverlayEl = document.getElementById('theme-transition-overlay');
+        if (this.transitionOverlayEl) {
+            this.transitionOverlayEl.classList.add('active');
         }
-        await this._loadThemeCore(themeToLoadKey);
-        this._setupSystemColorSchemeListener(preferredColorScheme);
 
-        // --- MODIFIED: 背景图片初始化 ---
-        await this._updateCustomBackground();
+        try {
+            // --- 主题和配色方案初始化 ---
+            const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
+            this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
 
-        (Utils?.log || console.log)("ThemeLoader: 初始化完成。", Utils?.logLevels?.INFO || 1);
+            let savedThemeKey = localStorage.getItem('selectedTheme');
+            let themeToLoadKey;
+
+            if (savedThemeKey && this.themes[savedThemeKey] && this._isThemeCompatible(savedThemeKey, this._currentEffectiveColorScheme)) {
+                themeToLoadKey = savedThemeKey;
+            } else {
+                let newThemeKey;
+                if (savedThemeKey && this.themes[savedThemeKey]) {
+                    const baseName = this._getBaseThemeName(savedThemeKey);
+                    const suffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
+                    const counterpartKey = `${baseName}-${suffix}`;
+                    if (this.themes[counterpartKey] && this._isThemeCompatible(counterpartKey, this._currentEffectiveColorScheme)) {
+                        newThemeKey = counterpartKey;
+                    }
+                }
+                if (!newThemeKey) {
+                    newThemeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
+                }
+                themeToLoadKey = newThemeKey;
+            }
+            await this._loadThemeCore(themeToLoadKey);
+            this._setupSystemColorSchemeListener(preferredColorScheme);
+
+            // --- MODIFIED: 背景图片初始化 ---
+            await this._updateCustomBackground();
+
+            (Utils?.log || console.log)("ThemeLoader: 初始化完成。", Utils?.logLevels?.INFO || 1);
+        } finally {
+            if (this.transitionOverlayEl) {
+                this.transitionOverlayEl.classList.remove('active');
+            }
+        }
     },
 
     /**
-     * OPTIMIZED: 应用一个新主题（无刷新），并优化了加载流程。
+     * OPTIMIZED: 应用一个新主题（无刷新），并使用遮罩优化了加载流程。
      * @param {string} themeKey - 要应用的主题的键名。
      * @returns {Promise<void>}
      */
     async applyTheme(themeKey) {
-        if (!this.themes[themeKey]) {
-            (Utils?.log || console.log)(`ThemeLoader: 尝试应用无效的主题键: ${themeKey}。正在回退。`, Utils?.logLevels?.ERROR || 3);
-            themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
+        if (this.transitionOverlayEl) {
+            this.transitionOverlayEl.classList.add('active');
         }
+        // 短暂延迟以确保浏览器渲染遮罩
+        await new Promise(resolve => setTimeout(resolve, 10));
 
-        // --- OPTIMIZATION: 立即切换CSS和更新状态，提供即时视觉反馈 ---
-        const themeConfig = this.themes[themeKey];
-        const themeStylesheet = document.getElementById('theme-stylesheet');
-        if (themeStylesheet && themeConfig.css) {
-            themeStylesheet.setAttribute('href', themeConfig.css);
-        }
-        this._currentThemeKey = themeKey;
-        localStorage.setItem('selectedTheme', themeKey);
-
-        // --- OPTIMIZATION: 在后台异步加载数据，不阻塞UI ---
-        const dataPromise = this._parseDataJson(themeConfig.dataJs);
-
-        // --- 在数据加载完成后，触发事件以更新依赖数据的UI部分 ---
         try {
+            if (!this.themes[themeKey]) {
+                (Utils?.log || console.log)(`ThemeLoader: 尝试应用无效的主题键: ${themeKey}。正在回退。`, Utils?.logLevels?.ERROR || 3);
+                themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
+            }
+
+            // OPTIMIZATION: 立即切换CSS和更新状态，提供即时视觉反馈
+            const themeConfig = this.themes[themeKey];
+            const themeStylesheet = document.getElementById('theme-stylesheet');
+            if (themeStylesheet && themeConfig.css) {
+                themeStylesheet.setAttribute('href', themeConfig.css);
+            }
+            this._currentThemeKey = themeKey;
+            localStorage.setItem('selectedTheme', themeKey);
+
+            // OPTIMIZATION: 在后台异步加载数据，不阻塞UI
+            const dataPromise = this._parseDataJson(themeConfig.dataJs);
+
+            // 在数据加载完成后，触发事件以更新依赖数据的UI部分
             const newDefinitions = await dataPromise;
             this._currentSpecialContactsDefinitions = newDefinitions;
 
@@ -278,7 +297,13 @@ const ThemeLoader = {
         } catch (error) {
             (Utils?.log || console.log)(`ThemeLoader: 在applyTheme期间加载或处理数据失败: ${error}`, Utils?.logLevels?.ERROR || 3);
             // 即使数据加载失败，也要确保UI不会处于不一致的状态
-            EventEmitter.emit('themeChanged', { newThemeKey: themeKey, newDefinitions: [] });
+            if (typeof EventEmitter !== 'undefined') {
+                EventEmitter.emit('themeChanged', { newThemeKey: themeKey, newDefinitions: [] });
+            }
+        } finally {
+            if (this.transitionOverlayEl) {
+                this.transitionOverlayEl.classList.remove('active');
+            }
         }
     },
 
