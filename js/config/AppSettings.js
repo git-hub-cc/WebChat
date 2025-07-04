@@ -147,6 +147,8 @@ const AppSettings = {
      * @description 自适应音频质量配置。
      */
     adaptiveAudioQuality: {
+        enabled: true, // 是否启用自适应音频质量
+        codecClockRate: 48000, // 音频编解码器的时钟频率 (Hz)。对于Opus应为48000。
         interval: 5000, // 检查间隔 (毫秒)
         logStatsToConsole: true, // 是否在控制台打印统计信息
         baseGoodConnectionThresholds: { // 良好连接的基准阈值
@@ -160,6 +162,33 @@ const AppSettings = {
             { levelName: "标准", maxAverageBitrate: 16000, sdpFmtpLine: "minptime=10;useinbandfec=1;stereo=0;maxaveragebitrate=16000;cbr=0;maxplaybackrate=16000", description: "一般网络，标准音质" },
             { levelName: "较高", maxAverageBitrate: 20000, sdpFmtpLine: "minptime=10;useinbandfec=1;stereo=0;maxaveragebitrate=20000;cbr=0;maxplaybackrate=20000", description: "良好网络，提升音质" },
             { levelName: "极高", maxAverageBitrate: 48000, sdpFmtpLine: "minptime=5;useinbandfec=1;stereo=1;maxaveragebitrate=48000;cbr=0;maxplaybackrate=48000",  description: "优秀网络，最佳音质" }
+        ],
+        initialProfileIndex: 2, // 初始配置档案索引 (对应 "标准")
+        switchToHigherCooldown: 10000, // 提升质量的冷却时间 (毫秒)
+        switchToLowerCooldown: 5000,   // 降低质量的冷却时间 (毫秒)
+        stabilityCountForUpgrade: 2,   // 连续多少次良好检查后才提升质量
+        badQualityDowngradeThreshold: 2 // 连续多少次差质量检查后才降低质量
+    },
+
+    /**
+     * @description 新增：自适应视频质量配置。
+     */
+    adaptiveVideoQuality: {
+        enabled: true, // 是否启用自适应视频质量
+        interval: 5000, // 检查间隔 (毫秒) - 与音频共用一个定时器
+        logStatsToConsole: true, // 是否在控制台打印统计信息
+        // 注意：视频质量调整通常使用与音频相同的网络状况阈值
+        baseGoodConnectionThresholds: {
+            rtt: 120,
+            packetLoss: 0.01,
+            jitter: 20
+        },
+        videoQualityProfiles: [ // 视频质量配置档案数组，从低到高
+            { levelName: "极低", maxBitrate: 150000,  scaleResolutionDownBy: 4.0, maxFramerate: 15, description: "非常差的网络，优先保障流畅度" },
+            { levelName: "较低", maxBitrate: 300000,  scaleResolutionDownBy: 2.0, maxFramerate: 15, description: "较差网络，较低分辨率" },
+            { levelName: "标准", maxBitrate: 800000, scaleResolutionDownBy: 1.0, maxFramerate: 30, description: "一般网络，标准视频质量" },
+            { levelName: "较高", maxBitrate: 1500000, scaleResolutionDownBy: 1.0, maxFramerate: 30, description: "良好网络，高清视频" },
+            { levelName: "极高", maxBitrate: 2500000, scaleResolutionDownBy: 1.0, maxFramerate: 30, description: "优秀网络，超清视频" }
         ],
         initialProfileIndex: 2, // 初始配置档案索引 (对应 "标准")
         switchToHigherCooldown: 10000, // 提升质量的冷却时间 (毫秒)

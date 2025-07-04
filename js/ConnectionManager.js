@@ -200,34 +200,17 @@ const ConnectionManager = {
         }
 
         let offerDelay = 0;
-        const contactsToPotentiallyConnect = [];
 
-        // --- FIX START: Improved logic to identify reconnectable contacts ---
+        // --- FIX START: Simplified and more robust logic ---
+        const contactsToPotentiallyConnect = [];
         for (const contactId of Object.keys(UserManager.contacts)) {
             if (contactId === UserManager.userId || UserManager.contacts[contactId]?.isAI) {
                 continue; // Skip self and AI contacts
             }
 
-            const existingConn = WebRTCManager.connections[contactId];
-
-            // If there's no connection object at all, it's a potential candidate.
-            if (!existingConn || !existingConn.peerConnection) {
-                contactsToPotentiallyConnect.push(contactId);
-                continue;
-            }
-
-            // If a connection object exists, check its state thoroughly.
-            // A connection is considered "dead" and reconnectable if it's in a failed, closed, or disconnected state.
-            // It should NOT be reconnected if it's currently stable, new, or in the process of connecting/negotiating.
-            const pc = existingConn.peerConnection;
-            const connectionState = pc.connectionState;
-            const signalingState = pc.signalingState;
-
-            const isDead = ['failed', 'closed', 'disconnected'].includes(connectionState);
-            const isNegotiating = ['have-local-offer', 'have-remote-offer'].includes(signalingState);
-            const isConnecting = connectionState === 'connecting';
-
-            if (isDead && !isNegotiating && !isConnecting) {
+            // A contact is a candidate for reconnection if we are not already stably connected to them.
+            // isConnectedTo() correctly checks for 'connected' state and an open data channel.
+            if (!this.isConnectedTo(contactId)) {
                 contactsToPotentiallyConnect.push(contactId);
             }
         }
@@ -244,14 +227,14 @@ const ConnectionManager = {
             ((id, delay) => {
                 setTimeout(async () => {
                     try {
-                        // Use createOffer which internally handles re-initialization if needed.
+                        // Use createOffer, which internally handles re-initialization of the connection if needed.
                         await this.createOffer(id, { isSilent: true });
                     } catch (error) {
                         Utils.log(`ConnectionManager: 自动连接到 ${id} 时出错: ${error.message}`, Utils.logLevels.WARN);
                     }
                 }, delay);
             })(idToConnect, offerDelay);
-            offerDelay += 200;
+            offerDelay += 200; // Stagger offers to prevent overwhelming the signaling server/browser
         }
     },
 
