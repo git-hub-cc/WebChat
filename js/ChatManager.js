@@ -116,8 +116,8 @@ const ChatManager = {
         }
 
         if (chatListEl.children.length === 0) {
-            const filterText = { all: '聊天', contacts: '联系人', groups: '群组' }[filter] || '项目';
-            chatListEl.innerHTML = `<li class="chat-list-item-empty">未找到${filterText}。</li>`;
+            // const filterText = { all: '聊天', contacts: '联系人', groups: '群组' }[filter] || '项目';
+            // chatListEl.innerHTML = `<li class="chat-list-item-empty">未找到${filterText}。</li>`;
         }
     },
 
