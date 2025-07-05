@@ -53,7 +53,7 @@ const AppSettings = {
     network: { // 新增：网络相关配置
         websocketHeartbeatInterval: 25000, // WebSocket心跳间隔 (毫秒)
         dataChannelHighThreshold: 2 * 1024 * 1024, // 数据通道高水位阈值 (2MB)
-        dataChannelBufferCheckInterval: 100 // 缓冲检查间隔 (毫秒)
+        dataChannelBufferCheckInterval: 200 // 缓冲检查间隔 (毫秒)
     },
 
     /**
@@ -61,7 +61,7 @@ const AppSettings = {
      */
     media: {
         music: 'music/call.mp3', // 呼叫音乐文件路径
-        chunkSize: 64 * 1024, // 文件/消息分片传输时每个分片的大小（字节）
+        chunkSize: 256 * 1024, // 文件/消息分片传输时每个分片的大小（字节）
         maxAudioDuration: 60, // 语音消息最大录制时长（秒）
         imageCompression: 0.8, // 图片压缩质量 (0-1)
         maxFileSize: 50 * 1024 * 1024, // 最大上传文件大小 (50 MB)
