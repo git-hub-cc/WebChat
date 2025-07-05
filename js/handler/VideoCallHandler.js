@@ -195,30 +195,61 @@ const VideoCallHandler = {
         this._stopAdaptiveMediaChecks(peerIdToCancel);
         this.manager.cleanupCallMediaAndState();
     },
-
     startLocalStreamAndSignal: async function (isOfferCreatorForMedia) {
         const isScreenShareCaller = this.manager.state.isScreenSharing && this.manager.state.isCaller;
 
         try {
             if (isScreenShareCaller) {
-                // --- Screen sharing logic (remains the same) ---
-                this.manager.state.localStream = await navigator.mediaDevices.getDisplayMedia({video: { cursor: "always" }, audio: true});
+                // --- MODIFICATION START: Screen sharing now mixes system audio and microphone audio ---
+                Utils.log("屏幕共享发起者：正在获取屏幕和麦克风流。", Utils.logLevels.INFO);
+
+                // 1. 获取屏幕视频和系统音频
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { cursor: "always" },
+                    audio: true // 请求系统/标签页音频
+                });
                 this.manager.state.isVideoEnabled = true;
-                const screenTrack = this.manager.state.localStream.getVideoTracks()[0];
-                if (screenTrack) screenTrack.onended = () => {
-                    Utils.log("用户已结束屏幕共享。", Utils.logLevels.INFO);
-                    this.manager.hangUpMedia();
-                };
-                if (this.manager.state.localStream.getAudioTracks().length === 0) {
-                    try {
-                        const micStream = await navigator.mediaDevices.getUserMedia({ audio: this.audioConstraints, video: false });
-                        micStream.getAudioTracks().forEach(track => this.manager.state.localStream.addTrack(track));
-                    } catch (micError) {
-                        Utils.log(`无法为屏幕共享获取麦克风: ${micError.message}`, Utils.logLevels.WARN);
-                    }
+
+                // 2. 另外，获取麦克风音频
+                let micStream = null;
+                try {
+                    micStream = await navigator.mediaDevices.getUserMedia({ audio: this.audioConstraints, video: false });
+                } catch (micError) {
+                    Utils.log(`无法为屏幕共享获取麦克风，将仅共享屏幕音频（如果可用）。错误: ${micError.message}`, Utils.logLevels.WARN);
+                    NotificationUIManager.showNotification('无法获取麦克风，将继续共享但不包含您的声音。', 'warning');
                 }
+
+                // 3. 将所有轨道合并到一个新的流中
+                const finalTracks = [];
+
+                // 添加视频轨道
+                const screenVideoTrack = screenStream.getVideoTracks()[0];
+                if (screenVideoTrack) {
+                    // 监听用户通过浏览器UI停止共享的事件
+                    screenVideoTrack.onended = () => {
+                        Utils.log("用户通过浏览器UI停止了屏幕共享。", Utils.logLevels.INFO);
+                        this.manager.hangUpMedia();
+                    };
+                    finalTracks.push(screenVideoTrack);
+                }
+
+                // 添加系统音频轨道 (如果存在)
+                const systemAudioTrack = screenStream.getAudioTracks()[0];
+                if (systemAudioTrack) {
+                    finalTracks.push(systemAudioTrack);
+                }
+
+                // 添加麦克风音频轨道 (如果存在)
+                const micAudioTrack = micStream ? micStream.getAudioTracks()[0] : null;
+                if (micAudioTrack) {
+                    finalTracks.push(micAudioTrack);
+                }
+
+                // 4. 创建最终的混合流
+                this.manager.state.localStream = new MediaStream(finalTracks);
+                // --- MODIFICATION END ---
             } else {
-                // --- Asymmetric Call Logic ---
+                // --- Asymmetric Call Logic --- (这部分逻辑保持不变)
                 // We attempt to send video unless we are the CALLER and we initiated an AUDIO-ONLY call.
                 // The receiver will always attempt to send video by default.
                 let attemptLocalCameraVideoSending = !(this.manager.state.isCaller && this.manager.state.isAudioOnly);
