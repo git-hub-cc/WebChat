@@ -64,7 +64,7 @@ const AppSettings = {
         chunkSize: 256 * 1024, // 文件/消息分片传输时每个分片的大小（字节）
         maxAudioDuration: 60, // 语音消息最大录制时长（秒）
         imageCompression: 0.8, // 图片压缩质量 (0-1)
-        maxFileSize: 50 * 1024 * 1024, // 最大上传文件大小 (50 MB)
+        maxFileSize: 1024 * 1024 * 1024, // 最大上传文件大小 (1 GB)
         maxStickerSize: 3 * 1024 * 1024, // ADDED: 3 MB for stickers
         audioConstraints: {    // 音频采集约束，用于提高通话质量
             echoCancellation: true,
