@@ -3,7 +3,7 @@
  * @description 管理人员大厅的 UI 和逻辑，包括获取在线用户、渲染列表及处理用户交互。
  *              新增功能：
  *              1. 通过 TimerManager 实现定期自动刷新在线用户列表。
- *              2. 实现自动连接逻辑：当某个离线联系人连续两次被检测到在线时，尝试自动与其建立连接。
+ *              2. ENHANCED: 在定期刷新时，会自动尝试与新上线或持续在线但未连接的联系人建立连接。
  * @module PeopleLobbyManager
  * @exports {object} PeopleLobbyManager - 对外暴露的单例对象。
  * @property {function} init - 初始化模块，并启动定期刷新任务。
@@ -15,16 +15,13 @@
  */
 const PeopleLobbyManager = {
     onlineUserIds: [], // 存储在线用户ID的数组
+    _previousOnlineUserIds: new Set(), // MODIFIED: 新增，用于跟踪状态变化
     lobbyContainerEl: null,    // 人员大厅的容器元素 (#peopleLobbyContent)
     peopleLobbyListEl: null,   // 显示用户列表的 ul 元素 (#peopleLobbyList)
     refreshButtonEl: null,     // 刷新按钮的引用
     isLoading: false,          // 标记是否正在加载数据
-    _AUTO_REFRESH_INTERVAL: 60 * 1000, // 自动刷新间隔：60秒 (毫秒)
+    _AUTO_REFRESH_INTERVAL: 30 * 1000, // MODIFIED: 缩短刷新间隔为30秒，以更快地响应状态变化
     _AUTO_REFRESH_TASK_NAME: 'peopleLobbyAutoRefresh', // 定时任务名称
-
-    // 新增：用于自动连接逻辑的属性
-    _autoConnectCounters: new Map(), // 存储联系人连续在线检测次数, key: userId, value: count
-    _AUTO_CONNECT_THRESHOLD: 2, // 连续检测到2次后触发自动连接
 
     /**
      * 初始化人员大厅管理器，并启动定期刷新在线用户列表的任务。
@@ -42,7 +39,6 @@ const PeopleLobbyManager = {
             TimerManager.addPeriodicTask(
                 this._AUTO_REFRESH_TASK_NAME,
                 async () => {
-                    // Utils.log('PeopleLobbyManager: 自动刷新在线用户列表...', Utils.logLevels.DEBUG);
                     // 调用 fetchOnlineUsers 但不直接在 UI 上显示加载状态，除非大厅本身可见
                     const success = await this.fetchOnlineUsers(true); // true表示是静默刷新
                     if (success && this.isVisible()) { // 如果获取成功且大厅可见，则重新渲染
@@ -72,8 +68,6 @@ const PeopleLobbyManager = {
             if (this.isVisible()) this.renderLobby();
         }
 
-        // 不再打印此条日志，因为它会每5秒出现一次，过于频繁
-        // Utils.log('PeopleLobbyManager: 开始获取在线用户...', Utils.logLevels.INFO);
         try {
             const lobbyApiUrl = AppSettings.server.lobbyApiEndpoint;
             if (!lobbyApiUrl) {
@@ -90,9 +84,6 @@ const PeopleLobbyManager = {
             this.onlineUserIds = Array.isArray(userIds) ? userIds.filter(id => id !== UserManager.userId) : [];
             const newOnlineUserIds = new Set(this.onlineUserIds);
 
-            // Utils.log(`PeopleLobbyManager: 成功获取在线用户: ${this.onlineUserIds.length} 个`, Utils.logLevels.DEBUG);
-
-            // 检查在线用户列表是否有实际变化，只有变化时才触发事件
             let changed = false;
             if (oldOnlineUserIds.size !== newOnlineUserIds.size) {
                 changed = true;
@@ -109,8 +100,9 @@ const PeopleLobbyManager = {
                 EventEmitter.emit('onlineUsersUpdated', [...this.onlineUserIds]);
             }
 
-            // --- 新增：自动连接逻辑 ---
-            this.handleAutoConnectLogic(newOnlineUserIds);
+            // --- ENHANCEMENT START: 自动重连逻辑 ---
+            this._handleAutoReconnectOnRefresh(newOnlineUserIds);
+            // --- ENHANCEMENT END ---
 
             return true;
         } catch (error) {
@@ -132,49 +124,47 @@ const PeopleLobbyManager = {
     },
 
     /**
-     * @description 处理自动连接逻辑。
-     * @param {Set<string>} onlineUserIdsSet - 当前在线的用户ID集合。
      * @private
+     * @description ENHANCED: 在每次刷新在线用户列表后，检查并尝试重连符合条件的联系人。
+     * @param {Set<string>} currentOnlineIds - 当前获取到的在线用户ID集合。
      */
-    handleAutoConnectLogic: function(onlineUserIdsSet) {
-        if (typeof UserManager === 'undefined' || typeof ConnectionManager === 'undefined' || !UserManager.contacts) {
-            return; // 依赖项未准备好，跳过
+    _handleAutoReconnectOnRefresh: function(currentOnlineIds) {
+        if (!UserManager.contacts || typeof ConnectionManager.isConnectedTo !== 'function') {
+            return;
         }
 
-        const contactsToConnect = [];
-        const allContactIds = Object.keys(UserManager.contacts);
+        const contactsToConnect = new Set();
 
-        for (const contactId of allContactIds) {
-            const isContactOnline = onlineUserIdsSet.has(contactId);
-            const isContactConnected = ConnectionManager.isConnectedTo(contactId);
-
-            // 条件：联系人在线，但我们与他/她当前没有建立连接
-            if (isContactOnline && !isContactConnected) {
-                const currentCount = (this._autoConnectCounters.get(contactId) || 0) + 1;
-                this._autoConnectCounters.set(contactId, currentCount);
-
-                // Utils.log(`PeopleLobbyManager: 检测到离线联系人 ${contactId} 在线，计数: ${currentCount}`, Utils.logLevels.DEBUG);
-
-                if (currentCount >= this._AUTO_CONNECT_THRESHOLD) {
-                    contactsToConnect.push(contactId);
-                    this._autoConnectCounters.delete(contactId); // 重置计数器，防止重复触发
-                }
-            } else {
-                // 如果用户不在线或已连接，则清零计数器
-                if (this._autoConnectCounters.has(contactId)) {
-                    this._autoConnectCounters.delete(contactId);
-                }
+        // 遍历所有当前在线的用户
+        for (const onlineId of currentOnlineIds) {
+            // 检查这个在线用户是否是我们的联系人，并且我们当前没有连接到他
+            if (UserManager.contacts[onlineId] && !ConnectionManager.isConnectedTo(onlineId)) {
+                contactsToConnect.add(onlineId);
             }
         }
 
-        if (contactsToConnect.length > 0) {
-            Utils.log(`PeopleLobbyManager: 自动连接条件触发，尝试连接: ${contactsToConnect.join(', ')}`, Utils.logLevels.INFO);
-            if (typeof ConnectionManager.autoConnectToContacts === 'function') {
-                ConnectionManager.autoConnectToContacts(contactsToConnect);
-            } else {
-                Utils.log('PeopleLobbyManager: ConnectionManager.autoConnectToContacts 方法未定义。', Utils.logLevels.WARN);
+        // 如果找到了需要连接的目标
+        if (contactsToConnect.size > 0) {
+            const contactsArray = Array.from(contactsToConnect);
+            Utils.log(`PeopleLobbyManager: 检测到 ${contactsArray.length} 个在线但未连接的联系人，将尝试静默重连: ${contactsArray.join(', ')}`, Utils.logLevels.INFO);
+
+            let offerDelay = 0;
+            for (const contactId of contactsArray) {
+                // 使用闭包确保 contactId 在 setTimeout 回调中是正确的
+                ((id, delay) => {
+                    setTimeout(async () => {
+                        // 再次检查，以防在延迟期间已经建立了连接
+                        if (!ConnectionManager.isConnectedTo(id)) {
+                            await ConnectionManager.createOffer(id, { isSilent: true });
+                        }
+                    }, delay);
+                })(contactId, offerDelay);
+                offerDelay += 250; // 错开请求，避免拥塞
             }
         }
+
+        // 更新上一次的在线用户列表状态，为下一次比较做准备
+        this._previousOnlineUserIds = currentOnlineIds;
     },
 
     /**
