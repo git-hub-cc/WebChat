@@ -52,7 +52,7 @@ const AppSettings = {
      */
     network: { // 新增：网络相关配置
         websocketHeartbeatInterval: 25000, // WebSocket心跳间隔 (毫秒)
-        dataChannelHighThreshold: 16 * 1024 * 1024, // 数据通道高水位阈值 (16MB)
+        dataChannelHighThreshold: 2 * 1024 * 1024, // 数据通道高水位阈值 (2MB)
         dataChannelBufferCheckInterval: 100 // 缓冲检查间隔 (毫秒)
     },
 
