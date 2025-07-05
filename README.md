@@ -8,7 +8,8 @@
 A feature-rich, modern web chat application built with vanilla JavaScript, HTML, and CSS for the frontend, and Java Spring Boot for the backend. It utilizes WebRTC for direct user-to-user media communication, supporting text, file sharing, voice messages, and real-time audio/video/screen-sharing calls. Initial user discovery and connection negotiation are handled by a WebSocket-based signaling server. The application now includes a powerful **"Memory Book"** feature for enhanced AI long-term memory, **Character Card import/export** for easy sharing, and **customizable backgrounds** for personalization. The AI system supports dynamic context, intelligent summarization, and Text-to-Speech (TTS), delivering a vivid and deeply engaging interactive experience.
 
 **Online Demo:**
-https://git-hub-cc.github.io/PPMC/
+* https://ppmc.club/ppmc.html
+* https://git-hub-cc.github.io/PPMC/
 
 ## ✨ Features
 

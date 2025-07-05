@@ -8,7 +8,8 @@
 一款功能丰富、现代化的 Web 聊天应用，前端使用原生 JavaScript、HTML 和 CSS 构建，后端采用 Java Spring Boot。它利用 WebRTC 进行用户间的直接媒体通信，支持文本、文件共享、语音/贴图消息以及实时音频/视频/屏幕共享通话。应用现已包含强大的**“记忆书”**功能以增强AI的长期记忆，**角色卡导入/导出**功能便于分享，以及**个性化的自定义背景图片**。AI系统支持动态上下文、智能摘要和文本转语音（TTS），带来生动且深度沉浸的交互体验。
 
 **在线演示：**
-https://git-hub-cc.github.io/PPMC/
+* https://ppmc.club/ppmc.html
+* https://git-hub-cc.github.io/PPMC/
 
 ## ✨ 功能特性
 

@@ -60,6 +60,7 @@ const CharacterCardManager = {
 
     /**
      * 处理导出按钮点击事件。
+     * 兼容原生安卓环境和普通浏览器环境。
      */
     handleExportClick: async function() {
         const themeSpecialContacts = ThemeLoader.getCurrentSpecialContactsDefinitions();
@@ -70,45 +71,52 @@ const CharacterCardManager = {
 
         NotificationUIManager.showNotification('正在准备角色数据，请稍候...', 'info');
 
-        // 使用 Promise.all 并行处理所有头像的转换
         const exportPromises = themeSpecialContacts.map(async (contact) => {
             const cleanContact = { ...contact };
-            // 移除运行时状态
             delete cleanContact.lastMessage;
             delete cleanContact.lastTime;
             delete cleanContact.unread;
             delete cleanContact.selectedChapterId;
-
-            // MODIFIED: 处理头像
             if (cleanContact.avatarUrl) {
                 const dataUrl = await this._imageToBase64(cleanContact.avatarUrl);
                 if (dataUrl) {
-                    cleanContact.avatarDataUrl = dataUrl; // 使用新字段
+                    cleanContact.avatarDataUrl = dataUrl;
                 }
-                delete cleanContact.avatarUrl; // 移除旧字段
+                delete cleanContact.avatarUrl;
             }
-
             return cleanContact;
         });
 
         try {
             const charactersToExport = await Promise.all(exportPromises);
-
             const jsonData = JSON.stringify(charactersToExport, null, 2);
-            const blob = new Blob([jsonData], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-
             const themeKey = ThemeLoader.getCurrentThemeKey();
             const themeName = themeKey ? themeKey.replace(/-[^-]*$/, '') : 'Characters';
-            a.href = url;
-            a.download = `PPMC_Theme_${themeName}_Characters.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const fileName = `PPMC_Theme_${themeName}_Characters.json`;
 
-            NotificationUIManager.showNotification('当前主题角色已开始导出。', 'success');
+            // --- 修改的核心部分 ---
+            // 检查是否存在我们注入的安卓原生接口
+            if (window.Android && typeof window.Android.saveFile === 'function') {
+                // 如果在我们的安卓应用中，直接调用原生方法保存文件
+                Utils.log("检测到安卓原生接口，调用 saveFile...", Utils.logLevels.INFO);
+                window.Android.saveFile(jsonData, fileName);
+                NotificationUIManager.showNotification('正在通过原生应用导出角色...', 'success');
+            } else {
+                // 如果不在安卓应用中（例如在PC浏览器），使用传统方法下载
+                Utils.log("未检测到安卓原生接口，使用浏览器下载...", Utils.logLevels.INFO);
+                const blob = new Blob([jsonData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                NotificationUIManager.showNotification('当前主题角色已开始导出。', 'success');
+            }
+            // --- 修改结束 ---
+
         } catch (error) {
             NotificationUIManager.showNotification('导出角色时发生错误，请检查控制台。', 'error');
             Utils.log(`导出角色卡失败: ${error}`, Utils.logLevels.ERROR);
