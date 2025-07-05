@@ -211,7 +211,6 @@ const VideoCallManager = {
         } else {
             this.state.isVideoEnabled = false;
         }
-
         this.updateCurrentCallUIState();
     },
 

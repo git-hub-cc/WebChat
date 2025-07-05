@@ -6,6 +6,7 @@
  *              FIX: 修复了 PiP 窗口拖动时因位置计算不当导致的偏移（跳跃）问题。
  *              FIXED: 修复了 togglePipMode 函数逻辑，确保其能正确进入画中画模式。
  *              FIXED: 修复了UI以支持不对称通话（一方音频，一方视频）。
+ *              FIXED: (本次修改) 修复了屏幕共享时，远程视频元素被错误隐藏导致闪烁的问题。
  * @module VideoCallUIManager
  * @exports {object} VideoCallUIManager - 对外暴露的单例对象，包含管理视频通话 UI 的方法。
  */
@@ -132,22 +133,23 @@ const VideoCallUIManager = {
             return;
         }
 
-        const remoteStream = this.remoteVideo.srcObject;
-        const hasRemoteVideo = remoteStream instanceof MediaStream && remoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
-
         if (callState.isCallActive) {
             this.showCallContainer(true);
-            // Update quality indicators...
         } else {
             this.showCallContainer(false);
             return;
         }
+
+        // --- THE FIX: Robust check for remote video stream ---
+        const remoteStream = this.remoteVideo.srcObject;
+        const hasRemoteVideo = remoteStream instanceof MediaStream && remoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
 
         // --- UI Mode Class Logic ---
         const isEffectivelyAudioOnly = !callState.isVideoEnabled && !hasRemoteVideo;
         this.callContainer.classList.toggle('audio-only-mode', isEffectivelyAudioOnly && !callState.isScreenSharing);
         this.callContainer.classList.toggle('screen-sharing-mode', callState.isScreenSharing);
         this.callContainer.classList.toggle('pip-mode', this.isPipMode && callState.isCallActive);
+
 
         // --- Video Element Display Logic ---
         const showLocalVideo = callState.localStream && callState.isVideoEnabled;
@@ -156,11 +158,6 @@ const VideoCallUIManager = {
             this.localVideo.srcObject = callState.localStream;
         }
 
-        // CORRECTED: Remote video visibility depends only on the presence of a live track.
-        this.remoteVideo.style.display = hasRemoteVideo ? 'block' : 'none';
-        if (hasRemoteVideo && this.remoteVideo.paused) {
-            this.remoteVideo.play().catch(e => Utils.log(`播放远程视频时出错: ${e.name} - ${e.message}`, Utils.logLevels.WARN));
-        }
 
         // --- Button State Logic ---
         this.cameraBtn.style.display = callState.isScreenSharing ? 'none' : 'inline-block';
