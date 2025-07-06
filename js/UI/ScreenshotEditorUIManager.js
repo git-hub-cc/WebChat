@@ -103,8 +103,11 @@ const ScreenshotEditorUIManager = {
 
     _handleRawScreenshot: function(detail) {
         Utils.log('原始截图已由 ScreenshotEditorUIManager 接收。', Utils.logLevels.DEBUG);
-        if (!detail || !detail.dataUrl || !detail.blob || !detail.originalStream) {
+        // [修复] 放宽检查，允许 originalStream 为 null（原生安卓截图场景）
+        // 只检查核心数据 dataUrl 和 blob 是否存在。
+        if (!detail || !detail.dataUrl || !detail.blob) { // <--- 修改后的行
             NotificationUIManager.showNotification('接收截图数据不完整。', 'error');
+            // 即使数据不完整，如果流存在，也应尝试关闭它
             if (detail && detail.originalStream) {
                 detail.originalStream.getTracks().forEach(track => track.stop());
             }
