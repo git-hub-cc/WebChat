@@ -1,4 +1,3 @@
-
 /**
  * @file MediaManager.js
  * @description 核心媒体管理器，负责处理媒体相关的核心逻辑，如麦克风权限、语音录制、文件处理和屏幕截图。
@@ -439,42 +438,4 @@ const MediaManager = {
             if (stream) stream.getTracks().forEach(track => track.stop());
         }
     }
-};
-
-
-/**
- * @function handleNativeScreenshot
- * @description 全局函数，由 Android 原生代码在截图完成后调用。
- * @param {string} base64DataUrl - 从原生代码传递过来的截图的 Base64 Data URL。
- */
-window.handleNativeScreenshot = function(base64DataUrl) {
-    Utils.log('Received screenshot from native Android.', Utils.logLevels.INFO);
-    if (!base64DataUrl || !base64DataUrl.startsWith('data:image/')) {
-        Utils.log('Invalid base64 data received from native.', Utils.logLevels.ERROR);
-        NotificationUIManager.showNotification('从原生应用接收截图失败。', 'error');
-        return;
-    }
-
-    // 将 Base64 Data URL 转换为 Blob
-    fetch(base64DataUrl)
-        .then(res => res.blob())
-        .then(blob => {
-            if (!blob) {
-                NotificationUIManager.showNotification('截图失败：无法生成图片 Blob。', 'error');
-                return;
-            }
-            // 触发事件，将截图发送到编辑器
-            if (typeof EventEmitter !== 'undefined' && MediaManager) {
-                EventEmitter.emit('rawScreenshotCaptured', {
-                    dataUrl: base64DataUrl,
-                    blob: blob,
-                    originalStream: null // 原生截图没有流
-                });
-                Utils.log("Raw screenshot from native processed, event emitted.", Utils.logLevels.INFO);
-            }
-        })
-        .catch(error => {
-            Utils.log(`Error converting native screenshot Data URL to Blob: ${error}`, Utils.logLevels.ERROR);
-            NotificationUIManager.showNotification('处理原生截图时出错。', 'error');
-        });
 };
