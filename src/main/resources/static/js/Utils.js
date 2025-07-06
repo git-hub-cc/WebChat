@@ -1,8 +1,7 @@
 /**
  * @file Utils.js
  * @description 提供一系列通用工具函数，供整个应用程序使用。
- *              包括日志记录、HTML 转义、网络检查、数据分片处理、ID 生成和日期格式化等。
- *              sendInChunks 现在实现了基于 RTCDataChannel.bufferedAmount 的背压控制，并支持二进制 Blob 传输。
+ *              包括日志记录、HTML 转义、网络检查、ID 生成和日期格式化等。
  *              新增: generateFileHash 用于计算文件Blob的SHA-256哈希。
  *              新增: makeElementCollapsible, formatMessageText, clipRectToArea, isPointInRect, showFullImage, showFullVideo 等从其他模块迁移过来的通用工具函数。
  *              新增: fetchApiStream 用于封装流式API请求的通用逻辑。
@@ -106,85 +105,6 @@ const Utils = {
         } catch (error) {
             Utils.log(`网络类型检查失败: ${error.message}`, Utils.logLevels.ERROR);
             return { ipv4: false, ipv6: false, relay: false, udp: false, tcp: false, count: 0, error: error.message };
-        }
-    },
-
-    /**
-     * 将大文件 (Blob) 分片并通过数据通道发送，实现了背压控制。
-     * @param {Blob} fileBlob - 要发送的文件 Blob 对象。
-     * @param {string} fileName - 文件名。
-     * @param {RTCDataChannel} dataChannel - 用于发送数据的 RTCDataChannel 实例。
-     * @param {string} peerId - 接收方的 ID。
-     * @param {string} fileHash - 文件的唯一哈希，用作分片 ID。
-     * @param {number} [chunkSize=AppSettings.media.chunkSize] - 每个分片的大小。
-     */
-    sendInChunks: async function (fileBlob, fileName, dataChannel, peerId, fileHash, chunkSize = AppSettings.media.chunkSize || 64 * 1024) {
-        if (!(fileBlob instanceof Blob)) {
-            Utils.log("Utils.sendInChunks: 提供的不是一个 Blob 对象。", Utils.logLevels.ERROR);
-            return;
-        }
-
-        const totalChunks = Math.ceil(fileBlob.size / chunkSize);
-        Utils.log(`准备向 ${peerId} 发送文件 "${fileName}" (hash: ${fileHash.substring(0,8)}...), 大小: ${fileBlob.size} bytes, 共 ${totalChunks} 个分片。`, Utils.logLevels.INFO);
-
-        try {
-            // 1. 发送元数据
-            const metadata = {
-                type: 'chunk-meta',
-                chunkId: fileHash,
-                totalChunks: totalChunks,
-                fileName: fileName,
-                fileType: fileBlob.type,
-                fileSize: fileBlob.size
-            };
-            dataChannel.send(JSON.stringify(metadata));
-
-            // 2. 记录发送状态
-            if (!ConnectionManager.pendingSentChunks) ConnectionManager.pendingSentChunks = {};
-            ConnectionManager.pendingSentChunks[fileHash] = {
-                total: totalChunks,
-                sent: 0,
-                dataLength: fileBlob.size
-            };
-
-            // 3. 循环发送二进制分片
-            for (let i = 0; i < totalChunks; i++) {
-                // 背压控制
-                while (dataChannel.bufferedAmount > AppSettings.network.dataChannelHighThreshold) {
-                    Utils.log(`Utils.sendInChunks: 到 ${peerId} 的缓冲区已满 (${dataChannel.bufferedAmount} > ${AppSettings.network.dataChannelHighThreshold}). 文件 ${fileName} 的分片 ${i+1}/${totalChunks}。等待 ${AppSettings.network.dataChannelBufferCheckInterval}ms。`, Utils.logLevels.DEBUG);
-                    await new Promise(resolve => setTimeout(resolve, AppSettings.network.dataChannelBufferCheckInterval));
-                    if (dataChannel.readyState !== 'open') {
-                        Utils.log(`Utils.sendInChunks: 数据通道到 ${peerId} 在发送分片 ${i+1} 期间关闭。中止发送。`, Utils.logLevels.WARN);
-                        if (ConnectionManager.pendingSentChunks[fileHash]) delete ConnectionManager.pendingSentChunks[fileHash];
-                        return;
-                    }
-                }
-
-                const start = i * chunkSize;
-                const end = start + chunkSize;
-                const chunkBlob = fileBlob.slice(start, end);
-                const chunkBuffer = await chunkBlob.arrayBuffer(); // 将分片转为 ArrayBuffer 发送
-
-                // 发送二进制分片
-                dataChannel.send(chunkBuffer);
-
-                // 更新发送状态
-                const pending = ConnectionManager.pendingSentChunks[fileHash];
-                if (pending) {
-                    pending.sent++;
-                    if (pending.sent === pending.total) {
-                        delete ConnectionManager.pendingSentChunks[fileHash];
-                        Utils.log(`已向 ${peerId} 发送完文件 "${fileName}" 的所有分片。`, Utils.logLevels.INFO);
-                    }
-                }
-                // 每个分片发送后稍微yield
-                await new Promise(resolve => setTimeout(resolve, 1));
-            }
-        } catch (error) {
-            Utils.log(`Utils.sendInChunks: 发送文件 "${fileName}" 到 ${peerId} 时出错: ${error.message}`, Utils.logLevels.ERROR);
-            if (ConnectionManager.pendingSentChunks?.[fileHash]) {
-                delete ConnectionManager.pendingSentChunks[fileHash];
-            }
         }
     },
 

@@ -3,6 +3,7 @@
  * @description 视频通话高级状态管理器和公共 API。
  *              负责管理通话的整体状态，并为其他模块提供发起和控制通话的接口。
  *              它将底层的 WebRTC 协商逻辑委托给 VideoCallHandler 处理。
+ *              MODIFIED: 增加了与原生 Android 层的交互，用于显示和取消来电通知。
  * @module VideoCallManager
  * @exports {object} VideoCallManager
  * @dependencies VideoCallHandler, AppSettings, Utils, NotificationUIManager, ConnectionManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter
@@ -58,6 +59,22 @@ const VideoCallManager = {
      * @param {string} peerId - 发送方 ID。
      */
     handleMessage: function (message, peerId) {
+        // --- [NEW] 拦截来电请求以触发原生通知 ---
+        if (message.type === 'video-call-request') {
+            if (window.Android && typeof window.Android.showIncomingCall === 'function') {
+                const callerName = (typeof UserManager !== 'undefined' && UserManager.contacts[peerId]?.name) || peerId;
+                Utils.log(`[Native Call] 正在为 ${callerName} 触发原生来电通知。`, Utils.logLevels.INFO);
+                window.Android.showIncomingCall(callerName, peerId);
+            }
+        }
+        // --- [NEW] 拦截呼叫取消/结束以取消原生通知 ---
+        if (message.type === 'video-call-cancel' || message.type === 'video-call-end') {
+            if (window.Android && typeof window.Android.cancelIncomingCall === 'function') {
+                Utils.log(`[Native Call] 正在取消原生来电通知。`, Utils.logLevels.INFO);
+                window.Android.cancelIncomingCall();
+            }
+        }
+
         VideoCallHandler.handleMessage(message, peerId);
     },
 
@@ -252,7 +269,7 @@ const VideoCallManager = {
         if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
         this.callRequestTimeout = null;
 
-        VideoCallHandler._stopAdaptiveMediaChecks(peerIdToHangUp); // MODIFIED
+        VideoCallHandler._stopAdaptiveMediaChecks(peerIdToHangUp);
 
         if (notifyPeer && (this.state.isCallActive || this.state.isCallPending) && peerIdToHangUp) {
             ConnectionManager.sendTo(peerIdToHangUp, {type: 'video-call-end', sender: UserManager.userId});
@@ -324,11 +341,17 @@ const VideoCallManager = {
         const peerIdCleaned = this.state.currentPeerId;
         Utils.log(`正在清理通话媒体和状态 (for ${peerIdCleaned || '未知'})。`, Utils.logLevels.INFO);
 
+        // --- [NEW] 确保原生通知在清理时被取消 ---
+        if (window.Android && typeof window.Android.cancelIncomingCall === 'function') {
+            Utils.log(`[Native Call] 清理：取消原生来电通知。`, Utils.logLevels.INFO);
+            window.Android.cancelIncomingCall();
+        }
+
         this.stopMusic();
         ModalUIManager.hideCallingModal();
         ModalUIManager.hideCallRequest();
 
-        VideoCallHandler._stopAdaptiveMediaChecks(peerIdCleaned); // MODIFIED
+        VideoCallHandler._stopAdaptiveMediaChecks(peerIdCleaned);
         if (peerIdCleaned) {
             delete VideoCallHandler._lastNegotiatedSdpFmtpLine[peerIdCleaned];
         } else {
