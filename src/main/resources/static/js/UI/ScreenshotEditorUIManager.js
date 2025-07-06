@@ -103,8 +103,11 @@ const ScreenshotEditorUIManager = {
 
     _handleRawScreenshot: function(detail) {
         Utils.log('原始截图已由 ScreenshotEditorUIManager 接收。', Utils.logLevels.DEBUG);
-        if (!detail || !detail.dataUrl || !detail.blob || !detail.originalStream) {
+        // [修复] 放宽检查，允许 originalStream 为 null（原生安卓截图场景）
+        // 只检查核心数据 dataUrl 和 blob 是否存在。
+        if (!detail || !detail.dataUrl || !detail.blob) { // <--- 修改后的行
             NotificationUIManager.showNotification('接收截图数据不完整。', 'error');
+            // 即使数据不完整，如果流存在，也应尝试关闭它
             if (detail && detail.originalStream) {
                 detail.originalStream.getTracks().forEach(track => track.stop());
             }
@@ -403,49 +406,64 @@ const ScreenshotEditorUIManager = {
         }
     },
 
-    _handleCanvasMouseMove: function(e) {
+    _handleCanvasMouseMove: function(e, isTouch = false) { // [修复] 增加 isTouch 参数
         if (!this.isEditorActive) return;
-        const isMouseButtonDown = e.buttons === 1;
-        const isTouchEvent = e.type.startsWith('touch');
-        if (!isMouseButtonDown && !isTouchEvent && (this.isCropping || this.isMovingCrop || this.isResizingCrop || this.isDrawingMark)) {
-            this.isCropping = false; this.isMovingCrop = false; this.isResizingCrop = false;
-            this.activeCropHandle = null; this.isDrawingMark = false;
+
+        // [修复] 修正事件状态判断逻辑
+        const isMouseButtonDown = e.buttons === 1; // 对于鼠标事件有效
+        const isActiveDrag = isMouseButtonDown || isTouch; // 对于触摸事件，isTouch 为 true，总是视为拖动
+
+        // 这个逻辑块用于处理鼠标在按键释放后移回画布的情况，对触摸无害
+        if (!isActiveDrag && (this.isCropping || this.isMovingCrop || this.isResizingCrop || this.isDrawingMark)) {
+            this.isCropping = false;
+            this.isMovingCrop = false;
+            this.isResizingCrop = false;
+            this.activeCropHandle = null;
+            this.isDrawingMark = false;
             const { x: currentX, y: currentY } = this._getCanvasCoordinates(e);
             this._updateCursorStyle(currentX, currentY);
             this._redrawCanvas();
             return;
         }
+
         const { x, y } = this._getCanvasCoordinates(e);
-        this.mouseX = x; this.mouseY = y;
+        this.mouseX = x;
+        this.mouseY = y;
         let needsRedraw = false;
-        const isActiveDrag = isMouseButtonDown || isTouchEvent;
-        if (this.currentTool === 'crop') {
-            if (this.isResizingCrop && this.activeCropHandle && isActiveDrag) {
-                this._resizeCropRect(x, y);
-                needsRedraw = true;
-            } else if (this.isMovingCrop && this.cropRect && isActiveDrag) {
-                this.cropRect.x = x - this.cropMoveOffsetX;
-                this.cropRect.y = y - this.cropMoveOffsetY;
-                this.cropRect.x = Math.max(0, Math.min(this.cropRect.x, this.canvasEl.width - this.cropRect.w));
-                this.cropRect.y = Math.max(0, Math.min(this.cropRect.y, this.canvasEl.height - this.cropRect.h));
-                this._updateCropHandles();
-                needsRedraw = true;
-            } else if (this.isCropping && isActiveDrag) {
-                this.cropRect.w = x - this.startX;
-                this.cropRect.h = y - this.startY;
-                needsRedraw = true;
-            } else if (!isActiveDrag) {
-                this._updateCursorStyle(x, y);
+
+        // 只有在拖动状态下才更新矩形
+        if (isActiveDrag) {
+            if (this.currentTool === 'crop') {
+                if (this.isResizingCrop && this.activeCropHandle) {
+                    this._resizeCropRect(x, y);
+                    needsRedraw = true;
+                } else if (this.isMovingCrop && this.cropRect) {
+                    this.cropRect.x = x - this.cropMoveOffsetX;
+                    this.cropRect.y = y - this.cropMoveOffsetY;
+                    this.cropRect.x = Math.max(0, Math.min(this.cropRect.x, this.canvasEl.width - this.cropRect.w));
+                    this.cropRect.y = Math.max(0, Math.min(this.cropRect.y, this.canvasEl.height - this.cropRect.h));
+                    this._updateCropHandles();
+                    needsRedraw = true;
+                } else if (this.isCropping) {
+                    this.cropRect.w = x - this.startX;
+                    this.cropRect.h = y - this.startY;
+                    needsRedraw = true;
+                }
+            } else if (this.currentTool === 'drawRect') {
+                if (this.isDrawingMark) {
+                    this.currentMarkRect.w = x - this.startX;
+                    this.currentMarkRect.h = y - this.startY;
+                    needsRedraw = true;
+                }
             }
-        } else if (this.currentTool === 'drawRect') {
-            if (this.isDrawingMark && isActiveDrag) {
-                this.currentMarkRect.w = x - this.startX;
-                this.currentMarkRect.h = y - this.startY;
-                needsRedraw = true;
-            } else if (!isActiveDrag && !this.isDrawingMark) {
+        } else { // 如果不是拖动状态（仅鼠标悬停），则只更新光标样式
+            if (this.currentTool === 'crop') {
+                this._updateCursorStyle(x, y);
+            } else if (this.currentTool === 'drawRect' && !this.isDrawingMark) {
                 this.canvasEl.style.cursor = 'crosshair';
             }
         }
+
         if (needsRedraw) {
             this._redrawCanvas();
         }
@@ -538,7 +556,8 @@ const ScreenshotEditorUIManager = {
     _handleCanvasTouchMove: function(e) {
         if (e.touches.length === 1) {
             e.preventDefault();
-            this._handleCanvasMouseMove(e.touches[0]);
+            // [修复] 传入第二个参数 true，明确告知这是一个触摸事件
+            this._handleCanvasMouseMove(e.touches[0], true);
         }
     },
     _handleCanvasTouchEnd: function(e) {

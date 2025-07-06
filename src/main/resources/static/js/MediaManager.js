@@ -340,15 +340,12 @@ const MediaManager = {
     },
 
     /**
-     * @description 捕获屏幕或窗口内容作为截图。用户同意分享后，延迟1秒再进行实际截图，然后将数据发送给编辑器。
+     * @description 捕获屏幕或窗口内容作为截图。
+     *              在 Android WebView 环境中，它会调用原生接口。
+     *              在标准浏览器中，它使用 getDisplayMedia API。
      * @returns {Promise<void>}
      */
     captureScreen: async function() {
-        // 检查 API 支持
-        if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
-            NotificationUIManager.showNotification('您的浏览器不支持屏幕捕获功能。', 'error');
-            return;
-        }
         // 检查是否有待发送的媒体
         if (MessageManager.audioData) {
             NotificationUIManager.showNotification('已有待发送的语音消息。请先取消。', 'warning');
@@ -359,87 +356,125 @@ const MediaManager = {
             return;
         }
 
-        let stream = null; // 屏幕共享流
+        // --- START: MODIFICATION ---
+        // 检查是否在我们的 Android WebView 环境中，并调用原生方法
+        if (window.Android && typeof window.Android.startScreenCapture === 'function') {
+            Utils.log('Using native Android screen capture.', Utils.logLevels.INFO);
+            NotificationUIManager.showNotification('请授权屏幕录制权限以截图...', 'info');
+            window.Android.startScreenCapture();
+            return; // 原生方法接管流程
+        }
+        // --- END: MODIFICATION ---
+
+        // Web Fallback: 检查 getDisplayMedia API 支持
+        if (typeof navigator.mediaDevices.getDisplayMedia !== 'function') {
+            NotificationUIManager.showNotification('您的浏览器不支持屏幕捕获功能。', 'error');
+            return;
+        }
+
+        let stream = null;
         try {
             // 请求屏幕共享权限
             stream = await navigator.mediaDevices.getDisplayMedia({
-                video: { cursor: 'always' }, // 捕获光标
-                audio: false // 不捕获音频
+                video: { cursor: 'always' },
+                audio: false
             });
 
-            const videoTrack = stream.getVideoTracks()[0]; // 获取视频轨道
-            if (!videoTrack) { // 如果无视频轨道
+            const videoTrack = stream.getVideoTracks()[0];
+            if (!videoTrack) {
                 NotificationUIManager.showNotification('无法获取视频流用于截图。', 'error');
-                stream.getTracks().forEach(track => track.stop()); // 停止流
+                stream.getTracks().forEach(track => track.stop());
                 return;
             }
 
-            setTimeout(async () => { // 延迟0.3秒截图
-                // 再次检查流是否仍然活动
+            setTimeout(async () => {
                 if (!stream || !stream.active || videoTrack.readyState === 'ended') {
                     Utils.log('MediaManager.captureScreen: 延迟后屏幕共享流已停止或无效。', Utils.logLevels.WARN);
                     if (stream) stream.getTracks().forEach(track => track.stop());
                     return;
                 }
-
                 try {
-                    const imageCapture = new ImageCapture(videoTrack); // 创建 ImageCapture 实例
-                    const bitmap = await imageCapture.grabFrame(); // 抓取当前帧
-
-                    // 将位图绘制到 Canvas
+                    const imageCapture = new ImageCapture(videoTrack);
+                    const bitmap = await imageCapture.grabFrame();
                     const canvas = document.createElement('canvas');
                     canvas.width = bitmap.width;
                     canvas.height = bitmap.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(bitmap, 0, 0);
+                    canvas.getContext('2d').drawImage(bitmap, 0, 0);
 
-                    // 将 Canvas 内容转为 Blob
-                    canvas.toBlob(async function(blob) { // 注意这里变成 async
-                        if (!blob) { // 如果生成 Blob 失败
+                    canvas.toBlob(function(blob) {
+                        if (!blob) {
                             NotificationUIManager.showNotification('截图失败：无法生成图片 Blob。', 'error');
                             if (stream) stream.getTracks().forEach(track => track.stop());
                             return;
                         }
-                        // 将 Blob 转为 Data URL (用于传递给编辑器，编辑器内部可能需要Data URL显示)
                         const reader = new FileReader();
                         reader.onloadend = function() {
                             const dataUrl = reader.result;
-                            // 通过 EventEmitter 发送原始截图数据给编辑器
                             if (typeof EventEmitter !== 'undefined') {
-                                EventEmitter.emit('rawScreenshotCaptured', { // 编辑器接收原始 dataUrl 和 blob
-                                    dataUrl: dataUrl, // 编辑器仍然使用 dataUrl 进行初始显示和编辑
-                                    blob: blob,       // 编辑器也接收 blob，以便在编辑确认后使用
-                                    originalStream: stream // 传递原始流，以便编辑器可以停止它
+                                EventEmitter.emit('rawScreenshotCaptured', {
+                                    dataUrl: dataUrl,
+                                    blob: blob,
+                                    originalStream: stream
                                 });
-                                Utils.log("Raw screenshot captured after delay, event emitted.", Utils.logLevels.INFO);
                             } else {
-                                Utils.log("MediaManager.captureScreen: EventEmitter 未定义，无法发送截图数据到编辑器。", Utils.logLevels.ERROR);
-                                if (stream) stream.getTracks().forEach(track => track.stop()); // 确保停止流
+                                if (stream) stream.getTracks().forEach(track => track.stop());
                             }
                         };
-                        reader.onerror = function() { // 读取 Blob 失败
-                            NotificationUIManager.showNotification('截图失败：无法读取图片数据。', 'error');
-                            if (stream) stream.getTracks().forEach(track => track.stop());
-                        };
                         reader.readAsDataURL(blob);
-                    }, 'image/png'); // 指定输出格式为 PNG
-                } catch (captureError) { // 截图处理错误
+                    }, 'image/png');
+                } catch (captureError) {
                     Utils.log(`延迟截图或处理时出错: ${captureError.message}`, Utils.logLevels.ERROR);
                     NotificationUIManager.showNotification(`截图处理失败: ${captureError.message}`, 'error');
                     if (stream) stream.getTracks().forEach(track => track.stop());
                 }
-            }, 300); // 延迟0.3秒
+            }, 300);
 
-        } catch (err) { // 请求屏幕共享权限失败
+        } catch (err) {
             Utils.log('屏幕捕获初始设置失败: ' + err.message, Utils.logLevels.ERROR);
-            if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') { // 如果不是用户取消或拒绝
+            if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
                 NotificationUIManager.showNotification('截图功能启动失败: ' + err.message, 'error');
             } else {
                 NotificationUIManager.showNotification('截图已取消或未授权。', 'info');
             }
-            if (stream) { // 如果在获取流后出错
-                stream.getTracks().forEach(track => track.stop());
-            }
+            if (stream) stream.getTracks().forEach(track => track.stop());
         }
     }
+};
+
+
+/**
+ * @function handleNativeScreenshot
+ * @description 全局函数，由 Android 原生代码在截图完成后调用。
+ * @param {string} base64DataUrl - 从原生代码传递过来的截图的 Base64 Data URL。
+ */
+window.handleNativeScreenshot = function(base64DataUrl) {
+    Utils.log('Received screenshot from native Android.', Utils.logLevels.INFO);
+    if (!base64DataUrl || !base64DataUrl.startsWith('data:image/')) {
+        Utils.log('Invalid base64 data received from native.', Utils.logLevels.ERROR);
+        NotificationUIManager.showNotification('从原生应用接收截图失败。', 'error');
+        return;
+    }
+
+    // 将 Base64 Data URL 转换为 Blob
+    fetch(base64DataUrl)
+        .then(res => res.blob())
+        .then(blob => {
+            if (!blob) {
+                NotificationUIManager.showNotification('截图失败：无法生成图片 Blob。', 'error');
+                return;
+            }
+            // 触发事件，将截图发送到编辑器
+            if (typeof EventEmitter !== 'undefined' && MediaManager) {
+                EventEmitter.emit('rawScreenshotCaptured', {
+                    dataUrl: base64DataUrl,
+                    blob: blob,
+                    originalStream: null // 原生截图没有流
+                });
+                Utils.log("Raw screenshot from native processed, event emitted.", Utils.logLevels.INFO);
+            }
+        })
+        .catch(error => {
+            Utils.log(`Error converting native screenshot Data URL to Blob: ${error}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification('处理原生截图时出错。', 'error');
+        });
 };
