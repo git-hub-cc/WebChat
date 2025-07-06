@@ -12,6 +12,7 @@
  *              私聊时，如果对方不在线，则提示用户消息无法发送，并阻止消息发送。
  *              新增：支持发送贴图消息。
  *              FIXED: 修复了文件消息的下载/播放按钮因无法获取文件信息而失效的问题。
+ *              FIXED: 将文件和贴图的发送逻辑统一到 DataChannelHandler.sendFile，确保所有文件类型都能正确发送。
  * @module MessageManager
  * @exports {object} MessageManager - 对外暴露的单例对象，包含消息处理的所有核心方法。
  */
@@ -68,17 +69,14 @@ const MessageManager = {
             // 3. Add to local UI
             await ChatManager.addMessage(targetId, stickerMessage);
 
+            // --- MODIFICATION START: Use DataChannelHandler.sendFile for stickers ---
             // 4. Send JSON and binary data to peer(s)
-            const sendStickerFunction = (peerId) => {
-                const conn = WebRTCManager.connections[peerId];
-                if (conn?.dataChannel?.readyState === 'open') {
-                    // Send the JSON "instruction"
-                    ConnectionManager.sendTo(peerId, stickerMessage);
-                    // Send the binary data
-                    Utils.sendInChunks(stickerData.blob, stickerData.name, conn.dataChannel, peerId, stickerData.id);
-                } else {
-                    Utils.log(`无法向 ${peerId} 发送贴图，数据通道未打开。`, Utils.logLevels.WARN);
-                }
+            const fileObjectForSending = {
+                blob: stickerData.blob,
+                hash: stickerData.id,
+                name: stickerData.name,
+                type: stickerData.blob.type,
+                size: stickerData.blob.size
             };
 
             if (isGroup) {
@@ -89,13 +87,23 @@ const MessageManager = {
                     if (memberId !== UserManager.userId && !UserManager.contacts[memberId]?.isAI) {
                         const conn = WebRTCManager.connections[memberId];
                         if (conn?.dataChannel?.readyState === 'open') {
-                            Utils.sendInChunks(stickerData.blob, stickerData.name, conn.dataChannel, memberId, stickerData.id);
+                            DataChannelHandler.sendFile(memberId, fileObjectForSending)
+                                .catch(err => Utils.log(`向群成员 ${memberId} 发送贴图失败: ${err.message}`, Utils.logLevels.ERROR));
                         }
                     }
                 });
             } else {
-                sendStickerFunction(targetId);
+                const conn = WebRTCManager.connections[targetId];
+                if (conn?.dataChannel?.readyState === 'open') {
+                    // Send the JSON "instruction"
+                    ConnectionManager.sendTo(targetId, stickerMessage);
+                    // Send the binary data
+                    await DataChannelHandler.sendFile(targetId, fileObjectForSending);
+                } else {
+                    Utils.log(`无法向 ${targetId} 发送贴图，数据通道未打开。`, Utils.logLevels.WARN);
+                }
             }
+            // --- MODIFICATION END ---
         } catch (error) {
             Utils.log(`发送贴图时出错: ${error}`, Utils.logLevels.ERROR);
             NotificationUIManager.showNotification('发送贴图失败。', 'error');
@@ -758,7 +766,7 @@ const MessageManager = {
             messageSent = true; MessageManager.cancelAudioData();
         }
 
-        // --- REFACTORED AND FIXED FILE SENDING LOGIC ---
+        // --- MODIFICATION START: Use DataChannelHandler.sendFile for files ---
         if (currentSelectedFile) {
             try {
                 // 1. Cache the file locally
@@ -772,7 +780,7 @@ const MessageManager = {
                 // 2. Create the file message object
                 const fileMessageObject = {
                     id: `${messageIdBase}_file`,
-                    type: 'file', // This remains 'file' for regular files/images
+                    type: 'file',
                     fileId: currentSelectedFile.hash,
                     fileName: currentSelectedFile.name,
                     fileType: currentSelectedFile.type,
@@ -785,32 +793,31 @@ const MessageManager = {
                 // 3. Add the message to the local chat UI immediately
                 await ChatManager.addMessage(targetId, fileMessageObject);
 
-                // 4. Send the JSON instruction message AND the binary data
-                const sendFunction = (peerId) => {
-                    const conn = WebRTCManager.connections[peerId];
-                    if (conn?.dataChannel?.readyState === 'open') {
-                        // Send the JSON "instruction" message first
-                        ConnectionManager.sendTo(peerId, fileMessageObject);
-                        // Then send the binary data chunks
-                        Utils.sendInChunks(currentSelectedFile.blob, currentSelectedFile.name, conn.dataChannel, peerId, currentSelectedFile.hash);
-                    } else {
-                        Utils.log(`无法向 ${peerId} 发送文件，数据通道未打开。`, Utils.logLevels.WARN);
-                    }
-                };
-
+                // 4. Send the JSON instruction and then the binary data
                 if (isGroup) {
-                    // For groups, broadcast the JSON instruction, then send binary to each member
+                    // For groups, broadcast the JSON instruction first
                     GroupManager.broadcastToGroup(targetId, fileMessageObject);
+                    // Then, send the binary data to each connected member
                     group.members.forEach(memberId => {
                         if (memberId !== UserManager.userId && !UserManager.contacts[memberId]?.isAI) {
                             const conn = WebRTCManager.connections[memberId];
                             if (conn?.dataChannel?.readyState === 'open') {
-                                Utils.sendInChunks(currentSelectedFile.blob, currentSelectedFile.name, conn.dataChannel, memberId, currentSelectedFile.hash);
+                                // Use the correct, centralized file sending method
+                                DataChannelHandler.sendFile(memberId, currentSelectedFile)
+                                    .catch(err => Utils.log(`向群成员 ${memberId} 发送文件失败: ${err.message}`, Utils.logLevels.ERROR));
                             }
                         }
                     });
                 } else {
-                    sendFunction(targetId);
+                    const conn = WebRTCManager.connections[targetId];
+                    if (conn?.dataChannel?.readyState === 'open') {
+                        // Send the JSON "instruction" message first
+                        ConnectionManager.sendTo(targetId, fileMessageObject);
+                        // Then send the binary data using the correct handler
+                        await DataChannelHandler.sendFile(targetId, currentSelectedFile);
+                    } else {
+                        Utils.log(`无法向 ${targetId} 发送文件，数据通道未打开。`, Utils.logLevels.WARN);
+                    }
                 }
 
                 messageSent = true;
@@ -823,7 +830,7 @@ const MessageManager = {
                 return;
             }
         }
-        // --- END OF REFACTORED LOGIC ---
+        // --- MODIFICATION END ---
 
         if (userTextMessageForChat) {
             if (isGroup) GroupManager.broadcastToGroup(targetId, userTextMessageForChat);

@@ -3,6 +3,7 @@
  * @description 处理 RTCDataChannel 的消息收发、分片和重组逻辑。
  *              现在原生支持二进制文件传输的分片和重组。
  *              FIXED: 当文件数据接收并缓存完毕后，触发 'fileDataReady' 事件，以便UI异步更新预览。
+ *              MODIFIED: 新增 sendFile 方法，实现任意类型文件的分片发送功能。
  * @module DataChannelHandler
  * @exports {object} DataChannelHandler
  * @dependencies Utils, AppSettings, UserManager, ChatManager, GroupManager, VideoCallManager, MessageManager, ConnectionManager, EventEmitter, DBManager
@@ -227,6 +228,81 @@ const DataChannelHandler = {
             }
         };
     },
+
+    // --- MODIFICATION START ---
+
+    /**
+     * @description (新增) 异步发送文件，支持任意类型。
+     *              该函数将文件分片，先发送元数据，然后逐个发送文件块。
+     * @param {string} peerId - 接收方的 ID。
+     * @param {object} fileObject - 包含文件信息的对象，至少需要 { blob, hash, name, type, size }。
+     * @returns {Promise<boolean>} - 一个 Promise，文件成功发送则 resolve(true)，否则 reject 或 resolve(false)。
+     */
+    sendFile: async function(peerId, fileObject) {
+        const conn = WebRTCManager.connections[peerId];
+        const channel = conn?.dataChannel;
+
+        if (!channel || channel.readyState !== 'open') {
+            Utils.log(`DataChannelHandler.sendFile: 无法发送到 ${peerId}，数据通道未打开。状态: ${channel?.readyState}`, Utils.logLevels.ERROR);
+            return false;
+        }
+
+        const fileBlob = fileObject.blob;
+        // 使用 AppSettings 中的配置或一个合理的默认值
+        const CHUNK_SIZE = AppSettings?.rtc?.chunkSize || 64 * 1024; // 64 KB
+        const totalChunks = Math.ceil(fileBlob.size / CHUNK_SIZE);
+
+        Utils.log(`准备发送文件 "${fileObject.name}" (大小: ${fileObject.size} bytes) 到 ${peerId}，共 ${totalChunks} 个分片。`, Utils.logLevels.INFO);
+
+        // 步骤 1: 发送元数据
+        const metadata = {
+            type: 'chunk-meta',
+            chunkId: fileObject.hash,
+            fileName: fileObject.name,
+            fileType: fileObject.type,
+            fileSize: fileObject.size,
+            totalChunks: totalChunks,
+            sender: UserManager.userId
+        };
+        try {
+            channel.send(JSON.stringify(metadata));
+        } catch (error) {
+            Utils.log(`DataChannelHandler.sendFile: 发送元数据到 ${peerId} 失败: ${error.message}`, Utils.logLevels.ERROR);
+            return false;
+        }
+
+        // 步骤 2: 分片并发送文件数据
+        let offset = 0;
+        let chunkIndex = 0;
+
+        try {
+            while (offset < fileBlob.size) {
+                // 处理背压：如果缓冲区已满，则等待
+                while (channel.bufferedAmount > AppSettings.network.dataChannelHighThreshold) {
+                    await new Promise(resolve => setTimeout(resolve, 50)); // 等待 50ms
+                }
+
+                const chunk = fileBlob.slice(offset, offset + CHUNK_SIZE);
+                const arrayBuffer = await chunk.arrayBuffer();
+
+                channel.send(arrayBuffer);
+
+                offset += arrayBuffer.byteLength;
+                chunkIndex++;
+
+                // 可以在这里触发进度更新事件
+                // EventEmitter.emit('fileSendProgress', { peerId, fileHash: fileObject.hash, progress: (chunkIndex / totalChunks) * 100 });
+            }
+            Utils.log(`文件 "${fileObject.name}" 已成功发送到 ${peerId} 的发送队列。`, Utils.logLevels.INFO);
+            return true;
+        } catch (error) {
+            Utils.log(`DataChannelHandler.sendFile: 在发送文件块 #${chunkIndex} 到 ${peerId} 时出错: ${error.message}`, Utils.logLevels.ERROR);
+            // 可以在这里发送一个取消消息
+            return false;
+        }
+    },
+
+    // --- MODIFICATION END ---
 
     /**
      * 通过数据通道向指定对等端发送消息。现在只处理字符串消息。
