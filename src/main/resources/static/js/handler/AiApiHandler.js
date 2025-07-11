@@ -22,8 +22,8 @@ const AiApiHandler = {
         const fallbackConfig = (typeof AppSettings !== 'undefined' && AppSettings && AppSettings.server) ? AppSettings.server : {};
         const llmProviders = (typeof LLMProviders !== 'undefined') ? LLMProviders : {};
 
-        const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
-        const providerConfig = llmProviders[providerKey] || llmProviders.ppmc || {};
+        const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'webchat';
+        const providerConfig = llmProviders[providerKey] || llmProviders.webchat || {};
 
         config.apiEndpoint = localStorage.getItem('aiSetting_apiEndpoint')
             || providerConfig.defaultEndpoint

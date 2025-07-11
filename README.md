@@ -1,15 +1,15 @@
 # AI Character Role-Playing Chat Platform
 
-[![GitHub stars](https://img.shields.io/github/stars/git-hub-cc/PPMC.svg?style=social)](https://github.com/git-hub-cc/PPMC/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/git-hub-cc/PPMC.svg?style=social)](https://github.com/git-hub-cc/PPMC/network/members)
+[![GitHub stars](https://img.shields.io/github/stars/git-hub-cc/WebChat.svg?style=social)](https://github.com/git-hub-cc/WebChat/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/git-hub-cc/WebChat.svg?style=social)](https://github.com/git-hub-cc/WebChat/network/members)
 
 [中文版](./README-cn.md)
 
 A feature-rich, modern web chat application built with vanilla JavaScript, HTML, and CSS for the frontend, and Java Spring Boot for the backend. It utilizes WebRTC for direct user-to-user media communication, supporting text, file sharing, voice messages, and real-time audio/video/screen-sharing calls. Initial user discovery and connection negotiation are handled by a WebSocket-based signaling server. The application now includes a powerful **"Memory Book"** feature for enhanced AI long-term memory, **Character Card import/export** for easy sharing, and **customizable backgrounds** for personalization. The AI system supports dynamic context, intelligent summarization, and Text-to-Speech (TTS), delivering a vivid and deeply engaging interactive experience.
 
 **Online Demo:**
-* https://ppmc.club/ppmc.html
-* https://git-hub-cc.github.io/PPMC/
+* https://ppmc.club/webchat/
+* https://git-hub-cc.github.io/WebChat/
 
 ## ✨ Features
 
@@ -187,6 +187,6 @@ This project utilizes and is inspired by several concepts and resources. We exte
         *   **Memory Book Concepts & Inspiration:** [SillyTavern](https://github.com/SillyTavern/SillyTavern).
         *   **Theme Concepts & Inspiration:** [@卤v (LuV)](https://space.bilibili.com/1290496974).
         *   **Material Resources:** Thanks to the many unnamed contributors of open material resources on the internet (users should ensure compliance when using materials).
-        *   **This project is also open-sourced at:** [https://github.com/git-hub-cc/PPMC](https://github.com/git-hub-cc/PPMC) (Stars and Forks are welcome!)
+        *   **This project is also open-sourced at:** [https://github.com/git-hub-cc/WebChat](https://github.com/git-hub-cc/WebChat) (Stars and Forks are welcome!)
 *   **WebRTC and WebSockets:** The core communication and signaling technologies that make this application possible.
 **Disclaimer:** This project is for educational and demonstration purposes only. Please respect all relevant copyrights and terms of service of any external APIs, services, or intellectual properties when using or adapting this code.

@@ -92,7 +92,7 @@ const CharacterCardManager = {
             const jsonData = JSON.stringify(charactersToExport, null, 2);
             const themeKey = ThemeLoader.getCurrentThemeKey();
             const themeName = themeKey ? themeKey.replace(/-[^-]*$/, '') : 'Characters';
-            const fileName = `PPMC_Theme_${themeName}_Characters.json`;
+            const fileName = `WebChat_Theme_${themeName}_Characters.json`;
 
             // --- 修改的核心部分 ---
             // 检查是否存在我们注入的安卓原生接口

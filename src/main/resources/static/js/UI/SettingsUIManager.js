@@ -303,8 +303,8 @@ const SettingsUIManager = {
 
 // **MODIFIED**: Use LLMProviders directly
         const providers = LLMProviders;
-// BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'，以确保 UI 与后端逻辑一致。
-        const currentProviderKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
+// BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'webchat'，以确保 UI 与后端逻辑一致。
+        const currentProviderKey = localStorage.getItem('aiSetting_llmProvider') || 'webchat';
 
         this.llmProviderSelectedValueEl.textContent = providers[currentProviderKey]?.label || '选择提供商';
         this.llmProviderOptionsContainerEl.innerHTML = '';
@@ -548,12 +548,12 @@ const SettingsUIManager = {
      * 此函数现在处理新的提供商逻辑，不再有“覆盖”概念。
      */
     loadAISettings: function() {
-// BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'ppmc'。
-        const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'ppmc';
+// BUG FIX: 将新用户的默认提供商从 'siliconflow' 改为 'webchat'。
+        const providerKey = localStorage.getItem('aiSetting_llmProvider') || 'webchat';
 // **MODIFIED**: Use LLMProviders directly
         const safeLLMProviders = (typeof LLMProviders !== 'undefined') ? LLMProviders : {};
-// BUG FIX: 确保在 providerKey 对应的配置不存在时，也回退到 'ppmc' 的配置。
-        const providerConfig = safeLLMProviders[providerKey] || safeLLMProviders.ppmc || {};
+// BUG FIX: 确保在 providerKey 对应的配置不存在时，也回退到 'webchat' 的配置。
+        const providerConfig = safeLLMProviders[providerKey] || safeLLMProviders.webchat || {};
 
 // 加载 API 端点: 优先使用 localStorage 的值，否则使用提供商的默认值
         this.apiEndpointInput.value = localStorage.getItem('aiSetting_apiEndpoint') || providerConfig.defaultEndpoint;

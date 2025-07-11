@@ -8,9 +8,9 @@
  */
 const LLMProviders = {
     // TODO
-    "ppmc": {
-        "label": "PPMC",
-        "defaultEndpoint": "https://ppmc.club/v1/chat/completions",
+    "webchat": {
+        "label": "WebChat",
+        "defaultEndpoint": "https://ppmc.club/webchat/v1/chat/completions",
         "defaultModel": "THUDM/GLM-4-32B-0414",
         "models": [
             { "key": "Qwen/Qwen3-14B", "label": "Qwen3 14B" },

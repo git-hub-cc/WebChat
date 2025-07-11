@@ -1,15 +1,15 @@
 # AI 角色扮演聊天平台
 
-[![GitHub stars](https://img.shields.io/github/stars/git-hub-cc/PPMC.svg?style=social)](https://github.com/git-hub-cc/PPMC/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/git-hub-cc/PPMC.svg?style=social)](https://github.com/git-hub-cc/PPMC/network/members)
+[![GitHub stars](https://img.shields.io/github/stars/git-hub-cc/WebChat.svg?style=social)](https://github.com/git-hub-cc/WebChat/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/git-hub-cc/WebChat.svg?style=social)](https://github.com/git-hub-cc/WebChat/network/members)
 
 [English Version](./README.md)
 
 一款功能丰富、现代化的 Web 聊天应用，前端使用原生 JavaScript、HTML 和 CSS 构建，后端采用 Java Spring Boot。它利用 WebRTC 进行用户间的直接媒体通信，支持文本、文件共享、语音/贴图消息以及实时音频/视频/屏幕共享通话。应用现已包含强大的**“记忆书”**功能以增强AI的长期记忆，**角色卡导入/导出**功能便于分享，以及**个性化的自定义背景图片**。AI系统支持动态上下文、智能摘要和文本转语音（TTS），带来生动且深度沉浸的交互体验。
 
 **在线演示：**
-* https://ppmc.club/ppmc.html
-* https://git-hub-cc.github.io/PPMC/
+* https://ppmc.club/webchat/
+* https://git-hub-cc.github.io/WebChat/
 
 ## ✨ 功能特性
 
@@ -185,5 +185,5 @@
         *   **记忆书概念与灵感：** [SillyTavern](https://github.com/SillyTavern/SillyTavern)。
         *   **主题概念与灵感：** [卤v (LuV)](https://space.bilibili.com/1290496974)。
         *   **素材资源：** 感谢互联网上许多无名贡献者提供的开放素材资源 (用户在使用素材时应确保合规)。
-        *   **本项目也在以下地址开源：** [https://github.com/git-hub-cc/PPMC](https://github.com/git-hub-cc/PPMC) (欢迎 Star 和 Fork！)
+        *   **本项目也在以下地址开源：** [https://github.com/git-hub-cc/WebChat](https://github.com/git-hub-cc/WebChat) (欢迎 Star 和 Fork！)
 **免责声明：** 本项目仅用于教育和演示目的。在使用或改编此代码时，请尊重任何外部 API、服务或知识产权的所有相关版权和服条款。
