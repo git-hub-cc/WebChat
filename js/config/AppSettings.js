@@ -116,8 +116,8 @@ const AppSettings = {
      * @description 服务器相关配置。
      */
     server: {
-        signalingServerUrl: 'wss://ppmc.club/ppmc/signaling', // 本地开发示例
-        lobbyApiEndpoint: 'https://ppmc.club/ppmc/api/monitor/online-user-ids', // 本地开发示例
+        signalingServerUrl: 'wss://ppmc.club/webchat/signaling', // 本地开发示例
+        lobbyApiEndpoint: 'https://ppmc.club/webchat/api/monitor/online-user-ids', // 本地开发示例
         api_key: "Bearer sk-xxxx", // API 密钥
         max_tokens: 2048, // AI 回复最大令牌数
         ttsApiEndpoint: 'https://gsv2p.acgnai.top', // TTS API 端点

@@ -3,28 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PPMC</title>
+    <title>WebChat</title>
 
     <!-- ========================================================================== -->
     <!-- SEO 与元数据 (SEO & Metadata) -->
     <!-- ========================================================================== -->
-    <meta name="description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta name="keywords" content="PPMC, WebRTC, AI Chat, Character Chat, Role-playing, JavaScript, Spring Boot, WebSocket, Real-time Communication, Video Call, Audio Call, Screen Sharing, TTS, Text-to-Speech, Theming, Genshin Impact, Xian Ni, Battle Through the Heavens, Crayon Shin-chan, Delicious in Dungeon, Jujutsu Kaisen, AI聊天, 角色扮演, 实时通讯, 文本转语音, 原神, 仙逆, 斗破苍穹, 蜡笔小新, 迷宫饭, 咒术回战, 即时通讯, AI助手">
+    <meta name="description" content="WebChat: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
+    <meta name="keywords" content="WebChat, WebRTC, AI Chat, Character Chat, Role-playing, JavaScript, Spring Boot, WebSocket, Real-time Communication, Video Call, Audio Call, Screen Sharing, TTS, Text-to-Speech, Theming, Genshin Impact, Xian Ni, Battle Through the Heavens, Crayon Shin-chan, Delicious in Dungeon, Jujutsu Kaisen, AI聊天, 角色扮演, 实时通讯, 文本转语音, 原神, 仙逆, 斗破苍穹, 蜡笔小新, 迷宫饭, 咒术回战, 即时通讯, AI助手">
     <meta name="author" content="git-hub-cc">
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://ppmc.club/ppmc/">
-    <meta property="og:title" content="PPMC - AI Character Chat Platform">
-    <meta property="og:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="og:image" content="https://ppmc.club/ppmc/img/desktop/img.png">
+    <meta property="og:url" content="https://ppmc.club/webchat/">
+    <meta property="og:title" content="WebChat - AI Character Chat Platform">
+    <meta property="og:description" content="WebChat: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
+    <meta property="og:image" content="https://ppmc.club/webchat/img/desktop/img.png">
 
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://ppmc.club/ppmc/">
-    <meta property="twitter:title" content="PPMC - AI Character Chat Platform">
-    <meta property="twitter:description" content="PPMC: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
-    <meta property="twitter:image" content="https://ppmc.club/ppmc/img/desktop/img.png">
+    <meta property="twitter:url" content="https://ppmc.club/webchat/">
+    <meta property="twitter:title" content="WebChat - AI Character Chat Platform">
+    <meta property="twitter:description" content="WebChat: 一款功能丰富的 AI 角色扮演聊天平台。基于 WebRTC、JavaScript 和 Spring Boot 构建，提供文本/语音/视频/屏幕共享、文件传输以及支持 TTS 和主题化的动态 AI 助手。Feature-rich AI Character Chat Platform built with WebRTC, JS & Spring Boot, offering text/voice/video/screen sharing, file transfer, and dynamic AI assistants with TTS & theming.">
+    <meta property="twitter:image" content="https://ppmc.club/webchat/img/desktop/img.png">
 
     <!-- ========================================================================== -->
     <!-- 样式表 (Stylesheets) -->
@@ -97,7 +97,7 @@
             <!-- 消息显示区域 -->
             <section class="no-chat-selected" id="noChatSelectedScreen">
                 <div class="logo-placeholder">💬</div>
-                <h2>PPMC</h2>
+                <h2>WebChat</h2>
                 <p>从列表中选择聊天开始，或创建一个新聊天。</p>
                 <p id="connectionStatusGlobal" class="status-indicator">状态: <span id="connectionStatusText">初始化中...</span></p>
             </section>
@@ -225,14 +225,14 @@
                         </p>
                         <strong>项目开源地址：</strong>
                         <ul>
-                            <li><a href="https://github.com/git-hub-cc/PPMC" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/PPMC</a><br></li>
-                            <li><a href="https://gitee.com/wyswydx/PPMC" target="_blank" rel="noopener noreferrer">https://gitee.com/wyswydx/PPMC</a>
+                            <li><a href="https://github.com/git-hub-cc/WebChat" target="_blank" rel="noopener noreferrer" id="ttsAttributionProjectLink">https://github.com/git-hub-cc/WebChat</a><br></li>
+                            <li><a href="https://gitee.com/wyswydx/WebChat" target="_blank" rel="noopener noreferrer">https://gitee.com/wyswydx/WebChat</a>
                             </li>
                         </ul>
                         <div>
                             <p>
                                 项目能走到今天，离不开各位大佬的默默付出（和咖啡续命）。<br>
-                                如果 PPMC 给你带来了哪怕一丝丝的快乐或便利，或者你只是单纯觉得本项目的猫猫开发者很可爱，不妨考虑请我们喝杯咖啡？<br>
+                                如果 WebChat 给你带来了哪怕一丝丝的快乐或便利，或者你只是单纯觉得本项目的猫猫开发者很可爱，不妨考虑请我们喝杯咖啡？<br>
                                 您的每一份支持，都是我们继续爆肝更新、添加更多神奇（蛇皮）功能的动力！(づ｡◕‿‿◕｡)づ
                             </p>
                             <img src="img/wechat/pay.png" alt="请作者喝杯咖啡" class="wechat-pay" loading="lazy">
@@ -595,10 +595,10 @@
         </header>
         <div class="modal-body">
             <p>
-                PPMC 现已开源！您可以在 GitHub 上找到源代码并参与：
+                WebChat 现已开源！您可以在 GitHub 上找到源代码并参与：
                 <br>
-                <a href="https://github.com/git-hub-cc/PPMC" target="_blank" rel="noopener noreferrer">
-                    https://github.com/git-hub-cc/PPMC
+                <a href="https://github.com/git-hub-cc/WebChat" target="_blank" rel="noopener noreferrer">
+                    https://github.com/git-hub-cc/WebChat
                 </a>
             </p>
             <p>
