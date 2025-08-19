@@ -402,8 +402,7 @@ const UserManager = {
             if (!isFromObject) NotificationUIManager.showNotification(`${specialContactName} 是内置联系人，不能手动添加。`, "warning");
 
             if (!isFromObject && establishConnection && this.contacts[id] && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
-                // 【FIX】使用新的统一连接方法
-                ConnectionManager.connectToPeer(id, { isSilent: true });
+                ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
         }
@@ -454,8 +453,7 @@ const UserManager = {
             if (typeof ChatManager !== 'undefined' && !isFromObject) ChatManager.renderChatList(ChatManager.currentFilter);
 
             if (!isFromObject && establishConnection && !this.contacts[id].isAI && !ConnectionManager.isConnectedTo(id)) {
-                // 【FIX】使用新的统一连接方法
-                ConnectionManager.connectToPeer(id, { isSilent: true });
+                ConnectionManager.createOffer(id, { isSilent: true });
             }
             return true;
         }
@@ -500,8 +498,7 @@ const UserManager = {
         }
 
         if (!isFromObject && establishConnection) {
-            // 【FIX】使用新的统一连接方法
-            ConnectionManager.connectToPeer(id, { isSilent: true });
+            ConnectionManager.createOffer(id, { isSilent: true });
         }
         return true;
     },

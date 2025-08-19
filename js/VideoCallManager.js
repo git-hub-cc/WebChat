@@ -1,15 +1,15 @@
 /**
  * @file VideoCallManager.js
- * @description 【重构】视频通话高级状态管理器和公共 API。
- *              此类现在与 simple-peer 集成，负责管理通话的整体状态，并通过 ConnectionManager
- *              创建和管理携带媒体流的 simple-peer 连接。
- *              移除了手动的SDP处理和自适应质量控制逻辑，以依赖 simple-peer 的内部协商。
- *              新增了 handleRemoteStream 方法来处理从 simple-peer 'stream' 事件到达的媒体流。
+ * @description 视频通话高级状态管理器和公共 API。
+ *              负责管理通话的整体状态，并为其他模块提供发起和控制通话的接口。
+ *              它将底层的 WebRTC 协商逻辑委托给 VideoCallHandler 处理。
+ *              MODIFIED: 增加了与原生 Android 层的交互，用于显示和取消来电通知。
  * @module VideoCallManager
  * @exports {object} VideoCallManager
- * @dependencies AppSettings, Utils, NotificationUIManager, ConnectionManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter, WebRTCManager
+ * @dependencies VideoCallHandler, AppSettings, Utils, NotificationUIManager, ConnectionManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter
  */
 const VideoCallManager = {
+    // 高级状态统一管理
     state: {
         localStream: null,
         remoteStream: null,
@@ -29,17 +29,23 @@ const VideoCallManager = {
     _boundEnableMusicPlay: null,
 
     /**
-     * 初始化管理器。
+     * 初始化管理器和处理器。
+     * @returns {boolean} 初始化是否成功。
      */
     init: function () {
-        // 不再需要初始化 VideoCallHandler
+        VideoCallHandler.init(this);
+
         try {
             this.musicPlayer = new Audio(AppSettings.media.music);
             this.musicPlayer.loop = true;
+            this.musicPlayer.addEventListener('ended', () => {
+                if (this.isMusicPlaying) this.musicPlayer.play().catch(e => Utils.log(`音乐循环播放错误: ${e}`, Utils.logLevels.WARN));
+            });
         } catch (e) {
             Utils.log(`初始化音乐时出错: ${e}`, Utils.logLevels.ERROR);
             this.musicPlayer = null;
         }
+
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             Utils.log('浏览器不支持媒体设备。通话功能已禁用。', Utils.logLevels.ERROR);
             return false;
@@ -48,70 +54,91 @@ const VideoCallManager = {
     },
 
     /**
-     * 处理来自对方的通话相关消息（非WebRTC信令）。
+     * 从 ConnectionManager 接收信令消息并转发给处理器。
      * @param {object} message - 消息对象。
      * @param {string} peerId - 发送方 ID。
      */
     handleMessage: function (message, peerId) {
-        // [MODIFIED] 现在只处理应用层通话信令，WebRTC信令由ConnectionManager/WebRTCManager处理
-        switch (message.type) {
-            case 'video-call-request':
-                if (!this.state.isCallActive && !this.state.isCallPending) {
-                    this.state.isCallPending = true;
-                    if (window.Android && typeof window.Android.showIncomingCall === 'function') {
-                        const callerName = UserManager.contacts[peerId]?.name || peerId;
-                        Utils.log(`[Native Call] 正在为 ${callerName} 触发原生来电通知。`, Utils.logLevels.INFO);
-                        window.Android.showIncomingCall(callerName, peerId);
-                    }
-                    this.showCallRequest(peerId, message.audioOnly || false, message.isScreenShare || false);
-                } else {
-                    ConnectionManager.sendTo(peerId, { type: 'video-call-rejected', reason: 'busy', sender: UserManager.userId });
-                }
-                break;
-            case 'video-call-accepted':
-                if (this.state.isCallPending && this.state.isCaller && this.state.currentPeerId === peerId) {
-                    this.manager.stopMusic();
-                    ModalUIManager.hideCallingModal();
-                    if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-                    this.callRequestTimeout = null;
-                    // 现在接受方会发起连接，发起方只需等待 'stream' 和 'connect' 事件
-                    Utils.log(`呼叫被 ${peerId} 接受，等待对方发起连接...`, Utils.logLevels.INFO);
-                }
-                break;
-            case 'video-call-rejected':
-            case 'video-call-cancel':
-            case 'video-call-end':
-                if ((this.state.isCallActive || this.state.isCallPending) && this.state.currentPeerId === peerId) {
-                    const reasonText = {
-                        'video-call-rejected': `通话被 ${UserManager.contacts[peerId]?.name || '对方'} 拒绝。`,
-                        'video-call-cancel': `通话被 ${UserManager.contacts[peerId]?.name || '对方'} 取消。`,
-                        'video-call-end': `${UserManager.contacts[peerId]?.name || '对方'} 结束了通话。`
-                    }[message.type];
-
-                    if (window.Android && typeof window.Android.cancelIncomingCall === 'function') {
-                        Utils.log(`[Native Call] 正在取消原生来电通知。`, Utils.logLevels.INFO);
-                        window.Android.cancelIncomingCall();
-                    }
-                    NotificationUIManager.showNotification(reasonText, 'info');
-                    this.cleanupCallMediaAndState();
-                }
-                break;
+        // --- [NEW] 拦截来电请求以触发原生通知 ---
+        if (message.type === 'video-call-request') {
+            if (window.Android && typeof window.Android.showIncomingCall === 'function') {
+                const callerName = (typeof UserManager !== 'undefined' && UserManager.contacts[peerId]?.name) || peerId;
+                Utils.log(`[Native Call] 正在为 ${callerName} 触发原生来电通知。`, Utils.logLevels.INFO);
+                window.Android.showIncomingCall(callerName, peerId);
+            }
         }
+        // --- [NEW] 拦截呼叫取消/结束以取消原生通知 ---
+        if (message.type === 'video-call-cancel' || message.type === 'video-call-end') {
+            if (window.Android && typeof window.Android.cancelIncomingCall === 'function') {
+                Utils.log(`[Native Call] 正在取消原生来电通知。`, Utils.logLevels.INFO);
+                window.Android.cancelIncomingCall();
+            }
+        }
+
+        VideoCallHandler.handleMessage(message, peerId);
     },
 
     /**
-     * [NEW] 处理从 simple-peer 'stream' 事件到达的远程媒体流。
-     * @param {string} peerId - 流来源的对方 ID。
-     * @param {MediaStream} stream - 远程媒体流。
+     * 发起一个纯音频通话。
+     * @param {string} peerId - 目标对方的 ID。
      */
-    handleRemoteStream: function(peerId, stream) {
-        if (this.state.currentPeerId === peerId && this.state.isCallActive) {
-            Utils.log(`VideoCallManager: 已接收到来自 ${peerId} 的远程流。`, Utils.logLevels.INFO);
-            this.state.remoteStream = stream;
-            VideoCallUIManager.setRemoteStream(stream);
-            this.updateCurrentCallUIState();
-        } else {
-            Utils.log(`VideoCallManager: 收到来自 ${peerId} 的流，但当前通话状态不匹配。忽略。`, Utils.logLevels.WARN);
+    initiateAudioCall: function (peerId) {
+        this.initiateCall(peerId, true);
+    },
+
+    /**
+     * 发起屏幕共享。
+     * @param {string} peerId - 目标对方的 ID。
+     * @returns {Promise<void>}
+     */
+    initiateScreenShare: async function (peerId) {
+        if (this.state.isCallActive || this.state.isCallPending) {
+            NotificationUIManager.showNotification('已有通话/共享正在进行或等待中。', 'warning');
+            return;
+        }
+        if (!peerId) peerId = ChatManager.currentChatId;
+        if (!peerId) {
+            NotificationUIManager.showNotification('请选择一个伙伴以共享屏幕。', 'warning');
+            return;
+        }
+        if (!ConnectionManager.isConnectedTo(peerId)) {
+            NotificationUIManager.showNotification('未连接到对方。', 'error');
+            return;
+        }
+
+        this.state.isScreenSharing = true;
+        this.state.isAudioOnly = false;
+        this.state.isVideoEnabled = true;
+        this.state.isAudioMuted = false;
+
+        try {
+            this.state.currentPeerId = peerId;
+            this.state.isCaller = true;
+            this.state.isCallPending = true;
+
+            ConnectionManager.sendTo(peerId, {
+                type: 'video-call-request',
+                audioOnly: this.state.isAudioOnly,
+                isScreenShare: this.state.isScreenSharing,
+                sender: UserManager.userId
+            });
+
+            ModalUIManager.showCallingModal(UserManager.contacts[peerId]?.name || '对方', () => this.hangUpMedia(), () => this.stopMusic(), '屏幕共享');
+            this.playMusic();
+
+            this.callRequestTimeout = setTimeout(() => {
+                if (this.state.isCallPending) {
+                    ConnectionManager.sendTo(this.state.currentPeerId, {
+                        type: 'video-call-cancel',
+                        sender: UserManager.userId
+                    });
+                    this.cancelPendingCall();
+                }
+            }, AppSettings.timeouts.callRequest);
+        } catch (error) {
+            Utils.log(`发起屏幕共享失败: ${error.message}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification('发起屏幕共享失败。', 'error');
+            this.cleanupCallMediaAndState();
         }
     },
 
@@ -126,8 +153,12 @@ const VideoCallManager = {
             return;
         }
         if (!peerId) peerId = ChatManager.currentChatId;
-        if (!peerId || !ConnectionManager.isConnectedTo(peerId)) {
-            NotificationUIManager.showNotification('请选择一个已连接的伙伴进行通话。', 'error');
+        if (!peerId) {
+            NotificationUIManager.showNotification('请选择一个伙伴进行通话。', 'warning');
+            return;
+        }
+        if (!ConnectionManager.isConnectedTo(peerId)) {
+            NotificationUIManager.showNotification('未连接到对方。', 'error');
             return;
         }
 
@@ -135,133 +166,97 @@ const VideoCallManager = {
         this.state.isScreenSharing = false;
         this.state.isVideoEnabled = !audioOnly;
         this.state.isAudioMuted = false;
-        this.state.currentPeerId = peerId;
-        this.state.isCaller = true;
-        this.state.isCallPending = true;
-
-        // 仅发送请求，不获取媒体流。等待对方接受后再获取。
-        ConnectionManager.sendTo(peerId, {
-            type: 'video-call-request',
-            audioOnly: this.state.isAudioOnly,
-            isScreenShare: false,
-            sender: UserManager.userId
-        });
-
-        ModalUIManager.showCallingModal(UserManager.contacts[peerId]?.name || '对方', () => this.hangUpMedia(), () => this.stopMusic(), audioOnly ? '语音通话' : '视频通话');
-        this.playMusic();
-
-        this.callRequestTimeout = setTimeout(() => {
-            if (this.state.isCallPending) {
-                ConnectionManager.sendTo(this.state.currentPeerId, { type: 'video-call-cancel', sender: UserManager.userId });
-                this.cancelPendingCall();
-            }
-        }, AppSettings.timeouts.callRequest);
-    },
-
-    /**
-     * 接受通话请求。
-     */
-    acceptCall: async function () {
-        ModalUIManager.hideCallRequest();
-        this.manager.stopMusic();
-        if (!this.state.currentPeerId) {
-            NotificationUIManager.showNotification('无效的通话请求。', 'error');
-            return;
-        }
-
         try {
-            // 1. 接受方获取本地媒体流
-            await this._startLocalStream();
+            this.state.currentPeerId = peerId;
+            this.state.isCaller = true;
+            this.state.isCallPending = true;
 
-            // 2. 发送接受信令
-            ConnectionManager.sendTo(this.state.currentPeerId, {
-                type: 'video-call-accepted',
-                audioOnly: !this.state.isVideoEnabled, // 发送自己当前的模式
-                isScreenShare: false,
+            ConnectionManager.sendTo(peerId, {
+                type: 'video-call-request',
+                audioOnly: this.state.isAudioOnly,
+                isScreenShare: this.state.isScreenSharing,
                 sender: UserManager.userId
             });
 
-            // 3. 创建 non-initiator peer 并传入流，它将等待对方的 offer
-            ConnectionManager.connectToPeer(this.state.currentPeerId, {
-                initiator: false,
-                stream: this.state.localStream
-            });
+            ModalUIManager.showCallingModal(UserManager.contacts[peerId]?.name || '对方', () => this.hangUpMedia(), () => this.stopMusic(), this.state.isAudioOnly ? '语音通话' : '视频通话');
+            this.playMusic();
 
-            // 4. 更新UI状态
-            VideoCallUIManager.setLocalStream(this.state.localStream);
-            VideoCallUIManager.showCallContainer(true);
-            this.state.isCallActive = true;
-            this.state.isCallPending = false;
-            this.updateCurrentCallUIState();
+            this.callRequestTimeout = setTimeout(() => {
+                if (this.state.isCallPending) {
+                    ConnectionManager.sendTo(this.state.currentPeerId, {
+                        type: 'video-call-cancel',
+                        sender: UserManager.userId
+                    });
+                    this.cancelPendingCall();
+                }
+            }, AppSettings.timeouts.callRequest);
         } catch (error) {
-            Utils.log(`接听通话失败: ${error.message}`, Utils.logLevels.ERROR);
-            NotificationUIManager.showNotification(`接听通话失败: ${error.message}`, 'error');
-            ConnectionManager.sendTo(this.state.currentPeerId, { type: 'video-call-rejected', reason: 'device_error', sender: UserManager.userId });
+            Utils.log(`发起通话失败: ${error.message}`, Utils.logLevels.ERROR);
+            NotificationUIManager.showNotification('发起通话失败。', 'error');
             this.cleanupCallMediaAndState();
         }
     },
 
-
     /**
-     * @private
-     * 获取本地媒体流（摄像头/麦克风或屏幕）。
+     * 切换摄像头开关。
      */
-    _startLocalStream: async function() {
-        this.releaseMediaResources(); // 清理旧的流
-
-        try {
-            if (this.state.isScreenSharing) {
-                // ... [屏幕共享逻辑不变，见原 VideoCallHandler] ...
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" }, audio: true });
-                this.state.isVideoEnabled = true;
-                let micStream = null;
-                try {
-                    micStream = await navigator.mediaDevices.getUserMedia({ audio: AppSettings.media.audioConstraints, video: false });
-                } catch (micError) {
-                    NotificationUIManager.showNotification('无法获取麦克风，将继续共享但不包含您的声音。', 'warning');
-                }
-                const finalTracks = [];
-                const screenVideoTrack = screenStream.getVideoTracks()[0];
-                if (screenVideoTrack) {
-                    screenVideoTrack.onended = () => this.hangUpMedia();
-                    finalTracks.push(screenVideoTrack);
-                }
-                if (screenStream.getAudioTracks()[0]) finalTracks.push(screenStream.getAudioTracks()[0]);
-                if (micStream && micStream.getAudioTracks()[0]) finalTracks.push(micStream.getAudioTracks()[0]);
-                this.state.localStream = new MediaStream(finalTracks);
-            } else {
-                let attemptVideo = !this.state.isAudioOnly;
-                if(attemptVideo) {
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    if (!devices.some(d => d.kind === 'videoinput')) {
-                        if(!this.state.isAudioOnly) NotificationUIManager.showNotification('没有摄像头。切换到纯音频通话。', 'warning');
-                        attemptVideo = false;
-                    }
-                }
-                this.state.localStream = await navigator.mediaDevices.getUserMedia({
-                    video: attemptVideo ? {} : false,
-                    audio: AppSettings.media.audioConstraints
-                });
-                this.state.isVideoEnabled = this.state.localStream.getVideoTracks().length > 0;
-            }
-            // 应用初始静音/视频状态
-            if (this.state.localStream.getAudioTracks()[0]) this.state.localStream.getAudioTracks()[0].enabled = !this.state.isAudioMuted;
-            if (this.state.localStream.getVideoTracks()[0]) this.state.localStream.getVideoTracks()[0].enabled = this.state.isVideoEnabled;
-
-        } catch (error) {
-            Utils.log(`获取媒体流失败: ${error.name}`, Utils.logLevels.ERROR);
-            this.state.isVideoEnabled = false;
-            // 尝试回退到纯音频
-            try {
-                this.state.localStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: AppSettings.media.audioConstraints });
-            } catch(audioError) {
-                Utils.log(`备用音频流获取失败: ${audioError.name}`, Utils.logLevels.ERROR);
-                this.cleanupCallMediaAndState();
-                throw audioError; // 向上抛出，让调用者处理
-            }
+    toggleCamera: function () {
+        if (!this.state.isCallActive || !this.state.localStream) {
+            NotificationUIManager.showNotification("通话未激活或本地流不存在。", "warning");
+            return;
         }
+        if (this.state.isAudioOnly) {
+            NotificationUIManager.showNotification("纯音频通话中摄像头不可用。", "warning");
+            return;
+        }
+        if (this.state.isScreenSharing && this.state.isCaller) {
+            NotificationUIManager.showNotification("屏幕共享期间摄像头不可用。", "warning");
+            return;
+        }
+
+        const videoTrack = this.state.localStream.getVideoTracks().find(t => t.kind === 'video' && t.readyState === 'live');
+
+        if (!videoTrack && !this.state.isScreenSharing) {
+            NotificationUIManager.showNotification('本地视频轨道不可用。', 'warning');
+            this.state.isVideoEnabled = false;
+            this.updateCurrentCallUIState();
+            return;
+        }
+        if (videoTrack) {
+            this.state.isVideoEnabled = !this.state.isVideoEnabled;
+            videoTrack.enabled = this.state.isVideoEnabled;
+        } else {
+            this.state.isVideoEnabled = false;
+        }
+        this.updateCurrentCallUIState();
     },
 
+    /**
+     * 切换麦克风静音状态。
+     */
+    toggleAudio: function () {
+        if (!this.state.isCallActive || !this.state.localStream || !this.state.localStream.getAudioTracks()[0]) {
+            NotificationUIManager.showNotification("通话未激活或本地音频轨道不存在。", "warning");
+            return;
+        }
+        this.state.isAudioMuted = !this.state.isAudioMuted;
+        this.state.localStream.getAudioTracks()[0].enabled = !this.state.isAudioMuted;
+        this.updateCurrentCallUIState();
+    },
+
+    /**
+     * 切换通话是否为纯音频模式（仅在通话前有效）。
+     */
+    toggleAudioOnly: async function () {
+        if (this.state.isCallActive || this.state.isCallPending) {
+            NotificationUIManager.showNotification("通话中或等待时无法切换模式。", "warning");
+            return;
+        }
+        this.state.isAudioOnly = !this.state.isAudioOnly;
+        Utils.log("已切换纯音频模式 (通话前): " + this.state.isAudioOnly, Utils.logLevels.INFO);
+        this.state.isVideoEnabled = !this.state.isAudioOnly;
+        this.updateCurrentCallUIState();
+    },
 
     /**
      * 挂断当前通话或取消等待中的通话。
@@ -271,160 +266,147 @@ const VideoCallManager = {
         const peerIdToHangUp = this.state.currentPeerId;
         Utils.log(`正在为对方 ${peerIdToHangUp || '未知'} 挂断媒体。通知: ${notifyPeer}`, Utils.logLevels.INFO);
 
+        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
+        this.callRequestTimeout = null;
+
+        VideoCallHandler._stopAdaptiveMediaChecks(peerIdToHangUp);
+
         if (notifyPeer && (this.state.isCallActive || this.state.isCallPending) && peerIdToHangUp) {
-            ConnectionManager.sendTo(peerIdToHangUp, { type: 'video-call-end', sender: UserManager.userId });
+            ConnectionManager.sendTo(peerIdToHangUp, {type: 'video-call-end', sender: UserManager.userId});
         }
-        // simple-peer 的 destroy 会处理 RTCPeerConnection 的关闭
-        WebRTCManager.closeConnection(peerIdToHangUp);
+
         this.cleanupCallMediaAndState();
+    },
+
+    /**
+     * 播放等待音。
+     * @param {boolean} [isRetry=false] - 是否为重试播放。
+     */
+    playMusic: function (isRetry = false) {
+        if (this.musicPlayer && this.musicPlayer.paused && !this.isMusicPlaying) {
+            Utils.log("正在尝试播放音乐...", Utils.logLevels.DEBUG);
+            this.musicPlayer.play().then(() => {
+                this.isMusicPlaying = true;
+                Utils.log("音乐正在播放。", Utils.logLevels.INFO);
+                if (isRetry && this._boundEnableMusicPlay) {
+                    document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
+                    document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
+                    delete this._boundEnableMusicPlay;
+                }
+            }).catch(error => {
+                Utils.log(`播放音乐时出错: ${error.name} - ${error.message}`, Utils.logLevels.ERROR);
+                if (error.name === 'NotAllowedError' && !isRetry) {
+                    NotificationUIManager.showNotification("音乐播放被阻止。请点击/触摸以启用。", "warning");
+                    this._boundEnableMusicPlay = () => this.playMusic(true);
+                    document.body.addEventListener('click', this._boundEnableMusicPlay, {once: true, capture: true});
+                    document.body.addEventListener('touchstart', this._boundEnableMusicPlay, {
+                        once: true,
+                        capture: true
+                    });
+                }
+            });
+        }
+    },
+
+    /**
+     * 停止等待音。
+     */
+    stopMusic: function () {
+        if (this.musicPlayer && (!this.musicPlayer.paused || this.isMusicPlaying)) {
+            this.musicPlayer.pause();
+            this.musicPlayer.currentTime = 0;
+            this.isMusicPlaying = false;
+            Utils.log("音乐已停止。", Utils.logLevels.INFO);
+            if (this._boundEnableMusicPlay) {
+                document.body.removeEventListener('click', this._boundEnableMusicPlay, {capture: true});
+                document.body.removeEventListener('touchstart', this._boundEnableMusicPlay, {capture: true});
+                delete this._boundEnableMusicPlay;
+            }
+        }
+    },
+
+    /**
+     * 根据当前状态更新通话相关的UI。
+     */
+    updateCurrentCallUIState: function () {
+        if (typeof VideoCallUIManager !== 'undefined') {
+            VideoCallUIManager.updateUIForCallState(this.state);
+        }
     },
 
     /**
      * 清理所有通话相关的媒体资源和状态。
      */
     cleanupCallMediaAndState: function () {
-        Utils.log(`正在清理通话媒体和状态 (for ${this.state.currentPeerId || '未知'})。`, Utils.logLevels.INFO);
+        const peerIdCleaned = this.state.currentPeerId;
+        Utils.log(`正在清理通话媒体和状态 (for ${peerIdCleaned || '未知'})。`, Utils.logLevels.INFO);
+
+        // --- [NEW] 确保原生通知在清理时被取消 ---
         if (window.Android && typeof window.Android.cancelIncomingCall === 'function') {
+            Utils.log(`[Native Call] 清理：取消原生来电通知。`, Utils.logLevels.INFO);
             window.Android.cancelIncomingCall();
         }
-        this.stopMusic();
-        if (this.callRequestTimeout) clearTimeout(this.callRequestTimeout);
-        this.callRequestTimeout = null;
 
+        this.stopMusic();
         ModalUIManager.hideCallingModal();
         ModalUIManager.hideCallRequest();
+
+        VideoCallHandler._stopAdaptiveMediaChecks(peerIdCleaned);
+        if (peerIdCleaned) {
+            delete VideoCallHandler._lastNegotiatedSdpFmtpLine[peerIdCleaned];
+        } else {
+            VideoCallHandler._lastNegotiatedSdpFmtpLine = {};
+        }
+
         this.releaseMediaResources();
 
-        if (VideoCallUIManager) {
+        if (peerIdCleaned) {
+            const conn = typeof WebRTCManager !== 'undefined' ? WebRTCManager.connections[peerIdCleaned] : null;
+            if (conn && conn.peerConnection) {
+                conn.peerConnection.getSenders().forEach(sender => {
+                    if (sender.track) {
+                        try {
+                            conn.peerConnection.removeTrack(sender);
+                            Utils.log(`已从 ${peerIdCleaned} 的 PC 中移除轨道 ${sender.track.kind}`, Utils.logLevels.DEBUG);
+                        } catch (e) {
+                            Utils.log(`从 ${peerIdCleaned} 的 PC 中移除轨道时出错: ${e.message}`, Utils.logLevels.WARN);
+                        }
+                    }
+                });
+            }
+        }
+
+        if (typeof VideoCallUIManager !== 'undefined') {
             VideoCallUIManager.setLocalStream(null);
             VideoCallUIManager.setRemoteStream(null);
             VideoCallUIManager.showCallContainer(false);
             VideoCallUIManager.resetPipVisuals();
         }
 
-        // 重置所有状态
-        this.state = {
-            localStream: null, remoteStream: null, currentPeerId: null, isCallActive: false,
-            isCaller: false, isCallPending: false, isAudioMuted: false, isVideoEnabled: true,
-            isAudioOnly: false, isScreenSharing: false,
-        };
+        // 重置所有状态属性
+        this.state.remoteStream = null;
+        this.state.isCallActive = false;
+        this.state.isCallPending = false;
+        this.state.isAudioMuted = false;
+        this.state.isAudioOnly = false;
+        this.state.isScreenSharing = false;
+        this.state.isVideoEnabled = true;
+        this.state.currentPeerId = null;
+
+        Utils.log('通话媒体和状态已清理。', Utils.logLevels.INFO);
         this.updateCurrentCallUIState();
     },
 
-
-    // ... (其他方法如 toggleCamera, toggleAudio, playMusic, stopMusic, releaseMediaResources, updateCurrentCallUIState 基本保持不变，
-    // 只是它们现在直接操作 localStream.getTracks()，而不需要通过 RTCRtpSender)
-    toggleCamera: function () {
-        if (!this.state.isCallActive || !this.state.localStream) return;
-        if (this.state.isAudioOnly || this.state.isScreenSharing) return;
-
-        const videoTrack = this.state.localStream.getVideoTracks()[0];
-        if (videoTrack) {
-            this.state.isVideoEnabled = !this.state.isVideoEnabled;
-            videoTrack.enabled = this.state.isVideoEnabled;
-            this.updateCurrentCallUIState();
-        }
-    },
-
-    toggleAudio: function () {
-        if (!this.state.isCallActive || !this.state.localStream) return;
-        const audioTrack = this.state.localStream.getAudioTracks()[0];
-        if (audioTrack) {
-            this.state.isAudioMuted = !this.state.isAudioMuted;
-            audioTrack.enabled = !this.state.isAudioMuted;
-            this.updateCurrentCallUIState();
-        }
-    },
-
-    playMusic: function() {
-        if (this.musicPlayer && this.musicPlayer.paused) {
-            this.musicPlayer.play().catch(e => {
-                if (e.name === 'NotAllowedError') {
-                    NotificationUIManager.showNotification("音乐播放被阻止。请点击/触摸以启用。", "warning");
-                    const enableAudio = () => this.playMusic();
-                    document.body.addEventListener('click', enableAudio, { once: true });
-                }
-            });
-        }
-    },
-    stopMusic: function() {
-        if (this.musicPlayer && !this.musicPlayer.paused) {
-            this.musicPlayer.pause();
-            this.musicPlayer.currentTime = 0;
-        }
-    },
+    /**
+     * 释放本地媒体流资源。
+     */
     releaseMediaResources: function () {
         if (this.state.localStream) {
-            this.state.localStream.getTracks().forEach(track => track.stop());
+            this.state.localStream.getTracks().forEach(track => {
+                track.stop();
+                Utils.log(`已停止本地轨道: ${track.kind} id: ${track.id}`, Utils.logLevels.DEBUG);
+            });
             this.state.localStream = null;
         }
-    },
-    updateCurrentCallUIState: function () {
-        if (VideoCallUIManager) {
-            VideoCallUIManager.updateUIForCallState(this.state);
-        }
-    },
-    // 以下方法在 simple-peer 模式下不再需要，因为协商是自动的
-    // showCallRequest, rejectCall, cancelPendingCall, initiateScreenShare, toggleAudioOnly
-    // initiateAudioCall
-    showCallRequest: function (peerId, audioOnly = false, isScreenShare = false) {
-        this.state.currentPeerId = peerId;
-        this.state.isAudioOnly = audioOnly;
-        this.state.isScreenSharing = isScreenShare;
-        this.state.isCaller = false;
-        ModalUIManager.showCallRequest(peerId, audioOnly, isScreenShare);
-        this.playMusic();
-    },
-    rejectCall: function () {
-        ModalUIManager.hideCallRequest();
-        this.manager.stopMusic();
-        if (!this.state.currentPeerId) return;
-        ConnectionManager.sendTo(this.state.currentPeerId, { type: 'video-call-rejected', reason: 'user_rejected', sender: UserManager.userId });
-        this.cleanupCallMediaAndState();
-    },
-    cancelPendingCall: function () {
-        this.cleanupCallMediaAndState();
-    },
-    initiateScreenShare: async function(peerId) {
-        if (this.state.isCallActive || this.state.isCallPending) {
-            NotificationUIManager.showNotification('已有通话/共享正在进行或等待中。', 'warning');
-            return;
-        }
-        if (!peerId) peerId = ChatManager.currentChatId;
-        if (!peerId || !ConnectionManager.isConnectedTo(peerId)) {
-            NotificationUIManager.showNotification('请选择一个已连接的伙伴以共享屏幕。', 'error');
-            return;
-        }
-        this.state.isScreenSharing = true;
-        this.state.isAudioOnly = false;
-        this.state.isVideoEnabled = true;
-        this.state.isAudioMuted = false;
-        this.state.currentPeerId = peerId;
-        this.state.isCaller = true;
-        this.state.isCallPending = true;
-
-        ConnectionManager.sendTo(peerId, {
-            type: 'video-call-request',
-            audioOnly: false,
-            isScreenShare: true,
-            sender: UserManager.userId
-        });
-        ModalUIManager.showCallingModal(UserManager.contacts[peerId]?.name || '对方', () => this.hangUpMedia(), () => this.stopMusic(), '屏幕共享');
-        this.playMusic();
-        this.callRequestTimeout = setTimeout(() => {
-            if (this.state.isCallPending) {
-                ConnectionManager.sendTo(this.state.currentPeerId, { type: 'video-call-cancel', sender: UserManager.userId });
-                this.cancelPendingCall();
-            }
-        }, AppSettings.timeouts.callRequest);
-    },
-    toggleAudioOnly: function() {
-        if(this.state.isCallActive || this.state.isCallPending) return;
-        this.state.isAudioOnly = !this.state.isAudioOnly;
-        this.state.isVideoEnabled = !this.state.isAudioOnly;
-        this.updateCurrentCallUIState();
-    },
-    initiateAudioCall: function(peerId) {
-        this.initiateCall(peerId, true);
     }
 };

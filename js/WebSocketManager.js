@@ -3,10 +3,9 @@
  * @description 管理与信令服务器的 WebSocket 通信。
  *              负责连接、断开、重连、心跳以及原始信令消息的发送和接收。
  *              MODIFIED: 增强了离线和连接失败时的用户引导，提示用户可使用手动连接功能。
- *              【核心修复】: 在连接成功后，立即发送 'REGISTER' 消息将当前用户ID注册到服务器，这是人员大厅功能正常工作的关键。
  * @module WebSocketManager
  * @exports {object} WebSocketManager
- * @dependencies Utils, AppSettings, LayoutUIManager, EventEmitter, TimerManager, UserManager
+ * @dependencies Utils, AppSettings, LayoutUIManager, EventEmitter, TimerManager
  */
 const WebSocketManager = {
     websocket: null, // WebSocket 实例
@@ -74,20 +73,6 @@ const WebSocketManager = {
                     this.wsReconnectAttempts = 0;
                     LayoutUIManager.updateConnectionStatusIndicator('信令服务器已连接。');
                     Utils.log('WebSocketManager: WebSocket 连接已建立。', Utils.logLevels.INFO);
-
-                    // [核心逻辑] 连接成功后，立即用当前用户ID向服务器注册。
-                    // 这对于自动重连至关重要。初始加载时的竞争条件由 AppInitializer 解决。
-                    if (UserManager && UserManager.userId) {
-                        Utils.log(`WebSocketManager: 正在注册用户 ID: ${UserManager.userId}`, Utils.logLevels.INFO);
-                        this.sendRawMessage({
-                            type: 'REGISTER',
-                            userId: UserManager.userId
-                        });
-                    } else {
-                        // 这是导致初始加载时出现错误日志的地方，但现在是预期的行为了。
-                        Utils.log('WebSocketManager: 无法注册 - UserManager.userId 尚不可用 (可能是初始加载)。', Utils.logLevels.WARN);
-                    }
-
                     this.startHeartbeat();
                     if (typeof this._onStatusChangeHandler === 'function') {
                         this._onStatusChangeHandler(true);
@@ -184,6 +169,7 @@ const WebSocketManager = {
         }
     },
 
+    // ... (stopHeartbeat, sendRawMessage, disconnect 不变) ...
     stopHeartbeat: function() {
         if (typeof TimerManager !== 'undefined') {
             TimerManager.removePeriodicTask(this._HEARTBEAT_TASK_NAME);
@@ -196,10 +182,7 @@ const WebSocketManager = {
             try {
                 const messageString = JSON.stringify(messageObject);
                 this.websocket.send(messageString);
-                // 避免对 PING 消息进行冗余记录
-                if (messageObject.type !== 'PING') {
-                    Utils.log(`WebSocketManager: 已发送 WS 消息: ${messageObject.type}`, Utils.logLevels.DEBUG);
-                }
+                Utils.log(`WebSocketManager: 已发送 WS 消息: ${messageObject.type}`, Utils.logLevels.DEBUG);
                 return true;
             } catch (e) {
                 Utils.log(`WebSocketManager: 序列化或发送 WS 消息时出错: ${e}`, Utils.logLevels.ERROR);
