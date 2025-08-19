@@ -1,118 +1,108 @@
 /**
  * @file AppInitializer.js
  * @description 应用的入口点和初始化器。负责按正确顺序加载和初始化所有管理器和 UI 组件，并设置核心事件监听器。
- *              现在确保 ThemeLoader.init() 在 UserManager.init() 之前被 await 调用。
- *              优化了部分异步任务的并行执行。
- *              当AI服务状态更新时，现在会正确调用 `ChatAreaUIManager.updateChatHeader` 来更新聊天头部的状态指示器。
- *              新增 ResourcePreviewUIManager 初始化。
- *              修复：WebSocket 连接检查逻辑，以适应 ConnectionManager 的拆分。
- *                    ConnectionManager.initialize()现在会正确启动并管理WebSocket连接。
- *              定时器逻辑已移至 TimerManager。
- *              修改：AI 服务健康检查现在会在其他关键异步任务（如WebSocket初始化）之后执行。
- *              FIXED: Added MemoryBookManager.init() call to ensure memory book data is loaded on startup.
- *              FIXED: 新增 fileDataReady 事件监听器，以在文件数据接收完毕后异步更新UI预览。
+ *              【核心修复】`init` 方法现在使用 `try...finally` 结构，确保无论初始化成功与否，加载覆盖层最终都会被移除，解决了页面卡在加载中的问题。
+ *              【核心修复】新增了中心化的用户注册逻辑，在网络和本地数据都就绪后执行，解决了竞争条件问题。
  * @module AppInitializer
- * @exports {object} AppInitializer - 包含 init 方法，现在应由 DOMContentLoaded 事件触发。
+ * @exports {object} AppInitializer - 包含 init 方法，由 DOMContentLoaded 事件触发。
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
  *               LayoutUIManager, ModalUIManager, SettingsUIManager, ChatAreaUIManager, SidebarUIManager,
  *               DetailsPanelUIManager, VideoCallUIManager, MediaUIManager, NotificationUIManager, Utils, EventEmitter,
  *               PeopleLobbyManager, AiApiHandler, ThemeLoader, ScreenshotEditorUIManager, ResourcePreviewUIManager, WebSocketManager, TimerManager, CharacterCardManager, MemoryBookManager
- * @dependents DOMContentLoaded (在 index.html 中通过新的方式调用)
  */
 const AppInitializer = {
 
     /**
-     * 应用程序的主初始化函数。
-     * ... (description remains the same)
+     * 【重构与修复】应用程序的主初始化函数。
+     * 使用 `try...finally` 确保加载覆盖层总能被移除，防止卡死。
+     * 解决了 WebSocket 注册时 userId 不可用的竞争条件问题。
      */
     init: async function () {
-        // --- 阶段 1: 关键的同步设置 ---
-        Utils.setLogLevelFromConfig();
-        this.initializeGlobalImageErrorHandler();
-        if (!Utils.checkWebRTCSupport()) return;
-        TimerManager.init();
+        const loadingTextEl = document.querySelector('.loading-text');
+        const loadingOverlay = document.getElementById('loadingOverlay');
 
         try {
-            // --- 阶段 2: 核心数据加载 (主要是顺序异步) ---
-            await DBManager.init();
-            Utils.log('数据库初始化成功', Utils.logLevels.INFO);
+            // --- 阶段 1: 关键的同步设置 ---
+            if(loadingTextEl) loadingTextEl.textContent = '正在配置核心服务...';
+            Utils.setLogLevelFromConfig();
+            this.initializeGlobalImageErrorHandler();
+            if (!Utils.checkWebRTCSupport()) return;
+            TimerManager.init();
 
-            // ADDED: Initialize MemoryBookManager right after DBManager
-            // This ensures memory data is loaded before any UI that might need it.
-            if (typeof MemoryBookManager !== 'undefined' && typeof MemoryBookManager.init === 'function') {
+            // --- 阶段 2: 关键异步任务并行启动 ---
+            // 任务1: 网络连接
+            if(loadingTextEl) loadingTextEl.textContent = '正在连接信令服务器...';
+            const networkPromise = ConnectionManager.initialize().catch(wsError => {
+                Utils.log(`AppInitializer: WebSocket 初始化/连接失败: ${wsError.message || wsError}`, Utils.logLevels.ERROR);
+                // 即使失败，也 resolve 以免阻塞 Promise.all
+                return Promise.resolve();
+            });
+
+            // 任务2: 本地数据和UI初始化
+            const localSetupPromise = (async () => {
+                if(loadingTextEl) loadingTextEl.textContent = '正在加载本地数据...';
+                await DBManager.init();
+                Utils.log('数据库初始化成功', Utils.logLevels.INFO);
+
+                // 核心数据加载
                 await MemoryBookManager.init();
-            } else {
-                Utils.log('MemoryBookManager 或其 init 方法未定义。记忆书功能可能无法使用。', Utils.logLevels.WARN);
-            }
-
-            if (typeof ThemeLoader !== 'undefined' && typeof ThemeLoader.init === 'function') {
                 await ThemeLoader.init();
-                Utils.log('ThemeLoader 初始化完成。', Utils.logLevels.INFO);
-            } else {
-                Utils.log('ThemeLoader 或其 init 方法未定义。主题系统可能无法正常工作。', Utils.logLevels.ERROR);
-            }
+                await UserManager.init();
+                await GroupManager.init();
+                await ChatManager.init();
+                Utils.log('核心数据模型已加载。', Utils.logLevels.INFO);
 
-            await UserManager.init();
-            await GroupManager.init();
-            await ChatManager.init();
-
-            // --- 阶段 3: UI 管理器初始化 (同步, 在核心数据加载后) ---
-            ModalUIManager.init();
-            SettingsUIManager.init();
-            LayoutUIManager.init();
-            ChatAreaUIManager.init();
-            SidebarUIManager.init();
-            DetailsPanelUIManager.init();
-            if (typeof ResourcePreviewUIManager !== 'undefined' && ResourcePreviewUIManager.init) {
+                // UI 管理器初始化 (同步)
+                if(loadingTextEl) loadingTextEl.textContent = '正在构建用户界面...';
+                ModalUIManager.init();
+                SettingsUIManager.init();
+                LayoutUIManager.init();
+                ChatAreaUIManager.init();
+                SidebarUIManager.init();
+                DetailsPanelUIManager.init();
                 ResourcePreviewUIManager.init();
-                Utils.log('ResourcePreviewUIManager 初始化完成。', Utils.logLevels.INFO);
-            } else {
-                Utils.log('ResourcePreviewUIManager 或其 init 方法未定义。资源预览功能可能无法使用。', Utils.logLevels.WARN);
-            }
-            VideoCallUIManager.init();
-            MediaUIManager.init();
-            PeopleLobbyManager.init();
-            EmojiStickerUIManager.init();
-            if (typeof ScreenshotEditorUIManager !== 'undefined' && typeof ScreenshotEditorUIManager.init === 'function') {
+                VideoCallUIManager.init();
+                MediaUIManager.init();
+                PeopleLobbyManager.init();
+                EmojiStickerUIManager.init();
                 ScreenshotEditorUIManager.init();
-                Utils.log('ScreenshotEditorUIManager 初始化完成。', Utils.logLevels.INFO);
-            } else {
-                Utils.log('ScreenshotEditorUIManager 或其 init 方法未定义。截图编辑功能可能无法使用。', Utils.logLevels.WARN);
-            }
-            if (typeof CharacterCardManager !== 'undefined' && CharacterCardManager.init) {
                 CharacterCardManager.init();
-                Utils.log('CharacterCardManager 初始化完成。', Utils.logLevels.INFO);
+                Utils.log('UI 管理器已初始化。', Utils.logLevels.INFO);
+            })();
+
+            // --- 阶段 3: 等待并行任务完成 ---
+            if(loadingTextEl) loadingTextEl.textContent = '正在等待所有模块就绪...';
+            await Promise.all([networkPromise, localSetupPromise]);
+            Utils.log('网络连接和本地数据加载均已完成。', Utils.logLevels.INFO);
+
+
+            // --- 新增阶段 3.5: 核心修复 - 确保在所有前置任务完成后进行用户注册 ---
+            if (loadingTextEl) loadingTextEl.textContent = '正在注册用户身份...';
+            if (WebSocketManager.isWebSocketConnected && UserManager.userId) {
+                Utils.log(`AppInitializer: 安全检查通过。确保用户 ${UserManager.userId} 已注册到信令服务器。`, Utils.logLevels.INFO);
+                WebSocketManager.sendRawMessage({
+                    type: 'REGISTER',
+                    userId: UserManager.userId
+                });
+            } else {
+                let reason = [];
+                if (!WebSocketManager.isWebSocketConnected) reason.push("WebSocket 未连接");
+                if (!UserManager.userId) reason.push("用户 ID 尚未加载");
+                Utils.log(`AppInitializer: 初始注册被跳过。原因: ${reason.join('; ')}`, Utils.logLevels.WARN);
             }
 
-            // --- 阶段 4: 其他同步设置 ---
+            // --- 阶段 4: 依赖于阶段3的后续设置 ---
+            if(loadingTextEl) loadingTextEl.textContent = '正在进行最终检查...';
             this.startNetworkMonitoring();
             MediaManager.initVoiceRecording();
             VideoCallManager.init();
             this.setupCoreEventListeners();
             this.smartBackToChatList();
 
-            // --- 阶段 5: 并行执行的初始异步操作 ---
-            const initialAsyncOperations = [];
-            initialAsyncOperations.push(this.refreshNetworkStatusUI());
+            // 初始网络状态UI刷新
+            await this.refreshNetworkStatusUI();
 
-            if (typeof ConnectionManager !== 'undefined' && typeof ConnectionManager.initialize === 'function') {
-                const cmInitPromise = ConnectionManager.initialize();
-                if (cmInitPromise && typeof cmInitPromise.catch === 'function') {
-                    initialAsyncOperations.push(cmInitPromise.catch(wsError => {
-                        Utils.log(`AppInitializer: WebSocket 初始化/连接失败: ${wsError.message || wsError}`, Utils.logLevels.ERROR);
-                    }));
-                } else {
-                    Utils.log('AppInitializer: ConnectionManager.initialize() did not return a valid Promise. WebSocket initialization might be incomplete.', Utils.logLevels.ERROR);
-                    initialAsyncOperations.push(Promise.resolve());
-                }
-            } else {
-                Utils.log('AppInitializer: ConnectionManager 未定义或其 initialize 方法未定义，无法初始化 WebSocket 连接。', Utils.logLevels.ERROR);
-                initialAsyncOperations.push(Promise.resolve());
-            }
-
-            await Promise.all(initialAsyncOperations);
-
-            // --- 阶段 6: 后续异步操作 (如 AI 健康检查) ---
+            // AI健康检查
             try {
                 const isAiHealthy = await AiApiHandler.checkAiServiceHealth();
                 UserManager.updateAiServiceStatus(isAiHealthy);
@@ -121,20 +111,29 @@ const AppInitializer = {
                 UserManager.updateAiServiceStatus(false);
             }
 
-            Utils.log('应用已初始化 (所有主要异步任务已启动或完成)', Utils.logLevels.INFO);
+            Utils.log('应用已完全初始化。', Utils.logLevels.INFO);
 
         } catch (error) {
             Utils.log(`应用初始化失败: ${error.stack || error}`, Utils.logLevels.ERROR);
+            if(loadingTextEl) loadingTextEl.textContent = '初始化失败！';
             NotificationUIManager.showNotification('应用初始化失败，部分功能可能无法使用。', 'error');
+        } finally {
+            // [核心修复] 无论成功或失败，都在此隐藏加载界面。
+            // 这确保了即使用户网络不佳，也能进入应用主界面（尽管某些功能可能不可用）。
+            if (loadingOverlay) {
+                setTimeout(() => {
+                    loadingOverlay.style.opacity = '0';
+                    loadingOverlay.addEventListener('transitionend', () => {
+                        loadingOverlay.style.display = 'none';
+                    }, { once: true });
+                    ModalUIManager.showOpenSourceInfoModal();
+                }, 500); // 延迟一小段时间，让用户看到最终状态
+            }
         }
     },
 
-    /**
-     * The following methods remain unchanged from your provided code...
-     * initializeGlobalImageErrorHandler, refreshNetworkStatusUI, startNetworkMonitoring,
-     * handleNetworkChange, smartBackToChatList
-     */
     initializeGlobalImageErrorHandler: function() {
+        // ... (此方法代码不变)
         document.addEventListener('error', function(event) {
             const imgElement = event.target;
             if (imgElement && imgElement.tagName === 'IMG') {
@@ -174,7 +173,9 @@ const AppInitializer = {
         }, true);
         Utils.log("全局图片错误处理器已初始化。", Utils.logLevels.INFO);
     },
+
     refreshNetworkStatusUI: async function() {
+        // ... (此方法代码不变)
         try {
             const networkType = await Utils.checkNetworkType();
             const wsStatus = (typeof ConnectionManager !== 'undefined') ? ConnectionManager.isWebSocketConnected : false;
@@ -189,11 +190,15 @@ const AppInitializer = {
             }
         }
     },
+
     startNetworkMonitoring: function () {
+        // ... (此方法代码不变)
         window.addEventListener('online', this.handleNetworkChange.bind(this));
         window.addEventListener('offline', this.handleNetworkChange.bind(this));
     },
+
     handleNetworkChange: async function () {
+        // ... (此方法代码不变)
         if (navigator.onLine) {
             LayoutUIManager.updateConnectionStatusIndicator('网络已重新连接。正在尝试恢复连接...');
             if (typeof ConnectionManager !== 'undefined' && typeof ConnectionManager.initialize === 'function') {
@@ -211,7 +216,9 @@ const AppInitializer = {
         }
         await this.refreshNetworkStatusUI();
     },
+
     smartBackToChatList: function (){
+        // ... (此方法代码不变)
         if (location.pathname === '/' || location.pathname === '/index.html' || location.pathname === (AppSettings.ui.baseUrl || '/')) {
             history.replaceState(null, null, location.href);
         } else {
@@ -226,6 +233,7 @@ const AppInitializer = {
             }
         });
     },
+
     setupCoreEventListeners: function () {
         EventEmitter.on('connectionDisconnected', (peerId) => {
             if (typeof ChatAreaUIManager !== 'undefined') ChatAreaUIManager.setCallButtonsStateForPeer(peerId, false);
@@ -267,26 +275,20 @@ const AppInitializer = {
                 }
             }
         });
-
-        // --- MODIFICATION START: Add listener for file data ready ---
         EventEmitter.on('fileDataReady', ({ fileHash, fileType, fileName }) => {
             if (!fileHash) return;
-            // Find all placeholders waiting for this specific file hash
             const placeholders = document.querySelectorAll(`.thumbnail-placeholder[data-awaiting-hash="${fileHash}"]`);
             if (placeholders.length > 0) {
                 Utils.log(`fileDataReady: 找到 ${placeholders.length} 个占位符 for hash ${fileHash}. 正在渲染缩略图。`);
                 placeholders.forEach(placeholder => {
                     const isResourceGrid = placeholder.classList.contains('thumbnail-placeholder-resource');
                     if (typeof MediaUIManager !== 'undefined' && MediaUIManager.renderMediaThumbnail) {
-                        // Re-call renderMediaThumbnail on the now-ready placeholder
                         MediaUIManager.renderMediaThumbnail(placeholder, fileHash, fileType, fileName, isResourceGrid);
                     }
-                    placeholder.removeAttribute('data-awaiting-hash'); // Clean up the marker attribute
+                    placeholder.removeAttribute('data-awaiting-hash');
                 });
             }
         });
-        // --- MODIFICATION END ---
-
         if (typeof AiApiHandler !== 'undefined' && typeof AiApiHandler.handleAiConfigChange === 'function') {
             EventEmitter.on('aiConfigChanged', AiApiHandler.handleAiConfigChange.bind(AiApiHandler));
         } else {
@@ -320,28 +322,6 @@ const AppInitializer = {
                 TimerManager.stopAllTasks();
             }
         });
-
-        const connectionStatusTextEl = document.getElementById('connectionStatusText');
-        const loadingOverlay = document.getElementById('loadingOverlay');
-        if (connectionStatusTextEl && loadingOverlay) {
-            const observer = new MutationObserver(() => {
-                const statusText = connectionStatusTextEl.textContent.toLowerCase();
-                if (statusText.includes('用户注册成功') ||
-                    statusText.includes('信令服务器已连接') ||
-                    statusText.includes('已从本地加载') ||
-                    statusText.includes('使用现有id') ||
-                    statusText.includes('初始化完成，准备连接')
-                ) {
-                    setTimeout(() => {
-                        if (loadingOverlay.style.display !== 'none') {
-                            loadingOverlay.style.display = 'none';
-                            ModalUIManager.showOpenSourceInfoModal();
-                        }
-                    }, 500);
-                }
-            });
-            observer.observe(connectionStatusTextEl, { childList: true, characterData: true, subtree: true });
-        }
     }
 };
 
@@ -355,6 +335,7 @@ window.addEventListener('DOMContentLoaded', () => {
  * @param {string} base64DataUrl - 从原生代码传递过来的截图的 Base64 Data URL。
  */
 window.handleNativeScreenshot = function(base64DataUrl) {
+    // ... (此函数代码不变)
     Utils.log('Received screenshot from native Android.', Utils.logLevels.INFO);
     if (!base64DataUrl || !base64DataUrl.startsWith('data:image/')) {
         Utils.log('Invalid base64 data received from native.', Utils.logLevels.ERROR);
@@ -362,7 +343,6 @@ window.handleNativeScreenshot = function(base64DataUrl) {
         return;
     }
 
-    // 将 Base64 Data URL 转换为 Blob
     fetch(base64DataUrl)
         .then(res => res.blob())
         .then(blob => {
@@ -370,12 +350,11 @@ window.handleNativeScreenshot = function(base64DataUrl) {
                 NotificationUIManager.showNotification('截图失败：无法生成图片 Blob。', 'error');
                 return;
             }
-            // 触发事件，将截图发送到编辑器
             if (typeof EventEmitter !== 'undefined') {
                 EventEmitter.emit('rawScreenshotCaptured', {
                     dataUrl: base64DataUrl,
                     blob: blob,
-                    originalStream: null // 原生截图没有流
+                    originalStream: null
                 });
                 Utils.log("Raw screenshot from native processed, event emitted.", Utils.logLevels.INFO);
             }

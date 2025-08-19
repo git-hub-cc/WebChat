@@ -785,7 +785,8 @@ const DetailsPanelUIManager = {
                 statusEl.className = 'member-status ' + (isActuallyOnline ? (isConnected ? 'connected' : 'online-not-connected') : 'offline');
                 if (isActuallyOnline && !isConnected) {
                     reconnectBtn.dataset.memberId = memberId;
-                    reconnectBtn.addEventListener('click', () => ConnectionManager.createOffer(memberId, { isSilent: false }));
+                    // 【FIX】使用新的统一连接方法
+                    reconnectBtn.addEventListener('click', () => ConnectionManager.connectToPeer(memberId, { isSilent: false }));
                 } else {
                     reconnectBtn.remove();
                 }
