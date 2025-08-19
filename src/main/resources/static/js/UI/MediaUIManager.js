@@ -6,6 +6,7 @@
  *              修改: displayFilePreview 现在使用 fileObj.previewUrl (一个Object URL) 来显示预览。
  *              新增: renderMediaThumbnail 用于在指定占位符中渲染图片或视频的缩略图。
  *              FIXED: renderMediaThumbnail 现在会在缓存未命中时显示加载状态，并等待 'fileDataReady' 事件。
+ *              FIXED: 修复了视频缩略图因浏览器处理时序问题导致的加载失败，通过延迟 video.load() 调用来解决。
  * @module MediaUIManager
  * @exports {object} MediaUIManager - 对外暴露的单例对象，包含管理媒体 UI 的方法。
  * @dependencies Utils, MessageManager, MediaManager, NotificationUIManager, EventEmitter, DBManager
@@ -202,19 +203,14 @@ const MediaUIManager = {
         try {
             const cachedItem = await DBManager.getItem('fileCache', fileHash);
 
-            // --- MODIFICATION START: Handle cache miss ---
             if (!cachedItem || !cachedItem.fileBlob) {
-                // If the file is not in the cache, display a loading state and mark the element
-                // to be updated later by the 'fileDataReady' event.
                 placeholderDiv.innerHTML = '<div class="spinner"></div>';
                 placeholderDiv.title = '正在接收文件...';
-                placeholderDiv.dataset.awaitingHash = fileHash; // Mark for later update
+                placeholderDiv.dataset.awaitingHash = fileHash;
                 Utils.log(`MediaUIManager.renderMediaThumbnail: 文件缓存未找到 (hash: ${fileHash})，设置加载状态。`, Utils.logLevels.DEBUG);
                 return;
             }
-            // --- MODIFICATION END ---
 
-            // If we are here, the file is in the cache.
             const blob = cachedItem.fileBlob;
             const objectURL = URL.createObjectURL(blob);
 
@@ -234,7 +230,7 @@ const MediaUIManager = {
             } else {
                 URL.revokeObjectURL(objectURL);
                 Utils.log(`MediaUIManager.renderMediaThumbnail: 不支持的类型 ${fileType} (hash: ${fileHash})`, Utils.logLevels.WARN);
-                placeholderDiv.innerHTML = '❔'; // 未知类型图标
+                placeholderDiv.innerHTML = '❔';
                 return;
             }
 
@@ -252,16 +248,21 @@ const MediaUIManager = {
 
             mediaElement.src = objectURL;
             if (fileType.startsWith('video/')) {
-                mediaElement.load();
+                // --- FIX START ---
+                // Defer loading slightly to give the browser time to process the src assignment.
+                // This often resolves timing-related media loading failures.
+                mediaElement.setAttribute('playsinline', ''); // Good practice for mobile browsers.
+                setTimeout(() => mediaElement.load(), 0);
+                // --- FIX END ---
             }
 
             try {
                 const dimensions = await loadPromise;
-                if (!isForResourceGrid) { // 仅为聊天消息中的缩略图设置尺寸
+                if (!isForResourceGrid) {
                     let { width, height } = dimensions;
                     if (width === 0 || height === 0) {
                         Utils.log(`renderMediaThumbnail: 无法获取媒体尺寸 (hash: ${fileHash})`, Utils.logLevels.WARN);
-                        width = 150; height = 100; // Default fallback
+                        width = 150; height = 100;
                     }
                     const aspectRatio = width / height;
                     const MAX_WIDTH = 150; const MAX_HEIGHT = 150;
@@ -272,14 +273,13 @@ const MediaUIManager = {
 
                 placeholderDiv.innerHTML = '';
                 placeholderDiv.appendChild(mediaElement);
-                // 存储 Object URL 以便后续由 MessageManager (deleteMessageLocally) 或 ResourcePreviewUIManager (清理时) 释放
                 placeholderDiv.dataset.objectUrlForRevoke = objectURL;
 
             } catch (loadError) {
                 Utils.log(`加载媒体缩略图尺寸失败 (hash: ${fileHash}): ${loadError.message}`, Utils.logLevels.ERROR);
                 placeholderDiv.innerHTML = '⚠️';
                 placeholderDiv.title = '预览加载失败。';
-                URL.revokeObjectURL(objectURL); // 释放 URL
+                URL.revokeObjectURL(objectURL);
             }
         } catch (dbError) {
             Utils.log(`从DB获取媒体用于缩略图失败 (hash: ${fileHash}): ${dbError.message}`, Utils.logLevels.ERROR);

@@ -352,7 +352,7 @@ window.addEventListener('DOMContentLoaded', () => {
 /**
  * @function handleNativeScreenshot
  * @description 全局函数，由 Android 原生代码在截图完成后调用。
- * @param {string} base64DataUrl - 从原生代码传递过来的截图的 Base64 Data URL。
+ * @param {string} base64DataUrl - 从原生代码传递过来的截图的 Base64 Data URL 。
  */
 window.handleNativeScreenshot = function(base64DataUrl) {
     Utils.log('Received screenshot from native Android.', Utils.logLevels.INFO);

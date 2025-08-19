@@ -1,14 +1,10 @@
 /**
  * @file VideoCallUIManager.js
- * @description 视频通话 UI 管理器，负责管理所有与视频通话相关的用户界面元素。
- *              包括本地/远程视频的显示、通话控制按钮的更新，以及画中画 (PiP) 模式的 UI 和拖动功能。
- *              现在能显示五级音频和视频质量状态。
- *              FIX: 修复了 PiP 窗口拖动时因位置计算不当导致的偏移（跳跃）问题。
- *              FIXED: 修复了 togglePipMode 函数逻辑，确保其能正确进入画中画模式。
- *              FIXED: 修复了UI以支持不对称通话（一方音频，一方视频）。
- *              FIXED: (本次修改) 修复了屏幕共享时，远程视频元素被错误隐藏导致闪烁的问题。
+ * @description [REFACTORED FOR SIMPLE-PEER] 视频通话 UI 管理器。
+ *              现在由 WebRTCManager 的事件驱动来设置远程流。
+ *              修复了屏幕共享和不对称通话时的UI显示逻辑。
  * @module VideoCallUIManager
- * @exports {object} VideoCallUIManager - 对外暴露的单例对象，包含管理视频通话 UI 的方法。
+ * @exports {object} VideoCallUIManager
  */
 const VideoCallUIManager = {
     localVideo: null,
@@ -80,12 +76,8 @@ const VideoCallUIManager = {
             this.callContainer.style.display = display ? 'flex' : 'none';
             if (!display) {
                 this.resetPipVisuals();
-                if (this.audioQualityIndicatorEl) {
-                    this.audioQualityIndicatorEl.style.display = 'none';
-                }
-                if (this.videoQualityIndicatorEl) {
-                    this.videoQualityIndicatorEl.style.display = 'none';
-                }
+                if (this.audioQualityIndicatorEl) this.audioQualityIndicatorEl.style.display = 'none';
+                if (this.videoQualityIndicatorEl) this.videoQualityIndicatorEl.style.display = 'none';
             }
         }
     },
@@ -98,14 +90,10 @@ const VideoCallUIManager = {
         this.audioQualityIndicatorEl.className = 'call-status-indicator';
         if (data.profileIndex !== undefined) {
             this.audioQualityIndicatorEl.classList.add(`quality-level-${data.profileIndex}`);
-            if (data.profileIndex >= 3) this.audioQualityIndicatorEl.classList.add('quality-high-range');
-            else if (data.profileIndex <= 1) this.audioQualityIndicatorEl.classList.add('quality-low-range');
-            else this.audioQualityIndicatorEl.classList.add('quality-medium-range');
         }
         this.audioQualityIndicatorEl.title = `音频: ${data.description || qualityText}`;
         this.audioQualityIndicatorEl.textContent = `A: ${qualityText}`;
         this.audioQualityIndicatorEl.style.display = 'inline-block';
-        Utils.log(`UI: 音频质量指示器更新为: ${qualityText} (Lvl ${data.profileIndex})`, Utils.logLevels.DEBUG);
     },
 
     _updateVideoQualityDisplay: function(data) {
@@ -117,63 +105,45 @@ const VideoCallUIManager = {
         this.videoQualityIndicatorEl.className = 'call-status-indicator';
         if (data.profileIndex !== undefined) {
             this.videoQualityIndicatorEl.classList.add(`quality-level-${data.profileIndex}`);
-            if (data.profileIndex >= 3) this.videoQualityIndicatorEl.classList.add('quality-high-range');
-            else if (data.profileIndex <= 1) this.videoQualityIndicatorEl.classList.add('quality-low-range');
-            else this.videoQualityIndicatorEl.classList.add('quality-medium-range');
         }
         this.videoQualityIndicatorEl.title = `视频: ${data.description || qualityText}`;
         this.videoQualityIndicatorEl.textContent = `V: ${qualityText}`;
         this.videoQualityIndicatorEl.style.display = 'inline-block';
-        Utils.log(`UI: 视频质量指示器更新为: ${qualityText} (Lvl ${data.profileIndex})`, Utils.logLevels.DEBUG);
     },
 
     updateUIForCallState: function(callState) {
-        if (!this.callContainer || !this.localVideo || !this.remoteVideo || !this.audioOnlyBtn || !this.cameraBtn || !this.audioBtn || !this.pipButton) {
-            Utils.log("VideoCallUIManager: 未找到所有 UI 元素，无法更新。", Utils.logLevels.WARN);
-            return;
-        }
-
-        if (callState.isCallActive) {
-            this.showCallContainer(true);
-        } else {
+        if (!this.callContainer) return;
+        if (!callState.isCallActive) {
             this.showCallContainer(false);
             return;
         }
 
-        // --- THE FIX: Robust check for remote video stream ---
+        this.showCallContainer(true);
+
         const remoteStream = this.remoteVideo.srcObject;
-        const hasRemoteVideo = remoteStream instanceof MediaStream && remoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
+        const hasRemoteVideoTrack = remoteStream instanceof MediaStream && remoteStream.getVideoTracks().some(t => t.readyState === "live" && !t.muted);
 
-        // --- UI Mode Class Logic ---
-        const isEffectivelyAudioOnly = !callState.isVideoEnabled && !hasRemoteVideo;
-        this.callContainer.classList.toggle('audio-only-mode', isEffectivelyAudioOnly && !callState.isScreenSharing);
+        this.remoteVideo.style.display = hasRemoteVideoTrack ? 'block' : 'none';
+
+        const isEffectivelyAudioOnly = !callState.isVideoEnabled && !hasRemoteVideoTrack;
+        this.callContainer.classList.toggle('audio-only-mode', isEffectivelyAudioOnly);
         this.callContainer.classList.toggle('screen-sharing-mode', callState.isScreenSharing);
-        this.callContainer.classList.toggle('pip-mode', this.isPipMode && callState.isCallActive);
+        this.callContainer.classList.toggle('pip-mode', this.isPipMode);
 
+        const hasLocalVideoStream = callState.localStream instanceof MediaStream && callState.localStream.getVideoTracks().some(t => t.readyState === "live");
+        this.localVideo.style.display = (hasLocalVideoStream && callState.isVideoEnabled) ? 'block' : 'none';
 
-        // --- Video Element Display Logic ---
-        const showLocalVideo = callState.localStream && callState.isVideoEnabled;
-        this.localVideo.style.display = showLocalVideo ? 'block' : 'none';
-        if (this.localVideo.srcObject !== callState.localStream) {
-            this.localVideo.srcObject = callState.localStream;
-        }
-
-
-        // --- Button State Logic ---
         this.cameraBtn.style.display = callState.isScreenSharing ? 'none' : 'inline-block';
         if (!callState.isScreenSharing) {
             this.cameraBtn.innerHTML = callState.isVideoEnabled ? '📹' : '🚫';
-            this.cameraBtn.style.background = callState.isVideoEnabled ? '#fff' : '#666';
-            this.cameraBtn.style.color = callState.isVideoEnabled ? 'var(--text-color)' : 'white';
+            this.cameraBtn.classList.toggle('active', callState.isVideoEnabled);
             this.cameraBtn.title = callState.isVideoEnabled ? '关闭摄像头' : '打开摄像头';
         }
 
         this.audioBtn.innerHTML = callState.isAudioMuted ? '🔇' : '🎤';
-        this.audioBtn.style.background = callState.isAudioMuted ? '#666' : '#fff';
-        this.audioBtn.style.color = callState.isAudioMuted ? 'white' : 'var(--text-color)';
+        this.audioBtn.classList.toggle('active', !callState.isAudioMuted);
         this.audioBtn.title = callState.isAudioMuted ? '取消静音' : '静音';
 
-        // This button is only for pre-call setup, hide it during a call
         this.audioOnlyBtn.style.display = callState.isCallActive ? 'none' : 'inline-block';
         if (!callState.isCallActive) {
             this.audioOnlyBtn.innerHTML = callState.isAudioOnly ? '🎬' : '🔊';
@@ -189,7 +159,9 @@ const VideoCallUIManager = {
 
     setLocalStream: function(stream) {
         if (this.localVideo) {
-            this.localVideo.srcObject = stream;
+            if (this.localVideo.srcObject !== stream) {
+                this.localVideo.srcObject = stream;
+            }
             if (stream && this.localVideo.paused) {
                 this.localVideo.play().catch(e => Utils.log(`播放本地视频时出错: ${e.name}`, Utils.logLevels.WARN));
             }
@@ -198,21 +170,17 @@ const VideoCallUIManager = {
 
     setRemoteStream: function(stream) {
         if (this.remoteVideo) {
-            this.remoteVideo.srcObject = stream;
+            if (this.remoteVideo.srcObject !== stream) {
+                this.remoteVideo.srcObject = stream;
+            }
             if (stream && this.remoteVideo.paused) {
                 this.remoteVideo.play().catch(e => Utils.log(`播放远程视频时出错: ${e.name}`, Utils.logLevels.WARN));
             }
         }
     },
 
-    /**
-     * FIX: 切换画中画 (PiP) 模式，简化逻辑。
-     */
     togglePipMode: function () {
-        if (!VideoCallManager.state.isCallActive || !this.callContainer) {
-            Utils.log(`无法切换PiP模式: 通话未激活 (${VideoCallManager.state.isCallActive}) 或容器不存在。`, Utils.logLevels.WARN);
-            return;
-        }
+        if (!VideoCallManager.state.isCallActive || !this.callContainer) return;
         this.isPipMode = !this.isPipMode;
         if (this.isPipMode) {
             this.initPipDraggable(this.callContainer);
@@ -264,45 +232,26 @@ const VideoCallUIManager = {
         const style = window.getComputedStyle(this.dragInfo.element);
         this.dragInfo.elementStartX = parseInt(style.left, 10) || 0;
         this.dragInfo.elementStartY = parseInt(style.top, 10) || 0;
-        if (e.type === "touchstart") {
-            this.dragInfo.cursorStartX = e.touches[0].clientX;
-            this.dragInfo.cursorStartY = e.touches[0].clientY;
-            document.addEventListener("touchmove", this._boundDragTouch, {passive: false});
-            document.addEventListener("touchend", this._boundDragEndTouch);
-        } else {
-            this.dragInfo.cursorStartX = e.clientX;
-            this.dragInfo.cursorStartY = e.clientY;
-            document.addEventListener("mousemove", this._boundDrag);
-            document.addEventListener("mouseup", this._boundDragEnd);
-        }
+        const client = e.touches ? e.touches[0] : e;
+        this.dragInfo.cursorStartX = client.clientX;
+        this.dragInfo.cursorStartY = client.clientY;
+        document.addEventListener(e.type === "touchstart" ? "touchmove" : "mousemove", this._boundDrag, {passive: false});
+        document.addEventListener(e.type === "touchstart" ? "touchend" : "mouseup", this._boundDragEnd);
         this.dragInfo.originalTransition = this.dragInfo.element.style.transition;
         this.dragInfo.element.style.transition = 'none';
         this.dragInfo.element.style.cursor = 'grabbing';
-        document.body.style.userSelect = 'none';
-        if (typeof LayoutUIManager !== 'undefined' && LayoutUIManager.appContainer) {
-            LayoutUIManager.appContainer.style.userSelect = 'none';
-        }
     },
 
     drag: function (e) {
-        if (!this.dragInfo.active || !this.dragInfo.element) return;
+        if (!this.dragInfo.active) return;
         e.preventDefault();
-        let cursorCurrentX, cursorCurrentY;
-        if (e.type === "touchmove") {
-            cursorCurrentX = e.touches[0].clientX;
-            cursorCurrentY = e.touches[0].clientY;
-        } else {
-            cursorCurrentX = e.clientX;
-            cursorCurrentY = e.clientY;
-        }
-        const deltaX = cursorCurrentX - this.dragInfo.cursorStartX;
-        const deltaY = cursorCurrentY - this.dragInfo.cursorStartY;
+        const client = e.touches ? e.touches[0] : e;
+        const deltaX = client.clientX - this.dragInfo.cursorStartX;
+        const deltaY = client.clientY - this.dragInfo.cursorStartY;
         let newX = this.dragInfo.elementStartX + deltaX;
         let newY = this.dragInfo.elementStartY + deltaY;
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        newX = Math.max(0, Math.min(newX, viewportWidth - this.dragInfo.element.offsetWidth));
-        newY = Math.max(0, Math.min(newY, viewportHeight - this.dragInfo.element.offsetHeight));
+        newX = Math.max(0, Math.min(newX, window.innerWidth - this.dragInfo.element.offsetWidth));
+        newY = Math.max(0, Math.min(newY, window.innerHeight - this.dragInfo.element.offsetHeight));
         this.dragInfo.element.style.left = `${newX}px`;
         this.dragInfo.element.style.top = `${newY}px`;
     },
@@ -310,10 +259,6 @@ const VideoCallUIManager = {
     dragEnd: function () {
         if (!this.dragInfo.active) return;
         this.dragInfo.active = false;
-        document.body.style.userSelect = '';
-        if (typeof LayoutUIManager !== 'undefined' && LayoutUIManager.appContainer) {
-            LayoutUIManager.appContainer.style.userSelect = '';
-        }
         if (this.dragInfo.element) {
             this.dragInfo.element.style.transition = this.dragInfo.originalTransition || '';
             this.dragInfo.element.style.cursor = 'grab';
@@ -332,8 +277,10 @@ const VideoCallUIManager = {
         if (this.callContainer) {
             this.removePipDraggable(this.callContainer);
             this.callContainer.classList.remove('pip-mode');
-            this.callContainer.style.left = ''; this.callContainer.style.top = '';
-            this.callContainer.style.right = ''; this.callContainer.style.bottom = '';
+            this.callContainer.style.left = '';
+            this.callContainer.style.top = '';
+            this.callContainer.style.right = '';
+            this.callContainer.style.bottom = '';
             this.callContainer.style.transition = '';
             this.callContainer.style.transform = '';
         }

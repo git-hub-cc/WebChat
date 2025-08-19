@@ -46,15 +46,15 @@ allowed:
 openai:
   api:
     # TODO
-    base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    model: "qwen-turbo"
+    base_url: "http://api.siliconflow.cn/v1"
+    model: "THUDM/GLM-4-32B-0414"
     # !!! 安全警告 !!!
     # 将API密钥硬编码在配置文件中存在安全风险。
     # 推荐使用环境变量、Spring Cloud Config或Vault等方式来管理密钥。
     # 例如：api_key: "${OPENAI_API_KEY}"
     api_keys:
-      - "sk-xxxx"
-      - "sk-xxxx"
+      - sk-lgmczapcfkmzelleymipaktrizxkandklacggnijaidkomit
+      - sk-uotzesuboojedyiuquqrfymcpjwkuuglrwfebljflhameast
 
 # 应用程序提示词配置
 app:

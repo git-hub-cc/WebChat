@@ -1,0 +1,66 @@
+# 服务器配置
+server:
+  port: 8080
+
+# Spring 应用配置
+spring:
+  application:
+    name: Web-Chat
+  jackson:
+    time-zone: Asia/Shanghai
+# 日志配置
+logging:
+  level:
+    club.ppmc: DEBUG # 应用主包的日志级别，设为DEBUG以获取详细日志
+    org.springframework.web.socket: DEBUG # WebSocket交互的详细日志，用于调试
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# 自定义WebSocket服务器设置
+websocket:
+  max:
+    # 消息缓冲区大小（单位：KB）
+    text-buffer-size-kb: 1024
+    binary-buffer-size-kb: 1024
+    # 会话空闲超时时间（单位：分钟）
+    session-timeout-min: 5
+
+# 自定义API配置
+api:
+  v1:
+    request:
+      # v1 API的每日请求限制（每个客户端IP）
+      limit: 400
+
+# CORS 和 WebSocket 允许的源列表
+allowed:
+  origins:
+    - "https://175.178.216.24"
+    - "https://ppmc.club"
+    - "https://www.ppmc.club"
+    - "https://git-hub-cc.github.io"
+    - "http://localhost:8080"
+    - "http://localhost:63342"  # 示例：为本地前端开发环境
+
+# OpenAI兼容的API配置
+openai:
+  api:
+    base_url: "http://api.siliconflow.cn/v1"
+    model: "THUDM/GLM-4-32B-0414"
+    # !!! 安全警告 !!!
+    # 将API密钥硬编码在配置文件中存在安全风险。
+    # 推荐使用环境变量、Spring Cloud Config或Vault等方式来管理密钥。
+    # 例如：api_key: "${OPENAI_API_KEY}"
+    # TODO
+    api_keys:
+
+# 应用程序提示词配置
+app:
+  # 用于为角色生成今日事件和心情的系统提示词
+  # %s 将被替换为具体的角色设定
+  event_mood_prompt: |
+    基于以下角色设定，为其生成一个今天发生的、符合其人设的随机小事件和当前的心情。
+    请严格以JSON格式返回，必须包含 'event' 和 'mood' 两个键，不要包含任何其他说明文字。
+    
+    角色设定：
+    %s

@@ -4,7 +4,8 @@
  * 主要职责:
  * - 管理WebSocket连接的生命周期 (`afterConnectionEstablished`, `afterConnectionClosed`)。
  * - 接收、解析和路由所有信令消息 (`handleMessage`)。
- * - 处理用户注册、心跳(Ping/Pong)以及WebRTC的Offer, Answer, ICE Candidate消息转发。
+ * - 处理用户注册、心跳(Ping/Pong)以及将WebRTC的SIGNAL消息转发给目标用户。
+ * [MODIFIED] 消息处理逻辑已简化，以支持 simple-peer 的通用信令模型。
  *
  * 关联:
  * - `UserSessionService`: 用于管理用户与WebSocket会话的映射关系。
@@ -44,7 +45,6 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             var payload = message.getPayload().toString();
             var signalingMessage = objectMapper.readValue(payload, SignalingMessage.class);
 
-            // 根据消息类型进行结构化日志记录，避免冗余信息
             logReceivedMessage(session, signalingMessage);
 
             handleSignalingMessage(session, signalingMessage);
@@ -71,11 +71,10 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
     }
 
     private void handleSignalingMessage(WebSocketSession session, SignalingMessage message) {
-        // 使用JDK 17的Switch表达式风格路由消息
+        // [MODIFIED] 使用简化的Switch表达式来路由消息
         switch (message.type()) {
             case REGISTER -> handleRegister(session, message);
-            case OFFER, ANSWER -> forwardRtcMessage(session, message);
-            case ICE_CANDIDATE -> forwardIceCandidate(session, message);
+            case SIGNAL -> forwardSignalingMessage(session, message); // 新的通用转发逻辑
             case PING -> handlePing(session);
             default -> {
                 logger.warn("收到未知的消息类型: {} | 会话ID: {}", message.type(), session.getId());
@@ -93,7 +92,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         }
 
         if (userSessionService.registerUser(userId, session)) {
-            var response = new SignalingMessage(MessageType.SUCCESS, userId, null, null, null, null, null, null, null, null, null, "注册成功");
+            var response = new SignalingMessage(MessageType.SUCCESS, userId, null, null, null, "注册成功");
             sendMessage(session, response);
             logger.info("用户 '{}' 注册成功 | 会话ID: {}", userId, session.getId());
         } else {
@@ -103,10 +102,10 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
     }
 
     /**
-     * 统一处理Offer和Answer消息的转发。
-     * 这两种消息的转发逻辑几乎相同，可以合并以减少代码重复。
+     * [NEW] 统一处理所有WebRTC信令消息的转发。
+     * 此方法不再关心信令的具体内容，只负责将其从一个用户传递给另一个用户。
      */
-    private void forwardRtcMessage(WebSocketSession session, SignalingMessage message) {
+    private void forwardSignalingMessage(WebSocketSession session, SignalingMessage message) {
         var fromUserId = userSessionService.getUserId(session);
         if (fromUserId == null) {
             sendErrorMessage(session, "无法识别用户身份，请先注册。");
@@ -114,52 +113,38 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         }
 
         var targetUserId = message.targetUserId();
+        if (targetUserId == null || targetUserId.isBlank()) {
+            logger.warn("信令消息转发失败：缺少目标用户ID。消息来自 '{}'。", fromUserId);
+            sendErrorMessage(session, "信令消息必须包含targetUserId。");
+            return;
+        }
+
         var targetSession = userSessionService.getUserSession(targetUserId);
 
         if (targetSession == null || !targetSession.isOpen()) {
             logger.warn("{}转发失败：目标用户'{}'不在线。", message.type(), targetUserId);
-            var notFoundMsg = new SignalingMessage(MessageType.USER_NOT_FOUND, null, targetUserId, null, null, null, null, null, null, null, null, "目标用户 " + targetUserId + " 不在线。");
+            var notFoundMsg = new SignalingMessage(MessageType.USER_NOT_FOUND, null, targetUserId, null, null, "目标用户 " + targetUserId + " 不在线。");
             sendMessage(session, notFoundMsg);
             return;
         }
 
-        // 创建要转发的消息，将`fromUserId`设置为原始发送者
+        // 创建要转发的消息，将`fromUserId`设置为原始发送者，并携带原始负载
         var forwardMessage = new SignalingMessage(
-                message.type(), null, null, fromUserId, message.sdp(), message.sdpType(),
-                message.candidates(), null, message.isVideoCall(), message.isAudioOnly(),
-                message.isScreenShare(), null);
+                message.type(),
+                null,           // userId (not needed for forward)
+                null,           // targetUserId (not needed for forward)
+                fromUserId,     // fromUserId is the original sender
+                message.payload(),// The original payload from the sender
+                null            // message (not needed for signal)
+        );
 
         sendMessage(targetSession, forwardMessage);
-        logger.info("{} 已从 '{}' 转发给 '{}'。", message.type(), fromUserId, targetUserId);
-    }
-
-    private void forwardIceCandidate(WebSocketSession session, SignalingMessage message) {
-        var fromUserId = userSessionService.getUserId(session);
-        if (fromUserId == null) {
-            logger.warn("无法识别ICE Candidate发送者 | 会话ID: {}", session.getId());
-            return;
-        }
-
-        var targetUserId = message.targetUserId();
-        var targetSession = userSessionService.getUserSession(targetUserId);
-
-        if (targetSession == null || !targetSession.isOpen()) {
-            logger.warn("ICE Candidate转发失败: 目标用户'{}'不在线。消息从'{}'到'{}'未送达。",
-                    targetUserId, fromUserId, targetUserId);
-            return;
-        }
-
-        var forwardMessage = new SignalingMessage(
-                MessageType.ICE_CANDIDATE, null, null, fromUserId, null, null,
-                null, message.candidate(), null, null, null, null);
-
-        sendMessage(targetSession, forwardMessage);
-        logger.debug("ICE Candidate 已从'{}'转发给'{}'。", fromUserId, targetUserId);
+        logger.debug("{} 已从 '{}' 转发给 '{}'。", message.type(), fromUserId, targetUserId);
     }
 
     private void handlePing(WebSocketSession session) {
         logger.debug("收到来自会话 {} 的Ping，将发送Pong。", session.getId());
-        sendMessage(session, new SignalingMessage(MessageType.PONG, null, null, null, null, null, null, null, null, null, null, "pong"));
+        sendMessage(session, new SignalingMessage(MessageType.PONG, null, null, null, null, "pong"));
     }
 
     private void sendMessage(WebSocketSession session, SignalingMessage message) {
@@ -176,16 +161,15 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
     }
 
     private void sendErrorMessage(WebSocketSession session, String errorMessageText) {
-        sendMessage(session, new SignalingMessage(MessageType.ERROR, null, null, null, null, null, null, null, null, null, null, errorMessageText));
+        sendMessage(session, new SignalingMessage(MessageType.ERROR, null, null, null, null, errorMessageText));
     }
 
+    /**
+     * [MODIFIED] 简化了日志记录逻辑以适应新的信令协议。
+     */
     private void logReceivedMessage(WebSocketSession session, SignalingMessage message) {
         switch (message.type()) {
-            case OFFER, ANSWER ->
-                    logger.info("收到消息: {} | 会话: {} | 目标: {} | 视频: {} | 音频: {}",
-                            message.type(), session.getId(), message.targetUserId(),
-                            message.isVideoCall(), message.isAudioOnly());
-            case ICE_CANDIDATE ->
+            case SIGNAL ->
                     logger.debug("收到消息: {} | 会话: {} | 目标: {}",
                             message.type(), session.getId(), message.targetUserId());
             case PING ->

@@ -9,7 +9,7 @@
     <relativePath/> <!-- lookup parent from repository -->
 </parent>
 <groupId>club.ppmc</groupId>
-<artifactId>Web-Chat</artifactId>
+<artifactId>WebChat</artifactId>
 <version>0.0.1-SNAPSHOT</version>
 <name>Web-Chat</name>
 <description>A feature-rich, modern web chat application built with vanilla JavaScript, HTML, and CSS for the frontend, and Java Spring Boot for the backend. It utilizes WebRTC for direct user-to-user media communication, supporting text, file sharing, voice messages, and real-time audio/video/screen-sharing calls. Initial user discovery is handled by a WebSocket-based signaling server (implemented in Java Spring Boot). Direct media communication minimizes reliance on a central server for heavy data transfer (except for signaling and optional TURN relay services), while AI chat and TTS functionalities are proxied through the backend to external services. The application is deeply integrated with themable AI assistant contacts featuring Text-to-Speech (TTS), dynamic context (like daily random events and moods), and smart summarization for long conversations, offering a more vivid interactive experience.</description>
