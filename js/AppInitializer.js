@@ -1,7 +1,7 @@
 /**
  * @file AppInitializer.js
  * @description 应用的入口点和初始化器。负责按正确顺序加载和初始化所有管理器和 UI 组件，并设置核心事件监听器。
- *              现在确保 ThemeLoader.init() 在 UserManager.init() 之前被 await 调用。
+ *              MODIFIED: 在初始化早期，会异步加载 ui_templates.html 文件并将其内容注入到 DOM 中，以供其他模块使用。
  *              优化了部分异步任务的并行执行。
  *              当AI服务状态更新时，现在会正确调用 `ChatAreaUIManager.updateChatHeader` 来更新聊天头部的状态指示器。
  *              新增 ResourcePreviewUIManager 初始化。
@@ -24,7 +24,6 @@ const AppInitializer = {
 
     /**
      * 应用程序的主初始化函数。
-     * ... (description remains the same)
      */
     init: async function () {
         // --- 阶段 1: 关键的同步设置 ---
@@ -33,15 +32,16 @@ const AppInitializer = {
         if (!Utils.checkWebRTCSupport()) return;
         TimerManager.init();
 
-        // REMOVED: document.addEventListener('contextmenu', event => event.preventDefault());
-
         try {
+            // --- 新增阶段: 加载 UI 模板 ---
+            await this.loadUiTemplates();
+            Utils.log('UI 模板加载成功', Utils.logLevels.INFO);
+
             // --- 阶段 2: 核心数据加载 (主要是顺序异步) ---
             await DBManager.init();
             Utils.log('数据库初始化成功', Utils.logLevels.INFO);
 
             // ADDED: Initialize MemoryBookManager right after DBManager
-            // This ensures memory data is loaded before any UI that might need it.
             if (typeof MemoryBookManager !== 'undefined' && typeof MemoryBookManager.init === 'function') {
                 await MemoryBookManager.init();
             } else {
@@ -133,10 +133,27 @@ const AppInitializer = {
     },
 
     /**
-     * The following methods remain unchanged from your provided code...
-     * initializeGlobalImageErrorHandler, refreshNetworkStatusUI, startNetworkMonitoring,
-     * handleNetworkChange, smartBackToChatList
+     * @private
+     * @description 从 ui_templates.html 文件加载 UI 模板并注入到 DOM 中。
+     *              这是初始化的关键早期步骤，必须在任何 UI 管理器初始化之前完成。
+     * @returns {Promise<void>}
      */
+    loadUiTemplates: async function() {
+        try {
+            const response = await fetch('templates.html');
+            if (!response.ok) {
+                throw new Error(`无法获取 UI 模板文件: ${response.statusText}`);
+            }
+            const templatesHtml = await response.text();
+            document.body.insertAdjacentHTML('beforeend', templatesHtml);
+        } catch (error) {
+            console.error('加载 UI 模板失败:', error);
+            // 显示一个致命错误，因为没有模板，应用无法运行
+            document.body.innerHTML = '<div style="color: red; padding: 20px; font-family: sans-serif;">关键UI组件加载失败，应用无法启动。请检查网络连接并刷新页面或联系管理员。</div>';
+            throw error; // 阻止后续的初始化
+        }
+    },
+
     initializeGlobalImageErrorHandler: function() {
         document.addEventListener('error', function(event) {
             const imgElement = event.target;
