@@ -54,6 +54,7 @@
     --input-bg-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.92);
 
     --sent-bg-color: rgba(var(--mgf-deep-cave-bg-rgb), 0.75);
+    --text-on-sent: rgb(var(--text-primary-rgb));
     --received-bg-color: rgba(var(--mgf-ancient-stone-border-rgb), 0.9);
 
     /* --- 字体与排版覆盖 --- */

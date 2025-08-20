@@ -51,7 +51,13 @@
     <aside class="sidebar-nav" id="sidebarNav">
         <header class="sidebar-header">
             <button class="menu-btn" id="mainMenuBtn" title="菜单">☰</button>
-            <label for="chatSearchInput" class="visually-hidden">搜索聊天</label><input type="search" class="search-bar" id="chatSearchInput" placeholder="搜索...">
+            <label for="chatSearchInput" class="visually-hidden">搜索聊天</label><form autocomplete="off">
+            <input type="search"
+                   class="search-bar"
+                   id="chatSearchInput"
+                   placeholder="搜索..."
+                   autocomplete="off">
+        </form>
         </header>
         <nav class="nav-tabs">
             <button class="nav-tab active" data-tab-target="all-chats" id="tabAllChats">全部</button>

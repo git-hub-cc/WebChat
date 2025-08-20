@@ -5,6 +5,7 @@
  *              与 GroupManager 协作，在群成员变更或群信息更新时刷新UI。
  *              修复：getDatesWithMessages 现在使用UTC日期来生成日期字符串，以解决资源预览日历中因时区导致 scrollToDate 功能失效的问题。
  *              OPTIMIZED: renderChatList 现在使用增量更新DOM，而不是完全重绘，以提高性能和流畅度。
+ *              MODIFIED: 在渲染聊天列表时，为非AI/非特殊联系人添加了右键菜单事件监听器。
  * @module ChatManager
  * @exports {object} ChatManager - 对外暴露的单例对象，包含所有聊天管理功能。
  * @dependencies DBManager, UserManager, GroupManager, ConnectionManager, MessageManager, DetailsPanelUIManager, ChatAreaUIManager, SidebarUIManager, NotificationUIManager, Utils, ModalUIManager
@@ -130,6 +131,16 @@ const ChatManager = {
     _populateChatListItem(clone, item) {
         const li = clone.querySelector('.chat-list-item');
         li.addEventListener('click', () => this.openChat(item.id, item.type));
+
+        // MODIFIED: 为符合条件的联系人添加右键菜单事件
+        if (item.type === 'contact' && !item.isSpecial) {
+            li.addEventListener('contextmenu', (event) => {
+                if (typeof SidebarUIManager !== 'undefined' && SidebarUIManager._showContactContextMenu) {
+                    SidebarUIManager._showContactContextMenu(event, item.id, item.name);
+                }
+            });
+        }
+
         this._updateChatListItem(li, item); // 复用更新逻辑来填充所有内容
     },
 

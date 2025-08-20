@@ -2,6 +2,7 @@
  * @file LayoutUIManager.js
  * @description 布局管理器，负责处理应用的响应式 UI 布局。
  *              它根据窗口大小（移动端 vs. 桌面端）动态调整主要区域（如侧边栏和聊天区）的显示和隐藏。
+ *              MODIFIED: 在应用主容器上禁用了默认右键菜单，以支持自定义上下文菜单。
  * @module LayoutManager
  * @exports {object} LayoutUIManager - 对外暴露的单例对象，包含布局管理方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定 resize 事件。
@@ -31,6 +32,18 @@ const LayoutUIManager = {
 
         if (this.backToListBtn) { // 绑定返回按钮事件
             this.backToListBtn.addEventListener('click', () => this.showChatListArea());
+        }
+
+        // MODIFIED: 在应用容器级别禁用默认右键菜单
+        if (this.appContainer) {
+            this.appContainer.addEventListener('contextmenu', event => {
+                // 允许在输入框、文本区域内使用原生右键菜单（用于复制粘贴等）
+                const target = event.target;
+                if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+                    return;
+                }
+                event.preventDefault();
+            });
         }
     },
 
