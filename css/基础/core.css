@@ -1,6 +1,7 @@
-/* ========================================================================== */
-/* 基础重置与 Body (Base Reset & Body) */
-/* ========================================================================== */
+
+    /* ========================================================================== */
+    /* 基础重置与 Body (Base Reset & Body) */
+    /* ========================================================================== */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -1136,20 +1137,27 @@ input:checked + .slider::before {
     background-color: rgba(var(--accent-danger-rgb), 0.8);
 }
 
-#theme-transition-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 9998; /* 介于内容和加载/通知层之间 */
-    background-color: var(--surface-2-bg); /* 初始背景色 */
-    opacity: 0;
-    pointer-events: none; /* 不可交互 */
-    transition: opacity 0.25s ease-in-out;
+/* ========================================================================== */
+/* View Transitions API (主题切换动画) */
+/* ========================================================================== */
+
+@keyframes reveal-in {
+    from {
+        clip-path: circle(0% at var(--x) var(--y));
+    }
+    to {
+        clip-path: circle(150% at var(--x) var(--y));
+    }
 }
 
-#theme-transition-overlay.active {
-    opacity: 1;
-    pointer-events: all;
+::view-transition-new(root) {
+    animation: reveal-in 0.5s ease-in-out;
 }
+
+::view-transition-old(root) {
+    animation: none; /* 默认的淡出效果通常很好，这里可以禁用或自定义 */
+}
+
 
 /* ========================================================================== */
 /* 动画 (Animations) */

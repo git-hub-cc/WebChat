@@ -6,6 +6,7 @@
  *              新增：支持AI联系人选择不同的关卡篇章，并持久化用户的选择。
  *              MODIFIED: 增加了对 isImported 标志的支持，以确保导入的角色在主题切换时不会被移除。addContact 方法现在能更好地处理完整的联系人数据对象。
  *              OPTIMIZED: ensureSpecialContacts 现在使用 Promise.all 并行处理数据库写入，以提高性能。
+ *              FIXED: 在 clearAllContacts 中增加了对 ConnectionManager.connections 的存在性检查，防止在没有连接时出错。
  * @module UserManager
  * @exports {object} UserManager - 对外暴露的单例对象，包含所有用户和联系人管理功能。
  * @property {string|null} userId - 当前用户的唯一 ID。
@@ -634,12 +635,11 @@ const UserManager = {
 
                         if (typeof ChatManager !== 'undefined') await ChatManager.clearChat(contactId);
 
-                        // --- MODIFIED: START of BUG FIX ---
-                        // Added a check for `ConnectionManager.connections` to prevent crash if it's undefined.
+                        // --- FIXED: Added a check for `ConnectionManager.connections` ---
                         if (typeof ConnectionManager !== 'undefined' && ConnectionManager.connections && ConnectionManager.connections[contactId]) {
                             ConnectionManager.close(contactId);
                         }
-                        // --- MODIFIED: END of BUG FIX ---
+                        // --- END OF FIX ---
 
                         if (removedContactDetails && removedContactDetails.isAI && typeof GroupManager !== 'undefined' && GroupManager.groups) {
                             for (const groupId in GroupManager.groups) {

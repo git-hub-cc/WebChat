@@ -117,10 +117,8 @@ const AppSettings = {
      */
     server: {
         // todo
-        // signalingServerUrl: 'wss://ppmc.club/webchat/signaling', // 本地开发示例
-        // lobbyApiEndpoint: 'https://ppmc.club/webchat/api/monitor/online-user-ids', // 本地开发示例
-        signalingServerUrl: 'ws://localhost:8080/signaling', // 本地开发示例
-        lobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids', // 本地开发示例
+        signalingServerUrl: 'wss://ppmc.club/webchat/signaling', // 本地开发示例
+        lobbyApiEndpoint: 'https://ppmc.club/webchat/api/monitor/online-user-ids', // 本地开发示例
         api_key: "Bearer sk-xxxx", // API 密钥
         max_tokens: 2048, // AI 回复最大令牌数
         ttsApiEndpoint: 'https://gsv2p.acgnai.top', // TTS API 端点
