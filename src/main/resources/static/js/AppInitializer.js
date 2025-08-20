@@ -11,6 +11,7 @@
  *              修改：AI 服务健康检查现在会在其他关键异步任务（如WebSocket初始化）之后执行。
  *              FIXED: Added MemoryBookManager.init() call to ensure memory book data is loaded on startup.
  *              FIXED: 新增 fileDataReady 事件监听器，以在文件数据接收完毕后异步更新UI预览。
+ *              MODIFIED: 移除了全局的右键菜单禁用，将其移至 LayoutUIManager 中更精确地控制。
  * @module AppInitializer
  * @exports {object} AppInitializer - 包含 init 方法，现在应由 DOMContentLoaded 事件触发。
  * @dependencies DBManager, UserManager, ChatManager, GroupManager, ConnectionManager, MediaManager, VideoCallManager,
@@ -31,6 +32,8 @@ const AppInitializer = {
         this.initializeGlobalImageErrorHandler();
         if (!Utils.checkWebRTCSupport()) return;
         TimerManager.init();
+
+        // REMOVED: document.addEventListener('contextmenu', event => event.preventDefault());
 
         try {
             // --- 阶段 2: 核心数据加载 (主要是顺序异步) ---

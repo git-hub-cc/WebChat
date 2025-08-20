@@ -1,3 +1,4 @@
+
 /**
  * @file ThemeLoader.js
  * @description 主题加载器。这是一个在应用初始化早期执行的关键脚本，
@@ -9,7 +10,7 @@
  *              MODIFIED: 支持为浅色和深色模式分别设置、缓存和应用自定义背景图片。
  *              OPTIMIZED: applyTheme 现在会立即切换CSS，并在后台异步加载数据，以提高UI响应速度。
  *              OPTIMIZED: _parseDataJson现在使用Promise.all并行加载所有关卡篇章文件，以加快主题切换速度。
- *              OPTIMIZED: 切换主题时使用全屏遮罩，防止UI闪烁，提升切换体验。
+ *              OPTIMIZED: 切换主题时使用 View Transitions API 实现圆形扩散过渡动画，提升切换体验。
  * @module ThemeLoader
  * @exports {object} ThemeLoader - 主要通过其 `applyTheme` 方法和几个 getter 与其他模块交互。
  * @property {function} init - 初始化主题加载器，加载初始主题和数据，并应用缓存的背景图。
@@ -24,7 +25,7 @@
  * @dependents AppInitializer (确保其早期执行), SettingsUIManager (用于主题切换和背景设置), UserManager (依赖其加载的数据)
  */
 const ThemeLoader = {
-    // 从 ThemeList.js 导入主题定义
+// 从 ThemeList.js 导入主题定义
     themes: THEME_LIST,
 
     COLOR_SCHEME_KEY: 'selectedColorScheme', // localStorage 中存储配色方案偏好的键
@@ -34,7 +35,6 @@ const ThemeLoader = {
     _systemColorSchemeListener: null, // 系统配色方案变化监听器
     _currentSpecialContactsDefinitions: [], // 存储当前主题的特殊联系人定义
     _currentInjectedBackgroundUrl: null, // MODIFIED: 存储当前注入背景的 Object URL，以便释放
-    transitionOverlayEl: null, // OPTIMIZED: 用于主题切换的遮罩元素
 
     /**
      * @private
@@ -55,17 +55,17 @@ const ThemeLoader = {
             document.head.appendChild(styleTag);
         }
 
-        // 注入 CSS 规则
+// 注入 CSS 规则
         styleTag.textContent = `
-            body {
-                background-image: url(${imageUrl});
-                backdrop-filter: blur(10px);
-                background-repeat: no-repeat;
-                background-size: cover;
-                background-attachment: fixed;
-                background-position-x: center;
-            }
-        `;
+body {
+    background-image: url(${imageUrl});
+    backdrop-filter: blur(10px);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-attachment: fixed;
+    background-position-x: center;
+}
+    `;
     },
 
     /**
@@ -127,7 +127,7 @@ const ThemeLoader = {
                 return [];
             }
 
-            // --- OPTIMIZATION START: Parallelize chapter file fetching ---
+// --- OPTIMIZATION START: Parallelize chapter file fetching ---
             const processingPromises = definitions.map(async (def) => {
                 const processedDef = { ...def }; // Work on a copy
 
@@ -151,11 +151,11 @@ const ThemeLoader = {
                     delete processedDef.chaptersFilePath; // Clean up the path property
                 }
 
-                // Ensure every definition has a chapters array, even if empty
+// Ensure every definition has a chapters array, even if empty
                 if (!processedDef.chapters || !Array.isArray(processedDef.chapters)) {
                     processedDef.chapters = [];
                 }
-                // Validate and standardize each chapter
+// Validate and standardize each chapter
                 processedDef.chapters = processedDef.chapters.map(chapter => ({
                     id: chapter.id || `chapter_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
                     name: chapter.name || "未命名篇章",
@@ -167,7 +167,7 @@ const ThemeLoader = {
 
             const fullyProcessedDefinitions = await Promise.all(processingPromises);
             return fullyProcessedDefinitions;
-            // --- OPTIMIZATION END ---
+// --- OPTIMIZATION END ---
 
         } catch (error) {
             (Utils?.log || console.log)(`ThemeLoader: 加载或解析 data JSON ${dataJsonUrl} 时出错: ${error}`, Utils?.logLevels?.ERROR || 3);
@@ -207,104 +207,81 @@ const ThemeLoader = {
      * @returns {Promise<void>}
      */
     async init() {
-        this.transitionOverlayEl = document.getElementById('theme-transition-overlay');
-        if (this.transitionOverlayEl) {
-            this.transitionOverlayEl.classList.add('active');
-        }
+// --- 主题和配色方案初始化 ---
+        const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
+        this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
 
-        try {
-            // --- 主题和配色方案初始化 ---
-            const preferredColorScheme = localStorage.getItem(this.COLOR_SCHEME_KEY) || this.DEFAULT_COLOR_SCHEME;
-            this._currentEffectiveColorScheme = this._getEffectiveColorScheme(preferredColorScheme);
+        let savedThemeKey = localStorage.getItem('selectedTheme');
+        let themeToLoadKey;
 
-            let savedThemeKey = localStorage.getItem('selectedTheme');
-            let themeToLoadKey;
-
-            if (savedThemeKey && this.themes[savedThemeKey] && this._isThemeCompatible(savedThemeKey, this._currentEffectiveColorScheme)) {
-                themeToLoadKey = savedThemeKey;
-            } else {
-                let newThemeKey;
-                if (savedThemeKey && this.themes[savedThemeKey]) {
-                    const baseName = this._getBaseThemeName(savedThemeKey);
-                    const suffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
-                    const counterpartKey = `${baseName}-${suffix}`;
-                    if (this.themes[counterpartKey] && this._isThemeCompatible(counterpartKey, this._currentEffectiveColorScheme)) {
-                        newThemeKey = counterpartKey;
-                    }
+        if (savedThemeKey && this.themes[savedThemeKey] && this._isThemeCompatible(savedThemeKey, this._currentEffectiveColorScheme)) {
+            themeToLoadKey = savedThemeKey;
+        } else {
+            let newThemeKey;
+            if (savedThemeKey && this.themes[savedThemeKey]) {
+                const baseName = this._getBaseThemeName(savedThemeKey);
+                const suffix = this._currentEffectiveColorScheme === 'light' ? '浅色' : '深色';
+                const counterpartKey = `${baseName}-${suffix}`;
+                if (this.themes[counterpartKey] && this._isThemeCompatible(counterpartKey, this._currentEffectiveColorScheme)) {
+                    newThemeKey = counterpartKey;
                 }
-                if (!newThemeKey) {
-                    newThemeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
-                }
-                themeToLoadKey = newThemeKey;
             }
-            await this._loadThemeCore(themeToLoadKey);
-            this._setupSystemColorSchemeListener(preferredColorScheme);
-
-            // --- MODIFIED: 背景图片初始化 ---
-            await this._updateCustomBackground();
-
-            (Utils?.log || console.log)("ThemeLoader: 初始化完成。", Utils?.logLevels?.INFO || 1);
-        } finally {
-            if (this.transitionOverlayEl) {
-                this.transitionOverlayEl.classList.remove('active');
+            if (!newThemeKey) {
+                newThemeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
             }
+            themeToLoadKey = newThemeKey;
         }
+        await this._loadThemeCore(themeToLoadKey);
+        this._setupSystemColorSchemeListener(preferredColorScheme);
+
+// --- MODIFIED: 背景图片初始化 ---
+        await this._updateCustomBackground();
+
+        (Utils?.log || console.log)("ThemeLoader: 初始化完成。", Utils?.logLevels?.INFO || 1);
     },
 
     /**
-     * OPTIMIZED: 应用一个新主题（无刷新），并使用遮罩优化了加载流程。
+     * OPTIMIZED: 应用一个新主题（无刷新），并使用 View Transitions API 实现圆形扩散动画。
      * @param {string} themeKey - 要应用的主题的键名。
+     * @param {Event} [event] - 触发此操作的点击事件，用于获取动画起始坐标。
      * @returns {Promise<void>}
      */
-    async applyTheme(themeKey) {
-        if (this.transitionOverlayEl) {
-            this.transitionOverlayEl.classList.add('active');
+    async applyTheme(themeKey, event) {
+        if (!this.themes[themeKey]) {
+            (Utils?.log || console.log)(`ThemeLoader: 尝试应用无效的主题键: ${themeKey}。正在回退。`, Utils?.logLevels?.ERROR || 3);
+            themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
         }
-        // 短暂延迟以确保浏览器渲染遮罩
-        await new Promise(resolve => setTimeout(resolve, 10));
 
-        try {
-            if (!this.themes[themeKey]) {
-                (Utils?.log || console.log)(`ThemeLoader: 尝试应用无效的主题键: ${themeKey}。正在回退。`, Utils?.logLevels?.ERROR || 3);
-                themeKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
-            }
-
-            // OPTIMIZATION: 立即切换CSS和更新状态，提供即时视觉反馈
-            const themeConfig = this.themes[themeKey];
-            const themeStylesheet = document.getElementById('theme-stylesheet');
-            if (themeStylesheet && themeConfig.css) {
-                themeStylesheet.setAttribute('href', themeConfig.css);
-            }
-            this._currentThemeKey = themeKey;
-            localStorage.setItem('selectedTheme', themeKey);
-
-            // OPTIMIZATION: 在后台异步加载数据，不阻塞UI
-            const dataPromise = this._parseDataJson(themeConfig.dataJs);
-
-            // 在数据加载完成后，触发事件以更新依赖数据的UI部分
-            const newDefinitions = await dataPromise;
-            this._currentSpecialContactsDefinitions = newDefinitions;
+        const updateDom = async () => {
+            await this._loadThemeCore(themeKey);
+            const newDefinitions = this.getCurrentSpecialContactsDefinitions();
 
             if (typeof EventEmitter !== 'undefined') {
                 EventEmitter.emit('themeChanged', {
                     newThemeKey: themeKey,
-                    newDefinitions: [...this._currentSpecialContactsDefinitions]
+                    newDefinitions: [...newDefinitions]
                 });
                 (Utils?.log || console.log)(`ThemeLoader: 已为 ${themeKey} 触发 themeChanged 事件。`, Utils?.logLevels?.INFO || 1);
-            } else {
-                console.warn("ThemeLoader: EventEmitter 未定义，无法触发 themeChanged 事件。");
             }
-        } catch (error) {
-            (Utils?.log || console.log)(`ThemeLoader: 在applyTheme期间加载或处理数据失败: ${error}`, Utils?.logLevels?.ERROR || 3);
-            // 即使数据加载失败，也要确保UI不会处于不一致的状态
-            if (typeof EventEmitter !== 'undefined') {
-                EventEmitter.emit('themeChanged', { newThemeKey: themeKey, newDefinitions: [] });
-            }
-        } finally {
-            if (this.transitionOverlayEl) {
-                this.transitionOverlayEl.classList.remove('active');
-            }
+        };
+
+// 检查浏览器是否支持 View Transitions API
+        if (!document.startViewTransition) {
+            await updateDom();
+            return;
         }
+
+// 获取点击坐标，如果无事件则默认为屏幕中心
+        const x = event ? event.clientX : window.innerWidth / 2;
+        const y = event ? event.clientY : window.innerHeight / 2;
+        const endRadius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+
+        document.documentElement.style.setProperty('--x', x + 'px');
+        document.documentElement.style.setProperty('--y', y + 'px');
+        document.documentElement.style.setProperty('--r', endRadius + 'px');
+
+// 执行过渡
+        const transition = document.startViewTransition(updateDom);
     },
 
     /**
@@ -327,7 +304,7 @@ const ThemeLoader = {
             const dbKey = `background_image_${colorSchemeType}`;
             await DBManager.setItem('appStateCache', { id: dbKey, imageBlob: imageBlob });
 
-            // 如果设置的背景与当前模式匹配，则立即更新
+// 如果设置的背景与当前模式匹配，则立即更新
             if (colorSchemeType === this.getCurrentEffectiveColorScheme()) {
                 await this._updateCustomBackground();
             }
@@ -355,7 +332,7 @@ const ThemeLoader = {
             const dbKey = `background_image_${colorSchemeType}`;
             await DBManager.removeItem('appStateCache', dbKey);
 
-            // 如果移除的背景与当前模式匹配，则立即更新（移除）
+// 如果移除的背景与当前模式匹配，则立即更新（移除）
             if (colorSchemeType === this.getCurrentEffectiveColorScheme()) {
                 await this._updateCustomBackground();
             }
@@ -373,9 +350,10 @@ const ThemeLoader = {
      * @description 当用户在设置中更改配色方案时调用。
      *              此方法会更新内部的有效配色方案，应用兼容的主题，并更新背景图。
      * @param {string} newSchemeKeyFromUser - 用户选择的配色方案键 ('auto', 'light', 'dark')。
+     * @param {Event} [event] - 触发此操作的点击事件。
      * @returns {Promise<void>}
      */
-    async updateColorSchemePreference(newSchemeKeyFromUser) {
+    async updateColorSchemePreference(newSchemeKeyFromUser, event) {
         const newEffectiveColorScheme = this._getEffectiveColorScheme(newSchemeKeyFromUser);
         const currentStoredScheme = localStorage.getItem(this.COLOR_SCHEME_KEY);
 
@@ -395,7 +373,7 @@ const ThemeLoader = {
                 themeToApplyKey = this._findFallbackThemeKeyForScheme(this._currentEffectiveColorScheme);
             }
 
-            await this.applyTheme(themeToApplyKey);
+            await this.applyTheme(themeToApplyKey, event);
             await this._updateCustomBackground(); // MODIFIED: 更新背景
             this._setupSystemColorSchemeListener(newSchemeKeyFromUser);
         }
@@ -440,7 +418,7 @@ const ThemeLoader = {
     _getEffectiveColorScheme: function(preferredScheme) {
         if (preferredScheme === 'light') return 'light';
         if (preferredScheme === 'dark') return 'dark';
-        // Check if window and matchMedia are available (they should be in a browser context)
+// Check if window and matchMedia are available (they should be in a browser context)
         if (typeof window !== 'undefined' && window.matchMedia) {
             if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 return 'dark';
@@ -459,7 +437,7 @@ const ThemeLoader = {
      * @returns {string} - 找到的备用主题的键名。
      */
     _findFallbackThemeKeyForScheme: function(colorScheme) {
-        const suffix = colorScheme === 'light' ? '-浅色' : '-深色';
+        const suffix = colorScheme === 'light' ? '浅色' : '深色';
         for (const key in this.themes) {
             if (key.endsWith(suffix)) return key;
         }
@@ -469,8 +447,8 @@ const ThemeLoader = {
             return firstKey;
         }
         console.error("ThemeLoader: 严重错误 - ThemeLoader.themes 中未定义任何主题。");
-        // Provide a hardcoded ultimate fallback if absolutely no themes are defined,
-        // though this state indicates a severe configuration issue.
+// Provide a hardcoded ultimate fallback if absolutely no themes are defined,
+// though this state indicates a severe configuration issue.
         return '原神-浅色';
     },
 
@@ -504,7 +482,7 @@ const ThemeLoader = {
                     if (!this.themes[newThemeToApplyKey] || !this._isThemeCompatible(newThemeToApplyKey, newSystemEffectiveColorScheme)) {
                         newThemeToApplyKey = this._findFallbackThemeKeyForScheme(newSystemEffectiveColorScheme);
                     }
-                    await this.applyTheme(newThemeToApplyKey);
+                    await this.applyTheme(newThemeToApplyKey); // No event object, so it will animate from center
                     await this._updateCustomBackground(); // MODIFIED: 更新背景
                 }
             };

@@ -3,14 +3,14 @@
  * @description [REFACTORED FOR SIMPLE-PEER] 视频通话的协议和媒体流处理器。
  *              负责处理通话请求、接受、拒绝等高级信令，并获取本地媒体流。
  *              它将底层的连接建立和媒体协商完全委托给 WebRTCManager(SimplePeer)。
+ *              OPTIMIZED: 现在处理 `video-call-end` 消息时会调用 manager.hangUpMedia，正确地结束媒体会话而不中断数据连接。
  * @module VideoCallHandler
  * @exports {object} VideoCallHandler
  * @dependencies AppSettings, Utils, NotificationUIManager, ConnectionManager, WebRTCManager, UserManager, VideoCallUIManager, ModalUIManager, EventEmitter, TimerManager
  */
 const VideoCallHandler = {
-    manager: null, // 对 VideoCallManager 实例的引用
+    manager: null,
 
-    // 媒体约束和自适应质量相关的配置和状态
     audioConstraints: AppSettings.media.audioConstraints,
     _currentAudioProfileIndex: {},
     _lastProfileSwitchTime: {},
@@ -22,20 +22,11 @@ const VideoCallHandler = {
     _consecutiveGoodChecks_video: {},
     _consecutiveBadChecks_video: {},
 
-    /**
-     * 初始化处理器。
-     * @param {object} managerInstance - VideoCallManager 的实例。
-     */
     init: function(managerInstance) {
         this.manager = managerInstance;
         Utils.log("VideoCallHandler (SimplePeer) 已初始化。", Utils.logLevels.INFO);
     },
 
-    /**
-     * 处理来自对等端的所有视频通话相关信令消息。
-     * @param {object} message - 消息对象。
-     * @param {string} peerId - 发送方ID。
-     */
     handleMessage: function (message, peerId) {
         switch (message.type) {
             case 'video-call-request':
@@ -57,22 +48,24 @@ const VideoCallHandler = {
                 break;
             case 'video-call-rejected':
             case 'video-call-cancel':
-            case 'video-call-end':
                 if ((this.manager.state.isCallActive || this.manager.state.isCallPending) && this.manager.state.currentPeerId === peerId) {
                     const reason = message.reason ||
                         (message.type === 'video-call-cancel' ? '对方取消' :
-                            (message.type === 'video-call-rejected' ? '对方拒绝' : '对方挂断'));
-                    NotificationUIManager.showNotification(`通话结束: ${reason}`, 'info');
+                            (message.type === 'video-call-rejected' ? '对方拒绝' : '未知原因'));
+                    NotificationUIManager.showNotification(`呼叫未接通: ${reason}`, 'info');
                     this.manager.cleanupCallMediaAndState();
+                }
+                break;
+            case 'video-call-end':
+                if (this.manager.state.isCallActive && this.manager.state.currentPeerId === peerId) {
+                    NotificationUIManager.showNotification('对方已挂断', 'info');
+                    // MODIFIED: Call hangUpMedia to correctly end the media session without killing the data channel.
+                    this.manager.hangUpMedia(false); // `false` prevents sending a hang-up message back.
                 }
                 break;
         }
     },
 
-    /**
-     * [REFACTORED] 获取本地媒体流并指示 WebRTCManager 发起连接。
-     * @param {boolean} isOfferCreator - 是否是发起方。
-     */
     startLocalStreamAndSignal: async function (isOfferCreator) {
         const isScreenShare = this.manager.state.isScreenSharing;
         const isAudioOnly = this.manager.state.isAudioOnly;
@@ -158,8 +151,14 @@ const VideoCallHandler = {
         this.manager.playMusic();
     },
 
+    /**
+     * [MODIFIED] 取消一个正在等待对方响应的呼叫。
+     */
     cancelPendingCall: function () {
         const peerIdToCancel = this.manager.state.currentPeerId;
+        if (this.manager.state.isCallPending && peerIdToCancel) {
+            ConnectionManager.sendTo(peerIdToCancel, { type: 'video-call-cancel', sender: UserManager.userId });
+        }
         if (this.manager.callRequestTimeout) clearTimeout(this.manager.callRequestTimeout);
         this.manager.callRequestTimeout = null;
         this._stopAdaptiveMediaChecks(peerIdToCancel);
@@ -168,7 +167,6 @@ const VideoCallHandler = {
 
     _getPeerConnection: function(peerId) {
         const peerInstance = WebRTCManager.connections[peerId]?.peer;
-        // simple-peer v9+ exposes the pc via a private property `_pc`. Use with caution.
         return peerInstance ? (peerInstance._pc || peerInstance.pc) : null;
     },
 

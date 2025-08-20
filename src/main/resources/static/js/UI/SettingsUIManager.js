@@ -1,3 +1,4 @@
+
 /**
  * @file SettingsUIManager.js
  * @description 设置 UI 管理器，负责处理主菜单/设置模态框内的所有 UI 元素和交互逻辑。
@@ -11,15 +12,6 @@
  *              修改：移除了 AI & API 配置的“覆盖”复选框，用户的输入将始终生效。
  *              重构：将模型名称选择器从原生 select 改为自定义 div 组件。
  *              MODIFIED: 支持为浅色和深色模式分别设置和移除背景图片。
- * @module SettingsUIManager
- * @exports {object} SettingsUIManager - 对外暴露的单例对象，包含所有设置 UI 管理方法。
- * @property {function} init - 初始化模块，获取 DOM 元素、加载设置并绑定事件。
- * @property {function} loadAISettings - 从 localStorage 加载 AI 相关设置并填充到输入框。
- * @property {function} saveAISetting - 保存单个 AI 设置到 localStorage 并触发事件。
- * @property {function} initThemeSelectors - 初始化主题和配色方案的自定义下拉选择器。
- * @property {function} updateNetworkInfoDisplay - 更新模态框中的网络状态信息。
- * @dependencies UserManager, ConnectionManager, ChatManager, ThemeLoader, NotificationUIManager, Utils, AppInitializer, ModalUIManager, EventEmitter, AppSettings, DBManager, LLMProviders
- * @dependents AppInitializer (进行初始化)
  */
 const SettingsUIManager = {
 // 主题和配色方案选择器元素
@@ -167,7 +159,7 @@ const SettingsUIManager = {
         if(modalCopySdpBtn) modalCopySdpBtn.addEventListener('click', () => this.copySdpTextFromModal());
 
 // 手动连接按钮
-        // 以下按钮是实现手动/离线WebRTC连接的关键
+// 以下按钮是实现手动/离线WebRTC连接的关键
         const modalCreateOfferBtn = document.getElementById('modalCreateOfferBtn');
         if(modalCreateOfferBtn) modalCreateOfferBtn.addEventListener('click', () => ConnectionManager.createOffer(null, {isManual: true}));
         const modalCreateAnswerBtn = document.getElementById('modalCreateAnswerBtn');
@@ -460,10 +452,10 @@ const SettingsUIManager = {
             optionDiv.textContent = schemes[key];
             optionDiv.dataset.schemeKey = key;
 
-            optionDiv.addEventListener('click', async () => {
+            optionDiv.addEventListener('click', async (event) => { // MODIFIED: Capture event
                 const selectedSchemeKey = optionDiv.dataset.schemeKey;
 
-                await ThemeLoader.updateColorSchemePreference(selectedSchemeKey);
+                await ThemeLoader.updateColorSchemePreference(selectedSchemeKey, event); // MODIFIED: Pass event
 
                 this.colorSchemeSelectedValueEl.textContent = schemes[selectedSchemeKey];
                 this._populateThemeSelectorWithOptions();
@@ -520,10 +512,10 @@ const SettingsUIManager = {
                 optionDiv.classList.add('option');
                 optionDiv.textContent = theme.name;
                 optionDiv.dataset.themeKey = key;
-                optionDiv.addEventListener('click', async () => {
+                optionDiv.addEventListener('click', async (event) => { // MODIFIED: Capture event
                     const selectedKey = optionDiv.dataset.themeKey;
                     if (selectedKey !== ThemeLoader.getCurrentThemeKey()) {
-                        await ThemeLoader.applyTheme(selectedKey);
+                        await ThemeLoader.applyTheme(selectedKey, event); // MODIFIED: Pass event
                         this.themeSelectedValueEl.textContent = ThemeLoader.themes[selectedKey]?.name;
                         this.themeSelectedValueEl.dataset.currentThemeKey = selectedKey;
                     }

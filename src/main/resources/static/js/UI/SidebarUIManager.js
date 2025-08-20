@@ -1,15 +1,15 @@
-
 /**
  * @file SidebarUIManager.js
  * @description 侧边栏 UI 管理器，负责管理应用左侧边栏内的所有 UI 元素和交互。
  *              包括顶部的标签页（全部、联系人、群组）、搜索框，以及更新聊天列表项的状态（如在线状态）。
+ *              MODIFIED: 新增了对联系人列表项的右键上下文菜单支持，允许删除非特殊联系人。
  * @module SidebarUIManager
  * @exports {object} SidebarUIManager - 对外暴露的单例对象，包含管理侧边栏 UI 的方法。
  * @property {function} init - 初始化模块，获取 DOM 元素并绑定事件。
  * @property {function} setActiveTab - 设置并高亮显示当前活动的标签页。
  * @property {function} filterChatList - 根据搜索框的输入触发聊天列表的重新渲染。
  * @property {function} updateChatListItemStatus - 更新指定联系人在列表中的在线状态指示器。
- * @dependencies ChatManager, UserManager, GroupManager
+ * @dependencies ChatManager, UserManager, GroupManager, Utils
  * @dependents AppInitializer (进行初始化), ChatManager (设置活动标签), EventEmitter (用于更新状态)
  */
 const SidebarUIManager = {
@@ -17,6 +17,11 @@ const SidebarUIManager = {
     tabAllChatsEl: null,     // “全部”标签页
     tabContactsEl: null,   // “联系人”标签页
     tabGroupsEl: null,     // “群组”标签页
+
+    // NEW: Context menu properties
+    contactContextMenuEl: null,
+    activeContextMenuItemId: null,
+    activeContextMenuItemName: null,
 
     /**
      * 初始化模块，获取所有需要的 DOM 元素引用并绑定核心事件。
@@ -27,6 +32,7 @@ const SidebarUIManager = {
         this.tabContactsEl = document.getElementById('tabContacts');
         this.tabGroupsEl = document.getElementById('tabGroups');
 
+        this._initContactContextMenu(); // NEW: Initialize the context menu
         this.bindEvents(); // 绑定事件
     },
 
@@ -42,6 +48,87 @@ const SidebarUIManager = {
         // 绑定搜索框的输入事件
         if (this.chatSearchInputEl) this.chatSearchInputEl.addEventListener('input', (e) => this.filterChatList(e.target.value));
     },
+
+    /**
+     * @private
+     * @description (新增) 初始化联系人右键菜单。创建DOM元素并附加到body，同时绑定全局点击事件以关闭菜单。
+     */
+    _initContactContextMenu: function() {
+        this.contactContextMenuEl = document.createElement('div');
+        this.contactContextMenuEl.id = 'contactContextMenu';
+        this.contactContextMenuEl.className = 'contact-context-menu';
+        document.body.appendChild(this.contactContextMenuEl);
+
+        document.addEventListener('click', (event) => {
+            if (this.contactContextMenuEl && !this.contactContextMenuEl.contains(event.target)) {
+                this._hideContactContextMenu();
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && this.contactContextMenuEl) {
+                this._hideContactContextMenu();
+            }
+        });
+    },
+
+    /**
+     * @private
+     * @description (新增) 显示并定位联系人的右键菜单。
+     * @param {MouseEvent} event - 触发菜单的 contextmenu 事件。
+     * @param {string} contactId - 被右键点击的联系人ID。
+     * @param {string} contactName - 被右键点击的联系人名称。
+     */
+    _showContactContextMenu: function(event, contactId, contactName) {
+        if (!this.contactContextMenuEl) return;
+        event.preventDefault();
+        event.stopPropagation(); // 阻止事件冒泡到 app-container
+
+        this.activeContextMenuItemId = contactId;
+        this.activeContextMenuItemName = contactName;
+        this.contactContextMenuEl.innerHTML = ''; // 清空旧内容
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = `删除 "${Utils.truncateFileName(contactName, 10)}"`;
+        deleteButton.className = 'contact-context-menu-button delete';
+        deleteButton.addEventListener('click', () => {
+            // 复用 ChatManager 中已包含确认对话框的删除逻辑
+            ChatManager.deleteChat(this.activeContextMenuItemId, 'contact');
+            this._hideContactContextMenu();
+        });
+
+        this.contactContextMenuEl.appendChild(deleteButton);
+
+        const { clientX: mouseX, clientY: mouseY } = event;
+        const menuWidth = this.contactContextMenuEl.offsetWidth;
+        const menuHeight = this.contactContextMenuEl.offsetHeight;
+
+        let x = mouseX;
+        let y = mouseY;
+
+        if (x + menuWidth > window.innerWidth) {
+            x = window.innerWidth - menuWidth - 5;
+        }
+        if (y + menuHeight > window.innerHeight) {
+            y = window.innerHeight - menuHeight - 5;
+        }
+
+        this.contactContextMenuEl.style.top = `${y}px`;
+        this.contactContextMenuEl.style.left = `${x}px`;
+        this.contactContextMenuEl.classList.add('show');
+    },
+
+    /**
+     * @private
+     * @description (新增) 隐藏联系人右键菜单。
+     */
+    _hideContactContextMenu: function() {
+        if (this.contactContextMenuEl) {
+            this.contactContextMenuEl.classList.remove('show');
+            this.activeContextMenuItemId = null;
+            this.activeContextMenuItemName = null;
+        }
+    },
+
 
     /**
      * 设置并高亮显示当前活动的标签页。
