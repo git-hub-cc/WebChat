@@ -1,0 +1,142 @@
+/*
+================================================================================
+|             🎨 原神 - 浮世摹绘 (浅色主题) - REFACTORED 🎨                   |
+================================================================================
+| This file now only overrides the design tokens defined in _variables.css
+| and provides theme-specific character styles using the new variable system.
+*/
+
+body.theme-原神-浅色 {
+    /* --- 1. Override Core Design Tokens --- */
+
+    /* Base Palette */
+    --gi-gold-primary-rgb: 222, 178, 111;
+    --gi-parchment-light-rgb: 249, 245, 235;
+    --gi-brown-dark-rgb: 85, 68, 51;
+    --gi-brown-medium-rgb: 130, 100, 75;
+    --gi-dendro-rgb: 153, 204, 51;
+    --gi-pyro-rgb: 255, 123, 89;
+
+    /* Semantic Overrides */
+    --color-brand-primary: rgb(var(--gi-gold-primary-rgb));
+    --color-text-primary: rgb(var(--gi-brown-dark-rgb));
+    --color-text-secondary: rgb(var(--gi-brown-medium-rgb));
+    --color-background-page: rgb(var(--gi-parchment-light-rgb));
+    --color-background-panel: rgba(253, 250, 242, 0.85); /* Slightly transparent */
+    --color-background-elevated: #FFFFFF;
+    --color-background-hover: rgba(228, 218, 200, 0.6);
+    --color-background-active: rgba(240, 210, 150, 0.5);
+    --color-border: rgba(var(--gi-brown-dark-rgb), 0.2);
+    --color-status-success: rgb(var(--gi-dendro-rgb));
+    --color-status-danger: rgb(var(--gi-pyro-rgb));
+
+    /* Typography & Sizing */
+    --font-family-base: "HYWenHei-85W", "Noto Serif SC", serif;
+    --border-radius-md: 6px;
+    --shadow-md: 0 3px 6px rgba(var(--gi-brown-dark-rgb), 0.1);
+
+    /* --- 2. Define Character Color Variables --- */
+    --paimon-primary: #2d3b53;
+    --paimon-text: #fafaff;
+    --paimon-accent: #ffd700;
+    --paimon-msg-bg: linear-gradient(135deg, #f0f4ff, #e6e9f5);
+    --paimon-secondary-bg: rgba(45, 59, 83, 0.1);
+
+    --zhongli-primary: #3c322d;
+    --zhongli-text: #ffc343;
+    --zhongli-accent: #ffc343;
+    --zhongli-msg-bg: linear-gradient(135deg, #fff8e8, #fef2d4);
+    --zhongli-secondary-bg: rgba(60, 50, 45, 0.1);
+
+    --venti-primary: #006450;
+    --venti-text: #72e0c5;
+    --venti-accent: #72e0c5;
+    --venti-msg-bg: linear-gradient(135deg, #e0f8f3, #cff2ea);
+    --venti-secondary-bg: rgba(0, 100, 80, 0.1);
+
+    --raiden-primary: #5a468c;
+    --raiden-text: #b08cff;
+    --raiden-accent: #b08cff;
+    --raiden-msg-bg: linear-gradient(135deg, #f0eaff, #e6dff5);
+    --raiden-secondary-bg: rgba(90, 70, 140, 0.1);
+
+    --hutao-primary: #8b0000;
+    --hutao-text: #ffffff;
+    --hutao-accent: #ff7b59;
+    --hutao-msg-bg: linear-gradient(135deg, #ffe8e0, #ffd8cc);
+    --hutao-secondary-bg: rgba(139, 0, 0, 0.1);
+
+    --kazuha-primary: #cd5c5c;
+    --kazuha-text: #ffffff;
+    --kazuha-accent: #72e0c5;
+    --kazuha-msg-bg: linear-gradient(135deg, #ffebe0, #ffddd0);
+    --kazuha-secondary-bg: rgba(205, 92, 92, 0.1);
+}
+
+/* --- 3. Apply Character Styles --- */
+
+body.theme-原神-浅色 .AI_Paimon_原神 {
+    --character-primary-color: var(--paimon-primary);
+    --character-text-color: var(--paimon-text);
+    --character-accent-color: var(--paimon-accent);
+    --character-message-bg: var(--paimon-msg-bg);
+    --character-secondary-bg: var(--paimon-secondary-bg);
+    --character-glow-color: color-mix(in srgb, var(--paimon-accent), transparent 30%);
+}
+
+body.theme-原神-浅色 .AI_Zhongli_原神 {
+    --character-primary-color: var(--zhongli-primary);
+    --character-text-color: var(--zhongli-text);
+    --character-accent-color: var(--zhongli-accent);
+    --character-message-bg: var(--zhongli-msg-bg);
+    --character-secondary-bg: var(--zhongli-secondary-bg);
+    --character-glow-color: color-mix(in srgb, var(--zhongli-accent), transparent 30%);
+}
+
+body.theme-原神-浅色 .AI_Venti_原神 {
+    --character-primary-color: var(--venti-primary);
+    --character-text-color: var(--venti-text);
+    --character-accent-color: var(--venti-accent);
+    --character-message-bg: var(--venti-msg-bg);
+    --character-secondary-bg: var(--venti-secondary-bg);
+    --character-glow-color: color-mix(in srgb, var(--venti-accent), transparent 30%);
+}
+
+body.theme-原神-浅色 .AI_RaidenShogun_原神 {
+    --character-primary-color: var(--raiden-primary);
+    --character-text-color: var(--raiden-text);
+    --character-accent-color: var(--raiden-accent);
+    --character-message-bg: var(--raiden-msg-bg);
+    --character-secondary-bg: var(--raiden-secondary-bg);
+    --character-glow-color: color-mix(in srgb, var(--raiden-accent), transparent 30%);
+}
+
+body.theme-原神-浅色 .AI_HuTao_原神 {
+    --character-primary-color: var(--hutao-primary);
+    --character-text-color: var(--hutao-text);
+    --character-accent-color: var(--hutao-accent);
+    --character-message-bg: var(--hutao-msg-bg);
+    --character-secondary-bg: var(--hutao-secondary-bg);
+    --character-glow-color: color-mix(in srgb, var(--hutao-accent), transparent 30%);
+}
+
+body.theme-原神-浅色 .AI_Kazuha_原神 {
+    --character-primary-color: var(--kazuha-primary);
+    --character-text-color: var(--kazuha-text);
+    --character-accent-color: var(--kazuha-accent);
+    --character-message-bg: var(--kazuha-msg-bg);
+    --character-secondary-bg: var(--kazuha-secondary-bg);
+    --character-glow-color: color-mix(in srgb, var(--kazuha-accent), transparent 30%);
+}
+
+/* --- 4. Theme-specific Decorations --- */
+body.theme-原神-浅色 #app-root {
+    background-image: var(--custom-background-image,
+    linear-gradient(to bottom, rgba(135, 206, 235, 0.4), rgb(var(--gi-parchment-light-rgb)) 50%),
+    radial-gradient(ellipse at top, rgba(255, 255, 255, 0.5) 0%, transparent 70%)
+    );
+}
+
+body.theme-原神-浅色 .app-container {
+    backdrop-filter: blur(5px);
+}

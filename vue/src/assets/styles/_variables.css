@@ -1,0 +1,122 @@
+/*
+================================================================================
+|             🎨 Design System: Tokens & Variables (Light Mode)              |
+================================================================================
+*/
+
+/* 修改: 将 :root, :root.colorscheme-light 改为 body, body.colorscheme-light */
+body, body.colorscheme-light {
+    /* --- 1. Colors --- */
+    /* ... 内部所有变量保持不变 ... */
+    --color-brand-primary: #007ACC;
+    --color-brand-primary-dark: #0062a1;
+    --color-brand-secondary: #009688;
+    --color-text-primary: #1C2023;
+    --color-text-secondary: #5A6670;
+    --color-text-tertiary: #9CA3AF;
+    --color-text-on-brand: #FFFFFF;
+    --color-text-link: var(--color-brand-primary);
+    --color-background-page: #F2F5F7;
+    --color-background-panel: #FFFFFF;
+    --color-background-elevated: #F8F9FA;
+    --color-background-hover: #E9ECEF;
+    --color-background-active: #DDEBFF;
+    --color-border: #DEE2E6;
+    --color-border-strong: #CED4DA;
+    --color-border-interactive: var(--color-brand-primary);
+    --color-status-success: #198754;
+    --color-status-danger: #DC3545;
+    --color-status-warning: #FFC107;
+    --color-status-info: #0DCAF0;
+    --color-message-sent-bg: var(--color-brand-primary);
+    --color-message-sent-text: var(--color-text-on-brand);
+    --color-message-received-bg: var(--color-background-elevated);
+    --color-message-received-text: var(--color-text-primary);
+    --color-message-system-bg: #E9ECEF;
+    --color-message-system-text: var(--color-text-secondary);
+
+    /* --- 2. Typography --- */
+    --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", Consolas, monospace;
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --line-height-base: 1.5;
+
+    /* --- 3. Sizing & Spacing --- */
+    --spacing-1: 0.25rem;
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.75rem;
+    --spacing-4: 1rem;
+    --spacing-5: 1.5rem;
+    --spacing-6: 2rem;
+    --sidebar-width: 320px;
+    --details-panel-width: 340px;
+    --max-app-width: 1600px;
+    --header-height: 60px;
+    --avatar-size: 44px;
+
+    /* --- 4. Borders & Shadows --- */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-pill: 9999px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.07), 0 3px 6px rgba(0, 0, 0, 0.05);
+    --shadow-focus-ring: 0 0 0 3px rgba(0, 122, 204, 0.25);
+
+    /* --- 5. Transitions --- */
+    --transition-duration-fast: 150ms;
+    --transition-duration-normal: 250ms;
+    --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/*
+================================================================================
+|               🌑 Design System: Tokens & Variables (Dark Mode)              |
+================================================================================
+*/
+
+/* 修改: 将 :root.colorscheme-dark 改为 body.colorscheme-dark */
+body.colorscheme-dark {
+    /* --- 1. Colors (Dark) --- */
+    /* ... 内部所有变量保持不变 ... */
+    --color-brand-primary: #3498DB;
+    --color-brand-primary-dark: #2980B9;
+    --color-brand-secondary: #1ABC9C;
+    --color-text-primary: #EAECEF;
+    --color-text-secondary: #99AAB5;
+    --color-text-tertiary: #7289DA;
+    --color-text-on-brand: #FFFFFF;
+    --color-text-link: var(--color-brand-primary);
+    --color-background-page: #23272A;
+    --color-background-panel: #2C2F33;
+    --color-background-elevated: #36393F;
+    --color-background-hover: #40444B;
+    --color-background-active: #4F545C;
+    --color-border: #40444B;
+    --color-border-strong: #54585E;
+    --color-status-success: #2ECC71;
+    --color-status-danger: #E74C3C;
+    --color-status-warning: #F1C40F;
+    --color-status-info: #3498DB;
+    --color-message-sent-bg: var(--color-brand-primary);
+    --color-message-sent-text: var(--color-text-on-brand);
+    --color-message-received-bg: var(--color-background-elevated);
+    --color-message-received-text: var(--color-text-primary);
+    --color-message-system-bg: rgba(0,0,0,0.1);
+    --color-message-system-text: var(--color-text-secondary);
+
+    /* --- Shadows (Dark) --- */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.15);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.2);
+    --shadow-focus-ring: 0 0 0 3px rgba(52, 152, 219, 0.3);
+}

@@ -1,0 +1,22 @@
+/*
+================================================================================
+|                         🎨 Global CSS Entry Point                          |
+================================================================================
+| This file imports all necessary global stylesheets in the correct order.
+| It is the single CSS file imported in `main.js`.
+*/
+
+/* 1. Design Tokens (Variables) - MUST be first */
+@import '_variables.css';
+
+/* 2. Base styles and resets */
+@import '_base.css';
+
+/* 3. (Optional) Any other global utility styles can be imported here */
+/* @import './_utilities.css'; */
+
+/*
+  NOTE: Theme-specific CSS files are NOT imported here.
+  They are dynamically loaded by the `settingsStore` and linked in `App.vue`
+  to enable runtime theme switching.
+*/

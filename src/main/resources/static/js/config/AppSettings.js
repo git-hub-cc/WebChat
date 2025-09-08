@@ -131,6 +131,11 @@ const AppSettings = {
         iceServers: [
             {
                 urls: [
+                    "stun:stun.miwifi.com:3478"
+                ]
+            },
+            {
+                urls: [
                     "turn:175.178.216.24:3478"
                 ],
                 username: "test",

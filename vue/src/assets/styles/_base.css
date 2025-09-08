@@ -1,0 +1,102 @@
+/*
+================================================================================
+|                      🌐 Base Styles & Resets                      |
+================================================================================
+*/
+
+/* --- Box Sizing & Reset --- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- HTML & Body Defaults --- */
+html {
+    font-size: 16px; /* Base font size */
+}
+
+body {
+    line-height: var(--line-height-base);
+    background-color: var(--color-background-page);
+    color: var(--color-text-primary);
+    font-family: var(--font-family-base);
+}
+
+/* --- Scrollbar Styling (Telegram Style) --- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: var(--border-radius-pill);
+}
+.colorscheme-dark ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}
+.colorscheme-dark ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* --- Common Elements --- */
+a {
+    color: var(--color-text-link);
+    text-decoration: none;
+    transition: color var(--transition-duration-fast) var(--transition-easing);
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+button {
+    font-family: inherit;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: inherit;
+}
+
+input, textarea, select {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    background-color: var(--color-background-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-2) var(--spacing-3);
+    transition: border-color var(--transition-duration-fast) var(--transition-easing),
+    box-shadow var(--transition-duration-fast) var(--transition-easing);
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--color-border-interactive);
+    box-shadow: var(--shadow-focus-ring);
+}
+
+/* --- Utility Classes --- */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
