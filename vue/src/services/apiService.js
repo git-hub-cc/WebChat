@@ -1,11 +1,20 @@
 import { useUserStore } from '@/stores/userStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useChatStore } from '@/stores/chatStore';
+import { useGroupStore } from '@/stores/groupStore';
+import { useMemoryStore } from '@/stores/memoryStore';
 import { eventBus } from './eventBus';
 import { log, fetchApiStream } from '@/utils';
 import AppSettings from '@/config/AppSettings';
+import { MCP_TOOLS } from '@/config/McpTools';
 
-// Helper to get current API settings from Pinia store
+/**
+ * @file apiService.js
+ * @description (Vue Refactor) 封装所有与外部 API 的交互逻辑，
+ *              包括 AI 对话、TTS 合成、工具调用 (MCP) 和记忆提取。
+ */
+
+// 辅助函数：从 Pinia store 获取当前生效的 API 配置
 function _getEffectiveAiConfig() {
     const settingsStore = useSettingsStore();
     return {
@@ -17,35 +26,72 @@ function _getEffectiveAiConfig() {
     };
 }
 
+// 辅助函数：为 MCP 分析请求构建提示
+function _buildMcpAnalysisPrompt(chatHistory, userMessage) {
+    const messages = [];
+    let mcpSystemPrompt = "你是一个能够理解并使用工具的智能助手。\n";
+    mcpSystemPrompt += "可用的工具列表如下 (JSON格式):\n```json\n" + JSON.stringify(Object.values(MCP_TOOLS).map(({ name, description, parameters }) => ({ name, description, parameters })), null, 2) + "\n```\n";
+    mcpSystemPrompt += "根据用户的提问，如果可以使用工具，你必须只回复一个JSON对象，格式如下: {\"tool_call\": {\"name\": \"工具名称\", \"arguments\": {\"参数1\": \"值1\"}}}. 不要添加任何其他解释或文本。\n";
+    mcpSystemPrompt += "如果任何工具都不适用，或者你需要用户提供更多信息，请像平常一样自然地回复用户，不要提及工具。";
+
+    messages.push({ role: "system", content: mcpSystemPrompt });
+    messages.push(...chatHistory); // chatHistory should already be in { role, content } format
+    messages.push({ role: "user", content: userMessage });
+    return messages;
+}
+
+// 辅助函数：为 MCP 最终回复构建提示
+function _buildMcpFinalPrompt(baseSystemPrompt, originalUserMessage, toolCall, toolResult) {
+    const messages = [];
+    messages.push({ role: "system", content: baseSystemPrompt });
+    const combinedPrompt = `${originalUserMessage}\n\n[系统提示：你已调用工具“${toolCall.name}”并获得以下结果，请基于此结果，用自然语言回复用户。]\n工具结果: ${toolResult}`;
+    messages.push({ role: "user", content: combinedPrompt });
+    return messages;
+}
+
+
+// 辅助函数：执行 MCP 工具调用
+async function _executeMcpTool(toolName, args) {
+    const toolDef = MCP_TOOLS[toolName];
+    if (!toolDef) return { error: `未知的工具: ${toolName}` };
+    let url = toolDef.url_template;
+    for (const key in args) {
+        url = url.replace(`{${key}}`, encodeURIComponent(args[key]));
+    }
+    log(`MCP: 正在执行工具 "${toolName}"，请求URL: ${url}`, 'INFO');
+    try {
+        const response = await fetch(url);
+        if (!response.ok) return { error: `工具API请求失败: ${response.status}` };
+        const data = await response.text();
+        return { data };
+    } catch (e) {
+        return { error: `网络请求失败: ${e.message}` };
+    }
+}
+
+
 export const apiService = {
     /**
-     * Sends a message to the AI and handles the streaming response.
-     * @param {string} targetId - The AI contact ID.
-     * @param {object} contact - The AI contact object from the store.
-     * @param {string} messageText - The user's message.
-     * @param {Array<object>} fullChatHistory - The full chat history for context.
+     * 向单个 AI 发送消息并处理响应。
+     * @param {string} targetId - AI 联系人 ID。
+     * @param {object} contact - AI 联系人对象。
+     * @param {string} messageText - 用户消息。
+     * @param {Array<object>} fullChatHistory - 完整聊天历史。
      */
     async sendAiMessage(targetId, contact, messageText, fullChatHistory = []) {
         const chatStore = useChatStore();
         const userStore = useUserStore();
+        const memoryStore = useMemoryStore();
         const effectiveConfig = _getEffectiveAiConfig();
 
         if (!effectiveConfig.apiEndpoint) {
-            throw new Error("AI API endpoint is not configured.");
+            throw new Error("AI API 端点未配置。");
         }
 
-        // --- FIX START: 使用 EventBus 管理临时UI状态 ---
         const thinkingMessageId = `ai_thinking_${Date.now()}`;
-
-        // 1. 发送事件，让UI显示“思考中...”
         eventBus.emit('ai:thinking', {
             chatId: targetId,
-            message: {
-                id: thinkingMessageId,
-                type: 'system',
-                content: '思考中...',
-                sender: targetId,
-            }
+            message: { id: thinkingMessageId, type: 'system', content: '思考中...', sender: targetId }
         });
 
         try {
@@ -56,8 +102,23 @@ export const apiService = {
                     content: msg.content
                 }));
 
+            // 构建 System Prompt
+            let systemPrompt = contact.aiConfig?.systemPrompt || "You are a helpful assistant.";
+            const memoryContent = memoryStore.getEnabledMemoryForChat(targetId);
+            if (memoryContent) {
+                systemPrompt = `[背景记忆]\n${memoryContent}\n\n[角色设定]\n${systemPrompt}`;
+            }
+            const selectedChapterId = contact.selectedChapterId;
+            if (selectedChapterId && contact.chapters) {
+                const chapter = contact.chapters.find(c => c.id === selectedChapterId);
+                if (chapter?.promptModifier) {
+                    systemPrompt += `\n\n[当前篇章: ${chapter.name}]\n${chapter.promptModifier}`;
+                }
+            }
+            systemPrompt += AppSettings.ai.promptSuffix;
+
             const messagesForRequestBody = [
-                { role: "system", content: contact.aiConfig?.systemPrompt || "You are a helpful assistant." },
+                { role: "system", content: systemPrompt },
                 ...formattedChatHistory,
                 { role: "user", content: messageText }
             ];
@@ -69,81 +130,174 @@ export const apiService = {
                 max_tokens: effectiveConfig.maxTokens
             };
 
-            const headers = {
-                'Content-Type': 'application/json',
-                'Authorization': effectiveConfig.apiKey,
-            };
-
+            const headers = { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey };
             const aiMessageId = `ai_stream_${Date.now()}`;
             let fullResponseContent = "";
 
-            // 2. 移除“思考中...”，并准备显示流式消息
             eventBus.emit('ai:clear_thinking', { chatId: targetId, thinkingId: thinkingMessageId });
 
             const initialAiMessage = {
-                id: aiMessageId,
-                type: 'text',
-                content: "▍",
-                sender: targetId,
-                timestamp: new Date().toISOString(),
-                isStreaming: true,
+                id: aiMessageId, type: 'text', content: "▍", sender: targetId,
+                timestamp: new Date().toISOString(), isStreaming: true,
             };
-            // 发送事件，让UI显示初始的流式消息气泡
             eventBus.emit('ai:streaming_start', { chatId: targetId, message: initialAiMessage });
 
             await fetchApiStream(
-                effectiveConfig.apiEndpoint,
-                requestBody,
-                headers,
+                effectiveConfig.apiEndpoint, requestBody, headers,
                 (jsonChunk) => { // onChunkReceived
                     const chunkContent = jsonChunk.choices[0]?.delta?.content;
                     if (chunkContent) {
                         fullResponseContent += chunkContent;
-                        // 发送事件，更新UI中的流式消息内容
                         eventBus.emit('ai:streaming_chunk', {
-                            chatId: targetId,
-                            messageId: aiMessageId,
-                            content: fullResponseContent + "▍"
+                            chatId: targetId, messageId: aiMessageId, content: fullResponseContent + "▍"
                         });
                     }
                 },
                 async () => { // onStreamEnd
-                    // 3. 流式传输结束，移除流式UI消息
                     eventBus.emit('ai:streaming_end', { chatId: targetId, messageId: aiMessageId });
-
-                    // 4. 将最终的、完整的消息添加到 chatStore 进行持久化
                     const finalAiMessage = {
-                        id: aiMessageId, // 使用流式消息的ID以保持一致性
-                        type: 'text',
-                        content: fullResponseContent,
-                        sender: targetId,
-                        timestamp: initialAiMessage.timestamp, // 使用初始时间戳
-                        isNewlyCompletedAIResponse: true, // For TTS trigger
+                        id: aiMessageId, type: 'text', content: fullResponseContent, sender: targetId,
+                        timestamp: initialAiMessage.timestamp, isNewlyCompletedAIResponse: true,
                     };
                     await chatStore.addMessage(targetId, finalAiMessage);
                 }
             );
 
         } catch (error) {
-            log(`Error communicating with AI: ${error}`, 'ERROR');
-            // 5. 如果出错，确保移除所有临时UI消息
+            log(`与 AI 通信时出错: ${error}`, 'ERROR');
             eventBus.emit('ai:clear_thinking', { chatId: targetId, thinkingId: thinkingMessageId });
-            eventBus.emit('ai:streaming_end', { chatId: targetId, messageId: `ai_stream_${thinkingMessageId.split('_')[2]}` }); // Try to clean up stream bubble too
-
             const errorMessage = {
-                id: `ai_error_${Date.now()}`,
-                type: 'text',
-                content: `抱歉，我遇到了一个错误: ${error.message}`,
-                sender: targetId,
-                timestamp: new Date().toISOString()
+                id: `ai_error_${Date.now()}`, type: 'text', content: `抱歉，我遇到了一个错误: ${error.message}`,
+                sender: targetId, timestamp: new Date().toISOString()
             };
-            // 将错误消息添加到持久化存储
             await chatStore.addMessage(targetId, errorMessage);
         }
-        // --- FIX END ---
     },
 
-    // ... 其他函数 (checkAiServiceHealth, requestTtsForMessage, _generateTtsCacheKey) 保持不变 ...
+    /**
+     * 向群聊中的 AI 发送消息并处理响应。
+     * @param {string} groupId - 群组 ID。
+     * @param {object} aiContact - AI 联系人对象。
+     * @param {string} mentionedMessageText - 触发AI的完整消息文本。
+     * @param {string} originalSenderId - 原始消息发送者 ID。
+     */
+    async sendGroupAiMessage(groupId, aiContact, mentionedMessageText, originalSenderId) {
+        const chatStore = useChatStore();
+        const userStore = useUserStore();
+        const groupStore = useGroupStore();
+        const effectiveConfig = _getEffectiveAiConfig();
+
+        const thinkingMessageId = `ai_thinking_group_${Date.now()}`;
+        eventBus.emit('ai:thinking', {
+            chatId: groupId,
+            message: { id: thinkingMessageId, type: 'system', content: `${aiContact.name} 正在思考...`, sender: aiContact.id }
+        });
+
+        try {
+            const group = groupStore.groups[groupId];
+            const fullHistory = (chatStore.chats[groupId] || []).slice(-10); // Limit context for groups
+
+            const formattedHistory = fullHistory
+                .filter(msg => msg.type === 'text' && !msg.isRetracted && !msg.isThinking)
+                .map(msg => {
+                    const senderName = msg.sender === userStore.userId ? userStore.userName : userStore.contacts[msg.sender]?.name || `用户${msg.sender.substring(0,4)}`;
+                    return {
+                        role: msg.sender === aiContact.id ? 'assistant' : 'user',
+                        content: `${senderName}: ${msg.content}`
+                    };
+                });
+
+            const originalSenderName = userStore.contacts[originalSenderId]?.name || userStore.userName;
+            const userTriggerMessage = `${originalSenderName}: ${mentionedMessageText}`;
+
+            let systemPrompt = group.aiPrompts?.[aiContact.id] || aiContact.aiConfig?.systemPrompt || "You are a helpful assistant.";
+            systemPrompt += AppSettings.ai.groupPromptSuffix;
+
+            const messagesForRequestBody = [
+                { role: "system", content: systemPrompt },
+                ...formattedHistory,
+                { role: "user", content: userTriggerMessage }
+            ];
+
+            const requestBody = {
+                model: effectiveConfig.model, messages: messagesForRequestBody, stream: true,
+                max_tokens: effectiveConfig.maxTokens,
+            };
+
+            eventBus.emit('ai:clear_thinking', { chatId: groupId, thinkingId: thinkingMessageId });
+
+            const aiResponseMessageId = `group_ai_msg_${aiContact.id}_${Date.now()}`;
+            let fullAiResponseContent = "";
+            const initialAiResponseMessage = {
+                id: aiResponseMessageId, type: 'text', content: "▍",
+                timestamp: new Date().toISOString(), sender: aiContact.id,
+                groupId: groupId, isStreaming: true,
+            };
+            eventBus.emit('ai:streaming_start', { chatId: groupId, message: initialAiResponseMessage });
+
+            await fetchApiStream(
+                effectiveConfig.apiEndpoint, requestBody, { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey },
+                (jsonChunk) => {
+                    const chunkContent = jsonChunk.choices[0]?.delta?.content;
+                    if (chunkContent) {
+                        fullAiResponseContent += chunkContent;
+                        eventBus.emit('ai:streaming_chunk', {
+                            chatId: groupId, messageId: aiResponseMessageId, content: fullAiResponseContent + "▍"
+                        });
+                    }
+                },
+                async () => {
+                    eventBus.emit('ai:streaming_end', { chatId: groupId, messageId: aiResponseMessageId });
+                    const finalAiMessage = { ...initialAiResponseMessage, content: fullAiResponseContent, isStreaming: false };
+                    await chatStore.addMessage(groupId, finalAiMessage);
+                    groupStore.broadcastMessage(groupId, finalAiMessage);
+                }
+            );
+
+        } catch (error) {
+            log(`在群聊中与 AI 通信时出错: ${error}`, 'ERROR');
+            eventBus.emit('ai:clear_thinking', { chatId: groupId, thinkingId: thinkingMessageId });
+            const errorMessage = {
+                id: `ai_error_group_${Date.now()}`, type: 'system',
+                content: `${aiContact.name} 无法回复: ${error.message}`, sender: aiContact.id
+            };
+            await chatStore.addMessage(groupId, errorMessage);
+        }
+    },
+
+    /**
+     * 为记忆书功能提取对话要素。
+     * @param {Array<string>} elements - 要提取的要素列表。
+     * @param {string} conversationTranscript - 对话文本。
+     * @returns {Promise<string>} AI 生成的摘要。
+     */
+    async extractMemoryElements(elements, conversationTranscript) {
+        const effectiveConfig = _getEffectiveAiConfig();
+        if (!effectiveConfig.apiEndpoint) {
+            throw new Error("AI API 端点未配置。");
+        }
+        const prompt = `你是一个对话分析和信息提取专家。请仔细阅读以下对话记录，并根据预设的关键要素列表，简洁、清晰地总结出相关信息。\n\n关键要素列表:\n${elements.map(e => `- ${e}`).join('\n')}\n\n对话记录:\n---\n${conversationTranscript}\n---\n\n请根据以上对话，生成一份“记忆书”，清晰地列出每个关键要素对应的内容。如果对话中没有某个要素的信息，请注明“未提及”。`;
+        const requestBody = {
+            model: effectiveConfig.model,
+            messages: [{ role: "user", content: prompt }],
+            stream: true,
+            temperature: 0.1,
+            max_tokens: 1024
+        };
+        return new Promise(async (resolve, reject) => {
+            try {
+                await fetchApiStream(
+                    effectiveConfig.apiEndpoint, requestBody,
+                    { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                    () => {},
+                    (finalContent) => resolve(finalContent)
+                );
+            } catch (error) {
+                reject(error);
+            }
+        });
+    },
+
     async checkAiServiceHealth() {
         const effectiveConfig = _getEffectiveAiConfig();
         if (!effectiveConfig.apiEndpoint || !effectiveConfig.apiKey) {

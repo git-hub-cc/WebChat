@@ -9,23 +9,44 @@ import { webrtcService } from '@/services/webrtcService';
 import AppSettings from '@/config/AppSettings';
 
 export const useGroupStore = defineStore('group', () => {
-    // --- STATE ---
-    const groups = ref({}); // { [groupId]: groupObject }
+    const groups = ref({});
 
-    // --- ACTIONS ---
     async function init() {
         const groupItems = await dbService.getAllItems('groups');
         const groupsMap = {};
-        groupItems.forEach(g => groupsMap[g.id] = { type: 'group', ...g });
+        groupItems.forEach(g => {
+            groupsMap[g.id] = { type: 'group', aiPrompts: {}, ...g };
+        });
         groups.value = groupsMap;
         log('群组Store已初始化', 'INFO');
         eventBus.on('webrtc:message', handleIncomingGroupMessage);
     }
 
+    /**
+     * [NEW] Updates the specific system prompt for an AI within a group.
+     * @param {string} groupId
+     * @param {string} aiMemberId
+     * @param {string} newPrompt
+     */
+    async function updateGroupAiPrompt(groupId, aiMemberId, newPrompt) {
+        const group = groups.value[groupId];
+        const userStore = useUserStore();
+        if (group && group.owner === userStore.userId) {
+            if (!group.aiPrompts) group.aiPrompts = {};
+            group.aiPrompts[aiMemberId] = newPrompt;
+            await dbService.setItem('groups', group);
+            broadcastMessage(groupId, {
+                type: 'group-ai-prompt-updated',
+                aiMemberId,
+                newPrompt,
+            });
+            eventBus.emit('showNotification', { message: 'AI 行为指示已更新', type: 'success' });
+        }
+    }
+
     async function createGroup(name, customGroupId = null) {
         const userStore = useUserStore();
         const finalGroupId = customGroupId ? `group_${customGroupId}` : `group_${generateId()}`;
-
         if (groups.value[finalGroupId]) {
             if (groups.value[finalGroupId].owner === userStore.userId) {
                 groups.value[finalGroupId].name = name;
@@ -38,16 +59,9 @@ export const useGroupStore = defineStore('group', () => {
                 return null;
             }
         }
-
         const newGroup = {
-            id: finalGroupId,
-            name,
-            owner: userStore.userId,
-            members: [userStore.userId],
-            lastTime: new Date().toISOString(),
-            unread: 0,
-            aiPrompts: {},
-            type: 'group'
+            id: finalGroupId, name, owner: userStore.userId, members: [userStore.userId],
+            lastTime: new Date().toISOString(), unread: 0, aiPrompts: {}, type: 'group'
         };
         groups.value[finalGroupId] = newGroup;
         await dbService.setItem('groups', newGroup);
@@ -63,18 +77,14 @@ export const useGroupStore = defineStore('group', () => {
             return false;
         }
         if (group.members.includes(memberId)) return true;
-
         group.members.push(memberId);
-
         const addedMemberDetails = userStore.contacts[memberId];
         broadcastMessage(groupId, {
             type: 'group-member-added',
             addedMemberId: memberId,
-            addedMemberDetails: JSON.parse(JSON.stringify(addedMemberDetails)), // Ensure plain object
+            addedMemberDetails: JSON.parse(JSON.stringify(addedMemberDetails)),
         }, [memberId]);
-
         webrtcService.sendMessage(memberId, { type: 'group-invite', group: JSON.parse(JSON.stringify(groups.value[groupId])) });
-
         await dbService.setItem('groups', group);
         eventBus.emit('showNotification', { message: `${addedMemberDetails.name} 已加入群组`, type: 'success' });
         return true;
@@ -84,10 +94,12 @@ export const useGroupStore = defineStore('group', () => {
         const group = groups.value[groupId];
         const userStore = useUserStore();
         if (!group || group.owner !== userStore.userId || memberId === userStore.userId) return false;
-
         const index = group.members.indexOf(memberId);
         if (index > -1) {
             group.members.splice(index, 1);
+            if (group.aiPrompts?.[memberId]) { // Remove AI prompt if member is removed
+                delete group.aiPrompts[memberId];
+            }
             broadcastMessage(groupId, { type: 'group-member-removed', removedMemberId: memberId }, [memberId]);
             webrtcService.sendMessage(memberId, { type: 'group-removed-you', groupId });
             await dbService.setItem('groups', group);
@@ -101,16 +113,11 @@ export const useGroupStore = defineStore('group', () => {
         const userStore = useUserStore();
         const userId = userStore.userId;
         if (!group || !group.members.includes(userId) || group.owner === userId) return false;
-
         broadcastMessage(groupId, { type: 'group-member-left', memberId: userId, memberName: userStore.userName });
-
         delete groups.value[groupId];
         await dbService.removeItem('groups', groupId);
         await useChatStore().deleteChatHistory(groupId);
-
-        if (useChatStore().currentChatId === groupId) {
-            useChatStore().openChat(null);
-        }
+        if (useChatStore().currentChatId === groupId) useChatStore().openChat(null);
         return true;
     }
 
@@ -118,16 +125,11 @@ export const useGroupStore = defineStore('group', () => {
         const group = groups.value[groupId];
         const userId = useUserStore().userId;
         if (!group || group.owner !== userId) return false;
-
         broadcastMessage(groupId, { type: 'group-dissolved' });
-
         delete groups.value[groupId];
         await dbService.removeItem('groups', groupId);
         await useChatStore().deleteChatHistory(groupId);
-
-        if (useChatStore().currentChatId === groupId) {
-            useChatStore().openChat(null);
-        }
+        if (useChatStore().currentChatId === groupId) useChatStore().openChat(null);
         return true;
     }
 
@@ -135,7 +137,6 @@ export const useGroupStore = defineStore('group', () => {
         const group = groups.value[groupId];
         const userStore = useUserStore();
         if (!group) return;
-
         group.members.forEach(memberId => {
             if (memberId !== userStore.userId && !userStore.contacts[memberId]?.isAI) {
                 webrtcService.sendMessage(memberId, { ...message, groupId });
@@ -163,17 +164,30 @@ export const useGroupStore = defineStore('group', () => {
             case 'group-member-added':
                 if (groups.value[groupId] && !groups.value[groupId].members.includes(message.addedMemberId)) {
                     groups.value[groupId].members.push(message.addedMemberId);
-                    // Also add the contact if they don't exist
                     if (message.addedMemberDetails && !userStore.contacts[message.addedMemberId]) {
                         await userStore.addContact(message.addedMemberDetails);
                     }
                     await dbService.setItem('groups', groups.value[groupId]);
                 }
                 break;
+            // [NEW] Handle incoming prompt updates from other group members
+            case 'group-ai-prompt-updated':
+                if (groups.value[groupId]) {
+                    if (!groups.value[groupId].aiPrompts) groups.value[groupId].aiPrompts = {};
+                    groups.value[groupId].aiPrompts[message.aiMemberId] = message.newPrompt;
+                    await dbService.setItem('groups', groups.value[groupId]);
+                    log(`Group prompt updated for AI ${message.aiMemberId} from peer.`, 'INFO');
+                }
+                break;
             case 'group-member-removed':
                 if(groups.value[groupId] && message.removedMemberId) {
                     const index = groups.value[groupId].members.indexOf(message.removedMemberId);
-                    if (index > -1) groups.value[groupId].members.splice(index, 1);
+                    if (index > -1) {
+                        groups.value[groupId].members.splice(index, 1);
+                        if(groups.value[groupId].aiPrompts?.[message.removedMemberId]) {
+                            delete groups.value[groupId].aiPrompts[message.removedMemberId];
+                        }
+                    }
                     await dbService.setItem('groups', groups.value[groupId]);
                 }
                 break;
@@ -210,21 +224,18 @@ export const useGroupStore = defineStore('group', () => {
             await dbService.setItem('groups', groups.value[groupId]);
         }
     }
-
     async function incrementUnread(groupId) {
         if (groups.value[groupId]) {
             groups.value[groupId].unread = (groups.value[groupId].unread || 0) + 1;
             await dbService.setItem('groups', groups.value[groupId]);
         }
     }
-
     async function clearUnread(groupId) {
         if (groups.value[groupId]) {
             groups.value[groupId].unread = 0;
             await dbService.setItem('groups', groups.value[groupId]);
         }
     }
-
     async function removeMemberFromAllGroups(memberId) {
         const promises = [];
         for (const groupId in groups.value) {
@@ -241,7 +252,7 @@ export const useGroupStore = defineStore('group', () => {
 
     return {
         groups, init, createGroup, addMemberToGroup, removeMemberFromGroup,
-        leaveGroup, dissolveGroup, broadcastMessage,
+        leaveGroup, dissolveGroup, broadcastMessage, updateGroupAiPrompt,
         updateGroupLastMessage, incrementUnread, clearUnread,
         removeMemberFromAllGroups
     };

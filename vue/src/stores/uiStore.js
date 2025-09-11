@@ -1,11 +1,15 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
+/**
+ * @file uiStore.js
+ * @description (Vue Refactor) Manages global UI state, such as which panels or modals are open.
+ */
 export const useUiStore = defineStore('ui', () => {
     // --- STATE ---
     const isDetailsPanelOpen = ref(false);
     const detailsPanelContent = ref('info'); // 'info', 'lobby'
-    const activeModal = ref(null); // 'settings', 'newContact', 'calling', 'incomingCall', 'screenshotEditor', 'confirmation', 'mediaViewer'
+    const activeModal = ref(null); // 'settings', 'newContact', 'calling', 'incomingCall', 'screenshotEditor', 'confirmation', 'mediaViewer', 'bindManualConnection'
     const isAppLoading = ref(true);
     const chatListFilter = ref('all');
     const chatListSearchTerm = ref('');
@@ -18,13 +22,12 @@ export const useUiStore = defineStore('ui', () => {
     const contextMenuTarget = ref(null);
 
     // Confirmation Modal State
-    const confirmationOptions = ref(null); // { message, onConfirm, onCancel, title, ... }
-
-    // Media Viewer State
-    const mediaViewerContent = ref(null); // { type: 'image' | 'video', src, alt }
-
-    // Prefill data for modals
+    const confirmationOptions = ref(null);
+    const mediaViewerContent = ref(null);
     const modalPrefillData = ref({});
+
+    // Manual Connection State
+    const manualSdpText = ref('');
 
     // --- ACTIONS ---
     function toggleDetailsPanel(forceState, content = 'info') {
@@ -47,14 +50,7 @@ export const useUiStore = defineStore('ui', () => {
         activeModal.value = null;
         modalPrefillData.value = {};
         if (confirmationOptions.value) confirmationOptions.value = null;
-
-        // --- START OF FIX ---
-        // The responsibility of revoking blob URLs is now handled by mediaCacheService.
-        // We no longer revoke the URL here, which was the cause of the bug.
-        if (mediaViewerContent.value) {
-            mediaViewerContent.value = null;
-        }
-        // --- END OF FIX ---
+        if (mediaViewerContent.value) mediaViewerContent.value = null;
     }
 
     function setAppLoading(isLoading) {
@@ -85,27 +81,12 @@ export const useUiStore = defineStore('ui', () => {
     }
 
     return {
-        isDetailsPanelOpen,
-        detailsPanelContent,
-        activeModal,
-        isAppLoading,
-        chatListFilter,
-        chatListSearchTerm,
-        isChatViewActiveOnMobile,
-        modalPrefillData,
-        isContextMenuOpen,
-        contextMenuPos,
-        contextMenuItems,
-        contextMenuTarget,
-        confirmationOptions,
-        mediaViewerContent,
-        toggleDetailsPanel,
-        showModal,
-        hideModal,
-        setAppLoading,
-        showContextMenu,
-        hideContextMenu,
-        showConfirmationModal,
-        showMediaViewer
+        isDetailsPanelOpen, detailsPanelContent, activeModal, isAppLoading,
+        chatListFilter, chatListSearchTerm, isChatViewActiveOnMobile,
+        modalPrefillData, isContextMenuOpen, contextMenuPos, contextMenuItems,
+        contextMenuTarget, confirmationOptions, mediaViewerContent,
+        manualSdpText,
+        toggleDetailsPanel, showModal, hideModal, setAppLoading,
+        showContextMenu, hideContextMenu, showConfirmationModal, showMediaViewer
     };
 });

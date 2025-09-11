@@ -5,8 +5,11 @@
         <button :class="{ active: activeTab === 'contact' }" @click="activeTab = 'contact'">联系人</button>
         <button :class="{ active: activeTab === 'group' }" @click="activeTab = 'group'">群组</button>
         <button :class="{ active: activeTab === 'character' }" @click="activeTab = 'character'">角色</button>
+        <!-- [NEW] Memory Book Tab -->
+        <button :class="{ active: activeTab === 'memory' }" @click="activeTab = 'memory'">记忆书</button>
       </nav>
 
+      <!-- Contact Tab -->
       <div v-if="activeTab === 'contact'" class="tab-content">
         <h3>添加/修改联系人</h3>
         <p>输入对方ID。若ID已存在，可修改其昵称。</p>
@@ -15,6 +18,7 @@
         <button class="btn-primary" @click="handleConfirmContact">确认</button>
       </div>
 
+      <!-- Group Tab -->
       <div v-if="activeTab === 'group'" class="tab-content">
         <h3>创建/修改群组</h3>
         <p>输入群组名称。提供ID可修改，留空则创建。</p>
@@ -23,6 +27,7 @@
         <button class="btn-primary" @click="handleConfirmGroup">确认</button>
       </div>
 
+      <!-- Character Tab -->
       <div v-if="activeTab === 'character'" class="tab-content">
         <h3>角色卡管理</h3>
         <p>导入或导出角色定义文件 (.json)。</p>
@@ -32,26 +37,64 @@
         </div>
         <input type="file" ref="importFileInputRef" @change="handleImport" accept=".json" style="display: none;">
       </div>
+
+      <!-- [NEW] Memory Book Tab Content -->
+      <div v-if="activeTab === 'memory'" class="tab-content">
+        <h3>记忆书管理</h3>
+        <p>管理用于AI提取长期记忆的关键要素。</p>
+
+        <!-- List of Memory Sets -->
+        <div class="memory-set-list">
+          <div v-if="memoryStore.elementSets.length === 0 && !isFormVisible" class="empty-list-info">
+            还没有记忆书，点击下方按钮添加一个吧！
+          </div>
+          <div v-for="set in memoryStore.elementSets" :key="set.id" class="memory-set-item">
+            <span class="set-name">{{ set.name }}</span>
+            <div class="set-actions">
+              <button class="btn-icon" @click="_showMemorySetForm(set)" title="编辑">✏️</button>
+              <button class="btn-icon" @click="deleteMemorySet(set)" title="删除">🗑️</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Form for Add/Edit -->
+        <transition name="form-fade">
+          <div v-if="isFormVisible" class="memory-set-form">
+            <h4>{{ editingSetId ? '编辑记忆书' : '添加新记忆书' }}</h4>
+            <input type="text" v-model="editingSetName" placeholder="记忆书名称 (例如: '个人喜好')">
+            <input type="text" v-model="editingSetElements" placeholder="关键要素, 用逗号分隔 (例如: '颜色, 食物')">
+            <div class="form-actions">
+              <button class="btn-secondary" @click="_hideMemorySetForm">取消</button>
+              <button class="btn-primary" @click="handleSaveMemorySet">
+                {{ editingSetId ? '保存修改' : '确认添加' }}
+              </button>
+            </div>
+          </div>
+        </transition>
+
+        <button v-if="!isFormVisible" class="btn-primary" @click="_showMemorySetForm()">+ 添加新记忆书</button>
+      </div>
+
     </div>
   </ModalWrapper>
 </template>
 
 <script setup>
-// --- FIX START: Import necessary hooks and store ---
 import { ref, onMounted, watch } from 'vue';
 import ModalWrapper from './ModalWrapper.vue';
 import { useUserStore } from '@/stores/userStore';
 import { useGroupStore } from '@/stores/groupStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { useUiStore } from '@/stores/uiStore'; // Import uiStore
+import { useUiStore } from '@/stores/uiStore';
+import { useMemoryStore } from '@/stores/memoryStore'; // Import memoryStore
 import { eventBus } from '@/services/eventBus';
-// --- FIX END ---
 
 const emit = defineEmits(['close']);
 const userStore = useUserStore();
 const groupStore = useGroupStore();
 const settingsStore = useSettingsStore();
-const uiStore = useUiStore(); // Get uiStore instance
+const uiStore = useUiStore();
+const memoryStore = useMemoryStore(); // Get memoryStore instance
 
 const activeTab = ref('contact');
 const newContactId = ref('');
@@ -60,23 +103,23 @@ const newGroupName = ref('');
 const newGroupId = ref('');
 const importFileInputRef = ref(null);
 
-// --- FIX START: Logic to handle prefill data ---
+// --- [NEW] State for Memory Book Management ---
+const isFormVisible = ref(false);
+const editingSetId = ref(null);
+const editingSetName = ref('');
+const editingSetElements = ref('');
+
+
 const checkPrefillData = () => {
   const prefill = uiStore.modalPrefillData;
   if (prefill.prefillId) {
     newContactId.value = prefill.prefillId;
     newContactName.value = prefill.prefillName || '';
-    // Switch to the correct tab if not already active
     activeTab.value = 'contact';
   }
 };
-
-// Check when the component is mounted
 onMounted(checkPrefillData);
-
-// Also watch for changes if the modal is already open and data changes
 watch(() => uiStore.modalPrefillData, checkPrefillData);
-// --- FIX END ---
 
 
 const handleConfirmContact = async () => {
@@ -94,7 +137,6 @@ const handleConfirmContact = async () => {
     emit('close');
   }
 };
-
 const handleConfirmGroup = async () => {
   if(!newGroupName.value) {
     eventBus.emit('showNotification', { message: '群组名称不能为空', type: 'warning' });
@@ -106,9 +148,7 @@ const handleConfirmGroup = async () => {
     emit('close');
   }
 };
-
 const triggerImport = () => importFileInputRef.value?.click();
-
 const handleImport = (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -131,7 +171,6 @@ const handleImport = (event) => {
   reader.readAsText(file);
   if(event.target) event.target.value = '';
 };
-
 const exportCharacters = async () => {
   const charactersToExport = settingsStore.currentSpecialContacts;
   if (charactersToExport.length === 0) {
@@ -150,38 +189,84 @@ const exportCharacters = async () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
+// --- [NEW] Methods for Memory Book Management ---
+const _showMemorySetForm = (set = null) => {
+  if (set) {
+    editingSetId.value = set.id;
+    editingSetName.value = set.name;
+    editingSetElements.value = set.elements.join(', ');
+  } else {
+    editingSetId.value = null;
+    editingSetName.value = '';
+    editingSetElements.value = '';
+  }
+  isFormVisible.value = true;
+};
+
+const _hideMemorySetForm = () => {
+  isFormVisible.value = false;
+};
+
+const handleSaveMemorySet = async () => {
+  const name = editingSetName.value.trim();
+  const elements = editingSetElements.value.split(/[,，、\s]+/).map(e => e.trim()).filter(Boolean);
+
+  let success = false;
+  if (editingSetId.value) {
+    success = await memoryStore.updateElementSet(editingSetId.value, name, elements);
+  } else {
+    success = await memoryStore.addElementSet(name, elements);
+  }
+
+  if (success) {
+    _hideMemorySetForm();
+  }
+};
+
+const deleteMemorySet = (set) => {
+  uiStore.showConfirmationModal({
+    message: `确定要删除记忆书 "${set.name}" 吗？此操作不可逆。`,
+    onConfirm: () => memoryStore.deleteElementSet(set.id)
+  });
+};
+
 </script>
 
 <style scoped>
-.modal-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--color-border);
-  margin-bottom: var(--spacing-4);
-}
-.modal-tabs button {
-  padding: var(--spacing-2) var(--spacing-4);
-  border-bottom: 2px solid transparent;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-}
-.modal-tabs button.active {
-  color: var(--color-brand-primary);
-  border-bottom-color: var(--color-brand-primary);
-}
-.tab-content {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-3);
-}
+/* ... existing styles ... */
+.modal-tabs { display: flex; border-bottom: 1px solid var(--color-border); margin-bottom: var(--spacing-4); }
+.modal-tabs button { padding: var(--spacing-2) var(--spacing-4); border-bottom: 2px solid transparent; font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
+.modal-tabs button.active { color: var(--color-brand-primary); border-bottom-color: var(--color-brand-primary); }
+.tab-content { display: flex; flex-direction: column; gap: var(--spacing-3); }
 h3 { margin-bottom: var(--spacing-1); }
 p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-2); }
-.btn-primary, .btn-secondary {
-  padding: var(--spacing-2) var(--spacing-4);
-  border-radius: var(--border-radius-md);
-  font-weight: var(--font-weight-medium);
-  width: 100%;
-}
+.btn-primary, .btn-secondary { padding: var(--spacing-2) var(--spacing-4); border-radius: var(--border-radius-md); font-weight: var(--font-weight-medium); width: 100%; }
 .btn-primary { background-color: var(--color-brand-primary); color: var(--color-text-on-brand); }
 .btn-secondary { background-color: var(--color-background-elevated); border: 1px solid var(--color-border); }
 .button-group { display: flex; gap: var(--spacing-3); }
+
+/* --- [NEW] Styles for Memory Book Management --- */
+.memory-set-list { display: flex; flex-direction: column; gap: var(--spacing-2); }
+.memory-set-item { display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-2) var(--spacing-3); background-color: var(--color-background-elevated); border-radius: var(--border-radius-md); }
+.set-name { font-weight: var(--font-weight-medium); }
+.set-actions { display: flex; gap: var(--spacing-1); }
+.btn-icon { font-size: 1rem; padding: var(--spacing-1); border-radius: 50%; width: 32px; height: 32px; }
+.btn-icon:hover { background-color: var(--color-background-hover); }
+.empty-list-info { text-align: center; color: var(--color-text-secondary); padding: var(--spacing-3); }
+
+.memory-set-form {
+  padding: var(--spacing-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--border-radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-2);
+}
+.memory-set-form h4 { margin: 0 0 var(--spacing-1) 0; }
+.form-actions { display: flex; justify-content: flex-end; gap: var(--spacing-2); }
+.form-actions .btn-primary, .form-actions .btn-secondary { width: auto; }
+
+.form-fade-enter-active, .form-fade-leave-active { transition: all 0.3s ease; }
+.form-fade-enter-from, .form-fade-leave-to { opacity: 0; transform: translateY(-10px); }
 </style>

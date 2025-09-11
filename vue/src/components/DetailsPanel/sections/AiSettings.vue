@@ -11,7 +11,7 @@
       </select>
     </div>
 
-    <!-- Memory Books -->
+    <!-- [MODIFIED] Memory Books Section -->
     <div class="setting-block">
       <h4>记忆书</h4>
       <div v-if="memoryStore.elementSets.length === 0" class="empty-memory">
@@ -22,14 +22,16 @@
           <div class="memory-header">
             <span class="memory-name">{{ set.name }}</span>
             <div class="memory-actions">
-              <input
-                  type="radio"
-                  :name="`memory-enable-${contactId}`"
-                  :checked="isMemoryBookEnabled(set.id)"
-                  @change="toggleMemoryBook(set.id, $event.target.checked)"
-                  :id="`radio-${set.id}`"
-              />
-              <label :for="`radio-${set.id}`">启用</label>
+              <label :for="`radio-${set.id}`" class="enable-label">
+                <input
+                    type="radio"
+                    :name="`memory-enable-${contactId}`"
+                    :checked="isMemoryBookEnabled(set.id)"
+                    @change="toggleMemoryBook(set.id, $event.target.checked)"
+                    :id="`radio-${set.id}`"
+                />
+                启用
+              </label>
               <button @click="generateMemory(set.id)" class="btn-action">记录</button>
             </div>
           </div>
@@ -45,8 +47,7 @@
     <!-- TTS Settings -->
     <div class="setting-block">
       <h4>TTS 设置</h4>
-      <p>TTS 设置功能正在开发中...</p>
-      <!-- Full TTS form will be built here -->
+      <p class="placeholder-text">TTS 设置功能正在开发中...</p>
     </div>
   </div>
 </template>
@@ -74,6 +75,7 @@ const onChapterChange = (event) => {
   userStore.setSelectedChapterForAI(props.contactId, chapterId);
 };
 
+// --- [NEW] Memory Book related computed properties and methods ---
 const getMemoryContent = (setId) => {
   return memoryStore.elementSets.find(s => s.id === setId)?.books?.[props.contactId]?.content || '';
 };
@@ -115,8 +117,7 @@ h4 {
 .chapter-select {
   width: 100%;
 }
-
-.empty-memory {
+.placeholder-text, .empty-memory {
   text-align: center;
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
@@ -130,13 +131,11 @@ h4 {
   flex-direction: column;
   gap: var(--spacing-3);
 }
-
 .memory-item {
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius-md);
   overflow: hidden;
 }
-
 .memory-header {
   display: flex;
   justify-content: space-between;
@@ -144,31 +143,25 @@ h4 {
   padding: var(--spacing-2) var(--spacing-3);
   background-color: var(--color-background-elevated);
 }
-
-.memory-name {
-  font-weight: var(--font-weight-medium);
-}
-
+.memory-name { font-weight: var(--font-weight-medium); }
 .memory-actions {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
   font-size: var(--font-size-sm);
 }
-.memory-actions label {
+.enable-label {
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: var(--spacing-1);
 }
-
 .memory-actions .btn-action {
   background: none;
   color: var(--color-brand-primary);
   font-weight: var(--font-weight-semibold);
   padding: 0;
 }
-
 .memory-item textarea {
   width: 100%;
   border: none;

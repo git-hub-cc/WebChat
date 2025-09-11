@@ -8,10 +8,11 @@
     <div class="details-tabs">
       <button :class="{ active: activeTab === 'members' }" @click="activeTab = 'members'">成员</button>
       <button :class="{ active: activeTab === 'media' }" @click="activeTab = 'media'">媒体</button>
+      <!-- [MODIFIED] Conditionally render AI settings tab -->
       <button v-if="isOwnerWithAIs" :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'">AI设置</button>
     </div>
 
-    <!-- 成员列表 -->
+    <!-- 成员列表 (No changes here) -->
     <div v-if="activeTab === 'members'" class="tab-content">
       <div class="member-list">
         <div v-for="member in sortedMembers" :key="member.id" class="member-item">
@@ -26,7 +27,6 @@
           <IconButton v-if="isOwner && !member.isOwner" icon="✕" title="移除成员" @click="removeMember(member.id, member.name)" />
         </div>
       </div>
-
       <div v-if="isOwner" class="add-member-section">
         <hr>
         <h3>添加成员</h3>
@@ -42,13 +42,12 @@
       </div>
     </div>
 
-    <!-- 媒体预览 -->
+    <!-- 媒体预览 (No changes here) -->
     <ResourcePreview v-if="activeTab === 'media'" :chat-id="group.id" />
 
-    <!-- AI 设置 -->
+    <!-- [MODIFIED] AI 设置 Tab Content -->
     <div v-if="activeTab === 'ai' && isOwnerWithAIs" class="tab-content">
-      <p>AI 设置占位</p>
-      <!-- TODO: AI Settings for group prompts would go here -->
+      <AiGroupSettings :group-id="group.id" />
     </div>
 
     <div class="actions">
@@ -56,22 +55,23 @@
       <button v-if="!isOwner" class="btn-danger" @click="leaveGroup">退出群组</button>
       <button v-if="isOwner" class="btn-danger" @click="dissolveGroup">解散群组</button>
     </div>
-
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, defineAsyncComponent } from 'vue';
 import { useGroupStore } from '@/stores/groupStore';
 import { useUserStore } from '@/stores/userStore';
 import { useChatStore } from '@/stores/chatStore';
 import { useUiStore } from '@/stores/uiStore';
-import { eventBus } from '@/services/eventBus';
 import Avatar from '@/components/Shared/Avatar.vue';
 import IconButton from '@/components/Shared/IconButton.vue';
 import ResourcePreview from './ResourcePreview.vue';
 import AppSettings from '@/config/AppSettings';
 import { webrtcService } from '@/services/webrtcService';
+
+// [NEW] Asynchronously import the new component
+const AiGroupSettings = defineAsyncComponent(() => import('./AiGroupSettings.vue'));
 
 const groupStore = useGroupStore();
 const userStore = useUserStore();
@@ -124,21 +124,21 @@ async function addMember() {
 }
 
 function removeMember(memberId, memberName) {
-  eventBus.emit('showConfirmation', {
+  uiStore.showConfirmationModal({
     message: `确定要将 "${memberName}" 移出群组吗？`,
     onConfirm: () => groupStore.removeMemberFromGroup(group.value.id, memberId),
   });
 }
 
 function leaveGroup() {
-  eventBus.emit('showConfirmation', {
+  uiStore.showConfirmationModal({
     message: `确定要退出群组 "${group.value.name}" 吗？`,
     onConfirm: () => groupStore.leaveGroup(group.value.id).then(() => uiStore.toggleDetailsPanel(false)),
   });
 }
 
 function dissolveGroup() {
-  eventBus.emit('showConfirmation', {
+  uiStore.showConfirmationModal({
     message: `确定要解散群组 "${group.value.name}" 吗？此操作不可逆！`,
     onConfirm: () => groupStore.dissolveGroup(group.value.id).then(() => uiStore.toggleDetailsPanel(false)),
   });
@@ -146,6 +146,7 @@ function dissolveGroup() {
 </script>
 
 <style scoped>
+/* Scoped styles are unchanged, as the structure is largely the same */
 .group-info-section { text-align: center; padding: 0 var(--spacing-4) var(--spacing-4); }
 .profile-avatar { margin: var(--spacing-4) auto; }
 .profile-name { font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); }

@@ -1,7 +1,7 @@
 import { log } from '@/utils';
 
 const DB_NAME = 'WebChatVueDB';
-const DB_VERSION = 2;
+const DB_VERSION = 2; // Keep this version if it's already deployed, or increment if needed.
 const STORES = ['user', 'contacts', 'chats', 'groups', 'settings', 'appStateCache', 'stickers', 'memoryBooks', 'fileCache', 'ttsCache'];
 
 let dbPromise = null;
@@ -40,20 +40,25 @@ function getDb() {
 async function performDbOperation(storeName, mode, operation) {
     const db = await getDb();
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction(storeName, mode);
-        const store = transaction.objectStore(storeName);
-        transaction.oncomplete = () => {};
-        transaction.onerror = (event) => {
-            log(`数据库事务错误 on ${storeName}: ${event.target.error}`, 'ERROR');
-            reject(event.target.error);
-        };
+        try {
+            const transaction = db.transaction(storeName, mode);
+            const store = transaction.objectStore(storeName);
+            transaction.oncomplete = () => {};
+            transaction.onerror = (event) => {
+                log(`数据库事务错误 on ${storeName}: ${event.target.error}`, 'ERROR');
+                reject(event.target.error);
+            };
 
-        const request = operation(store);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = (event) => {
-            log(`数据库请求失败 on ${storeName}: ${event.target.error}`, 'ERROR');
-            reject(event.target.error);
-        };
+            const request = operation(store);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = (event) => {
+                log(`数据库请求失败 on ${storeName}: ${event.target.error}`, 'ERROR');
+                reject(event.target.error);
+            };
+        } catch (error) {
+            log(`创建数据库事务时出错 on ${storeName}: ${error}`, 'ERROR');
+            reject(error);
+        }
     });
 }
 
@@ -63,18 +68,25 @@ export const dbService = {
     getAllItems: (storeName) => performDbOperation(storeName, 'readonly', store => store.getAll()),
 
     /**
-     * Stores an item. Handles Vue's reactivity proxies by deep cloning.
+     * Stores an item. Handles Vue's reactivity proxies by deep cloning,
+     * but bypasses cloning for stores known to contain Blob objects.
      * @param {string} storeName - The name of the object store.
      * @param {object} item - The item to store.
      */
     setItem: (storeName, item) => {
         // --- START OF FIX ---
-        // For stores containing Blobs, we must bypass JSON stringification as it doesn't work for Blobs.
-        // The responsibility is shifted to the caller to provide a plain, non-reactive object.
-        if (storeName === 'fileCache' || storeName === 'ttsCache' || storeName === 'stickers') {
+        // Define a list of stores that contain Blob objects and should not be stringified.
+        const blobStores = ['fileCache', 'ttsCache', 'stickers', 'appStateCache'];
+
+        if (blobStores.includes(storeName)) {
+            // For stores containing Blobs, we must pass the object directly
+            // without JSON stringification. The caller is responsible for ensuring
+            // the object is not a Vue reactive proxy if it causes issues,
+            // but for simple structures like {id, blob}, it's generally safe.
+            log(`dbService.setItem: Bypassing JSON.stringify for blob store '${storeName}'.`, 'DEBUG');
             return performDbOperation(storeName, 'readwrite', store => store.put(item));
         } else {
-            // For all other metadata stores, this is a safe and effective way to remove Vue's reactivity proxies.
+            // For all other metadata stores, this is a safe way to remove Vue's reactivity proxies.
             const plainItem = JSON.parse(JSON.stringify(item));
             return performDbOperation(storeName, 'readwrite', store => store.put(plainItem));
         }
