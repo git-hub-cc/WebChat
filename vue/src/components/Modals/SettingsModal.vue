@@ -74,7 +74,7 @@
       <div v-if="activeTab === 'api'" class="tab-content">
         <div class="setting-item">
           <label for="llm-provider-select">大模型提供商</label>
-          <select id="llm-provider-select" :value="settingsStore.apiSettings.llmProvider" @change="onProviderChange">
+          <select id="llm-provider-select" :value="apiSettingsForm.llmProvider" @change="onProviderChange">
             <option v-for="(provider, key) in LLMProviders" :key="key" :value="key">
               {{ provider.label }}
             </option>
@@ -109,25 +109,11 @@
 
       <!-- 高级 Advanced -->
       <div v-if="activeTab === 'advanced'" class="tab-content">
-        <h3>手动连接 (两步式)</h3>
-        <p>用于信令服务器故障时。一方创建提议，另一方创建应答，然后提议方接受应答即可。</p>
-
-        <div class="manual-connect-step">
-          <button class="btn-secondary" @click="createManualOffer">1. 创建连接提议</button>
-        </div>
-
-        <div class="manual-connect-step">
-          <button class="btn-secondary" @click="createManualAnswer">2. 创建应答 (粘贴提议后)</button>
-        </div>
-
-        <div class="manual-connect-step">
-          <button class="btn-secondary" @click="acceptManualAnswer">3. 接受应答 (粘贴应答后)</button>
-        </div>
-
-        <div class="manual-connect-step">
-          <textarea v-model="uiStore.manualSdpText" placeholder="在此粘贴对方的连接信息..." rows="5"></textarea>
-          <button class="btn-secondary" @click="copySdpText">复制我的信息</button>
-        </div>
+        <h3>手动连接</h3>
+        <p>用于信令服务器故障时，通过手动交换信息来建立连接。</p>
+        <button class="btn-secondary" @click="uiStore.showModal('bindManualConnection')">
+          打开手动连接工具
+        </button>
       </div>
 
     </div>
@@ -135,7 +121,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import ModalWrapper from './ModalWrapper.vue';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useUserStore } from '@/stores/userStore';
@@ -172,7 +158,7 @@ const wsStatusClass = computed(() => webrtcService.isWebSocketConnected.value ? 
 
 const onThemeChange = (event) => settingsStore.applyTheme(event.target.value, event);
 const onColorSchemeChange = (event) => settingsStore.setColorScheme(event.target.value, event);
-const copyUserId = () => { eventBus.emit('showNotification', { message: '用户ID已复制', type: 'success' }); navigator.clipboard.writeText(userStore.userId); };
+const copyUserId = () => { navigator.clipboard.writeText(userStore.userId); eventBus.emit('showNotification', { message: '用户ID已复制', type: 'success' }); };
 const clearContacts = () => eventBus.emit('showConfirmation', { message: '确定要删除所有手动添加的联系人吗？', onConfirm: () => userStore.removeAllContacts() });
 const clearChats = () => chatStore.clearAllChats();
 const clearCache = () => {
@@ -206,26 +192,6 @@ const handleBgChange = (event, mode) => {
 const removeBackground = (mode) => settingsStore.removeCustomBackground(mode);
 const onProviderChange = (event) => settingsStore.handleLlmProviderChange(event.target.value);
 const saveApiSetting = (key) => settingsStore.saveApiSetting(key, apiSettingsForm[key]);
-
-// Manual Connection Logic
-const createManualOffer = () => webrtcService.createManualOffer();
-const createManualAnswer = () => webrtcService.createManualAnswer(uiStore.manualSdpText);
-const acceptManualAnswer = () => {
-  webrtcService.acceptManualAnswer(uiStore.manualSdpText);
-  uiStore.manualSdpText = '';
-};
-const copySdpText = () => {
-  if (uiStore.manualSdpText) {
-    navigator.clipboard.writeText(uiStore.manualSdpText);
-    eventBus.emit('showNotification', { message: '连接信息已复制！', type: 'success' });
-  } else {
-    eventBus.emit('showNotification', { message: '没有可复制的信息。', type: 'info' });
-  }
-};
-
-const onManualSignal = (signal) => { uiStore.manualSdpText = JSON.stringify(signal, null, 2); };
-onMounted(() => eventBus.on('webrtc:manual-signal', onManualSignal));
-onUnmounted(() => eventBus.off('webrtc:manual-signal', onManualSignal));
 </script>
 
 <style scoped>
@@ -250,8 +216,5 @@ hr { border: none; border-top: 1px solid var(--color-border); margin: var(--spac
 .btn-danger-outline { color: var(--color-status-danger); border: 1px solid var(--color-status-danger); }
 .btn-danger-outline:disabled { color: var(--color-text-tertiary); border-color: var(--color-border); }
 input[type="text"], input[type="password"], input[type="number"], select, textarea { width: 100%; flex-grow: 1; }
-.button-group { display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-2); }
 p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: 0; line-height: 1.4; }
-.manual-connect-step { display: flex; flex-direction: column; gap: var(--spacing-2); }
-.manual-connect-step .btn-secondary { width: 100%; text-align: left; justify-content: flex-start; }
 </style>

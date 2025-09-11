@@ -33,15 +33,12 @@ const props = defineProps({
 
 const userStore = useUserStore();
 
-const contactStatus = computed(() => {
-  if (props.item.type === 'group') return null;
-  return userStore.getContactStatus(props.item);
-});
+// MODIFICATION: Use the centralized getter for online status
+const combinedStatus = computed(() => userStore.getContactCombinedStatus(props.item.id));
 
 const isOnline = computed(() => {
-  // The Avatar's online dot should be visible if the status class is 'online'.
-  // This now correctly applies to both regular users and AI contacts.
-  return contactStatus.value?.className === 'online';
+  if (props.item.type === 'group') return null; // Group never shows online dot
+  return combinedStatus.value.isOnlineDisplay;
 });
 
 const formattedTime = computed(() => {

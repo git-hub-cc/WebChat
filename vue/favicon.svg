@@ -1,0 +1,29 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background shape: Rounded square (Optional, can be removed for pure icon) -->
+    <rect x="0" y="0" width="48" height="48" rx="8" fill="#F8F9FA"/>
+
+    <!-- Chat Bubble (main element) -->
+    <path d="M12 12C12 9.79086 13.7909 8 16 8H32C34.2091 8 36 9.79086 36 12V28C36 30.2091 34.2091 32 32 32H19.043L12 37V28C12 28 12 12 12 12Z" fill="#3498DB"/>
+
+    <!-- "Typing" dots inside the bubble -->
+    <circle cx="20" cy="20" r="2" fill="white"/>
+    <circle cx="24" cy="20" r="2" fill="white"/>
+    <circle cx="28" cy="20" r="2" fill="white"/>
+
+    <!-- AI Symbol (brain/star-like node in the corner, subtle) -->
+    <g fill="#2ECC71"> <!-- A subtle green for AI, or your brand primary -->
+        <circle cx="38" cy="10" r="4"/>
+        <path d="M38 6L39.5 8.5L42 10L39.5 11.5L38 14L36.5 11.5L34 10L36.5 8.5L38 6Z" fill="#2ECC71"/>
+    </g>
+
+    <!-- Optional: If you want a dark mode version, you could use a <g> tag with `prefers-color-scheme` CSS -->
+    <!-- Example for dark mode override (requires embedding CSS) -->
+    <!-- <style>
+      @media (prefers-color-scheme: dark) {
+        svg > rect { fill: #2C2F33; }
+        svg > path { fill: #3498DB; }
+        svg > g { fill: #2ECC71; }
+      }
+    </style> -->
+
+</svg>

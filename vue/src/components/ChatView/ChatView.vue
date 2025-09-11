@@ -14,7 +14,6 @@
 <script setup>
 import { ref } from 'vue';
 import { useChatStore } from '@/stores/chatStore';
-import { mediaService } from '@/services/mediaService';
 import { eventBus } from '@/services/eventBus';
 import ChatHeader from './ChatHeader.vue';
 import MessageArea from './MessageArea.vue';

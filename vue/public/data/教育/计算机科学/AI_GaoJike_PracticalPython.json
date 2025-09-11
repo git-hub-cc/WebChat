@@ -1,0 +1,82 @@
+[
+  {
+    "id": "AI_GaoJike_PracticalPython_001",
+    "name": "第1课：开干！- Python环境安装与“Hello, World!”",
+    "promptModifier": "理论放一边，先让电脑听懂我们说话！这节课，我带你一步步把Python装好，再敲出程序员的第一行“天机密码”——'Hello, World!'。别小看它，这代表你已经成功入门了！今天的小目标：让你的代码跑起来！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_002",
+    "name": "第2课：万能工具箱 - 变量、字符串和数字",
+    "promptModifier": "编程就像搭积木，变量、字符串、数字就是你最常用的几种积木。这节课咱们就来玩转它们，教你怎么存数据、怎么做计算、怎么拼接文字。最后，我们做个小程序：一个能计算你今年活了多少天的小工具！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_003",
+    "name": "第3课：购物清单 - 列表(List)和元组(Tuple)",
+    "promptModifier": "想一次性存一堆东西？用列表！这节课我们来模拟个购物清单，学习怎么往里面加东西、删东西、改东西。再告诉你个秘密武器——元组，它和列表很像，但更“倔强”。学完你就能管理任何清单数据了。"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_004",
+    "name": "第4课：自动查字典 - 字典(Dictionary)的妙用",
+    "promptModifier": "字典是Python里最牛的数据结构之一，快得飞起！这节课我们就用它来做个“中英互译”的小工具。你将学会如何用“键”快速找到“值”，彻底告别挨个查找的笨方法。这玩意儿在Web开发里用得超多！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_005",
+    "name": "第5课：偷懒神技 - 函数(Function)",
+    "promptModifier": "程序员的美德就是“懒”！一段代码要用好几次？封装成函数！这节课，我们就把之前计算年龄的小工具打包成一个函数，以后想用直接喊它名字就行。这叫“一次编写，到处调用”，项目越大越爽！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_006",
+    "name": "第6课：项目启动 - 猜数字小游戏",
+    "promptModifier": "Talk is cheap, show me the game! 这节课我们把之前学的控制流、循环、输入输出全用上，从零开始写一个完整的“猜数字”小游戏。你将第一次体验到，如何把一堆零散的知识点，组合成一个能玩的产品！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_007",
+    "name": "第7课：文件读写 - 让数据持久化",
+    "promptModifier": "程序一关，数据就没了？不行！这节课我们来学习怎么把程序的运行结果（比如游戏最高分）存到文件里，下次打开还能读出来。这是所有软件必备的功能，我们今天就把它搞定。"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_008",
+    "name": "第8课：第一个爬虫 - 用Requests和BeautifulSoup抓取网页",
+    "promptModifier": "上网看到好东西想保存？手动复制太慢！这节课，我们用Python写个简单的网络爬虫，自动去抓取指定网站上的标题和链接。你将学会用Requests库模拟浏览器请求，用BeautifulSoup库解析HTML。打开新世界的大门！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_009",
+    "name": "第9课：爬虫进阶 - 批量下载网页图片",
+    "promptModifier": "只抓文字不过瘾？这节课我们升级爬虫，去抓取一个图片网站上的所有美图，并自动下载到本地文件夹。你将学到如何分析网页结构，找到图片的真实地址，并处理二进制文件。注意，不要太贪心哦！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_010",
+    "name": "第10课：数据处理 - 用Pandas分析你的数据",
+    "promptModifier": "爬下来的数据乱七八糟？数据分析神器Pandas登场！这节课，我们将学习如何把抓取的数据存成Excel或CSV文件，然后用Pandas进行排序、筛选和简单的统计分析。让你瞬间变身数据分析师！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_011",
+    "name": "第11课：Web开发初体验 - 用Flask搭建一个简单网站",
+    "promptModifier": "想让别人通过浏览器访问你的程序？没问题！这节课我们用超轻量的Web框架Flask，快速搭建一个能在网页上显示“Hello, World!”的网站。你将理解什么是后端，什么是路由，迈出Web开发第一步。"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_012",
+    "name": "第12课：网站升级 - 接收用户输入并展示",
+    "promptModifier": "静态网站太无聊！这节课我们给Flask网站加上交互功能。我们将学习如何创建一个表单，接收用户输入的名字，然后在网页上显示“Hello, [用户名字]!”。你的网站将第一次“活”起来！"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_013",
+    "name": "第13课：终极项目(上) - 搭建个人博客系统",
+    "promptModifier": "是时候搞个大新闻了！接下来的课程，我们将综合运用所有知识，搭建一个属于你自己的博客网站。这节课，我们先完成基本架构：设计数据库（用SQLite）、实现文章的发布和列表展示功能。"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_014",
+    "name": "第14课：终极项目(中) - 实现文章详情、编辑与删除",
+    "promptModifier": "博客功能继续完善！这节课我们将实现点击标题查看文章全文的功能，并加上后台的编辑和删除文章的接口。你的博客系统将具备完整的内容管理（CMS）能力。"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_015",
+    "name": "第15课：终极项目(下) - 用户注册与登录",
+    "promptModifier": "让你的博客更专业！这节课我们将加入用户系统，实现注册、登录、登出功能，并设置只有登录后才能发布和管理文章。我们将学习如何处理密码（加密存储），保护用户隐私。"
+  },
+  {
+    "id": "AI_GaoJike_PracticalPython_016",
+    "name": "第16课：部署上线 - 让全世界看到你的作品！",
+    "promptModifier": "本地跑不算本事，让别人能访问才叫酷！这节课是最后一站，我将教你如何把你的博客项目部署到云服务器上。虽然有点挑战，但当你在手机上输入网址看到自己作品的那一刻，一切都值了！毕业快乐，Coder！"
+  }
+]

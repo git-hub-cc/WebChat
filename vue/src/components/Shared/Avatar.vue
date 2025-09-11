@@ -2,6 +2,7 @@
   <div class="avatar" :class="[sizeClass, { 'is-special': entity.isSpecial }, entity.id]">
     <img v-if="entity.avatarUrl" :src="entity.avatarUrl" :alt="avatarText" class="avatar-image">
     <span v-else class="avatar-text">{{ avatarText }}</span>
+    <!-- MODIFICATION: isOnline prop is now the single source of truth for online dot visibility -->
     <span v-if="isOnline" class="online-dot"></span>
   </div>
 </template>
@@ -19,6 +20,7 @@ const props = defineProps({
     type: String,
     default: 'medium', // 'small', 'medium', 'large', 'xl'
   },
+  // MODIFICATION: isOnline is now directly passed as a boolean, no internal logic
   isOnline: {
     type: Boolean,
     default: false,

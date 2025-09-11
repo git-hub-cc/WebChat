@@ -4,12 +4,10 @@ import { eventBus } from '@/services/eventBus';
 import { webrtcService } from '@/services/webrtcService';
 import { useUserStore } from './userStore';
 import { useUiStore } from './uiStore';
+import { useChatStore } from './chatStore';
 import { log } from '@/utils';
 import AppSettings from '@/config/AppSettings';
 
-/**
- * Manages all real-time audio/video call states and core logic.
- */
 export const useCallStore = defineStore('call', () => {
     // --- STATE ---
     const localStream = ref(null);
@@ -21,43 +19,69 @@ export const useCallStore = defineStore('call', () => {
     const isAudioMuted = ref(false);
     const isVideoEnabled = ref(true);
     const isScreenSharing = ref(false);
-    const incomingCallInfo = ref(null); // { peerId, name, isScreenShare }
+    const incomingCallInfo = ref(null);
 
     let callRequestTimeout = null;
     let musicPlayer = null;
+    let isMusicPlaying = false;
+    let boundEnableMusicPlay = null;
 
     // --- PRIVATE HELPERS ---
-
     function _initMusicPlayer() {
         if (!musicPlayer) {
-            musicPlayer = new Audio(AppSettings.media.music);
-            musicPlayer.loop = true;
+            try {
+                musicPlayer = new Audio(AppSettings.media.music);
+                musicPlayer.loop = true;
+            } catch (e) {
+                log(`无法创建呼叫音乐播放器: ${e.message}`, 'ERROR');
+            }
         }
     }
 
-    async function _playMusic() {
+    async function _playMusic(isRetry = false) {
         _initMusicPlayer();
-        try {
-            await musicPlayer.play();
-        } catch (error) {
-            log(`Could not auto-play call music: ${error.message}`, 'WARN');
+        if (musicPlayer && !isMusicPlaying) {
+            try {
+                await musicPlayer.play();
+                isMusicPlaying = true;
+                if (boundEnableMusicPlay) {
+                    document.body.removeEventListener('click', boundEnableMusicPlay);
+                    boundEnableMusicPlay = null;
+                }
+            } catch (error) {
+                log(`播放呼叫音乐失败: ${error.name} - ${error.message}`, 'WARN');
+                isMusicPlaying = false;
+                if (error.name === 'NotAllowedError' && !isRetry) {
+                    eventBus.emit('showNotification', { message: '浏览器阻止了铃声自动播放。请点击页面任意位置以启用声音。', type: 'warning' });
+                    boundEnableMusicPlay = () => _playMusic(true);
+                    document.body.addEventListener('click', boundEnableMusicPlay, { once: true });
+                }
+            }
         }
     }
 
     function _stopMusic() {
-        if (musicPlayer) {
+        if (musicPlayer && isMusicPlaying) {
             musicPlayer.pause();
             musicPlayer.currentTime = 0;
+            isMusicPlaying = false;
+        }
+        if (boundEnableMusicPlay) {
+            document.body.removeEventListener('click', boundEnableMusicPlay);
+            boundEnableMusicPlay = null;
         }
     }
 
-    function _resetState() {
+    function _resetState(keepPeerId = false) {
         if (localStream.value) {
             localStream.value.getTracks().forEach(track => track.stop());
         }
         localStream.value = null;
         remoteStream.value = null;
-        currentPeerId.value = null;
+        // If keepPeerId is false, this is a full reset.
+        if (!keepPeerId) {
+            currentPeerId.value = null;
+        }
         isCallActive.value = false;
         isCaller.value = false;
         isCallPending.value = false;
@@ -95,9 +119,8 @@ export const useCallStore = defineStore('call', () => {
         }
     }
 
-    // --- ACTIONS ---
-
-    async function startCall(peerId, options = { isScreenShare: false, isAudioOnly: false }) {
+    // --- INTERNAL ACTION ---
+    function _initiateMediaSession(peerId, options = { isScreenShare: false, audioOnly: false }) {
         if (isCallActive.value || isCallPending.value) {
             eventBus.emit('showNotification', { message: '已在通话中', type: 'warning' });
             return;
@@ -107,14 +130,11 @@ export const useCallStore = defineStore('call', () => {
         isCaller.value = true;
         isCallPending.value = true;
         isScreenSharing.value = options.isScreenShare;
-        isVideoEnabled.value = !options.isScreenShare && !options.isAudioOnly;
-
+        isVideoEnabled.value = !options.isScreenShare && !options.audioOnly;
         const callType = options.isScreenShare ? 'screenshare-request' : 'call-request';
-        webrtcService.sendMessage(peerId, { type: callType, from: userStore.userId, audioOnly: options.isAudioOnly });
-
+        webrtcService.sendMessage(peerId, { type: callType, from: userStore.userId, audioOnly: options.audioOnly });
         useUiStore().showModal('calling');
         _playMusic();
-
         callRequestTimeout = setTimeout(() => {
             if (isCallPending.value) {
                 eventBus.emit('showNotification', { message: '对方无应答', type: 'info' });
@@ -125,30 +145,41 @@ export const useCallStore = defineStore('call', () => {
         }, AppSettings.timeouts.callRequest);
     }
 
+    // --- PUBLIC ACTIONS ---
+    function startVideoCall() {
+        const chatId = useChatStore().currentChatId;
+        if (chatId) _initiateMediaSession(chatId, { isScreenShare: false, audioOnly: false });
+    }
+
+    function startAudioCall() {
+        const chatId = useChatStore().currentChatId;
+        if (chatId) _initiateMediaSession(chatId, { isScreenShare: false, audioOnly: true });
+    }
+
+    function startScreenShare() {
+        const chatId = useChatStore().currentChatId;
+        if (chatId) _initiateMediaSession(chatId, { isScreenShare: true, audioOnly: false });
+    }
+
     async function acceptCall() {
         if (!incomingCallInfo.value) return;
         const uiStore = useUiStore();
-        const { peerId, isScreenShare, audioOnly } = incomingCallInfo.value;
-
+        const { peerId, audioOnly } = incomingCallInfo.value;
         _stopMusic();
         uiStore.hideModal();
-
         const stream = await _getMediaStream({ screen: false, video: !audioOnly, audio: true });
         if (!stream) {
-            rejectCall(true); // Reject internally if media fails
+            rejectCall(true);
             return;
         }
-
         currentPeerId.value = peerId;
         isCallActive.value = true;
         isCallPending.value = false;
-        isScreenSharing.value = false; // We are receiving, not sharing
+        isScreenSharing.value = false;
         isVideoEnabled.value = !audioOnly;
         localStream.value = stream;
-
         webrtcService.sendMessage(peerId, { type: 'call-accepted', from: useUserStore().userId });
-        webrtcService.createOffer(peerId, { stream });
-
+        webrtcService.addStreamToConnection(peerId, stream);
         incomingCallInfo.value = null;
     }
 
@@ -156,21 +187,32 @@ export const useCallStore = defineStore('call', () => {
         let peerIdToNotify;
         if (isCaller.value && isCallPending.value) {
             peerIdToNotify = currentPeerId.value;
-            if(!isInternal) webrtcService.sendMessage(peerIdToNotify, { type: 'call-cancel', from: useUserStore().userId });
+            if (!isInternal) webrtcService.sendMessage(peerIdToNotify, { type: 'call-cancel', from: useUserStore().userId });
         } else if (incomingCallInfo.value) {
             peerIdToNotify = incomingCallInfo.value.peerId;
-            if(!isInternal) webrtcService.sendMessage(peerIdToNotify, { type: 'call-rejected', from: useUserStore().userId });
+            if (!isInternal) webrtcService.sendMessage(peerIdToNotify, { type: 'call-rejected', from: useUserStore().userId });
         }
-
         _resetState();
         useUiStore().hideModal();
     }
 
-    function hangUp() {
-        if ((!isCallActive.value && !isCallPending.value) || !currentPeerId.value) return;
-        webrtcService.sendMessage(currentPeerId.value, { type: 'call-end', from: useUserStore().userId });
-        webrtcService.closeConnection(currentPeerId.value);
-        _resetState();
+    // --- MODIFIED HANGUP LOGIC ---
+    function hangUp(notifyPeer = true) {
+        const peerId = currentPeerId.value;
+        if ((!isCallActive.value && !isCallPending.value) || !peerId) return;
+
+        log(`Hanging up media for peer ${peerId}. Notify: ${notifyPeer}`, 'INFO');
+
+        if (notifyPeer) {
+            webrtcService.sendMessage(peerId, { type: 'call-end', from: useUserStore().userId });
+        }
+
+        // Remove the media stream from the connection, but don't destroy the connection itself.
+        if (localStream.value) {
+            webrtcService.removeStreamFromConnection(peerId, localStream.value);
+        }
+
+        _resetState(true); // Reset state but keep peerId for context
     }
 
     function toggleAudio() {
@@ -217,7 +259,6 @@ export const useCallStore = defineStore('call', () => {
                     isCallPending.value = false;
                     isCallActive.value = true;
                     useUiStore().hideModal();
-
                     _getMediaStream({
                         screen: isScreenSharing.value,
                         video: isVideoEnabled.value,
@@ -233,10 +274,18 @@ export const useCallStore = defineStore('call', () => {
                 }
                 break;
 
+            // --- MODIFIED: Handle call-end by calling hangUp without notifying back ---
+            case 'call-end':
+                if (isCallActive.value && currentPeerId.value === peerId) {
+                    log(`Received call-end from ${peerId}. Ending media session locally.`, 'INFO');
+                    hangUp(false); // Do not notify the peer back
+                    eventBus.emit('showNotification', { message: '对方已挂断', type: 'info' });
+                }
+                break;
+
             case 'call-rejected':
             case 'call-cancel':
-            case 'call-end':
-                if (currentPeerId.value === peerId || incomingCallInfo.value?.peerId === peerId) {
+                if ( (isCallPending.value || isCallActive.value) && (currentPeerId.value === peerId || incomingCallInfo.value?.peerId === peerId) ) {
                     _resetState();
                     useUiStore().hideModal();
                     eventBus.emit('showNotification', { message: '通话已结束', type: 'info' });
@@ -247,18 +296,26 @@ export const useCallStore = defineStore('call', () => {
 
     eventBus.on('webrtc:stream', ({ peerId, stream }) => {
         if (currentPeerId.value === peerId) {
-            remoteStream.value = stream;
+            if (stream instanceof MediaStream) {
+                remoteStream.value = stream;
+            } else {
+                log(`Received an invalid stream object from peer ${peerId}. Ignoring.`, 'WARN');
+            }
         }
     });
 
     eventBus.on('webrtc:disconnected', (peerId) => {
+        // Now, this is the primary way a call is fully terminated due to network issues
         if (currentPeerId.value === peerId) {
-            hangUp();
+            log(`Call with ${peerId} ended due to connection loss.`, 'WARN');
+            eventBus.emit('showNotification', { message: '与对方的连接已断开', type: 'warning' });
+            _resetState();
         }
     });
 
     return {
-        localStream, remoteStream, currentPeerId, isCallActive, isCallPending, isAudioMuted, isVideoEnabled, isScreenSharing, incomingCallInfo, isCaller,
-        startCall, acceptCall, rejectCall, hangUp, toggleAudio, toggleVideo
+        localStream, remoteStream, currentPeerId, isCallActive, isCallPending, isAudioMuted, isVideoEnabled, isScreenSharing, incomingCallInfo,
+        startVideoCall, startAudioCall, startScreenShare,
+        acceptCall, rejectCall, hangUp, toggleAudio, toggleVideo
     };
 });

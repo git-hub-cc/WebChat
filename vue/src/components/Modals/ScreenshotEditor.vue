@@ -35,7 +35,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { eventBus } from '@/services/eventBus';
-import { log, generateFileHash } from '@/utils';
+import { generateFileHash } from '@/utils';
 import { useUiStore } from '@/stores/uiStore';
 import IconButton from '@/components/Shared/IconButton.vue';
 import AppSettings from '@/config/AppSettings';

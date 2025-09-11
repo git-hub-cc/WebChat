@@ -1,0 +1,82 @@
+[
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_001",
+    "name": "Module 1: Professional Introductions & Small Talk",
+    "promptModifier": "This first module focuses on making a powerful first impression. We will practice crafting a concise and impactful self-introduction for networking events. Furthermore, we will master the art of professional small talk, moving beyond weather to discuss industry trends and current events in a manner that is both engaging and appropriate. The key is to build rapport effectively."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_002",
+    "name": "Module 2: Mastering Professional Emails",
+    "promptModifier": "Your email is your digital handshake. This module provides a comprehensive guide to professional email correspondence. We will cover subject lines, formal vs. informal tone, structuring requests and apologies, and attaching documents. We will analyze examples of effective and ineffective emails, focusing on clarity, conciseness, and courtesy. You will be provided with templates for various scenarios."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_003",
+    "name": "Module 3: The Language of Meetings (Part 1) - Participating & Expressing Opinions",
+    "promptModifier": "This session prepares you to be an active and valued participant in international meetings. We will learn diplomatic language for agreeing, disagreeing, and interrupting politely. Key phrases like 'Could I just jump in here?', 'I see your point, however, have we considered...', and 'To build on what John said...' will be practiced through simulated meeting scenarios."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_004",
+    "name": "Module 4: The Language of Meetings (Part 2) - Leading & Facilitating",
+    "promptModifier": "For those in leadership roles, this module is critical. We will focus on the language required to lead a meeting effectively: setting the agenda, managing time, encouraging participation, delegating action items, and summarizing outcomes. The objective is to project confidence and control while fostering a collaborative environment. We will simulate chairing a project kick-off meeting."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_005",
+    "name": "Module 5: Effective Teleconferencing & Video Calls",
+    "promptModifier": "Virtual communication has its own set of rules. This module addresses the nuances of teleconferencing and video calls. We will cover best practices for virtual etiquette, clear communication techniques when non-verbal cues are limited, and phrases for handling technical difficulties gracefully. The focus is on maintaining professionalism and engagement in a remote setting."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_006",
+    "name": "Module 6: The Art of Negotiation (Part 1) - Preparation & Opening",
+    "promptModifier": "Negotiation is a core business skill. In this session, we will focus on the preparation and opening stages. This includes defining your objectives, understanding your counterpart, and establishing a positive tone. We will practice the language of making opening statements, setting positions, and asking clarifying questions. The goal is to lay a solid foundation for a successful outcome."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_007",
+    "name": "Module 7: The Art of Negotiation (Part 2) - Bargaining & Closing",
+    "promptModifier": "This module delves into the heart of negotiation: bargaining and closing. We will learn and practice the language of making proposals and counter-proposals, using conditional sentences ('If you agree to X, we can offer Y'), and finding compromises. We will also cover techniques for overcoming deadlocks and formalizing an agreement. A simulated supplier negotiation will be our practice ground."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_008",
+    "name": "Module 8: Delivering Powerful Presentations",
+    "promptModifier": "This session is designed to transform your presentations from mere reports into compelling narratives. We will focus on the three key parts: a strong opening to grab attention, a logically structured body with clear signposting, and a memorable conclusion with a call to action. We will also work on body language and voice modulation for maximum impact."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_009",
+    "name": "Module 9: Handling Q&A Sessions with Confidence",
+    "promptModifier": "The Q&A session is often the most challenging part of a presentation. This module equips you with strategies to handle it with poise. We will practice techniques for clarifying questions, managing difficult or hostile questions, and bridging back to your key messages. The goal is to maintain control and reinforce your credibility."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_010",
+    "name": "Module 10: Cross-Cultural Communication - Understanding a Global Mindset",
+    "promptModifier": "In a globalized world, cultural intelligence is non-negotiable. This module explores key cultural dimensions (e.g., direct vs. indirect communication, high-context vs. low-context cultures). We will discuss how these differences impact business interactions and learn to adapt our communication style to be more effective and respectful with international colleagues and clients."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_011",
+    "name": "Module 11: Business Vocabulary - Finance, Marketing, and HR",
+    "promptModifier": "To speak the language of business, you need the right vocabulary. This module provides a targeted overview of essential terminology in three core areas: finance (e.g., revenue, profit margin, ROI), marketing (e.g., market share, brand equity, target audience), and human resources (e.g., recruitment, performance appraisal, retention). The focus is on practical application, not rote memorization."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_012",
+    "name": "Module 12: Writing Business Reports and Proposals",
+    "promptModifier": "This module covers the structure and language of formal business documents. We will learn how to write a clear executive summary, structure a formal report, and craft a persuasive proposal. The emphasis is on objective, data-driven language and a professional, reader-focused tone. Templates will be provided."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_013",
+    "name": "Module 13: Managing and Resolving Conflict",
+    "promptModifier": "Conflict is inevitable in business. This session teaches the language of constructive conflict resolution. We will practice using 'I-statements' to express concerns without blame, active listening to understand the other party's perspective, and collaborative language to work towards a mutually acceptable solution. This is an advanced communication skill."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_014",
+    "name": "Module 14: Socializing with Colleagues and Clients",
+    "promptModifier": "Business is often built on relationships forged outside the boardroom. This module covers the etiquette and language for business lunches, dinners, and networking events. We will learn how to extend and accept invitations, make toasts, and navigate conversations in a more relaxed yet still professional setting."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_015",
+    "name": "Module 15: The Elevator Pitch - Selling Your Idea in 60 Seconds",
+    "promptModifier": "Can you sell your idea, your product, or yourself in under a minute? This module is dedicated to crafting and delivering a compelling 'elevator pitch'. We will use a simple formula: problem, solution, value proposition, and call to action. You will practice until your pitch is both concise and convincing."
+  },
+  {
+    "id": "AI_DavidChen_ShangWuYingYu_016",
+    "name": "Module 16: Final Simulation - International Business Case Study",
+    "promptModifier": "Our final session is a capstone case study. You will be presented with a complex international business scenario. Your team will be required to analyze the situation, strategize, and then engage in a multi-stage role-play involving email communication, a virtual meeting, and a final negotiation. This will integrate every skill we have learned. A fitting challenge to prepare you for the global stage."
+  }
+]

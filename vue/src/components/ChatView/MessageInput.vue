@@ -67,7 +67,7 @@ import { useChatStore } from '@/stores/chatStore';
 import IconButton from '@/components/Shared/IconButton.vue';
 import EmojiPicker from '@/components/Shared/EmojiPicker.vue';
 import { mediaService } from '@/services/mediaService';
-import { generateFileHash, log } from '@/utils';
+import { generateFileHash } from '@/utils';
 import { eventBus } from '@/services/eventBus';
 
 const chatStore = useChatStore();

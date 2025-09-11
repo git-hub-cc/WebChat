@@ -6,7 +6,7 @@
         <video v-show="!isAudioOnly" ref="localVideoRef" class="local-video" autoplay playsinline muted></video>
         <div v-if="isAudioOnly" class="audio-only-ui">
           <Avatar :entity="peerContact" size="xl" />
-          <p>{{ peerContact?.name }}</p>
+          <p class="audio-peer-name">{{ peerContact?.name }}</p>
         </div>
       </div>
 
@@ -43,7 +43,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useCallStore } from '@/stores/callStore';
 import { useUserStore } from '@/stores/userStore';
 import IconButton from '@/components/Shared/IconButton.vue';
@@ -56,18 +56,33 @@ const remoteVideoRef = ref(null);
 const isPipMode = ref(false);
 const callContainerRef = ref(null);
 
+// --- START OF FIX ---
+// The watcher now robustly handles both valid MediaStream objects and null values.
 watch(() => callStore.localStream, (newStream) => {
-  if (localVideoRef.value) localVideoRef.value.srcObject = newStream;
+  if (localVideoRef.value) {
+    if (newStream instanceof MediaStream) {
+      localVideoRef.value.srcObject = newStream;
+    } else {
+      localVideoRef.value.srcObject = null; // Correctly handle stream removal
+    }
+  }
 });
 watch(() => callStore.remoteStream, (newStream) => {
-  if (remoteVideoRef.value) remoteVideoRef.value.srcObject = newStream;
+  if (remoteVideoRef.value) {
+    if (newStream instanceof MediaStream) {
+      remoteVideoRef.value.srcObject = newStream;
+    } else {
+      remoteVideoRef.value.srcObject = null; // Correctly handle stream removal
+    }
+  }
 });
+// --- END OF FIX ---
+
 
 const peerContact = computed(() => userStore.contacts[callStore.currentPeerId]);
 
 const isAudioOnly = computed(() => {
-  // A call is considered audio-only if local video is disabled AND there's no remote video track.
-  const hasRemoteVideo = callStore.remoteStream?.getVideoTracks().some(t => t.enabled && t.readyState === 'live');
+  const hasRemoteVideo = callStore.remoteStream?.getVideoTracks().some(t => t.readyState === 'live');
   return !callStore.isVideoEnabled && !hasRemoteVideo;
 });
 
@@ -75,7 +90,7 @@ function togglePip() {
   isPipMode.value = !isPipMode.value;
 }
 
-// Draggable PIP Logic (unchanged from previous suggestion)
+// Draggable PIP Logic
 let dragInfo = { active: false, x: 0, y: 0, initialX: 0, initialY: 0 };
 function dragStart(e) {
   if (e.target.closest('button')) return;
@@ -133,12 +148,10 @@ watch(isPipMode, (isPip) => {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   width: 100%; height: 100%; color: white;
 }
-.audio-only-ui .avatar-xl { width: 120px; height: 120px; font-size: 4rem; margin-bottom: var(--spacing-4); }
-.audio-only-ui p { font-size: 1.5rem; }
+.audio-peer-name { font-size: 1.5rem; }
 .call-view-container.audio-only-mode .remote-video, .call-view-container.audio-only-mode .local-video {
   display: none;
 }
-
 .call-controls {
   position: absolute; bottom: 20px; display: flex; gap: var(--spacing-3);
   background-color: rgba(0, 0, 0, 0.4); padding: var(--spacing-2) var(--spacing-4);
@@ -154,8 +167,6 @@ watch(isPipMode, (isPip) => {
   font-size: 1.8rem; transform: rotate(135deg); border: none;
   display: flex; align-items: center; justify-content: center;
 }
-
-/* PIP Mode */
 .call-view-container.pip-mode {
   inset: auto; bottom: 20px; right: 20px; width: 25vw;
   min-width: 300px; max-width: 400px; aspect-ratio: 16 / 9;
@@ -170,7 +181,6 @@ watch(isPipMode, (isPip) => {
   align-items: center; justify-content: center;
 }
 .pip-mode:hover .call-controls { opacity: 1; }
-
 .call-view-fade-enter-active, .call-view-fade-leave-active {
   transition: opacity 0.3s ease;
 }

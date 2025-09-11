@@ -24,7 +24,7 @@ body {
     line-height: var(--line-height-base);
     background-color: var(--color-background-page);
     color: var(--color-text-primary);
-    font-family: var(--font-family-base);
+    font-family: var(--font-family-base), serif;
 }
 
 /* --- Scrollbar Styling (Telegram Style) --- */

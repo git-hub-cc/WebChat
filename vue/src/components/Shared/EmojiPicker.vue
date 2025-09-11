@@ -28,7 +28,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onUnmounted, watch } from 'vue';
 import { EMOJI_LIST } from '@/config/EmojiList';
 import { mediaService } from '@/services/mediaService';
 import { dbService } from '@/services/dbService';

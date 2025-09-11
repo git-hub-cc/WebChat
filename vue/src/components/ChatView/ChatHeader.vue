@@ -16,9 +16,9 @@
       </div>
     </div>
     <div class="chat-actions">
-      <IconButton icon="📹" title="视频通话" :disabled="!canCall" />
-      <IconButton icon="🎤" title="语音通话" :disabled="!canCall" />
-      <IconButton icon="🖥️" title="屏幕共享" :disabled="!canCall" />
+      <IconButton icon="📹" title="视频通话" :disabled="!canCall" @click="startVideoCall" />
+      <IconButton icon="🎤" title="语音通话" :disabled="!canCall" @click="startAudioCall" />
+      <IconButton icon="🖥️" title="屏幕共享" :disabled="!canCall" @click="startScreenShare" />
       <IconButton icon="👥" title="人员大厅" @click="uiStore.toggleDetailsPanel(true, 'lobby')" />
     </div>
   </header>
@@ -30,6 +30,8 @@ import { useChatStore } from '@/stores/chatStore';
 import { useUserStore } from '@/stores/userStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useGroupStore } from '@/stores/groupStore';
+import { useCallStore } from '@/stores/callStore';
+import { webrtcService } from '@/services/webrtcService';
 import Avatar from '@/components/Shared/Avatar.vue';
 import IconButton from '@/components/Shared/IconButton.vue';
 
@@ -37,6 +39,7 @@ const chatStore = useChatStore();
 const userStore = useUserStore();
 const groupStore = useGroupStore();
 const uiStore = useUiStore();
+const callStore = useCallStore();
 
 const chatInfo = computed(() => {
   const chatId = chatStore.currentChatId;
@@ -44,20 +47,20 @@ const chatInfo = computed(() => {
   return userStore.contacts[chatId] || groupStore.groups[chatId];
 });
 
-const contactStatus = computed(() => {
-  if (!chatInfo.value || chatInfo.value.type === 'group') return null;
-  // Use the centralized getter from the user store
-  return userStore.getContactStatus(chatInfo.value);
-});
+// MODIFICATION: Use the centralized getter for online status
+const combinedStatus = computed(() => chatInfo.value ? userStore.getContactCombinedStatus(chatInfo.value.id) : {});
 
 const isOnline = computed(() => {
   if (!chatInfo.value || chatInfo.value.type === 'group') return false;
-  // The Avatar's online dot reflects the status from the getter
-  return contactStatus.value?.className === 'online';
+  return combinedStatus.value.isOnlineDisplay;
 });
 
 const canCall = computed(() => {
-  return chatInfo.value && chatInfo.value.type !== 'group' && !chatInfo.value.isAI && !chatInfo.value.isSpecial && isOnline.value;
+  return chatInfo.value &&
+      chatInfo.value.type !== 'group' &&
+      !chatInfo.value.isAI && // AI contacts cannot be called
+      !chatInfo.value.isSpecial && // Special non-AI contacts also not directly callable via WebRTC
+      combinedStatus.value.isConnected; // Must have an active WebRTC connection
 });
 
 const statusText = computed(() => {
@@ -65,14 +68,31 @@ const statusText = computed(() => {
   if (chatInfo.value.type === 'group') {
     return `${chatInfo.value.members.length} 名成员`;
   }
-  return contactStatus.value?.text || '加载中...';
+  return combinedStatus.value.statusText;
 });
 
 const statusClass = computed(() => {
   if (!chatInfo.value) return 'offline';
   if (chatInfo.value.type === 'group') return 'online'; // Groups are always 'online' conceptually
-  return contactStatus.value?.className || 'offline';
+  return combinedStatus.value.statusClass;
 });
+
+const startVideoCall = () => {
+  if (canCall.value) {
+    callStore.startVideoCall();
+  }
+};
+const startAudioCall = () => {
+  if (canCall.value) {
+    callStore.startAudioCall();
+  }
+};
+const startScreenShare = () => {
+  if (canCall.value) {
+    callStore.startScreenShare();
+  }
+};
+
 </script>
 
 <style scoped>
@@ -86,20 +106,70 @@ const statusClass = computed(() => {
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-background-panel);
 }
-.back-button { display: none; margin-right: var(--spacing-2); }
-@media (max-width: 768px) { .back-button { display: inline-flex; } }
-.chat-info { display: flex; align-items: center; cursor: pointer; flex-grow: 1; overflow: hidden; padding: var(--spacing-2) 0; }
-.chat-details { margin-left: var(--spacing-3); overflow: hidden; }
-.chat-title { font-size: var(--font-size-lg); font-weight: var(--font-weight-semibold); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
-.character-active .chat-title { color: var(--character-primary-color); text-shadow: 0 0 5px var(--character-glow-color); }
-.chat-status { font-size: var(--font-size-sm); color: var(--color-text-secondary); position: relative; padding-left: 12px; }
+.back-button {
+  display: none;
+  margin-right: var(--spacing-2);
+}
+@media (max-width: 768px) {
+  .back-button {
+    display: inline-flex;
+  }
+}
+.chat-info {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  flex-grow: 1;
+  overflow: hidden;
+  padding: var(--spacing-2) 0;
+}
+.chat-details {
+  margin-left: var(--spacing-3);
+  overflow: hidden;
+}
+.chat-title {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.character-active .chat-title {
+  color: var(--character-primary-color);
+  text-shadow: 0 0 5px var(--character-glow-color);
+}
+.chat-status {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  position: relative;
+  padding-left: 12px;
+}
 .chat-status::before {
-  content: ''; position: absolute; left: 0; top: 50%;
-  transform: translateY(-50%); width: 8px; height: 8px;
-  border-radius: 50%; background-color: var(--color-text-tertiary);
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-text-tertiary);
   transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
-.chat-status.online::before { background-color: var(--color-status-success); box-shadow: 0 0 4px var(--color-status-success); }
-.chat-status.offline::before { background-color: var(--color-status-danger); }
-.chat-actions { display: flex; align-items: center; gap: var(--spacing-1); }
+.chat-status.online::before {
+  background-color: var(--color-status-success);
+  box-shadow: 0 0 4px var(--color-status-success);
+}
+.chat-status.offline::before {
+  background-color: var(--color-status-danger);
+}
+.chat-status.warning::before {
+  background-color: var(--color-status-warning);
+  box-shadow: 0 0 4px var(--color-status-warning);
+}
+.chat-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
 </style>

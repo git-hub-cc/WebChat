@@ -35,7 +35,7 @@ function _buildMcpAnalysisPrompt(chatHistory, userMessage) {
     mcpSystemPrompt += "如果任何工具都不适用，或者你需要用户提供更多信息，请像平常一样自然地回复用户，不要提及工具。";
 
     messages.push({ role: "system", content: mcpSystemPrompt });
-    messages.push(...chatHistory); // chatHistory should already be in { role, content } format
+    messages.push(...chatHistory);
     messages.push({ role: "user", content: userMessage });
     return messages;
 }
@@ -48,7 +48,6 @@ function _buildMcpFinalPrompt(baseSystemPrompt, originalUserMessage, toolCall, t
     messages.push({ role: "user", content: combinedPrompt });
     return messages;
 }
-
 
 // 辅助函数：执行 MCP 工具调用
 async function _executeMcpTool(toolName, args) {
@@ -69,15 +68,7 @@ async function _executeMcpTool(toolName, args) {
     }
 }
 
-
 export const apiService = {
-    /**
-     * 向单个 AI 发送消息并处理响应。
-     * @param {string} targetId - AI 联系人 ID。
-     * @param {object} contact - AI 联系人对象。
-     * @param {string} messageText - 用户消息。
-     * @param {Array<object>} fullChatHistory - 完整聊天历史。
-     */
     async sendAiMessage(targetId, contact, messageText, fullChatHistory = []) {
         const chatStore = useChatStore();
         const userStore = useUserStore();
@@ -102,7 +93,6 @@ export const apiService = {
                     content: msg.content
                 }));
 
-            // 构建 System Prompt
             let systemPrompt = contact.aiConfig?.systemPrompt || "You are a helpful assistant.";
             const memoryContent = memoryStore.getEnabledMemoryForChat(targetId);
             if (memoryContent) {
@@ -117,52 +107,111 @@ export const apiService = {
             }
             systemPrompt += AppSettings.ai.promptSuffix;
 
-            const messagesForRequestBody = [
-                { role: "system", content: systemPrompt },
-                ...formattedChatHistory,
-                { role: "user", content: messageText }
-            ];
+            // This variable will hold the final request body for streaming
+            let requestBody;
+            let runStreaming = true;
 
-            const requestBody = {
-                model: effectiveConfig.model,
-                messages: messagesForRequestBody,
-                stream: true,
-                max_tokens: effectiveConfig.maxTokens
-            };
+            // MCP (Tool Call) Logic
+            if (contact.aiConfig?.mcp_enabled && typeof MCP_TOOLS !== 'undefined') {
+                const analysisMessages = _buildMcpAnalysisPrompt(formattedChatHistory, messageText);
+                const analysisRequestBody = { model: effectiveConfig.model, messages: analysisMessages, stream: false, temperature: 0.0, max_tokens: 512 };
 
-            const headers = { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey };
-            const aiMessageId = `ai_stream_${Date.now()}`;
-            let fullResponseContent = "";
+                try {
+                    const analysisResponse = await fetch(effectiveConfig.apiEndpoint, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey },
+                        body: JSON.stringify(analysisRequestBody)
+                    });
+                    if (!analysisResponse.ok) throw new Error(`MCP分析请求失败: ${analysisResponse.status}`);
 
-            eventBus.emit('ai:clear_thinking', { chatId: targetId, thinkingId: thinkingMessageId });
+                    const rawTextResult = await analysisResponse.text();
+                    const jsonStringResult = rawTextResult.trim().match(/\{.*\}/s)?.[0] || rawTextResult;
+                    const analysisResult = JSON.parse(jsonStringResult);
+                    const aiContent = analysisResult.choices[0].message.content;
 
-            const initialAiMessage = {
-                id: aiMessageId, type: 'text', content: "▍", sender: targetId,
-                timestamp: new Date().toISOString(), isStreaming: true,
-            };
-            eventBus.emit('ai:streaming_start', { chatId: targetId, message: initialAiMessage });
+                    let toolCall;
+                    try {
+                        const parsedContent = JSON.parse(aiContent);
+                        if (parsedContent.tool_call) toolCall = parsedContent.tool_call;
+                    } catch(e) { /* Not a tool call, proceed */ }
 
-            await fetchApiStream(
-                effectiveConfig.apiEndpoint, requestBody, headers,
-                (jsonChunk) => { // onChunkReceived
-                    const chunkContent = jsonChunk.choices[0]?.delta?.content;
-                    if (chunkContent) {
-                        fullResponseContent += chunkContent;
-                        eventBus.emit('ai:streaming_chunk', {
-                            chatId: targetId, messageId: aiMessageId, content: fullResponseContent + "▍"
-                        });
+                    if (toolCall) {
+                        eventBus.emit('ai:clear_thinking', { chatId: targetId, thinkingId: thinkingMessageId });
+                        const toolUseMessageId = `tool_use_${Date.now()}`;
+                        eventBus.emit('ai:tool_use_start', { chatId: targetId, message: { id: toolUseMessageId, type: 'system', toolCallInfo: { name: toolCall.name }, sender: targetId } });
+
+                        const toolResult = await _executeMcpTool(toolCall.name, toolCall.arguments);
+                        eventBus.emit('ai:tool_use_end', { chatId: targetId, toolUseId: toolUseMessageId });
+
+                        if (toolResult.error) throw new Error(`工具调用错误: ${toolResult.error}`);
+
+                        const finalMessages = _buildMcpFinalPrompt(systemPrompt, messageText, toolCall, toolResult.data);
+                        requestBody = { model: effectiveConfig.model, messages: finalMessages, stream: true, max_tokens: effectiveConfig.maxTokens };
+                    } else {
+                        // AI decided not to use a tool, respond directly with its analysis
+                        runStreaming = false;
+                        eventBus.emit('ai:clear_thinking', { chatId: targetId, thinkingId: thinkingMessageId });
+                        const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
+                        await chatStore.addMessage(targetId, finalAiMessage);
                     }
-                },
-                async () => { // onStreamEnd
-                    eventBus.emit('ai:streaming_end', { chatId: targetId, messageId: aiMessageId });
-                    const finalAiMessage = {
-                        id: aiMessageId, type: 'text', content: fullResponseContent, sender: targetId,
-                        timestamp: initialAiMessage.timestamp, isNewlyCompletedAIResponse: true,
+                } catch (mcpError) {
+                    log(`MCP analysis or tool execution failed: ${mcpError.message}. Falling back to normal response.`, 'WARN');
+                    // If MCP fails, fallback to a normal response
+                    requestBody = {
+                        model: effectiveConfig.model,
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            ...formattedChatHistory,
+                            { role: "user", content: messageText }
+                        ],
+                        stream: true,
+                        max_tokens: effectiveConfig.maxTokens
                     };
-                    await chatStore.addMessage(targetId, finalAiMessage);
                 }
-            );
+            } else {
+                // Normal non-MCP request
+                requestBody = {
+                    model: effectiveConfig.model,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        ...formattedChatHistory,
+                        { role: "user", content: messageText }
+                    ],
+                    stream: true,
+                    max_tokens: effectiveConfig.maxTokens
+                };
+            }
 
+            if (runStreaming) {
+                eventBus.emit('ai:clear_thinking', { chatId: targetId, thinkingId: thinkingMessageId });
+                const aiMessageId = `ai_stream_${Date.now()}`;
+                let fullResponseContent = "";
+                const initialAiMessage = {
+                    id: aiMessageId, type: 'text', content: "▍", sender: targetId,
+                    timestamp: new Date().toISOString(), isStreaming: true,
+                };
+                eventBus.emit('ai:streaming_start', { chatId: targetId, message: initialAiMessage });
+
+                await fetchApiStream(
+                    effectiveConfig.apiEndpoint, requestBody, { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey },
+                    (jsonChunk) => {
+                        const chunkContent = jsonChunk.choices[0]?.delta?.content;
+                        if (chunkContent) {
+                            fullResponseContent += chunkContent;
+                            eventBus.emit('ai:streaming_chunk', {
+                                chatId: targetId, messageId: aiMessageId, content: fullResponseContent + "▍"
+                            });
+                        }
+                    },
+                    async () => {
+                        eventBus.emit('ai:streaming_end', { chatId: targetId, messageId: aiMessageId });
+                        const finalAiMessage = {
+                            id: aiMessageId, type: 'text', content: fullResponseContent, sender: targetId,
+                            timestamp: initialAiMessage.timestamp, isNewlyCompletedAIResponse: true,
+                        };
+                        await chatStore.addMessage(targetId, finalAiMessage);
+                    }
+                );
+            }
         } catch (error) {
             log(`与 AI 通信时出错: ${error}`, 'ERROR');
             eventBus.emit('ai:clear_thinking', { chatId: targetId, thinkingId: thinkingMessageId });
@@ -174,85 +223,121 @@ export const apiService = {
         }
     },
 
-    /**
-     * 向群聊中的 AI 发送消息并处理响应。
-     * @param {string} groupId - 群组 ID。
-     * @param {object} aiContact - AI 联系人对象。
-     * @param {string} mentionedMessageText - 触发AI的完整消息文本。
-     * @param {string} originalSenderId - 原始消息发送者 ID。
-     */
     async sendGroupAiMessage(groupId, aiContact, mentionedMessageText, originalSenderId) {
         const chatStore = useChatStore();
         const userStore = useUserStore();
         const groupStore = useGroupStore();
         const effectiveConfig = _getEffectiveAiConfig();
+        const group = groupStore.groups[groupId];
+        if (!group) return;
 
         const thinkingMessageId = `ai_thinking_group_${Date.now()}`;
         eventBus.emit('ai:thinking', {
             chatId: groupId,
-            message: { id: thinkingMessageId, type: 'system', content: `${aiContact.name} 正在思考...`, sender: aiContact.id }
+            message: { id: thinkingMessageId, type: 'system', toolCallInfo: { name: '思考中...' }, sender: aiContact.id }
         });
 
         try {
-            const group = groupStore.groups[groupId];
-            const fullHistory = (chatStore.chats[groupId] || []).slice(-10); // Limit context for groups
-
+            const fullHistory = (chatStore.chats[groupId] || []).slice(-10);
             const formattedHistory = fullHistory
                 .filter(msg => msg.type === 'text' && !msg.isRetracted && !msg.isThinking)
-                .map(msg => {
-                    const senderName = msg.sender === userStore.userId ? userStore.userName : userStore.contacts[msg.sender]?.name || `用户${msg.sender.substring(0,4)}`;
-                    return {
-                        role: msg.sender === aiContact.id ? 'assistant' : 'user',
-                        content: `${senderName}: ${msg.content}`
-                    };
-                });
-
+                .map(msg => ({
+                    role: msg.sender === aiContact.id ? 'assistant' : 'user',
+                    content: `${userStore.contacts[msg.sender]?.name || '用户'}: ${msg.content}`
+                }));
             const originalSenderName = userStore.contacts[originalSenderId]?.name || userStore.userName;
             const userTriggerMessage = `${originalSenderName}: ${mentionedMessageText}`;
 
-            let systemPrompt = group.aiPrompts?.[aiContact.id] || aiContact.aiConfig?.systemPrompt || "You are a helpful assistant.";
-            systemPrompt += AppSettings.ai.groupPromptSuffix;
+            let requestBody;
+            let runStreaming = true;
 
-            const messagesForRequestBody = [
-                { role: "system", content: systemPrompt },
-                ...formattedHistory,
-                { role: "user", content: userTriggerMessage }
-            ];
+            if (aiContact.aiConfig?.mcp_enabled && typeof MCP_TOOLS !== 'undefined') {
+                const analysisMessages = _buildMcpAnalysisPrompt(formattedHistory, userTriggerMessage);
+                const analysisRequestBody = { model: effectiveConfig.model, messages: analysisMessages, stream: false, temperature: 0.0, max_tokens: 512 };
 
-            const requestBody = {
-                model: effectiveConfig.model, messages: messagesForRequestBody, stream: true,
-                max_tokens: effectiveConfig.maxTokens,
-            };
+                try {
+                    const analysisResponse = await fetch(effectiveConfig.apiEndpoint, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey },
+                        body: JSON.stringify(analysisRequestBody)
+                    });
+                    if (!analysisResponse.ok) throw new Error(`MCP分析请求失败: ${analysisResponse.status}`);
+                    const rawTextResult = await analysisResponse.text();
+                    const jsonStringResult = rawTextResult.trim().match(/\{.*\}/s)?.[0] || rawTextResult;
+                    const analysisResult = JSON.parse(jsonStringResult);
+                    const aiContent = analysisResult.choices[0].message.content;
 
-            eventBus.emit('ai:clear_thinking', { chatId: groupId, thinkingId: thinkingMessageId });
+                    let toolCall;
+                    try {
+                        const parsedContent = JSON.parse(aiContent);
+                        if (parsedContent.tool_call) toolCall = parsedContent.tool_call;
+                    } catch (e) { /* Not a tool call */ }
 
-            const aiResponseMessageId = `group_ai_msg_${aiContact.id}_${Date.now()}`;
-            let fullAiResponseContent = "";
-            const initialAiResponseMessage = {
-                id: aiResponseMessageId, type: 'text', content: "▍",
-                timestamp: new Date().toISOString(), sender: aiContact.id,
-                groupId: groupId, isStreaming: true,
-            };
-            eventBus.emit('ai:streaming_start', { chatId: groupId, message: initialAiResponseMessage });
+                    if (toolCall) {
+                        eventBus.emit('ai:clear_thinking', { chatId: groupId, thinkingId: thinkingMessageId });
+                        const toolUseMessageId = `tool_use_group_${Date.now()}`;
+                        eventBus.emit('ai:tool_use_start', { chatId: groupId, message: { id: toolUseMessageId, type: 'system', toolCallInfo: { name: toolCall.name }, sender: aiContact.id } });
 
-            await fetchApiStream(
-                effectiveConfig.apiEndpoint, requestBody, { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey },
-                (jsonChunk) => {
-                    const chunkContent = jsonChunk.choices[0]?.delta?.content;
-                    if (chunkContent) {
-                        fullAiResponseContent += chunkContent;
-                        eventBus.emit('ai:streaming_chunk', {
-                            chatId: groupId, messageId: aiResponseMessageId, content: fullAiResponseContent + "▍"
-                        });
+                        const toolResult = await _executeMcpTool(toolCall.name, toolCall.arguments);
+                        eventBus.emit('ai:tool_use_end', { chatId: groupId, toolUseId: toolUseMessageId });
+                        if (toolResult.error) throw new Error(`工具调用错误: ${toolResult.error}`);
+
+                        const finalMessages = _buildMcpFinalPrompt(group.aiPrompts?.[aiContact.id] || aiContact.aiConfig?.systemPrompt || "", userTriggerMessage, toolCall, toolResult.data);
+                        requestBody = { model: effectiveConfig.model, messages: finalMessages, stream: true, max_tokens: effectiveConfig.maxTokens };
+                    } else {
+                        runStreaming = false;
+                        eventBus.emit('ai:clear_thinking', { chatId: groupId, thinkingId: thinkingMessageId });
+                        const finalAiMessage = { id: `group_ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: aiContact.id, groupId: groupId };
+                        await chatStore.addMessage(groupId, finalAiMessage);
+                        groupStore.broadcastMessage(groupId, finalAiMessage);
                     }
-                },
-                async () => {
-                    eventBus.emit('ai:streaming_end', { chatId: groupId, messageId: aiResponseMessageId });
-                    const finalAiMessage = { ...initialAiResponseMessage, content: fullAiResponseContent, isStreaming: false };
-                    await chatStore.addMessage(groupId, finalAiMessage);
-                    groupStore.broadcastMessage(groupId, finalAiMessage);
+                } catch(mcpError) {
+                    log(`Group MCP failed: ${mcpError.message}. Falling back.`, 'WARN');
+                    // Fallback requestBody will be created below
                 }
-            );
+            }
+
+            if (runStreaming && !requestBody) {
+                let systemPrompt = group.aiPrompts?.[aiContact.id] || aiContact.aiConfig?.systemPrompt || "You are a helpful assistant.";
+                systemPrompt += AppSettings.ai.groupPromptSuffix;
+                const messagesForRequestBody = [
+                    { role: "system", content: systemPrompt },
+                    ...formattedHistory,
+                    { role: 'user', content: userTriggerMessage }
+                ];
+                requestBody = { model: effectiveConfig.model, messages: messagesForRequestBody, stream: true, max_tokens: effectiveConfig.maxTokens };
+            }
+
+            if(runStreaming) {
+                eventBus.emit('ai:clear_thinking', { chatId: groupId, thinkingId: thinkingMessageId });
+                const aiResponseMessageId = `group_ai_msg_${aiContact.id}_${Date.now()}`;
+                let fullAiResponseContent = "";
+                const initialAiResponseMessage = {
+                    id: aiResponseMessageId, type: 'text', content: "▍",
+                    timestamp: new Date().toISOString(), sender: aiContact.id,
+                    groupId: groupId, isStreaming: true,
+                };
+                eventBus.emit('ai:streaming_start', { chatId: groupId, message: initialAiResponseMessage });
+
+                await fetchApiStream(
+                    effectiveConfig.apiEndpoint, requestBody, { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey },
+                    (jsonChunk) => {
+                        const chunkContent = jsonChunk.choices[0]?.delta?.content;
+                        if (chunkContent) {
+                            fullAiResponseContent += chunkContent;
+                            eventBus.emit('ai:streaming_chunk', {
+                                chatId: groupId, messageId: aiResponseMessageId, content: fullAiResponseContent + "▍"
+                            });
+                        }
+                    },
+                    async () => {
+                        eventBus.emit('ai:streaming_end', { chatId: groupId, messageId: aiResponseMessageId });
+                        const finalAiMessage = { ...initialAiResponseMessage, content: fullAiResponseContent, isStreaming: false, isNewlyCompletedAIResponse: true };
+                        await chatStore.addMessage(groupId, finalAiMessage);
+                        const messageForBroadcast = { ...finalAiMessage, isNewlyCompletedAIResponse: undefined };
+                        groupStore.broadcastMessage(groupId, messageForBroadcast);
+                    }
+                );
+            }
 
         } catch (error) {
             log(`在群聊中与 AI 通信时出错: ${error}`, 'ERROR');
@@ -265,17 +350,10 @@ export const apiService = {
         }
     },
 
-    /**
-     * 为记忆书功能提取对话要素。
-     * @param {Array<string>} elements - 要提取的要素列表。
-     * @param {string} conversationTranscript - 对话文本。
-     * @returns {Promise<string>} AI 生成的摘要。
-     */
     async extractMemoryElements(elements, conversationTranscript) {
         const effectiveConfig = _getEffectiveAiConfig();
-        if (!effectiveConfig.apiEndpoint) {
-            throw new Error("AI API 端点未配置。");
-        }
+        if (!effectiveConfig.apiEndpoint) throw new Error("AI API 端点未配置。");
+
         const prompt = `你是一个对话分析和信息提取专家。请仔细阅读以下对话记录，并根据预设的关键要素列表，简洁、清晰地总结出相关信息。\n\n关键要素列表:\n${elements.map(e => `- ${e}`).join('\n')}\n\n对话记录:\n---\n${conversationTranscript}\n---\n\n请根据以上对话，生成一份“记忆书”，清晰地列出每个关键要素对应的内容。如果对话中没有某个要素的信息，请注明“未提及”。`;
         const requestBody = {
             model: effectiveConfig.model,
@@ -288,7 +366,7 @@ export const apiService = {
             try {
                 await fetchApiStream(
                     effectiveConfig.apiEndpoint, requestBody,
-                    { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey || "" },
+                    { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey },
                     () => {},
                     (finalContent) => resolve(finalContent)
                 );
@@ -304,7 +382,6 @@ export const apiService = {
             log('AI service health check skipped: Endpoint or API Key is missing.', 'WARN');
             return false;
         }
-
         try {
             const response = await fetch(effectiveConfig.apiEndpoint, {
                 method: 'POST',
@@ -313,7 +390,7 @@ export const apiService = {
                     model: effectiveConfig.model,
                     messages: [{ role: "user", content: "Health check" }],
                     max_tokens: 1,
-                    stream: false // Health check can be non-streaming for simplicity
+                    stream: false
                 })
             });
             return response.ok;
@@ -322,19 +399,16 @@ export const apiService = {
             return false;
         }
     },
+
     async requestTtsForMessage(payload) {
         const effectiveConfig = _getEffectiveAiConfig();
-        if (!effectiveConfig.ttsApiEndpoint) {
-            throw new Error('TTS API endpoint is not configured.');
-        }
-
+        if (!effectiveConfig.ttsApiEndpoint) throw new Error('TTS API endpoint is not configured.');
         const cacheKey = await this._generateTtsCacheKey(payload);
         const cachedItem = await dbService.getItem('ttsCache', cacheKey);
         if (cachedItem?.audioBlob) {
             log(`TTS Cache HIT for key ${cacheKey}`, 'INFO');
             return cachedItem.audioBlob;
         }
-
         log(`TTS Cache MISS for key ${cacheKey}. Fetching from API.`, 'DEBUG');
         const ttsUrl = `${effectiveConfig.ttsApiEndpoint}/infer_single`;
         const response = await fetch(ttsUrl, {
@@ -342,24 +416,16 @@ export const apiService = {
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer guest' },
             body: JSON.stringify(payload)
         });
-
-        if (!response.ok) {
-            throw new Error(`TTS API request failed with status ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`TTS API request failed with status ${response.status}`);
         const result = await response.json();
-        if (!result.audio_url) {
-            throw new Error('TTS API response did not contain an audio_url.');
-        }
-
+        if (!result.audio_url) throw new Error('TTS API response did not contain an audio_url.');
         const audioResponse = await fetch(result.audio_url);
-        if (!audioResponse.ok) {
-            throw new Error(`Failed to fetch TTS audio file from ${result.audio_url}`);
-        }
+        if (!audioResponse.ok) throw new Error(`Failed to fetch TTS audio file from ${result.audio_url}`);
         const audioBlob = await audioResponse.blob();
-
         await dbService.setItem('ttsCache', { id: cacheKey, audioBlob });
         return audioBlob;
     },
+
     async _generateTtsCacheKey(payload) {
         const payloadString = JSON.stringify(payload);
         const encoder = new TextEncoder();

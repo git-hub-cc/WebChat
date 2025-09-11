@@ -29,7 +29,7 @@
             <video :src="displayUrl" preload="metadata"></video>
             <div class="play-overlay">▶</div>
           </div>
-          <div v-else-if="!displayUrl" class="thumbnail-loading"><Spinner /></div>
+          <div v-else-if="!displayUrl && (isImage || isVideo)" class="thumbnail-loading"><Spinner /></div>
           <div v-else class="file-icon"><span>{{ getFileExtension(message.fileName) }}</span></div>
         </div>
         <div class="file-info">
@@ -40,7 +40,12 @@
 
       <!-- System or Retracted Message -->
       <div v-else-if="message.type === 'system' || message.isRetracted" class="message-content system-message">
-        {{ message.content }}
+        <!-- [MODIFIED] MCP Tool Use UI -->
+        <div v-if="message.toolCallInfo" class="tool-call-indicator">
+          <Spinner size="small" />
+          <span>正在使用工具: {{ message.toolCallInfo.name }}...</span>
+        </div>
+        <span v-else>{{ message.content }}</span>
       </div>
 
       <div v-if="!message.isRetracted" class="message-meta">
@@ -52,18 +57,15 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onUnmounted, watch } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useChatStore } from '@/stores/chatStore';
-import { formatMessageText } from '@/utils';
-import { log } from '@/utils';
+import { formatMessageText, log } from '@/utils';
 import Spinner from '@/components/Shared/Spinner.vue';
 import { eventBus } from '@/services/eventBus';
 import AppSettings from '@/config/AppSettings';
-// --- START OF FIX ---
 import { mediaCacheService } from '@/services/mediaCacheService';
-// --- END OF FIX ---
 
 const props = defineProps({ message: { type: Object, required: true } });
 
@@ -71,7 +73,6 @@ const userStore = useUserStore();
 const uiStore = useUiStore();
 const chatStore = useChatStore();
 
-// ... (computed properties like isMyMessage, etc. are unchanged) ...
 const isMyMessage = computed(() => props.message.sender === userStore.userId);
 const isGroupChat = computed(() => !!props.message.groupId);
 const senderContact = computed(() => userStore.contacts[props.message.sender]);
@@ -82,8 +83,7 @@ const formattedContent = computed(() => props.message.type === 'text' && props.m
 const formattedTimestamp = computed(() => new Date(props.message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 const statusIcon = computed(() => ({ sending: '🕒', sent: '✓', delivered: '✓✓', failed: '❌' }[props.message.status] || ''));
 
-// Media related state
-const displayUrl = ref(null); // Changed from mediaUrl to displayUrl
+const displayUrl = ref(null);
 const isPlaying = ref(false);
 let audioPlayer = null;
 
@@ -104,36 +104,26 @@ const formatDuration = (seconds) => {
   return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 };
 
-// --- START OF FIX ---
 async function loadMedia() {
   if (!isMediaFile.value || !props.message.fileHash) return;
-  // Use the centralized service to get a stable URL
   const url = await mediaCacheService.getUrl(props.message.fileHash);
   if (url) {
     displayUrl.value = url;
   } else {
-    // If URL is null, it means the blob is not in the DB yet.
-    // We listen for the 'file:ready' event to try again.
     eventBus.on('file:ready', handleFileReady);
   }
 }
-
 function handleFileReady({ fileHash }) {
   if (fileHash === props.message.fileHash) {
     log(`'file:ready' event received for message ${props.message.id}. Reloading media.`, 'DEBUG');
     loadMedia();
-    eventBus.off('file:ready', handleFileReady); // Important: remove listener after use
+    eventBus.off('file:ready', handleFileReady);
   }
 }
-
 function handleMediaClick() {
   if (displayUrl.value && (isImage.value || isVideo.value)) {
-    uiStore.showMediaViewer({
-      type: isVideo.value ? 'video' : 'image',
-      src: displayUrl.value, // Pass the reactive URL
-      alt: props.message.fileName,
-    });
-  } else if (displayUrl.value) { // For other file types, trigger download
+    uiStore.showMediaViewer({ type: isVideo.value ? 'video' : 'image', src: displayUrl.value, alt: props.message.fileName });
+  } else if (displayUrl.value) {
     const a = document.createElement('a');
     a.href = displayUrl.value;
     a.download = props.message.fileName || 'download';
@@ -142,8 +132,6 @@ function handleMediaClick() {
     document.body.removeChild(a);
   }
 }
-// --- END OF FIX ---
-
 function toggleAudioPlay() {
   if (!displayUrl.value) return;
   if (!audioPlayer) {
@@ -152,30 +140,17 @@ function toggleAudioPlay() {
     audioPlayer.onpause = () => { isPlaying.value = false; };
     audioPlayer.onplaying = () => { isPlaying.value = true; };
   }
-  if (isPlaying.value) {
-    audioPlayer.pause();
-  } else {
-    audioPlayer.play().catch(e => log(`Error playing audio preview: ${e}`, 'ERROR'));
-  }
+  isPlaying.value ? audioPlayer.pause() : audioPlayer.play().catch(e => log(`Error playing audio preview: ${e}`, 'ERROR'));
 }
-
 function showContextMenu(event) {
   if (props.message.type === 'system' || props.message.isRetracted) return;
   const items = [{
     label: '删除',
-    action: () => {
-      uiStore.showConfirmationModal({
-        message: "确定要删除这条消息吗？此操作仅在您本地生效。",
-        onConfirm: () => chatStore.deleteMessage(props.message.id)
-      });
-    },
+    action: () => uiStore.showConfirmationModal({ message: "确定要删除这条消息吗？此操作仅在您本地生效。", onConfirm: () => chatStore.deleteMessage(props.message.id) }),
     class: 'danger'
   }];
   if (isMyMessage.value && Date.now() - new Date(props.message.timestamp).getTime() < AppSettings.ui.messageRetractionWindow) {
-    items.push({
-      label: '撤回',
-      action: () => chatStore.retractMessage(props.message.id)
-    });
+    items.push({ label: '撤回', action: () => chatStore.retractMessage(props.message.id) });
   }
   uiStore.showContextMenu({ event, items, target: { type: 'message', id: props.message.id } });
 }
@@ -183,22 +158,17 @@ function showContextMenu(event) {
 watch(() => props.message.fileHash, loadMedia, { immediate: true });
 
 onUnmounted(() => {
-  // --- START OF FIX ---
-  // The component no longer manages the URL lifecycle.
-  // The mediaCacheService handles global cleanup.
-  // We only need to clean up the event listener.
   eventBus.off('file:ready', handleFileReady);
   if (audioPlayer) {
     audioPlayer.pause();
     audioPlayer.src = '';
     audioPlayer = null;
   }
-  // --- END OF FIX ---
 });
 </script>
 
 <style scoped>
-/* Styles remain unchanged */
+/* Styles remain unchanged, with addition of tool-call-indicator */
 .message-wrapper { display: flex; margin-bottom: var(--spacing-2); padding: 0 var(--spacing-1); }
 .message-wrapper.sent { justify-content: flex-end; }
 .message-wrapper.received { justify-content: flex-start; }
@@ -227,4 +197,15 @@ onUnmounted(() => {
 .message-meta { display: flex; justify-content: flex-end; align-items: center; font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--spacing-1); float: right; clear: both; }
 .message-wrapper.sent .message-meta { color: rgba(255, 255, 255, 0.7); }
 .status-icon { margin-left: var(--spacing-1); }
+.tool-call-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-style: italic;
+}
+.tool-call-indicator .spinner {
+  width: 1em;
+  height: 1em;
+  border-width: 2px;
+}
 </style>

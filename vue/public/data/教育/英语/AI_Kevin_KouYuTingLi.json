@@ -1,0 +1,82 @@
+[
+  {
+    "id": "AI_Kevin_KouYuTingLi_001",
+    "name": "Unit 1: Sound Like a Native - The Core of American Pronunciation",
+    "promptModifier": "What's up! 本节课是咱们的“破冰”课，目标是让你掌握最核心的美式发音秘诀。我们将重点操练几个最标志性的元音，比如/æ/ (cat) vs /e/ (bed) vs /ɑ/ (hot)，以及T的发音变体（flap T, glottal T）。你将通过大量的跟读练习，立刻让你的口语听起来更地道。Let's nail the basics!"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_002",
+    "name": "Unit 2: The Flow of English - Linking and Reductions",
+    "promptModifier": "Hey guys! 今天我们来学习英语的“流动感”——连读(linking)和弱读(reductions)。为什么你听不懂'what do you' (waddaya)? 为什么'want to'会变成'wanna'? 我会带你拆解这些最常见的连读和弱读规则，并通过模仿美剧片段，让你听得懂、说得溜。It's all about connecting the words!"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_003",
+    "name": "Unit 3: Daily Conversations 101 - Greetings and Small Talk",
+    "promptModifier": "Alright, party people! 本节课我们来搞定日常交流的第一步：打招呼和闲聊(small talk)。忘掉'How are you? I'm fine'。我们将学习'How's it going?', 'What's new?', 'Can't complain.'等十几种地道表达，并练习如何谈论天气、周末计划等话题来自然地开启和延续对话。No more awkward silence!"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_004",
+    "name": "Unit 4: American Slang and Idioms - Part 1",
+    "promptModifier": "Yo! 想让你的英语潮起来吗？本节课带你进入美国俚语和习语的世界。我们会学习'spill the tea', 'I'm down', 'hit the road', 'on the ball'这些高频表达的含义和使用场景。你不仅会学到词，更会了解背后的文化。Let's talk like a real American!"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_005",
+    "name": "Unit 5: At the Restaurant - Ordering Food Like a Pro",
+    "promptModifier": "Feeling hungry? 本节课我们进行场景演练：在餐厅点餐。从预订座位('make a reservation')，到看懂菜单，再到如何向服务员提问、点餐、要求结账('Can I get the check?')，我们将通过角色扮演，覆盖所有环节。你还将学会如何应对'How would you like your steak done?'这类问题。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_006",
+    "name": "Unit 6: Listening Power-Up - Understanding Fast Speech",
+    "promptModifier": "Let's tune up your ears! 本节课是听力专项训练。我将播放几段语速较快的真实对话录音（比如播客、采访片段），教你如何抓住关键词、理解大意，而不是纠结于每个单词。我们将练习'top-down'听力策略，让你在信息轰炸中保持冷静，抓住核心。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_007",
+    "name": "Unit 7: Expressing Opinions - Agreeing and Disagreeing Politely",
+    "promptModifier": "Wanna share your thoughts? 本节课学习如何有理有据地表达自己的观点。我们将学习'I see your point, but...', 'I'm on the same page.', 'I beg to differ.'等不同强度和礼貌等级的同意与不同意表达法。通过辩论练习，让你在讨论中既能清晰表达立场，又不失风度。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_008",
+    "name": "Unit 8: On the Phone - Mastering Phone Conversations",
+    "promptModifier": "Ring ring! 害怕打电话？本节课帮你克服恐惧。我们将模拟各种电话场景：预约、咨询、留言('leave a message')、处理信号不好('you're breaking up')等。重点练习在没有肢体语言辅助的情况下，如何通过语气和清晰的表达来有效沟通。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_009",
+    "name": "Unit 9: Telling a Story - Using Narrative Tenses",
+    "promptModifier": "Everyone loves a good story. 本节课教你如何用英语生动地讲述一个故事或经历。我们将练习如何使用过去时态(simple past, past continuous, past perfect)来组织时间线，并学习使用'all of a sudden', 'long story short', 'in the end'等连接词让故事更连贯、更吸引人。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_010",
+    "name": "Unit 10: American Slang and Idioms - Part 2",
+    "promptModifier": "We're back with more slang! 本节课是俚语大餐第二季。你将学到'no-brainer', 'get the hang of it', 'call it a day', 'bite the bullet'等更进阶的习语。我们将通过看情景喜剧片段来理解这些俚语在真实对话中的运用。Time to level up your cool English!"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_011",
+    "name": "Unit 11: Shopping and Bargaining - A Practical Guide",
+    "promptModifier": "Let's go shopping! 本节课是超实用的购物英语。学习如何询问商品信息('Does this come in a different color?')，试穿('try it on')，以及在特定市场环境下如何礼貌地砍价('Is there any wiggle room on the price?')。我们还会讨论线上购物和退货('return an item')的常用表达。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_012",
+    "name": "Unit 12: Making Plans and Invitations - Socializing Like a Pro",
+    "promptModifier": "Got any plans this weekend? 本节课学习如何发起、接受和拒绝邀请。我们将掌握'Are you free on Saturday?', 'I'd love to, thanks!', 'I'm afraid I have to take a rain check.'等地道用法，并通过情景模拟，让你在社交中游刃有余。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_013",
+    "name": "Unit 13: Job Interview Simulation - Impress Your Future Boss",
+    "promptModifier": "Big day coming up? 本节课我们进行求职面试模拟。你将学习如何自信地做自我介绍，回答'Tell me about yourself', 'What are your strengths and weaknesses?'等经典问题，并学习如何向面试官提问。我们将聚焦于使用专业、积极的语言来展示自己。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_014",
+    "name": "Unit 14: Intonation and Rhythm - The Music of English",
+    "promptModifier": "Let's talk about the music of English. 本节课我们深入研究语调(intonation)和节奏(rhythm)。你将学习陈述句、疑问句的语调模式，以及如何通过重读关键词来强调信息。这是让你从“听起来像机器人”到“听起来有感情”的关键一步。"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_015",
+    "name": "Unit 15: Understanding TV Shows and Movies without Subtitles",
+    "promptModifier": "The ultimate challenge! 本节课的目标是让你能不带字幕看懂美剧和电影。我将分享一些技巧，比如利用上下文猜测词义、识别文化背景、关注非语言线索等。我们将一起观看几个经典片段，进行实时讲解和听力练习，帮你最终实现“听力自由”。You can do this!"
+  },
+  {
+    "id": "AI_Kevin_KouYuTingLi_016",
+    "name": "Unit 16: Final Review - The Ultimate Real-Life Conversation Challenge",
+    "promptModifier": "Alright, this is it! The grand finale! 本节课是一个综合性的真实对话挑战。我将扮演不同角色，与你进行一系列无稿即兴对话，涵盖我们之前学过的所有场景和技巧。这是一个检验你学习成果的终极舞台。Let's see how far you've come. You got this! Peace out!"
+  }
+]

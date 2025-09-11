@@ -8,6 +8,7 @@ import { LLMProviders } from '@/config/LLMProviders';
 import AppSettings from '@/config/AppSettings';
 
 export const useSettingsStore = defineStore('settings', () => {
+    // --- STATE ---
     const themes = ref(THEME_LIST);
     const colorScheme = ref(localStorage.getItem('colorScheme') || 'auto');
     const currentThemeKey = ref(localStorage.getItem('currentThemeKey') || '原神-浅色');
@@ -15,6 +16,7 @@ export const useSettingsStore = defineStore('settings', () => {
     const customBackgrounds = ref({ light: null, dark: null });
     const isThemeTransitioning = ref(false);
 
+    // --- GETTERS ---
     const effectiveColorScheme = computed(() => {
         if (colorScheme.value === 'light' || colorScheme.value === 'dark') {
             return colorScheme.value;
@@ -22,60 +24,92 @@ export const useSettingsStore = defineStore('settings', () => {
         if (typeof window.matchMedia !== 'function') return 'light';
         return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     });
+
     const currentTheme = computed(() => themes.value[currentThemeKey.value]);
     const currentSpecialContacts = computed(() => currentTheme.value?.specialContacts || []);
 
-    async function init() {
-        // ... (apiSettings init remains the same)
-        const storedApiSettings = await dbService.getItem('settings', 'apiSettings');
-        if (storedApiSettings) {
-            apiSettings.value = { ...apiSettings.value, ...storedApiSettings };
-        } else {
-            const defaultProvider = LLMProviders[apiSettings.value.llmProvider] || LLMProviders.webchat;
-            apiSettings.value.apiEndpoint = defaultProvider.defaultEndpoint;
-            apiSettings.value.model = defaultProvider.defaultModel;
+    // --- ACTIONS ---
+
+    /**
+     * @private
+     * Reliably loads the data file for a given theme key and updates the store.
+     * This is the single source of truth for loading theme data.
+     * @param {string} themeKey - The key of the theme to load data for.
+     */
+    async function _loadThemeData(themeKey) {
+        const themeConfig = themes.value[themeKey];
+        // Only fetch if config exists, has a data file, and hasn't been loaded yet.
+        if (themeConfig && themeConfig.dataJs && !themeConfig.specialContacts) {
+            try {
+                log(`Fetching theme data for ${themeKey} from ${themeConfig.dataJs}`, 'DEBUG');
+                const response = await fetch(themeConfig.dataJs);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+
+                // Ensure the ref is updated correctly to trigger reactivity
+                themes.value[themeKey] = { ...themeConfig, specialContacts: data };
+                log(`Successfully loaded and set special contacts for ${themeKey}. Count: ${data.length}`, 'INFO');
+            } catch(e) {
+                log(`Failed to load theme data for ${themeKey}: ${e.message}`, 'ERROR');
+                if (themes.value[themeKey]) {
+                    themes.value[themeKey].specialContacts = []; // Set empty array on failure
+                }
+            }
+        } else if (themeConfig && !themeConfig.dataJs) {
+            log(`Theme ${themeKey} has no dataJs file specified.`, 'DEBUG');
+            if (themes.value[themeKey]) {
+                themes.value[themeKey].specialContacts = []; // Ensure property exists
+            }
         }
+    }
 
-        // --- [LOGGING ENHANCED] Load custom backgrounds on init ---
-        log('settingsStore.init: 开始加载自定义背景...', 'DEBUG');
+    /**
+     * Initializes the settings store.
+     */
+    async function init() {
+        // Load API settings
+        const storedApiSettings = await dbService.getItem('settings', 'apiSettings');
+        const defaultProviderKey = storedApiSettings?.llmProvider || 'webchat';
+        const defaultProvider = LLMProviders[defaultProviderKey] || LLMProviders.webchat;
+
+        apiSettings.value = {
+            llmProvider: defaultProviderKey,
+            apiEndpoint: storedApiSettings?.apiEndpoint || defaultProvider.defaultEndpoint,
+            model: storedApiSettings?.model || defaultProvider.defaultModel,
+            apiKey: storedApiSettings?.apiKey || AppSettings.server.api_key,
+            maxTokens: storedApiSettings?.maxTokens || AppSettings.server.max_tokens,
+            ttsApiEndpoint: storedApiSettings?.ttsApiEndpoint || AppSettings.server.ttsApiEndpoint,
+        };
+
+        // Load custom backgrounds
         try {
-            const bgLight = await dbService.getItem('appStateCache', 'background_image_light');
-            const bgDark = await dbService.getItem('appStateCache', 'background_image_dark');
-
-            if (bgLight?.imageBlob instanceof Blob) {
-                log(`settingsStore.init: 从DB加载了浅色模式背景 Blob (大小: ${bgLight.imageBlob.size} bytes)。`, 'INFO');
-                if (customBackgrounds.value.light) URL.revokeObjectURL(customBackgrounds.value.light);
-                customBackgrounds.value.light = URL.createObjectURL(bgLight.imageBlob);
-                log(`settingsStore.init: 为浅色模式创建了新的 Object URL: ${customBackgrounds.value.light.substring(0, 50)}...`, 'DEBUG');
-            } else {
-                log('settingsStore.init: 未在DB中找到浅色模式背景。', 'DEBUG');
-            }
-
-            if (bgDark?.imageBlob instanceof Blob) {
-                log(`settingsStore.init: 从DB加载了深色模式背景 Blob (大小: ${bgDark.imageBlob.size} bytes)。`, 'INFO');
-                if (customBackgrounds.value.dark) URL.revokeObjectURL(customBackgrounds.value.dark);
-                customBackgrounds.value.dark = URL.createObjectURL(bgDark.imageBlob);
-                log(`settingsStore.init: 为深色模式创建了新的 Object URL: ${customBackgrounds.value.dark.substring(0, 50)}...`, 'DEBUG');
-            } else {
-                log('settingsStore.init: 未在DB中找到深色模式背景。', 'DEBUG');
-            }
+            const [bgLight, bgDark] = await Promise.all([
+                dbService.getItem('appStateCache', 'background_image_light'),
+                dbService.getItem('appStateCache', 'background_image_dark')
+            ]);
+            if (bgLight?.imageBlob) customBackgrounds.value.light = URL.createObjectURL(bgLight.imageBlob);
+            if (bgDark?.imageBlob) customBackgrounds.value.dark = URL.createObjectURL(bgDark.imageBlob);
         } catch(e) {
             log(`加载自定义背景时出错: ${e.message}`, 'ERROR');
         }
-        log('settingsStore.init: 自定义背景加载完成。', 'DEBUG');
 
-        await _syncThemeWithColorScheme();
+        await _syncThemeWithColorScheme(true); // Initial theme and data load
 
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', async () => {
             if (colorScheme.value === 'auto') {
-                await _syncThemeWithColorScheme();
+                await _syncThemeWithColorScheme(true);
             }
         });
 
         log('设置Store已初始化', 'INFO');
     }
 
-    async function _syncThemeWithColorScheme() {
+    /**
+     * @private
+     * Syncs the current theme with the effective color scheme.
+     * @param {boolean} forceLoadData - If true, ensures data for the theme is loaded.
+     */
+    async function _syncThemeWithColorScheme(forceLoadData = false) {
         const themeMode = currentThemeKey.value.includes('-深色') ? 'dark' : 'light';
         if (themeMode !== effectiveColorScheme.value) {
             const baseName = currentThemeKey.value.replace(/-浅色|-深色/, '');
@@ -84,10 +118,15 @@ export const useSettingsStore = defineStore('settings', () => {
             if (themes.value[newThemeKey]) {
                 await applyTheme(newThemeKey);
             }
+        } else if (forceLoadData) {
+            await _loadThemeData(currentThemeKey.value);
         }
         eventBus.emit('colorSchemeChanged', effectiveColorScheme.value);
     }
 
+    /**
+     * Applies a new theme with a potential transition animation.
+     */
     async function applyTheme(themeKey, event = null) {
         if (!themes.value[themeKey]) {
             log(`Attempted to apply non-existent theme: ${themeKey}`, 'WARN');
@@ -97,15 +136,7 @@ export const useSettingsStore = defineStore('settings', () => {
         const updateLogic = async () => {
             currentThemeKey.value = themeKey;
             localStorage.setItem('currentThemeKey', themeKey);
-            const themeConfig = themes.value[themeKey];
-            if (themeConfig.dataJs && !themeConfig.specialContacts) {
-                try {
-                    const response = await fetch(themeConfig.dataJs);
-                    themes.value[themeKey] = { ...themeConfig, specialContacts: await response.json() };
-                } catch(e) {
-                    log(`Failed to load theme data: ${themeConfig.dataJs}`, 'ERROR');
-                }
-            }
+            await _loadThemeData(themeKey); // Ensure data is loaded
             eventBus.emit('themeChanged');
         };
 
@@ -123,67 +154,50 @@ export const useSettingsStore = defineStore('settings', () => {
     async function setColorScheme(scheme, event = null) {
         colorScheme.value = scheme;
         localStorage.setItem('colorScheme', scheme);
-        await _syncThemeWithColorScheme();
+        await _syncThemeWithColorScheme(true);
     }
 
     async function saveApiSetting(key, value) {
         if (apiSettings.value[key] !== value) {
             apiSettings.value[key] = value;
             await dbService.setItem('settings', { id: 'apiSettings', ...apiSettings.value });
-            log(`API Setting saved: ${key} = ${value}`, 'INFO');
-            eventBus.emit('apiSettingsChanged'); // 触发事件
+            log(`API Setting saved: ${key}`, 'INFO');
+            eventBus.emit('apiSettingsChanged');
         }
     }
 
     async function handleLlmProviderChange(providerKey) {
         const providerConfig = LLMProviders[providerKey];
         if (!providerConfig) return;
-
-        // 批量更新和保存设置
         apiSettings.value.llmProvider = providerKey;
         apiSettings.value.apiEndpoint = providerConfig.defaultEndpoint;
         apiSettings.value.model = providerConfig.defaultModel;
-
         await dbService.setItem('settings', { id: 'apiSettings', ...apiSettings.value });
-        log(`LLM Provider changed to ${providerKey}. Settings updated.`, 'INFO');
+        log(`LLM Provider changed to ${providerKey}.`, 'INFO');
         eventBus.emit('apiSettingsChanged');
     }
 
     async function setCustomBackground(blob, mode) {
-        log(`settingsStore.setCustomBackground: 正在为 ${mode} 模式设置新背景...`, 'DEBUG');
         const oldUrl = customBackgrounds.value[mode];
-        if (oldUrl) {
-            URL.revokeObjectURL(oldUrl);
-            log(`settingsStore.setCustomBackground: 已释放旧的 Object URL for ${mode} mode.`, 'DEBUG');
-        }
-
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
         customBackgrounds.value[mode] = URL.createObjectURL(blob);
-        log(`settingsStore.setCustomBackground: 已创建新的 Object URL for ${mode} mode: ${customBackgrounds.value[mode].substring(0,50)}...`, 'DEBUG');
         await dbService.setItem('appStateCache', { id: `background_image_${mode}`, imageBlob: blob });
-        log(`自定义背景已为 ${mode} 模式设置并缓存到数据库。`, 'INFO');
+        log(`自定义背景已为 ${mode} 模式设置并缓存。`, 'INFO');
     }
 
     async function removeCustomBackground(mode) {
-        log(`settingsStore.removeCustomBackground: 正在移除 ${mode} 模式的背景...`, 'DEBUG');
         const oldUrl = customBackgrounds.value[mode];
-        if (oldUrl) {
-            URL.revokeObjectURL(oldUrl);
-            log(`settingsStore.removeCustomBackground: 已释放 Object URL for ${mode} mode.`, 'DEBUG');
-        }
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
         customBackgrounds.value[mode] = null;
         await dbService.removeItem('appStateCache', `background_image_${mode}`);
-        log(`自定义背景已为 ${mode} 模式移除并从数据库清除。`, 'INFO');
+        log(`自定义背景已为 ${mode} 模式移除。`, 'INFO');
     }
-
-    // --- [NEW] Watcher for debugging ---
-    watch(customBackgrounds, (newVal) => {
-        log(`settingsStore.customBackgrounds 状态已更新: light=${newVal.light?.substring(0,50) || null}, dark=${newVal.dark?.substring(0,50) || null}`, 'DEBUG');
-    }, { deep: true });
 
     return {
         themes, colorScheme, currentThemeKey, apiSettings, customBackgrounds, isThemeTransitioning,
         effectiveColorScheme, currentTheme, currentSpecialContacts,
         init, applyTheme, setColorScheme, saveApiSetting, handleLlmProviderChange,
-        setCustomBackground, removeCustomBackground
+        setCustomBackground, removeCustomBackground,
+        _loadThemeData
     };
 });

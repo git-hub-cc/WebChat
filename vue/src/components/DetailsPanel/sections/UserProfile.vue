@@ -2,9 +2,12 @@
   <div v-if="contact" class="user-profile-section" :class="{ 'character-active': contact.isSpecial, [contact.id]: contact.isSpecial }">
     <!-- Basic Info -->
     <div class="profile-header">
-      <Avatar :entity="contact" size="xl" class="profile-avatar" />
+      <!-- MODIFICATION: isOnline prop is now passed from the combined status -->
+      <Avatar :entity="contact" size="xl" class="profile-avatar" :is-online="combinedStatus.isOnlineDisplay" />
       <h2 class="profile-name">{{ contact.name }}</h2>
       <p class="profile-id">ID: {{ contact.id }}</p>
+      <!-- MODIFICATION: Display the combined status text -->
+      <p class="profile-status" :class="combinedStatus.statusClass">{{ combinedStatus.statusText }}</p>
     </div>
     <hr>
 
@@ -58,6 +61,9 @@ const settingsStore = useSettingsStore();
 
 const contact = computed(() => userStore.contacts[chatStore.currentChatId]);
 
+// MODIFICATION: Get combined status for display
+const combinedStatus = computed(() => contact.value ? userStore.getContactCombinedStatus(contact.value.id) : {});
+
 const isThemeSpecialContact = computed(() => {
   if (!contact.value) return false;
   return settingsStore.currentSpecialContacts.some(sc => sc.id === contact.value.id);
@@ -78,12 +84,16 @@ const deleteContact = () => {
 </script>
 
 <style scoped>
-.user-profile-section { text-align: center; }
+.user-profile-section { text-align: center; padding-bottom: var(--spacing-4); } /* [MODIFIED] Added bottom padding */
 .profile-header { padding: var(--spacing-4) 0; }
 .profile-avatar { margin: 0 auto var(--spacing-4); }
 .profile-name { font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); }
 .character-active .profile-name { color: var(--character-primary-color); }
-.profile-id { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-4); word-break: break-all; }
+.profile-id { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-2); word-break: break-all; } /* [MODIFIED] Adjusted margin */
+.profile-status { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-4); } /* [NEW] Added for status text */
+.profile-status.online { color: var(--color-status-success); }
+.profile-status.offline { color: var(--color-status-danger); }
+.profile-status.warning { color: var(--color-status-warning); }
 hr { border: none; border-top: 1px solid var(--color-border); margin: 0 var(--spacing-4); }
 
 .about-section, .actions, .resource-section { padding: 0 var(--spacing-4); } /* [MODIFIED] Add .resource-section to padding rule */
