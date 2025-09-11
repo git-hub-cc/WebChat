@@ -1,29 +1,49 @@
-<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- Background shape: Rounded square (Optional, can be removed for pure icon) -->
-    <rect x="0" y="0" width="48" height="48" rx="8" fill="#F8F9FA"/>
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" fill-rule="evenodd" clip-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2">
+    <style>
+        /*
+        默认 (浅色模式) 颜色
+        引用 _variables.css 中的颜色，保证100%一致性。
+        */
+        :root {
+        --bubble-color: #007ACC; /* --color-brand-primary from light theme */
+        --symbol-color: #FFFFFF; /* --color-text-on-brand from light theme */
+        }
 
-    <!-- Chat Bubble (main element) -->
-    <path d="M12 12C12 9.79086 13.7909 8 16 8H32C34.2091 8 36 9.79086 36 12V28C36 30.2091 34.2091 32 32 32H19.043L12 37V28C12 28 12 12 12 12Z" fill="#3498DB"/>
+        /*
+        当浏览器/操作系统为深色模式时，自动覆盖以上变量。
+        */
+        @media (prefers-color-scheme: dark) {
+        :root {
+        --bubble-color: #3498DB; /* --color-brand-primary from dark theme */
+        --symbol-color: #2C2F33; /* --color-background-panel from dark theme */
+        }
+        }
 
-    <!-- "Typing" dots inside the bubble -->
-    <circle cx="20" cy="20" r="2" fill="white"/>
-    <circle cx="24" cy="20" r="2" fill="white"/>
-    <circle cx="28" cy="20" r="2" fill="white"/>
+        /* 将颜色变量应用到 SVG 形状上 */
+        .bubble {
+        fill: var(--bubble-color);
+        transition: fill 0.3s ease-in-out;
+        }
+        .symbol {
+        fill: var(--symbol-color);
+        transition: fill 0.3s ease-in-out;
+        }
+    </style>
 
-    <!-- AI Symbol (brain/star-like node in the corner, subtle) -->
-    <g fill="#2ECC71"> <!-- A subtle green for AI, or your brand primary -->
-        <circle cx="38" cy="10" r="4"/>
-        <path d="M38 6L39.5 8.5L42 10L39.5 11.5L38 14L36.5 11.5L34 10L36.5 8.5L38 6Z" fill="#2ECC71"/>
+    <!-- 图标形状定义 -->
+    <g>
+        <!-- 聊天气泡主体 (保持不变) -->
+        <path class="bubble" d="M10,10 C4.477,10 0,14.477 0,20 v40 c0,5.523 4.477,10 10,10 h20 l-10,15 v-15 h60 c5.523,0 10,-4.477 10,-10 v-40 c0,-5.523 -4.477,-10 -10,-10 H10Z"/>
+
+        <!--
+          MODIFIED & FIXED: 内部符号改为三个点，并精确居中。
+          - 垂直中心 (cy) 调整为 40。
+          - 水平中心 (cx) 组调整为以 45 为中心。
+        -->
+        <g class="symbol">
+            <circle cx="25" cy="40" r="7.5"/>
+            <circle cx="45" cy="40" r="7.5"/>
+            <circle cx="65" cy="40" r="7.5"/>
+        </g>
     </g>
-
-    <!-- Optional: If you want a dark mode version, you could use a <g> tag with `prefers-color-scheme` CSS -->
-    <!-- Example for dark mode override (requires embedding CSS) -->
-    <!-- <style>
-      @media (prefers-color-scheme: dark) {
-        svg > rect { fill: #2C2F33; }
-        svg > path { fill: #3498DB; }
-        svg > g { fill: #2ECC71; }
-      }
-    </style> -->
-
 </svg>

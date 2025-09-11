@@ -1,6 +1,6 @@
 <template>
   <transition name="widget-slide-down">
-    <div class="floating-call-widget" @click="maximize">
+    <div v-if="callStore.isCallActive && !callStore.isFullScreenCallViewVisible" class="floating-call-widget" @click="maximize">
       <div class="widget-info">
         <Avatar v-if="callStore.peerContact" :entity="callStore.peerContact" size="small" />
         <div class="text-info">

@@ -7,17 +7,21 @@ import { useSettingsStore } from './settingsStore';
 import { useGroupStore } from './groupStore';
 import { generateId, log } from '@/utils';
 import { webrtcService } from '@/services/webrtcService';
+import { apiService } from '@/services/apiService';
 import AppSettings from '@/config/AppSettings';
+// --- TTS MODIFICATION: Import default TTS config ---
+import { DEFAULT_TTS_CONFIG } from '@/config/ttsDefaults';
 
 export const useUserStore = defineStore('user', () => {
-    // ... state and getters are unchanged ...
+    // --- STATE ---
     const userId = ref(null);
     const userName = ref('我');
     const contacts = ref({});
     const isAiServiceHealthy = ref(false);
     const aiServiceStatusMessage = ref("状态检查中...");
-    const onlineUserIds = ref([]); // From Lobby API
+    const onlineUserIds = ref([]);
 
+    // --- GETTERS ---
     const getContactCombinedStatus = computed(() => (contactId) => {
         const contact = contacts.value[contactId];
         if (!contact) {
@@ -88,7 +92,7 @@ export const useUserStore = defineStore('user', () => {
 
 
     // --- ACTIONS ---
-    // ... other actions are unchanged ...
+
     async function init() {
         let userData = await dbService.getItem('user', 'currentUser');
         if (userData?.userId) {
@@ -103,6 +107,12 @@ export const useUserStore = defineStore('user', () => {
         const dbContacts = await dbService.getAllItems('contacts');
         const contactsMap = {};
         dbContacts.forEach(c => {
+            // --- TTS MODIFICATION: Ensure full TTS config on load ---
+            if (c.isAI) {
+                c.aiConfig = c.aiConfig || {};
+                // Merge saved settings on top of the full default template
+                c.aiConfig.tts = { ...DEFAULT_TTS_CONFIG, ...(c.aiConfig.tts || {}) };
+            }
             contactsMap[c.id] = { type: 'contact', ...c, isOnline: false };
         });
         contacts.value = contactsMap;
@@ -110,79 +120,79 @@ export const useUserStore = defineStore('user', () => {
         await ensureSpecialContacts();
         eventBus.on('themeChanged', ensureSpecialContacts);
         eventBus.on('apiSettingsChanged', () => apiService.checkAiServiceHealth().then(updateAiServiceStatus));
+
+        eventBus.on('webrtc:connected', (peerId) => {
+            const chatStore = useChatStore();
+            chatStore.resendFailedMessages(peerId);
+        });
+
         log(`用户Store已初始化。ID: ${userId.value}`, 'INFO');
     }
 
     async function ensureSpecialContacts() {
         const settingsStore = useSettingsStore();
+        const chatStore = useChatStore();
+
         if (!settingsStore.currentTheme || !settingsStore.currentSpecialContacts) {
-            log('ensureSpecialContacts: 主题或特殊联系人定义尚未加载。', 'WARN');
+            log('ensureSpecialContacts: Theme or special contact definitions not loaded yet. Skipping sync.', 'WARN');
             return;
         }
 
-        const newDefs = settingsStore.currentSpecialContacts;
-        const processedIds = new Set();
-        const savePromises = [];
+        const newThemeDefs = settingsStore.currentSpecialContacts;
+        const newThemeDefIds = new Set(newThemeDefs.map(def => def.id));
+        const newContactsState = {};
+        const dbWritePromises = [];
+        const idsToRemoveFromDb = [];
 
-        for (const def of newDefs) {
-            processedIds.add(def.id);
-            const existing = contacts.value[def.id];
+        for (const contactId in contacts.value) {
+            const contact = contacts.value[contactId];
+            if (!contact.isSpecial || contact.isImported) {
+                newContactsState[contactId] = contact;
+            }
+        }
+
+        for (const def of newThemeDefs) {
+            const existingContact = contacts.value[def.id];
             const baseData = { ...def, isSpecial: true, type: 'contact' };
-
-            if (existing) {
-                const updatedContact = {
-                    ...existing,
-                    ...baseData,
-                    name: def.name,
-                    avatarText: def.avatarText,
-                    avatarUrl: def.avatarUrl,
-                    aboutDetails: def.aboutDetails,
-                    chapters: def.chapters,
-                    selectedChapterId: existing.selectedChapterId || def.selectedChapterId || null,
-                    aiConfig: {
-                        ...(existing.aiConfig || {}),
-                        ...(baseData.aiConfig || {}),
-                        tts: {
-                            ...(existing.aiConfig?.tts || {}),
-                            ...(baseData.aiConfig?.tts || {}),
-                        }
+            newContactsState[def.id] = {
+                ...baseData,
+                lastMessage: existingContact?.lastMessage || def.initialMessage || '你好！',
+                lastTime: existingContact?.lastTime || new Date(0).toISOString(),
+                unread: existingContact?.unread || 0,
+                selectedChapterId: existingContact?.selectedChapterId ?? (def.selectedChapterId || null),
+                aiConfig: {
+                    ...(def.aiConfig || {}),
+                    ...(existingContact?.aiConfig || {}),
+                    // --- TTS MODIFICATION: Ensure full TTS config when syncing theme contacts ---
+                    tts: {
+                        ...DEFAULT_TTS_CONFIG, // Start with full defaults
+                        ...(def.aiConfig?.tts || {}), // Apply theme-defined TTS settings
+                        ...(existingContact?.aiConfig?.tts || {}), // Apply user-saved TTS settings over theme defaults
                     }
-                };
-                if (updatedContact.isAI) {
-                    if (!updatedContact.aiConfig) updatedContact.aiConfig = {};
-                    if (!updatedContact.aiConfig.tts) updatedContact.aiConfig.tts = {};
-                    if (updatedContact.aiConfig.tts.tts_mode === undefined) updatedContact.aiConfig.tts.tts_mode = 'Preset';
-                    if (updatedContact.aiConfig.tts.version === undefined) updatedContact.aiConfig.tts.version = 'v4';
-                    updatedContact.isOnline = isAiServiceHealthy.value;
                 }
-                contacts.value[def.id] = updatedContact;
-            } else {
-                contacts.value[def.id] = {
-                    ...baseData,
-                    lastMessage: def.initialMessage || '你好！',
-                    lastTime: new Date(0).toISOString(),
-                    unread: 0,
-                    isOnline: baseData.isAI ? isAiServiceHealthy.value : false,
-                    selectedChapterId: def.selectedChapterId || null
-                };
-                if (contacts.value[def.id].isAI) {
-                    if (!contacts.value[def.id].aiConfig) contacts.value[def.id].aiConfig = {};
-                    if (!contacts.value[def.id].aiConfig.tts) contacts.value[def.id].aiConfig.tts = {};
-                    if (contacts.value[def.id].aiConfig.tts.tts_mode === undefined) contacts.value[def.id].aiConfig.tts.tts_mode = 'Preset';
-                    if (contacts.value[def.id].aiConfig.tts.version === undefined) contacts.value[def.id].aiConfig.tts.version = 'v4';
-                }
-            }
-            savePromises.push(dbService.setItem('contacts', contacts.value[def.id]));
+            };
+            dbWritePromises.push(dbService.setItem('contacts', newContactsState[def.id]));
         }
 
-        for (const id in contacts.value) {
-            if (contacts.value[id].isSpecial && !processedIds.has(id) && !contacts.value[id].isImported) {
-                contacts.value[id].isSpecial = false;
-                savePromises.push(dbService.setItem('contacts', contacts.value[id]));
+        for (const contactId in contacts.value) {
+            const contact = contacts.value[contactId];
+            if (contact.isSpecial && !contact.isImported && !newThemeDefIds.has(contactId)) {
+                idsToRemoveFromDb.push(contactId);
             }
         }
-        await Promise.all(savePromises);
-        log(`特殊联系人已同步至主题: ${settingsStore.currentThemeKey}`, 'INFO');
+
+        if (idsToRemoveFromDb.length > 0) {
+            log(`Pruning ${idsToRemoveFromDb.length} old theme characters from DB: ${idsToRemoveFromDb.join(', ')}`, 'INFO');
+            for (const idToRemove of idsToRemoveFromDb) {
+                dbWritePromises.push(dbService.removeItem('contacts', idToRemove));
+                dbWritePromises.push(chatStore.deleteChatHistory(idToRemove));
+            }
+        }
+
+        contacts.value = newContactsState;
+
+        await Promise.all(dbWritePromises);
+        log(`Special contacts synced to theme: ${settingsStore.currentThemeKey}`, 'INFO');
     }
 
     async function addContact(contactData) {
@@ -204,7 +214,8 @@ export const useUserStore = defineStore('user', () => {
         const existingContact = contacts.value[contactData.id];
         const finalName = contactData.name?.trim() || existingContact?.name || `用户 ${contactData.id.substring(0, 4)}`;
 
-        const defaultAiConfig = { tts: { tts_mode: 'Preset', version: 'v4' } };
+        // --- TTS MODIFICATION: Define default AI config with full TTS settings ---
+        const defaultAiConfig = { tts: { ...DEFAULT_TTS_CONFIG } };
 
         let updated = false;
         if (existingContact) {
@@ -219,12 +230,14 @@ export const useUserStore = defineStore('user', () => {
             if (contactData.selectedChapterId !== undefined && existingContact.selectedChapterId !== contactData.selectedChapterId) { existingContact.selectedChapterId = contactData.selectedChapterId; updated = true; }
 
             if (contactData.aiConfig) {
+                // --- TTS MODIFICATION: Ensure full TTS config when updating ---
                 existingContact.aiConfig = existingContact.aiConfig || {};
                 Object.assign(existingContact.aiConfig, contactData.aiConfig);
-                if (contactData.aiConfig.tts) {
-                    existingContact.aiConfig.tts = existingContact.aiConfig.tts || {};
-                    Object.assign(existingContact.aiConfig.tts, contactData.aiConfig.tts);
-                }
+                existingContact.aiConfig.tts = {
+                    ...DEFAULT_TTS_CONFIG,
+                    ...(existingContact.aiConfig.tts || {}),
+                    ...(contactData.aiConfig.tts || {})
+                };
                 updated = true;
             }
             if (updated) {
@@ -249,17 +262,12 @@ export const useUserStore = defineStore('user', () => {
                 isAI: contactData.isAI || false,
                 isSpecial: contactData.isSpecial || false,
                 isImported: contactData.isImported || false,
-                aiConfig: contactData.aiConfig || defaultAiConfig,
+                // --- TTS MODIFICATION: Initialize with full TTS config ---
+                aiConfig: contactData.aiConfig ? { ...contactData.aiConfig, tts: { ...DEFAULT_TTS_CONFIG, ...(contactData.aiConfig.tts || {}) } } : defaultAiConfig,
                 aboutDetails: contactData.aboutDetails || null,
                 chapters: contactData.chapters || [],
                 selectedChapterId: contactData.selectedChapterId || null
             };
-            if (newContact.isAI) {
-                if (!newContact.aiConfig) newContact.aiConfig = defaultAiConfig;
-                if (!newContact.aiConfig.tts) newContact.aiConfig.tts = defaultAiConfig.tts;
-                if (newContact.aiConfig.tts.tts_mode === undefined) newContact.aiConfig.tts.tts_mode = 'Preset';
-                if (newContact.aiConfig.tts.version === undefined) newContact.aiConfig.tts.version = 'v4';
-            }
             contacts.value[contactData.id] = newContact;
             await dbService.setItem('contacts', newContact);
             eventBus.emit('showNotification', { message: `联系人 "${finalName}" 已添加`, type: 'success'});
@@ -268,21 +276,13 @@ export const useUserStore = defineStore('user', () => {
         return true;
     }
 
-    async function updateContactStatus(contactId, isOnline) {
-        const contact = contacts.value[contactId];
-        if (contact && contact.isOnline !== isOnline) {
-            contact.isOnline = isOnline;
-            await dbService.setItem('contacts', contact);
-            log(`Contact status updated: ${contact.name} is now ${isOnline ? 'online' : 'offline'}`, 'DEBUG');
-        }
+    async function updateContactStatus(contactId, isConnected) {
+        log(`Connection status change for ${contactId}: ${isConnected}`, 'DEBUG');
     }
 
     function updateAiServiceStatus(isHealthy) {
         isAiServiceHealthy.value = isHealthy;
         aiServiceStatusMessage.value = isHealthy ? "AI 服务可用" : "AI 服务不可用";
-        Object.values(contacts.value).forEach(contact => {
-            if (contact.isAI) contact.isOnline = isHealthy;
-        });
         log(`AI service status updated to: ${isHealthy}.`, 'INFO');
     }
 
@@ -291,23 +291,13 @@ export const useUserStore = defineStore('user', () => {
             const response = await fetch(AppSettings.server.lobbyApiEndpoint);
             if (!response.ok) throw new Error(`Server responded with ${response.status}`);
             const userIds = await response.json();
-            const newOnlineUserIds = Array.isArray(userIds) ? userIds.filter(id => id !== userId.value) : [];
-
-            onlineUserIds.value = newOnlineUserIds;
-
-            for (const contactId in contacts.value) {
-                const contact = contacts.value[contactId];
-                if (!contact.isAI && !contact.isSpecial) {
-                    const isNowOnline = newOnlineUserIds.includes(contactId);
-                    if (contact.isOnline !== isNowOnline) {
-                        contact.isOnline = isNowOnline;
-                    }
-                }
-            }
+            onlineUserIds.value = Array.isArray(userIds) ? userIds.filter(id => id !== userId.value) : [];
             log(`在线用户列表已更新: ${onlineUserIds.value.length} users online.`, 'INFO');
+            return true;
         } catch (error) {
             log(`获取在线用户列表失败: ${error}`, 'ERROR');
             onlineUserIds.value = [];
+            return false;
         }
     }
 
@@ -351,11 +341,6 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    // --- START OF MODIFICATION ---
-    /**
-     * Clears all contacts that are not part of the current theme's special contacts.
-     * The confirmation logic is now handled in the UI component.
-     */
     async function removeAllContacts() {
         const settingsStore = useSettingsStore();
         const specialContactIds = new Set(settingsStore.currentSpecialContacts.map(c => c.id));
@@ -367,11 +352,10 @@ export const useUserStore = defineStore('user', () => {
         }
 
         for (const id of contactIdsToRemove) {
-            await removeContact(id); // Use the refactored removeContact for full cleanup
+            await removeContact(id);
         }
         eventBus.emit('showNotification', { message: '所有手动添加的联系人已清空。', type: 'success' });
     }
-    // --- END OF MODIFICATION ---
 
     async function setSelectedChapterForAI(contactId, chapterId) {
         const contact = contacts.value[contactId];
@@ -382,11 +366,16 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    async function saveTtsSettings(contactId, ttsConfig) {
+    async function saveTtsSettings(contactId, ttsConfigFromUi) {
         const contact = contacts.value[contactId];
         if (contact?.isAI) {
             if (!contact.aiConfig) contact.aiConfig = {};
-            contact.aiConfig.tts = ttsConfig;
+            // --- TTS MODIFICATION: Merge with defaults to ensure completeness ---
+            contact.aiConfig.tts = {
+                ...DEFAULT_TTS_CONFIG, // Start with a full set of defaults
+                ...(contact.aiConfig.tts || {}), // Apply existing saved settings
+                ...ttsConfigFromUi, // Apply the new changes from the UI
+            };
             await dbService.setItem('contacts', contact);
             log(`TTS settings saved for contact ${contactId}`, 'INFO');
             eventBus.emit('showNotification', { message: 'TTS 设置已保存', type: 'success' });
@@ -396,6 +385,7 @@ export const useUserStore = defineStore('user', () => {
     return {
         userId, userName, contacts, isAiServiceHealthy, aiServiceStatusMessage, onlineUserIds, getContactCombinedStatus,
         init, fetchOnlineUsers, addContact, removeContact, updateAiServiceStatus, updateContactStatus, clearUnread,
-        incrementUnread, updateContactLastMessage, removeAllContacts, setSelectedChapterForAI, saveTtsSettings
+        incrementUnread, updateContactLastMessage, removeAllContacts, setSelectedChapterForAI, saveTtsSettings,
+        ensureSpecialContacts
     };
 });

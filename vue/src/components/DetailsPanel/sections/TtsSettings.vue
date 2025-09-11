@@ -14,7 +14,7 @@
       </select>
 
       <!-- Dynamic, Searchable Model Select -->
-      <div v-else-if="field.key === 'model_name' && localSettings.tts_mode === 'Dynamic'" class="searchable-select">
+      <div v-else-if="field.key === 'model_name' && localSettings.tts_mode === 'Dynamic'" class="searchable-select" @click.stop>
         <input
             type="text"
             v-model="modelSearch"
@@ -38,18 +38,20 @@
       <!-- Standard Inputs (Text, Number, Checkbox, Select) -->
       <input v-else-if="field.type === 'checkbox'" type="checkbox" v-model="localSettings[field.key]" :id="`tts-${contactId}-${field.key}`">
       <select v-else-if="field.type === 'select'" v-model="localSettings[field.key]" :id="`tts-${contactId}-${field.key}`">
-        <option v-for="opt in field.options" :key="opt.value" :value="opt.value">{{ opt.text }}</option>
+        <option v-for="opt in field.options" :key="opt.value || opt" :value="opt.value || opt">{{ opt.text || opt }}</option>
       </select>
-      <input v-else :type="field.type" v-model="localSettings[field.key]" :id="`tts-${contactId}-${field.key}`" :step="field.step" :min="field.min" :max="field.max">
+      <input v-else :type="field.type" v-model.number="localSettings[field.key]" :id="`tts-${contactId}-${field.key}`" :step="field.step" :min="field.min" :max="field.max">
     </div>
     <button class="btn-primary btn-save-tts" @click="saveSettings">保存 TTS 设置</button>
   </div>
 </template>
 
 <script setup>
-import {ref, reactive, watch, computed, onUnmounted, onMounted} from 'vue';
+import { ref, reactive, watch, computed, onMounted, onUnmounted } from 'vue';
 import { useUserStore } from '@/stores/userStore';
+import { apiService } from '@/services/apiService';
 import { log } from '@/utils';
+import { DEFAULT_TTS_CONFIG } from '@/config/ttsDefaults';
 
 const props = defineProps({
   contactId: { type: String, required: true }
@@ -63,22 +65,24 @@ const configFields = [
   { key: 'model_name', label: '模型', type: 'text', default: '', isPotentiallyDynamic: true },
   { key: 'prompt_text_lang', label: '参考音频语言', type: 'select', options: [], isPotentiallyDynamic: true },
   { key: 'emotion', label: '情感', type: 'select', options: [], isPotentiallyDynamic: true },
-  // ... other fields from your config can be added here
+  { key: 'text_lang', label: '文本语言', type: 'select', options: ["中文", "英语", "日语", "粤语", "韩语", "中英混合", "日英混合", "粤英混合", "韩英混合", "多语种混合", "多语种混合（粤语）"]},
+  { key: 'text_split_method', label: '切分方法', type: 'select', options: ["四句一切", "凑50字一切", "按中文句号。切", "按英文句号.切", "按标点符号切"] },
+  { key: 'seed', label: '种子', type: 'number', default: -1, step:1 },
 ];
 
 const localSettings = reactive({});
-const dynamicDataCache = ref({}); // { [version]: { models: { [modelName]: { [lang]: [emotions] } } } }
-const dynamicDataStatus = reactive({ models: 'idle', speakers: 'idle' });
+// --- START OF FIX: Renamed to avoid confusion with service-level cache ---
+const componentCache = ref({}); // { [version]: { models: { [modelName]: { [lang]: [emotions] } } } }
+// --- END OF FIX ---
+const dynamicDataStatus = reactive({ models: 'idle' });
 const modelSearch = ref('');
 const showModelOptions = ref(false);
 
 watch(() => props.contactId, (newId) => {
   if (newId) {
     const contact = userStore.contacts[newId];
-    const settings = contact?.aiConfig?.tts || {};
-    configFields.forEach(field => {
-      localSettings[field.key] = settings[field.key] ?? field.default;
-    });
+    const settings = { ...DEFAULT_TTS_CONFIG, ...(contact?.aiConfig?.tts || {}) };
+    Object.assign(localSettings, settings);
     if (localSettings.tts_mode === 'Dynamic') {
       modelSearch.value = localSettings.model_name;
       fetchModels(localSettings.version);
@@ -86,29 +90,37 @@ watch(() => props.contactId, (newId) => {
   }
 }, { immediate: true });
 
-watch(() => localSettings.version, (newVersion) => {
-  if (localSettings.tts_mode === 'Dynamic') fetchModels(newVersion);
+watch(() => localSettings.version, (newVersion, oldVersion) => {
+  if (newVersion !== oldVersion && localSettings.tts_mode === 'Dynamic') {
+    localSettings.model_name = '';
+    modelSearch.value = '';
+    localSettings.prompt_text_lang = '';
+    localSettings.emotion = '';
+    fetchModels(newVersion);
+  }
 });
+
 watch(() => localSettings.tts_mode, (newMode) => {
   if (newMode === 'Dynamic') fetchModels(localSettings.version);
 });
 
 const filteredModels = computed(() => {
-  const models = dynamicDataCache.value[localSettings.version]?.models || {};
+  // --- START OF FIX: Referencing componentCache ---
+  const models = componentCache.value[localSettings.version]?.models || {};
+  // --- END OF FIX ---
   const modelNames = Object.keys(models);
   if (!modelSearch.value) return modelNames;
   return modelNames.filter(m => m.toLowerCase().includes(modelSearch.value.toLowerCase()));
 });
 
 async function fetchModels(version) {
-  if (!version || dynamicDataCache.value[version]) return;
+  if (!version || componentCache.value[version]) return; // Use component cache
   dynamicDataStatus.models = 'loading';
   try {
-    // This is a mock implementation. Replace with actual apiService call
-    // const modelsData = await apiService.fetchTtsModels(version);
-    // MOCK DATA for demonstration:
-    const modelsData = { "派蒙": { "中文": ["开心", "默认"] }, "钟离": { "中文": ["沉稳", "默认"] } };
-    dynamicDataCache.value[version] = { models: modelsData };
+    // --- START OF FIX: Use the correct method from apiService ---
+    await apiService.getTtsModels(version); // This fetches and caches in the service
+    componentCache.value[version] = { models: apiService.getTtsModelData(version) }; // Populate component cache from service
+    // --- END OF FIX ---
     dynamicDataStatus.models = 'loaded';
   } catch (error) {
     log(`Failed to fetch TTS models for version ${version}: ${error}`, 'ERROR');
@@ -120,11 +132,15 @@ function selectModel(model) {
   localSettings.model_name = model;
   modelSearch.value = model;
   showModelOptions.value = false;
+  localSettings.prompt_text_lang = '';
+  localSettings.emotion = '';
 }
 
 function isDynamicSelectDisabled(key) {
-  if (key === 'prompt_text_lang') return !localSettings.model_name || !dynamicDataCache.value[localSettings.version]?.models[localSettings.model_name];
-  if (key === 'emotion') return !localSettings.prompt_text_lang || !dynamicDataCache.value[localSettings.version]?.models[localSettings.model_name]?.[localSettings.prompt_text_lang];
+  // --- START OF FIX: Referencing componentCache ---
+  if (key === 'prompt_text_lang') return !localSettings.model_name || !componentCache.value[localSettings.version]?.models[localSettings.model_name];
+  if (key === 'emotion') return !localSettings.prompt_text_lang || !componentCache.value[localSettings.version]?.models[localSettings.model_name]?.[localSettings.prompt_text_lang];
+  // --- END OF FIX ---
   return true;
 }
 
@@ -135,7 +151,9 @@ function getDynamicSelectPlaceholder(key) {
 }
 
 function getDynamicOptions(key) {
-  const modelData = dynamicDataCache.value[localSettings.version]?.models[localSettings.model_name];
+  // --- START OF FIX: Referencing componentCache ---
+  const modelData = componentCache.value[localSettings.version]?.models[localSettings.model_name];
+  // --- END OF FIX ---
   if (!modelData) return [];
   if (key === 'prompt_text_lang') return Object.keys(modelData);
   if (key === 'emotion') return modelData[localSettings.prompt_text_lang] || [];
@@ -143,10 +161,21 @@ function getDynamicOptions(key) {
 }
 
 async function saveSettings() {
-  await userStore.saveTtsSettings(props.contactId, JSON.parse(JSON.stringify(localSettings)));
+  const settingsToSave = { ...DEFAULT_TTS_CONFIG };
+  configFields.forEach(field => {
+    if (localSettings[field.key] !== undefined) {
+      settingsToSave[field.key] = localSettings[field.key];
+    }
+  });
+  Object.keys(DEFAULT_TTS_CONFIG).forEach(key => {
+    if (!configFields.some(f => f.key === key)) {
+      const contact = userStore.contacts[props.contactId];
+      settingsToSave[key] = contact?.aiConfig?.tts?.[key] ?? DEFAULT_TTS_CONFIG[key];
+    }
+  });
+  await userStore.saveTtsSettings(props.contactId, settingsToSave);
 }
 
-// Global click listener to close options
 const closeOptions = () => { showModelOptions.value = false; };
 onMounted(() => document.addEventListener('click', closeOptions));
 onUnmounted(() => document.removeEventListener('click', closeOptions));

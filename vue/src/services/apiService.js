@@ -7,6 +7,13 @@ import { eventBus } from './eventBus';
 import { log, fetchApiStream } from '@/utils';
 import AppSettings from '@/config/AppSettings';
 import { MCP_TOOLS } from '@/config/McpTools';
+import { dbService } from './dbService';
+// --- NEW ---
+import { useTtsStore } from '@/stores/ttsStore';
+
+
+// Internal cache for dynamic TTS data to avoid redundant API calls
+const _ttsDynamicDataCache = {};
 
 function _getEffectiveAiConfig() {
     const settingsStore = useSettingsStore();
@@ -53,17 +60,36 @@ async function _executeMcpTool(toolName, args) {
         return { error: `网络请求失败: ${e.message}` };
     }
 }
+async function _generateTtsCacheKey(payload) {
+    try {
+        const payloadString = JSON.stringify(payload);
+        const encoder = new TextEncoder();
+        const data = encoder.encode(payloadString);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+        log(`生成 TTS 缓存键失败: ${error}`, 'ERROR');
+        return `tts_fallback_${encodeURIComponent(payload.text)}_${encodeURIComponent(payload.model_name || 'default_model')}`;
+    }
+}
 
 export const apiService = {
-    async sendAiMessage(targetId, contact, messageText, fullChatHistory = []) {
+    async sendAiMessage(targetId, messageText, fullChatHistory = []) {
         const chatStore = useChatStore();
         const userStore = useUserStore();
         const memoryStore = useMemoryStore();
+
+        const contact = userStore.contacts[targetId];
+        if (!contact) {
+            log(`sendAiMessage: Contact with ID ${targetId} not found. Aborting.`, 'ERROR');
+            return;
+        }
+
         const effectiveConfig = _getEffectiveAiConfig();
         if (!effectiveConfig.apiEndpoint) throw new Error("AI API 端点未配置。");
 
         const thinkingMessageId = `ai_thinking_${Date.now()}`;
-        // --- MODIFIED: Use chatStore action ---
         chatStore.addTemporaryMessage(targetId, { id: thinkingMessageId, type: 'system', content: '思考中...', sender: targetId, isThinking: true });
 
         try {
@@ -107,19 +133,14 @@ export const apiService = {
                     const aiContent = analysisResult.choices[0].message.content;
 
                     let toolCall;
-                    try {
-                        const parsedContent = JSON.parse(aiContent);
-                        if (parsedContent.tool_call) toolCall = parsedContent.tool_call;
-                    } catch(e) {}
+                    try { const parsedContent = JSON.parse(aiContent); if (parsedContent.tool_call) toolCall = parsedContent.tool_call; } catch(e) {}
 
                     if (toolCall) {
                         chatStore.removeTemporaryMessage(targetId, thinkingMessageId);
                         const toolUseMessageId = `tool_use_${Date.now()}`;
                         chatStore.addTemporaryMessage(targetId, { id: toolUseMessageId, type: 'system', toolCallInfo: { name: toolCall.name }, sender: targetId });
-
                         const toolResult = await _executeMcpTool(toolCall.name, toolCall.arguments);
                         chatStore.removeTemporaryMessage(targetId, toolUseMessageId);
-
                         if (toolResult.error) throw new Error(`工具调用错误: ${toolResult.error}`);
                         const finalMessages = _buildMcpFinalPrompt(systemPrompt, messageText, toolCall, toolResult.data);
                         requestBody = { model: effectiveConfig.model, messages: finalMessages, stream: true, max_tokens: effectiveConfig.maxTokens };
@@ -149,10 +170,7 @@ export const apiService = {
                 chatStore.removeTemporaryMessage(targetId, thinkingMessageId);
                 const aiMessageId = `ai_stream_${Date.now()}`;
                 let fullResponseContent = "";
-                const initialAiMessage = {
-                    id: aiMessageId, type: 'text', content: "▍", sender: targetId,
-                    timestamp: new Date().toISOString(), isStreaming: true,
-                };
+                const initialAiMessage = { id: aiMessageId, type: 'text', content: "▍", sender: targetId, timestamp: new Date().toISOString(), isStreaming: true };
                 chatStore.addTemporaryMessage(targetId, initialAiMessage);
 
                 await fetchApiStream(
@@ -164,30 +182,39 @@ export const apiService = {
                             chatStore.updateTemporaryMessage(targetId, aiMessageId, fullResponseContent + "▍");
                         }
                     },
-                    async () => {
+                    async (finalContent) => {
                         chatStore.removeTemporaryMessage(targetId, aiMessageId);
-                        const finalAiMessage = {
-                            id: aiMessageId, type: 'text', content: fullResponseContent, sender: targetId,
-                            timestamp: initialAiMessage.timestamp, isNewlyCompletedAIResponse: true,
-                        };
+                        const finalAiMessage = { id: aiMessageId, type: 'text', content: finalContent, sender: targetId, timestamp: initialAiMessage.timestamp, isNewlyCompletedAIResponse: true };
                         await chatStore.addMessage(targetId, finalAiMessage);
+
+                        const latestContactState = useUserStore().contacts[targetId];
+                        // --- MODIFICATION: Trigger TTS via ttsStore ---
+                        if (latestContactState?.aiConfig?.tts?.enabled && finalContent) {
+                            const ttsStore = useTtsStore();
+                            // Pass the final message object and the contact info
+                            ttsStore.requestTtsForMessage({ ...finalAiMessage, senderContact: latestContactState });
+                        }
                     }
                 );
             }
         } catch (error) {
             log(`与 AI 通信时出错: ${error}`, 'ERROR');
             chatStore.removeTemporaryMessage(targetId, thinkingMessageId);
-            const errorMessage = {
-                id: `ai_error_${Date.now()}`, type: 'text', content: `抱歉，我遇到了一个错误: ${error.message}`,
-                sender: targetId, timestamp: new Date().toISOString()
-            };
+            const errorMessage = { id: `ai_error_${Date.now()}`, type: 'text', content: `抱歉，我遇到了一个错误: ${error.message}`, sender: targetId, timestamp: new Date().toISOString() };
             await chatStore.addMessage(targetId, errorMessage);
         }
     },
-    async sendGroupAiMessage(groupId, aiContact, mentionedMessageText, originalSenderId) {
+    async sendGroupAiMessage(groupId, aiContactId, mentionedMessageText, originalSenderId) {
         const chatStore = useChatStore();
         const userStore = useUserStore();
         const groupStore = useGroupStore();
+
+        const aiContact = userStore.contacts[aiContactId];
+        if (!aiContact || !aiContact.isAI) {
+            log(`sendGroupAiMessage: Target ${aiContactId} is not a valid AI contact.`, 'WARN');
+            return;
+        }
+
         const effectiveConfig = _getEffectiveAiConfig();
         const group = groupStore.groups[groupId];
         if (!group) return;
@@ -212,7 +239,6 @@ export const apiService = {
             if (aiContact.aiConfig?.mcp_enabled && typeof MCP_TOOLS !== 'undefined') {
                 const analysisMessages = _buildMcpAnalysisPrompt(formattedHistory, userTriggerMessage);
                 const analysisRequestBody = { model: effectiveConfig.model, messages: analysisMessages, stream: false, temperature: 0.0, max_tokens: 512 };
-
                 try {
                     const analysisResponse = await fetch(effectiveConfig.apiEndpoint, {
                         method: 'POST', headers: { 'Content-Type': 'application/json', 'authorization': effectiveConfig.apiKey },
@@ -223,22 +249,15 @@ export const apiService = {
                     const jsonStringResult = rawTextResult.trim().match(/\{.*\}/s)?.[0] || rawTextResult;
                     const analysisResult = JSON.parse(jsonStringResult);
                     const aiContent = analysisResult.choices[0].message.content;
-
                     let toolCall;
-                    try {
-                        const parsedContent = JSON.parse(aiContent);
-                        if (parsedContent.tool_call) toolCall = parsedContent.tool_call;
-                    } catch (e) {}
-
+                    try { const parsedContent = JSON.parse(aiContent); if (parsedContent.tool_call) toolCall = parsedContent.tool_call; } catch (e) {}
                     if (toolCall) {
                         chatStore.removeTemporaryMessage(groupId, thinkingMessageId);
                         const toolUseMessageId = `tool_use_group_${Date.now()}`;
                         chatStore.addTemporaryMessage(groupId, { id: toolUseMessageId, type: 'system', toolCallInfo: { name: toolCall.name }, sender: aiContact.id });
-
                         const toolResult = await _executeMcpTool(toolCall.name, toolCall.arguments);
                         chatStore.removeTemporaryMessage(groupId, toolUseMessageId);
                         if (toolResult.error) throw new Error(`工具调用错误: ${toolResult.error}`);
-
                         const finalMessages = _buildMcpFinalPrompt(group.aiPrompts?.[aiContact.id] || aiContact.aiConfig?.systemPrompt || "", userTriggerMessage, toolCall, toolResult.data);
                         requestBody = { model: effectiveConfig.model, messages: finalMessages, stream: true, max_tokens: effectiveConfig.maxTokens };
                     } else {
@@ -284,12 +303,19 @@ export const apiService = {
                             chatStore.updateTemporaryMessage(groupId, aiResponseMessageId, fullAiResponseContent + "▍");
                         }
                     },
-                    async () => {
+                    async (finalContent) => {
                         chatStore.removeTemporaryMessage(groupId, aiResponseMessageId);
-                        const finalAiMessage = { ...initialAiResponseMessage, content: fullAiResponseContent, isStreaming: false, isNewlyCompletedAIResponse: true };
+                        const finalAiMessage = { ...initialAiResponseMessage, content: finalContent, isStreaming: false, isNewlyCompletedAIResponse: true };
                         await chatStore.addMessage(groupId, finalAiMessage);
                         const messageForBroadcast = { ...finalAiMessage, isNewlyCompletedAIResponse: undefined };
                         groupStore.broadcastMessage(groupId, messageForBroadcast);
+
+                        // --- MODIFICATION: Trigger TTS via ttsStore ---
+                        const latestAiContactState = useUserStore().contacts[aiContact.id];
+                        if (latestAiContactState?.aiConfig?.tts?.enabled && finalContent) {
+                            const ttsStore = useTtsStore();
+                            ttsStore.requestTtsForMessage({ ...finalAiMessage, senderContact: latestAiContactState });
+                        }
                     }
                 );
             }
@@ -329,7 +355,6 @@ export const apiService = {
             }
         });
     },
-
     async checkAiServiceHealth() {
         const effectiveConfig = _getEffectiveAiConfig();
         if (!effectiveConfig.apiEndpoint || !effectiveConfig.apiKey) {
@@ -354,17 +379,79 @@ export const apiService = {
         }
     },
 
-    async requestTtsForMessage(payload) {
+    async getTtsModels(version) {
+        if (_ttsDynamicDataCache[version]) {
+            return Object.keys(_ttsDynamicDataCache[version].models || {});
+        }
         const effectiveConfig = _getEffectiveAiConfig();
         if (!effectiveConfig.ttsApiEndpoint) throw new Error('TTS API endpoint is not configured.');
-        const cacheKey = await this._generateTtsCacheKey(payload);
+        const modelsUrl = `${effectiveConfig.ttsApiEndpoint.replace(/\/$/, '')}/models`;
+        log(`Fetching TTS models from ${modelsUrl} for version ${version}`, 'DEBUG');
+        const response = await fetch(modelsUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer guest' },
+            body: JSON.stringify({ version })
+        });
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to fetch TTS models: ${response.status} ${errorText}`);
+        }
+        const data = await response.json();
+        if (!data || typeof data.models !== 'object') {
+            throw new Error('Invalid response format from TTS models API.');
+        }
+        _ttsDynamicDataCache[version] = { models: data.models };
+        return Object.keys(data.models);
+    },
+
+    // --- START OF FIX ---
+    getTtsModelData(version) {
+        // Correctly references the module-level cache variable.
+        return _ttsDynamicDataCache[version]?.models || {};
+    },
+    // --- END OF FIX ---
+
+    async requestTtsForMessage(contact, text) {
+        const effectiveConfig = _getEffectiveAiConfig();
+        if (!effectiveConfig.ttsApiEndpoint) throw new Error('TTS API endpoint is not configured.');
+        const ttsConfig = contact.aiConfig?.tts || {};
+        const cleanedText = text
+            .replace(/[*【\[(（].*?[*】\])）]/g, '')
+            .replace(/[!?"#$%&'()*+\-\/:;<=>@[\\\]^_`{|}~「」『』《》〈〉·～]/g, '，')
+            .trim();
+        if (!cleanedText) return null;
+        const payload = {
+            version: ttsConfig.version || 'v4',
+            sample_steps: ttsConfig.sample_steps ?? 16,
+            if_sr: ttsConfig.if_sr ?? false,
+            model_name: ttsConfig.model_name,
+            speaker_name: ttsConfig.speaker_name,
+            prompt_text_lang: ttsConfig.prompt_text_lang || "中文",
+            emotion: ttsConfig.emotion || "默认",
+            text: cleanedText,
+            text_lang: ttsConfig.text_lang || "中文",
+            top_k: ttsConfig.top_k ?? 10,
+            top_p: ttsConfig.top_p ?? 1,
+            temperature: ttsConfig.temperature ?? 1,
+            text_split_method: ttsConfig.text_split_method || "按标点符号切",
+            batch_size: ttsConfig.batch_size ?? 10,
+            batch_threshold: ttsConfig.batch_threshold ?? 0.75,
+            split_bucket: ttsConfig.split_bucket ?? true,
+            speed_facter: ttsConfig.speed_facter ?? 1,
+            fragment_interval: ttsConfig.fragment_interval ?? 0.3,
+            media_type: ttsConfig.media_type || "wav",
+            parallel_infer: ttsConfig.parallel_infer ?? true,
+            repetition_penalty: ttsConfig.repetition_penalty ?? 1.35,
+            seed: ttsConfig.seed ?? -1,
+        };
+        const cacheKey = await _generateTtsCacheKey(payload);
         const cachedItem = await dbService.getItem('ttsCache', cacheKey);
         if (cachedItem?.audioBlob) {
             log(`TTS Cache HIT for key ${cacheKey}`, 'INFO');
             return cachedItem.audioBlob;
         }
         log(`TTS Cache MISS for key ${cacheKey}. Fetching from API.`, 'DEBUG');
-        const ttsUrl = `${effectiveConfig.ttsApiEndpoint}/infer_single`;
+        const ttsUrl = `${effectiveConfig.ttsApiEndpoint.replace(/\/$/, '')}/infer_single`;
         const response = await fetch(ttsUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer guest' },
@@ -378,14 +465,5 @@ export const apiService = {
         const audioBlob = await audioResponse.blob();
         await dbService.setItem('ttsCache', { id: cacheKey, audioBlob });
         return audioBlob;
-    },
-
-    async _generateTtsCacheKey(payload) {
-        const payloadString = JSON.stringify(payload);
-        const encoder = new TextEncoder();
-        const data = encoder.encode(payloadString);
-        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     },
 };
