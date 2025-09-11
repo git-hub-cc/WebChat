@@ -21,7 +21,7 @@ export const useUiStore = defineStore('ui', () => {
     const contextMenuItems = ref([]);
     const contextMenuTarget = ref(null);
 
-    // Confirmation Modal State
+    // MODIFICATION: Renamed from confirmationModalOptions to be more generic and clear
     const confirmationOptions = ref(null);
     const mediaViewerContent = ref(null);
     const modalPrefillData = ref({});
@@ -49,6 +49,7 @@ export const useUiStore = defineStore('ui', () => {
     function hideModal() {
         activeModal.value = null;
         modalPrefillData.value = {};
+        // MODIFICATION: Reset confirmation and media viewer state when any modal closes
         if (confirmationOptions.value) confirmationOptions.value = null;
         if (mediaViewerContent.value) mediaViewerContent.value = null;
     }
@@ -70,10 +71,24 @@ export const useUiStore = defineStore('ui', () => {
         contextMenuTarget.value = null;
     }
 
+    // --- START OF MODIFICATION ---
+    /**
+     * Shows a confirmation modal with the specified options.
+     * @param {object} options - Configuration for the modal.
+     * @param {string} options.message - The text to display.
+     * @param {Function} options.onConfirm - Callback for confirm button.
+     * @param {Function} [options.onCancel] - Optional callback for cancel.
+     * @param {string} [options.title='确认操作']
+     * @param {string} [options.confirmText='确认']
+     * @param {string} [options.cancelText='取消']
+     * @param {string} [options.confirmClass='btn-danger']
+     */
     function showConfirmationModal(options) {
         confirmationOptions.value = options;
         showModal('confirmation');
     }
+    // --- END OF MODIFICATION ---
+
 
     function showMediaViewer(content) {
         mediaViewerContent.value = content;

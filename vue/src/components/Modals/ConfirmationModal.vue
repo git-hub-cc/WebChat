@@ -18,6 +18,8 @@ import { useUiStore } from '@/stores/uiStore';
 import ModalWrapper from './ModalWrapper.vue';
 
 const uiStore = useUiStore();
+// --- START OF MODIFICATION ---
+// Use uiStore.confirmationOptions as the source of truth for the modal's content and behavior.
 const options = computed(() => uiStore.confirmationOptions || {});
 
 const formattedMessage = computed(() => {
@@ -37,6 +39,7 @@ const handleCancel = () => {
   }
   uiStore.hideModal();
 };
+// --- END OF MODIFICATION ---
 </script>
 
 <style scoped>

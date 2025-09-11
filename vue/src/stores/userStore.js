@@ -10,7 +10,7 @@ import { webrtcService } from '@/services/webrtcService';
 import AppSettings from '@/config/AppSettings';
 
 export const useUserStore = defineStore('user', () => {
-    // --- STATE ---
+    // ... state and getters are unchanged ...
     const userId = ref(null);
     const userName = ref('我');
     const contacts = ref({});
@@ -18,9 +18,6 @@ export const useUserStore = defineStore('user', () => {
     const aiServiceStatusMessage = ref("状态检查中...");
     const onlineUserIds = ref([]); // From Lobby API
 
-    // --- GETTERS ---
-
-    // MODIFICATION: Consolidated getter for all online status logic
     const getContactCombinedStatus = computed(() => (contactId) => {
         const contact = contacts.value[contactId];
         if (!contact) {
@@ -40,18 +37,18 @@ export const useUserStore = defineStore('user', () => {
         if (contact.isAI) {
             return {
                 isOnlineDisplay: isAiServiceHealthy.value,
-                isConnected: isAiServiceHealthy.value, // AI "connected" if service is healthy
-                isLobbyOnline: isAiServiceHealthy.value, // AI "lobby online" if service is healthy
+                isConnected: isAiServiceHealthy.value,
+                isLobbyOnline: isAiServiceHealthy.value,
                 isAi: true,
                 statusText: aiServiceStatusMessage.value,
                 statusClass: isAiServiceHealthy.value ? 'online' : 'offline'
             };
         }
 
-        if (contact.isSpecial) { // Non-AI special contacts
+        if (contact.isSpecial) {
             return {
-                isOnlineDisplay: true, // Special contacts are always 'online' conceptually
-                isConnected: true, // Assuming special contacts are always "connected" in a logical sense
+                isOnlineDisplay: true,
+                isConnected: true,
                 isLobbyOnline: true,
                 isAi: false,
                 statusText: '特殊联系人',
@@ -59,12 +56,11 @@ export const useUserStore = defineStore('user', () => {
             };
         }
 
-        // Regular user contacts
         if (isConnectedViaWebRTC) {
             return {
                 isOnlineDisplay: true,
                 isConnected: true,
-                isLobbyOnline: true, // If WebRTC connected, they must be Lobby Online
+                isLobbyOnline: true,
                 isAi: false,
                 statusText: '在线 (已连接)',
                 statusClass: 'online'
@@ -76,7 +72,7 @@ export const useUserStore = defineStore('user', () => {
                 isLobbyOnline: true,
                 isAi: false,
                 statusText: '在线 (未连接)',
-                statusClass: 'warning' // Indicate online but not connected
+                statusClass: 'warning'
             };
         } else {
             return {
@@ -90,7 +86,9 @@ export const useUserStore = defineStore('user', () => {
         }
     });
 
+
     // --- ACTIONS ---
+    // ... other actions are unchanged ...
     async function init() {
         let userData = await dbService.getItem('user', 'currentUser');
         if (userData?.userId) {
@@ -105,7 +103,7 @@ export const useUserStore = defineStore('user', () => {
         const dbContacts = await dbService.getAllItems('contacts');
         const contactsMap = {};
         dbContacts.forEach(c => {
-            contactsMap[c.id] = { type: 'contact', ...c, isOnline: false }; // isOnline will be updated later
+            contactsMap[c.id] = { type: 'contact', ...c, isOnline: false };
         });
         contacts.value = contactsMap;
 
@@ -132,7 +130,6 @@ export const useUserStore = defineStore('user', () => {
             const baseData = { ...def, isSpecial: true, type: 'contact' };
 
             if (existing) {
-                // MODIFICATION: Merge instead of overwrite specific fields
                 const updatedContact = {
                     ...existing,
                     ...baseData,
@@ -141,9 +138,7 @@ export const useUserStore = defineStore('user', () => {
                     avatarUrl: def.avatarUrl,
                     aboutDetails: def.aboutDetails,
                     chapters: def.chapters,
-                    // Keep existing selectedChapterId unless def explicitly overrides it
                     selectedChapterId: existing.selectedChapterId || def.selectedChapterId || null,
-                    // Ensure TTS config is preserved/merged
                     aiConfig: {
                         ...(existing.aiConfig || {}),
                         ...(baseData.aiConfig || {}),
@@ -153,7 +148,6 @@ export const useUserStore = defineStore('user', () => {
                         }
                     }
                 };
-                // Ensure AI-specific default values are set if missing after merge
                 if (updatedContact.isAI) {
                     if (!updatedContact.aiConfig) updatedContact.aiConfig = {};
                     if (!updatedContact.aiConfig.tts) updatedContact.aiConfig.tts = {};
@@ -169,9 +163,8 @@ export const useUserStore = defineStore('user', () => {
                     lastTime: new Date(0).toISOString(),
                     unread: 0,
                     isOnline: baseData.isAI ? isAiServiceHealthy.value : false,
-                    selectedChapterId: def.selectedChapterId || null // Ensure this is set
+                    selectedChapterId: def.selectedChapterId || null
                 };
-                // Ensure AI-specific default values for new contact
                 if (contacts.value[def.id].isAI) {
                     if (!contacts.value[def.id].aiConfig) contacts.value[def.id].aiConfig = {};
                     if (!contacts.value[def.id].aiConfig.tts) contacts.value[def.id].aiConfig.tts = {};
@@ -183,11 +176,8 @@ export const useUserStore = defineStore('user', () => {
         }
 
         for (const id in contacts.value) {
-            // If an existing contact was special but is no longer in newDefs (and not imported), mark as non-special
             if (contacts.value[id].isSpecial && !processedIds.has(id) && !contacts.value[id].isImported) {
                 contacts.value[id].isSpecial = false;
-                // If it was an AI, it effectively stops being an AI managed by theme, but we keep isAI true
-                // for history purposes unless explicitly overwritten.
                 savePromises.push(dbService.setItem('contacts', contacts.value[id]));
             }
         }
@@ -205,7 +195,6 @@ export const useUserStore = defineStore('user', () => {
             return false;
         }
 
-        // Prevent adding theme-defined special contacts manually
         const settingsStore = useSettingsStore();
         if (settingsStore.currentSpecialContacts.some(sc => sc.id === contactData.id) && !contactData.isImported) {
             eventBus.emit('showNotification', { message: '这是内置的特殊联系人，不能手动添加或修改。', type: 'warning'});
@@ -219,7 +208,6 @@ export const useUserStore = defineStore('user', () => {
 
         let updated = false;
         if (existingContact) {
-            // Update existing contact
             if (existingContact.name !== finalName) { existingContact.name = finalName; updated = true; }
             if (contactData.avatarUrl !== undefined && existingContact.avatarUrl !== contactData.avatarUrl) { existingContact.avatarUrl = contactData.avatarUrl; updated = true; }
             if (contactData.avatarText !== undefined && existingContact.avatarText !== contactData.avatarText) { existingContact.avatarText = contactData.avatarText; updated = true; }
@@ -230,7 +218,6 @@ export const useUserStore = defineStore('user', () => {
             if (contactData.chapters !== undefined && existingContact.chapters !== contactData.chapters) { existingContact.chapters = contactData.chapters; updated = true; }
             if (contactData.selectedChapterId !== undefined && existingContact.selectedChapterId !== contactData.selectedChapterId) { existingContact.selectedChapterId = contactData.selectedChapterId; updated = true; }
 
-            // Deep merge aiConfig, especially TTS
             if (contactData.aiConfig) {
                 existingContact.aiConfig = existingContact.aiConfig || {};
                 Object.assign(existingContact.aiConfig, contactData.aiConfig);
@@ -249,14 +236,13 @@ export const useUserStore = defineStore('user', () => {
             }
 
         } else {
-            // Create new contact
             const newContact = {
                 id: contactData.id,
                 name: finalName,
                 lastMessage: '',
                 lastTime: new Date().toISOString(),
                 unread: 0,
-                isOnline: false, // Default to offline, will be updated by webrtc/lobby service
+                isOnline: false,
                 type: 'contact',
                 avatarText: contactData.avatarText || finalName.charAt(0).toUpperCase(),
                 avatarUrl: contactData.avatarUrl || null,
@@ -268,7 +254,6 @@ export const useUserStore = defineStore('user', () => {
                 chapters: contactData.chapters || [],
                 selectedChapterId: contactData.selectedChapterId || null
             };
-            // Ensure proper AI config structure
             if (newContact.isAI) {
                 if (!newContact.aiConfig) newContact.aiConfig = defaultAiConfig;
                 if (!newContact.aiConfig.tts) newContact.aiConfig.tts = defaultAiConfig.tts;
@@ -283,11 +268,10 @@ export const useUserStore = defineStore('user', () => {
         return true;
     }
 
-    // MODIFICATION: updateContactStatus now correctly updates the ref
     async function updateContactStatus(contactId, isOnline) {
         const contact = contacts.value[contactId];
         if (contact && contact.isOnline !== isOnline) {
-            contact.isOnline = isOnline; // Directly modify the reactive ref
+            contact.isOnline = isOnline;
             await dbService.setItem('contacts', contact);
             log(`Contact status updated: ${contact.name} is now ${isOnline ? 'online' : 'offline'}`, 'DEBUG');
         }
@@ -309,18 +293,14 @@ export const useUserStore = defineStore('user', () => {
             const userIds = await response.json();
             const newOnlineUserIds = Array.isArray(userIds) ? userIds.filter(id => id !== userId.value) : [];
 
-            // Update local onlineUserIds ref
             onlineUserIds.value = newOnlineUserIds;
 
-            // MODIFICATION: Iterate through all contacts and update their isOnline status based on new lobby data
             for (const contactId in contacts.value) {
                 const contact = contacts.value[contactId];
-                if (!contact.isAI && !contact.isSpecial) { // Only update regular users based on lobby
+                if (!contact.isAI && !contact.isSpecial) {
                     const isNowOnline = newOnlineUserIds.includes(contactId);
                     if (contact.isOnline !== isNowOnline) {
                         contact.isOnline = isNowOnline;
-                        // Persist this change, but don't spam DB for every contact on every refresh
-                        // dbService.setItem('contacts', contact); // Consider batching or throttling this
                     }
                 }
             }
@@ -340,7 +320,7 @@ export const useUserStore = defineStore('user', () => {
         }
         await useGroupStore().removeMemberFromAllGroups(contactId);
         webrtcService.closeConnection(contactId);
-        delete contacts.value[contactId]; // Directly delete from reactive map
+        delete contacts.value[contactId];
         await dbService.removeItem('contacts', contactId);
         const chatStore = useChatStore();
         await chatStore.deleteChatHistory(contactId);
@@ -371,13 +351,27 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
+    // --- START OF MODIFICATION ---
+    /**
+     * Clears all contacts that are not part of the current theme's special contacts.
+     * The confirmation logic is now handled in the UI component.
+     */
     async function removeAllContacts() {
         const settingsStore = useSettingsStore();
         const specialContactIds = new Set(settingsStore.currentSpecialContacts.map(c => c.id));
         const contactIdsToRemove = Object.keys(contacts.value).filter(id => !specialContactIds.has(id));
-        for (const id of contactIdsToRemove) await removeContact(id); // Use removeContact to ensure full cleanup
+
+        if (contactIdsToRemove.length === 0) {
+            eventBus.emit('showNotification', { message: '没有可清除的联系人。', type: 'info' });
+            return;
+        }
+
+        for (const id of contactIdsToRemove) {
+            await removeContact(id); // Use the refactored removeContact for full cleanup
+        }
         eventBus.emit('showNotification', { message: '所有手动添加的联系人已清空。', type: 'success' });
     }
+    // --- END OF MODIFICATION ---
 
     async function setSelectedChapterForAI(contactId, chapterId) {
         const contact = contacts.value[contactId];

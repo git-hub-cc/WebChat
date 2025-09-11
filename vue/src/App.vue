@@ -12,22 +12,13 @@
         <ChatList />
       </aside>
 
-      <!-- ======================================================= -->
-      <!-- MODIFICATION START: Refactored Main View Container      -->
-      <!-- ======================================================= -->
       <main class="main-view-container">
-        <!-- 如果有选中的聊天，显示完整的聊天视图 (它自带 ChatHeader) -->
         <ChatView v-if="chatStore.currentChatId" :key="chatStore.currentChatId" />
-
-        <!-- 否则，显示由 WelcomeHeader 和 WelcomeScreen 组成的欢迎视图 -->
         <div v-else class="welcome-view">
           <WelcomeHeader />
           <WelcomeScreen />
         </div>
       </main>
-      <!-- ======================================================= -->
-      <!-- MODIFICATION END                                        -->
-      <!-- ======================================================= -->
 
       <aside v-if="uiStore.isDetailsPanelOpen" class="details-panel-container">
         <DetailsPanel :key="chatStore.currentChatId" />
@@ -43,8 +34,16 @@
     <ConfirmationModal v-if="uiStore.activeModal === 'confirmation'" />
     <MediaViewerModal v-if="uiStore.activeModal === 'mediaViewer'" />
 
+    <!-- ======================================================= -->
+    <!-- MODIFICATION START: Conditional Call View Rendering     -->
+    <!-- ======================================================= -->
     <!-- 全屏通话视图 -->
-    <VideoCallView v-if="callStore.isCallActive" />
+    <VideoCallView v-if="callStore.isCallActive && callStore.isFullScreenCallViewVisible" />
+    <!-- 浮动通话小部件 -->
+    <FloatingCallWidget v-if="callStore.isCallActive && !callStore.isFullScreenCallViewVisible" />
+    <!-- ======================================================= -->
+    <!-- MODIFICATION END                                        -->
+    <!-- ======================================================= -->
 
     <!-- 全局通知 -->
     <NotificationContainer />
@@ -86,8 +85,9 @@ import ContextMenu from '@/components/Shared/ContextMenu.vue';
 import ConfirmationModal from '@/components/Modals/ConfirmationModal.vue';
 import MediaViewerModal from '@/components/Modals/MediaViewerModal.vue';
 import BindManualConnectionModal from '@/components/Modals/BindManualConnectionModal.vue';
-// MODIFICATION: Import the new WelcomeHeader component
 import WelcomeHeader from '@/components/ChatView/WelcomeHeader.vue';
+// --- NEW: Import FloatingCallWidget ---
+import FloatingCallWidget from '@/components/Shared/FloatingCallWidget.vue';
 
 // 初始化 stores
 const userStore = useUserStore();
@@ -98,58 +98,42 @@ const uiStore = useUiStore();
 const callStore = useCallStore();
 const memoryStore = useMemoryStore();
 
-// --- 计算属性 ---
+// --- 计算属性 (unchanged) ---
 const appContainerClasses = computed(() => ({
   'details-panel-open': uiStore.isDetailsPanelOpen,
   'chat-active': uiStore.isChatViewActiveOnMobile
 }));
-
 const backgroundStyle = computed(() => {
   const bgUrl = settingsStore.customBackgrounds[settingsStore.effectiveColorScheme];
   return bgUrl ? { '--custom-background-image': `url(${bgUrl})` } : {};
 });
-
 const themeHref = computed(() => {
   const themeConfig = settingsStore.currentTheme;
-  // 在 Vite 中，public 目录下的文件会被复制到输出目录的根。
-  // 确保路径是相对于根目录的。
   return themeConfig?.css ? `/${themeConfig.css.replace(/^public\//, '')}` : '';
 });
 
-
-// --- 生命周期钩子 ---
+// --- 生命周期钩子 & 侦听器 (unchanged) ---
 onMounted(async () => {
   uiStore.setAppLoading(true);
   try {
-    // 按顺序初始化核心服务和状态
     await settingsStore.init();
     await userStore.init();
     await groupStore.init();
     await chatStore.init();
     await memoryStore.init();
     await webrtcService.init(userStore.userId);
-
-    // 并行执行非阻塞的初始化任务
     apiService.checkAiServiceHealth().then(isHealthy => {
       userStore.updateAiServiceStatus(isHealthy);
     });
-
-    // 监听手动连接就绪事件
     eventBus.on('webrtc:manual-connection-ready', () => {
       uiStore.showModal('bindManualConnection');
     });
-
   } catch (error) {
     console.error("应用初始化失败:", error);
-    // 可以在这里显示一个无法恢复的错误界面
   } finally {
-    // 稍微延迟一下，避免加载动画闪烁
     setTimeout(() => uiStore.setAppLoading(false), 300);
   }
 });
-
-// --- 侦听器 ---
-// 动态更新 body/html 上的 class，用于主题和配色方案切换
 watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, settingsStore.isThemeTransitioning],
     ([newThemeKey, newScheme, newIsTransitioning], [oldThemeKey, oldScheme] = []) => {
       if (oldThemeKey) document.body.classList.remove(`theme-${oldThemeKey}`);
@@ -164,7 +148,7 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
 </script>
 
 <style>
-/* 全局基础样式和布局 */
+/* Global styles are unchanged */
 #app-root {
   width: 100vw;
   height: 100dvh;
@@ -178,7 +162,6 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
   transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out;
   background-size: cover;
   background-position: center;
-  /* 应用自定义背景图 */
   background-image: var(--custom-background-image, none);
 }
 .app-container {
@@ -214,18 +197,14 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
 .main-view-container {
   border-left: 1px solid var(--color-border);
 }
-
-/* MODIFICATION: Style for the new welcome view wrapper */
 .welcome-view {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
-/* Ensure WelcomeScreen fills remaining space */
 .welcome-view > .welcome-screen {
   flex-grow: 1;
 }
-
 .loading-overlay {
   position: fixed;
   inset: 0;
@@ -241,8 +220,6 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
   font-size: 1.2rem;
   color: var(--color-text-secondary);
 }
-
-/* Responsive Breakpoints */
 @media (max-width: 1024px) {
   .app-container.details-panel-open {
     grid-template-columns: var(--sidebar-width) 1fr;
@@ -288,8 +265,6 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
     max-width: 320px;
   }
 }
-
-/* View Transition API Animation */
 @keyframes reveal-in {
   from { clip-path: circle(0% at var(--clip-x) var(--clip-y)); }
   to { clip-path: circle(150% at var(--clip-x) var(--clip-y)); }

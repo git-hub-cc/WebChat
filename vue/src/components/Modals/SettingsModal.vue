@@ -27,9 +27,11 @@
         <hr>
         <div class="actions-group">
           <h3>操作</h3>
-          <button class="btn-danger" @click="clearContacts">清空联系人</button>
-          <button class="btn-danger" @click="clearChats">清空所有聊天</button>
+          <!-- START OF MODIFICATION -->
+          <button class="btn-danger" @click="clearContacts" :disabled="nonSpecialContactsCount === 0">清空联系人 ({{ nonSpecialContactsCount }})</button>
+          <button class="btn-danger" @click="clearChats" :disabled="totalChatsCount === 0">清空所有聊天 ({{ totalChatsCount }})</button>
           <button class="btn-danger" @click="clearCache">初始化应用</button>
+          <!-- END OF MODIFICATION -->
         </div>
       </div>
 
@@ -156,14 +158,28 @@ const currentProviderModels = computed(() => LLMProviders[apiSettingsForm.llmPro
 const wsStatusText = computed(() => webrtcService.isWebSocketConnected.value ? '已连接' : '已断开');
 const wsStatusClass = computed(() => webrtcService.isWebSocketConnected.value ? 'status-online' : 'status-offline');
 
-const onThemeChange = (event) => settingsStore.applyTheme(event.target.value, event);
-const onColorSchemeChange = (event) => settingsStore.setColorScheme(event.target.value, event);
-const copyUserId = () => { navigator.clipboard.writeText(userStore.userId); eventBus.emit('showNotification', { message: '用户ID已复制', type: 'success' }); };
-const clearContacts = () => eventBus.emit('showConfirmation', { message: '确定要删除所有手动添加的联系人吗？', onConfirm: () => userStore.removeAllContacts() });
-const clearChats = () => chatStore.clearAllChats();
+// --- START OF MODIFICATION ---
+const nonSpecialContactsCount = computed(() => {
+  const specialContactIds = new Set(settingsStore.currentSpecialContacts.map(c => c.id));
+  return Object.keys(userStore.contacts).filter(id => !specialContactIds.has(id)).length;
+});
+
+const totalChatsCount = computed(() => Object.keys(chatStore.chats).length);
+
+const clearContacts = () => uiStore.showConfirmationModal({
+  message: '确定要删除所有手动添加的联系人吗？此操作不可逆。',
+  onConfirm: () => userStore.removeAllContacts()
+});
+
+const clearChats = () => uiStore.showConfirmationModal({
+  message: '确定要清空所有聊天记录吗？此操作无法撤销。',
+  onConfirm: () => chatStore.clearAllChats()
+});
+
 const clearCache = () => {
-  eventBus.emit('showConfirmation', {
+  uiStore.showConfirmationModal({
     message: "确定要初始化应用吗？所有数据都将被删除，页面将刷新。",
+    confirmText: '确定初始化',
     onConfirm: async () => {
       await dbService.clearAllData();
       localStorage.clear();
@@ -171,6 +187,12 @@ const clearCache = () => {
     }
   });
 };
+// --- END OF MODIFICATION ---
+
+const onThemeChange = (event) => settingsStore.applyTheme(event.target.value, event);
+const onColorSchemeChange = (event) => settingsStore.setColorScheme(event.target.value, event);
+const copyUserId = () => { navigator.clipboard.writeText(userStore.userId); eventBus.emit('showNotification', { message: '用户ID已复制', type: 'success' }); };
+
 const triggerBgInput = (mode) => {
   if (mode === 'light') bgInputLightRef.value?.click();
   else bgInputDarkRef.value?.click();
@@ -217,4 +239,11 @@ hr { border: none; border-top: 1px solid var(--color-border); margin: var(--spac
 .btn-danger-outline:disabled { color: var(--color-text-tertiary); border-color: var(--color-border); }
 input[type="text"], input[type="password"], input[type="number"], select, textarea { width: 100%; flex-grow: 1; }
 p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: 0; line-height: 1.4; }
+/* --- ADD THIS STYLE FOR DISABLED BUTTONS --- */
+.btn-danger:disabled {
+  background-color: var(--color-background-hover);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 </style>
