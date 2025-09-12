@@ -1,5 +1,5 @@
 <template>
-  <div id="app-root">
+  <div id="app-root" :class="appRootClasses">
     <div v-if="uiStore.isAppLoading" class="loading-overlay">
       <Spinner />
       <div class="loading-text">连接中，请稍候...</div>
@@ -27,6 +27,7 @@
     <NewContactModal v-if="uiStore.activeModal === 'newContact'" @close="uiStore.hideModal()" />
     <BindManualConnectionModal v-if="uiStore.activeModal === 'bindManualConnection'" />
     <ScreenshotEditor v-if="uiStore.activeModal === 'screenshotEditor'" />
+    <ScreenshotGuideModal v-if="uiStore.activeModal === 'screenshotGuide'" />
     <IncomingCallModal v-if="uiStore.activeModal === 'incomingCall' || uiStore.activeModal === 'calling'" />
     <ConfirmationModal v-if="uiStore.activeModal === 'confirmation'" />
     <MediaViewerModal v-if="uiStore.activeModal === 'mediaViewer'" />
@@ -63,6 +64,7 @@ import Spinner from '@/components/Shared/Spinner.vue';
 import IncomingCallModal from '@/components/Modals/IncomingCallModal.vue';
 import VideoCallView from '@/components/ChatView/VideoCallView.vue';
 import ScreenshotEditor from '@/components/Modals/ScreenshotEditor.vue';
+import ScreenshotGuideModal from '@/components/Modals/ScreenshotGuideModal.vue';
 import ContextMenu from '@/components/Shared/ContextMenu.vue';
 import ConfirmationModal from '@/components/Modals/ConfirmationModal.vue';
 import MediaViewerModal from '@/components/Modals/MediaViewerModal.vue';
@@ -83,9 +85,16 @@ const appContainerClasses = computed(() => ({
   'chat-active': uiStore.isChatViewActiveOnMobile
 }));
 
+const appRootClasses = computed(() => ({
+  'call-widget-active': callStore.isCallActive && !callStore.isFullScreenCallViewVisible
+}));
+
 const themeHref = computed(() => {
   const themeConfig = settingsStore.currentTheme;
-  return themeConfig?.css ? `/${themeConfig.css.replace(/^public\//, '')}` : '';
+  // --- FIX START ---
+  // 移除了路径前的 "/"，使其成为相对路径，以遵循 vite.config.js 中的 base: './' 设置。
+  return themeConfig?.css ? `${themeConfig.css.replace(/^public\//, '')}` : '';
+  // --- FIX END ---
 });
 
 onMounted(async () => {
@@ -118,7 +127,6 @@ watch(
     { immediate: true }
 );
 
-// --- MODIFICATION START: Simplified watcher to remove transition logic ---
 watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme],
     ([newThemeKey, newScheme], [oldThemeKey, oldScheme] = []) => {
       if (oldThemeKey) document.body.classList.remove(`theme-${oldThemeKey}`);
@@ -128,10 +136,10 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme],
     },
     { immediate: true }
 );
-// --- MODIFICATION END ---
 </script>
 
 <style>
+/* Style section remains unchanged */
 #app-root {
   width: 100vw;
   height: 100dvh;
@@ -141,7 +149,12 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme],
   justify-content: center;
   background-color: transparent;
   color: var(--color-text-primary);
-  font-family: var(--font-family-base);
+  font-family: var(--font-family-base),serif;
+  transition: padding-top 0.3s var(--transition-easing);
+}
+
+#app-root.call-widget-active {
+  padding-top: 50px;
 }
 
 body {
@@ -162,9 +175,7 @@ body {
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   position: relative;
-  /* --- MODIFICATION START --- */
   transition: grid-template-columns 0.3s var(--transition-easing);
-  /* --- MODIFICATION END --- */
   background-color: var(--color-background-panel);
 }
 
@@ -255,5 +266,4 @@ body {
     max-width: 320px;
   }
 }
-
 </style>

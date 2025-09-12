@@ -6,6 +6,8 @@ import AppSettings from '@/config/AppSettings';
  * @param {('DEBUG'|'INFO'|'WARN'|'ERROR')} [level='DEBUG'] - 日志级别。
  */
 export const log = (message, level = 'DEBUG') => {
+    // 在生产环境下，直接跳过所有日志记录逻辑
+    // return;
     const levelMap = AppSettings.logLevels;
     const currentLogLevel = levelMap[AppSettings.logLevel] ?? levelMap.DEBUG;
 

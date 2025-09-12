@@ -2,12 +2,14 @@
   <div class="message-input-root">
     <transition name="preview-fade">
       <div v-if="preview" class="preview-container">
+        <!-- Preview container content remains the same -->
         <div v-if="preview.type === 'audio'" class="audio-preview">
-          <span>🎙️ 语音消息 ({{ formatDuration(preview.duration) }})</span>
-          <div class="preview-actions">
-            <button @click="playPreviewAudio" class="btn-play">播放</button>
-            <button @click="cancelPreview" class="btn-cancel">取消</button>
-          </div>
+          <button @click="playPreviewAudio" class="btn-play-preview">
+            {{ isPreviewPlaying ? '❚❚' : '▶' }}
+          </button>
+          <div ref="previewWaveformRef" class="preview-waveform-container"></div>
+          <span class="preview-duration">{{ formatDuration(preview.duration) }}</span>
+          <button @click="cancelPreview" class="btn-cancel-preview">✕</button>
         </div>
         <div v-if="preview.type === 'file'" class="file-preview">
           <img v-if="preview.isImage" :src="preview.url" class="file-preview-image" alt="Image Preview"/>
@@ -21,33 +23,77 @@
 
     <AiMentionList :show="showMentionList" :suggestions="mentionSuggestions" @select="handleMentionSelect" />
 
-    <div class="input-container">
-      <IconButton icon="😀" title="表情/贴图" @click.stop="toggleEmojiPicker" />
-      <IconButton icon="📎" title="附加文件" @click="triggerFileInput" />
-      <textarea
-          ref="textareaRef"
-          v-model="newMessage"
-          @keydown="handleKeyDown"
-          @input="handleInput"
-          @paste="handlePaste"
-          placeholder="输入消息..."
-          class="message-textarea"
-      ></textarea>
+    <div v-if="isRecordingLocked" class="locked-recording-bar">
+      <!-- Locked recording bar remains the same -->
+      <div class="recording-indicator">🔴</div>
+      <div class="recording-timer">{{ formatDuration(recordingDuration) }}</div>
+      <div class="spacer"></div>
+      <button @click="cancelLockedRecording" class="btn-cancel-recording">取消</button>
+      <button @click="sendLockedRecording" class="btn-send-recording">发送</button>
+    </div>
 
-      <IconButton v-if="!newMessage && !isRecording" icon="📸" title="截图" @click="handleScreenshot" />
-      <IconButton
-          v-if="!newMessage"
-          :icon="isRecording ? '🛑' : '🎙️'"
-          :title="isRecording ? `录音中... ${formatDuration(recordingDuration)}` : '按住录音'"
-          @mousedown="startRecording"
-          @mouseup="stopRecording"
-          @mouseleave="stopRecording"
-          @touchstart.prevent="startRecording"
-          @touchend.prevent="stopRecording"
-          class="voice-button"
-          :class="{ recording: isRecording }"
-      />
-      <IconButton v-else icon="➤" title="发送" @click="send" class="send-button" />
+    <div v-else class="input-container" :class="{ 'recording-active': isRecording }">
+      <transition name="cancel-hint-fade">
+        <div v-if="isRecording && !isRecordingLocked" class="cancel-hint" :class="{ active: isSlidToCancel }">
+          <span v-if="isSlidToCancel" class="hint-text">松开即可取消</span>
+        </div>
+      </transition>
+
+      <div class="input-main-area" :class="{ 'slide-away': isSlidToCancel }">
+        <IconButton icon="😀" title="表情/贴图" @click.stop="toggleEmojiPicker" />
+        <IconButton icon="📎" title="附加文件" @click="triggerFileInput" />
+        <textarea
+            ref="textareaRef"
+            v-model="newMessage"
+            @keydown="handleKeyDown"
+            @input="handleInput"
+            @paste="handlePaste"
+            :placeholder="isSttActive ? '正在聆听，请说话...' : '输入消息...'"
+            class="message-textarea"
+            :readonly="isSttActive"
+        ></textarea>
+      </div>
+
+      <div class="input-actions-area">
+        <IconButton v-if="!newMessage && !isRecording && !isSttActive" icon="📸" title="截图" @click="handleScreenshot" />
+
+        <div v-if="!newMessage || isSttActive" class="voice-button-wrapper">
+          <!-- STT button for AI chats -->
+          <IconButton
+              v-if="isCurrentChatWithAI"
+              :icon="isSttActive ? '🛑' : '🎙️'"
+              :title="isSttActive ? '停止识别' : '语音输入'"
+              @click="toggleStt"
+              class="voice-button"
+              :class="{ recording: isSttActive }"
+          />
+
+          <!-- Audio recording button for regular chats -->
+          <template v-else>
+            <transition name="lock-hint-fade">
+              <div v-if="isRecording && !isRecordingLocked" class="lock-hint">
+                <span class="lock-icon">🔒</span>
+                <span class="arrow">↑</span>
+                <span class="hint-text">上滑锁定</span>
+              </div>
+            </transition>
+            <IconButton
+                :icon="isRecording ? '🛑' : '🎙️'"
+                :title="isRecording ? `录音中... ${formatDuration(recordingDuration)}` : '按住录音'"
+                @mousedown.prevent="startRecording"
+                @mouseup.prevent="stopRecording"
+                @mousemove.prevent="handleRecordingMove"
+                @touchstart.prevent="startRecording"
+                @touchend.prevent="stopRecording"
+                @touchmove.prevent="handleRecordingMove"
+                class="voice-button"
+                :class="{ recording: isRecording }"
+            />
+          </template>
+        </div>
+
+        <IconButton v-else icon="➤" title="发送" @click="send" class="send-button" />
+      </div>
 
       <EmojiPicker
           :show="isEmojiPickerVisible"
@@ -64,6 +110,7 @@ import { ref, onMounted, onUnmounted, nextTick, watch, computed } from 'vue';
 import { useChatStore } from '@/stores/chatStore';
 import { useUserStore } from '@/stores/userStore';
 import { useGroupStore } from '@/stores/groupStore';
+import { useUiStore } from '@/stores/uiStore';
 import IconButton from '@/components/Shared/IconButton.vue';
 import EmojiPicker from '@/components/Shared/EmojiPicker.vue';
 import AiMentionList from './AiMentionList.vue';
@@ -71,10 +118,13 @@ import { mediaService } from '@/services/mediaService';
 import { webrtcService } from '@/services/webrtcService';
 import { generateFileHash } from '@/utils';
 import { eventBus } from '@/services/eventBus';
+import WaveSurfer from 'wavesurfer.js';
+import { sttService } from '@/services/sttService';
 
 const chatStore = useChatStore();
 const userStore = useUserStore();
 const groupStore = useGroupStore();
+const uiStore = useUiStore();
 
 const newMessage = ref('');
 const textareaRef = ref(null);
@@ -84,14 +134,32 @@ const preview = ref(null);
 const isRecording = ref(false);
 const recordingDuration = ref(0);
 let recordingInterval = null;
-let previewAudio = null;
 let typingTimeout = null;
+
+const previewWaveformRef = ref(null);
+let previewWavesurfer = null;
+const isPreviewPlaying = ref(false);
 
 const showMentionList = ref(false);
 const mentionSuggestions = ref([]);
 
+const isRecordingLocked = ref(false);
+const startCoords = ref({ x: 0, y: 0 });
+const isSlidToCancel = ref(false);
+const LOCK_THRESHOLD = -60;
+const CANCEL_THRESHOLD = -80;
+
+const isSttActive = ref(false);
+const sttStoppedManually = ref(false);
+const isCurrentChatWithAI = computed(() => {
+  if (!chatStore.currentChatId) return false;
+  const contact = userStore.contacts[chatStore.currentChatId];
+  return contact?.isAI === true;
+});
+
+
 const adjustTextareaHeight = () => { nextTick(() => { const textarea = textareaRef.value; if (textarea) { textarea.style.height = 'auto'; textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`; } }); };
-const handleKeyDown = (event) => { if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey) { event.preventDefault(); send(); } };
+const handleKeyDown = (event) => { if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !isSttActive.value) { event.preventDefault(); send(); } };
 const triggerFileInput = () => fileInputRef.value?.click();
 
 function send() { if (preview.value) { if (preview.value.type === 'audio' || preview.value.type === 'file') { chatStore.sendMessage({ file: preview.value }); } cancelPreview(); } if (newMessage.value.trim()) { chatStore.sendMessage({ content: newMessage.value.trim() }); newMessage.value = ''; adjustTextareaHeight(); } }
@@ -101,83 +169,98 @@ function toggleEmojiPicker() { isEmojiPickerVisible.value = !isEmojiPickerVisibl
 function closeEmojiPicker(event) { if (isEmojiPickerVisible.value && !event.target.closest('.picker-container, .input-container')) { isEmojiPickerVisible.value = false; } }
 async function handleFileSelect(event) { const file = event.target.files[0]; if (file) await processFile(file); if(event.target) event.target.value = ''; }
 async function handlePaste(event) { const file = event.clipboardData.files[0]; if (file?.type.startsWith('image/')) { event.preventDefault(); await processFile(file); } }
-async function processFile(file) { cancelPreview(); const hash = await generateFileHash(file); const isImage = file.type.startsWith('image/'); preview.value = { type: 'file', blob: file, hash, name: file.name, fileType: file.type, size: file.size, isImage, url: isImage ? URL.createObjectURL(file) : null }; }
-function cancelPreview() { if (preview.value?.url) URL.revokeObjectURL(preview.value.url); if (previewAudio) { previewAudio.pause(); previewAudio = null; } preview.value = null; }
-function playPreviewAudio() { if (preview.value?.url) { if (previewAudio) previewAudio.pause(); previewAudio = new Audio(preview.value.url); previewAudio.play(); } }
-const formatDuration = (seconds) => { const min = Math.floor(seconds / 60); const sec = seconds % 60; return `${min}:${sec < 10 ? '0' : ''}${sec}`; };
-async function startRecording() { cancelPreview(); const success = await mediaService.startRecording(); if (success) { isRecording.value = true; recordingDuration.value = 0; recordingInterval = setInterval(() => { recordingDuration.value++; }, 1000); } }
-function stopRecording() { if (!isRecording.value) return; clearInterval(recordingInterval); isRecording.value = false; mediaService.stopRecording(); }
-function onRecordingComplete({ blob, duration }) { cancelPreview(); const url = URL.createObjectURL(blob); preview.value = { type: 'audio', blob, duration, url, hash: `audio_${Date.now()}`, name: `voice-message.webm`, fileType: blob.type, size: blob.size, }; }
-function handleScreenshot() { mediaService.captureScreen(); }
-function onScreenshotComplete(fileObject) { cancelPreview(); preview.value = { type: 'file', ...fileObject, isImage: true, url: URL.createObjectURL(fileObject.blob) }; }
+async function processFile(file) {
+  cancelPreview();
+  const hash = await generateFileHash(file);
+  const isImage = file.type.startsWith('image/');
+  preview.value = {
+    type: 'file',
+    blob: file,
+    hash,
+    name: file.name,
+    fileType: file.type,
+    size: file.size,
+    isImage,
+    url: isImage ? URL.createObjectURL(file) : null
+  };
+}
 
-function handleInput() {
-  adjustTextareaHeight();
-  handleTypingIndicator();
-  handleMentionPopup();
+function cancelPreview() { if (preview.value?.url) { URL.revokeObjectURL(preview.value.url); } if (previewWavesurfer) { previewWavesurfer.destroy(); previewWavesurfer = null; } preview.value = null; isPreviewPlaying.value = false; }
+function playPreviewAudio() { if (previewWavesurfer) { previewWavesurfer.playPause(); } }
+watch(preview, (newPreview, oldPreview) => { if (oldPreview && previewWavesurfer) { previewWavesurfer.destroy(); previewWavesurfer = null; isPreviewPlaying.value = false; } if (newPreview && newPreview.type === 'audio') { nextTick(() => { if (previewWaveformRef.value) { previewWavesurfer = WaveSurfer.create({ container: previewWaveformRef.value, url: newPreview.url, height: 32, waveColor: 'var(--color-text-tertiary)', progressColor: 'var(--color-brand-secondary)', cursorWidth: 1, cursorColor: 'var(--color-brand-primary)', barWidth: 2, barRadius: 2, }); previewWavesurfer.on('play', () => isPreviewPlaying.value = true); previewWavesurfer.on('pause', () => isPreviewPlaying.value = false); previewWavesurfer.on('finish', () => isPreviewPlaying.value = false); } }); } });
+
+const formatDuration = (seconds) => { const min = Math.floor(seconds / 60); const sec = seconds % 60; return `${min}:${sec < 10 ? '0' : ''}${sec}`; };
+function toggleStt() { if (isSttActive.value) { sttStoppedManually.value = true; sttService.stop(); } else { newMessage.value = ''; sttService.start(); } }
+async function startRecording(event) { if (isRecording.value) return; cancelPreview(); const success = await mediaService.startRecording(); if (success) { isRecording.value = true; const touch = event.touches ? event.touches[0] : event; startCoords.value = { x: touch.clientX, y: touch.clientY }; recordingDuration.value = 0; recordingInterval = setInterval(() => { recordingDuration.value++; }, 1000); } }
+function stopRecording() { if (!isRecording.value) return; if (isRecordingLocked.value) return; clearInterval(recordingInterval); if (!isSlidToCancel.value) { mediaService.stopRecording(); } else { mediaService.stopRecording(true); } isRecording.value = false; isSlidToCancel.value = false; }
+function handleRecordingMove(event) { if (!isRecording.value || isRecordingLocked.value) return; const touch = event.touches ? event.touches[0] : event; const deltaY = touch.clientY - startCoords.value.y; const deltaX = touch.clientX - startCoords.value.x; if (deltaY < LOCK_THRESHOLD) { isRecordingLocked.value = true; startCoords.value = { x: 0, y: 0 }; } else if (deltaX < CANCEL_THRESHOLD) { isSlidToCancel.value = true; } else { isSlidToCancel.value = false; } }
+function cancelLockedRecording() { isRecordingLocked.value = false; isRecording.value = false; clearInterval(recordingInterval); mediaService.stopRecording(true); }
+function sendLockedRecording() { isRecordingLocked.value = false; isRecording.value = false; clearInterval(recordingInterval); mediaService.stopRecording(); }
+function onRecordingComplete({ blob, duration }) { cancelPreview(); const url = URL.createObjectURL(blob); preview.value = { type: 'audio', blob, duration, url, hash: `audio_${Date.now()}`, name: `voice-message.webm`, fileType: blob.type, size: blob.size, }; }
+
+// --- MODIFICATION START: Updated screenshot handler ---
+function handleScreenshot() {
+  // Instead of directly capturing, show the guide modal first.
+  // The modal itself will then trigger mediaService.captureScreen().
+  uiStore.showModal('screenshotGuide');
 }
-function handleTypingIndicator() {
-  if (typingTimeout) clearTimeout(typingTimeout);
-  webrtcService.sendTyping(chatStore.currentChatId);
-  typingTimeout = setTimeout(() => {
-    // Stop sending typing indicator after a pause
-  }, 2000);
+// --- MODIFICATION END ---
+
+function handleRawScreenshot(screenshotData) { uiStore.showModal('screenshotEditor', screenshotData); }
+
+function onScreenshotComplete(fileObject) {
+  cancelPreview();
+  preview.value = {
+    type: 'file',
+    ...fileObject,
+    isImage: true,
+    url: URL.createObjectURL(fileObject.blob)
+  };
 }
-function handleMentionPopup() {
-  const text = newMessage.value;
-  const cursorPos = textareaRef.value.selectionStart;
-  const textBeforeCursor = text.substring(0, cursorPos);
-  const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
-  if (lastAtSymbolIndex !== -1 && chatStore.currentChatId.startsWith('group_')) {
-    const query = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-    const group = groupStore.groups[chatStore.currentChatId];
-    if (group) {
-      mentionSuggestions.value = group.members
-          .map(id => userStore.contacts[id])
-          .filter(contact => contact?.isAI && contact.name.toLowerCase().includes(query.toLowerCase()));
-      showMentionList.value = mentionSuggestions.value.length > 0;
-    }
-  } else {
-    showMentionList.value = false;
-  }
-}
-function handleMentionSelect(user) {
-  const text = newMessage.value;
-  const cursorPos = textareaRef.value.selectionStart;
-  const textBeforeCursor = text.substring(0, cursorPos);
-  const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
-  const prefix = text.substring(0, lastAtSymbolIndex);
-  const suffix = text.substring(cursorPos);
-  newMessage.value = `${prefix}@${user.name} ${suffix}`;
-  showMentionList.value = false;
-  nextTick(() => {
-    const newCursorPos = prefix.length + `@${user.name} `.length;
-    textareaRef.value.focus();
-    textareaRef.value.setSelectionRange(newCursorPos, newCursorPos);
-  });
-}
+
+function handleInput() { adjustTextareaHeight(); handleTypingIndicator(); handleMentionPopup(); }
+function handleTypingIndicator() { if (typingTimeout) clearTimeout(typingTimeout); webrtcService.sendTyping(chatStore.currentChatId); typingTimeout = setTimeout(() => {}, 2000); }
+function handleMentionPopup() { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); if (lastAtSymbolIndex !== -1 && chatStore.currentChatId.startsWith('group_')) { const group = groupStore.groups[chatStore.currentChatId]; if (group) { const query = textBeforeCursor.substring(lastAtSymbolIndex + 1); mentionSuggestions.value = group.members.map(id => userStore.contacts[id]).filter(contact => contact?.isAI && contact.name.toLowerCase().includes(query.toLowerCase())); showMentionList.value = mentionSuggestions.value.length > 0; } } else { showMentionList.value = false; } }
+function handleMentionSelect(user) { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); const prefix = text.substring(0, lastAtSymbolIndex); const suffix = text.substring(cursorPos); newMessage.value = `${prefix}@${user.name} ${suffix}`; showMentionList.value = false; nextTick(() => { const newCursorPos = prefix.length + `@${user.name} `.length; textareaRef.value.focus(); textareaRef.value.setSelectionRange(newCursorPos, newCursorPos); }); }
 
 onMounted(() => {
   document.addEventListener('click', closeEmojiPicker);
   eventBus.on('recording:complete', onRecordingComplete);
   eventBus.on('screenshot:editing-complete', onScreenshotComplete);
   eventBus.on('file:dropped', processFile);
+  eventBus.on('screenshot:raw-captured', handleRawScreenshot);
+
+  sttService.init({
+    onStart: () => { isSttActive.value = true; sttStoppedManually.value = false; },
+    onResult: (finalTranscript, interimTranscript) => { newMessage.value = finalTranscript + interimTranscript; adjustTextareaHeight(); },
+    onError: (error) => { isSttActive.value = false; sttStoppedManually.value = false; const errorMessage = error === 'no-speech' ? '未检测到语音' : '语音识别出错'; eventBus.emit('showNotification', { message: errorMessage, type: 'error' }); },
+    onEnd: () => { isSttActive.value = false; if (sttStoppedManually.value) { sttStoppedManually.value = false; if (newMessage.value.trim()) { send(); } } }
+  });
 });
 onUnmounted(() => {
   document.removeEventListener('click', closeEmojiPicker);
   eventBus.off('recording:complete', onRecordingComplete);
   eventBus.off('screenshot:editing-complete', onScreenshotComplete);
   eventBus.off('file:dropped', processFile);
+  eventBus.off('screenshot:raw-captured', handleRawScreenshot);
   if (recordingInterval) clearInterval(recordingInterval);
   if (typingTimeout) clearTimeout(typingTimeout);
   cancelPreview();
+  if (isSttActive.value) sttService.stop();
 });
 </script>
 
 <style scoped>
+/* Styles remain unchanged */
 .message-input-root { padding: var(--spacing-2) var(--spacing-4); background-color: var(--color-background-panel); border-top: 1px solid var(--color-border); flex-shrink: 0; position: relative; }
-.input-container { display: flex; align-items: flex-end; background-color: var(--color-background-elevated); padding: var(--spacing-1) var(--spacing-2); position: relative; border-radius: var(--border-radius-lg); }
+.input-container { display: flex; align-items: flex-end; background-color: var(--color-background-elevated); padding: var(--spacing-1) var(--spacing-2); position: relative; border-radius: var(--border-radius-lg); overflow: hidden; }
+.locked-recording-bar { display: flex; align-items: center; background-color: var(--color-background-elevated); padding: var(--spacing-1) var(--spacing-2); position: relative; border-radius: var(--border-radius-lg); }
 .message-textarea { flex-grow: 1; border: none; background: transparent; padding: var(--spacing-2); resize: none; max-height: 150px; overflow-y: auto; line-height: 1.4; outline: none; box-shadow: none; }
+.message-textarea:read-only {
+  color: var(--color-text-primary);
+  background-color: var(--color-background-hover);
+  cursor: default;
+}
 .send-button { background-color: var(--color-brand-primary); color: white; border-radius: 50%; width: 36px; height: 36px; font-size: 1.2rem; }
 .voice-button.recording { color: var(--color-status-danger); animation: pulse 1.5s infinite; }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--color-status-danger-rgb), 0.4); } 70% { box-shadow: 0 0 0 10px rgba(var(--color-status-danger-rgb), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--color-status-danger-rgb), 0); } }
@@ -185,9 +268,50 @@ onUnmounted(() => {
 .preview-actions { display: flex; gap: var(--spacing-2); }
 .preview-actions button { border-radius: 4px; padding: 4px 8px; color: white; font-weight: 500;}
 .btn-cancel { background: var(--color-status-danger); }
-.btn-play { background: var(--color-status-success); }
 .file-preview-image { max-height: 40px; border-radius: 4px; margin-right: var(--spacing-2); }
-.file-preview, .audio-preview { display: flex; align-items: center; gap: var(--spacing-2); width: 100%; justify-content: space-between; }
-
+.file-preview { display: flex; align-items: center; gap: var(--spacing-2); width: 100%; justify-content: space-between; }
+.audio-preview { display: flex; align-items: center; gap: var(--spacing-2); width: 100%; }
+.btn-play-preview { width: 32px; height: 32px; border-radius: 50%; background-color: var(--color-brand-secondary); color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.2rem; }
+.preview-waveform-container { flex-grow: 1; height: 32px; }
+.preview-duration { color: var(--color-text-secondary); }
+.btn-cancel-preview { width: 32px; height: 32px; border-radius: 50%; background: none; color: var(--color-status-danger); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; }
+.preview-fade-enter-active, .preview-fade-leave-active { transition: all 0.2s ease; }
 .preview-fade-enter-from, .preview-fade-leave-to { opacity: 0; transform: translateY(-10px); }
+.input-container.recording-active { background-color: transparent; }
+.input-main-area { display: flex; align-items: flex-end; flex-grow: 1; transition: transform 0.3s ease; }
+.input-main-area.slide-away { transform: translateX(-80px); }
+.input-actions-area { display: flex; align-items: flex-end; }
+
+.cancel-hint {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding-left: var(--spacing-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  transition: opacity 0.3s ease;
+}
+.cancel-hint.active { color: var(--color-status-danger); font-weight: var(--font-weight-semibold); }
+.cancel-hint-fade-enter-active, .cancel-hint-fade-leave-active { transition: opacity 0.2s ease; }
+.cancel-hint-fade-enter-from, .cancel-hint-fade-leave-to { opacity: 0; }
+
+.voice-button-wrapper { position: relative; display: flex; align-items: center; justify-content: center; }
+.lock-hint { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; background-color: rgba(0, 0, 0, 0.7); color: white; padding: var(--spacing-2); border-radius: var(--border-radius-md); pointer-events: none; }
+.lock-hint .arrow { font-size: 1.2rem; animation: bounce 1.5s infinite; }
+.lock-hint .hint-text { font-size: var(--font-size-xs); white-space: nowrap; }
+@keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-8px); } 60% { transform: translateY(-4px); } }
+.lock-hint-fade-enter-active, .lock-hint-fade-leave-active { transition: opacity 0.3s ease; }
+.lock-hint-fade-enter-from, .lock-hint-fade-leave-to { opacity: 0; }
+
+.locked-recording-bar { padding: var(--spacing-2) var(--spacing-3); gap: var(--spacing-3); }
+.recording-indicator { color: var(--color-status-danger); animation: pulse-dot 1.5s infinite ease-in-out; }
+@keyframes pulse-dot { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+.recording-timer { font-family: var(--font-family-mono); color: var(--color-text-primary); font-weight: var(--font-weight-medium); }
+.spacer { flex-grow: 1; }
+.btn-cancel-recording, .btn-send-recording { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); padding: var(--spacing-1) var(--spacing-3); border-radius: var(--border-radius-md); }
+.btn-cancel-recording { color: var(--color-text-secondary); }
+.btn-send-recording { background-color: var(--color-brand-primary); color: white; }
 </style>

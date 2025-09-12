@@ -25,6 +25,9 @@ body {
     background-color: var(--color-background-page);
     color: var(--color-text-primary);
     font-family: var(--font-family-base), serif;
+    /* --- MODIFICATION START: Smooth theme/color-scheme transitions --- */
+    transition: background-color 0.3s var(--transition-easing), color 0.3s var(--transition-easing);
+    /* --- MODIFICATION END --- */
 }
 
 /* --- Scrollbar Styling (Telegram Style) --- */

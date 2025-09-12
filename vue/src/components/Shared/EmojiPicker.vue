@@ -14,9 +14,14 @@
         </div>
         <!-- Sticker Grid -->
         <div v-show="activeTab === 'sticker'" class="sticker-grid scroller">
-          <div v-for="sticker in stickers" :key="sticker.id" class="sticker-item" @click="selectSticker(sticker)">
-            <img :src="sticker.url" :alt="sticker.name" loading="lazy">
+          <!-- --- MODIFICATION START: Use a component-like structure for the sticker item --- -->
+          <div v-for="sticker in stickers" :key="sticker.id" class="sticker-item-wrapper">
+            <div class="sticker-item" @click="selectSticker(sticker)">
+              <div v-if="!sticker.url" class="sticker-placeholder"></div>
+              <img v-if="sticker.url" :src="sticker.url" :alt="sticker.name" loading="lazy">
+            </div>
           </div>
+          <!-- --- MODIFICATION END --- -->
           <label class="add-sticker-button" title="添加新贴图">
             +
             <input type="file" @change="handleStickerUpload" accept="image/png, image/jpeg, image/gif, image/webp" hidden>
@@ -45,7 +50,6 @@ const stickers = ref([]);
 let objectUrls = new Map();
 
 async function loadStickers() {
-  // Clean up previous URLs
   objectUrls.forEach(URL.revokeObjectURL);
   objectUrls.clear();
 
@@ -157,7 +161,46 @@ onUnmounted(() => {
   grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
   gap: var(--spacing-2);
 }
-.sticker-item, .add-sticker-button {
+/* --- MODIFICATION START: Styles for sticker placeholder and wrapper --- */
+.sticker-item-wrapper {
+  width: 70px;
+  height: 70px;
+}
+
+.sticker-item {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  overflow: hidden; /* Important for placeholder */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative; /* For placeholder positioning */
+}
+
+.sticker-placeholder {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-background-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+}
+
+.sticker-item:hover {
+  transform: scale(1.05);
+}
+.sticker-item img {
+  max-width: 90%;
+  max-height: 90%;
+  object-fit: contain;
+  position: relative; /* Ensure it's on top of the placeholder */
+  z-index: 1;
+}
+/* --- MODIFICATION END --- */
+
+.add-sticker-button {
   width: 70px;
   height: 70px;
   border-radius: var(--border-radius-md);
@@ -166,17 +209,6 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.1s ease;
-}
-.sticker-item:hover {
-  transform: scale(1.05);
-}
-.sticker-item img {
-  max-width: 90%;
-  max-height: 90%;
-  object-fit: contain;
-}
-.add-sticker-button {
   font-size: 2rem;
   color: var(--color-text-secondary);
   border: 2px dashed var(--color-border);
@@ -185,4 +217,13 @@ onUnmounted(() => {
   background-color: var(--color-background-hover);
 }
 
+.picker-fade-enter-active,
+.picker-fade-leave-active {
+  transition: all 0.2s ease;
+}
+.picker-fade-enter-from,
+.picker-fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
 </style>

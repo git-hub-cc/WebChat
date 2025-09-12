@@ -55,23 +55,26 @@ const startPos = ref({ x: 0, y: 0 });
 const currentPos = ref({ x: 0, y: 0 });
 
 onMounted(() => {
-  eventBus.on('screenshot:raw-captured', handleRawScreenshot);
+  const screenshotData = uiStore.modalPrefillData;
+  if (screenshotData && screenshotData.dataUrl) {
+    initializeEditor(screenshotData);
+  }
+
   window.addEventListener('mousemove', handleMouseMove);
   window.addEventListener('mouseup', handleMouseUp);
 });
 
 onUnmounted(() => {
-  eventBus.off('screenshot:raw-captured', handleRawScreenshot);
   window.removeEventListener('mousemove', handleMouseMove);
   window.removeEventListener('mouseup', handleMouseUp);
+  closeEditor(false);
 });
 
-function handleRawScreenshot({ dataUrl, blob, originalStream: stream }) {
+function initializeEditor({ dataUrl, blob, originalStream: stream }) {
   const img = new Image();
   img.onload = () => {
     rawImage.value = img;
     originalStream.value = stream;
-    uiStore.showModal('screenshotEditor');
 
     nextTick(() => {
       const canvas = canvasRef.value;
@@ -79,8 +82,8 @@ function handleRawScreenshot({ dataUrl, blob, originalStream: stream }) {
         ctx.value = canvas.getContext('2d');
         canvas.width = img.width;
         canvas.height = img.height;
-        activateTool('crop'); // Default to crop tool
-        URL.revokeObjectURL(dataUrl); // Revoke URL after image is loaded into canvas
+        activateTool('crop');
+        URL.revokeObjectURL(dataUrl);
       }
     });
   };
@@ -126,7 +129,7 @@ function handleMouseUp() {
   };
 
   if (rect.w < 5 || rect.h < 5) {
-    if (currentTool.value === 'crop') cropRect.value = null; // Reset crop if too small
+    if (currentTool.value === 'crop') cropRect.value = null;
     redrawCanvas();
     return;
   }
@@ -147,22 +150,18 @@ function redrawCanvas() {
   ctx.value.clearRect(0, 0, canvas.width, canvas.height);
   ctx.value.drawImage(rawImage.value, 0, 0);
 
-  // Draw crop overlay first
   if (cropRect.value) {
     ctx.value.fillStyle = 'rgba(0, 0, 0, 0.5)';
     ctx.value.fillRect(0, 0, canvas.width, canvas.height);
-    //drawImage is faster than clearRect for showing the cropped area
     ctx.value.drawImage(rawImage.value, cropRect.value.x, cropRect.value.y, cropRect.value.w, cropRect.value.h, cropRect.value.x, cropRect.value.y, cropRect.value.w, cropRect.value.h);
   }
 
-  // Then draw marks
   marks.value.forEach(mark => {
     ctx.value.strokeStyle = mark.color;
     ctx.value.lineWidth = AppSettings.ui.screenshotEditor.defaultMarkLineWidth;
     ctx.value.strokeRect(mark.x, mark.y, mark.w, mark.h);
   });
 
-  // Finally draw crop border and live drawing preview on top
   if (cropRect.value) {
     ctx.value.strokeStyle = 'rgba(255, 255, 255, 0.9)';
     ctx.value.lineWidth = 2;
@@ -188,7 +187,10 @@ function redrawCanvas() {
   }
 }
 
-function closeEditor() {
+function closeEditor(emitCancelEvent = true) {
+  if (emitCancelEvent) {
+    eventBus.emit('screenshot:editing-cancelled');
+  }
   uiStore.hideModal();
   if (originalStream.value) {
     originalStream.value.getTracks().forEach(track => track.stop());
@@ -200,8 +202,7 @@ function closeEditor() {
 }
 
 function cancelEdit() {
-  eventBus.emit('screenshot:editing-cancelled');
-  closeEditor();
+  closeEditor(true);
 }
 
 async function confirmEdit() {
@@ -230,22 +231,27 @@ async function confirmEdit() {
   finalCanvas.toBlob(async (blob) => {
     if (!blob) {
       eventBus.emit('showNotification', { message: '处理截图失败', type: 'error' });
-      closeEditor();
+      closeEditor(true);
       return;
     }
     const hash = await generateFileHash(blob);
     const fileObject = {
       blob, hash,
       name: `screenshot-${Date.now()}.png`,
-      type: 'image/png', size: blob.size
+      // --- MODIFICATION START ---
+      // MODIFIED: Use 'fileType' to avoid naming collision with preview.type
+      fileType: 'image/png',
+      // --- MODIFICATION END ---
+      size: blob.size
     };
     eventBus.emit('screenshot:editing-complete', fileObject);
-    closeEditor();
+    closeEditor(false);
   }, 'image/png');
 }
 </script>
 
 <style scoped>
+/* Styles remain unchanged */
 .editor-backdrop { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.85); z-index: 1100; display: flex; flex-direction: column; }
 .editor-toolbar { display: flex; align-items: center; padding: var(--spacing-2); background-color: #333; flex-shrink: 0; }
 .color-picker { -webkit-appearance: none; -moz-appearance: none; appearance: none; width: 30px; height: 30px; border: none; cursor: pointer; background: none; padding: 0; border-radius: 50%; overflow: hidden; border: 2px solid white; }

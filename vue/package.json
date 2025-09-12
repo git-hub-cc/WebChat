@@ -12,7 +12,8 @@
     "pinia": "^2.1.7",
     "simple-peer": "^9.11.1",
     "vue": "^3.4.21",
-    "vue-virtual-scroller": "^2.0.0-beta.8"
+    "vue-virtual-scroller": "^2.0.0-beta.8",
+    "wavesurfer.js": "^7.8.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",

@@ -14,9 +14,7 @@ export const useSettingsStore = defineStore('settings', () => {
     const currentThemeKey = ref(localStorage.getItem('currentThemeKey') || '原神-浅色');
     const apiSettings = ref({});
     const customBackgrounds = ref({ light: null, dark: null });
-    // --- MODIFICATION START: Removed unused state for view transitions ---
-    // const isThemeTransitioning = ref(false); // This is no longer needed
-    // --- MODIFICATION END ---
+    const isThemeTransitioning = ref(false);
 
     // --- GETTERS ---
     const effectiveColorScheme = computed(() => {
@@ -43,8 +41,10 @@ export const useSettingsStore = defineStore('settings', () => {
         if (themeConfig && themeConfig.dataJs && !themeConfig.specialContacts) {
             try {
                 log(`Fetching theme data for ${themeKey} from ${themeConfig.dataJs}`, 'DEBUG');
-                // In Vite, public files are served from the root.
-                const response = await fetch(`/${themeConfig.dataJs}`);
+                // --- FIX START ---
+                // 移除了路径前的 "/"，使其成为相对路径，以遵循 vite.config.js 中的 base: './' 设置。
+                const response = await fetch(`${themeConfig.dataJs}`);
+                // --- FIX END ---
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
                 themes.value[themeKey] = { ...themeConfig, specialContacts: data };
@@ -125,7 +125,6 @@ export const useSettingsStore = defineStore('settings', () => {
     /**
      * Applies a new theme.
      */
-    // --- MODIFICATION START: Simplified applyTheme method ---
     async function applyTheme(themeKey, event = null) {
         if (!themes.value[themeKey]) {
             log(`Attempted to apply non-existent theme: ${themeKey}`, 'WARN');
@@ -141,7 +140,6 @@ export const useSettingsStore = defineStore('settings', () => {
 
         await updateLogic();
     }
-    // --- MODIFICATION END ---
 
     /**
      * [NEW] Public action to ensure theme data is loaded before use.
@@ -193,13 +191,13 @@ export const useSettingsStore = defineStore('settings', () => {
         await dbService.removeItem('appStateCache', `background_image_${mode}`);
         log(`自定义背景已为 ${mode} 模式移除。`, 'INFO');
     }
-    // --- MODIFICATION START: Removed isThemeTransitioning from return object ---
+
     return {
         themes, colorScheme, currentThemeKey, apiSettings, customBackgrounds,
+        isThemeTransitioning,
         effectiveColorScheme, currentTheme, currentSpecialContacts,
         init, applyTheme, setColorScheme, saveApiSetting, handleLlmProviderChange,
         setCustomBackground, removeCustomBackground,
         ensureThemeDataIsLoaded, _loadThemeData
     };
-    // --- MODIFICATION END ---
 });
