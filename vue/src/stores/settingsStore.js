@@ -14,7 +14,9 @@ export const useSettingsStore = defineStore('settings', () => {
     const currentThemeKey = ref(localStorage.getItem('currentThemeKey') || '原神-浅色');
     const apiSettings = ref({});
     const customBackgrounds = ref({ light: null, dark: null });
-    const isThemeTransitioning = ref(false);
+    // --- MODIFICATION START: Removed unused state for view transitions ---
+    // const isThemeTransitioning = ref(false); // This is no longer needed
+    // --- MODIFICATION END ---
 
     // --- GETTERS ---
     const effectiveColorScheme = computed(() => {
@@ -121,8 +123,9 @@ export const useSettingsStore = defineStore('settings', () => {
     }
 
     /**
-     * Applies a new theme with a potential transition animation.
+     * Applies a new theme.
      */
+    // --- MODIFICATION START: Simplified applyTheme method ---
     async function applyTheme(themeKey, event = null) {
         if (!themes.value[themeKey]) {
             log(`Attempted to apply non-existent theme: ${themeKey}`, 'WARN');
@@ -136,16 +139,9 @@ export const useSettingsStore = defineStore('settings', () => {
             eventBus.emit('themeChanged');
         };
 
-        if (document.startViewTransition && event) {
-            isThemeTransitioning.value = true;
-            document.documentElement.style.setProperty('--clip-x', `${event.clientX}px`);
-            document.documentElement.style.setProperty('--clip-y', `${event.clientY}px`);
-            const transition = document.startViewTransition(updateLogic);
-            try { await transition.finished; } finally { isThemeTransitioning.value = false; }
-        } else {
-            await updateLogic();
-        }
+        await updateLogic();
     }
+    // --- MODIFICATION END ---
 
     /**
      * [NEW] Public action to ensure theme data is loaded before use.
@@ -197,12 +193,13 @@ export const useSettingsStore = defineStore('settings', () => {
         await dbService.removeItem('appStateCache', `background_image_${mode}`);
         log(`自定义背景已为 ${mode} 模式移除。`, 'INFO');
     }
-
+    // --- MODIFICATION START: Removed isThemeTransitioning from return object ---
     return {
-        themes, colorScheme, currentThemeKey, apiSettings, customBackgrounds, isThemeTransitioning,
+        themes, colorScheme, currentThemeKey, apiSettings, customBackgrounds,
         effectiveColorScheme, currentTheme, currentSpecialContacts,
         init, applyTheme, setColorScheme, saveApiSetting, handleLlmProviderChange,
         setCustomBackground, removeCustomBackground,
-        ensureThemeDataIsLoaded, _loadThemeData // Expose _loadThemeData for internal use if needed, but prefer ensure
+        ensureThemeDataIsLoaded, _loadThemeData
     };
+    // --- MODIFICATION END ---
 });

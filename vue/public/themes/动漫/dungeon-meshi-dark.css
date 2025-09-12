@@ -57,43 +57,43 @@ body.theme-迷宫饭-深色 {
     --laios-primary: #B8860B;
     --laios-text: var(--color-background-page);
     --laios-accent: #B8860B;
-    --laios-msg-bg: rgba(184, 134, 11, 0.09);
+    --laios-msg-bg: linear-gradient(135deg, rgba(184, 134, 11, 0.07), rgba(184, 134, 11, 0.12));
     --laios-secondary-bg: rgba(184, 134, 11, 0.15);
 
     --marcille-primary: #FFD700;
     --marcille-text: var(--color-background-page);
     --marcille-accent: #FFD700;
-    --marcille-msg-bg: rgba(255, 215, 0, 0.07);
+    --marcille-msg-bg: linear-gradient(135deg, rgba(255, 215, 0, 0.05), rgba(255, 215, 0, 0.1));
     --marcille-secondary-bg: rgba(255, 215, 0, 0.15);
 
     --chilchuck-primary: #E53935;
     --chilchuck-text: var(--color-text-primary);
     --chilchuck-accent: #E53935;
-    --chilchuck-msg-bg: rgba(229, 57, 53, 0.08);
+    --chilchuck-msg-bg: linear-gradient(135deg, rgba(229, 57, 53, 0.06), rgba(229, 57, 53, 0.11));
     --chilchuck-secondary-bg: rgba(229, 57, 53, 0.15);
 
     --senshi-primary: #9E9E9E;
     --senshi-text: var(--color-background-page);
     --senshi-accent: #9E9E9E;
-    --senshi-msg-bg: rgba(158, 158, 158, 0.1);
+    --senshi-msg-bg: linear-gradient(135deg, rgba(158, 158, 158, 0.08), rgba(158, 158, 158, 0.15));
     --senshi-secondary-bg: rgba(158, 158, 158, 0.2);
 
     --falin-primary: #CFD8DC;
     --falin-text: var(--color-background-page);
     --falin-accent: #CFD8DC;
-    --falin-msg-bg: rgba(var(--mgf-deep-cave-bg-rgb), 0.5);
+    --falin-msg-bg: linear-gradient(135deg, rgba(var(--mgf-deep-cave-bg-rgb), 0.4), rgba(var(--mgf-deep-cave-bg-rgb), 0.6));
     --falin-secondary-bg: rgba(207, 216, 220, 0.1);
 
     --kabru-primary: #5C6BC0;
     --kabru-text: var(--color-text-primary);
     --kabru-accent: #5C6BC0;
-    --kabru-msg-bg: rgba(92, 107, 192, 0.08);
+    --kabru-msg-bg: linear-gradient(135deg, rgba(92, 107, 192, 0.06), rgba(92, 107, 192, 0.12));
     --kabru-secondary-bg: rgba(92, 107, 192, 0.15);
 
     --wingedlion-primary: #FBC02D;
     --wingedlion-text: var(--color-background-page);
     --wingedlion-accent: #FBC02D;
-    --wingedlion-msg-bg: rgba(251, 192, 45, 0.07);
+    --wingedlion-msg-bg: linear-gradient(135deg, rgba(251, 192, 45, 0.05), rgba(251, 192, 45, 0.1));
     --wingedlion-secondary-bg: rgba(251, 192, 45, 0.15);
 }
 
@@ -110,7 +110,7 @@ body.theme-迷宫饭-深色 {
     );
 }
 
-body.theme-迷宫饭-深色 .message.system {
+body.theme-迷宫饭-深色 .system-message {
     border: 1px dashed var(--color-brand-primary);
     box-shadow: 0 0 4px rgba(var(--mgf-torch-flame-orange-rgb), 0.22) inset;
 }
@@ -181,4 +181,18 @@ body.theme-迷宫饭-深色 .AI_WingedLion_迷宫饭 {
     --character-message-bg: var(--wingedlion-msg-bg);
     --character-secondary-bg: var(--wingedlion-secondary-bg);
     --character-glow-color: var(--wingedlion-primary);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-迷宫饭-深色 .chat-list-item.is-special.active {
+    background-color: var(--character-secondary-bg);
+}
+
+body.theme-迷宫饭-深色 .chat-list-item.is-special.active .name {
+    color: var(--character-primary-color) !important;
+    text-shadow: 0 0 5px var(--character-glow-color);
 }

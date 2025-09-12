@@ -111,7 +111,7 @@ body.theme-迷宫饭-浅色 {
     );
 }
 
-body.theme-迷宫饭-浅色 .message.system {
+body.theme-迷宫饭-浅色 .system-message {
     border: 1px dashed var(--color-brand-primary);
     box-shadow: 0 0 4px rgba(var(--mgf-cooked-food-brown-rgb), 0.18) inset;
 }
@@ -182,4 +182,21 @@ body.theme-迷宫饭-浅色 .AI_WingedLion_迷宫饭 {
     --character-message-bg: var(--wingedlion-msg-bg);
     --character-secondary-bg: var(--wingedlion-secondary-bg);
     --character-glow-color: rgba(230, 81, 0, 0.4);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-迷宫饭-浅色 .chat-list-item.is-special.active {
+    background: var(--character-secondary-bg);
+}
+
+body.theme-迷宫饭-浅色 .chat-list-item.is-special.active .name {
+    color: var(--character-primary-color) !important;
+}
+
+body.theme-迷宫饭-浅色 .message-bubble.character-message {
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 0 0 1px var(--character-accent-color);
 }

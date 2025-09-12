@@ -1,12 +1,10 @@
 <template>
-  <div id="app-root" :style="backgroundStyle">
-    <!-- 全局加载遮罩 -->
+  <div id="app-root">
     <div v-if="uiStore.isAppLoading" class="loading-overlay">
       <Spinner />
       <div class="loading-text">连接中，请稍候...</div>
     </div>
 
-    <!-- 主应用容器 -->
     <div v-else class="app-container" :class="appContainerClasses">
       <aside class="sidebar-container">
         <ChatList />
@@ -25,7 +23,6 @@
       </aside>
     </div>
 
-    <!-- 模态框 -->
     <SettingsModal v-if="uiStore.activeModal === 'settings'" @close="uiStore.hideModal()" />
     <NewContactModal v-if="uiStore.activeModal === 'newContact'" @close="uiStore.hideModal()" />
     <BindManualConnectionModal v-if="uiStore.activeModal === 'bindManualConnection'" />
@@ -34,24 +31,10 @@
     <ConfirmationModal v-if="uiStore.activeModal === 'confirmation'" />
     <MediaViewerModal v-if="uiStore.activeModal === 'mediaViewer'" />
 
-    <!-- ======================================================= -->
-    <!-- MODIFICATION START: Conditional Call View Rendering     -->
-    <!-- ======================================================= -->
-    <!-- 全屏通话视图 -->
     <VideoCallView v-if="callStore.isCallActive && callStore.isFullScreenCallViewVisible" />
-    <!-- 浮动通话小部件 -->
     <FloatingCallWidget v-if="callStore.isCallActive && !callStore.isFullScreenCallViewVisible" />
-    <!-- ======================================================= -->
-    <!-- MODIFICATION END                                        -->
-    <!-- ======================================================= -->
-
-    <!-- 全局通知 -->
     <NotificationContainer />
-
-    <!-- 全局右键菜单 -->
     <ContextMenu />
-
-    <!-- 动态主题样式表 -->
     <link id="theme-stylesheet" rel="stylesheet" :href="themeHref" />
   </div>
 </template>
@@ -69,7 +52,6 @@ import { webrtcService } from '@/services/webrtcService';
 import { apiService } from '@/services/apiService';
 import { eventBus } from '@/services/eventBus';
 
-// 导入组件
 import ChatList from '@/components/ChatList/ChatList.vue';
 import ChatView from '@/components/ChatView/ChatView.vue';
 import WelcomeScreen from '@/components/ChatView/WelcomeScreen.vue';
@@ -86,10 +68,8 @@ import ConfirmationModal from '@/components/Modals/ConfirmationModal.vue';
 import MediaViewerModal from '@/components/Modals/MediaViewerModal.vue';
 import BindManualConnectionModal from '@/components/Modals/BindManualConnectionModal.vue';
 import WelcomeHeader from '@/components/ChatView/WelcomeHeader.vue';
-// --- NEW: Import FloatingCallWidget ---
 import FloatingCallWidget from '@/components/Shared/FloatingCallWidget.vue';
 
-// 初始化 stores
 const userStore = useUserStore();
 const chatStore = useChatStore();
 const groupStore = useGroupStore();
@@ -98,21 +78,16 @@ const uiStore = useUiStore();
 const callStore = useCallStore();
 const memoryStore = useMemoryStore();
 
-// --- 计算属性 (unchanged) ---
 const appContainerClasses = computed(() => ({
   'details-panel-open': uiStore.isDetailsPanelOpen,
   'chat-active': uiStore.isChatViewActiveOnMobile
 }));
-const backgroundStyle = computed(() => {
-  const bgUrl = settingsStore.customBackgrounds[settingsStore.effectiveColorScheme];
-  return bgUrl ? { '--custom-background-image': `url(${bgUrl})` } : {};
-});
+
 const themeHref = computed(() => {
   const themeConfig = settingsStore.currentTheme;
   return themeConfig?.css ? `/${themeConfig.css.replace(/^public\//, '')}` : '';
 });
 
-// --- 生命周期钩子 & 侦听器 (unchanged) ---
 onMounted(async () => {
   uiStore.setAppLoading(true);
   try {
@@ -134,21 +109,29 @@ onMounted(async () => {
     setTimeout(() => uiStore.setAppLoading(false), 300);
   }
 });
-watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, settingsStore.isThemeTransitioning],
-    ([newThemeKey, newScheme, newIsTransitioning], [oldThemeKey, oldScheme] = []) => {
+
+watch(
+    () => settingsStore.customBackgrounds[settingsStore.effectiveColorScheme],
+    (bgUrl) => {
+      document.body.style.backgroundImage = bgUrl ? `url(${bgUrl})` : 'none';
+    },
+    { immediate: true }
+);
+
+// --- MODIFICATION START: Simplified watcher to remove transition logic ---
+watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme],
+    ([newThemeKey, newScheme], [oldThemeKey, oldScheme] = []) => {
       if (oldThemeKey) document.body.classList.remove(`theme-${oldThemeKey}`);
       if (oldScheme) document.body.classList.remove(`colorscheme-${oldScheme}`);
       if (newThemeKey) document.body.classList.add(`theme-${newThemeKey}`);
       if (newScheme) document.body.classList.add(`colorscheme-${newScheme}`);
-      if (newIsTransitioning) document.documentElement.classList.add('is-transitioning');
-      else document.documentElement.classList.remove('is-transitioning');
     },
     { immediate: true }
 );
+// --- MODIFICATION END ---
 </script>
 
 <style>
-/* Global styles are unchanged */
 #app-root {
   width: 100vw;
   height: 100dvh;
@@ -156,14 +139,18 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--color-background-page);
+  background-color: transparent;
   color: var(--color-text-primary);
   font-family: var(--font-family-base);
+}
+
+body {
   transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out;
   background-size: cover;
   background-position: center;
-  background-image: var(--custom-background-image, none);
+  background-repeat: no-repeat;
 }
+
 .app-container {
   display: grid;
   grid-template-columns: var(--sidebar-width) 1fr;
@@ -175,9 +162,12 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   position: relative;
+  /* --- MODIFICATION START --- */
   transition: grid-template-columns 0.3s var(--transition-easing);
+  /* --- MODIFICATION END --- */
   background-color: var(--color-background-panel);
 }
+
 .app-container.details-panel-open {
   grid-template-columns: var(--sidebar-width) 1fr var(--details-panel-width);
 }
@@ -265,8 +255,5 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
     max-width: 320px;
   }
 }
-@keyframes reveal-in {
-  from { clip-path: circle(0% at var(--clip-x) var(--clip-y)); }
-  to { clip-path: circle(150% at var(--clip-x) var(--clip-y)); }
-}
+
 </style>

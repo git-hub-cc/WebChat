@@ -15,7 +15,12 @@
             :data-id="item.id"
             class="scroller-item"
         >
-          <MessageBubble :message="item" />
+          <!-- --- MODIFICATION START: Use property from store, remove local function --- -->
+          <MessageBubble
+              :message="item"
+              :is-consecutive="item.isConsecutive"
+          />
+          <!-- --- MODIFICATION END --- -->
         </DynamicScrollerItem>
       </template>
     </DynamicScroller>
@@ -46,6 +51,10 @@ const userStore = useUserStore();
 const scrollerRef = ref(null);
 const showScrollToBottom = ref(false);
 
+// --- MODIFICATION START: Removed unreliable local function ---
+// const isMessageConsecutive = (index) => { ... };
+// --- MODIFICATION END ---
+
 const scrollToBottom = (behavior = 'smooth') => {
   nextTick(() => {
     scrollerRef.value?.scrollToBottom();
@@ -59,9 +68,8 @@ const scrollToMessage = (messageId) => {
   }
 };
 
-// --- START OF MODIFICATION: New function to handle date scroll ---
 const scrollToDate = ({ chatId, dateString }) => {
-  if (chatId !== props.chatId) return; // Ignore if not for the current chat
+  if (chatId !== props.chatId) return;
 
   const targetDateStart = new Date(`${dateString}T00:00:00.000Z`).getTime();
   const targetDateEnd = new Date(`${dateString}T23:59:59.999Z`).getTime();
@@ -71,7 +79,7 @@ const scrollToDate = ({ chatId, dateString }) => {
     const msgTimestamp = new Date(chatStore.currentChatMessages[i].timestamp).getTime();
     if (msgTimestamp >= targetDateStart && msgTimestamp <= targetDateEnd) {
       firstMessageIndex = i;
-      break; // Found the first message of the day
+      break;
     }
   }
 
@@ -82,7 +90,6 @@ const scrollToDate = ({ chatId, dateString }) => {
     eventBus.emit('showNotification', { message: `未找到 ${dateString} 的消息`, type: 'warning' });
   }
 };
-// --- END OF MODIFICATION ---
 
 watch(() => chatStore.currentChatMessages.length, (newLength, oldLength) => {
   if (newLength > oldLength) {
@@ -114,9 +121,7 @@ onMounted(() => {
     scrollerEl.addEventListener('scroll', handleScroll);
   }
   eventBus.on('chat:scroll-to-message', scrollToMessage);
-  // --- START OF MODIFICATION: Listen for the new global event ---
   eventBus.on('chat:scroll-to-date', scrollToDate);
-  // --- END OF MODIFICATION ---
 });
 
 onUnmounted(() => {
@@ -124,9 +129,7 @@ onUnmounted(() => {
     scrollerEl.removeEventListener('scroll', handleScroll);
   }
   eventBus.off('chat:scroll-to-message', scrollToMessage);
-  // --- START OF MODIFICATION: Unregister the listener ---
   eventBus.off('chat:scroll-to-date', scrollToDate);
-  // --- END OF MODIFICATION ---
 });
 </script>
 

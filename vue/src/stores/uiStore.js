@@ -18,6 +18,9 @@ export const useUiStore = defineStore('ui', () => {
     const mediaViewerContent = ref(null);
     const modalPrefillData = ref({});
     const manualSdpText = ref('');
+    // --- MODIFICATION START: Add state for dangerous actions ---
+    const isPerformingDangerousAction = ref(false);
+    // --- MODIFICATION END ---
 
     // --- ACTIONS ---
     function toggleDetailsPanel(forceState, content = 'info') {
@@ -76,6 +79,9 @@ export const useUiStore = defineStore('ui', () => {
         modalPrefillData, isContextMenuOpen, contextMenuPos, contextMenuItems,
         contextMenuTarget, confirmationOptions, mediaViewerContent,
         manualSdpText,
+        // --- MODIFICATION START: Expose the new state ---
+        isPerformingDangerousAction,
+        // --- MODIFICATION END ---
         toggleDetailsPanel, showModal, hideModal, setAppLoading,
         showContextMenu, hideContextMenu, showConfirmationModal, showMediaViewer
     };

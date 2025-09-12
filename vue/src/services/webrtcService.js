@@ -43,12 +43,17 @@ function _stopHeartbeat() {
     }
 }
 
-async function _proactivelyConnectToOnlineContacts() {
+// --- MODIFICATION START: Rename to make it clear this is a public-facing method ---
+async function proactivelyConnectToOnlineContacts() {
+// --- MODIFICATION END ---
     const userStore = useUserStore();
+    // Fetch the latest online users first
     await userStore.fetchOnlineUsers();
+
     userStore.onlineUserIds.forEach(onlineId => {
         const contact = userStore.contacts[onlineId];
         const isConnected = connections.value[onlineId]?.isConnected ?? false;
+        // Connect if they are a contact, not an AI, and not already connected
         if (contact && !contact.isAI && !isConnected) {
             log(`Proactive Connect: Found online contact ${onlineId}. Attempting connection.`, 'INFO');
             webrtcService.createOffer(onlineId, { isSilent: true });
@@ -71,7 +76,9 @@ function _connectWebSocket() {
             _sendWsMessage({ type: 'REGISTER', userId: currentUserId });
             _startHeartbeat();
             eventBus.emit('websocket:status', true);
-            await _proactivelyConnectToOnlineContacts();
+            // --- MODIFICATION START: Use the renamed public method ---
+            await webrtcService.proactivelyConnectToOnlineContacts();
+            // --- MODIFICATION END ---
             resolve();
         };
         websocket.onmessage = (event) => {
@@ -153,14 +160,12 @@ function _handlePeerData(rawData, peerId) {
     } else {
         try {
             const message = JSON.parse(new TextDecoder().decode(rawData));
-            // --- MODIFICATION START: Handle retraction requests and ACKs ---
             if (message.type === 'retract-message-request') {
                 eventBus.emit('message:retracted', {
                     chatId: message.groupId || peerId,
                     messageId: message.messageId,
                     retractedByName: message.retractedByName
                 });
-                // Send an acknowledgment back
                 webrtcService.sendMessage(peerId, { type: 'retract-message-ack', messageId: message.messageId }, true);
                 return;
             }
@@ -168,7 +173,6 @@ function _handlePeerData(rawData, peerId) {
                 eventBus.emit('message:retracted-ack', { messageId: message.messageId });
                 return;
             }
-            // --- MODIFICATION END ---
             if (message.type === 'message-ack') { eventBus.emit('message:delivered', { messageId: message.ackId, peerId }); return; }
             if (message.type === 'file-transfer-complete') { eventBus.emit('message:file-delivered', { messageId: message.ackId, peerId }); return; }
             if (message.id) { if (message.type === 'text' || message.type.startsWith('call-') || message.type === 'typing') { webrtcService.sendMessage(peerId, { type: 'message-ack', ackId: message.id }, true); } }
@@ -290,7 +294,9 @@ export const webrtcService = {
     },
     startAutoRefresh() {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-        autoRefreshInterval = setInterval(_proactivelyConnectToOnlineContacts, 30000);
+        // --- MODIFICATION START: Use the renamed public method ---
+        autoRefreshInterval = setInterval(this.proactivelyConnectToOnlineContacts, 30000);
+        // --- MODIFICATION END ---
         log('WebRTC Service: Started periodic online user refresh and auto-connect task.', 'INFO');
     },
     stopAutoRefresh() {
@@ -299,6 +305,9 @@ export const webrtcService = {
             autoRefreshInterval = null;
         }
     },
+    // --- MODIFICATION START: Expose the proactive connection method ---
+    proactivelyConnectToOnlineContacts,
+    // --- MODIFICATION END ---
     createOffer(targetPeerId, options = {}) {
         if (connections.value[targetPeerId]?.isConnected) {
             log(`WebRTC: Connection to ${targetPeerId} is already connected. Ignoring new offer.`, 'DEBUG');

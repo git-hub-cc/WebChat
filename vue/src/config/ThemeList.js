@@ -5,8 +5,6 @@ export const THEME_LIST = {
     "迷宫饭-深色": { name: "迷宫饭", css: "themes/动漫/dungeon-meshi-dark.css", dataJs: "data/动漫/迷宫饭.json" },
     "斗破苍穹-浅色": { name: "斗破苍穹", css: "themes/动漫/btth-light.css", dataJs: "data/动漫/斗破苍穹.json" },
     "斗破苍穹-深色": { name: "斗破苍穹", css: "themes/动漫/btth-dark.css", dataJs: "data/动漫/斗破苍穹.json" },
-    "崩坏3-浅色": { name: "崩坏3", css: "themes/动漫/honkai3rd-light.css", dataJs: "data/动漫/崩坏3.json" },
-    "崩坏3-深色": { name: "崩坏3", css: "themes/动漫/honkai3rd-dark.css", dataJs: "data/动漫/崩坏3.json" },
     "蜡笔小新-浅色": { name: "蜡笔小新", css: "themes/动漫/shinchan-light.css", dataJs: "data/动漫/蜡笔小新.json"},
     "蜡笔小新-深色": { name: "蜡笔小新", css: "themes/动漫/shinchan-dark.css", dataJs: "data/动漫/蜡笔小新.json" },
     "英语-浅色": { name: "英语", css: "themes/教育/english-light.css", dataJs: "data/教育/英语.json" },

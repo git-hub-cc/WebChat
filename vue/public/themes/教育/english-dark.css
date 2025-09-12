@@ -81,7 +81,7 @@ body.theme-英语-深色 {
 }
 
 body.theme-英语-深色 .app-container {
-    box-shadow: var(--shadow-md), 0 0 0 1px rgba(var(--border-subtle-rgb), 0.5);
+    box-shadow: var(--shadow-md), 0 0 0 1px rgba(var(--ll-border-light-rgb), 0.5);
     border: 1px solid var(--color-border);
 }
 
@@ -91,7 +91,7 @@ body.theme-英语-深色 .message-area {
     background-position: 0 0.5em;
 }
 
-body.theme-英语-深色 .message.system {
+body.theme-英语-深色 .system-message {
     border: 1px dashed var(--color-border);
 }
 
@@ -127,4 +127,15 @@ body.theme-英语-深色 .AI_Kevin_KouYuTingLi {
     --character-glow-color: rgba(251, 146, 60, 0.3);
 }
 
-/* ... Other English teachers would follow the same pattern ... */
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-英语-深色 .chat-list-item.is-special.active {
+    background-image: linear-gradient(to right, var(--character-secondary-bg), transparent);
+}
+
+body.theme-英语-深色 .message-bubble.character-message .sender-name {
+    text-shadow: 0 0 3px var(--character-glow-color);
+}

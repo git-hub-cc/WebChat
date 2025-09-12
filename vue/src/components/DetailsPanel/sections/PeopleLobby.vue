@@ -5,8 +5,9 @@
       <IconButton icon="🔄" title="刷新列表" :class="{ loading: isLoading }" @click="fetchUsers" />
     </div>
     <div class="lobby-list scroller">
+      <!-- Show skeleton loader during initial load -->
       <div v-if="isLoading && onlineUsers.length === 0" class="loading-state">
-        <Spinner />
+        <SkeletonLoader type="list-item" v-for="i in 5" :key="i" />
       </div>
       <div v-else-if="onlineUsers.length === 0" class="empty-state">
         当前无其他在线用户
@@ -32,13 +33,12 @@ import { useUserStore } from '@/stores/userStore';
 import { useUiStore } from '@/stores/uiStore';
 import IconButton from '@/components/Shared/IconButton.vue';
 import Avatar from '@/components/Shared/Avatar.vue';
-import Spinner from '@/components/Shared/Spinner.vue';
+import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
 
 const userStore = useUserStore();
 const uiStore = useUiStore();
 const isLoading = ref(false);
 
-// --- START OF MODIFICATION ---
 // This computed property is now more robust and directly reflects the required states.
 const onlineUsers = computed(() => {
   return userStore.onlineUserIds.map(id => {
@@ -60,7 +60,6 @@ const onlineUsers = computed(() => {
     };
   });
 });
-// --- END OF MODIFICATION ---
 
 // The refresh button now just triggers the centralized fetch action
 async function fetchUsers() {
@@ -91,7 +90,21 @@ onMounted(() => {
 .lobby-header { display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-2) var(--spacing-3); border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
 .lobby-header h4 { font-weight: var(--font-weight-semibold); }
 .lobby-list { flex-grow: 1; overflow-y: auto; }
-.loading-state, .empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--color-text-secondary); }
+/* --- MODIFICATION START: Split styles for proper alignment --- */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-secondary);
+}
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Align skeleton to the top */
+  height: 100%;
+}
+/* --- MODIFICATION END --- */
 .lobby-item { display: flex; align-items: center; padding: var(--spacing-2) var(--spacing-3); cursor: pointer; border-bottom: 1px solid var(--color-border); }
 .lobby-item:hover { background-color: var(--color-background-hover); }
 .user-info { margin-left: var(--spacing-3); flex-grow: 1; overflow: hidden; }

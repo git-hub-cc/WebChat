@@ -8,8 +8,8 @@ export default defineConfig({
     plugins: [
         vue(),
         nodePolyfills({
-            // simple-peer 依赖 buffer
-            include: ['buffer'],
+            // simple-peer 依赖 buffer 和 util
+            include: ['buffer', 'util'],
             globals: {
                 Buffer: true,
             },
@@ -19,8 +19,6 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url)),
-            // 解决 simple-peer 依赖的 util 模块在浏览器中不可用的问题
-            'util': 'rollup-plugin-node-polyfills/polyfills/util'
         }
     },
     // 如果需要部署到子目录，例如 https://ppmc.club/webchat/

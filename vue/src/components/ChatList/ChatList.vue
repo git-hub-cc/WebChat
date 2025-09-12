@@ -2,13 +2,18 @@
   <div class="chat-list-root">
     <header class="chat-list-header">
       <IconButton icon="☰" title="菜单" @click="uiStore.showModal('settings')" />
-      <input
-          type="search"
-          :value="uiStore.chatListSearchTerm"
-          @input="uiStore.chatListSearchTerm = $event.target.value"
-          placeholder="搜索..."
-          class="search-bar"
-      />
+      <!-- --- MODIFICATION START: Use debounced handler & Add search icon --- -->
+      <div class="search-bar-wrapper">
+        <span class="search-icon">🔍</span>
+        <input
+            type="search"
+            :value="uiStore.chatListSearchTerm"
+            @input="handleSearchInput"
+            placeholder="搜索..."
+            class="search-bar"
+        />
+      </div>
+      <!-- --- MODIFICATION END --- -->
     </header>
 
     <nav class="chat-list-tabs">
@@ -18,10 +23,15 @@
     </nav>
 
     <div class="chat-items-wrapper">
+      <!-- --- MODIFICATION START: Improved empty state with SVG --- -->
       <div v-if="chatStore.filteredChatList.length === 0" class="empty-list">
+        <svg class="empty-list-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
+        </svg>
         <p>这里空空如也...</p>
         <p>点击右下角的 "+" 添加新的联系人或群组吧！</p>
       </div>
+      <!-- --- MODIFICATION END --- -->
       <RecycleScroller
           v-else
           class="scroller"
@@ -51,11 +61,16 @@ import { useGroupStore } from '@/stores/groupStore';
 import ChatListItem from './ChatListItem.vue';
 import IconButton from '@/components/Shared/IconButton.vue';
 import { RecycleScroller } from 'vue-virtual-scroller';
+import { debounce } from '@/utils';
 
 const chatStore = useChatStore();
 const uiStore = useUiStore();
 const userStore = useUserStore();
 const groupStore = useGroupStore();
+
+const handleSearchInput = debounce((event) => {
+  uiStore.chatListSearchTerm = event.target.value;
+}, 250);
 
 const selectChat = (item) => {
   chatStore.openChat(item.id);
@@ -133,11 +148,28 @@ const showContextMenu = (event, item) => {
   flex-shrink: 0;
   border-bottom: 1px solid var(--color-border);
 }
-.search-bar {
+
+/* --- MODIFICATION START: Styles for search bar with icon --- */
+.search-bar-wrapper {
   flex-grow: 1;
+  position: relative;
   margin-left: var(--spacing-2);
-  border-radius: var(--border-radius-pill);
 }
+.search-icon {
+  position: absolute;
+  left: var(--spacing-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-tertiary);
+  pointer-events: none; /* Allows clicking through the icon */
+}
+.search-bar {
+  width: 100%;
+  border-radius: var(--border-radius-pill);
+  padding-left: calc(var(--spacing-3) * 2 + 1em); /* Make space for the icon */
+}
+/* --- MODIFICATION END --- */
+
 .chat-list-tabs {
   display: flex;
   justify-content: space-around;
@@ -164,6 +196,8 @@ const showContextMenu = (event, item) => {
 .scroller {
   height: 100%;
 }
+
+/* --- MODIFICATION START: Styles for improved empty state --- */
 .empty-list {
   display: flex;
   flex-direction: column;
@@ -173,8 +207,18 @@ const showContextMenu = (event, item) => {
   color: var(--color-text-secondary);
   text-align: center;
   padding: var(--spacing-4);
+}
+.empty-list-icon {
+  width: 64px;
+  height: 64px;
+  opacity: 0.3;
+  margin-bottom: var(--spacing-3);
+}
+.empty-list p {
   line-height: 1.6;
 }
+/* --- MODIFICATION END --- */
+
 .new-chat-fab {
   position: absolute;
   bottom: var(--spacing-4);

@@ -58,31 +58,35 @@ body.theme-蜡笔小新-深色 {
     --shinchan-primary: #e63232;
     --shinchan-text: #FFFFFF;
     --shinchan-accent: #FFDC64;
-    --shinchan-msg-bg: rgba(230, 50, 50, 0.1);
+    --shinchan-msg-bg: linear-gradient(135deg, rgba(230, 50, 50, 0.1), rgba(230, 50, 50, 0.2));
     --shinchan-secondary-bg: var(--color-background-active);
 
     --misae-primary: #DC6E86;
     --misae-text: var(--color-background-page);
-    --misae-accent: var(--color-text-chalk-white-rgb);
-    --misae-msg-bg: rgba(220, 110, 130, 0.1);
+    /* --- ✅ FIX: Use the full color variable --- */
+    --misae-accent: var(--color-text-primary);
+    --misae-msg-bg: linear-gradient(135deg, rgba(220, 110, 130, 0.1), rgba(220, 110, 130, 0.2));
     --misae-secondary-bg: var(--color-background-active);
 
     --hiroshi-primary: #647896;
-    --hiroshi-text: var(--color-text-chalk-white-rgb);
-    --hiroshi-accent: var(--color-text-pencil-gray-rgb);
-    --hiroshi-msg-bg: rgba(100, 120, 150, 0.1);
+    --hiroshi-text: var(--color-text-primary);
+    /* --- ✅ FIX: Use the full color variable --- */
+    --hiroshi-accent: var(--color-text-secondary);
+    --hiroshi-msg-bg: linear-gradient(135deg, rgba(100, 120, 150, 0.1), rgba(100, 120, 150, 0.2));
     --hiroshi-secondary-bg: var(--color-background-active);
 
     --kazama-primary: #5AB4C8;
     --kazama-text: var(--color-background-page);
-    --kazama-accent: var(--color-text-chalk-white-rgb);
-    --kazama-msg-bg: rgba(90, 170, 200, 0.1);
+    /* --- ✅ FIX: Use the full color variable --- */
+    --kazama-accent: var(--color-text-primary);
+    --kazama-msg-bg: linear-gradient(135deg, rgba(90, 170, 200, 0.1), rgba(90, 170, 200, 0.2));
     --kazama-secondary-bg: var(--color-background-active);
 
-    --shiro-primary: var(--color-text-chalk-white-rgb);
+    /* --- ✅ FIX: Use the full color variable --- */
+    --shiro-primary: var(--color-text-primary);
     --shiro-text: #FF6450;
     --shiro-accent: #FF6450;
-    --shiro-msg-bg: rgba(220, 220, 220, 0.1);
+    --shiro-msg-bg: linear-gradient(135deg, rgba(220, 220, 220, 0.1), rgba(220, 220, 220, 0.2));
     --shiro-secondary-bg: var(--color-background-active);
 }
 
@@ -99,11 +103,11 @@ body.theme-蜡笔小新-深色 {
     );
 }
 
-body.theme-蜡笔小新-深色 .message.sent {
+body.theme-蜡笔小新-深色 .message-bubble.sent {
     border-left: 2px solid var(--color-border-strong);
 }
 
-body.theme-蜡笔小新-深色 .message.system {
+body.theme-蜡笔小新-深色 .system-message {
     border: 1px dashed var(--color-status-success);
     box-shadow: 0 0 5px rgba(var(--cs-action-green-rgb), 0.25) inset;
 }
@@ -156,4 +160,15 @@ body.theme-蜡笔小新-深色 .AI_小白 {
     --character-message-bg: var(--shiro-msg-bg);
     --character-secondary-bg: var(--shiro-secondary-bg);
     --character-glow-color: transparent;
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+
+body.theme-蜡笔小新-深色 .chat-list-item.is-special.active {
+    background: var(--character-secondary-bg);
+    border-right: 3px solid var(--character-primary-color);
 }

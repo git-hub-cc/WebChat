@@ -91,7 +91,7 @@ body.theme-英语-浅色 .message-area {
     background-position: 0 0.5em;
 }
 
-body.theme-英语-浅色 .message.system {
+body.theme-英语-浅色 .system-message {
     border: 1px dashed var(--color-border);
 }
 
@@ -127,4 +127,19 @@ body.theme-英语-浅色 .AI_Kevin_KouYuTingLi {
     --character-glow-color: transparent;
 }
 
-/* ... Other English teachers would follow the same pattern ... */
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-英语-浅色 .chat-list-item.is-special.active {
+    background-color: var(--character-secondary-bg);
+}
+
+body.theme-英语-浅色 .chat-list-item.is-special.active .name {
+    color: var(--character-primary-color) !important;
+}
+
+body.theme-英语-浅色 .message-bubble.character-message .sender-name {
+    color: var(--character-primary-color);
+}

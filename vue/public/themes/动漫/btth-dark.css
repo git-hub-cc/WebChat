@@ -61,55 +61,57 @@ body.theme-斗破苍穹-深色 {
     --xiaoyan-text: #1E1E1E;
     --xiaoyan-accent: #328CAA;
     --xiaoyan-glow: #BE8C32;
-    --xiaoyan-msg-bg: rgba(30, 30, 30, 0.2);
+    --xiaoyan-msg-bg: linear-gradient(135deg, rgba(30, 30, 30, 0.1), rgba(30, 30, 30, 0.3));
     --xiaoyan-secondary-bg: rgba(30, 30, 30, 0.3);
 
     --yaolao-primary: #6E50A0;
     --yaolao-text: #E6EBF0;
     --yaolao-accent: #6496D2;
     --yaolao-glow: #6496D2;
-    --yaolao-msg-bg: rgba(110, 80, 160, 0.1);
+    --yaolao-msg-bg: linear-gradient(135deg, rgba(110, 80, 160, 0.1), rgba(110, 80, 160, 0.2));
     --yaolao-secondary-bg: rgba(230, 235, 240, 0.08);
 
     --medusa-primary: #B43264;
     --medusa-text: var(--color-border-strong);
     --medusa-accent: #643C82;
     --medusa-glow: #B43264;
-    --medusa-msg-bg: rgba(100, 60, 130, 0.12);
+    --medusa-msg-bg: linear-gradient(135deg, rgba(100, 60, 130, 0.1), rgba(180, 50, 100, 0.15));
     --medusa-secondary-bg: rgba(100, 60, 130, 0.2);
 
     --xiaoxian-primary: #6E7873;
-    --xiaoxian-text: rgba(var(--color-text-primary-rgb), 0.8);
+    /* --- ✅ FIX: Replaced undefined variable with the correct one --- */
+    --xiaoxian-text: rgba(var(--dq-dark-text-ash-white-rgb), 0.8);
+    /* --- ✅ END FIX --- */
     --xiaoxian-accent: #6E7873;
-    --xiaoxian-msg-bg: rgba(110, 110, 120, 0.08);
+    --xiaoxian-msg-bg: linear-gradient(135deg, rgba(110, 110, 120, 0.05), rgba(110, 110, 120, 0.12));
     --xiaoxian-secondary-bg: rgba(110, 110, 120, 0.15);
 
     --yunyun-primary: #5A96AA;
     --yunyun-text: var(--color-text-primary);
     --yunyun-accent: #A07828;
     --yunyun-glow: #A07828;
-    --yunyun-msg-bg: rgba(90, 150, 170, 0.1);
+    --yunyun-msg-bg: linear-gradient(135deg, rgba(90, 150, 170, 0.08), rgba(90, 150, 170, 0.15));
     --yunyun-secondary-bg: rgba(90, 150, 170, 0.15);
 
     --xuner-primary: #B48228;
     --xuner-text: var(--color-background-page);
     --xuner-accent: var(--color-brand-primary);
     --xuner-glow: var(--color-brand-primary);
-    --xuner-msg-bg: rgba(180, 130, 40, 0.12);
+    --xuner-msg-bg: linear-gradient(135deg, rgba(180, 130, 40, 0.1), rgba(180, 130, 40, 0.18));
     --xuner-secondary-bg: rgba(180, 130, 40, 0.2);
 
     --haibodong-primary: #64AAD8;
     --haibodong-text: var(--color-background-page);
     --haibodong-accent: var(--color-background-page);
     --haibodong-glow: var(--color-background-page);
-    --haibodong-msg-bg: rgba(100, 170, 220, 0.1);
+    --haibodong-msg-bg: linear-gradient(135deg, rgba(100, 170, 220, 0.08), rgba(100, 170, 220, 0.15));
     --haibodong-secondary-bg: rgba(100, 170, 220, 0.15);
 
     --ziyan-primary: #A05AB4;
     --ziyan-text: var(--color-text-primary);
     --ziyan-accent: var(--color-text-primary);
     --ziyan-glow: var(--color-text-primary);
-    --ziyan-msg-bg: rgba(160, 90, 200, 0.1);
+    --ziyan-msg-bg: linear-gradient(135deg, rgba(160, 90, 200, 0.08), rgba(160, 90, 200, 0.15));
     --ziyan-secondary-bg: rgba(160, 90, 200, 0.15);
 }
 
@@ -127,15 +129,15 @@ body.theme-斗破苍穹-深色 {
 }
 
 body.theme-斗破苍穹-深色 .app-container {
-    border: 1px solid rgba(var(--border-subtle-rgb), 0.6);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(var(--brand-rgb), 0.25);
+    border: 1px solid rgba(var(--dq-dark-volcanic-border-rgb), 0.6);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.25);
 }
 
-body.theme-斗破苍穹-深色 .chat-header-main::after {
+body.theme-斗破苍穹-深色 .chat-header.character-active::after {
     content: '';
     display: block;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(var(--brand-rgb)), rgb(var(--accent-info-rgb)), transparent);
+    background: linear-gradient(90deg, transparent, var(--character-primary-color), var(--character-accent-color), transparent);
     opacity: 0.8;
     position: absolute;
     bottom: -1px;
@@ -144,7 +146,7 @@ body.theme-斗破苍穹-深色 .chat-header-main::after {
     filter: blur(0.5px);
 }
 
-body.theme-斗破苍穹-深色 .message.system {
+body.theme-斗破苍穹-深色 .system-message {
     border: 1px dashed var(--color-status-info);
     box-shadow: 0 0 10px rgba(var(--dq-dark-soul-purple-rgb), 0.2) inset;
 }
@@ -224,4 +226,25 @@ body.theme-斗破苍穹-深色 .AI_紫妍_斗破苍穹 {
     --character-message-bg: var(--ziyan-msg-bg);
     --character-secondary-bg: var(--ziyan-secondary-bg);
     --character-glow-color: var(--ziyan-glow);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+
+/* General enhancements for all special characters in this theme */
+body.theme-斗破苍穹-深色 .chat-list-item.is-special.active {
+    background-image: linear-gradient(to right, rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.1), transparent);
+    border-left: 3px solid var(--character-primary-color);
+}
+
+body.theme-斗破苍穹-深色 .user-profile-section.character-active {
+    background: radial-gradient(circle at top, var(--character-secondary-bg), transparent 70%);
+}
+
+body.theme-斗破苍穹-深色 .user-profile-section.character-active hr {
+    border-color: var(--character-accent-color);
+    opacity: 0.5;
 }

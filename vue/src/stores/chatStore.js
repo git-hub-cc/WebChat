@@ -54,12 +54,25 @@ export const useChatStore = defineStore('chat', () => {
     const currentChatMessages = computed(() => {
         const persistent = chats.value[currentChatId.value] || [];
         const temporary = temporaryMessages.value[currentChatId.value] || [];
-        return [...persistent, ...temporary]
+        const sortedMessages = [...persistent, ...temporary]
             .filter(m => m && m.id)
             .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+        // --- MODIFICATION START: Calculate isConsecutive property here ---
+        return sortedMessages.map((msg, index, allMsgs) => {
+            if (index === 0) {
+                return { ...msg, isConsecutive: false };
+            }
+            const prevMsg = allMsgs[index - 1];
+            const isConsecutive = msg && prevMsg &&
+                msg.sender === prevMsg.sender &&
+                msg.type !== 'system' && !msg.isRetracted &&
+                prevMsg.type !== 'system' && !prevMsg.isRetracted;
+            return { ...msg, isConsecutive };
+        });
+        // --- MODIFICATION END ---
     });
 
-    // --- MODIFICATION START: New Getter for Retraction Logic ---
     const isMessageRetractable = computed(() => (messageId) => {
         const chatId = Object.keys(chats.value).find(cid => chats.value[cid].some(m => m.id === messageId));
         if (!chatId) return false;
@@ -72,7 +85,6 @@ export const useChatStore = defineStore('chat', () => {
 
         return Date.now() - new Date(message.timestamp).getTime() < AppSettings.ui.messageRetractionWindow;
     });
-    // --- MODIFICATION END ---
 
 
     const getMessagesWithResources = computed(() => (chatId, resourceType, offset, limit) => {
@@ -134,19 +146,15 @@ export const useChatStore = defineStore('chat', () => {
         eventBus.on('webrtc:message', handleIncomingMessage);
         eventBus.on('message:delivered', ({ messageId, peerId }) => { _updateMessageState(peerId, messageId, { status: 'delivered' }); });
         eventBus.on('message:file-delivered', ({ messageId, peerId }) => { _updateMessageState(peerId, messageId, { status: 'delivered' }); });
-        // --- MODIFICATION START: Listen for retraction event ---
         eventBus.on('message:retracted', ({ chatId, messageId, retractedByName }) => {
             _updateMessageToRetractedState(messageId, chatId, retractedByName);
         });
-        // --- MODIFICATION END ---
     }
 
     function formatPreview(message) {
         if (!message) return '';
         if (message.type === 'system' && message.subType === 'call-log') return message.content;
-        // --- MODIFICATION START: Check for retraction ---
         if (message.isRetracted) return '消息已撤回';
-        // --- MODIFICATION END ---
         if (message.toolCallInfo) return `正在使用工具: ${message.toolCallInfo.name}`;
         if (message.isThinking) return `思考中...`;
         if (message.isStreaming) return `正在输入...`;
@@ -320,14 +328,10 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     async function handleIncomingMessage({ peerId, message }) {
-        // --- MODIFICATION START: Handle retract-message-ack ---
         if (message.type === 'retract-message-ack') {
             log(`Retraction confirmed for message ${message.messageId}`, 'DEBUG');
-            // This is just a confirmation, the local UI is already updated.
-            // Future logic could use this, e.g., to show a specific "retracted for all" icon.
             return;
         }
-        // --- MODIFICATION END ---
         if (message.type === 'group-join') { return; }
 
         const chatId = message.groupId || peerId;
@@ -370,11 +374,19 @@ export const useChatStore = defineStore('chat', () => {
             eventBus.emit('showNotification', { message: '没有聊天记录可清空。', type: 'info' });
             return;
         }
-        chats.value = {};
-        await dbService.clearStore('chats');
-        Object.keys(useUserStore().contacts).forEach(id => useUserStore().updateContactLastMessage(id, ''));
-        Object.keys(useGroupStore().groups).forEach(id => useGroupStore().updateGroupLastMessage(id, ''));
-        eventBus.emit('showNotification', { message: '所有聊天记录已清空', type: 'success' });
+        // --- MODIFICATION START: Add loading state for dangerous action ---
+        const uiStore = useUiStore();
+        uiStore.isPerformingDangerousAction = true;
+        try {
+            chats.value = {};
+            await dbService.clearStore('chats');
+            Object.keys(useUserStore().contacts).forEach(id => useUserStore().updateContactLastMessage(id, ''));
+            Object.keys(useGroupStore().groups).forEach(id => useGroupStore().updateGroupLastMessage(id, ''));
+            eventBus.emit('showNotification', { message: '所有聊天记录已清空', type: 'success' });
+        } finally {
+            uiStore.isPerformingDangerousAction = false;
+        }
+        // --- MODIFICATION END ---
     }
 
     async function deleteMessage(messageId) {
@@ -387,7 +399,6 @@ export const useChatStore = defineStore('chat', () => {
         }
     }
 
-    // --- MODIFICATION START: New Retraction Action ---
     async function retractMessage(messageId) {
         const chatId = currentChatId.value;
         if (!isMessageRetractable.value(messageId) || !chatId) {
@@ -432,7 +443,6 @@ export const useChatStore = defineStore('chat', () => {
             await dbService.setItem('chats', { id: chatId, messages: JSON.parse(JSON.stringify(chats.value[chatId])) });
         }
     }
-    // --- MODIFICATION END ---
 
     function addTemporaryMessage(chatId, message) { if (!temporaryMessages.value[chatId]) temporaryMessages.value[chatId] = []; temporaryMessages.value[chatId].push(message); }
     function updateTemporaryMessage(chatId, messageId, newContent) { const tempChat = temporaryMessages.value[chatId]; if (tempChat) { const msg = tempChat.find(m => m.id === messageId); if (msg) msg.content = newContent; } }

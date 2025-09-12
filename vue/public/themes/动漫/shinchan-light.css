@@ -59,7 +59,7 @@ body.theme-蜡笔小新-浅色 {
     --shinchan-text: #ED1C24; /* Text color is same as primary on yellow bg */
     --shinchan-accent: #ED1C24;
     --shinchan-msg-bg: #FFF200;
-    --shinchan-secondary-bg: var(--color-brand-primary);
+    --shinchan-secondary-bg: #FFF200;
 
     --misae-primary: #F39DBE;
     --misae-text: #FFFFFF;
@@ -99,9 +99,9 @@ body.theme-蜡笔小新-浅色 .app-container {
     border: 3px solid var(--color-border);
 }
 
-body.theme-蜡笔小新-浅色 .chat-list-item.active .chat-list-name,
-body.theme-蜡笔小新-浅色 .chat-list-item.active .chat-list-preview,
-body.theme-蜡笔小新-浅色 .chat-list-item.active .chat-list-time {
+body.theme-蜡笔小新-浅色 .chat-list-item.active .name,
+body.theme-蜡笔小新-浅色 .chat-list-item.active .preview,
+body.theme-蜡笔小新-浅色 .chat-list-item.active .timestamp {
     color: var(--color-text-on-brand);
 }
 
@@ -153,4 +153,22 @@ body.theme-蜡笔小新-浅色 .AI_小白 {
     --character-message-bg: var(--shiro-msg-bg);
     --character-secondary-bg: var(--shiro-secondary-bg);
     --character-glow-color: transparent;
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-蜡笔小新-浅色 .chat-list-item.is-special.active {
+    background: var(--character-secondary-bg);
+}
+
+body.theme-蜡笔小新-浅色 .chat-list-item.is-special.active .name {
+    color: var(--character-text-color) !important;
+}
+
+body.theme-蜡笔小新-浅色 .message-bubble.character-message {
+    border: 3px solid var(--color-border-strong);
+    box-shadow: 2px 2px 0px var(--color-border-strong);
 }

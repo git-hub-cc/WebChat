@@ -1,0 +1,39 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <style>
+        /* --- LIGHT THEME STYLES (DEFAULT) --- */
+        .bg { fill: url(#logo-gradient); }
+        .grad-stop-1 { stop-color: #007ACC; }
+        .grad-stop-2 { stop-color: #009688; }
+        .bubble { fill: white; fill-opacity: 0.9; }
+        .dot-1 { fill: #007ACC; }
+        .dot-2 { fill: #009688; }
+
+        /* --- DARK THEME STYLES --- */
+        @media (prefers-color-scheme: dark) {
+        /* Make the background transparent to blend with the dark browser UI */
+        .bg { fill: transparent; }
+
+        /* The gradient stops are not needed for dark mode, but we can reset them if necessary */
+        .grad-stop-1, .grad-stop-2 { stop-color: transparent; }
+
+        /* Change the bubble to a light grey color for high contrast */
+        .bubble { fill: #D1D5DB; fill-opacity: 1; }
+
+        /* Make the dots a darker grey to be visible on the light grey bubble */
+        .dot-1, .dot-2 { fill: #4B5563; }
+        }
+    </style>
+
+    <defs>
+        <linearGradient id="logo-gradient" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+            <stop class="grad-stop-1"/>
+            <stop offset="1" class="grad-stop-2"/>
+        </linearGradient>
+    </defs>
+
+    <!-- The visual elements now use classes instead of hardcoded fills -->
+    <rect width="64" height="64" rx="12" class="bg"/>
+    <path d="M16 20C16 17.7909 17.7909 16 20 16H44C46.2091 16 48 17.7909 48 20V36C48 38.2091 46.2091 40 44 40H32.6667C31.5621 40 30.5044 40.4214 29.7283 41.1975L23.1975 47.7283C22.4214 48.5044 21.3638 48.9258 20.2591 48.9258C19.7828 48.9258 19.3103 48.8085 18.8856 48.5839C17.712 47.9439 17.0393 46.6853 17.1852 45.3853L17.8182 39.5113C17.901 38.7103 17.585 37.915 17.0096 37.3396C16.4342 36.7642 16 35.9689 16 35.1679V20Z" class="bubble"/>
+    <circle cx="26" cy="28" r="3" class="dot-1"/>
+    <circle cx="38" cy="28" r="3" class="dot-2"/>
+</svg>

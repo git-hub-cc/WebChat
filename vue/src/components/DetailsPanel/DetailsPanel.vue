@@ -20,20 +20,28 @@ import { useChatStore } from '@/stores/chatStore';
 import { useUserStore } from '@/stores/userStore';
 import { useGroupStore } from '@/stores/groupStore';
 import IconButton from '@/components/Shared/IconButton.vue';
-import Spinner from '@/components/Shared/Spinner.vue';
+// --- MODIFICATION START: Import SkeletonLoader instead of Spinner ---
+import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
+// --- MODIFICATION END ---
 
 // 异步加载子组件，优化初始加载性能
 const UserProfile = defineAsyncComponent({
   loader: () => import('./sections/UserProfile.vue'),
-  loadingComponent: Spinner,
+  // --- MODIFICATION START: Use SkeletonLoader as the placeholder ---
+  loadingComponent: SkeletonLoader,
+  // --- MODIFICATION END ---
 });
 const GroupInfo = defineAsyncComponent({
   loader: () => import('./sections/GroupInfo.vue'),
-  loadingComponent: Spinner,
+  // --- MODIFICATION START: Use SkeletonLoader as the placeholder ---
+  loadingComponent: SkeletonLoader,
+  // --- MODIFICATION END ---
 });
 const PeopleLobby = defineAsyncComponent({
   loader: () => import('./sections/PeopleLobby.vue'),
-  loadingComponent: Spinner,
+  // --- MODIFICATION START: Use SkeletonLoader as the placeholder ---
+  loadingComponent: SkeletonLoader,
+  // --- MODIFICATION END ---
 });
 
 const uiStore = useUiStore();

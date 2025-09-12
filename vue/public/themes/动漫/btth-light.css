@@ -59,55 +59,55 @@ body.theme-斗破苍穹-浅色 {
     --xiaoyan-text: #323232;
     --xiaoyan-accent: #46B4C8;
     --xiaoyan-glow: #DCA832;
-    --xiaoyan-msg-bg: rgba(50, 50, 50, 0.03);
+    --xiaoyan-msg-bg: linear-gradient(135deg, rgba(50, 50, 50, 0.02), rgba(50, 50, 50, 0.05));
     --xiaoyan-secondary-bg: rgba(50, 50, 50, 0.1);
 
     --yaolao-primary: #826EB4;
     --yaolao-text: #FAFCFF;
     --yaolao-accent: #96B4E1;
     --yaolao-glow: #96B4E1;
-    --yaolao-msg-bg: rgba(130, 110, 180, 0.05);
+    --yaolao-msg-bg: linear-gradient(135deg, rgba(130, 110, 180, 0.03), rgba(130, 110, 180, 0.08));
     --yaolao-secondary-bg: rgba(220, 225, 230, 0.25);
 
     --medusa-primary: #8C50A0;
     --medusa-text: #B48C28;
     --medusa-accent: #C84678;
     --medusa-glow: #C84678;
-    --medusa-msg-bg: rgba(140, 80, 160, 0.07);
+    --medusa-msg-bg: linear-gradient(135deg, rgba(140, 80, 160, 0.05), rgba(140, 80, 160, 0.1));
     --medusa-secondary-bg: rgba(140, 80, 160, 0.15);
 
     --xiaoxian-primary: #6E7873;
     --xiaoxian-text: #A0A596;
     --xiaoxian-accent: #6E7873;
-    --xiaoxian-msg-bg: rgba(160, 165, 150, 0.08);
+    --xiaoxian-msg-bg: linear-gradient(135deg, rgba(160, 165, 150, 0.05), rgba(160, 165, 150, 0.12));
     --xiaoxian-secondary-bg: rgba(160, 165, 150, 0.15);
 
     --yunyun-primary: #82BECD;
     --yunyun-text: var(--color-text-primary);
     --yunyun-accent: #E1BE64;
     --yunyun-glow: #E1BE64;
-    --yunyun-msg-bg: rgba(130, 190, 210, 0.08);
+    --yunyun-msg-bg: linear-gradient(135deg, rgba(130, 190, 210, 0.05), rgba(130, 190, 210, 0.12));
     --yunyun-secondary-bg: rgba(130, 190, 210, 0.15);
 
     --xuner-primary: #D9A520;
     --xuner-text: var(--color-text-primary);
     --xuner-accent: var(--color-status-danger);
     --xuner-glow: var(--color-status-danger);
-    --xuner-msg-bg: rgba(218, 165, 32, 0.07);
+    --xuner-msg-bg: linear-gradient(135deg, rgba(218, 165, 32, 0.05), rgba(218, 165, 32, 0.1));
     --xuner-secondary-bg: rgba(218, 165, 32, 0.15);
 
     --haibodong-primary: #5082AA;
     --haibodong-text: var(--color-text-primary);
     --haibodong-accent: #BED8F0;
     --haibodong-glow: #BED8F0;
-    --haibodong-msg-bg: rgba(150, 200, 230, 0.08);
+    --haibodong-msg-bg: linear-gradient(135deg, rgba(150, 200, 230, 0.05), rgba(150, 200, 230, 0.12));
     --haibodong-secondary-bg: rgba(150, 200, 230, 0.15);
 
     --ziyan-primary: #A05AB4;
     --ziyan-text: #F0DCFF;
     --ziyan-accent: #DCACF0;
     --ziyan-glow: #DCACF0;
-    --ziyan-msg-bg: rgba(190, 130, 220, 0.08);
+    --ziyan-msg-bg: linear-gradient(135deg, rgba(190, 130, 220, 0.05), rgba(190, 130, 220, 0.12));
     --ziyan-secondary-bg: rgba(190, 130, 220, 0.15);
 }
 
@@ -133,7 +133,7 @@ body.theme-斗破苍穹-浅色 .chat-header-main::after {
     content: '';
     display: block;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(var(--brand-rgb)), transparent);
+    background: linear-gradient(90deg, transparent, rgb(var(--dq-light-qinglian-flame-rgb)), transparent);
     opacity: 0.7;
     position: absolute;
     bottom: -1px;
@@ -141,7 +141,7 @@ body.theme-斗破苍穹-浅色 .chat-header-main::after {
     right: 0;
 }
 
-body.theme-斗破苍穹-浅色 .message.system {
+body.theme-斗破苍穹-浅色 .system-message {
     border: 1px dashed var(--color-status-success);
     box-shadow: 0 0 8px rgba(var(--dq-light-luminous-gold-rgb), 0.15) inset;
 }
@@ -221,4 +221,21 @@ body.theme-斗破苍穹-浅色 .AI_紫妍_斗破苍穹 {
     --character-message-bg: var(--ziyan-msg-bg);
     --character-secondary-bg: var(--ziyan-secondary-bg);
     --character-glow-color: var(--ziyan-glow);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-斗破苍穹-浅色 .chat-list-item.is-special.active {
+    background: var(--character-secondary-bg);
+}
+
+body.theme-斗破苍穹-浅色 .chat-list-item.is-special.active .name {
+    color: var(--character-primary-color) !important;
+}
+
+body.theme-斗破苍穹-浅色 .user-profile-section.character-active {
+    background: linear-gradient(to bottom, var(--character-secondary-bg), transparent);
 }

@@ -1,6 +1,11 @@
 <template>
   <div class="welcome-screen">
-    <div class="logo-placeholder">💬</div>
+    <!-- --- MODIFICATION START --- -->
+    <div class="logo-container">
+      <!-- Replaced inline SVG with an img tag pointing to the public favicon -->
+      <img src="/favicon.svg" alt="WebChat Logo" width="64" height="64">
+    </div>
+    <!-- --- MODIFICATION END --- -->
     <h2>WebChat</h2>
     <p>从左侧列表中选择一个聊天开始对话，或点击 "+" 添加新朋友。</p>
     <p class="status-indicator">
@@ -37,11 +42,13 @@ const statusMessage = computed(() => {
   padding: var(--spacing-5);
 }
 
-.logo-placeholder {
-  font-size: 6rem;
+/* --- MODIFICATION START --- */
+.logo-container {
   margin-bottom: var(--spacing-4);
-  opacity: 0.5;
+  opacity: 0.8;
+  transform: scale(1.2); /* Make it a bit larger */
 }
+/* --- MODIFICATION END --- */
 
 h2 {
   font-size: 2rem;

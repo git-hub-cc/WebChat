@@ -66,14 +66,19 @@ body.theme-MCP-浅色 .chat-list-item.active {
     background: linear-gradient(90deg, var(--color-background-active), transparent);
     border-left: 3px solid var(--color-brand-primary);
 }
-body.theme-MCP-浅色 .details-panel.character-active h4 {
+body.theme-MCP-浅色 .details-panel.character-active h4,
+body.theme-MCP-浅色 .details-header h3 {
     color: var(--color-brand-primary);
     border-bottom-color: rgba(var(--mcp-accent-teal-rgb), 0.5);
     letter-spacing: 0.5px;
     text-transform: uppercase;
     font-size: 13px;
 }
-
+body.theme-MCP-浅色 .message-bubble,
+body.theme-MCP-浅色 input,
+body.theme-MCP-浅色 textarea {
+    font-family: var(--font-family-mono), serif;
+}
 /*
 ================================================================
 |         3. Character-specific Variable Application           |
@@ -86,4 +91,13 @@ body.theme-MCP-浅色 .AI_McpAssistant_System {
     --character-message-bg: var(--mcp-msg-bg);
     --character-secondary-bg: var(--mcp-secondary-bg);
     --character-glow-color: rgba(var(--mcp-accent-light-teal-rgb), 0.6);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-MCP-浅色 .message-bubble.character-message {
+    border-left: 3px solid var(--character-accent-color);
 }

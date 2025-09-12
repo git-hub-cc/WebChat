@@ -219,7 +219,32 @@ export const useCallStore = defineStore('call', () => {
     function maximizeCallView() { isFullScreenCallViewVisible.value = true; }
 
     // --- EVENT BUS LISTENERS ---
-    eventBus.on('webrtc:stats-updated', ({ peerId, stats }) => { /* ... (no changes needed) ... */ });
+    eventBus.on('webrtc:stats-updated', ({ peerId, stats }) => {
+        if (!callQuality.value[peerId]) callQuality.value[peerId] = {};
+        let audioQuality = 'unknown';
+        let videoQuality = 'unknown';
+
+        if (stats.packetLoss < 0.02 && stats.rtt < 150 && stats.jitter < 30) {
+            audioQuality = 'good';
+        } else if (stats.packetLoss < 0.05 && stats.rtt < 400 && stats.jitter < 60) {
+            audioQuality = 'medium';
+        } else {
+            audioQuality = 'poor';
+        }
+
+        if (!isScreenSharing.value && isVideoEnabled.value) {
+            if (stats.packetLoss < 0.03 && stats.rtt < 250) {
+                videoQuality = 'good';
+            } else if (stats.packetLoss < 0.07 && stats.rtt < 500) {
+                videoQuality = 'medium';
+            } else {
+                videoQuality = 'poor';
+            }
+        }
+
+        callQuality.value[peerId].audio = audioQuality;
+        callQuality.value[peerId].video = videoQuality;
+    });
 
     eventBus.on('webrtc:message', ({ peerId, message }) => {
         const userStore = useUserStore();

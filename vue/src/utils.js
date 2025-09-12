@@ -25,6 +25,24 @@ export const log = (message, level = 'DEBUG') => {
 };
 
 /**
+ * --- MODIFICATION START: Added debounce utility function ---
+ * 创建一个防抖函数，该函数会从上一次被调用后，延迟 `delay` 毫秒后调用 `func` 方法。
+ * @param {Function} func - 要防抖的函数。
+ * @param {number} [delay=300] - 延迟的毫秒数。
+ * @returns {Function} - 返回新的防抖函数。
+ */
+export const debounce = (func, delay = 300) => {
+    let timeoutId;
+    return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+};
+/**
+ * --- MODIFICATION END ---
+ */
+
+/**
  * 生成一个指定长度的随机字符串 ID。
  * @param {number} [length=8] - ID 的长度。
  * @returns {string} - 生成的随机 ID。

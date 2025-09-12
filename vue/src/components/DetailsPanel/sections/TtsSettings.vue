@@ -71,9 +71,9 @@ const configFields = [
 ];
 
 const localSettings = reactive({});
-// --- START OF FIX: Renamed to avoid confusion with service-level cache ---
-const componentCache = ref({}); // { [version]: { models: { [modelName]: { [lang]: [emotions] } } } }
-// --- END OF FIX ---
+// --- MODIFICATION START: Remove redundant component-level cache ---
+// const componentCache = ref({}); // Removed
+// --- MODIFICATION END ---
 const dynamicDataStatus = reactive({ models: 'idle' });
 const modelSearch = ref('');
 const showModelOptions = ref(false);
@@ -105,22 +105,22 @@ watch(() => localSettings.tts_mode, (newMode) => {
 });
 
 const filteredModels = computed(() => {
-  // --- START OF FIX: Referencing componentCache ---
-  const models = componentCache.value[localSettings.version]?.models || {};
-  // --- END OF FIX ---
+  // --- MODIFICATION START: Read directly from apiService ---
+  const models = apiService.getTtsModelData(localSettings.version) || {};
+  // --- MODIFICATION END ---
   const modelNames = Object.keys(models);
   if (!modelSearch.value) return modelNames;
   return modelNames.filter(m => m.toLowerCase().includes(modelSearch.value.toLowerCase()));
 });
 
 async function fetchModels(version) {
-  if (!version || componentCache.value[version]) return; // Use component cache
+  // --- MODIFICATION START: Rely on apiService's internal caching ---
+  if (!version) return;
+  // --- MODIFICATION END ---
   dynamicDataStatus.models = 'loading';
   try {
-    // --- START OF FIX: Use the correct method from apiService ---
-    await apiService.getTtsModels(version); // This fetches and caches in the service
-    componentCache.value[version] = { models: apiService.getTtsModelData(version) }; // Populate component cache from service
-    // --- END OF FIX ---
+    // This fetches and caches data within the apiService
+    await apiService.getTtsModels(version);
     dynamicDataStatus.models = 'loaded';
   } catch (error) {
     log(`Failed to fetch TTS models for version ${version}: ${error}`, 'ERROR');
@@ -137,10 +137,11 @@ function selectModel(model) {
 }
 
 function isDynamicSelectDisabled(key) {
-  // --- START OF FIX: Referencing componentCache ---
-  if (key === 'prompt_text_lang') return !localSettings.model_name || !componentCache.value[localSettings.version]?.models[localSettings.model_name];
-  if (key === 'emotion') return !localSettings.prompt_text_lang || !componentCache.value[localSettings.version]?.models[localSettings.model_name]?.[localSettings.prompt_text_lang];
-  // --- END OF FIX ---
+  // --- MODIFICATION START: Read directly from apiService ---
+  const modelData = apiService.getTtsModelData(localSettings.version);
+  if (key === 'prompt_text_lang') return !localSettings.model_name || !modelData?.[localSettings.model_name];
+  if (key === 'emotion') return !localSettings.prompt_text_lang || !modelData?.[localSettings.model_name]?.[localSettings.prompt_text_lang];
+  // --- MODIFICATION END ---
   return true;
 }
 
@@ -151,9 +152,10 @@ function getDynamicSelectPlaceholder(key) {
 }
 
 function getDynamicOptions(key) {
-  // --- START OF FIX: Referencing componentCache ---
-  const modelData = componentCache.value[localSettings.version]?.models[localSettings.model_name];
-  // --- END OF FIX ---
+  // --- MODIFICATION START: Read directly from apiService ---
+  const modelDataForVersion = apiService.getTtsModelData(localSettings.version);
+  const modelData = modelDataForVersion ? modelDataForVersion[localSettings.model_name] : null;
+  // --- MODIFICATION END ---
   if (!modelData) return [];
   if (key === 'prompt_text_lang') return Object.keys(modelData);
   if (key === 'emotion') return modelData[localSettings.prompt_text_lang] || [];

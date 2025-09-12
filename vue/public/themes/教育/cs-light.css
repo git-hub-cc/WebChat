@@ -90,8 +90,9 @@ body.theme-计算机科学-浅色 {
 ================================================================
 */
 body.theme-计算机科学-浅色 .message-bubble,
-body.theme-计算机科学-浅色 .message-input textarea {
-    font-family: var(--font-family-mono);
+body.theme-计算机科学-浅色 input,
+body.theme-计算机科学-浅色 textarea {
+    font-family: var(--font-family-mono), serif;
 }
 
 body.theme-计算机科学-浅色 .chat-list-item.active {
@@ -99,7 +100,7 @@ body.theme-计算机科学-浅色 .chat-list-item.active {
     background-color: var(--color-background-active);
 }
 
-body.theme-计算机科学-浅色 .message.system {
+body.theme-计算机科学-浅色 .system-message {
     border: 1px dashed var(--color-border);
 }
 
@@ -151,4 +152,25 @@ body.theme-计算机科学-浅色 .AI_Phantom_CyberSecurity {
     --character-message-bg: var(--phantom-msg-bg);
     --character-secondary-bg: var(--phantom-secondary-bg);
     --character-glow-color: rgba(46, 204, 113, 0.6);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-计算机科学-浅色 .chat-list-item.is-special.active {
+    background: var(--character-secondary-bg);
+}
+
+body.theme-计算机科学-浅色 .chat-list-item.is-special.active .name {
+    color: var(--character-primary-color) !important;
+}
+
+body.theme-计算机科学-浅色 .message-bubble.character-message {
+    border-left: 3px solid var(--character-accent-color);
+}
+
+body.theme-计算机科学-浅色 .sender-name {
+    font-family: var(--font-family-mono);
 }

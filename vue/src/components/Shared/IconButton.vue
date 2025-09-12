@@ -22,17 +22,24 @@ defineProps({
   justify-content: center;
   font-size: 1.5rem;
   color: var(--color-text-secondary);
-  transition: background-color var(--transition-duration-fast) ease, color var(--transition-duration-fast) ease;
+  /* --- MODIFICATION START --- */
+  transition: background-color var(--transition-duration-fast) ease,
+  color var(--transition-duration-fast) ease,
+  transform var(--transition-duration-fast) ease;
+  /* --- MODIFICATION END --- */
   flex-shrink: 0;
 }
 .icon-button .icon {
   line-height: 1; /* Aligns emoji better */
 }
 
+/* --- MODIFICATION START --- */
 .icon-button:hover:not(:disabled) {
   background-color: var(--color-background-hover);
   color: var(--color-text-primary);
+  transform: scale(1.1);
 }
+/* --- MODIFICATION END --- */
 .icon-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

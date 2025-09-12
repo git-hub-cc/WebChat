@@ -27,11 +27,26 @@
         <hr>
         <div class="actions-group">
           <h3>操作</h3>
-          <!-- START OF MODIFICATION -->
-          <button class="btn-danger" @click="clearContacts" :disabled="nonSpecialContactsCount === 0">清空联系人 ({{ nonSpecialContactsCount }})</button>
-          <button class="btn-danger" @click="clearChats" :disabled="totalChatsCount === 0">清空所有聊天 ({{ totalChatsCount }})</button>
-          <button class="btn-danger" @click="clearCache">初始化应用</button>
-          <!-- END OF MODIFICATION -->
+          <!-- --- MODIFICATION START: Bind disabled state to uiStore and change text on loading --- -->
+          <button
+              class="btn-danger"
+              @click="clearContacts"
+              :disabled="nonSpecialContactsCount === 0 || uiStore.isPerformingDangerousAction">
+            {{ uiStore.isPerformingDangerousAction ? '处理中...' : `清空联系人 (${nonSpecialContactsCount})` }}
+          </button>
+          <button
+              class="btn-danger"
+              @click="clearChats"
+              :disabled="totalChatsCount === 0 || uiStore.isPerformingDangerousAction">
+            {{ uiStore.isPerformingDangerousAction ? '处理中...' : `清空所有聊天 (${totalChatsCount})` }}
+          </button>
+          <button
+              class="btn-danger"
+              @click="clearCache"
+              :disabled="uiStore.isPerformingDangerousAction">
+            {{ uiStore.isPerformingDangerousAction ? '处理中...' : '初始化应用' }}
+          </button>
+          <!-- --- MODIFICATION END --- -->
         </div>
       </div>
 
@@ -158,7 +173,6 @@ const currentProviderModels = computed(() => LLMProviders[apiSettingsForm.llmPro
 const wsStatusText = computed(() => webrtcService.isWebSocketConnected.value ? '已连接' : '已断开');
 const wsStatusClass = computed(() => webrtcService.isWebSocketConnected.value ? 'status-online' : 'status-offline');
 
-// --- START OF MODIFICATION ---
 const nonSpecialContactsCount = computed(() => {
   const specialContactIds = new Set(settingsStore.currentSpecialContacts.map(c => c.id));
   return Object.keys(userStore.contacts).filter(id => !specialContactIds.has(id)).length;
@@ -181,13 +195,22 @@ const clearCache = () => {
     message: "确定要初始化应用吗？所有数据都将被删除，页面将刷新。",
     confirmText: '确定初始化',
     onConfirm: async () => {
-      await dbService.clearAllData();
-      localStorage.clear();
-      window.location.reload();
+      // --- MODIFICATION START: Add loading state for dangerous action ---
+      uiStore.isPerformingDangerousAction = true;
+      try {
+        await dbService.clearAllData();
+        localStorage.clear();
+        window.location.reload();
+      } catch (error) {
+        // In case of error, reset the loading state to allow user interaction
+        uiStore.isPerformingDangerousAction = false;
+        eventBus.emit('showNotification', { message: `初始化失败: ${error.message}`, type: 'error' });
+      }
+      // No finally block needed as the page will reload on success
+      // --- MODIFICATION END ---
     }
   });
 };
-// --- END OF MODIFICATION ---
 
 const onThemeChange = (event) => settingsStore.applyTheme(event.target.value, event);
 const onColorSchemeChange = (event) => settingsStore.setColorScheme(event.target.value, event);
@@ -239,7 +262,6 @@ hr { border: none; border-top: 1px solid var(--color-border); margin: var(--spac
 .btn-danger-outline:disabled { color: var(--color-text-tertiary); border-color: var(--color-border); }
 input[type="text"], input[type="password"], input[type="number"], select, textarea { width: 100%; flex-grow: 1; }
 p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: 0; line-height: 1.4; }
-/* --- ADD THIS STYLE FOR DISABLED BUTTONS --- */
 .btn-danger:disabled {
   background-color: var(--color-background-hover);
   color: var(--color-text-tertiary);

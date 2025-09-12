@@ -1,25 +1,25 @@
 <template>
-  <div class="message-wrapper" :class="wrapperClasses" @contextmenu.prevent="showContextMenu" @dblclick="showContextMenu">
+  <!-- --- MODIFICATION START --- -->
+  <div
+      class="message-wrapper"
+      :class="{ ...wrapperClasses, 'consecutive': isConsecutive }"
+      @contextmenu.prevent="showContextMenu"
+      @dblclick="showContextMenu"
+  >
+    <!-- --- MODIFICATION END --- -->
 
-    <!-- ✅ START: REFACTORED SYSTEM MESSAGE BLOCK -->
-    <!-- 将所有系统/撤回/工具调用/通话记录消息都用这个统一的、带背景的容器包裹 -->
     <div v-if="message.type === 'system' || message.isRetracted" class="system-message">
-      <!-- Call Log -->
       <div v-if="message.subType === 'call-log'" class="call-log-content">
         <span class="call-icon">{{ callIcon }}</span>
         <span>{{ message.content }}</span>
       </div>
-      <!-- Tool Call -->
       <div v-else-if="message.toolCallInfo" class="tool-call-indicator">
         <Spinner size="x-small" />
         <span>正在使用工具: {{ message.toolCallInfo.name }}...</span>
       </div>
-      <!-- Generic/Retracted Text -->
       <span v-else>{{ message.content }}</span>
     </div>
-    <!-- ✅ END: REFACTORED SYSTEM MESSAGE BLOCK -->
 
-    <!-- Regular Message Bubble -->
     <div v-else class="message-bubble" :class="{ 'character-message': isCharacterMessage, [message.sender]: isCharacterMessage }">
       <div v-if="!isMyMessage && isGroupChat" class="sender-name">
         {{ senderName }}
@@ -29,17 +29,15 @@
 
         <div v-else-if="message.type === 'audio'" class="audio-content">
           <button class="play-button" @click="toggleAudioPlay">{{ isPlaying ? '❚❚' : '▶' }}</button>
-          <div class="waveform-placeholder"></div> <!-- Placeholder for future waveform UI -->
+          <div class="waveform-placeholder"></div>
           <span class="duration-label">{{ formatDuration(message.duration) }}</span>
         </div>
 
         <div v-else-if="isMedia" class="media-content" @click="handleMediaClick">
-          <!-- Sticker -->
           <div v-if="message.type === 'sticker'" class="sticker-wrapper">
             <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image">
             <div v-else class="thumbnail-loading"><Spinner size="small" /></div>
           </div>
-          <!-- Image/Video -->
           <div v-else-if="message.type === 'image' || message.fileType?.startsWith('video/')" class="media-preview-container">
             <div v-if="displayUrl" class="video-preview">
               <video v-if="message.fileType?.startsWith('video/')" :src="displayUrl" preload="metadata"></video>
@@ -48,7 +46,6 @@
             </div>
             <div v-else class="thumbnail-loading"><Spinner size="small" /></div>
           </div>
-          <!-- Generic File -->
           <div v-else class="file-info-wrapper">
             <div class="file-icon-container">{{ getFileExtension(message.fileName) }}</div>
             <div class="file-info-text">
@@ -87,7 +84,13 @@ import Spinner from '@/components/Shared/Spinner.vue';
 import { eventBus } from '@/services/eventBus';
 import { mediaCacheService } from '@/services/mediaCacheService';
 
-const props = defineProps({ message: { type: Object, required: true } });
+// --- MODIFICATION START ---
+const props = defineProps({
+  message: { type: Object, required: true },
+  isConsecutive: { type: Boolean, default: false }
+});
+// --- MODIFICATION END ---
+
 const userStore = useUserStore();
 const uiStore = useUiStore();
 const chatStore = useChatStore();
@@ -151,11 +154,18 @@ onUnmounted(() => { eventBus.off('file:ready', handleFileReady); if (audioPlayer
   margin-bottom: var(--spacing-2);
   padding: 0 var(--spacing-1);
 }
+/* --- MODIFICATION START --- */
+.message-wrapper.consecutive {
+  margin-top: calc(-1 * var(--spacing-2) + 4px); /* Reduce top margin for consecutive messages */
+}
+.message-wrapper.consecutive .sender-name {
+  display: none; /* Hide sender name for consecutive messages in groups */
+}
+/* --- MODIFICATION END --- */
 .message-wrapper.sent { justify-content: flex-end; }
 .message-wrapper.received { justify-content: flex-start; }
 .message-wrapper.system-wrapper { justify-content: center; }
 
-/* ✅ REVISED SYSTEM MESSAGE STYLES */
 .system-message {
   display: inline-block;
   max-width: 80%;
@@ -208,6 +218,7 @@ onUnmounted(() => { eventBus.off('file:ready', handleFileReady); if (audioPlayer
 .message-bubble.character-message {
   background: var(--character-message-bg, var(--color-message-received-bg));
   border: 1px solid var(--character-accent-color, transparent);
+  box-shadow: 0 0 8px var(--character-glow-color, transparent); /* Added for theme enhancement */
 }
 .message-bubble.character-message .sender-name {
   color: var(--character-primary-color, var(--color-brand-secondary));

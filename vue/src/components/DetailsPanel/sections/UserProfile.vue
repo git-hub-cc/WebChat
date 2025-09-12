@@ -1,12 +1,15 @@
 <template>
-  <div v-if="contact" class="user-profile-section" :class="{ 'character-active': contact.isSpecial, [contact.id]: contact.isSpecial }">
+  <!-- Use SkeletonLoader when contact is loading -->
+  <div v-if="!contact" class="loading-state">
+    <SkeletonLoader type="profile" />
+  </div>
+  <div v-else class="user-profile-section" :class="{ 'character-active': contact.isSpecial, [contact.id]: contact.isSpecial }">
+
     <!-- Basic Info -->
     <div class="profile-header">
-      <!-- MODIFICATION: isOnline prop is now passed from the combined status -->
       <Avatar :entity="contact" size="xl" class="profile-avatar" :is-online="combinedStatus.isOnlineDisplay" />
       <h2 class="profile-name">{{ contact.name }}</h2>
       <p class="profile-id">ID: {{ contact.id }}</p>
-      <!-- MODIFICATION: Display the combined status text -->
       <p class="profile-status" :class="combinedStatus.statusClass">{{ combinedStatus.statusText }}</p>
     </div>
     <hr>
@@ -31,15 +34,12 @@
       <button class="btn-danger" @click="deleteContact">删除联系人</button>
     </div>
 
-    <!-- [NEW] Resource Preview for all contact types -->
+    <!-- Resource Preview for all contact types -->
     <hr>
     <div class="resource-section">
       <ResourcePreview :chat-id="contact.id" />
     </div>
 
-  </div>
-  <div v-else class="loading-state">
-    <Spinner />
   </div>
 </template>
 
@@ -51,8 +51,8 @@ import { useUiStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import Avatar from '@/components/Shared/Avatar.vue';
 import AiSettings from './AiSettings.vue';
-import Spinner from '@/components/Shared/Spinner.vue';
-import ResourcePreview from './ResourcePreview.vue'; // [NEW] Import ResourcePreview
+import ResourcePreview from './ResourcePreview.vue';
+import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
 
 const userStore = useUserStore();
 const chatStore = useChatStore();
@@ -61,7 +61,6 @@ const settingsStore = useSettingsStore();
 
 const contact = computed(() => userStore.contacts[chatStore.currentChatId]);
 
-// MODIFICATION: Get combined status for display
 const combinedStatus = computed(() => contact.value ? userStore.getContactCombinedStatus(contact.value.id) : {});
 
 const isThemeSpecialContact = computed(() => {
@@ -84,19 +83,19 @@ const deleteContact = () => {
 </script>
 
 <style scoped>
-.user-profile-section { text-align: center; padding-bottom: var(--spacing-4); } /* [MODIFIED] Added bottom padding */
+.user-profile-section { text-align: center; padding-bottom: var(--spacing-4); }
 .profile-header { padding: var(--spacing-4) 0; }
 .profile-avatar { margin: 0 auto var(--spacing-4); }
 .profile-name { font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); }
 .character-active .profile-name { color: var(--character-primary-color); }
-.profile-id { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-2); word-break: break-all; } /* [MODIFIED] Adjusted margin */
-.profile-status { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-4); } /* [NEW] Added for status text */
+.profile-id { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-2); word-break: break-all; }
+.profile-status { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-4); }
 .profile-status.online { color: var(--color-status-success); }
 .profile-status.offline { color: var(--color-status-danger); }
 .profile-status.warning { color: var(--color-status-warning); }
 hr { border: none; border-top: 1px solid var(--color-border); margin: 0 var(--spacing-4); }
 
-.about-section, .actions, .resource-section { padding: 0 var(--spacing-4); } /* [MODIFIED] Add .resource-section to padding rule */
+.about-section, .actions, .resource-section { padding: 0 var(--spacing-4); }
 .about-section { text-align: left; margin-top: var(--spacing-4); }
 .about-section h4 { font-weight: var(--font-weight-semibold); margin-bottom: var(--spacing-3); }
 .basic-info-list { list-style: none; margin-bottom: var(--spacing-3); }
@@ -105,12 +104,16 @@ hr { border: none; border-top: 1px solid var(--color-border); margin: 0 var(--sp
 
 .actions { margin-top: var(--spacing-5); }
 .btn-danger { background-color: var(--color-status-danger); color: white; padding: var(--spacing-2) var(--spacing-4); border-radius: var(--border-radius-md); font-weight: var(--font-weight-medium); width: 100%; }
-.loading-state { display: flex; justify-content: center; padding: var(--spacing-6); }
+/* --- MODIFICATION START: Style for top-aligned skeleton --- */
+.loading-state {
+  display: flex;
+  justify-content: flex-start; /* Align skeleton to the top */
+}
+/* --- MODIFICATION END --- */
 
-/* [NEW] Style for the resource section container */
 .resource-section {
   margin-top: var(--spacing-5);
   margin-bottom: var(--spacing-4);
-  text-align: left; /* Reset text align for the contents of ResourcePreview */
+  text-align: left;
 }
 </style>

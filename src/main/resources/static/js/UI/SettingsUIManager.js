@@ -99,7 +99,6 @@ const SettingsUIManager = {
      * 绑定设置模态框内的所有 UI 事件监听器。
      */
     bindEvents: function() {
-// ... [bindEvents implementation remains largely the same, no changes needed here] ...
 // AI 设置输入框失去焦点时保存
         if (this.apiEndpointInput) this.apiEndpointInput.addEventListener('blur', () => this.saveAISetting('apiEndpoint', this.apiEndpointInput.value));
         if (this.apiKeyInput) this.apiKeyInput.addEventListener('blur', () => this.saveAISetting('api_key', this.apiKeyInput.value));
