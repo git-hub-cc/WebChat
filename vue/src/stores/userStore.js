@@ -19,34 +19,49 @@ export const useUserStore = defineStore('user', () => {
     const contacts = ref({});
     const isAiServiceHealthy = ref(false);
     const aiServiceStatusMessage = ref("状态检查中...");
-    const onlineUserIds = ref([]);
+
+    // [修改] `allOnlineUsers` 成为全网在线用户的唯一真实来源
+    // 格式: [{ userId: string, originServer: string, isLocal: boolean }, ...]
+    const allOnlineUsers = ref([]);
+
     const typingContacts = ref({});
 
+    // [新增] 存储当前服务器的URL，用于判断用户是否为本地用户
+    const selfServerUrl = ref('');
+
+
     // --- GETTERS ---
+    // [核心修改] 这是阶段二的关键。状态计算逻辑被简化，并且更加准确。
+    // 它不再关心用户在哪个服务器，只关心两个核心问题：
+    // 1. 用户是否在全网在线列表里？ (isGloballyOnline)
+    // 2. 我和这个用户之间是否已经建立了P2P连接？ (isConnected)
     const getContactCombinedStatus = computed(() => (contactId) => {
         const contact = contacts.value[contactId];
         const isConnected = webrtcService.connections.value[contactId]?.isConnected ?? false;
-        const isLobbyOnline = onlineUserIds.value.includes(contactId);
+        // 关键检查：用户是否在线，取决于他是否存在于从后端获取的全网用户列表中
+        const isGloballyOnline = allOnlineUsers.value.some(u => u.userId === contactId);
 
+        // 优先处理特殊状态
         if (typingContacts.value[contactId]) {
-            return { isOnlineDisplay: true, isConnected: true, isLobbyOnline: true, isAi: false, statusText: '正在输入...', statusClass: 'online' };
+            return { isOnlineDisplay: true, isConnected: true, isGloballyOnline: true, isAi: false, statusText: '正在输入...', statusClass: 'online' };
         }
-
         if (contact?.isAI) {
-            return { isOnlineDisplay: isAiServiceHealthy.value, isConnected: isAiServiceHealthy.value, isLobbyOnline: isAiServiceHealthy.value, isAi: true, statusText: aiServiceStatusMessage.value, statusClass: isAiServiceHealthy.value ? 'online' : 'offline' };
+            return { isOnlineDisplay: isAiServiceHealthy.value, isConnected: isAiServiceHealthy.value, isGloballyOnline: isAiServiceHealthy.value, isAi: true, statusText: aiServiceStatusMessage.value, statusClass: isAiServiceHealthy.value ? 'online' : 'offline' };
         }
         if (contact?.isSpecial) {
-            return { isOnlineDisplay: true, isConnected: true, isLobbyOnline: true, isAi: false, statusText: '特殊联系人', statusClass: 'online' };
+            return { isOnlineDisplay: true, isConnected: true, isGloballyOnline: true, isAi: false, statusText: '特殊联系人', statusClass: 'online' };
         }
 
+        // 核心状态判断逻辑
         if (isConnected) {
-            return { isOnlineDisplay: true, isConnected: true, isLobbyOnline: true, isAi: false, statusText: '在线 (已连接)', statusClass: 'online' };
+            return { isOnlineDisplay: true, isConnected: true, isGloballyOnline: true, isAi: false, statusText: '在线 (已连接)', statusClass: 'online' };
         }
-        if (isLobbyOnline) {
-            return { isOnlineDisplay: true, isConnected: false, isLobbyOnline: true, isAi: false, statusText: '在线 (未连接)', statusClass: 'warning' };
+        if (isGloballyOnline) {
+            return { isOnlineDisplay: true, isConnected: false, isGloballyOnline: true, isAi: false, statusText: '在线 (未连接)', statusClass: 'warning' };
         }
 
-        return { isOnlineDisplay: false, isConnected: false, isLobbyOnline: false, isAi: false, statusText: '离线', statusClass: 'offline' };
+        // 如果以上都不是，则用户离线
+        return { isOnlineDisplay: false, isConnected: false, isGloballyOnline: false, isAi: false, statusText: '离线', statusClass: 'offline' };
     });
 
 
@@ -62,6 +77,17 @@ export const useUserStore = defineStore('user', () => {
             userName.value = `用户 ${userId.value.substring(0, 4)}`;
             await dbService.setItem('user', { id: 'currentUser', userId: userId.value, userName: userName.value });
         }
+
+        try {
+            const endpointUrl = new URL(AppSettings.server.allOnlineUsersApiEndpoint);
+            const pathSegments = endpointUrl.pathname.split('/').filter(Boolean);
+            const basePath = '/' + pathSegments.slice(0, -3).join('/');
+            selfServerUrl.value = endpointUrl.origin + (basePath === '/' ? '' : basePath);
+            log(`自身服务器URL被识别为: ${selfServerUrl.value}`, 'INFO');
+        } catch (e) {
+            log(`无法从 allOnlineUsersApiEndpoint 解析自身服务器URL: ${e}`, 'ERROR');
+        }
+
         const dbContacts = await dbService.getAllItems('contacts');
         const contactsMap = {};
         dbContacts.forEach(c => {
@@ -76,8 +102,7 @@ export const useUserStore = defineStore('user', () => {
         eventBus.on('themeChanged', ensureSpecialContacts);
         eventBus.on('apiSettingsChanged', () => apiService.checkAiServiceHealth().then(updateAiServiceStatus));
         eventBus.on('webrtc:connected', (peerId) => {
-            const chatStore = useChatStore();
-            chatStore.resendFailedMessages(peerId);
+            useChatStore().resendFailedMessages(peerId);
         });
         eventBus.on('webrtc:typing', ({ peerId }) => {
             if (typingContacts.value[peerId]) clearTimeout(typingContacts.value[peerId].timer);
@@ -93,7 +118,6 @@ export const useUserStore = defineStore('user', () => {
         const settingsStore = useSettingsStore();
         const chatStore = useChatStore();
         if (!settingsStore.currentTheme || !settingsStore.currentSpecialContacts) {
-            log('ensureSpecialContacts: Theme or special contact definitions not loaded yet. Skipping sync.', 'WARN');
             return;
         }
         const newThemeDefs = settingsStore.currentSpecialContacts;
@@ -119,11 +143,7 @@ export const useUserStore = defineStore('user', () => {
                 aiConfig: {
                     ...(def.aiConfig || {}),
                     ...(existingContact?.aiConfig || {}),
-                    tts: {
-                        ...DEFAULT_TTS_CONFIG,
-                        ...(def.aiConfig?.tts || {}),
-                        ...(existingContact?.aiConfig?.tts || {})
-                    }
+                    tts: { ...DEFAULT_TTS_CONFIG, ...(def.aiConfig?.tts || {}), ...(existingContact?.aiConfig?.tts || {}) }
                 }
             };
             dbWritePromises.push(dbService.setItem('contacts', newContactsState[def.id]));
@@ -135,7 +155,6 @@ export const useUserStore = defineStore('user', () => {
             }
         }
         if (idsToRemoveFromDb.length > 0) {
-            log(`Pruning ${idsToRemoveFromDb.length} old theme characters from DB: ${idsToRemoveFromDb.join(', ')}`, 'INFO');
             for (const idToRemove of idsToRemoveFromDb) {
                 dbWritePromises.push(dbService.removeItem('contacts', idToRemove));
                 dbWritePromises.push(chatStore.deleteChatHistory(idToRemove));
@@ -143,16 +162,11 @@ export const useUserStore = defineStore('user', () => {
         }
         contacts.value = newContactsState;
         await Promise.all(dbWritePromises);
-        log(`Special contacts synced to theme: ${settingsStore.currentThemeKey}`, 'INFO');
     }
 
     async function addContact(contactData) {
-        if (!contactData || !contactData.id) {
-            eventBus.emit('showNotification', { message: '添加联系人失败：ID无效', type: 'error'});
-            return false;
-        }
-        if (contactData.id === userId.value) {
-            eventBus.emit('showNotification', { message: '你不能添加自己为联系人', type: 'warning'});
+        if (!contactData || !contactData.id || contactData.id === userId.value) {
+            eventBus.emit('showNotification', { message: '无效的联系人ID', type: 'warning'});
             return false;
         }
         const settingsStore = useSettingsStore();
@@ -162,91 +176,102 @@ export const useUserStore = defineStore('user', () => {
         }
         const existingContact = contacts.value[contactData.id];
         const finalName = contactData.name?.trim() || existingContact?.name || `用户 ${contactData.id.substring(0, 4)}`;
-        const defaultAiConfig = { tts: { ...DEFAULT_TTS_CONFIG } };
-        let updated = false;
 
-        // --- MODIFICATION START: Centralize post-add/update logic ---
         const postAction = () => {
-            // If the user is in the online list, attempt to connect immediately
-            if (onlineUserIds.value.includes(contactData.id)) {
-                eventBus.emit('showNotification', { message: `联系人 "${finalName}" 已添加/更新，正在尝试连接...`, type: 'info' });
-                webrtcService.createOffer(contactData.id, { isSilent: false });
-            }
+            // 添加或更新联系人后，立即触发一次主动连接检查
+            webrtcService.proactivelyConnectToOnlineContacts();
         };
-        // --- MODIFICATION END ---
 
         if (existingContact) {
-            if (existingContact.name !== finalName) { existingContact.name = finalName; updated = true; }
-            if (contactData.avatarUrl !== undefined && existingContact.avatarUrl !== contactData.avatarUrl) { existingContact.avatarUrl = contactData.avatarUrl; updated = true; }
-            if (contactData.avatarText !== undefined && existingContact.avatarText !== contactData.avatarText) { existingContact.avatarText = contactData.avatarText; updated = true; }
-            if (contactData.isAI !== undefined && existingContact.isAI !== contactData.isAI) { existingContact.isAI = contactData.isAI; updated = true; }
-            if (contactData.isSpecial !== undefined && existingContact.isSpecial !== contactData.isSpecial) { existingContact.isSpecial = contactData.isSpecial; updated = true; }
-            if (contactData.isImported !== undefined && existingContact.isImported !== contactData.isImported) { existingContact.isImported = contactData.isImported; updated = true; }
-            if (contactData.aboutDetails !== undefined && existingContact.aboutDetails !== contactData.aboutDetails) { existingContact.aboutDetails = contactData.aboutDetails; updated = true; }
-            if (contactData.chapters !== undefined && existingContact.chapters !== contactData.chapters) { existingContact.chapters = contactData.chapters; updated = true; }
-            if (contactData.selectedChapterId !== undefined && existingContact.selectedChapterId !== contactData.selectedChapterId) { existingContact.selectedChapterId = contactData.selectedChapterId; updated = true; }
-            if (contactData.aiConfig) {
-                existingContact.aiConfig = existingContact.aiConfig || {};
-                Object.assign(existingContact.aiConfig, contactData.aiConfig);
-                existingContact.aiConfig.tts = { ...DEFAULT_TTS_CONFIG, ...(existingContact.aiConfig.tts || {}), ...(contactData.aiConfig.tts || {}) };
-                updated = true;
-            }
-            if (updated) {
+            if (existingContact.name !== finalName) {
+                existingContact.name = finalName;
                 await dbService.setItem('contacts', existingContact);
-                log(`Updated contact: ${finalName} (${contactData.id})`, 'INFO');
-                postAction(); // Trigger connection attempt on update too
+                postAction();
             } else {
                 eventBus.emit('showNotification', { message: `${finalName} 已存在，且信息无更改。`, type: 'info'});
             }
         } else {
             const newContact = {
                 id: contactData.id, name: finalName, lastMessage: '', lastTime: new Date().toISOString(),
-                unread: 0, isOnline: false, type: 'contact',
-                avatarText: contactData.avatarText || finalName.charAt(0).toUpperCase(),
-                avatarUrl: contactData.avatarUrl || null, isAI: contactData.isAI || false,
-                isSpecial: contactData.isSpecial || false, isImported: contactData.isImported || false,
-                aiConfig: contactData.aiConfig ? { ...contactData.aiConfig, tts: { ...DEFAULT_TTS_CONFIG, ...(contactData.aiConfig.tts || {}) } } : defaultAiConfig,
-                aboutDetails: contactData.aboutDetails || null, chapters: contactData.chapters || [],
-                selectedChapterId: contactData.selectedChapterId || null
+                unread: 0, isOnline: false, type: 'contact', avatarText: finalName.charAt(0).toUpperCase()
             };
             contacts.value[contactData.id] = newContact;
             await dbService.setItem('contacts', newContact);
-            log(`Added new contact: ${finalName} (${contactData.id})`, 'INFO');
-            postAction(); // Trigger connection attempt on new add
+            postAction();
         }
         return true;
     }
 
-    function updateContactStatus(contactId, isConnected) { log(`Connection status change for ${contactId}: ${isConnected}`, 'DEBUG'); }
-    function updateAiServiceStatus(isHealthy) { isAiServiceHealthy.value = isHealthy; aiServiceStatusMessage.value = isHealthy ? "AI 服务可用" : "AI 服务不可用"; log(`AI service status updated to: ${isHealthy}.`, 'INFO'); }
+    function updateAiServiceStatus(isHealthy) {
+        isAiServiceHealthy.value = isHealthy;
+        aiServiceStatusMessage.value = isHealthy ? "AI 服务可用" : "AI 服务不可用";
+    }
 
-    async function fetchOnlineUsers() {
+    async function fetchAllOnlineUsers() {
         try {
-            const response = await fetch(AppSettings.server.lobbyApiEndpoint);
-            if (!response.ok) throw new Error(`Server responded with ${response.status}`);
-            const userIds = await response.json();
-            const newOnlineIds = Array.isArray(userIds) ? userIds.filter(id => id !== userId.value) : [];
+            const response = await fetch(AppSettings.server.allOnlineUsersApiEndpoint);
+            if (!response.ok) throw new Error(`服务器响应 ${response.status}`);
+            const users = await response.json();
 
-            // --- MODIFICATION START: Trigger proactive connection if online list changes ---
-            if (JSON.stringify(onlineUserIds.value) !== JSON.stringify(newOnlineIds)) {
-                onlineUserIds.value = newOnlineIds;
-                log(`在线用户列表已更新: ${onlineUserIds.value.length} users online.`, 'INFO');
-                // Call the proactive connection logic in webrtcService
+            const newAllOnlineUsers = (Array.isArray(users) ? users : [])
+                .filter(u => u.userId !== userId.value)
+                .map(u => ({ ...u, isLocal: u.originServer === selfServerUrl.value }));
+
+            // 只有在列表发生变化时才更新，以防止不必要的重渲染
+            if (JSON.stringify(allOnlineUsers.value.map(u => u.userId).sort()) !== JSON.stringify(newAllOnlineUsers.map(u => u.userId).sort())) {
+                allOnlineUsers.value = newAllOnlineUsers;
+                log(`全网用户列表已更新: ${allOnlineUsers.value.length} users online.`, 'INFO');
+                // 触发一次主动连接检查
                 webrtcService.proactivelyConnectToOnlineContacts();
             }
-            // --- MODIFICATION END ---
 
             return true;
         } catch (error) {
-            log(`获取在线用户列表失败: ${error}`, 'ERROR');
+            log(`获取全网用户列表失败: ${error}`, 'ERROR');
+            allOnlineUsers.value = [];
             return false;
         }
     }
 
-    async function removeContact(contactId) { if (!contacts.value[contactId]) return false; const settingsStore = useSettingsStore(); if (settingsStore.currentSpecialContacts.some(c => c.id === contactId) && !contacts.value[contactId].isImported) { eventBus.emit('showNotification', { message: '无法删除当前主题的内置角色。', type: 'warning' }); return false; } await useGroupStore().removeMemberFromAllGroups(contactId); webrtcService.closeConnection(contactId); delete contacts.value[contactId]; await dbService.removeItem('contacts', contactId); const chatStore = useChatStore(); await chatStore.deleteChatHistory(contactId); if (chatStore.currentChatId === contactId) chatStore.openChat(null); eventBus.emit('showNotification', { message: '联系人已删除', type: 'success' }); return true; }
-    async function clearUnread(contactId) { if (contacts.value[contactId] && contacts.value[contactId].unread > 0) { contacts.value[contactId].unread = 0; await dbService.setItem('contacts', contacts.value[contactId]); } }
-    async function incrementUnread(contactId) { if (contacts.value[contactId]) { contacts.value[contactId].unread = (contacts.value[contactId].unread || 0) + 1; await dbService.setItem('contacts', contacts.value[contactId]); } }
-    async function updateContactLastMessage(contactId, messageText) { if (contacts.value[contactId]) { contacts.value[contactId].lastMessage = messageText; contacts.value[contactId].lastTime = new Date().toISOString(); await dbService.setItem('contacts', contacts.value[contactId]); } }
+    async function removeContact(contactId) {
+        if (!contacts.value[contactId]) return false;
+        const settingsStore = useSettingsStore();
+        if (settingsStore.currentSpecialContacts.some(c => c.id === contactId) && !contacts.value[contactId].isImported) {
+            eventBus.emit('showNotification', { message: '无法删除当前主题的内置角色。', type: 'warning' });
+            return false;
+        }
+        await useGroupStore().removeMemberFromAllGroups(contactId);
+        webrtcService.closeConnection(contactId);
+        delete contacts.value[contactId];
+        await dbService.removeItem('contacts', contactId);
+        const chatStore = useChatStore();
+        await chatStore.deleteChatHistory(contactId);
+        if (chatStore.currentChatId === contactId) chatStore.openChat(null);
+        eventBus.emit('showNotification', { message: '联系人已删除', type: 'success' });
+        return true;
+    }
+
+    async function clearUnread(contactId) {
+        if (contacts.value[contactId] && contacts.value[contactId].unread > 0) {
+            contacts.value[contactId].unread = 0;
+            await dbService.setItem('contacts', contacts.value[contactId]);
+        }
+    }
+
+    async function incrementUnread(contactId) {
+        if (contacts.value[contactId]) {
+            contacts.value[contactId].unread = (contacts.value[contactId].unread || 0) + 1;
+            await dbService.setItem('contacts', contacts.value[contactId]);
+        }
+    }
+
+    async function updateContactLastMessage(contactId, messageText) {
+        if (contacts.value[contactId]) {
+            contacts.value[contactId].lastMessage = messageText;
+            contacts.value[contactId].lastTime = new Date().toISOString();
+            await dbService.setItem('contacts', contacts.value[contactId]);
+        }
+    }
 
     async function removeAllContacts() {
         const uiStore = useUiStore();
@@ -268,12 +293,35 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    async function setSelectedChapterForAI(contactId, chapterId) { const contact = contacts.value[contactId]; if (contact?.isAI) { contact.selectedChapterId = chapterId; await dbService.setItem('contacts', contact); log(`AI ${contactId} chapter set to: ${chapterId || 'Default'}`, 'INFO'); } }
-    async function saveTtsSettings(contactId, ttsConfigFromUi) { const contact = contacts.value[contactId]; if (contact?.isAI) { if (!contact.aiConfig) contact.aiConfig = {}; contact.aiConfig.tts = { ...DEFAULT_TTS_CONFIG, ...(contact.aiConfig.tts || {}), ...ttsConfigFromUi, }; await dbService.setItem('contacts', contact); log(`TTS settings saved for contact ${contactId}`, 'INFO'); eventBus.emit('showNotification', { message: 'TTS 设置已保存', type: 'success' }); } }
+    async function setSelectedChapterForAI(contactId, chapterId) {
+        const contact = contacts.value[contactId];
+        if (contact?.isAI) {
+            contact.selectedChapterId = chapterId;
+            await dbService.setItem('contacts', contact);
+        }
+    }
+
+    async function saveTtsSettings(contactId, ttsConfigFromUi) {
+        const contact = contacts.value[contactId];
+        if (contact?.isAI) {
+            if (!contact.aiConfig) contact.aiConfig = {};
+            contact.aiConfig.tts = { ...DEFAULT_TTS_CONFIG, ...(contact.aiConfig.tts || {}), ...ttsConfigFromUi, };
+            await dbService.setItem('contacts', contact);
+            eventBus.emit('showNotification', { message: 'TTS 设置已保存', type: 'success' });
+        }
+    }
+
+    function updateContactStatus(contactId, isConnected) {
+        log(`连接状态变更 for ${contactId}: ${isConnected}`, 'DEBUG');
+    }
 
     return {
-        userId, userName, contacts, isAiServiceHealthy, aiServiceStatusMessage, onlineUserIds, getContactCombinedStatus, typingContacts,
-        init, fetchOnlineUsers, addContact, removeContact, updateAiServiceStatus, updateContactStatus, clearUnread,
+        userId, userName, contacts, isAiServiceHealthy, aiServiceStatusMessage,
+        allOnlineUsers,
+        getContactCombinedStatus, typingContacts,
+        init,
+        fetchAllOnlineUsers,
+        addContact, removeContact, updateAiServiceStatus, updateContactStatus, clearUnread,
         incrementUnread, updateContactLastMessage, removeAllContacts, setSelectedChapterForAI, saveTtsSettings,
         ensureSpecialContacts
     };

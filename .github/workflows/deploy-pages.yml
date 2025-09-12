@@ -1,5 +1,5 @@
 # 工作流名称
-name: Deploy Static Website to GitHub Pages
+name: Deploy Vue App to GitHub Pages
 
 # 触发条件：当推送到 main 分支时触发
 on:
@@ -23,7 +23,21 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v4
 
-      # 第二步：部署到 GitHub Pages
+      # 第二步：设置 Node.js 环境
+      # Vue 项目需要 Node.js 环境来执行 npm 命令
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 你可以根据项目需要指定 Node.js 版本
+
+      # 第三步：安装依赖并构建 Vue 项目
+      - name: Install Dependencies and Build Vue App 🛠️
+        run: |
+          npm install
+          npm run build
+        working-directory: ./vue # 指定在 vue 目录下执行命令
+
+      # 第四步：部署到 GitHub Pages
       # 这个 Action 会把指定目录的内容推送到 gh-pages 分支
       - name: Deploy 🚀
         uses: peaceiris/actions-gh-pages@v3
@@ -33,8 +47,8 @@ jobs:
 
           # 【最关键的一步】
           # 指定要发布到网站根目录的文件夹
-          # 这里我们指向你的 static 文件夹
-          publish_dir: ./src/main/resources/static
+          # 这里我们指向 Vue 构建后生成的 dist 文件夹
+          publish_dir: ./vue/dist
 
           # （可选）如果你想在部署时保留 .github 这样的文件夹，可以设置为 true
           # keep_files: true

@@ -1,6 +1,9 @@
 # 服务器配置
 server:
   port: 8080
+  # [新增] 服务器GUID持久化文件路径
+  guid:
+    path: data/server.guid
 
 # Spring 应用配置
 spring:
@@ -12,7 +15,7 @@ spring:
 logging:
   level:
     club.ppmc: DEBUG # 应用主包的日志级别，设为DEBUG以获取详细日志
-    org.springframework.web.socket: DEBUG # WebSocket交互的详细日志，用于调试
+    org.springframework.web.socket: INFO # WebSocket交互日志级别设为INFO，避免刷屏
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
 
@@ -35,12 +38,12 @@ api:
 # CORS 和 WebSocket 允许的源列表
 allowed:
   origins:
-    - "https://175.178.216.24"
     - "https://ppmc.club"
     - "https://www.ppmc.club"
     - "https://git-hub-cc.github.io"
     - "http://localhost:8080"
-    - "http://localhost:3000"  # 示例：为本地前端开发环境
+    - "http://localhost:3000"
+    - "http://localhost:5173"
 
 # OpenAI兼容的API配置
 openai:
@@ -66,3 +69,18 @@ app:
     
     角色设定：
     %s
+
+# ===============================================
+# [修改] 联邦网络配置
+# ===============================================
+federation:
+  # 必填：当前服务器的公开访问地址。此地址仅用于客户端连接参考，不再作为唯一标识。
+  # 真正的唯一标识是服务器GUID。
+  self-url: "http://127.0.0.1:8080"
+
+  # 伙伴服务器列表。列出所有你想与之互联的其他后端实例的根URL。
+  # 例如，如果你的朋友部署了一个实例在 https://friends.chat.com
+  # 注意：不要在此列表中包含上面的 self-url。
+  peers:
+    - "https://ppmc.club/webchat/"
+  # - "http://192.168.1.50:8080"

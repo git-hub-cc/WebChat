@@ -23,7 +23,7 @@ function _sendWsMessage(messageObject) {
         websocket.send(JSON.stringify(messageObject));
         return true;
     }
-    log('WebSocket not connected. Message not sent.', 'WARN');
+    log('WebSocket 未连接。消息未发送。', 'WARN');
     return false;
 }
 
@@ -31,7 +31,7 @@ function _startHeartbeat() {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     heartbeatInterval = setInterval(() => {
         if (_sendWsMessage({ type: 'PING' })) {
-            log('WebSocket: Sent PING heartbeat', 'DEBUG');
+            log('WebSocket: 已发送 PING 心跳', 'DEBUG');
         }
     }, AppSettings.network.websocketHeartbeatInterval);
 }
@@ -43,20 +43,23 @@ function _stopHeartbeat() {
     }
 }
 
-// --- MODIFICATION START: Rename to make it clear this is a public-facing method ---
+// [核心修改] 这个函数现在会尝试连接所有在线的、已经是联系人的用户，无论他们在哪台服务器
 async function proactivelyConnectToOnlineContacts() {
-// --- MODIFICATION END ---
     const userStore = useUserStore();
-    // Fetch the latest online users first
-    await userStore.fetchOnlineUsers();
+    // 确保我们有最新的全网用户列表
+    await userStore.fetchAllOnlineUsers();
 
-    userStore.onlineUserIds.forEach(onlineId => {
-        const contact = userStore.contacts[onlineId];
-        const isConnected = connections.value[onlineId]?.isConnected ?? false;
-        // Connect if they are a contact, not an AI, and not already connected
+    // 遍历全网在线用户
+    userStore.allOnlineUsers.forEach(onlineUser => {
+        const contactId = onlineUser.userId;
+        const contact = userStore.contacts[contactId];
+        const isConnected = connections.value[contactId]?.isConnected ?? false;
+
+        // 如果该在线用户已经是我的联系人，并且不是AI，且尚未连接，则发起连接
         if (contact && !contact.isAI && !isConnected) {
-            log(`Proactive Connect: Found online contact ${onlineId}. Attempting connection.`, 'INFO');
-            webrtcService.createOffer(onlineId, { isSilent: true });
+            log(`主动连接: 发现全网在线联系人 ${contactId}。尝试连接。`, 'INFO');
+            // 前端只管发起 offer，后端会自动处理路由
+            webrtcService.createOffer(contactId, { isSilent: true });
         }
     });
 }
@@ -65,31 +68,29 @@ function _connectWebSocket() {
     return new Promise((resolve, reject) => {
         if (websocket && websocket.readyState === WebSocket.OPEN) return resolve();
         if (window.location.protocol === 'file:') {
-            log('Running from file:// protocol, WebSocket connection skipped.', 'WARN');
-            return reject(new Error('Cannot connect from file://'));
+            log('正在从 file:// 协议运行，WebSocket 连接已跳过。', 'WARN');
+            return reject(new Error('无法从 file:// 连接'));
         }
         websocket = new WebSocket(AppSettings.server.signalingServerUrl);
         websocket.onopen = async () => {
-            log('WebSocket: Connection established.', 'INFO');
+            log('WebSocket: 连接已建立。', 'INFO');
             isWebSocketConnected.value = true;
             reconnectAttempts = 0;
             _sendWsMessage({ type: 'REGISTER', userId: currentUserId });
             _startHeartbeat();
             eventBus.emit('websocket:status', true);
-            // --- MODIFICATION START: Use the renamed public method ---
             await webrtcService.proactivelyConnectToOnlineContacts();
-            // --- MODIFICATION END ---
             resolve();
         };
         websocket.onmessage = (event) => {
             const message = JSON.parse(event.data);
             if (message.type === 'PONG') return;
-            log(`WebSocket: Received message type ${message.type} from ${message.fromUserId || 'server'}`, 'DEBUG');
+            log(`WebSocket: 收到消息，类型 ${message.type} 来自 ${message.fromUserId || '服务器'}`, 'DEBUG');
 
             if (message.type === 'SIGNAL') {
                 eventBus.emit('websocket:signal', message);
             } else if (message.type === 'APP_MESSAGE') {
-                log(`Received APP_MESSAGE from ${message.fromUserId}, payload type: ${message.payload.type}`, 'DEBUG');
+                log(`收到来自 ${message.fromUserId} 的 APP_MESSAGE，负载类型: ${message.payload.type}`, 'DEBUG');
                 eventBus.emit('webrtc:message', { peerId: message.fromUserId, message: message.payload });
             } else {
                 eventBus.emit('websocket:message', message);
@@ -102,15 +103,15 @@ function _connectWebSocket() {
             if (reconnectAttempts < AppSettings.reconnect.websocket.maxAttempts) {
                 reconnectAttempts++;
                 const delay = AppSettings.reconnect.websocket.backoffBase * Math.pow(2, reconnectAttempts - 1);
-                log(`WebSocket closed. Attempting reconnect #${reconnectAttempts} in ${delay / 1000}s.`, 'WARN');
+                log(`WebSocket 已关闭。将在 ${delay / 1000}秒 后尝试第 ${reconnectAttempts} 次重连。`, 'WARN');
                 setTimeout(() => _connectWebSocket().catch(() => {}), delay);
             } else {
-                log('WebSocket max reconnect attempts reached.', 'ERROR');
+                log('WebSocket 达到最大重连次数。', 'ERROR');
                 eventBus.emit('showNotification', { message: '无法连接到信令服务器，请检查网络或刷新页面。', type: 'error', duration: 10000 });
             }
         };
         websocket.onerror = (error) => {
-            log('WebSocket: Error occurred.', 'ERROR');
+            log('WebSocket: 发生错误。', 'ERROR');
             websocket.close();
             reject(error);
         };
@@ -129,7 +130,7 @@ function _cleanupConnection(peerId) {
         delete chunkMetaBuffer[peerId];
         useUserStore().updateContactStatus(peerId, false);
         eventBus.emit('webrtc:disconnected', peerId);
-        log(`WebRTC: Cleaned up connection for ${peerId}`, 'INFO');
+        log(`WebRTC: 已清理 ${peerId} 的连接`, 'INFO');
     }
 }
 function _handlePeerData(rawData, peerId) {
@@ -144,7 +145,7 @@ function _handlePeerData(rawData, peerId) {
                 const receivedMeta = { ...meta };
                 delete pendingReceivedChunks[peerId][meta.chunkId];
                 delete chunkMetaBuffer[peerId];
-                log(`File "${receivedMeta.fileName}" received from ${peerId}.`, 'INFO');
+                log(`文件 "${receivedMeta.fileName}" 已从 ${peerId} 接收。`, 'INFO');
                 dbService.setItem('fileCache', {
                     id: receivedMeta.chunkId,
                     fileBlob: fileBlob,
@@ -190,7 +191,7 @@ function _handlePeerData(rawData, peerId) {
                 eventBus.emit('webrtc:message', { peerId, message });
             }
         } catch (e) {
-            log(`WebRTC: Received non-JSON data from ${peerId}`, 'WARN');
+            log(`WebRTC: 从 ${peerId} 收到非JSON数据`, 'WARN');
         }
     }
 }
@@ -199,8 +200,8 @@ function _startStatsPolling(peer, peerId) {
     const intervalId = setInterval(() => {
         if (!peer || !peer.connected) { clearInterval(statsIntervals.get(peerId)); statsIntervals.delete(peerId); return; }
         peer.getStats((err, statsReports) => {
-            if (err) { log(`Error getting WebRTC stats for ${peerId}: ${err.message}`, 'WARN'); return; }
-            if (!Array.isArray(statsReports)) { log(`Unexpected stats format for ${peerId}. Expected array.`, 'WARN'); return; }
+            if (err) { log(`获取 ${peerId} 的 WebRTC 统计信息时出错: ${err.message}`, 'WARN'); return; }
+            if (!Array.isArray(statsReports)) { log(` ${peerId} 的统计信息格式异常。期望为数组。`, 'WARN'); return; }
             let rtt = null, jitter = null, packetsLost = 0, packetsSent = 0;
             const remoteInboundReports = {};
             statsReports.forEach(report => { if (report.type === 'remote-inbound-rtp') { remoteInboundReports[report.id] = report; } });
@@ -233,7 +234,7 @@ function _setupPeerListeners(peer, peerId) {
         }
     });
     peer.on('connect', async () => {
-        log(`WebRTC: DataChannel with ${peerId} is connected.`, 'INFO');
+        log(`WebRTC: 与 ${peerId} 的 DataChannel 已连接。`, 'INFO');
         if (connections.value[peerId]) {
             connections.value[peerId].isConnected = true;
         }
@@ -252,21 +253,21 @@ function _setupPeerListeners(peer, peerId) {
     peer.on('data', rawData => _handlePeerData(rawData, peerId));
     peer.on('stream', remoteStream => {
         if (remoteStream instanceof MediaStream) {
-            log(`WebRTC: Received a valid remote stream from ${peerId}.`, 'INFO');
+            log(`WebRTC: 从 ${peerId} 收到一个有效的远程流。`, 'INFO');
             eventBus.emit('webrtc:stream', { peerId, stream: remoteStream });
         } else {
-            log(`WebRTC: Received an invalid or null stream from ${peerId}.`, 'WARN');
+            log(`WebRTC: 从 ${peerId} 收到一个无效或null的流。`, 'WARN');
         }
     });
     peer.on('close', () => { _cleanupConnection(peerId); });
-    peer.on('error', err => { log(`WebRTC: Error with ${peerId}: ${err.message}`, 'ERROR'); _cleanupConnection(peerId); });
+    peer.on('error', err => { log(`WebRTC: 与 ${peerId} 发生错误: ${err.message}`, 'ERROR'); _cleanupConnection(peerId); });
 }
 
 export const webrtcService = {
     connections,
     isWebSocketConnected,
     async init(userId) {
-        if (!userId) throw new Error("webrtcService init: userId is required.");
+        if (!userId) throw new Error("webrtcService init: 必须提供 userId。");
         currentUserId = userId;
         eventBus.on('websocket:signal', ({ fromUserId, payload }) => {
             this.handleIncomingSignal(fromUserId, payload);
@@ -275,16 +276,16 @@ export const webrtcService = {
             await _connectWebSocket();
             this.startAutoRefresh();
         } catch (error) {
-            log('Failed to initialize WebSocket connection.', 'ERROR');
+            log('初始化WebSocket连接失败。', 'ERROR');
         }
     },
     sendViaSignaling(targetUserId, payload) {
         if (!isWebSocketConnected.value) {
-            log(`Cannot send signaling message to ${targetUserId}: WebSocket is not connected.`, 'ERROR');
+            log(`无法发送信令消息给 ${targetUserId}: WebSocket 未连接。`, 'ERROR');
             eventBus.emit('showNotification', { message: '无法发送邀请：未连接到服务器。', type: 'error' });
             return false;
         }
-        log(`Sending application message to ${targetUserId} via WebSocket. Type: ${payload.type}`, 'INFO');
+        log(`正在通过 WebSocket 向 ${targetUserId} 发送应用消息。类型: ${payload.type}`, 'INFO');
         return _sendWsMessage({
             type: 'APP_MESSAGE',
             userId: currentUserId,
@@ -294,10 +295,8 @@ export const webrtcService = {
     },
     startAutoRefresh() {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-        // --- MODIFICATION START: Use the renamed public method ---
         autoRefreshInterval = setInterval(this.proactivelyConnectToOnlineContacts, 30000);
-        // --- MODIFICATION END ---
-        log('WebRTC Service: Started periodic online user refresh and auto-connect task.', 'INFO');
+        log('WebRTC 服务: 已启动周期性在线用户刷新和自动连接任务。', 'INFO');
     },
     stopAutoRefresh() {
         if (autoRefreshInterval) {
@@ -305,23 +304,21 @@ export const webrtcService = {
             autoRefreshInterval = null;
         }
     },
-    // --- MODIFICATION START: Expose the proactive connection method ---
     proactivelyConnectToOnlineContacts,
-    // --- MODIFICATION END ---
     createOffer(targetPeerId, options = {}) {
         if (connections.value[targetPeerId]?.isConnected) {
-            log(`WebRTC: Connection to ${targetPeerId} is already connected. Ignoring new offer.`, 'DEBUG');
+            log(`WebRTC: 到 ${targetPeerId} 的连接已存在。忽略新提议。`, 'DEBUG');
             return;
         }
         if (connections.value[targetPeerId] && !connections.value[targetPeerId].isConnected) {
-            log(`WebRTC: Offer for ${targetPeerId} is already in progress. Ignoring new offer.`, 'DEBUG');
+            log(`WebRTC: 针对 ${targetPeerId} 的提议已在进行中。忽略新提议。`, 'DEBUG');
             if (options.stream && connections.value[targetPeerId].peer.streams[0] !== options.stream) {
-                log(`WebRTC: Updating stream for ongoing offer to ${targetPeerId}.`, 'DEBUG');
+                log(`WebRTC: 正在为进行中的提议更新到 ${targetPeerId} 的流。`, 'DEBUG');
                 this.addStreamToConnection(targetPeerId, options.stream);
             }
             return;
         }
-        log(`WebRTC: Creating offer for ${targetPeerId}`, 'INFO');
+        log(`WebRTC: 正在为 ${targetPeerId} 创建提议`, 'INFO');
         const peer = new SimplePeer({
             initiator: true,
             config: AppSettings.peerConnectionConfig,
@@ -334,13 +331,13 @@ export const webrtcService = {
     addStreamToConnection(peerId, stream) {
         const conn = connections.value[peerId];
         if (conn?.peer) {
-            log(`WebRTC: Adding stream to existing peer for ${peerId}.`, 'INFO');
+            log(`WebRTC: 正在向 ${peerId} 的现有对等连接添加流。`, 'INFO');
             if (conn.peer.streams && conn.peer.streams.length > 0) {
                 conn.peer.removeStream(conn.peer.streams[0], () => {});
             }
             conn.peer.addStream(stream, () => {});
         } else {
-            log(`WebRTC: No peer found for ${peerId}. Initiating new connection with stream.`, 'INFO');
+            log(`WebRTC: 未找到 ${peerId} 的对等连接。正在使用流初始化新连接。`, 'INFO');
             this.createOffer(peerId, { stream });
         }
     },
@@ -349,16 +346,16 @@ export const webrtcService = {
         if (conn?.peer?.connected && stream) {
             try {
                 conn.peer.removeStream(stream, () => {});
-                log(`WebRTC: Media stream removed from connection with ${peerId}. Data channel remains.`, 'INFO');
+                log(`WebRTC: 已从与 ${peerId} 的连接中移除媒体流。数据通道保持连接。`, 'INFO');
             } catch (error) {
-                log(`WebRTC: Error removing stream from ${peerId}: ${error.message}`, 'ERROR');
+                log(`WebRTC: 从 ${peerId} 移除流时出错: ${error.message}`, 'ERROR');
             }
         }
     },
     async handleIncomingSignal(fromUserId, payload) {
         let conn = connections.value[fromUserId];
         if (!conn) {
-            log(`WebRTC: Received initial signal from ${fromUserId}, creating peer.`, 'INFO');
+            log(`WebRTC: 收到来自 ${fromUserId} 的初始信令，正在创建对等连接。`, 'INFO');
             const userStore = useUserStore();
             if (!userStore.contacts[fromUserId]) {
                 await userStore.addContact({ id: fromUserId });
@@ -373,7 +370,7 @@ export const webrtcService = {
     sendMessage(peerId, messageObject, isAck = false) {
         const conn = connections.value[peerId];
         if (!conn?.peer?.connected) {
-            log(`WebRTC: Cannot send message to ${peerId}, not connected.`, 'WARN');
+            log(`WebRTC: 无法向 ${peerId} 发送消息，未连接。`, 'WARN');
             throw new Error('not connected');
         }
         try {
@@ -381,7 +378,7 @@ export const webrtcService = {
             conn.peer.send(messageString);
             return true;
         } catch (error) {
-            log(`WebRTC: Error sending message to ${peerId}: ${error.message}`, 'ERROR');
+            log(`WebRTC: 向 ${peerId} 发送消息时出错: ${error.message}`, 'ERROR');
             throw error;
         }
     },
@@ -391,7 +388,7 @@ export const webrtcService = {
             try {
                 conn.peer.send(JSON.stringify({ type: 'typing' }));
             } catch (error) {
-                log(`Failed to send typing indicator to ${peerId}: ${error.message}`, 'WARN');
+                log(`向 ${peerId} 发送输入中指示失败: ${error.message}`, 'WARN');
             }
         }
     },
@@ -413,7 +410,7 @@ export const webrtcService = {
                 totalChunks: Math.ceil(fileObject.blob.size / CHUNK_SIZE),
             });
         } catch (error) {
-            log(`Failed to send file metadata for "${fileObject.name}" to ${peerId}. Aborting.`, 'ERROR');
+            log(`向 ${peerId} 发送文件元数据 "${fileObject.name}" 失败。中止。`, 'ERROR');
             return false;
         }
         let offset = 0;
@@ -431,7 +428,7 @@ export const webrtcService = {
             }
             return true;
         } catch (error) {
-            log(`WebRTC: Error sending file chunks to ${peerId}: ${error.message}`, 'ERROR');
+            log(`WebRTC: 向 ${peerId} 发送文件块时出错: ${error.message}`, 'ERROR');
             return false;
         }
     },

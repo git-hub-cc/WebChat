@@ -95,12 +95,16 @@
         <IconButton v-else icon="➤" title="发送" @click="send" class="send-button" />
       </div>
 
-      <EmojiPicker
-          :show="isEmojiPickerVisible"
-          @select-emoji="insertEmoji"
-          @select-sticker="sendSticker"
-      />
+      <!-- --- FIX START: Moved EmojiPicker outside of .input-container --- -->
+      <!-- The EmojiPicker was moved from inside `.input-container` to here. -->
+      <!-- This prevents it from being clipped by `.input-container`'s `overflow: hidden` style. -->
     </div>
+    <EmojiPicker
+        :show="isEmojiPickerVisible"
+        @select-emoji="insertEmoji"
+        @select-sticker="sendSticker"
+    />
+    <!-- --- FIX END --- -->
     <input type="file" ref="fileInputRef" @change="handleFileSelect" style="display:none;" />
   </div>
 </template>
@@ -198,13 +202,9 @@ function cancelLockedRecording() { isRecordingLocked.value = false; isRecording.
 function sendLockedRecording() { isRecordingLocked.value = false; isRecording.value = false; clearInterval(recordingInterval); mediaService.stopRecording(); }
 function onRecordingComplete({ blob, duration }) { cancelPreview(); const url = URL.createObjectURL(blob); preview.value = { type: 'audio', blob, duration, url, hash: `audio_${Date.now()}`, name: `voice-message.webm`, fileType: blob.type, size: blob.size, }; }
 
-// --- MODIFICATION START: Updated screenshot handler ---
 function handleScreenshot() {
-  // Instead of directly capturing, show the guide modal first.
-  // The modal itself will then trigger mediaService.captureScreen().
   uiStore.showModal('screenshotGuide');
 }
-// --- MODIFICATION END ---
 
 function handleRawScreenshot(screenshotData) { uiStore.showModal('screenshotEditor', screenshotData); }
 
@@ -220,7 +220,7 @@ function onScreenshotComplete(fileObject) {
 
 function handleInput() { adjustTextareaHeight(); handleTypingIndicator(); handleMentionPopup(); }
 function handleTypingIndicator() { if (typingTimeout) clearTimeout(typingTimeout); webrtcService.sendTyping(chatStore.currentChatId); typingTimeout = setTimeout(() => {}, 2000); }
-function handleMentionPopup() { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); if (lastAtSymbolIndex !== -1 && chatStore.currentChatId.startsWith('group_')) { const group = groupStore.groups[chatStore.currentChatId]; if (group) { const query = textBeforeCursor.substring(lastAtSymbolIndex + 1); mentionSuggestions.value = group.members.map(id => userStore.contacts[id]).filter(contact => contact?.isAI && contact.name.toLowerCase().includes(query.toLowerCase())); showMentionList.value = mentionSuggestions.value.length > 0; } } else { showMentionList.value = false; } }
+function handleMentionPopup() { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); if (lastAtSymbolIndex !== -1 && chatStore.currentChatId.startsWith('group_')) { const group = groupStore.groups[chatStore.currentChatId]; if (group) { mentionSuggestions.value = group.members.map(id => userStore.contacts[id]).filter(contact => contact?.isAI && contact.name.toLowerCase().includes(query.toLowerCase())); showMentionList.value = mentionSuggestions.value.length > 0; } } else { showMentionList.value = false; } }
 function handleMentionSelect(user) { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); const prefix = text.substring(0, lastAtSymbolIndex); const suffix = text.substring(cursorPos); newMessage.value = `${prefix}@${user.name} ${suffix}`; showMentionList.value = false; nextTick(() => { const newCursorPos = prefix.length + `@${user.name} `.length; textareaRef.value.focus(); textareaRef.value.setSelectionRange(newCursorPos, newCursorPos); }); }
 
 onMounted(() => {

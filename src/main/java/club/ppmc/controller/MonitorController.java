@@ -1,27 +1,21 @@
-/**
- * 此文件提供了用于监控服务器状态的API端点。
- *
- * 主要职责:
- * - 提供一个`/api/monitor/status`接口，返回服务器的当前状态，
- *   包括在线用户数、服务器时间和运行状态。
- * - 提供一个`/api/monitor/online-user-ids`接口，返回当前所有在线用户的ID列表。
- *
- * 关联:
- * - `UserSessionService`: 用于获取当前在线用户数量和用户ID列表。
- * - `ServerStatusDto`: 作为此Controller的`/api/monitor/status`响应数据结构。
- */
 package club.ppmc.controller;
 
+import club.ppmc.dto.FederatedUserDto;
 import club.ppmc.dto.ServerStatusDto;
+import club.ppmc.service.FederationService;
+import club.ppmc.service.ServerIdentityService;
 import club.ppmc.service.UserSessionService;
-import java.util.Collections;
-import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/monitor")
@@ -30,9 +24,17 @@ public class MonitorController {
     private static final Logger logger = LoggerFactory.getLogger(MonitorController.class);
 
     private final UserSessionService userSessionService;
+    private final FederationService federationService;
+    // [MODIFIED] 使用ServerIdentityService来获取唯一的、持久化的服务器ID
+    private final ServerIdentityService serverIdentityService;
 
-    public MonitorController(UserSessionService userSessionService) {
+    public MonitorController(
+            UserSessionService userSessionService,
+            FederationService federationService,
+            ServerIdentityService serverIdentityService) { // <-- 注入ServerIdentityService
         this.userSessionService = userSessionService;
+        this.federationService = federationService;
+        this.serverIdentityService = serverIdentityService;
     }
 
     /**
@@ -68,9 +70,38 @@ public class MonitorController {
             return ResponseEntity.ok(onlineUserIds);
         } catch (Exception e) {
             logger.error("获取在线用户ID列表时发生未知错误。", e);
-            // 在发生错误时返回一个带有错误状态码和空列表的响应会更合适，
-            // 但为了简化，这里仅返回一个空列表和HTTP 200 OK。
-            // 更好的做法是返回 ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Collections.emptyList());
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+    }
+
+    /**
+     * [MODIFIED] 获取所有已知服务器（包括本机）的在线用户列表。
+     * 现在使用服务器的持久化GUID作为来源标识。
+     * @return 包含所有在线用户ID及其来源服务器GUID的列表。
+     */
+    @GetMapping("/all-online-users")
+    public ResponseEntity<List<FederatedUserDto>> getAllOnlineUsers() {
+        logger.info("收到获取全网在线用户的请求 /api/monitor/all-online-users");
+        try {
+            // 获取本服务器的GUID
+            String selfServerGuid = serverIdentityService.getServerGuid();
+
+            // 获取本地用户，并使用GUID进行标记
+            List<FederatedUserDto> localUsers = userSessionService.getOnlineUserIds().stream()
+                    .map(userId -> new FederatedUserDto(userId, selfServerGuid))
+                    .collect(Collectors.toList());
+
+            // 获取联邦用户 (FederationService现在会返回带有GUID的DTO)
+            List<FederatedUserDto> federatedUsers = federationService.getFederatedUsers();
+
+            // 合并并返回
+            List<FederatedUserDto> allUsers = Stream.concat(localUsers.stream(), federatedUsers.stream())
+                    .collect(Collectors.toList());
+
+            logger.debug("成功获取全网在线用户列表，数量: {}", allUsers.size());
+            return ResponseEntity.ok(allUsers);
+        } catch (Exception e) {
+            logger.error("获取全网在线用户列表时发生未知错误。", e);
             return ResponseEntity.ok(Collections.emptyList());
         }
     }

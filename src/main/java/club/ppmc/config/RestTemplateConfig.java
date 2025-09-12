@@ -1,29 +1,37 @@
-/**
- * 此文件定义了同步HTTP客户端`RestTemplate`的Spring配置。
- *
- * 主要职责:
- * - 创建一个`RestTemplate` Bean，用于应用程序中需要进行同步HTTP调用的部分。
- *
- * 注意:
- * - 在现代响应式Spring应用中，推荐优先使用`WebClient`。
- *   此Bean的存在可能是为了兼容旧代码或特定的同步场景。
- */
 package club.ppmc.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.socket.client.WebSocketClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
+/**
+ * 此文件定义了同步HTTP客户端`RestTemplate`和WebSocket客户端的Spring配置。
+ */
 @Configuration
 public class RestTemplateConfig {
 
     /**
-     * 创建一个默认的`RestTemplate`实例作为Spring Bean。
+     * [REMOVED] RestTemplate不再用于联邦服务。
+     * 如果项目中其他地方也不再需要它，可以删除此Bean。
+     * 此处暂时保留以确保其他潜在模块的兼容性。
      *
      * @return 一个新的`RestTemplate`对象。
      */
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
+    }
+
+    /**
+     * 创建一个标准的WebSocket客户端Bean。
+     * 此Bean是FederationRoutingService的必要依赖，用于建立到伙伴服务器的出站WebSocket连接。
+     *
+     * @return 一个新的`StandardWebSocketClient`对象。
+     */
+    @Bean
+    public WebSocketClient webSocketClient() {
+        return new StandardWebSocketClient();
     }
 }

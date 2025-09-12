@@ -237,4 +237,14 @@ const showContextMenu = (event, item) => {
   background-color: var(--color-brand-primary-dark);
   transform: scale(1.05);
 }
+
+/* --- START OF MODIFICATION --- */
+.new-chat-fab :deep(.icon) {
+  transition: transform 0.2s ease;
+}
+
+.new-chat-fab:hover :deep(.icon) {
+  transform: rotate(90deg);
+}
+/* --- END OF MODIFICATION --- */
 </style>
