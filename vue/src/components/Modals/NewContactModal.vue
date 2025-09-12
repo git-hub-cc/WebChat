@@ -170,10 +170,7 @@ const imageToBase64 = async (url) => {
 };
 
 const exportCharacters = async () => {
-  // --- START OF FIX ---
-  // Ensure the theme's special contact data is loaded before attempting to export.
-  await settingsStore._loadThemeData(settingsStore.currentThemeKey);
-  // --- END OF FIX ---
+  await settingsStore.ensureThemeDataIsLoaded();
 
   const charactersToExport = settingsStore.currentSpecialContacts;
   if (!charactersToExport || charactersToExport.length === 0) {

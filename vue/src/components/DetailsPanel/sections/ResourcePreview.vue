@@ -4,27 +4,25 @@
 
     <nav class="resource-tabs">
       <button :class="{ active: activeTab === 'media' }" @click="switchTab('media')">媒体</button>
-      <!-- [NEW] Added Text tab -->
       <button :class="{ active: activeTab === 'text' }" @click="switchTab('text')">文本</button>
       <button :class="{ active: activeTab === 'files' }" @click="switchTab('files')">文件</button>
       <button :class="{ active: activeTab === 'calendar' }" @click="switchTab('calendar')">日历</button>
     </nav>
 
     <div class="resource-content" ref="scrollContainerRef">
-      <!-- Media/Files/Text Grid/List View -->
       <div v-if="activeTab !== 'calendar'" class="resource-view-wrapper">
         <RecycleScroller
             v-if="filteredResources.length > 0"
             class="scroller"
-            :class="{ 'grid-view': activeTab !== 'text' }"
+            :class="{ 'grid-view': activeTab !== 'text', 'list-view': activeTab === 'text' }"
             :items="filteredResources"
             :item-size="itemSize"
             key-field="id"
             :buffer="200"
-            :grid-items="gridItems"
+            :grid-items="gridColumns"
+            direction="vertical"
             v-slot="{ item }"
         >
-          <!-- [MODIFIED] Use a dynamic component based on the active tab -->
           <component
               :is="itemComponent"
               :item="item"
@@ -38,7 +36,6 @@
         </div>
       </div>
 
-      <!-- Calendar View -->
       <div v-if="activeTab === 'calendar'" class="calendar-wrapper">
         <CalendarView :chat-id="chatId" @select-date="scrollToDate" />
       </div>
@@ -55,7 +52,6 @@ import { eventBus } from '@/services/eventBus';
 import { RecycleScroller } from 'vue-virtual-scroller';
 import CalendarView from './CalendarView.vue';
 
-// --- [NEW] Dynamically import item components ---
 const ResourceGridItem = defineAsyncComponent(() => import('./ResourceGridItem.vue'));
 const ResourceTextItem = defineAsyncComponent(() => import('./ResourceTextItem.vue'));
 
@@ -81,18 +77,29 @@ const filteredResources = computed(() => {
   });
 });
 
-// --- [MODIFIED] Dynamic component and layout properties for RecycleScroller ---
 const itemComponent = computed(() => {
   return activeTab.value === 'text' ? ResourceTextItem : ResourceGridItem;
 });
-const itemSize = computed(() => (activeTab.value === 'text' ? 80 : 100)); // Text items are shorter
-const gridItems = computed(() => (activeTab.value === 'text' ? 1 : 2)); // Text is a single column list
 
-// --- [MODIFIED] Updated helper function ---
+const gridColumns = computed(() => {
+  return activeTab.value === 'text' ? 1 : 3;
+});
+
+const itemSize = computed(() => {
+  if (activeTab.value === 'text') {
+    return 72; // Fixed height for list items
+  }
+  if (scrollContainerRef.value) {
+    const containerWidth = scrollContainerRef.value.clientWidth;
+    return (containerWidth - 16) / 3; // Approx width for square grid items
+  }
+  return 100;
+});
+
 function getResourceTypeForTab(tab) {
   switch (tab) {
     case 'media': return 'imagery';
-    case 'text': return 'text'; // New case for text
+    case 'text': return 'text';
     case 'files': return 'other';
     default: return 'all';
   }
@@ -106,9 +113,9 @@ async function loadResources(reset = false) {
     hasMore.value = true;
   }
   try {
-    const rawMessages = chatStore.getMessagesWithResources(props.chatId, getResourceTypeForTab(activeTab.value), allResources.value.length, 20);
+    const rawMessages = chatStore.getMessagesWithResources(props.chatId, getResourceTypeForTab(activeTab.value), allResources.value.length, 21);
     if (rawMessages.length === 0) hasMore.value = false;
-    allResources.value.push(...rawMessages); // No need for extra processing here
+    allResources.value.push(...rawMessages);
   } catch (error) {
     log(`加载资源失败: ${error}`, 'ERROR');
   } finally {
@@ -156,15 +163,22 @@ onUnmounted(() => {
 .resource-tabs button.active { color: var(--color-brand-primary); border-bottom-color: var(--color-brand-primary); }
 .resource-content { flex-grow: 1; overflow-y: auto; position: relative; }
 .scroller { height: 100%; }
-.scroller.grid-view { padding: var(--spacing-2); } /* Add padding only for grid */
 .resource-view-wrapper { height: 100%; }
 .loading-spinner, .empty-state { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: var(--color-text-secondary); }
 .calendar-wrapper { padding: var(--spacing-3); }
 
-/* Apply grid layout to the scroller's content when in grid view */
+.scroller.grid-view { padding: var(--spacing-2); }
 .scroller.grid-view :deep(.vue-recycle-scroller__item-wrapper) {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-1);
 }
+
+/* --- START OF FIX: Styles for list view --- */
+.scroller.list-view :deep(.vue-recycle-scroller__item-view) {
+  /* This forces the item's container to fill the width */
+  width: 100% !important;
+  max-width: 100%;
+}
+/* --- END OF FIX --- */
 </style>

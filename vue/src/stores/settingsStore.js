@@ -38,27 +38,25 @@ export const useSettingsStore = defineStore('settings', () => {
      */
     async function _loadThemeData(themeKey) {
         const themeConfig = themes.value[themeKey];
-        // Only fetch if config exists, has a data file, and hasn't been loaded yet.
         if (themeConfig && themeConfig.dataJs && !themeConfig.specialContacts) {
             try {
                 log(`Fetching theme data for ${themeKey} from ${themeConfig.dataJs}`, 'DEBUG');
-                const response = await fetch(themeConfig.dataJs);
+                // In Vite, public files are served from the root.
+                const response = await fetch(`/${themeConfig.dataJs}`);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
-
-                // Ensure the ref is updated correctly to trigger reactivity
                 themes.value[themeKey] = { ...themeConfig, specialContacts: data };
                 log(`Successfully loaded and set special contacts for ${themeKey}. Count: ${data.length}`, 'INFO');
             } catch(e) {
                 log(`Failed to load theme data for ${themeKey}: ${e.message}`, 'ERROR');
                 if (themes.value[themeKey]) {
-                    themes.value[themeKey].specialContacts = []; // Set empty array on failure
+                    themes.value[themeKey].specialContacts = [];
                 }
             }
         } else if (themeConfig && !themeConfig.dataJs) {
             log(`Theme ${themeKey} has no dataJs file specified.`, 'DEBUG');
             if (themes.value[themeKey]) {
-                themes.value[themeKey].specialContacts = []; // Ensure property exists
+                themes.value[themeKey].specialContacts = [];
             }
         }
     }
@@ -67,7 +65,6 @@ export const useSettingsStore = defineStore('settings', () => {
      * Initializes the settings store.
      */
     async function init() {
-        // Load API settings
         const storedApiSettings = await dbService.getItem('settings', 'apiSettings');
         const defaultProviderKey = storedApiSettings?.llmProvider || 'webchat';
         const defaultProvider = LLMProviders[defaultProviderKey] || LLMProviders.webchat;
@@ -81,7 +78,6 @@ export const useSettingsStore = defineStore('settings', () => {
             ttsApiEndpoint: storedApiSettings?.ttsApiEndpoint || AppSettings.server.ttsApiEndpoint,
         };
 
-        // Load custom backgrounds
         try {
             const [bgLight, bgDark] = await Promise.all([
                 dbService.getItem('appStateCache', 'background_image_light'),
@@ -93,7 +89,7 @@ export const useSettingsStore = defineStore('settings', () => {
             log(`加载自定义背景时出错: ${e.message}`, 'ERROR');
         }
 
-        await _syncThemeWithColorScheme(true); // Initial theme and data load
+        await _syncThemeWithColorScheme(true);
 
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', async () => {
             if (colorScheme.value === 'auto') {
@@ -136,7 +132,7 @@ export const useSettingsStore = defineStore('settings', () => {
         const updateLogic = async () => {
             currentThemeKey.value = themeKey;
             localStorage.setItem('currentThemeKey', themeKey);
-            await _loadThemeData(themeKey); // Ensure data is loaded
+            await _loadThemeData(themeKey);
             eventBus.emit('themeChanged');
         };
 
@@ -149,6 +145,15 @@ export const useSettingsStore = defineStore('settings', () => {
         } else {
             await updateLogic();
         }
+    }
+
+    /**
+     * [NEW] Public action to ensure theme data is loaded before use.
+     * @param {string} themeKey - The key of the theme to check/load.
+     */
+    async function ensureThemeDataIsLoaded(themeKey) {
+        if (!themeKey) themeKey = currentThemeKey.value;
+        await _loadThemeData(themeKey);
     }
 
     async function setColorScheme(scheme, event = null) {
@@ -198,6 +203,6 @@ export const useSettingsStore = defineStore('settings', () => {
         effectiveColorScheme, currentTheme, currentSpecialContacts,
         init, applyTheme, setColorScheme, saveApiSetting, handleLlmProviderChange,
         setCustomBackground, removeCustomBackground,
-        _loadThemeData
+        ensureThemeDataIsLoaded, _loadThemeData // Expose _loadThemeData for internal use if needed, but prefer ensure
     };
 });

@@ -15,13 +15,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed } from 'vue';
 import { useChatStore } from '@/stores/chatStore';
+// --- START OF MODIFICATION: Import necessary stores and eventBus ---
+import { useUiStore } from '@/stores/uiStore';
+import { eventBus } from '@/services/eventBus';
+// --- END OF MODIFICATION ---
 
 const props = defineProps({
   chatId: { type: String, required: true }
 });
-const emit = defineEmits(['select-date']);
+
+// --- START OF MODIFICATION: Remove emit, add uiStore ---
+// const emit = defineEmits(['select-date']); // No longer needed
+const uiStore = useUiStore();
+// --- END OF MODIFICATION ---
 
 const chatStore = useChatStore();
 const currentDate = ref(new Date());
@@ -41,14 +49,11 @@ const days = computed(() => {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const grid = [];
 
-  // Add empty cells for the start of the month
   for (let i = 0; i < firstDayOfMonth; i++) {
     grid.push({ isEmpty: true, dateKey: `empty-${i}` });
   }
 
-  // Add days of the month
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, month, day);
     const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const hasMessages = datesWithMessages.value.has(dateKey);
     grid.push({
@@ -74,11 +79,20 @@ function nextMonth() {
   currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + 1, 1);
 }
 
+// --- START OF MODIFICATION: Update selectDate to use eventBus ---
 function selectDate(day) {
   if (day.hasMessages) {
-    emit('select-date', day.dateKey);
+    // Emit a global event that MessageArea can listen to
+    eventBus.emit('chat:scroll-to-date', { chatId: props.chatId, dateString: day.dateKey });
+
+    // For better mobile UX, hide the panel and show the chat view
+    if (window.innerWidth <= 768) {
+      uiStore.toggleDetailsPanel(false);
+      uiStore.isChatViewActiveOnMobile = true;
+    }
   }
 }
+// --- END OF MODIFICATION ---
 </script>
 
 <style scoped>

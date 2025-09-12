@@ -1,28 +1,22 @@
 import { ref } from 'vue';
-import { log, generateId, generateFileHash } from '@/utils';
+import { log, generateFileHash } from '@/utils';
 import { eventBus } from './eventBus';
 import AppSettings from '@/config/AppSettings';
 import { dbService } from './dbService';
 
-// --- 模块内部状态 ---
 const mediaRecorder = ref(null);
 const audioChunks = ref([]);
 const recordingStartTime = ref(null);
 const localAudioStream = ref(null);
 
-/**
- * 封装所有与本地设备媒体（麦克风、屏幕）交互的底层逻辑。
- */
 export const mediaService = {
-
-    // --- 语音录制 ---
 
     async startRecording() {
         if (mediaRecorder.value?.state === 'recording') return null;
 
         try {
             if (!localAudioStream.value || localAudioStream.value.getAudioTracks().some(t => t.readyState === 'ended')) {
-                this.releaseAudioResources(); // Clean up previous stream if ended
+                this.releaseAudioResources();
                 localAudioStream.value = await navigator.mediaDevices.getUserMedia({ audio: AppSettings.media.audioConstraints });
             }
             mediaRecorder.value = new MediaRecorder(localAudioStream.value);
@@ -53,7 +47,6 @@ export const mediaService = {
         if (mediaRecorder.value?.state === 'recording') {
             mediaRecorder.value.stop();
         }
-        // Don't release resources immediately, wait for onstop event to fire
     },
 
     releaseAudioResources() {
@@ -63,8 +56,6 @@ export const mediaService = {
         }
         mediaRecorder.value = null;
     },
-
-    // --- 截图 ---
 
     async captureScreen() {
         if (window.Android && typeof window.Android.startScreenCapture === 'function') {
@@ -88,7 +79,6 @@ export const mediaService = {
 
                 try {
                     const videoTrack = stream.getVideoTracks()[0];
-                    // Use ImageCapture for better performance if available
                     const imageCapture = new ImageCapture(videoTrack);
                     const bitmap = await imageCapture.grabFrame();
                     const canvas = document.createElement('canvas');
@@ -117,7 +107,6 @@ export const mediaService = {
         }
     },
 
-    // --- 贴图处理 ---
     async processStickerFile(file) {
         if (file.size > AppSettings.media.maxStickerSize) {
             eventBus.emit('showNotification', { message: `贴图文件过大 (上限 ${AppSettings.media.maxStickerSize / 1024 / 1024}MB)`, type: 'warning' });
@@ -142,7 +131,6 @@ export const mediaService = {
     },
 };
 
-// 全局函数，供原生安卓调用
 window.handleNativeScreenshot = function(base64DataUrl) {
     log('从原生安卓接收到截图数据', 'INFO');
     if (!base64DataUrl || !base64DataUrl.startsWith('data:image/')) {
@@ -154,7 +142,7 @@ window.handleNativeScreenshot = function(base64DataUrl) {
         .then(res => res.blob())
         .then(blob => {
             if (blob) {
-                const dataUrl = URL.createObjectURL(blob); // Create a URL for consistency, even though we have base64
+                const dataUrl = URL.createObjectURL(blob);
                 eventBus.emit('screenshot:raw-captured', {
                     dataUrl: dataUrl,
                     blob: blob,

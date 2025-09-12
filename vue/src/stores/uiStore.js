@@ -1,32 +1,22 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
-/**
- * @file uiStore.js
- * @description (Vue Refactor) Manages global UI state, such as which panels or modals are open.
- */
 export const useUiStore = defineStore('ui', () => {
     // --- STATE ---
     const isDetailsPanelOpen = ref(false);
-    const detailsPanelContent = ref('info'); // 'info', 'lobby'
-    const activeModal = ref(null); // 'settings', 'newContact', 'calling', 'incomingCall', 'screenshotEditor', 'confirmation', 'mediaViewer', 'bindManualConnection'
+    const detailsPanelContent = ref('info');
+    const activeModal = ref(null);
     const isAppLoading = ref(true);
     const chatListFilter = ref('all');
     const chatListSearchTerm = ref('');
     const isChatViewActiveOnMobile = ref(false);
-
-    // Context Menu State
     const isContextMenuOpen = ref(false);
     const contextMenuPos = ref({ x: 0, y: 0 });
     const contextMenuItems = ref([]);
     const contextMenuTarget = ref(null);
-
-    // MODIFICATION: Renamed from confirmationModalOptions to be more generic and clear
     const confirmationOptions = ref(null);
     const mediaViewerContent = ref(null);
     const modalPrefillData = ref({});
-
-    // Manual Connection State
     const manualSdpText = ref('');
 
     // --- ACTIONS ---
@@ -49,7 +39,6 @@ export const useUiStore = defineStore('ui', () => {
     function hideModal() {
         activeModal.value = null;
         modalPrefillData.value = {};
-        // MODIFICATION: Reset confirmation and media viewer state when any modal closes
         if (confirmationOptions.value) confirmationOptions.value = null;
         if (mediaViewerContent.value) mediaViewerContent.value = null;
     }
@@ -71,24 +60,10 @@ export const useUiStore = defineStore('ui', () => {
         contextMenuTarget.value = null;
     }
 
-    // --- START OF MODIFICATION ---
-    /**
-     * Shows a confirmation modal with the specified options.
-     * @param {object} options - Configuration for the modal.
-     * @param {string} options.message - The text to display.
-     * @param {Function} options.onConfirm - Callback for confirm button.
-     * @param {Function} [options.onCancel] - Optional callback for cancel.
-     * @param {string} [options.title='确认操作']
-     * @param {string} [options.confirmText='确认']
-     * @param {string} [options.cancelText='取消']
-     * @param {string} [options.confirmClass='btn-danger']
-     */
     function showConfirmationModal(options) {
         confirmationOptions.value = options;
         showModal('confirmation');
     }
-    // --- END OF MODIFICATION ---
-
 
     function showMediaViewer(content) {
         mediaViewerContent.value = content;

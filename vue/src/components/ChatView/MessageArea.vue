@@ -59,6 +59,31 @@ const scrollToMessage = (messageId) => {
   }
 };
 
+// --- START OF MODIFICATION: New function to handle date scroll ---
+const scrollToDate = ({ chatId, dateString }) => {
+  if (chatId !== props.chatId) return; // Ignore if not for the current chat
+
+  const targetDateStart = new Date(`${dateString}T00:00:00.000Z`).getTime();
+  const targetDateEnd = new Date(`${dateString}T23:59:59.999Z`).getTime();
+
+  let firstMessageIndex = -1;
+  for (let i = 0; i < chatStore.currentChatMessages.length; i++) {
+    const msgTimestamp = new Date(chatStore.currentChatMessages[i].timestamp).getTime();
+    if (msgTimestamp >= targetDateStart && msgTimestamp <= targetDateEnd) {
+      firstMessageIndex = i;
+      break; // Found the first message of the day
+    }
+  }
+
+  if (firstMessageIndex > -1 && scrollerRef.value) {
+    scrollerRef.value.scrollToItem(firstMessageIndex);
+    eventBus.emit('showNotification', { message: `已跳转到 ${dateString} 的消息`, type: 'info' });
+  } else {
+    eventBus.emit('showNotification', { message: `未找到 ${dateString} 的消息`, type: 'warning' });
+  }
+};
+// --- END OF MODIFICATION ---
+
 watch(() => chatStore.currentChatMessages.length, (newLength, oldLength) => {
   if (newLength > oldLength) {
     const lastMessage = chatStore.currentChatMessages[newLength - 1];
@@ -89,6 +114,9 @@ onMounted(() => {
     scrollerEl.addEventListener('scroll', handleScroll);
   }
   eventBus.on('chat:scroll-to-message', scrollToMessage);
+  // --- START OF MODIFICATION: Listen for the new global event ---
+  eventBus.on('chat:scroll-to-date', scrollToDate);
+  // --- END OF MODIFICATION ---
 });
 
 onUnmounted(() => {
@@ -96,6 +124,9 @@ onUnmounted(() => {
     scrollerEl.removeEventListener('scroll', handleScroll);
   }
   eventBus.off('chat:scroll-to-message', scrollToMessage);
+  // --- START OF MODIFICATION: Unregister the listener ---
+  eventBus.off('chat:scroll-to-date', scrollToDate);
+  // --- END OF MODIFICATION ---
 });
 </script>
 

@@ -1,6 +1,5 @@
 <template>
   <header class="chat-header" v-if="chatInfo" :class="{ 'character-active': chatInfo.isSpecial }">
-    <!-- Back button for mobile -->
     <IconButton
         icon="←"
         title="返回列表"
@@ -31,7 +30,6 @@ import { useUserStore } from '@/stores/userStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useGroupStore } from '@/stores/groupStore';
 import { useCallStore } from '@/stores/callStore';
-import { webrtcService } from '@/services/webrtcService';
 import Avatar from '@/components/Shared/Avatar.vue';
 import IconButton from '@/components/Shared/IconButton.vue';
 
@@ -47,7 +45,6 @@ const chatInfo = computed(() => {
   return userStore.contacts[chatId] || groupStore.groups[chatId];
 });
 
-// MODIFICATION: Use the centralized getter for online status
 const combinedStatus = computed(() => chatInfo.value ? userStore.getContactCombinedStatus(chatInfo.value.id) : {});
 
 const isOnline = computed(() => {
@@ -58,9 +55,9 @@ const isOnline = computed(() => {
 const canCall = computed(() => {
   return chatInfo.value &&
       chatInfo.value.type !== 'group' &&
-      !chatInfo.value.isAI && // AI contacts cannot be called
-      !chatInfo.value.isSpecial && // Special non-AI contacts also not directly callable via WebRTC
-      combinedStatus.value.isConnected; // Must have an active WebRTC connection
+      !chatInfo.value.isAI &&
+      !chatInfo.value.isSpecial &&
+      combinedStatus.value.isConnected;
 });
 
 const statusText = computed(() => {
@@ -73,25 +70,13 @@ const statusText = computed(() => {
 
 const statusClass = computed(() => {
   if (!chatInfo.value) return 'offline';
-  if (chatInfo.value.type === 'group') return 'online'; // Groups are always 'online' conceptually
+  if (chatInfo.value.type === 'group') return 'online';
   return combinedStatus.value.statusClass;
 });
 
-const startVideoCall = () => {
-  if (canCall.value) {
-    callStore.startVideoCall();
-  }
-};
-const startAudioCall = () => {
-  if (canCall.value) {
-    callStore.startAudioCall();
-  }
-};
-const startScreenShare = () => {
-  if (canCall.value) {
-    callStore.startScreenShare();
-  }
-};
+const startVideoCall = () => { if (canCall.value) callStore.startVideoCall(); };
+const startAudioCall = () => { if (canCall.value) callStore.startAudioCall(); };
+const startScreenShare = () => { if (canCall.value) callStore.startScreenShare(); };
 
 </script>
 
@@ -143,7 +128,10 @@ const startScreenShare = () => {
   color: var(--color-text-secondary);
   position: relative;
   padding-left: 12px;
+  height: 1.2em; /* Ensure consistent height */
+  line-height: 1.2em;
 }
+.chat-status.online { color: var(--color-status-success); }
 .chat-status::before {
   content: '';
   position: absolute;

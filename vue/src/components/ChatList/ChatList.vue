@@ -34,7 +34,7 @@
             :item="item"
             :is-active="item.id === chatStore.currentChatId"
             @click="selectChat(item)"
-            @contextmenu.prevent="showContactMenu($event, item)"
+            @contextmenu.prevent="showContextMenu($event, item)"
         />
       </RecycleScroller>
     </div>
@@ -47,6 +47,7 @@
 import { useChatStore } from '@/stores/chatStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useUserStore } from '@/stores/userStore';
+import { useGroupStore } from '@/stores/groupStore';
 import ChatListItem from './ChatListItem.vue';
 import IconButton from '@/components/Shared/IconButton.vue';
 import { RecycleScroller } from 'vue-virtual-scroller';
@@ -54,41 +55,70 @@ import { RecycleScroller } from 'vue-virtual-scroller';
 const chatStore = useChatStore();
 const uiStore = useUiStore();
 const userStore = useUserStore();
+const groupStore = useGroupStore();
 
 const selectChat = (item) => {
   chatStore.openChat(item.id);
-  // On mobile, automatically switch to the chat view
   if (window.innerWidth <= 768) {
     uiStore.isChatViewActiveOnMobile = true;
   }
 };
 
-const showContactMenu = (event, item) => {
-  if (item.type !== 'contact' || item.isSpecial) return;
+const showContextMenu = (event, item) => {
+  if (item.type === 'contact' && !item.isSpecial) {
+    uiStore.showContextMenu({
+      event,
+      target: { type: 'contact', id: item.id },
+      items: [
+        {
+          label: `删除 "${item.name}"`,
+          action: () => {
+            uiStore.showConfirmationModal({
+              message: `确定要删除联系人 "${item.name}" 吗？所有相关消息都将丢失。`,
+              onConfirm: () => userStore.removeContact(item.id)
+            });
+          },
+          class: 'danger'
+        }
+      ]
+    });
+  } else if (item.type === 'group') {
+    const group = groupStore.groups[item.id];
+    if (!group) return;
+    const isOwner = group.owner === userStore.userId;
+    const actionLabel = isOwner ? '解散群组' : '退出群组';
+    const confirmMessage = isOwner
+        ? `确定要解散群组 "${item.name}" 吗？此操作不可逆。`
+        : `确定要退出群组 "${item.name}" 吗？`;
 
-  uiStore.showContextMenu({
-    event,
-    target: { type: 'contact', id: item.id },
-    items: [
-      {
-        label: `删除 "${item.name}"`,
-        action: () => {
-          // Use the new confirmation modal
-          uiStore.showConfirmationModal({
-            message: `确定要删除联系人 "${item.name}" 吗？所有相关消息都将丢失。`,
-            onConfirm: () => userStore.removeContact(item.id)
-          });
-        },
-        class: 'danger'
-      }
-    ]
-  });
+    uiStore.showContextMenu({
+      event,
+      target: { type: 'group', id: item.id },
+      items: [
+        {
+          label: actionLabel,
+          action: () => {
+            uiStore.showConfirmationModal({
+              message: confirmMessage,
+              onConfirm: () => {
+                if (isOwner) {
+                  groupStore.dissolveGroup(item.id);
+                } else {
+                  groupStore.leaveGroup(item.id);
+                }
+              }
+            });
+          },
+          class: 'danger'
+        }
+      ]
+    });
+  }
 };
 
 </script>
 
 <style scoped>
-/* Styles are unchanged */
 .chat-list-root {
   display: flex;
   flex-direction: column;
@@ -129,7 +159,7 @@ const showContactMenu = (event, item) => {
 }
 .chat-items-wrapper {
   flex-grow: 1;
-  overflow: hidden; /* Important for virtual scroller */
+  overflow: hidden;
 }
 .scroller {
   height: 100%;

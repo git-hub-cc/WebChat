@@ -7,7 +7,6 @@ import { log } from '@/utils';
  *              Acts as a centralized singleton for creating and revoking media URLs.
  */
 
-// A Map to store the mapping of fileHash -> blob:url
 const urlCache = new Map();
 
 export const mediaCacheService = {
@@ -21,17 +20,15 @@ export const mediaCacheService = {
     async getUrl(fileHash) {
         if (!fileHash) return null;
 
-        // 1. Check in-memory cache first
         if (urlCache.has(fileHash)) {
             return urlCache.get(fileHash);
         }
 
-        // 2. If not cached, fetch from IndexedDB
         try {
             const cacheItem = await dbService.getItem('fileCache', fileHash);
             if (cacheItem?.fileBlob instanceof Blob) {
                 const url = URL.createObjectURL(cacheItem.fileBlob);
-                urlCache.set(fileHash, url); // Store in cache
+                urlCache.set(fileHash, url);
                 return url;
             } else {
                 log(`Media blob not found in DB for hash: ${fileHash}`, 'WARN');
@@ -54,7 +51,6 @@ export const mediaCacheService = {
     }
 };
 
-// Add a global cleanup hook to prevent memory leaks when the user leaves the page.
 window.addEventListener('beforeunload', () => {
     mediaCacheService.cleanup();
 });

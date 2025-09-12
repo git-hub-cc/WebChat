@@ -47,7 +47,6 @@
     <!-- TTS Settings -->
     <div class="setting-block">
       <h4>TTS 设置</h4>
-      <!-- [MODIFIED] Replaced placeholder with the TtsSettings component -->
       <TtsSettings :contact-id="contactId" />
     </div>
   </div>
@@ -58,7 +57,6 @@ import { computed, defineAsyncComponent } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { useMemoryStore } from '@/stores/memoryStore';
 
-// [NEW] Asynchronously import TtsSettings component
 const TtsSettings = defineAsyncComponent(() => import('./TtsSettings.vue'));
 
 const props = defineProps({
@@ -84,7 +82,6 @@ const saveMemory = (setId, content) => memoryStore.saveMemoryBookContent(setId, 
 </script>
 
 <style scoped>
-/* Styles are unchanged */
 .ai-settings-section { padding: var(--spacing-4); display: flex; flex-direction: column; gap: var(--spacing-5); }
 .setting-block { text-align: left; }
 h4 { font-weight: var(--font-weight-semibold); margin-bottom: var(--spacing-3); padding-bottom: var(--spacing-2); border-bottom: 1px solid var(--color-border); }

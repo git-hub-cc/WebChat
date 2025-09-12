@@ -28,16 +28,23 @@ const formattedTimestamp = computed(() => {
 </script>
 
 <style scoped>
+/* --- START OF FIX: Ensure left-alignment and full width --- */
 .text-item-wrapper {
   padding: var(--spacing-2) var(--spacing-3);
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
-  height: 80px;
+  height: 72px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   overflow: hidden;
+  position: relative;
+  /* Make sure the item itself is left-aligned within its container */
+  text-align: left;
+  width: 100%; /* Occupy the full width provided by the scroller */
 }
+/* --- END OF FIX --- */
+
 .text-item-wrapper:hover {
   background-color: var(--color-background-hover);
 }
@@ -46,6 +53,9 @@ const formattedTimestamp = computed(() => {
   font-weight: var(--font-weight-bold);
   color: var(--color-brand-primary);
   margin-bottom: var(--spacing-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .text-item-content {
   font-size: var(--font-size-sm);

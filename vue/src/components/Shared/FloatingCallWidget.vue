@@ -101,7 +101,6 @@ const maximize = () => {
   justify-content: center;
 }
 
-/* Transitions */
 .widget-slide-down-enter-active,
 .widget-slide-down-leave-active {
   transition: transform 0.3s var(--transition-easing);
