@@ -46,7 +46,9 @@ export default {
         }
     },
     ui: {
-        messageRetractionWindow: 5 * 60 * 1000,
+        // --- MODIFICATION START: Ensure this value is present ---
+        messageRetractionWindow: 2 * 60 * 1000, // 消息可撤回时间窗口 (2分钟)
+        // --- MODIFICATION END ---
         contextMenuAutoHide: 3000,
         virtualScroll: {
             batchSize: 15,

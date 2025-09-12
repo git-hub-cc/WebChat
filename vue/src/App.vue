@@ -269,12 +269,4 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme, 
   from { clip-path: circle(0% at var(--clip-x) var(--clip-y)); }
   to { clip-path: circle(150% at var(--clip-x) var(--clip-y)); }
 }
-html.is-transitioning::view-transition-new(root) {
-  animation: reveal-in 0.5s ease-in-out;
-  mix-blend-mode: normal;
-}
-html.is-transitioning::view-transition-old(root) {
-  animation: none;
-  mix-blend-mode: normal;
-}
 </style>

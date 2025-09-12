@@ -100,10 +100,6 @@ onUnmounted(() => {
 }
 
 /* --- Transitions --- */
-.media-viewer-fade-enter-active,
-.media-viewer-fade-leave-active {
-  transition: opacity 0.3s ease;
-}
 .media-viewer-fade-enter-from,
 .media-viewer-fade-leave-to {
   opacity: 0;

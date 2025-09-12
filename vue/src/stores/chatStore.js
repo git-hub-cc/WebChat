@@ -16,7 +16,7 @@ export const useChatStore = defineStore('chat', () => {
     const currentChatId = ref(null);
     const temporaryMessages = ref({});
 
-    // --- GETTERS (No changes) ---
+    // --- GETTERS ---
     const sortedChatList = computed(() => {
         const userStore = useUserStore();
         const groupStore = useGroupStore();
@@ -58,6 +58,22 @@ export const useChatStore = defineStore('chat', () => {
             .filter(m => m && m.id)
             .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     });
+
+    // --- MODIFICATION START: New Getter for Retraction Logic ---
+    const isMessageRetractable = computed(() => (messageId) => {
+        const chatId = Object.keys(chats.value).find(cid => chats.value[cid].some(m => m.id === messageId));
+        if (!chatId) return false;
+
+        const message = chats.value[chatId].find(m => m.id === messageId);
+        const userStore = useUserStore();
+
+        if (!message || message.sender !== userStore.userId) return false;
+        if (message.isRetracted || message.type === 'system') return false;
+
+        return Date.now() - new Date(message.timestamp).getTime() < AppSettings.ui.messageRetractionWindow;
+    });
+    // --- MODIFICATION END ---
+
 
     const getMessagesWithResources = computed(() => (chatId, resourceType, offset, limit) => {
         const allMessages = chats.value[chatId] || [];
@@ -116,26 +132,68 @@ export const useChatStore = defineStore('chat', () => {
         log('Chat Store initialized', 'INFO');
 
         eventBus.on('webrtc:message', handleIncomingMessage);
-
-        eventBus.on('message:delivered', ({ messageId, peerId }) => {
-            const chatId = peerId;
-            const msg = chats.value[chatId]?.find(m => m.id === messageId);
-            if (msg && msg.type === 'text') {
-                _updateMessageState(chatId, messageId, { status: 'delivered' });
-            }
-        });
-
-        eventBus.on('message:file-delivered', ({ messageId, peerId }) => {
-            const chatId = peerId;
-            _updateMessageState(chatId, messageId, { status: 'delivered' });
-        });
-
+        eventBus.on('message:delivered', ({ messageId, peerId }) => { _updateMessageState(peerId, messageId, { status: 'delivered' }); });
+        eventBus.on('message:file-delivered', ({ messageId, peerId }) => { _updateMessageState(peerId, messageId, { status: 'delivered' }); });
+        // --- MODIFICATION START: Listen for retraction event ---
         eventBus.on('message:retracted', ({ chatId, messageId, retractedByName }) => {
             _updateMessageToRetractedState(messageId, chatId, retractedByName);
         });
+        // --- MODIFICATION END ---
     }
 
-    // --- START OF MODIFICATION: sendMessage now handles AI mentions in groups ---
+    function formatPreview(message) {
+        if (!message) return '';
+        if (message.type === 'system' && message.subType === 'call-log') return message.content;
+        // --- MODIFICATION START: Check for retraction ---
+        if (message.isRetracted) return '消息已撤回';
+        // --- MODIFICATION END ---
+        if (message.toolCallInfo) return `正在使用工具: ${message.toolCallInfo.name}`;
+        if (message.isThinking) return `思考中...`;
+        if (message.isStreaming) return `正在输入...`;
+        let senderPrefix = '';
+        const userStore = useUserStore();
+        if (message.groupId && message.sender !== userStore.userId) {
+            senderPrefix = `${userStore.contacts[message.sender]?.name || '成员'}: `;
+        }
+        let content = '';
+        switch (message.type) {
+            case 'text': content = message.content; break;
+            case 'image': content = '[图片]'; break;
+            case 'sticker': content = '[贴图]'; break;
+            case 'video': content = '[视频]'; break;
+            case 'audio': content = '[语音消息]'; break;
+            case 'file': content = `[文件] ${message.fileName || ''}`; break;
+            case 'system': return message.content;
+            default: content = '新消息';
+        }
+        const previewText = `${senderPrefix}${content}`;
+        return previewText.length > 30 ? previewText.slice(0, 27) + '...' : previewText;
+    }
+
+    async function _updateMessageState(chatId, messageId, updates) {
+        if (!chats.value[chatId]) return;
+        const messageIndex = chats.value[chatId].findIndex(m => m.id === messageId);
+        if (messageIndex > -1) {
+            Object.assign(chats.value[chatId][messageIndex], updates);
+            const messagesToSave = JSON.parse(JSON.stringify(chats.value[chatId]));
+            await dbService.setItem('chats', { id: chatId, messages: messagesToSave });
+        }
+    }
+
+    async function addMessage(chatId, message) {
+        if (!chats.value[chatId]) chats.value[chatId] = [];
+        const existingIndex = chats.value[chatId].findIndex(m => m.id === message.id);
+        if (existingIndex > -1) {
+            Object.assign(chats.value[chatId][existingIndex], message);
+        } else {
+            chats.value[chatId].push(message);
+        }
+        if (!message.isThinking && !message.isStreaming && !message.toolCallInfo) {
+            const messagesToSave = JSON.parse(JSON.stringify(chats.value[chatId]));
+            await dbService.setItem('chats', { id: chatId, messages: messagesToSave });
+        }
+    }
+
     async function sendMessage({ content = null, file = null, sticker = null }, isResend = false) {
         if (!currentChatId.value) return;
         const targetId = currentChatId.value;
@@ -150,7 +208,6 @@ export const useChatStore = defineStore('chat', () => {
         const messageId = generateId(16);
 
         if (file || sticker) {
-            // ... (file handling logic is correct and unchanged)
             const mediaData = file || sticker;
             const mediaBlob = mediaData.blob;
             const mediaHash = mediaData.hash || mediaData.id;
@@ -202,24 +259,18 @@ export const useChatStore = defineStore('chat', () => {
             await apiService.sendAiMessage(targetId, content, chats.value[targetId]?.slice(-15) || []);
             _updateMessageState(targetId, fullMessage.id, { status: 'sent' });
         } else if (isGroup) {
-            // Broadcast to human members
             groupStore.broadcastMessage(targetId, fullMessage, { file: fileDataForTransport });
             _updateMessageState(targetId, fullMessage.id, { status: 'sent' });
-
-            // **NEW**: Check for AI mentions in the group
             const group = groupStore.groups[targetId];
             if (group && content) {
                 group.members.forEach(memberId => {
                     const memberContact = userStore.contacts[memberId];
                     if (memberContact?.isAI && content.includes(`@${memberContact.name}`)) {
-                        log(`AI Mention detected in group ${targetId} for AI ${memberId}`, 'INFO');
-                        // Get the history *before* this new message was added for context
                         const historyForAI = chats.value[targetId]?.filter(m => m.id !== fullMessage.id).slice(-15) || [];
                         apiService.sendGroupAiMessage(targetId, memberId, content, userStore.userId, historyForAI);
                     }
                 });
             }
-
         } else { // P2P
             try {
                 webrtcService.sendMessage(targetId, fullMessage);
@@ -237,64 +288,16 @@ export const useChatStore = defineStore('chat', () => {
             }
         }
     }
-    // --- END OF MODIFICATION ---
 
-    // ... (rest of the file is unchanged) ...
-    function formatPreview(message) {
-        if (!message) return '';
-        if (message.type === 'system' && message.subType === 'call-log') return message.content;
-        if (message.isRetracted) return '消息已撤回';
-        if (message.toolCallInfo) return `正在使用工具: ${message.toolCallInfo.name}`;
-        if (message.isThinking) return `思考中...`;
-        if (message.isStreaming) return `正在输入...`;
-        let senderPrefix = '';
-        const userStore = useUserStore();
-        if (message.groupId && message.sender !== userStore.userId) {
-            senderPrefix = `${userStore.contacts[message.sender]?.name || '成员'}: `;
-        }
-        let content = '';
-        switch (message.type) {
-            case 'text': content = message.content; break;
-            case 'image': content = '[图片]'; break;
-            case 'sticker': content = '[贴图]'; break;
-            case 'video': content = '[视频]'; break;
-            case 'audio': content = '[语音消息]'; break;
-            case 'file': content = `[文件] ${message.fileName || ''}`; break;
-            case 'system': return message.content;
-            default: content = '新消息';
-        }
-        const previewText = `${senderPrefix}${content}`;
-        return previewText.length > 30 ? previewText.slice(0, 27) + '...' : previewText;
-    }
-    async function _updateMessageState(chatId, messageId, updates) {
-        if (!chats.value[chatId]) return;
-        const messageIndex = chats.value[chatId].findIndex(m => m.id === messageId);
-        if (messageIndex > -1) {
-            Object.assign(chats.value[chatId][messageIndex], updates);
-            const messagesToSave = JSON.parse(JSON.stringify(chats.value[chatId]));
-            await dbService.setItem('chats', { id: chatId, messages: messagesToSave });
-        }
-    }
-    async function addMessage(chatId, message) {
-        if (!chats.value[chatId]) chats.value[chatId] = [];
-        const existingIndex = chats.value[chatId].findIndex(m => m.id === message.id);
-        if (existingIndex > -1) {
-            Object.assign(chats.value[chatId][existingIndex], message);
-        } else {
-            chats.value[chatId].push(message);
-        }
-        if (!message.isThinking && !message.isStreaming && !message.toolCallInfo) {
-            const messagesToSave = JSON.parse(JSON.stringify(chats.value[chatId]));
-            await dbService.setItem('chats', { id: chatId, messages: messagesToSave });
-        }
-    }
     async function resendFailedMessages(peerId) {
         if (!chats.value[peerId]) return;
         const failedMessages = chats.value[peerId].filter(m => m.status === 'failed' && m.sender === useUserStore().userId);
         if (failedMessages.length === 0) return;
         log(`Found ${failedMessages.length} failed messages for ${peerId}. Resending...`, 'INFO');
         eventBus.emit('showNotification', { message: `正在为 ${useUserStore().contacts[peerId]?.name || '用户'} 重发 ${failedMessages.length} 条失败的消息...`, type: 'info' });
+
         chats.value[peerId] = chats.value[peerId].filter(m => m.status !== 'failed' || m.sender !== useUserStore().userId);
+
         for (const message of failedMessages) {
             const fileBlob = message.fileHash ? (await dbService.getItem('fileCache', message.fileHash))?.fileBlob : null;
             const payload = {
@@ -309,13 +312,24 @@ export const useChatStore = defineStore('chat', () => {
             };
             if ((payload.file || payload.sticker) && !payload.file?.blob && !payload.sticker?.blob) {
                 log(`Cannot resend file message ${message.id} as blob is missing from cache.`, 'ERROR');
+                await addMessage(peerId, { ...message, status: 'failed' });
                 continue;
             }
             await sendMessage(payload, true);
         }
     }
+
     async function handleIncomingMessage({ peerId, message }) {
-        if (message.type === 'retract-message-ack' || message.type === 'group-join') { return; }
+        // --- MODIFICATION START: Handle retract-message-ack ---
+        if (message.type === 'retract-message-ack') {
+            log(`Retraction confirmed for message ${message.messageId}`, 'DEBUG');
+            // This is just a confirmation, the local UI is already updated.
+            // Future logic could use this, e.g., to show a specific "retracted for all" icon.
+            return;
+        }
+        // --- MODIFICATION END ---
+        if (message.type === 'group-join') { return; }
+
         const chatId = message.groupId || peerId;
         await addMessage(chatId, { ...message, status: 'delivered' });
         if (currentChatId.value !== chatId || !document.hasFocus()) {
@@ -329,6 +343,7 @@ export const useChatStore = defineStore('chat', () => {
             ttsStore.requestTtsForMessage({ ...message, senderContact });
         }
     }
+
     function openChat(chatId) {
         if (currentChatId.value === chatId) return;
         if (currentChatId.value && temporaryMessages.value[currentChatId.value]) {
@@ -340,6 +355,7 @@ export const useChatStore = defineStore('chat', () => {
         else if (chatId) useUserStore().clearUnread(chatId);
         log(`Opening chat: ${chatId}`, 'INFO');
     }
+
     async function deleteChatHistory(chatId) {
         if (chats.value[chatId]) {
             chats.value[chatId] = [];
@@ -348,6 +364,7 @@ export const useChatStore = defineStore('chat', () => {
             else useUserStore().updateContactLastMessage(chatId, '聊天记录已清空');
         }
     }
+
     async function clearAllChats() {
         if (Object.keys(chats.value).length === 0) {
             eventBus.emit('showNotification', { message: '没有聊天记录可清空。', type: 'info' });
@@ -359,6 +376,7 @@ export const useChatStore = defineStore('chat', () => {
         Object.keys(useGroupStore().groups).forEach(id => useGroupStore().updateGroupLastMessage(id, ''));
         eventBus.emit('showNotification', { message: '所有聊天记录已清空', type: 'success' });
     }
+
     async function deleteMessage(messageId) {
         const chatId = Object.keys(chats.value).find(cid => chats.value[cid].some(m => m.id === messageId));
         if (!chatId) return;
@@ -368,45 +386,60 @@ export const useChatStore = defineStore('chat', () => {
             await dbService.setItem('chats', { id: chatId, messages: chats.value[chatId] });
         }
     }
+
+    // --- MODIFICATION START: New Retraction Action ---
     async function retractMessage(messageId) {
         const chatId = currentChatId.value;
-        if (!chatId) return;
-        const message = chats.value[chatId]?.find(m => m.id === messageId);
-        const userStore = useUserStore();
-        if (!message || message.sender !== userStore.userId) return;
-        if (Date.now() - new Date(message.timestamp).getTime() > AppSettings.ui.messageRetractionWindow) {
-            eventBus.emit('showNotification', { message: '消息已超过可撤回时间', type: 'warning' });
+        if (!isMessageRetractable.value(messageId) || !chatId) {
+            if (isMessageRetractable.value(messageId) === false) { // Check explicitly for false to avoid firing on initial undefined
+                eventBus.emit('showNotification', { message: '消息已超过可撤回时间', type: 'warning' });
+            }
             return;
         }
-        const retractInfo = { type: 'retract-message-ack', messageId, retractedByName: userStore.userName };
+        const userStore = useUserStore();
+        const retractInfo = {
+            type: 'retract-message-request',
+            messageId,
+            retractedByName: userStore.userName
+        };
         try {
             if (chatId.startsWith('group_')) {
                 useGroupStore().broadcastMessage(chatId, retractInfo);
             } else {
                 webrtcService.sendMessage(chatId, retractInfo);
             }
+            // Optimistically update local UI
             await _updateMessageToRetractedState(messageId, chatId, "你");
         } catch (error) {
             log(`Failed to send retract command for message ${messageId}: ${error.message}`, 'ERROR');
             eventBus.emit('showNotification', { message: '撤回失败，对方可能已离线。', type: 'error' });
         }
     }
+
     async function _updateMessageToRetractedState(messageId, chatId, retractedByName) {
         if (!chats.value[chatId]) return;
         const messageIndex = chats.value[chatId].findIndex(m => m.id === messageId);
         if (messageIndex > -1) {
             const originalMessage = chats.value[chatId][messageIndex];
-            const retractedMessage = { ...originalMessage, type: 'system', isRetracted: true, content: `${retractedByName} 撤回了一条消息` };
+            const retractedMessage = {
+                ...originalMessage,
+                type: 'system',
+                isRetracted: true,
+                content: `${retractedByName} 撤回了一条消息`
+            };
+            // Replace the message in the array
             chats.value[chatId][messageIndex] = retractedMessage;
-            await dbService.setItem('chats', { id: chatId, messages: chats.value[chatId] });
+            await dbService.setItem('chats', { id: chatId, messages: JSON.parse(JSON.stringify(chats.value[chatId])) });
         }
     }
+    // --- MODIFICATION END ---
+
     function addTemporaryMessage(chatId, message) { if (!temporaryMessages.value[chatId]) temporaryMessages.value[chatId] = []; temporaryMessages.value[chatId].push(message); }
     function updateTemporaryMessage(chatId, messageId, newContent) { const tempChat = temporaryMessages.value[chatId]; if (tempChat) { const msg = tempChat.find(m => m.id === messageId); if (msg) msg.content = newContent; } }
     function removeTemporaryMessage(chatId, messageId) { if (temporaryMessages.value[chatId]) { temporaryMessages.value[chatId] = temporaryMessages.value[chatId].filter(m => m.id !== messageId); } }
 
     return {
-        chats, currentChatId, filteredChatList, currentChatMessages, getMessagesWithResources, getDatesWithMessages,
+        chats, currentChatId, filteredChatList, currentChatMessages, isMessageRetractable, getMessagesWithResources, getDatesWithMessages,
         init, addMessage, sendMessage, openChat, deleteChatHistory, clearAllChats, formatPreview,
         deleteMessage, retractMessage,
         addTemporaryMessage, updateTemporaryMessage, removeTemporaryMessage,

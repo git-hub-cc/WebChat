@@ -28,26 +28,25 @@ const formattedTimestamp = computed(() => {
 </script>
 
 <style scoped>
-/* --- START OF FIX: Ensure left-alignment and full width --- */
 .text-item-wrapper {
-  padding: var(--spacing-2) var(--spacing-3);
-  border-bottom: 1px solid var(--color-border);
-  cursor: pointer;
-  height: 72px;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  width: 100%;
+  height: 72px;
+  padding: var(--spacing-2) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
   overflow: hidden;
   position: relative;
-  /* Make sure the item itself is left-aligned within its container */
   text-align: left;
-  width: 100%; /* Occupy the full width provided by the scroller */
+  transition: background-color 0.2s ease;
 }
-/* --- END OF FIX --- */
 
 .text-item-wrapper:hover {
   background-color: var(--color-background-hover);
 }
+
 .text-item-sender {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
@@ -57,18 +56,20 @@ const formattedTimestamp = computed(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .text-item-content {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
+  line-height: 1.4;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.4;
 }
+
 .text-item-timestamp {
   position: absolute;
   top: var(--spacing-2);
-  right: var(--spacing-3);
+  right: var(--spacing-4);
   font-size: var(--font-size-xs);
   color: var(--color-text-tertiary);
 }

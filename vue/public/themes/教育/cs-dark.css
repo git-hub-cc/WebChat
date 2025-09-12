@@ -1,0 +1,144 @@
+/*
+================================================================================
+|                                                                              |
+|                    💻 CS - 赛博终端 (深色主题) - REFACTORED 💻               |
+|                                                                              |
+================================================================================
+*/
+body.theme-计算机科学-深色 {
+    /*
+    ================================================================
+    |           1. Theme-specific Design Tokens                    |
+    ================================================================
+    */
+
+    /* --- 1a. Theme Palette Definition --- */
+    --cs-dark-bg-main-rgb: 24, 24, 27;
+    --cs-dark-bg-container-rgb: 30, 30, 34;
+    --cs-dark-bg-sidebar-rgb: 37, 37, 42;
+    --cs-dark-bg-elevated-rgb: 45, 45, 50;
+    --cs-dark-bg-subtle-accent-rgb: 51, 51, 55;
+    --cs-dark-text-primary-rgb: 212, 212, 212;
+    --cs-dark-text-secondary-rgb: 150, 150, 150;
+    --cs-dark-accent-blue-rgb: 0, 122, 204;
+    --cs-dark-border-rgb: 60, 60, 60;
+    --cs-dark-status-online-rgb: 77, 183, 119;
+    --cs-dark-status-notification-rgb: 244, 121, 93;
+
+    /* --- 1b. Overriding Base Semantic Variables --- */
+    --color-brand-primary: rgb(var(--cs-dark-accent-blue-rgb));
+    --color-brand-primary-dark: rgb(0, 102, 174);
+    --color-text-primary: rgb(var(--cs-dark-text-primary-rgb));
+    --color-text-secondary: rgb(var(--cs-dark-text-secondary-rgb));
+    --color-text-on-brand: #FFFFFF;
+    --color-text-link: rgb(var(--cs-dark-accent-blue-rgb));
+
+    --color-background-page: rgb(var(--cs-dark-bg-main-rgb));
+    --color-background-panel: rgb(var(--cs-dark-bg-sidebar-rgb));
+    --color-background-elevated: rgb(var(--cs-dark-bg-elevated-rgb));
+    --color-background-hover: rgb(var(--cs-dark-bg-subtle-accent-rgb));
+    --color-background-active: rgba(var(--cs-dark-accent-blue-rgb), 0.15);
+
+    --color-border: rgb(var(--cs-dark-border-rgb));
+    --color-border-strong: rgb(80, 80, 80);
+
+    --color-status-success: rgb(var(--cs-dark-status-online-rgb));
+    --color-status-danger: rgb(var(--cs-dark-status-notification-rgb));
+
+    --color-message-sent-bg: rgba(var(--cs-dark-accent-blue-rgb), 0.2);
+    --color-message-sent-text: var(--color-text-primary);
+    --color-message-received-bg: var(--color-background-elevated);
+    --color-message-system-bg: transparent;
+    --color-message-system-text: var(--color-text-secondary);
+
+    /* --- 1c. Overriding Typography & Layout --- */
+    --font-family-base: "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", monospace;
+    --border-radius-md: 5px;
+    --shadow-focus-ring: 0 0 0 2px rgba(var(--cs-dark-accent-blue-rgb), 0.6);
+
+    /* --- 1d. Character Color Palette --- */
+    --ada-primary: #61AFEF;
+    --geek-primary: #E5C07B;
+    --wendy-primary: #C678DD;
+    --ligou-primary: #56B6C2;
+    --phantom-primary: #2ECC71;
+}
+
+/*
+================================================================
+|           2. Global Style Overrides for this Theme           |
+================================================================
+*/
+body.theme-计算机科学-深色 {
+    background-image: var(--custom-background-image,
+    linear-gradient(rgba(var(--border-subtle-rgb), 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--border-subtle-rgb), 0.1) 1px, transparent 1px)
+    );
+    background-size: 20px 20px;
+}
+
+body.theme-计算机科学-深色 .message-bubble,
+body.theme-计算机科学-深色 .message-input textarea,
+body.theme-计算机科学-深色 .details-panel h4 {
+    font-family: var(--font-family-mono);
+}
+
+body.theme-计算机科学-深色 .chat-list-item.active {
+    border-left: 3px solid var(--color-brand-primary);
+    background-color: var(--color-background-active);
+}
+
+body.theme-计算机科学-深色 .message.system {
+    border: 1px dashed rgba(var(--border-strong-rgb), 0.5);
+}
+
+/*
+================================================================
+|         3. Character-specific Variable Application           |
+================================================================
+*/
+body.theme-计算机科学-深色 .AI_Ada_Foundations {
+    --character-primary-color: var(--ada-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--ada-primary);
+    --character-message-bg: rgba(var(--ada-primary-rgb), 0.1);
+    --character-secondary-bg: var(--color-background-active);
+    --character-glow-color: rgba(var(--ada-primary-rgb), 0.5);
+}
+
+body.theme-计算机科学-深色 .AI_GaoJike_PracticalPython {
+    --character-primary-color: var(--geek-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--geek-primary);
+    --character-message-bg: rgba(var(--geek-primary-rgb), 0.1);
+    --character-secondary-bg: var(--color-background-active);
+    --character-glow-color: rgba(var(--geek-primary-rgb), 0.5);
+}
+
+body.theme-计算机科学-深色 .AI_Wendy_FrontendWizard {
+    --character-primary-color: var(--wendy-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--wendy-primary);
+    --character-message-bg: rgba(var(--wendy-primary-rgb), 0.1);
+    --character-secondary-bg: var(--color-background-active);
+    --character-glow-color: rgba(var(--wendy-primary-rgb), 0.5);
+}
+
+body.theme-计算机科学-深色 .AI_LiGou_SystemDesign {
+    --character-primary-color: var(--ligou-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--ligou-primary);
+    --character-message-bg: rgba(var(--ligou-primary-rgb), 0.1);
+    --character-secondary-bg: var(--color-background-active);
+    --character-glow-color: rgba(var(--ligou-primary-rgb), 0.5);
+}
+
+body.theme-计算机科学-深色 .AI_Phantom_CyberSecurity {
+    --character-primary-color: var(--phantom-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--phantom-primary);
+    --character-message-bg: rgba(var(--phantom-primary-rgb), 0.05);
+    --character-secondary-bg: var(--color-background-active);
+    --character-glow-color: rgba(var(--phantom-primary-rgb), 0.5);
+}

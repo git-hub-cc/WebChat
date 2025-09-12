@@ -30,6 +30,13 @@ export default defineConfig({
         assetsDir: 'assets',
         // 增加 chunk 大小警告限制，因为 virtual-scroller 可能较大
         chunkSizeWarningLimit: 1000,
+        terserOptions: {
+            compress: {
+                // 生产环境时移除 console
+                drop_console: true,
+                drop_debugger: true,
+            },
+        },
     },
     server: {
         port: 5173,

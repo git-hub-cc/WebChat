@@ -24,30 +24,33 @@ export const useUserStore = defineStore('user', () => {
     // --- GETTERS ---
     const getContactCombinedStatus = computed(() => (contactId) => {
         const contact = contacts.value[contactId];
-        if (!contact) {
-            return { isOnlineDisplay: false, isConnected: false, isLobbyOnline: false, isAi: false, statusText: '未知', statusClass: 'offline' };
-        }
+        // --- START OF MODIFICATION: Refined status logic ---
+        const isConnected = webrtcService.connections.value[contactId]?.isConnected ?? false;
+        const isLobbyOnline = onlineUserIds.value.includes(contactId);
 
+        // Handle typing first as it's a temporary, high-priority state
         if (typingContacts.value[contactId]) {
             return { isOnlineDisplay: true, isConnected: true, isLobbyOnline: true, isAi: false, statusText: '正在输入...', statusClass: 'online' };
         }
 
-        const isConnectedViaWebRTC = webrtcService.connections.value[contactId]?.isConnected ?? false;
-        const isLobbyOnline = onlineUserIds.value.includes(contactId);
-
-        if (contact.isAI) {
+        if (contact?.isAI) {
             return { isOnlineDisplay: isAiServiceHealthy.value, isConnected: isAiServiceHealthy.value, isLobbyOnline: isAiServiceHealthy.value, isAi: true, statusText: aiServiceStatusMessage.value, statusClass: isAiServiceHealthy.value ? 'online' : 'offline' };
         }
-        if (contact.isSpecial) {
+        if (contact?.isSpecial) {
             return { isOnlineDisplay: true, isConnected: true, isLobbyOnline: true, isAi: false, statusText: '特殊联系人', statusClass: 'online' };
         }
-        if (isConnectedViaWebRTC) {
+
+        // Standard user logic
+        if (isConnected) {
             return { isOnlineDisplay: true, isConnected: true, isLobbyOnline: true, isAi: false, statusText: '在线 (已连接)', statusClass: 'online' };
         }
         if (isLobbyOnline) {
             return { isOnlineDisplay: true, isConnected: false, isLobbyOnline: true, isAi: false, statusText: '在线 (未连接)', statusClass: 'warning' };
         }
+
+        // Default to offline if none of the above
         return { isOnlineDisplay: false, isConnected: false, isLobbyOnline: false, isAi: false, statusText: '离线', statusClass: 'offline' };
+        // --- END OF MODIFICATION ---
     });
 
 
@@ -207,9 +210,27 @@ export const useUserStore = defineStore('user', () => {
         return true;
     }
 
-    async function updateContactStatus(contactId, isConnected) { log(`Connection status change for ${contactId}: ${isConnected}`, 'DEBUG'); }
+    function updateContactStatus(contactId, isConnected) { log(`Connection status change for ${contactId}: ${isConnected}`, 'DEBUG'); }
     function updateAiServiceStatus(isHealthy) { isAiServiceHealthy.value = isHealthy; aiServiceStatusMessage.value = isHealthy ? "AI 服务可用" : "AI 服务不可用"; log(`AI service status updated to: ${isHealthy}.`, 'INFO'); }
-    async function fetchOnlineUsers() { try { const response = await fetch(AppSettings.server.lobbyApiEndpoint); if (!response.ok) throw new Error(`Server responded with ${response.status}`); const userIds = await response.json(); onlineUserIds.value = Array.isArray(userIds) ? userIds.filter(id => id !== userId.value) : []; log(`在线用户列表已更新: ${onlineUserIds.value.length} users online.`, 'INFO'); return true; } catch (error) { log(`获取在线用户列表失败: ${error}`, 'ERROR'); onlineUserIds.value = []; return false; } }
+
+    // --- START OF MODIFICATION: Moved fetchOnlineUsers here ---
+    async function fetchOnlineUsers() {
+        try {
+            const response = await fetch(AppSettings.server.lobbyApiEndpoint);
+            if (!response.ok) throw new Error(`Server responded with ${response.status}`);
+            const userIds = await response.json();
+            onlineUserIds.value = Array.isArray(userIds) ? userIds.filter(id => id !== userId.value) : [];
+            log(`在线用户列表已更新: ${onlineUserIds.value.length} users online.`, 'INFO');
+            return true;
+        } catch (error) {
+            log(`获取在线用户列表失败: ${error}`, 'ERROR');
+            // Do not clear the list on error, might be a temporary network issue.
+            // onlineUserIds.value = [];
+            return false;
+        }
+    }
+    // --- END OF MODIFICATION ---
+
     async function removeContact(contactId) { if (!contacts.value[contactId]) return false; const settingsStore = useSettingsStore(); if (settingsStore.currentSpecialContacts.some(c => c.id === contactId) && !contacts.value[contactId].isImported) { eventBus.emit('showNotification', { message: '无法删除当前主题的内置角色。', type: 'warning' }); return false; } await useGroupStore().removeMemberFromAllGroups(contactId); webrtcService.closeConnection(contactId); delete contacts.value[contactId]; await dbService.removeItem('contacts', contactId); const chatStore = useChatStore(); await chatStore.deleteChatHistory(contactId); if (chatStore.currentChatId === contactId) chatStore.openChat(null); eventBus.emit('showNotification', { message: '联系人已删除', type: 'success' }); return true; }
     async function clearUnread(contactId) { if (contacts.value[contactId] && contacts.value[contactId].unread > 0) { contacts.value[contactId].unread = 0; await dbService.setItem('contacts', contacts.value[contactId]); } }
     async function incrementUnread(contactId) { if (contacts.value[contactId]) { contacts.value[contactId].unread = (contacts.value[contactId].unread || 0) + 1; await dbService.setItem('contacts', contacts.value[contactId]); } }

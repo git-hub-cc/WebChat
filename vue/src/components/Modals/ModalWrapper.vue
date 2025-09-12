@@ -90,9 +90,6 @@ const close = () => {
 }
 
 /* Transitions */
-.modal-fade-enter-active, .modal-fade-leave-active {
-  transition: opacity 0.3s var(--transition-easing);
-}
 .modal-fade-enter-from, .modal-fade-leave-to {
   opacity: 0;
 }

@@ -12,14 +12,14 @@
         当前无其他在线用户
       </div>
       <div v-else v-for="user in onlineUsers" :key="user.id" class="lobby-item" @click="handleUserClick(user)">
-        <!-- MODIFICATION: Avatar now directly uses isOnline property from user object -->
+        <!-- The Avatar component will correctly show the online dot based on isOnline -->
         <Avatar :entity="user" :is-online="user.isOnline" />
         <div class="user-info">
           <span class="user-name">{{ user.name }}</span>
-          <!-- MODIFICATION: User status text reflects combined status -->
+          <!-- The status text and class now come directly from the combined status getter -->
           <span class="user-status" :class="user.statusClass">{{ user.statusText }}</span>
         </div>
-        <!-- MODIFICATION: Checkmark for contacts is now based on combinedStatus.isContact -->
+        <!-- The checkmark correctly identifies if they are already a contact -->
         <span v-if="user.isContact" class="contact-indicator">✓</span>
       </div>
     </div>
@@ -33,19 +33,19 @@ import { useUiStore } from '@/stores/uiStore';
 import IconButton from '@/components/Shared/IconButton.vue';
 import Avatar from '@/components/Shared/Avatar.vue';
 import Spinner from '@/components/Shared/Spinner.vue';
-import { webrtcService } from '@/services/webrtcService'; // Import webrtcService
 
 const userStore = useUserStore();
 const uiStore = useUiStore();
 const isLoading = ref(false);
 
-// This computed property reactively transforms the list of online IDs from the store
-// into a displayable list of user objects with their online status.
+// --- START OF MODIFICATION ---
+// This computed property is now more robust and directly reflects the required states.
 const onlineUsers = computed(() => {
   return userStore.onlineUserIds.map(id => {
     const contact = userStore.contacts[id];
-    // MODIFICATION: Use getContactCombinedStatus for a unified status
+    // Use the centralized getter for a unified and accurate status.
     const status = userStore.getContactCombinedStatus(id);
+
     return {
       id,
       name: contact ? contact.name : `用户 ${id.substring(0, 6)}`,
@@ -53,12 +53,14 @@ const onlineUsers = computed(() => {
       avatarUrl: contact ? contact.avatarUrl : null,
       isContact: !!contact,
       type: 'contact',
-      isOnline: status.isOnlineDisplay, // Used by Avatar for the dot
+      // These properties are now derived from the single source of truth
+      isOnline: status.isOnlineDisplay, // Correct for Avatar's online dot
       statusText: status.statusText,
       statusClass: status.statusClass,
     };
   });
 });
+// --- END OF MODIFICATION ---
 
 // The refresh button now just triggers the centralized fetch action
 async function fetchUsers() {
@@ -94,7 +96,7 @@ onMounted(() => {
 .lobby-item:hover { background-color: var(--color-background-hover); }
 .user-info { margin-left: var(--spacing-3); flex-grow: 1; overflow: hidden; }
 .user-name { font-weight: var(--font-weight-medium); display: block; }
-/* MODIFICATION: The user-status now uses the combined status classes */
+/* The user-status now uses the combined status classes */
 .user-status { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 .user-status.online { color: var(--color-status-success); }
 .user-status.offline { color: var(--color-status-danger); }

@@ -1,6 +1,6 @@
 <template>
   <div class="ai-settings-section">
-    <!-- Chapter Selector -->
+    <!-- Chapter Selector (Stays at the top level) -->
     <div v-if="contact.chapters && contact.chapters.length > 0" class="setting-block">
       <h4>篇章选择</h4>
       <select :value="selectedChapter" @change="onChapterChange" class="chapter-select">
@@ -11,7 +11,7 @@
       </select>
     </div>
 
-    <!-- Memory Books Section -->
+    <!-- Memory Books Section (Stays at the top level) -->
     <div class="setting-block">
       <h4>记忆书</h4>
       <div v-if="memoryStore.elementSets.length === 0" class="empty-memory">
@@ -44,24 +44,47 @@
       </div>
     </div>
 
-    <!-- TTS Settings -->
-    <div class="setting-block">
-      <h4>TTS 设置</h4>
-      <TtsSettings :contact-id="contactId" />
+    <!-- MODIFICATION START: New container for TTS-related tabs -->
+    <div class="tts-tab-container setting-block">
+      <nav class="details-tabs">
+        <button :class="{ active: activeTab === 'tts' }" @click="activeTab = 'tts'">TTS 设置</button>
+        <button :class="{ active: activeTab === 'about' }" @click="activeTab = 'about'">关于 TTS</button>
+      </nav>
+
+      <!-- TTS Settings Tab Content -->
+      <div v-if="activeTab === 'tts'" class="tab-content">
+        <TtsSettings :contact-id="contactId" />
+      </div>
+
+      <!-- About Tab Content -->
+      <div v-if="activeTab === 'about'" class="tab-content about-tts-content">
+        <p>我们感谢 <strong>GPT-SoVITS</strong> 及类似开源 TTS 项目的开发者为可访问的语音合成技术所做的贡献。特别感谢以下 GPT-SoVITS 社区贡献者 (排名不分先后)：</p>
+        <ul>
+          <li><strong>GPT-SoVITS 核心开发者:</strong> @花儿不哭 (FlowerNotCry)</li>
+          <li><strong>模型训练与分享:</strong> @红血球AE3803 (RedBloodCellAE3803), @白菜工厂1145号员工 (CabbageFactoryEmployee1145)</li>
+          <li><strong>推理优化与在线服务 (GSV AI Lab):</strong> @AI-Hobbyist</li>
+        </ul>
+        <p class="disclaimer">用户有责任确保遵守他们配置和使用的任何 TTS API 的服务条款。</p>
+      </div>
     </div>
+    <!-- MODIFICATION END -->
   </div>
 </template>
 
 <script setup>
-import { computed, defineAsyncComponent } from 'vue';
+import { ref, computed, defineAsyncComponent } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { useMemoryStore } from '@/stores/memoryStore';
 
+// (imports remain unchanged)
 const TtsSettings = defineAsyncComponent(() => import('./TtsSettings.vue'));
 
 const props = defineProps({
   contactId: { type: String, required: true },
 });
+
+// MODIFICATION: Set default tab to 'tts'
+const activeTab = ref('tts');
 
 const userStore = useUserStore();
 const memoryStore = useMemoryStore();
@@ -95,4 +118,72 @@ h4 { font-weight: var(--font-weight-semibold); margin-bottom: var(--spacing-3); 
 .enable-label { cursor: pointer; display: flex; align-items: center; gap: var(--spacing-1); }
 .memory-actions .btn-action { background: none; color: var(--color-brand-primary); font-weight: var(--font-weight-semibold); padding: 0; }
 .memory-item textarea { width: 100%; border: none; border-top: 1px solid var(--color-border); padding: var(--spacing-2); min-height: 80px; resize: vertical; font-family: var(--font-family-mono); }
+
+/* --- MODIFICATION START: Styles for the TTS-specific tab container --- */
+.tts-tab-container h4 {
+  /* Hide the h4 if it's inside the tab container, as tabs serve as headers */
+  display: none;
+}
+.details-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-4);
+  flex-shrink: 0;
+}
+.details-tabs button {
+  padding: var(--spacing-2) var(--spacing-4);
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  font-weight: var(--font-weight-medium);
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+.details-tabs button:hover {
+  color: var(--color-text-primary);
+}
+.details-tabs button.active {
+  color: var(--color-brand-primary);
+  border-bottom-color: var(--color-brand-primary);
+}
+
+.tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+}
+
+.about-tts-content {
+  text-align: left;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.about-tts-content p {
+  margin-bottom: var(--spacing-3);
+}
+
+.about-tts-content strong {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.about-tts-content ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: var(--spacing-3) 0;
+}
+
+.about-tts-content li {
+  margin-bottom: var(--spacing-1);
+}
+
+.about-tts-content .disclaimer {
+  font-style: italic;
+  font-size: calc(var(--font-size-sm) * 0.9);
+  padding: var(--spacing-2);
+  background-color: var(--color-background-elevated);
+  border-left: 3px solid var(--color-border-strong);
+  border-radius: var(--border-radius-sm);
+}
+/* --- MODIFICATION END --- */
 </style>

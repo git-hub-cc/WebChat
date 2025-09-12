@@ -65,11 +65,4 @@ function selectUser(user) {
   font-weight: var(--font-weight-medium);
 }
 
-.mention-fade-enter-active, .mention-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.mention-fade-enter-from, .mention-fade-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
 </style>

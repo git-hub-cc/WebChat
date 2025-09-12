@@ -79,17 +79,14 @@ function _connectWebSocket() {
             if (message.type === 'PONG') return;
             log(`WebSocket: Received message type ${message.type} from ${message.fromUserId || 'server'}`, 'DEBUG');
 
-            // --- START OF FIX: Handle application-level signaling messages ---
             if (message.type === 'SIGNAL') {
                 eventBus.emit('websocket:signal', message);
             } else if (message.type === 'APP_MESSAGE') {
-                // This is our new wrapper for reliable, application-level messages
                 log(`Received APP_MESSAGE from ${message.fromUserId}, payload type: ${message.payload.type}`, 'DEBUG');
                 eventBus.emit('webrtc:message', { peerId: message.fromUserId, message: message.payload });
             } else {
                 eventBus.emit('websocket:message', message);
             }
-            // --- END OF FIX ---
         };
         websocket.onclose = () => {
             isWebSocketConnected.value = false;
@@ -156,9 +153,24 @@ function _handlePeerData(rawData, peerId) {
     } else {
         try {
             const message = JSON.parse(new TextDecoder().decode(rawData));
+            // --- MODIFICATION START: Handle retraction requests and ACKs ---
+            if (message.type === 'retract-message-request') {
+                eventBus.emit('message:retracted', {
+                    chatId: message.groupId || peerId,
+                    messageId: message.messageId,
+                    retractedByName: message.retractedByName
+                });
+                // Send an acknowledgment back
+                webrtcService.sendMessage(peerId, { type: 'retract-message-ack', messageId: message.messageId }, true);
+                return;
+            }
+            if (message.type === 'retract-message-ack') {
+                eventBus.emit('message:retracted-ack', { messageId: message.messageId });
+                return;
+            }
+            // --- MODIFICATION END ---
             if (message.type === 'message-ack') { eventBus.emit('message:delivered', { messageId: message.ackId, peerId }); return; }
             if (message.type === 'file-transfer-complete') { eventBus.emit('message:file-delivered', { messageId: message.ackId, peerId }); return; }
-            if (message.type === 'retract-message-ack') { eventBus.emit('message:retracted', { chatId: message.groupId || peerId, ...message }); return; }
             if (message.id) { if (message.type === 'text' || message.type.startsWith('call-') || message.type === 'typing') { webrtcService.sendMessage(peerId, { type: 'message-ack', ackId: message.id }, true); } }
             if (message.type === 'typing') { eventBus.emit('webrtc:typing', { peerId }); return; }
             if (message.type === 'chunk-meta') {

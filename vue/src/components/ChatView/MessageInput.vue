@@ -188,6 +188,6 @@ onUnmounted(() => {
 .btn-play { background: var(--color-status-success); }
 .file-preview-image { max-height: 40px; border-radius: 4px; margin-right: var(--spacing-2); }
 .file-preview, .audio-preview { display: flex; align-items: center; gap: var(--spacing-2); width: 100%; justify-content: space-between; }
-.preview-fade-enter-active, .preview-fade-leave-active { transition: all 0.2s ease; }
+
 .preview-fade-enter-from, .preview-fade-leave-to { opacity: 0; transform: translateY(-10px); }
 </style>

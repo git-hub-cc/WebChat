@@ -85,13 +85,4 @@ onUnmounted(() => {
 }
 
 /* Transitions */
-.notification-list-enter-active,
-.notification-list-leave-active {
-  transition: all 0.5s ease;
-}
-.notification-list-enter-from,
-.notification-list-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
-}
 </style>

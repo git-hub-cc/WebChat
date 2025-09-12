@@ -10,6 +10,7 @@
     </nav>
 
     <div class="resource-content" ref="scrollContainerRef">
+      <!-- 资源网格或列表 -->
       <div v-if="activeTab !== 'calendar'" class="resource-view-wrapper">
         <RecycleScroller
             v-if="filteredResources.length > 0"
@@ -30,14 +31,16 @@
           />
         </RecycleScroller>
 
+        <!-- 加载与空状态 -->
         <div v-if="isLoading && filteredResources.length === 0" class="loading-spinner"><Spinner /></div>
         <div v-if="!isLoading && filteredResources.length === 0" class="empty-state">
           {{ searchQuery ? '无匹配结果' : '此分类下无资源' }}
         </div>
       </div>
 
+      <!-- 日历视图 -->
       <div v-if="activeTab === 'calendar'" class="calendar-wrapper">
-        <CalendarView :chat-id="chatId" @select-date="scrollToDate" />
+        <CalendarView :chat-id="chatId" />
       </div>
     </div>
   </div>
@@ -52,6 +55,7 @@ import { eventBus } from '@/services/eventBus';
 import { RecycleScroller } from 'vue-virtual-scroller';
 import CalendarView from './CalendarView.vue';
 
+// 异步加载子组件以优化性能
 const ResourceGridItem = defineAsyncComponent(() => import('./ResourceGridItem.vue'));
 const ResourceTextItem = defineAsyncComponent(() => import('./ResourceTextItem.vue'));
 
@@ -87,11 +91,13 @@ const gridColumns = computed(() => {
 
 const itemSize = computed(() => {
   if (activeTab.value === 'text') {
-    return 72; // Fixed height for list items
+    return 72; // 列表项的固定高度
   }
   if (scrollContainerRef.value) {
     const containerWidth = scrollContainerRef.value.clientWidth;
-    return (containerWidth - 16) / 3; // Approx width for square grid items
+    const padding = 8 * 2; // Corresponds to spacing-2
+    const gap = 8;
+    return (containerWidth - padding - gap * (gridColumns.value - 1)) / gridColumns.value;
   }
   return 100;
 });
@@ -125,6 +131,7 @@ async function loadResources(reset = false) {
 
 function switchTab(tab) {
   activeTab.value = tab;
+  searchQuery.value = '';
   if (tab !== 'calendar') {
     loadResources(true);
   }
@@ -166,19 +173,20 @@ onUnmounted(() => {
 .resource-view-wrapper { height: 100%; }
 .loading-spinner, .empty-state { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); color: var(--color-text-secondary); }
 .calendar-wrapper { padding: var(--spacing-3); }
-
 .scroller.grid-view { padding: var(--spacing-2); }
-.scroller.grid-view :deep(.vue-recycle-scroller__item-wrapper) {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--spacing-1);
-}
+.scroller.list-view { padding: 0; }
 
-/* --- START OF FIX: Styles for list view --- */
-.scroller.list-view :deep(.vue-recycle-scroller__item-view) {
-  /* This forces the item's container to fill the width */
-  width: 100% !important;
-  max-width: 100%;
+/*
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  THIS IS THE CRITICAL FIX
+  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+*/
+:deep(.scroller.list-view .vue-recycle-scroller__item-view) {
+  width: 100% !important; /* 强制覆盖库设置的内联 width: 72px */
 }
-/* --- END OF FIX --- */
+/*
+  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  THIS IS THE CRITICAL FIX
+  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+*/
 </style>

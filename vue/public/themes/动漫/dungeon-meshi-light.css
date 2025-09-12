@@ -1,0 +1,185 @@
+/*
+================================================================================
+|                                                                              |
+|             🍱 迷宫饭 - 明亮厨房 (浅色主题) - REFACTORED 🍱                   |
+|                                                                              |
+================================================================================
+*/
+body.theme-迷宫饭-浅色 {
+    /*
+    ================================================================
+    |           1. Theme-specific Design Tokens                    |
+    ================================================================
+    */
+
+    /* --- 1a. Theme Palette Definition --- */
+    --mgf-parchment-bg-rgb: 248, 244, 232;
+    --mgf-light-stone-panel-rgb: 238, 232, 220;
+    --mgf-cooked-food-brown-rgb: 180, 130, 90;
+    --mgf-cooked-food-brown-dark-rgb: 150, 100, 60;
+    --mgf-fresh-herb-green-rgb: 130, 160, 100;
+    --mgf-berry-red-rgb: 190, 70, 80;
+    --mgf-text-ink-brown-rgb: 85, 70, 55;
+    --mgf-text-light-soup-rgb: 150, 140, 125;
+    --mgf-border-old-wood-rgb: 205, 195, 180;
+
+    /* --- 1b. Overriding Base Semantic Variables --- */
+    --color-brand-primary: rgb(var(--mgf-cooked-food-brown-rgb));
+    --color-brand-primary-dark: rgb(var(--mgf-cooked-food-brown-dark-rgb));
+    --color-text-primary: rgb(var(--mgf-text-ink-brown-rgb));
+    --color-text-secondary: rgb(var(--mgf-text-light-soup-rgb));
+    --color-text-on-brand: rgb(var(--mgf-parchment-bg-rgb));
+    --color-text-link: rgb(var(--mgf-cooked-food-brown-rgb));
+
+    --color-background-page: rgb(var(--mgf-parchment-bg-rgb));
+    --color-background-panel: rgb(var(--mgf-light-stone-panel-rgb));
+    --color-background-elevated: #FFFFFF;
+    --color-background-hover: rgba(var(--mgf-cooked-food-brown-rgb), 0.07);
+    --color-background-active: rgba(var(--mgf-cooked-food-brown-rgb), 0.15);
+
+    --color-border: rgb(var(--mgf-border-old-wood-rgb));
+    --color-border-strong: rgb(var(--mgf-cooked-food-brown-rgb));
+
+    --color-status-success: rgb(var(--mgf-fresh-herb-green-rgb));
+    --color-status-danger: rgb(var(--mgf-berry-red-rgb));
+
+    --color-message-sent-bg: rgba(var(--mgf-cooked-food-brown-rgb), 0.12);
+    --color-message-sent-text: var(--color-text-primary);
+    --color-message-received-bg: var(--color-background-elevated);
+    --color-message-system-bg: rgba(var(--mgf-light-stone-panel-rgb), 0.85);
+    --color-message-system-text: var(--color-brand-primary);
+
+    /* --- 1c. Overriding Typography & Layout --- */
+    --font-family-base: "LXGW WenKai TC", "Source Han Serif SC", serif;
+    --border-radius-md: 6px;
+    --shadow-md: 0 1px 3px rgba(var(--mgf-text-ink-brown-rgb), 0.12);
+
+    /* --- 1d. Character Color Palette --- */
+    --laios-primary: #A0522D;
+    --laios-text: #F5EFE0;
+    --laios-accent: #795548;
+    --laios-msg-bg: linear-gradient(135deg, #fdf8f0, #f7f1e5);
+    --laios-secondary-bg: var(--color-background-active);
+
+    --marcille-primary: #FFB300;
+    --marcille-text: #614108;
+    --marcille-accent: #fce5a9;
+    --marcille-msg-bg: linear-gradient(135deg, #fffcf2, #fff8e1);
+    --marcille-secondary-bg: rgba(255, 179, 0, 0.15);
+
+    --chilchuck-primary: #C62828;
+    --chilchuck-text: #FFEBEE;
+    --chilchuck-accent: #8E0000;
+    --chilchuck-msg-bg: linear-gradient(135deg, #fff6f6, #ffebee);
+    --chilchuck-secondary-bg: rgba(198, 40, 40, 0.1);
+
+    --senshi-primary: #616161;
+    --senshi-text: #E0E0E0;
+    --senshi-accent: #424242;
+    --senshi-msg-bg: linear-gradient(135deg, #f5f5f5, #eeeeee);
+    --senshi-secondary-bg: rgba(97, 97, 97, 0.1);
+
+    --falin-primary: #795548;
+    --falin-text: #5D4037;
+    --falin-accent: #D7CCC8;
+    --falin-msg-bg: linear-gradient(135deg, #F8F9FA, #F1F3F5);
+    --falin-secondary-bg: rgba(121, 85, 72, 0.1);
+
+    --kabru-primary: #1565C0;
+    --kabru-text: #E3F2FD;
+    --kabru-accent: #0D47A1;
+    --kabru-msg-bg: linear-gradient(135deg, #f0f7ff, #e3f2fd);
+    --kabru-secondary-bg: rgba(21, 101, 192, 0.1);
+
+    --wingedlion-primary: #E65100;
+    --wingedlion-text: #4E342E;
+    --wingedlion-accent: #BF360C;
+    --wingedlion-msg-bg: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    --wingedlion-secondary-bg: rgba(230, 81, 0, 0.1);
+}
+
+/*
+================================================================
+|           2. Global Style Overrides for this Theme           |
+================================================================
+*/
+body.theme-迷宫饭-浅色 {
+    background-image: var(--custom-background-image,
+    radial-gradient(ellipse at top, rgba(var(--mgf-cooked-food-brown-rgb), 0.12) 0%, transparent 70%),
+    radial-gradient(ellipse at bottom, rgba(var(--mgf-fresh-herb-green-rgb), 0.08) 0%, transparent 60%),
+    linear-gradient(to bottom, rgb(var(--mgf-parchment-bg-rgb)), rgb(var(--mgf-light-stone-panel-rgb)))
+    );
+}
+
+body.theme-迷宫饭-浅色 .message.system {
+    border: 1px dashed var(--color-brand-primary);
+    box-shadow: 0 0 4px rgba(var(--mgf-cooked-food-brown-rgb), 0.18) inset;
+}
+
+/*
+================================================================
+|         3. Character-specific Variable Application           |
+================================================================
+*/
+body.theme-迷宫饭-浅色 .AI_Laious_迷宫饭 {
+    --character-primary-color: var(--laios-primary);
+    --character-text-color: var(--laios-text);
+    --character-accent-color: var(--laios-accent);
+    --character-message-bg: var(--laios-msg-bg);
+    --character-secondary-bg: var(--laios-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-迷宫饭-浅色 .AI_Marcille_迷宫饭 {
+    --character-primary-color: var(--marcille-primary);
+    --character-text-color: var(--marcille-text);
+    --character-accent-color: var(--marcille-accent);
+    --character-message-bg: var(--marcille-msg-bg);
+    --character-secondary-bg: var(--marcille-secondary-bg);
+    --character-glow-color: rgba(255, 179, 0, 0.4);
+}
+
+body.theme-迷宫饭-浅色 .AI_Chilchuck_迷宫饭 {
+    --character-primary-color: var(--chilchuck-primary);
+    --character-text-color: var(--chilchuck-text);
+    --character-accent-color: var(--chilchuck-accent);
+    --character-message-bg: var(--chilchuck-msg-bg);
+    --character-secondary-bg: var(--chilchuck-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-迷宫饭-浅色 .AI_Senshi_迷宫饭 {
+    --character-primary-color: var(--senshi-primary);
+    --character-text-color: var(--senshi-text);
+    --character-accent-color: var(--senshi-accent);
+    --character-message-bg: var(--senshi-msg-bg);
+    --character-secondary-bg: var(--senshi-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-迷宫饭-浅色 .AI_Falin_迷宫饭 {
+    --character-primary-color: var(--falin-primary);
+    --character-text-color: var(--falin-text);
+    --character-accent-color: var(--falin-accent);
+    --character-message-bg: var(--falin-msg-bg);
+    --character-secondary-bg: var(--falin-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-迷宫饭-浅色 .AI_Kabru_迷宫饭 {
+    --character-primary-color: var(--kabru-primary);
+    --character-text-color: var(--kabru-text);
+    --character-accent-color: var(--kabru-accent);
+    --character-message-bg: var(--kabru-msg-bg);
+    --character-secondary-bg: var(--kabru-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-迷宫饭-浅色 .AI_WingedLion_迷宫饭 {
+    --character-primary-color: var(--wingedlion-primary);
+    --character-text-color: var(--wingedlion-text);
+    --character-accent-color: var(--wingedlion-accent);
+    --character-message-bg: var(--wingedlion-msg-bg);
+    --character-secondary-bg: var(--wingedlion-secondary-bg);
+    --character-glow-color: rgba(230, 81, 0, 0.4);
+}

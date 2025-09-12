@@ -185,11 +185,4 @@ onUnmounted(() => {
   background-color: var(--color-background-hover);
 }
 
-.picker-fade-enter-active, .picker-fade-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-.picker-fade-enter-from, .picker-fade-leave-to {
-  opacity: 0;
-  transform: translateY(10px);
-}
 </style>
