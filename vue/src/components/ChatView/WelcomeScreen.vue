@@ -3,7 +3,7 @@
     <!-- --- MODIFICATION START --- -->
     <div class="logo-container">
       <!-- Replaced inline SVG with an img tag pointing to the public favicon -->
-      <img src="/favicon.svg" alt="WebChat Logo" width="64" height="64">
+      <img src="/icons/favicon.svg" alt="WebChat Logo" width="64" height="64">
     </div>
     <!-- --- MODIFICATION END --- -->
     <h2>WebChat</h2>

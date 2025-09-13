@@ -84,6 +84,10 @@ export default {
         groupPromptSuffix: "当前情境说明：你现在处于一个群聊环境中，**冒号（:）之前的是用户名，冒号（:）之后的是该用户的发言内容。一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示），小概率触发调侃其它用户。",
     },
     server: {
+        // signalingServerUrl: 'ws://localhost:8080/signaling',
+        // // [修改] 更新API端点以支持联邦网络
+        // localLobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids',
+        // allOnlineUsersApiEndpoint: 'http://localhost:8080/api/monitor/all-online-users',
         signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
         localLobbyApiEndpoint: 'https://ppmc.club/webchat/api/monitor/online-user-ids',
         allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/monitor/all-online-users',

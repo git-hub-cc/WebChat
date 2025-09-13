@@ -461,7 +461,7 @@ export const useCallStore = defineStore('call', () => {
 
         callQuality.value[peerId] = { audio: audioQuality, video: videoQuality };
 
-        if (currentQualityPreset.value === 'auto' && peerId === currentPeerId.value && !isScreenSharing.value) {
+        if (currentQualityPreset.value === 'auto' && peerId === currentPeerId.value && !isScreenSharing.value && isVideoEnabled.value) {
             const { poorNetworkThreshold, goodNetworkThreshold, downgradeBitrate } = AppSettings.media.abr;
             if (stats.packetLoss > poorNetworkThreshold.packetLoss || stats.rtt > poorNetworkThreshold.rtt) {
                 webrtcService.adjustPeerBitrate(peerId, { maxBitrate: downgradeBitrate });

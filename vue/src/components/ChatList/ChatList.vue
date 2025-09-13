@@ -49,7 +49,9 @@
       </RecycleScroller>
     </div>
 
-    <IconButton icon="+" class="new-chat-fab" title="新聊天/群组" @click="uiStore.showModal('newContact')" />
+    <!-- --- MODIFICATION START: Replaced text icon with SVG icon --- -->
+    <IconButton icon="icons/plus.svg" class="new-chat-fab" title="新聊天/群组" @click="uiStore.showModal('newContact')" />
+    <!-- --- MODIFICATION END --- -->
   </div>
 </template>
 
@@ -144,7 +146,10 @@ const showContextMenu = (event, item) => {
 .chat-list-header {
   display: flex;
   align-items: center;
-  padding: var(--spacing-2) var(--spacing-3);
+  /* --- [✅ 优化] START --- */
+  height: var(--header-height); /* 显式设置高度为60px，与右侧头部对齐 */
+  padding: 0 var(--spacing-3);     /* 调整垂直内边距为0，由flexbox居中 */
+  /* --- [✅ 优化] END --- */
   flex-shrink: 0;
   border-bottom: 1px solid var(--color-border);
 }

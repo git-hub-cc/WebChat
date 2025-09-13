@@ -25,8 +25,10 @@ public record SignalingMessage(
         // [MODIFIED] 使用一个通用的Map来承载simple-peer的信令数据
         Map<String, Object> payload,
         String message,
-        // [MODIFIED] 新增字段，用于服务器间路由识别。客户端消息中此字段为null。
-        String sourceServerUrl,
+        // --- [BUG FIX] ---
+        // 移除了冗余的 sourceServerUrl 字段，统一使用 sourceServerGuid
+        // String sourceServerUrl,
+        // --- [BUG FIX] ---
         // [NEW] 新增字段，服务器的持久化唯一ID。
         String sourceServerGuid) {
 
@@ -43,7 +45,10 @@ public record SignalingMessage(
         if (fromUserId != null) builder.append(", fromUserId='").append(fromUserId).append('\'');
         if (payload != null) builder.append(", payload='<signal_data>'"); // 使用占位符
         if (message != null) builder.append(", message='").append(message).append('\'');
-        if (sourceServerUrl != null) builder.append(", sourceServerUrl='").append(sourceServerUrl).append('\'');
+        // --- [BUG FIX] ---
+        // 移除了对 sourceServerUrl 的日志记录
+        // if (sourceServerUrl != null) builder.append(", sourceServerUrl='").append(sourceServerUrl).append('\'');
+        // --- [BUG FIX] ---
         if (sourceServerGuid != null) builder.append(", sourceServerGuid='").append(sourceServerGuid).append('\'');
         builder.append('}');
         return builder.toString();

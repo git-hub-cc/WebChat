@@ -62,7 +62,6 @@ export const useGroupStore = defineStore('group', () => {
         return finalGroupId;
     }
 
-    // --- START OF MODIFICATION: Refined addMemberToGroup with connection checks ---
     async function addMemberToGroup(groupId, memberId) {
         const group = groups.value[groupId];
         const userStore = useUserStore();
@@ -76,24 +75,23 @@ export const useGroupStore = defineStore('group', () => {
 
         const addedMemberDetails = userStore.contacts[memberId];
 
-        // For human users, check connection status before adding
         if (!addedMemberDetails?.isAI) {
+            await userStore.fetchAllOnlineUsers();
+
             const status = userStore.getContactCombinedStatus(memberId);
             const memberName = addedMemberDetails?.name || `用户 ${memberId.substring(0,4)}`;
 
-            if (!status.isLobbyOnline) {
+            if (!status.isGloballyOnline) {
                 eventBus.emit('showNotification', { message: `${memberName} 不在线，无法添加。`, type: 'error' });
                 return false;
             }
             if (!status.isConnected) {
                 eventBus.emit('showNotification', { message: `正在尝试与 ${memberName} 建立连接，请稍后重试...`, type: 'info' });
-                // Proactively try to establish a connection
                 webrtcService.createOffer(memberId, { isSilent: false });
                 return false;
             }
         }
 
-        // --- If checks pass, proceed with adding ---
         group.members.push(memberId);
 
         broadcastMessage(groupId, {
@@ -103,7 +101,6 @@ export const useGroupStore = defineStore('group', () => {
             allMembers: group.members
         }, { excludeIds: [memberId] });
 
-        // Only send a P2P join command to human users
         if (!addedMemberDetails?.isAI) {
             webrtcService.sendMessage(memberId, {
                 type: 'group-join',
@@ -115,7 +112,6 @@ export const useGroupStore = defineStore('group', () => {
         eventBus.emit('showNotification', { message: `${addedMemberDetails.name} 已加入群组`, type: 'success' });
         return true;
     }
-    // --- END OF MODIFICATION ---
 
     async function removeMemberFromGroup(groupId, memberId) {
         const group = groups.value[groupId];
@@ -123,22 +119,23 @@ export const useGroupStore = defineStore('group', () => {
         if (!group || group.owner !== userStore.userId || memberId === userStore.userId) return false;
         const index = group.members.indexOf(memberId);
         if (index > -1) {
+            const originalMembers = [...group.members];
+            const removedMemberName = userStore.contacts[memberId]?.name || `用户 ${memberId.substring(0,4)}`;
+
             group.members.splice(index, 1);
             if (group.aiPrompts?.[memberId]) {
                 delete group.aiPrompts[memberId];
             }
+
             broadcastMessage(groupId, {
                 type: 'group-member-removed',
                 removedMemberId: memberId,
+                removedMemberName: removedMemberName,
                 allMembers: group.members
-            }, { excludeIds: [memberId] });
-
-            if (!userStore.contacts[memberId]?.isAI) {
-                // Use signaling for critical removal notice
-                webrtcService.sendViaSignaling(memberId, { type: 'group-removed-you', groupId });
-            }
+            }, { customRecipientList: originalMembers });
 
             await dbService.setItem('groups', group);
+            eventBus.emit('showNotification', { message: `${removedMemberName} 已被移出群组`, type: 'success' });
             return true;
         }
         return false;
@@ -150,12 +147,14 @@ export const useGroupStore = defineStore('group', () => {
         const userId = userStore.userId;
         if (!group || !group.members.includes(userId) || group.owner === userId) return false;
         const updatedMembers = group.members.filter(id => id !== userId);
+
         broadcastMessage(groupId, {
             type: 'group-member-left',
             memberId: userId,
             memberName: userStore.userName,
             allMembers: updatedMembers
         }, { excludeIds: [userId] });
+
         delete groups.value[groupId];
         await dbService.removeItem('groups', groupId);
         await useChatStore().deleteChatHistory(groupId);
@@ -167,7 +166,13 @@ export const useGroupStore = defineStore('group', () => {
         const group = groups.value[groupId];
         const userId = useUserStore().userId;
         if (!group || group.owner !== userId) return false;
-        broadcastMessage(groupId, { type: 'group-dissolved' }, { excludeIds: [userId] });
+
+        // --- FIX START ---
+        // 同样，为解散操作也先保存原始成员列表，确保每个人都能收到解散通知。
+        const originalMembers = [...group.members];
+        broadcastMessage(groupId, { type: 'group-dissolved', groupName: group.name }, { customRecipientList: originalMembers, excludeIds: [userId] });
+        // --- FIX END ---
+
         delete groups.value[groupId];
         await dbService.removeItem('groups', groupId);
         await useChatStore().deleteChatHistory(groupId);
@@ -175,16 +180,23 @@ export const useGroupStore = defineStore('group', () => {
         return true;
     }
 
-    function broadcastMessage(groupId, message, { excludeIds = [], file = null } = {}) {
+    function broadcastMessage(groupId, message, { excludeIds = [], file = null, customRecipientList = null } = {}) {
         const group = groups.value[groupId];
         const userStore = useUserStore();
         if (!group) return;
-        group.members.forEach(memberId => {
+
+        const recipients = customRecipientList || group.members;
+
+        recipients.forEach(memberId => {
             if (memberId !== userStore.userId && !userStore.contacts[memberId]?.isAI && !excludeIds.includes(memberId)) {
-                webrtcService.sendMessage(memberId, { ...message, groupId });
-                if (file) {
-                    const fileData = { blob: file.blob, hash: file.hash || file.id, name: file.name, type: file.fileType || file.blob.type, size: file.size, messageId: message.id };
-                    webrtcService.sendFile(memberId, fileData);
+                try {
+                    webrtcService.sendMessage(memberId, { ...message, groupId });
+                    if (file) {
+                        const fileData = { blob: file.blob, hash: file.hash || file.id, name: file.name, type: file.fileType || file.blob.type, size: file.size, messageId: message.id };
+                        webrtcService.sendFile(memberId, fileData);
+                    }
+                } catch (error) {
+                    log(`向群组成员 ${memberId} 广播消息失败 (可能未连接): ${error.message}`, 'WARN');
                 }
             }
         });
@@ -204,25 +216,10 @@ export const useGroupStore = defineStore('group', () => {
                     groups.value[groupId] = newGroupData;
                     await dbService.setItem('groups', newGroupData);
                     eventBus.emit('showNotification', { message: `您已加入新群组: ${message.group.name}`, type: 'success' });
-                    const myId = userStore.userId;
-                    message.group.members.forEach(memberId => {
-                        if (memberId !== myId && !userStore.contacts[memberId]?.isAI) {
-                            if (userStore.onlineUserIds.includes(memberId)) {
-                                log(`Auto-connecting to new group member ${memberId}`, 'INFO');
-                                webrtcService.createOffer(memberId, { isSilent: true });
-                            }
-                        }
-                    });
+                    webrtcService.proactivelyConnectToOnlineContacts();
                 } else {
                     groups.value[groupId] = { ...groups.value[groupId], ...message.group };
                     await dbService.setItem('groups', groups.value[groupId]);
-                }
-                break;
-            case 'group-invite':
-                if (!groups.value[groupId]) {
-                    groups.value[groupId] = { type: 'group', ...message.group };
-                    await dbService.setItem('groups', message.group);
-                    eventBus.emit('showNotification', { message: `您已被邀请加入群组: ${message.group.name}`, type: 'success' });
                 }
                 break;
             case 'group-member-added':
@@ -242,26 +239,22 @@ export const useGroupStore = defineStore('group', () => {
                     log(`Group prompt updated for AI ${message.aiMemberId} from peer.`, 'INFO');
                 }
                 break;
-            case 'retract-message-ack':
-                if (groups.value[groupId]) {
-                    chatStore._updateMessageToRetractedState(message.messageId, groupId, message.retractedByName);
-                }
-                break;
             case 'group-member-removed':
                 if(groups.value[groupId] && message.removedMemberId) {
-                    groups.value[groupId].members = message.allMembers;
-                    if(groups.value[groupId].aiPrompts?.[message.removedMemberId]) {
-                        delete groups.value[groupId].aiPrompts[message.removedMemberId];
+                    if (message.removedMemberId === userStore.userId) {
+                        const groupName = groups.value[groupId].name;
+                        delete groups.value[groupId];
+                        await dbService.removeItem('groups', groupId);
+                        if (chatStore.currentChatId === groupId) chatStore.openChat(null);
+                        eventBus.emit('showNotification', { message: `您已被管理员移出群组 "${groupName}"`, type: 'warning' });
+                    } else {
+                        groups.value[groupId].members = message.allMembers;
+                        if(groups.value[groupId].aiPrompts?.[message.removedMemberId]) {
+                            delete groups.value[groupId].aiPrompts[message.removedMemberId];
+                        }
+                        await dbService.setItem('groups', groups.value[groupId]);
+                        eventBus.emit('showNotification', { message: `成员 "${message.removedMemberName}" 已被移出群组`, type: 'info' });
                     }
-                    await dbService.setItem('groups', groups.value[groupId]);
-                }
-                break;
-            case 'group-removed-you':
-                if(groups.value[groupId]) {
-                    delete groups.value[groupId];
-                    await dbService.removeItem('groups', groupId);
-                    if (chatStore.currentChatId === groupId) chatStore.openChat(null);
-                    eventBus.emit('showNotification', { message: `您已被移出群组`, type: 'warning' });
                 }
                 break;
             case 'group-member-left':
@@ -272,10 +265,11 @@ export const useGroupStore = defineStore('group', () => {
                 break;
             case 'group-dissolved':
                 if(groups.value[groupId]) {
+                    const groupName = message.groupName || groups.value[groupId].name; // Fallback
                     delete groups.value[groupId];
                     await dbService.removeItem('groups', groupId);
                     if (chatStore.currentChatId === groupId) chatStore.openChat(null);
-                    eventBus.emit('showNotification', { message: `群组 "${message.groupName}" 已被解散`, type: 'warning' });
+                    eventBus.emit('showNotification', { message: `群组 "${groupName}" 已被解散`, type: 'warning' });
                 }
                 break;
         }

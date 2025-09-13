@@ -1,6 +1,9 @@
 <template>
   <button class="icon-button" :title="title" :disabled="disabled">
-    <span class="icon">{{ icon }}</span>
+    <!-- --- MODIFICATION START: Conditionally render <img> for SVG icons or <span> for text icons --- -->
+    <img v-if="icon && icon.endsWith('.svg')" :src="icon" :alt="title" class="icon" />
+    <span v-else class="icon">{{ icon }}</span>
+    <!-- --- MODIFICATION END --- -->
   </button>
 </template>
 
@@ -29,9 +32,16 @@ defineProps({
   /* --- MODIFICATION END --- */
   flex-shrink: 0;
 }
+/* --- MODIFICATION START: Styles for both text and image icons --- */
 .icon-button .icon {
   line-height: 1; /* Aligns emoji better */
 }
+.icon-button img.icon {
+  width: 60%;
+  height: 60%;
+  object-fit: contain;
+}
+/* --- MODIFICATION END --- */
 
 /* --- MODIFICATION START --- */
 .icon-button:hover:not(:disabled) {

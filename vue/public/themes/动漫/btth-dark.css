@@ -1,7 +1,8 @@
 /*
 ================================================================================
 |                                                                              |
-|                    🔥 斗破苍穹 - 魔焰夜行 (深色主题) - REFACTORED 🔥          |
+|           🔥 斗破苍穹 - 魔焰夜行 (深色主题) - REFACTORED V2 🔥              |
+|              - 设计理念: 异火辉光, 灵魂深邃, 斗气涌动 -                     |
 |                                                                              |
 ================================================================================
 */
@@ -55,6 +56,7 @@ body.theme-斗破苍穹-深色 {
     --font-family-base: "LXGW WenKai TC", "STKaiti", "SimSun", serif;
     --border-radius-md: 5px;
     --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.7);
+    --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.25);
 
     /* --- 1d. Character Color Palette --- */
     --xiaoyan-primary: #D24628;
@@ -79,9 +81,7 @@ body.theme-斗破苍穹-深色 {
     --medusa-secondary-bg: rgba(100, 60, 130, 0.2);
 
     --xiaoxian-primary: #6E7873;
-    /* --- ✅ FIX: Replaced undefined variable with the correct one --- */
     --xiaoxian-text: rgba(var(--dq-dark-text-ash-white-rgb), 0.8);
-    /* --- ✅ END FIX --- */
     --xiaoxian-accent: #6E7873;
     --xiaoxian-msg-bg: linear-gradient(135deg, rgba(110, 110, 120, 0.05), rgba(110, 110, 120, 0.12));
     --xiaoxian-secondary-bg: rgba(110, 110, 120, 0.15);
@@ -126,11 +126,25 @@ body.theme-斗破苍穹-深色 {
     radial-gradient(ellipse at bottom left, rgba(var(--dq-dark-soul-purple-rgb), 0.12) 0%, transparent 70%),
     radial-gradient(circle at top left, rgba(var(--dq-dark-demonic-cyan-flame-rgb), 0.08) 0%, transparent 50%)
     );
+    /* --- [可读性优化] START --- */
+    font-weight: 500; /* 全局增加基础字重，让“霞鹜文楷”更清晰 */
+    /* --- [可读性优化] END --- */
 }
+
+/* --- [可读性优化] START --- */
+body.theme-斗破苍穹-深色 .message-content {
+    font-size: 1.05rem; /* 略微增大消息正文字体 */
+}
+body.theme-斗破苍穹-深色 .preview {
+    font-size: 0.9rem; /* 增大预览字体 */
+}
+/* --- [可读性优化] END --- */
+
 
 body.theme-斗破苍穹-深色 .app-container {
     border: 1px solid rgba(var(--dq-dark-volcanic-border-rgb), 0.6);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 0 3px rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.25);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(5px);
 }
 
 body.theme-斗破苍穹-深色 .chat-header.character-active::after {
@@ -234,7 +248,6 @@ body.theme-斗破苍穹-深色 .AI_紫妍_斗破苍穹 {
 ================================================================
 */
 
-/* General enhancements for all special characters in this theme */
 body.theme-斗破苍穹-深色 .chat-list-item.is-special.active {
     background-image: linear-gradient(to right, rgba(var(--dq-dark-heavenly-flame-red-rgb), 0.1), transparent);
     border-left: 3px solid var(--character-primary-color);

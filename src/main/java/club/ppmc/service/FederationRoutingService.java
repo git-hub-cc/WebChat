@@ -138,10 +138,13 @@ public class FederationRoutingService {
     public boolean forwardToOutboundPeers(SignalingMessage originalMessage, String fromUserId) {
         if (outboundPeers.isEmpty()) return false;
 
+        // --- [BUG FIX] ---
+        // 更新构造函数调用，移除 sourceServerUrl (null) 参数，以匹配新的7参数 DTO
         var forwardMessage = new SignalingMessage(
                 originalMessage.type(), null, originalMessage.targetUserId(), fromUserId,
-                originalMessage.payload(), null, null, federationService.getSelfGuid()
+                originalMessage.payload(), null, federationService.getSelfGuid()
         );
+        // --- [BUG FIX] ---
         try {
             String payload = objectMapper.writeValueAsString(forwardMessage);
             for (WebSocketSession session : outboundPeers.values()) {
@@ -187,7 +190,10 @@ public class FederationRoutingService {
             logger.info("到伙伴 {} 的出站连接已建立: 会话ID {}", peerUrl, session.getId());
             outboundPeers.put(peerUrl, session);
 
-            var registerMsg = new SignalingMessage(MessageType.REGISTER_PEER, null, null, null, null, "Peer Registration", null, federationService.getSelfGuid());
+            // --- [BUG FIX] ---
+            // 更新构造函数调用，移除 sourceServerUrl (null) 参数
+            var registerMsg = new SignalingMessage(MessageType.REGISTER_PEER, null, null, null, null, "Peer Registration", federationService.getSelfGuid());
+            // --- [BUG FIX] ---
             try {
                 sendOverWebSocket(session, objectMapper.writeValueAsString(registerMsg));
             } catch (JsonProcessingException e) {

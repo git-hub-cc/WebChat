@@ -8,7 +8,6 @@
     <div class="details-tabs">
       <button :class="{ active: activeTab === 'members' }" @click="activeTab = 'members'">成员</button>
       <button :class="{ active: activeTab === 'media' }" @click="activeTab = 'media'">媒体</button>
-      <!-- [MODIFIED] Conditionally render AI settings tab -->
       <button v-if="isOwnerWithAIs" :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'">AI设置</button>
     </div>
 
@@ -45,7 +44,7 @@
     <!-- 媒体预览 (No changes here) -->
     <ResourcePreview v-if="activeTab === 'media'" :chat-id="group.id" />
 
-    <!-- [MODIFIED] AI 设置 Tab Content -->
+    <!-- AI 设置 Tab Content -->
     <div v-if="activeTab === 'ai' && isOwnerWithAIs" class="tab-content">
       <AiGroupSettings :group-id="group.id" />
     </div>
@@ -70,7 +69,6 @@ import ResourcePreview from './ResourcePreview.vue';
 import AppSettings from '@/config/AppSettings';
 import { webrtcService } from '@/services/webrtcService';
 
-// [NEW] Asynchronously import the new component
 const AiGroupSettings = defineAsyncComponent(() => import('./AiGroupSettings.vue'));
 
 const groupStore = useGroupStore();
@@ -84,9 +82,7 @@ const selectedContactToAdd = ref("");
 const group = computed(() => groupStore.groups[chatStore.currentChatId]);
 const isOwner = computed(() => group.value?.owner === userStore.userId);
 const maxMembers = AppSettings.chat.maxGroupMembers;
-
 const groupIdShort = computed(() => group.value?.id.replace('group_', ''));
-
 const isOwnerWithAIs = computed(() => {
   return isOwner.value && group.value?.members.some(id => userStore.contacts[id]?.isAI);
 });
@@ -96,14 +92,15 @@ const sortedMembers = computed(() => {
   return group.value.members
       .map(id => {
         const contact = userStore.contacts[id] || { id, name: `用户 ${id.substring(0,4)}`, type: 'contact' };
-        const isConnected = webrtcService.connections.value[id]?.isConnected;
-        const status = {
-          isOwner: id === group.value.owner,
-          statusText: id === userStore.userId ? '您' : (contact.isAI ? 'AI 助手' : (isConnected ? '在线' : '离线')),
-          statusClass: isConnected ? 'online' : 'offline',
-          sortOrder: id === group.value.owner ? 0 : (isConnected ? 1 : (contact.isAI ? 2 : 3))
+        const status = userStore.getContactCombinedStatus(id);
+        const isOwnerStatus = id === group.value.owner;
+        return {
+          ...contact,
+          isOwner: isOwnerStatus,
+          statusText: id === userStore.userId ? '您' : (contact.isAI ? 'AI 助手' : status.statusText),
+          statusClass: status.statusClass,
+          sortOrder: isOwnerStatus ? 0 : (status.isConnected ? 1 : (contact.isAI ? 2 : 3))
         };
-        return { ...contact, ...status };
       })
       .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 });
@@ -133,14 +130,26 @@ function removeMember(memberId, memberName) {
 function leaveGroup() {
   uiStore.showConfirmationModal({
     message: `确定要退出群组 "${group.value.name}" 吗？`,
-    onConfirm: () => groupStore.leaveGroup(group.value.id).then(() => uiStore.toggleDetailsPanel(false)),
+    onConfirm: () => {
+      // --- FIX START ---
+      // 先关闭面板，再执行数据删除
+      uiStore.toggleDetailsPanel(false);
+      groupStore.leaveGroup(group.value.id);
+      // --- FIX END ---
+    },
   });
 }
 
 function dissolveGroup() {
   uiStore.showConfirmationModal({
     message: `确定要解散群组 "${group.value.name}" 吗？此操作不可逆！`,
-    onConfirm: () => groupStore.dissolveGroup(group.value.id).then(() => uiStore.toggleDetailsPanel(false)),
+    onConfirm: () => {
+      // --- FIX START ---
+      // 先关闭面板，再执行数据删除
+      uiStore.toggleDetailsPanel(false);
+      groupStore.dissolveGroup(group.value.id);
+      // --- FIX END ---
+    },
   });
 }
 </script>

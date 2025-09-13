@@ -5,9 +5,11 @@
       <h4>篇章选择</h4>
       <select :value="selectedChapter" @change="onChapterChange" class="chapter-select">
         <option :value="null">默认行为</option>
-        <option v-for="chapter in contact.chapters" :key="chapter.id" :value="chapter.id">
-          {{ chapter.name }}
+        <!-- ✅ FIX START: Use a computed property to display truncated names -->
+        <option v-for="chapter in formattedChapters" :key="chapter.id" :value="chapter.id" :title="chapter.name">
+          {{ chapter.displayName }}
         </option>
+        <!-- ✅ FIX END -->
       </select>
     </div>
 
@@ -92,6 +94,20 @@ const memoryStore = useMemoryStore();
 const contact = computed(() => userStore.contacts[props.contactId]);
 const selectedChapter = computed(() => contact.value?.selectedChapterId || null);
 
+// ✅ FIX START: Create a computed property to handle text truncation
+const formattedChapters = computed(() => {
+  if (!contact.value?.chapters) {
+    return [];
+  }
+  return contact.value.chapters.map(chapter => ({
+    ...chapter,
+    displayName: chapter.name.length > 50
+        ? `${chapter.name.substring(0, 50)}...`
+        : chapter.name,
+  }));
+});
+// ✅ FIX END
+
 const onChapterChange = (event) => {
   const chapterId = event.target.value === 'null' ? null : event.target.value;
   userStore.setSelectedChapterForAI(props.contactId, chapterId);
@@ -108,7 +124,13 @@ const saveMemory = (setId, content) => memoryStore.saveMemoryBookContent(setId, 
 .ai-settings-section { padding: var(--spacing-4); display: flex; flex-direction: column; gap: var(--spacing-5); }
 .setting-block { text-align: left; }
 h4 { font-weight: var(--font-weight-semibold); margin-bottom: var(--spacing-3); padding-bottom: var(--spacing-2); border-bottom: 1px solid var(--color-border); }
-.chapter-select { width: 100%; }
+.chapter-select {
+  width: 100%;
+  /* --- [✅ UI 优化] START --- */
+  max-width: 300px; /* 限制最大宽度，防止过长的篇章名破坏布局 */
+  text-overflow: ellipsis; /* 对已选中的长文本显示省略号 */
+  /* --- [✅ UI 优化] END --- */
+}
 .empty-memory { text-align: center; color: var(--color-text-secondary); font-size: var(--font-size-sm); padding: var(--spacing-3); background-color: var(--color-background-elevated); border-radius: var(--border-radius-md); }
 .memory-book-list { display: flex; flex-direction: column; gap: var(--spacing-3); }
 .memory-item { border: 1px solid var(--color-border); border-radius: var(--border-radius-md); overflow: hidden; }
