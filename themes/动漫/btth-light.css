@@ -1,7 +1,8 @@
 /*
 ================================================================================
 |                                                                              |
-|             🔥 斗破苍穹 - 炎动青莲 (浅色主题) - REFACTORED 🔥                 |
+|            🔥 斗破苍穹 - 炎动青莲 (浅色主题) - REFACTORED V2 🔥              |
+|              - 设计理念: 古卷雅致, 青莲灵动, 金石之气 -                      |
 |                                                                              |
 ================================================================================
 */
@@ -53,6 +54,8 @@ body.theme-斗破苍穹-浅色 {
     --font-family-base: "LXGW WenKai TC", "STKaiti", "SimSun", serif;
     --border-radius-md: 5px;
     --shadow-md: 0 2px 5px rgba(var(--dq-light-text-ink-black-rgb), 0.1);
+    --shadow-lg: 0 5px 25px rgba(var(--dq-light-text-ink-black-rgb), 0.15), 0 0 0 3px rgba(var(--dq-light-luminous-gold-rgb), 0.2);
+
 
     /* --- 1d. Character Color Palette --- */
     --xiaoyan-primary: #D25A3C;
@@ -122,11 +125,23 @@ body.theme-斗破苍穹-浅色 {
     radial-gradient(ellipse at bottom right, rgba(var(--dq-light-luminous-gold-rgb), 0.1) 0%, transparent 70%),
     linear-gradient(135deg, rgba(var(--dq-light-misty-scroll-bg-rgb), 0.95), rgba(var(--dq-light-ancient-jade-panel-rgb), 0.85))
     );
+    /* --- [可读性优化] START --- */
+    font-weight: 700; /* 全局增加基础字重，让“霞鹜文楷”更清晰 */
+    /* --- [可读性优化] END --- */
 }
+
+/* --- [可读性优化] START --- */
+body.theme-斗破苍穹-浅色 .message-content {
+    font-size: 1.05rem; /* 略微增大消息正文字体 */
+}
+body.theme-斗破苍穹-浅色 .preview {
+    font-size: 0.9rem; /* 增大预览字体 */
+}
+/* --- [可读性优化] END --- */
 
 body.theme-斗破苍穹-浅色 .app-container {
     border: 1px solid rgba(var(--dq-light-xuan-iron-border-rgb), 0.6);
-    box-shadow: 0 5px 25px rgba(var(--dq-light-text-ink-black-rgb), 0.15), 0 0 0 3px rgba(var(--dq-light-luminous-gold-rgb), 0.2);
+    box-shadow: var(--shadow-lg);
 }
 
 body.theme-斗破苍穹-浅色 .chat-header-main::after {
