@@ -1,35 +1,51 @@
 <template>
-  <ModalWrapper :show="true" title="准备截图" @close="cancel">
+  <ModalWrapper :show="true" title="准备共享屏幕" @close="cancel">
     <div class="guide-content">
       <div class="guide-icon">🖥️</div>
-      <h3>即将开始屏幕截图</h3>
-      <p class="guide-text">为了完成截图，您的浏览器会请求您授权并选择要分享的屏幕内容。</p>
-      <p class="guide-tip">为了获得最佳效果，请在弹出的窗口中选择 **“整个屏幕”** 或 **“Screen”** 选项。</p>
+      <h3>即将开始屏幕共享</h3>
+      <p class="guide-text">为了完成共享，您的浏览器会请求您授权并选择要分享的屏幕内容。</p>
+      <p class="guide-tip">为了获得最佳效果，请在弹出的窗口中选择 **“整个屏幕”** 选项。</p>
     </div>
     <template #footer>
       <button class="btn-secondary" @click="cancel">取消</button>
-      <button class="btn-primary" @click="proceed">好的，开始截图</button>
+      <button class="btn-primary" @click="proceed">好的，开始选择</button>
     </template>
   </ModalWrapper>
 </template>
 
 <script setup>
 import { useUiStore } from '@/stores/uiStore';
+// --- MODIFICATION START: Import callStore ---
+import { useCallStore } from '@/stores/callStore';
+// --- MODIFICATION END ---
 import { mediaService } from '@/services/mediaService';
 import ModalWrapper from './ModalWrapper.vue';
 
 const uiStore = useUiStore();
+// --- MODIFICATION START: Get callStore instance ---
+const callStore = useCallStore();
+// --- MODIFICATION END ---
 
 function cancel() {
   uiStore.hideModal();
 }
 
-function proceed() {
-  // 1. 先关闭我们自己的模态框
+// --- MODIFICATION START: Updated proceed logic for Scheme A ---
+async function proceed() {
+  // 1. Hide our guide modal first to present a clean UI for the browser's native prompt.
   uiStore.hideModal();
-  // 2. 立即触发原生的屏幕捕获流程
-  mediaService.captureScreen();
+
+  // 2. Await the user's selection from the mediaService.
+  //    This will now return a MediaStream or null.
+  const stream = await mediaService.captureScreen();
+
+  // 3. If a stream was successfully captured, initiate the call request with it.
+  if (stream) {
+    callStore.initiateScreenShareWithStream(stream);
+  }
+  // If the user cancelled, stream will be null and we do nothing further.
 }
+// --- MODIFICATION END ---
 </script>
 
 <style scoped>

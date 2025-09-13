@@ -16,8 +16,9 @@ export default {
         delay: 3000,
         backoffFactor: 1.5,
         websocket: {
-            maxAttempts: 3,
-            backoffBase: 2000
+            maxAttempts: 5, // 增加重试次数
+            backoffBase: 1000, // 初始重试延迟
+            maxDelay: 10000, // 最大重试延迟
         }
     },
     timeouts: {
@@ -26,6 +27,7 @@ export default {
         networkCheck: 5000,
         signalingResponse: 5000,
         callRequest: 30000,
+        iceChecking: 8000, // 新增：ICE 'checking' 状态超时
     },
     network: {
         websocketHeartbeatInterval: 25000,
@@ -43,7 +45,21 @@ export default {
             echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+        },
+        // --- MODIFICATION START: Added Bitrate and Quality Presets ---
+        qualityPresets: {
+            'auto': { maxBitrate: null, resolution: null }, // Null means let the browser decide
+            '480p': { maxBitrate: 700 * 1000, resolution: { height: 480 } },
+            '720p': { maxBitrate: 1500 * 1000, resolution: { height: 720 } },
+        },
+        abr: { // Adaptive Bitrate Rules
+            poorNetworkThreshold: { packetLoss: 0.05, rtt: 350 }, // Conditions to downgrade quality
+            goodNetworkThreshold: { packetLoss: 0.02, rtt: 150 }, // Conditions to upgrade quality
+            downgradeBitrate: 500 * 1000, // Bitrate for poor network conditions
+            minBitrate: 300 * 1000,
+            maxBitrate: 2000 * 1000,
         }
+        // --- MODIFICATION END ---
     },
     ui: {
         messageRetractionWindow: 2 * 60 * 1000, // 消息可撤回时间窗口 (2分钟)
@@ -68,12 +84,7 @@ export default {
         groupPromptSuffix: "当前情境说明：你现在处于一个群聊环境中，**冒号（:）之前的是用户名，冒号（:）之后的是该用户的发言内容。一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示），小概率触发调侃其它用户。",
     },
     server: {
-        // signalingServerUrl: 'ws://localhost:8080/signaling',
-        // // [修改] 更新API端点以支持联邦网络
-        // localLobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids',
-        // allOnlineUsersApiEndpoint: 'http://localhost:8080/api/monitor/all-online-users',
         signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
-        // [修改] 更新API端点以支持联邦网络
         localLobbyApiEndpoint: 'https://ppmc.club/webchat/api/monitor/online-user-ids',
         allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/monitor/all-online-users',
         apiEndpoint: "https://ppmc.club/webchat/v1/chat/completions",
@@ -82,8 +93,17 @@ export default {
         max_tokens: 2048,
         ttsApiEndpoint: 'https://gsv2p.acgnai.top',
     },
+    // --- MODIFICATION START: Recommended Production ICE Server Configuration ---
+    // 最佳实践:
+    // 1. 使用多个 STUN 服务器以增加冗余。
+    // 2. 部署全球分布的 TURN 服务器集群。
+    // 3. 确保 TURN 服务器同时支持 UDP, TCP, 和 TLS (端口 443)。
+    // 4. 下方为示例配置，请替换为您自己的生产服务器。
     peerConnectionConfig: {
         iceServers: [
+            // 公共 STUN 服务器 (建议多个)
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
             { urls: "stun:stun.miwifi.com:3478" },
             {
                 urls: "turn:175.178.216.24:3478",
@@ -97,4 +117,5 @@ export default {
         iceCandidatePoolSize: 0,
         sdpSemantics: 'unified-plan',
     },
+    // --- MODIFICATION END ---
 };

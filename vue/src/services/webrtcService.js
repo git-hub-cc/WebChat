@@ -43,27 +43,24 @@ function _stopHeartbeat() {
     }
 }
 
-// [核心修改] 这个函数现在会尝试连接所有在线的、已经是联系人的用户，无论他们在哪台服务器
 async function proactivelyConnectToOnlineContacts() {
     const userStore = useUserStore();
-    // 确保我们有最新的全网用户列表
     await userStore.fetchAllOnlineUsers();
-
-    // 遍历全网在线用户
     userStore.allOnlineUsers.forEach(onlineUser => {
         const contactId = onlineUser.userId;
         const contact = userStore.contacts[contactId];
-        const isConnected = connections.value[contactId]?.isConnected ?? false;
+        const conn = connections.value[contactId];
+        const isConnected = conn?.isConnected ?? false;
+        const isConnecting = conn && !conn.isConnected;
 
-        // 如果该在线用户已经是我的联系人，并且不是AI，且尚未连接，则发起连接
-        if (contact && !contact.isAI && !isConnected) {
+        if (contact && !contact.isAI && !isConnected && !isConnecting) {
             log(`主动连接: 发现全网在线联系人 ${contactId}。尝试连接。`, 'INFO');
-            // 前端只管发起 offer，后端会自动处理路由
             webrtcService.createOffer(contactId, { isSilent: true });
         }
     });
 }
 
+// --- MODIFICATION START: Implemented Exponential Backoff with Jitter ---
 function _connectWebSocket() {
     return new Promise((resolve, reject) => {
         if (websocket && websocket.readyState === WebSocket.OPEN) return resolve();
@@ -101,10 +98,14 @@ function _connectWebSocket() {
             _stopHeartbeat();
             eventBus.emit('websocket:status', false);
             if (reconnectAttempts < AppSettings.reconnect.websocket.maxAttempts) {
+                const delay = Math.min(
+                    AppSettings.reconnect.websocket.backoffBase * Math.pow(2, reconnectAttempts),
+                    AppSettings.reconnect.websocket.maxDelay
+                );
+                const jitter = delay * 0.2 * Math.random(); // Add jitter
                 reconnectAttempts++;
-                const delay = AppSettings.reconnect.websocket.backoffBase * Math.pow(2, reconnectAttempts - 1);
-                log(`WebSocket 已关闭。将在 ${delay / 1000}秒 后尝试第 ${reconnectAttempts} 次重连。`, 'WARN');
-                setTimeout(() => _connectWebSocket().catch(() => {}), delay);
+                log(`WebSocket 已关闭。将在 ${(delay + jitter) / 1000}秒 后尝试第 ${reconnectAttempts} 次重连。`, 'WARN');
+                setTimeout(() => _connectWebSocket().catch(() => {}), delay + jitter);
             } else {
                 log('WebSocket 达到最大重连次数。', 'ERROR');
                 eventBus.emit('showNotification', { message: '无法连接到信令服务器，请检查网络或刷新页面。', type: 'error', duration: 10000 });
@@ -112,19 +113,22 @@ function _connectWebSocket() {
         };
         websocket.onerror = (error) => {
             log('WebSocket: 发生错误。', 'ERROR');
-            websocket.close();
+            websocket.close(); // Ensure close event is fired for reconnect logic
             reject(error);
         };
     });
 }
+// --- MODIFICATION END ---
 
 function _cleanupConnection(peerId) {
     if (statsIntervals.has(peerId)) {
         clearInterval(statsIntervals.get(peerId));
         statsIntervals.delete(peerId);
     }
-    if (connections.value[peerId]) {
-        connections.value[peerId].peer?.destroy();
+    const conn = connections.value[peerId];
+    if (conn) {
+        if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
+        conn.peer?.destroy();
         delete connections.value[peerId];
         delete pendingReceivedChunks[peerId];
         delete chunkMetaBuffer[peerId];
@@ -225,6 +229,8 @@ function _startStatsPolling(peer, peerId) {
     }, 5000);
     statsIntervals.set(peerId, intervalId);
 }
+
+// --- MODIFICATION START: Enhanced _setupPeerListeners with ICE Restart and state handling ---
 function _setupPeerListeners(peer, peerId) {
     peer.on('signal', signalData => {
         if (peerId === MANUAL_PEER_ID) {
@@ -235,17 +241,17 @@ function _setupPeerListeners(peer, peerId) {
     });
     peer.on('connect', async () => {
         log(`WebRTC: 与 ${peerId} 的 DataChannel 已连接。`, 'INFO');
-        if (connections.value[peerId]) {
-            connections.value[peerId].isConnected = true;
+        const conn = connections.value[peerId];
+        if (conn) {
+            if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
+            conn.isConnected = true;
         }
         _startStatsPolling(peer, peerId);
         if (peerId === MANUAL_PEER_ID) {
             eventBus.emit('webrtc:manual-connection-ready');
         } else {
             const userStore = useUserStore();
-            if (!userStore.contacts[peerId]) {
-                await userStore.addContact({ id: peerId });
-            }
+            if (!userStore.contacts[peerId]) await userStore.addContact({ id: peerId });
             userStore.updateContactStatus(peerId, true);
         }
         eventBus.emit('webrtc:connected', peerId);
@@ -259,9 +265,29 @@ function _setupPeerListeners(peer, peerId) {
             log(`WebRTC: 从 ${peerId} 收到一个无效或null的流。`, 'WARN');
         }
     });
+
+    peer.on('iceStateChange', (iceConnectionState) => {
+        log(`WebRTC: ${peerId} ICE state changed to ${iceConnectionState}`, 'DEBUG');
+        const conn = connections.value[peerId];
+        if (!conn) return;
+
+        if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
+
+        if (iceConnectionState === 'checking') {
+            conn.iceCheckingTimeout = setTimeout(() => {
+                log(`WebRTC: ${peerId} ICE checking timed out. Cleaning up.`, 'WARN');
+                _cleanupConnection(peerId);
+            }, AppSettings.timeouts.iceChecking);
+        } else if (iceConnectionState === 'failed' || iceConnectionState === 'disconnected') {
+            log(`WebRTC: Connection to ${peerId} is unstable or failed. Attempting ICE restart.`, 'WARN');
+            webrtcService.restartIce(peerId);
+        }
+    });
+
     peer.on('close', () => { _cleanupConnection(peerId); });
     peer.on('error', err => { log(`WebRTC: 与 ${peerId} 发生错误: ${err.message}`, 'ERROR'); _cleanupConnection(peerId); });
 }
+// --- MODIFICATION END ---
 
 export const webrtcService = {
     connections,
@@ -295,7 +321,7 @@ export const webrtcService = {
     },
     startAutoRefresh() {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-        autoRefreshInterval = setInterval(this.proactivelyConnectToOnlineContacts, 30000);
+        autoRefreshInterval = setInterval(proactivelyConnectToOnlineContacts, 30000);
         log('WebRTC 服务: 已启动周期性在线用户刷新和自动连接任务。', 'INFO');
     },
     stopAutoRefresh() {
@@ -325,7 +351,7 @@ export const webrtcService = {
             trickle: true,
             stream: options.stream || false,
         });
-        connections.value[targetPeerId] = { peer, isConnected: false };
+        connections.value[targetPeerId] = { peer, isConnected: false, iceCheckingTimeout: null };
         _setupPeerListeners(peer, targetPeerId);
     },
     addStreamToConnection(peerId, stream) {
@@ -333,9 +359,9 @@ export const webrtcService = {
         if (conn?.peer) {
             log(`WebRTC: 正在向 ${peerId} 的现有对等连接添加流。`, 'INFO');
             if (conn.peer.streams && conn.peer.streams.length > 0) {
-                conn.peer.removeStream(conn.peer.streams[0], () => {});
+                conn.peer.removeStream(conn.peer.streams[0]);
             }
-            conn.peer.addStream(stream, () => {});
+            conn.peer.addStream(stream);
         } else {
             log(`WebRTC: 未找到 ${peerId} 的对等连接。正在使用流初始化新连接。`, 'INFO');
             this.createOffer(peerId, { stream });
@@ -345,7 +371,7 @@ export const webrtcService = {
         const conn = connections.value[peerId];
         if (conn?.peer?.connected && stream) {
             try {
-                conn.peer.removeStream(stream, () => {});
+                conn.peer.removeStream(stream);
                 log(`WebRTC: 已从与 ${peerId} 的连接中移除媒体流。数据通道保持连接。`, 'INFO');
             } catch (error) {
                 log(`WebRTC: 从 ${peerId} 移除流时出错: ${error.message}`, 'ERROR');
@@ -357,11 +383,9 @@ export const webrtcService = {
         if (!conn) {
             log(`WebRTC: 收到来自 ${fromUserId} 的初始信令，正在创建对等连接。`, 'INFO');
             const userStore = useUserStore();
-            if (!userStore.contacts[fromUserId]) {
-                await userStore.addContact({ id: fromUserId });
-            }
+            if (!userStore.contacts[fromUserId]) await userStore.addContact({ id: fromUserId });
             const peer = new SimplePeer({ initiator: false, config: AppSettings.peerConnectionConfig, trickle: true });
-            connections.value[fromUserId] = { peer, isConnected: false };
+            connections.value[fromUserId] = { peer, isConnected: false, iceCheckingTimeout: null };
             _setupPeerListeners(peer, fromUserId);
             conn = connections.value[fromUserId];
         }
@@ -433,10 +457,88 @@ export const webrtcService = {
         }
     },
     closeConnection(peerId) { _cleanupConnection(peerId); },
+    // --- MODIFICATION START: Added new public methods ---
+    restartIce(peerId) {
+        const conn = connections.value[peerId];
+        if (conn && conn.peer) {
+            log(`WebRTC: Manually restarting ICE for peer ${peerId}`, 'INFO');
+            conn.peer.destroy();
+            this.createOffer(peerId);
+        }
+    },
+    async adjustPeerBitrate(peerId, { maxBitrate, resolution }) {
+        const conn = connections.value[peerId];
+        if (!conn || !conn.peer || !conn.peer.connected) return;
+
+        const videoSender = conn.peer._pc.getSenders().find(s => s.track?.kind === 'video');
+        if (!videoSender) {
+            log(`WebRTC: No video sender found for peer ${peerId} to adjust bitrate.`, 'WARN');
+            return;
+        }
+
+        const params = videoSender.getParameters();
+        if (!params.encodings || params.encodings.length === 0) {
+            params.encodings = [{}];
+        }
+        if (maxBitrate) {
+            params.encodings[0].maxBitrate = maxBitrate;
+        } else {
+            delete params.encodings[0].maxBitrate;
+        }
+
+        await videoSender.setParameters(params);
+        log(`WebRTC: Adjusted bitrate for ${peerId} to ${maxBitrate ? maxBitrate / 1000 + 'kbps' : 'auto'}.`, 'INFO');
+
+        if (resolution && videoSender.track) {
+            try {
+                await videoSender.track.applyConstraints({
+                    height: { ideal: resolution.height }
+                });
+                log(`WebRTC: Adjusted resolution for ${peerId} to ideal height ${resolution.height}p.`, 'INFO');
+            } catch (e) {
+                log(`WebRTC: Failed to apply resolution constraint for ${peerId}: ${e.message}`, 'ERROR');
+            }
+        }
+    },
+    async testNetwork() {
+        const results = { stun: 'Testing...', turnUdp: 'Pending...', turnTcp: 'Pending...', turnTls: 'Pending...' };
+        const testPeerConnection = new RTCPeerConnection({ iceServers: AppSettings.peerConnectionConfig.iceServers });
+
+        const candidatePromise = new Promise(resolve => {
+            const candidates = [];
+            testPeerConnection.onicecandidate = (e) => {
+                if (e.candidate) {
+                    candidates.push(e.candidate);
+                } else {
+                    resolve(candidates);
+                }
+            };
+            setTimeout(() => resolve(candidates), AppSettings.timeouts.iceGathering);
+        });
+
+        testPeerConnection.createDataChannel('test');
+        testPeerConnection.createOffer().then(offer => testPeerConnection.setLocalDescription(offer));
+
+        const gatheredCandidates = await candidatePromise;
+        testPeerConnection.close();
+
+        if (gatheredCandidates.length > 0) {
+            const hasSrflx = gatheredCandidates.some(c => c.type === 'srflx');
+            results.stun = hasSrflx ? 'OK' : 'Failed';
+            results.turnUdp = gatheredCandidates.some(c => c.type === 'relay' && c.protocol === 'udp') ? 'OK' : 'Failed';
+            results.turnTcp = gatheredCandidates.some(c => c.type === 'relay' && c.protocol === 'tcp') ? 'OK' : 'Failed';
+            // Simple-peer doesn't expose TLS info directly, we infer it from port 443
+            results.turnTls = gatheredCandidates.some(c => c.type === 'relay' && c.port === 443) ? 'OK' : 'Failed';
+        } else {
+            results.stun = results.turnUdp = results.turnTcp = results.turnTls = 'Failed';
+        }
+        return results;
+    },
+    // --- MODIFICATION END ---
     createManualOffer() {
         if (connections.value[MANUAL_PEER_ID]) _cleanupConnection(MANUAL_PEER_ID);
         const peer = new SimplePeer({ initiator: true, config: AppSettings.peerConnectionConfig, trickle: false });
-        connections.value[MANUAL_PEER_ID] = { peer, isConnected: false };
+        connections.value[MANUAL_PEER_ID] = { peer, isConnected: false, iceCheckingTimeout: null };
         _setupPeerListeners(peer, MANUAL_PEER_ID);
         eventBus.emit('showNotification', { message: '连接提议已生成，请复制并发送给对方。', type: 'info' });
     },
@@ -448,7 +550,7 @@ export const webrtcService = {
         if (offerData.type !== 'offer') { eventBus.emit('showNotification', { message: '粘贴的内容不是一个有效的连接提议。', type: 'warning' }); return; }
         if (connections.value[MANUAL_PEER_ID]) _cleanupConnection(MANUAL_PEER_ID);
         const peer = new SimplePeer({ initiator: false, config: AppSettings.peerConnectionConfig, trickle: true });
-        connections.value[MANUAL_PEER_ID] = { peer, isConnected: false };
+        connections.value[MANUAL_PEER_ID] = { peer, isConnected: false, iceCheckingTimeout: null };
         _setupPeerListeners(peer, MANUAL_PEER_ID);
         peer.signal(offerData);
         eventBus.emit('showNotification', { message: '连接应答已生成，请复制并发送给对方。', type: 'info' });

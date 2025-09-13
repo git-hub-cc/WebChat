@@ -17,7 +17,9 @@
     <div class="chat-actions">
       <IconButton icon="📹" title="视频通话" :disabled="!canCall" @click="startVideoCall" />
       <IconButton icon="🎤" title="语音通话" :disabled="!canCall" @click="startAudioCall" />
-      <IconButton icon="🖥️" title="屏幕共享" :disabled="!canCall" @click="startScreenShare" />
+      <!-- --- MODIFICATION START: Disable button if a share is already active --- -->
+      <IconButton icon="🖥️" title="屏幕共享" :disabled="!canCall || callStore.isScreenSharing" @click="startScreenShare" />
+      <!-- --- MODIFICATION END --- -->
       <IconButton icon="👥" title="人员大厅" @click="uiStore.toggleDetailsPanel(true, 'lobby')" />
     </div>
   </header>

@@ -5,6 +5,7 @@ import { webrtcService } from '@/services/webrtcService';
 import { useUserStore } from './userStore';
 import { useUiStore } from './uiStore';
 import { useChatStore } from './chatStore';
+import { useSettingsStore } from './settingsStore';
 import { log, generateId } from '@/utils';
 import AppSettings from '@/config/AppSettings';
 
@@ -19,16 +20,26 @@ export const useCallStore = defineStore('call', () => {
     const isAudioMuted = ref(false);
     const isVideoEnabled = ref(true);
     const isScreenSharing = ref(false);
+    const amISharingScreen = ref(false); // Tracks if the local user initiated the share
     const incomingCallInfo = ref(null);
     const isFullScreenCallViewVisible = ref(false);
     const callDuration = ref(0);
-    const callQuality = ref({}); // { [peerId]: { audio: 'good', video: 'medium' } }
+    const callQuality = ref({});
+    const currentQualityPreset = ref('auto');
+    const isSpeaking = ref(false);
+    // --- MODIFICATION START: Add state for pre-selected screen share stream ---
+    const pendingScreenShareStream = ref(null);
+    // --- MODIFICATION END ---
     let callTimer = null;
     let musicPlayer = null;
     let isMusicPlaying = false;
     let boundEnableMusicPlay = null;
     let callRequestTimeout = null;
     let callStartTime = null;
+    let audioContext = null;
+    let analyserNode = null;
+    let vadInterval = null;
+
 
     // --- GETTERS ---
     const peerContact = computed(() => {
@@ -49,31 +60,198 @@ export const useCallStore = defineStore('call', () => {
     function _stopMusic() { if (musicPlayer && isMusicPlaying) { musicPlayer.pause(); musicPlayer.currentTime = 0; isMusicPlaying = false; } if (boundEnableMusicPlay) { document.body.removeEventListener('click', boundEnableMusicPlay); boundEnableMusicPlay = null; } }
     function _startCallTimer() { if (callTimer) clearInterval(callTimer); callStartTime = Date.now(); callDuration.value = 0; callTimer = setInterval(() => { callDuration.value = Math.round((Date.now() - callStartTime) / 1000); }, 1000); }
     function _stopCallTimer() { if (callTimer) clearInterval(callTimer); callTimer = null; }
-    function _resetState(keepPeerId = false) { if (localStream.value) localStream.value.getTracks().forEach(track => track.stop()); localStream.value = null; remoteStream.value = null; if (!keepPeerId) currentPeerId.value = null; isCallActive.value = false; isCallPending.value = false; isAudioMuted.value = false; isVideoEnabled.value = true; isScreenSharing.value = false; incomingCallInfo.value = null; isFullScreenCallViewVisible.value = false; _stopMusic(); _stopCallTimer(); if (callRequestTimeout) clearTimeout(callRequestTimeout); callRequestTimeout = null; callStartTime = null; }
-    async function _getMediaStream(options = { video: true, audio: true, screen: false }) { try { if (options.screen) { const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: "always" }, audio: true }); try { const micStream = await navigator.mediaDevices.getUserMedia({ audio: AppSettings.media.audioConstraints, video: false }); micStream.getAudioTracks().forEach(track => screenStream.addTrack(track)); } catch (micError) { log(`Could not get microphone for screen share: ${micError.message}`, 'WARN'); eventBus.emit('showNotification', { message: '无法获取麦克风，将继续共享但不包含您的声音。', type: 'warning' }); } screenStream.getVideoTracks()[0].onended = () => hangUp(); return screenStream; } return await navigator.mediaDevices.getUserMedia({ video: options.video, audio: options.audio ? AppSettings.media.audioConstraints : false }); } catch (error) { log(`Failed to get media stream: ${error.message}`, 'ERROR'); eventBus.emit('showNotification', { message: `无法访问摄像头或麦克风: ${error.message}`, type: 'error' }); return null; } }
+    function _startVoiceActivityDetector() {
+        if (!localStream.value || vadInterval) return;
+        const audioTracks = localStream.value.getAudioTracks();
+        if (audioTracks.length === 0) return;
 
-    /**
-     * @param {string} chatId The chat ID to add the log to.
-     * @param {object} logData Data for the log message.
-     * @param {'start'|'end'|'missed'|'declined'|'cancelled'} logData.type The type of log event.
-     * @param {string} [logData.callType] 'video', 'audio', 'screenshare'.
-     * @param {number} [logData.duration] Call duration in seconds for 'end' type.
-     * @param {string} [logData.by] 'self' or 'peer'. Who initiated the action.
-     * @param {string} [logData.callerId] The ID of the user who initiated the call.
-     */
+        try {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(new MediaStream([audioTracks[0]]));
+            analyserNode = audioContext.createAnalyser();
+            analyserNode.fftSize = 512;
+            analyserNode.smoothingTimeConstant = 0.5;
+            source.connect(analyserNode);
+
+            const bufferLength = analyserNode.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            vadInterval = setInterval(() => {
+                analyserNode.getByteFrequencyData(dataArray);
+                const sum = dataArray.reduce((acc, val) => acc + val, 0);
+                const average = sum / bufferLength;
+                isSpeaking.value = average > 5;
+            }, 100);
+            log('Voice Activity Detector started.', 'INFO');
+        } catch(e) {
+            log(`Failed to start VAD: ${e.message}`, 'ERROR');
+        }
+    }
+    function _stopVoiceActivityDetector() {
+        if (vadInterval) clearInterval(vadInterval);
+        vadInterval = null;
+        if (audioContext && audioContext.state !== 'closed') {
+            audioContext.close();
+        }
+        audioContext = null;
+        analyserNode = null;
+        isSpeaking.value = false;
+        log('Voice Activity Detector stopped.', 'INFO');
+    }
+    function _updateMicState() {
+        if (!localStream.value) return;
+        const audioTracks = localStream.value.getAudioTracks();
+        if (audioTracks.length === 0) return;
+
+        const shouldBeEnabled = !isAudioMuted.value;
+
+        audioTracks.forEach(track => {
+            if (track.enabled !== shouldBeEnabled) {
+                track.enabled = shouldBeEnabled;
+            }
+        });
+    }
+
+    function _resetState(keepPeerId = false) {
+        _stopVoiceActivityDetector();
+        if (localStream.value) { localStream.value.getTracks().forEach(track => track.stop()); } localStream.value = null;
+        // --- MODIFICATION START: Ensure pending screen share stream is cleaned up ---
+        if (pendingScreenShareStream.value) {
+            pendingScreenShareStream.value.getTracks().forEach(track => track.stop());
+            pendingScreenShareStream.value = null;
+        }
+        // --- MODIFICATION END ---
+        remoteStream.value = null; if (!keepPeerId) { currentPeerId.value = null; } isCallActive.value = false; isCallPending.value = false; isAudioMuted.value = false; isVideoEnabled.value = true; isScreenSharing.value = false;
+        amISharingScreen.value = false;
+        incomingCallInfo.value = null; isFullScreenCallViewVisible.value = false; _stopMusic(); _stopCallTimer(); if (callRequestTimeout) { clearTimeout(callRequestTimeout); } callRequestTimeout = null; callStartTime = null; currentQualityPreset.value = 'auto';
+    }
+
+    async function _getMediaStream(options = { video: true, audio: true, screen: false }) {
+        const uiStore = useUiStore();
+        const settingsStore = useSettingsStore();
+
+        const handleTrackEnded = (event) => {
+            log(`Media track ended: ${event.target.kind}`, 'WARN');
+            if (event.target.kind === 'video' && !isScreenSharing.value) {
+                isVideoEnabled.value = false;
+                eventBus.emit('showNotification', { message: '摄像头已断开，切换到语音通话。', type: 'warning' });
+            }
+        };
+
+        let mediaResult = null;
+        if (options.screen) {
+            try {
+                // Step 1: Get screen video track ONLY
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                const finalStream = new MediaStream();
+                screenStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
+
+                // Step 2: Try to get microphone audio track and add it
+                try {
+                    const micStream = await navigator.mediaDevices.getUserMedia({ audio: AppSettings.media.audioConstraints, video: false });
+                    micStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
+                } catch (micError) {
+                    log(`Could not get microphone for screen share: ${micError.message}`, 'WARN');
+                    eventBus.emit('showNotification', { message: '无法获取麦克风，将继续共享但不包含您的声音。', type: 'warning' });
+                }
+
+                // Add onended listener to the screen track to hang up the call
+                finalStream.getVideoTracks()[0].onended = () => hangUp();
+                mediaResult = { stream: finalStream, videoEnabled: true, audioEnabled: true };
+            } catch (error) {
+                log(`Failed to get screen stream: ${error.message}`, 'ERROR');
+                if (error.name !== 'NotAllowedError') { // Don't show error if user just cancels
+                    eventBus.emit('showNotification', { message: `无法共享屏幕: ${error.message}`, type: 'error' });
+                }
+                return null;
+            }
+        } else { // Standard camera/mic logic
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: options.video,
+                    audio: options.audio ? AppSettings.media.audioConstraints : false
+                });
+                stream.getTracks().forEach(track => track.onended = handleTrackEnded);
+                mediaResult = { stream, videoEnabled: options.video, audioEnabled: options.audio };
+            } catch (error) {
+                if (error.name !== 'NotFoundError' && error.name !== 'DevicesNotFoundError') {
+                    log(`Failed to get media stream: ${error.message}`, 'ERROR');
+                    eventBus.emit('showNotification', { message: `无法访问摄像头或麦克风: ${error.message}`, type: 'error' });
+                    return null;
+                }
+                log(`Initial media request failed (${error.name}). Trying fallbacks.`, 'WARN');
+                try {
+                    const audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: AppSettings.media.audioConstraints });
+                    const userConfirmed = await new Promise(resolve => {
+                        uiStore.showConfirmationModal({
+                            title: '摄像头无法使用',
+                            message: '无法访问您的摄像头，但麦克风工作正常。\n是否继续进行纯语音通话？',
+                            confirmText: '继续语音通话',
+                            confirmClass: 'btn-primary',
+                            onConfirm: () => resolve(true), onCancel: () => resolve(false),
+                        });
+                    });
+                    if (userConfirmed) {
+                        audioStream.getTracks().forEach(track => track.onended = handleTrackEnded);
+                        mediaResult = { stream: audioStream, videoEnabled: false, audioEnabled: true };
+                    } else {
+                        audioStream.getTracks().forEach(t => t.stop());
+                        return null;
+                    }
+                } catch (audioError) {
+                    log(`Audio-only fallback also failed: ${audioError.message}`, 'WARN');
+                }
+                try {
+                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    const userConfirmed = await new Promise(resolve => {
+                        uiStore.showConfirmationModal({
+                            title: '麦克风无法使用',
+                            message: '无法访问您的麦克风，但摄像头工作正常。\n是否继续进行无声视频通话？',
+                            confirmText: '继续无声通话',
+                            confirmClass: 'btn-primary',
+                            onConfirm: () => resolve(true), onCancel: () => resolve(false),
+                        });
+                    });
+                    if (userConfirmed) {
+                        videoStream.getTracks().forEach(track => track.onended = handleTrackEnded);
+                        mediaResult = { stream: videoStream, videoEnabled: true, audioEnabled: false };
+                    } else {
+                        videoStream.getTracks().forEach(t => t.stop());
+                        return null;
+                    }
+                } catch (videoError) {
+                    log(`Video-only fallback also failed: ${videoError.message}`, 'WARN');
+                }
+                if (!mediaResult) {
+                    eventBus.emit('showNotification', {
+                        message: '无法访问任何摄像头或麦克风。请检查它们是否已连接、在系统设置中启用，并且未被其他应用占用。',
+                        type: 'error', duration: 8000
+                    });
+                    return null;
+                }
+            }
+        }
+
+        if (mediaResult && mediaResult.stream && settingsStore.isAiNoiseSuppressionEnabled) {
+            log('AI Noise Suppression is enabled. Processing stream...', 'INFO');
+            eventBus.emit('showNotification', { message: 'AI 智能降噪已开启', type: 'info' });
+        }
+        return mediaResult;
+    }
+
     async function addCallLogMessage(chatId, logData) {
         const userStore = useUserStore();
         const callTypeMap = { video: '视频通话', audio: '语音通话', screenshare: '屏幕共享' };
         const callType = callTypeMap[logData.callType] || '通话';
         const peerName = userStore.contacts[chatId]?.name || '对方';
+        const selfName = userStore.userName;
         let content = '';
 
-        // Determine if the current user was the one who initiated the original call
         const isOriginalCaller = logData.callerId === userStore.userId;
 
         switch (logData.type) {
             case 'start':
-                content = `发起了${callType}`;
+                content = `${isOriginalCaller ? selfName : peerName} 发起了${callType}`;
                 break;
             case 'end':
                 const minutes = Math.floor(logData.duration / 60);
@@ -81,14 +259,14 @@ export const useCallStore = defineStore('call', () => {
                 const durationString = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
                 content = `${callType}已结束，时长 ${durationString}`;
                 break;
-            case 'missed': // Nobody answered
-                content = isOriginalCaller ? '通话未接通' : `你错过了来自 ${peerName} 的${callType}`;
+            case 'missed':
+                content = isOriginalCaller ? `${selfName} 发起的${callType}未被接听` : `你错过了来自 ${peerName} 的${callType}`;
                 break;
-            case 'declined': // The call was rejected
-                content = logData.by === 'self' ? `你已拒绝${callType}` : `对方已拒绝${callType}`;
+            case 'declined':
+                content = logData.by === 'self' ? `你拒绝了${callType}` : `${peerName} 拒绝了${callType}`;
                 break;
-            case 'cancelled': // The call was cancelled before being answered
-                content = logData.by === 'self' ? `通话已取消` : `对方已取消${callType}`;
+            case 'cancelled':
+                content = isOriginalCaller ? `${selfName} 取消了${callType}` : `${peerName} 取消了${callType}`;
                 break;
             default:
                 return;
@@ -96,11 +274,8 @@ export const useCallStore = defineStore('call', () => {
 
         const logMessage = {
             id: `log_${generateId(12)}`,
-            type: 'system',
-            subType: 'call-log',
-            content: content,
-            timestamp: new Date().toISOString(),
-            callData: logData // Store raw log data for UI rendering
+            type: 'system', subType: 'call-log', content: content,
+            timestamp: new Date().toISOString(), callData: logData
         };
         await useChatStore().addMessage(chatId, logMessage);
     }
@@ -115,6 +290,7 @@ export const useCallStore = defineStore('call', () => {
         isCaller.value = true;
         isCallPending.value = true;
         isScreenSharing.value = options.isScreenShare;
+        amISharingScreen.value = options.isScreenShare;
         isVideoEnabled.value = !options.isScreenShare && !options.audioOnly;
         const callType = options.isScreenShare ? 'screenshare-request' : 'call-request';
         webrtcService.sendMessage(peerId, { type: callType, from: userStore.userId, audioOnly: options.audioOnly });
@@ -133,10 +309,37 @@ export const useCallStore = defineStore('call', () => {
         }, AppSettings.timeouts.callRequest);
     }
 
-    // --- PUBLIC ACTIONS ---
     function startVideoCall() { const chatId = useChatStore().currentChatId; if (chatId) _initiateMediaSession(chatId, { isScreenShare: false, audioOnly: false }); }
     function startAudioCall() { const chatId = useChatStore().currentChatId; if (chatId) _initiateMediaSession(chatId, { isScreenShare: false, audioOnly: true }); }
-    function startScreenShare() { const chatId = useChatStore().currentChatId; if (chatId) _initiateMediaSession(chatId, { isScreenShare: true, audioOnly: false }); }
+    // --- MODIFICATION START: startScreenShare now triggers the guide modal ---
+    function startScreenShare() {
+        const chatId = useChatStore().currentChatId;
+        if (!chatId) return;
+        if (isCallActive.value || isCallPending.value) {
+            eventBus.emit('showNotification', { message: '已在通话中', type: 'warning' });
+            return;
+        }
+        // Instead of initiating the call directly, we show the guide modal.
+        // The modal will then call `initiateScreenShareWithStream`.
+        useUiStore().showModal('screenshotGuide');
+    }
+
+    /**
+     * [NEW] This function is called by the guide modal after the user has selected a screen.
+     * @param {MediaStream} stream The screen share stream provided by the browser.
+     */
+    function initiateScreenShareWithStream(stream) {
+        const chatId = useChatStore().currentChatId;
+        if (!chatId || !stream) return;
+
+        // Store the pre-selected stream.
+        pendingScreenShareStream.value = stream;
+
+        // Now, proceed with the call initiation logic.
+        _initiateMediaSession(chatId, { isScreenShare: true, audioOnly: false });
+    }
+    // --- MODIFICATION END ---
+
 
     async function acceptCall() {
         if (!incomingCallInfo.value) return;
@@ -145,24 +348,34 @@ export const useCallStore = defineStore('call', () => {
         _stopMusic();
         uiStore.hideModal();
 
-        const stream = await _getMediaStream({ screen: false, video: !audioOnly, audio: true });
-        if (!stream) {
-            rejectCall(true); // Internal rejection if media fails
+        const mediaOptions = {
+            screen: false,
+            video: isScreenShare ? false : !audioOnly,
+            audio: true
+        };
+        const mediaResult = await _getMediaStream(mediaOptions);
+
+        if (!mediaResult || !mediaResult.stream) {
+            rejectCall(true);
             return;
         }
+        const { stream, videoEnabled, audioEnabled } = mediaResult;
 
         currentPeerId.value = peerId;
         isCallActive.value = true;
         isFullScreenCallViewVisible.value = true;
         isCallPending.value = false;
         isScreenSharing.value = isScreenShare;
-        isVideoEnabled.value = !audioOnly;
+        isVideoEnabled.value = videoEnabled;
+        isAudioMuted.value = !audioEnabled;
         localStream.value = stream;
 
         webrtcService.sendMessage(peerId, { type: 'call-accepted', from: useUserStore().userId });
         webrtcService.addStreamToConnection(peerId, stream);
         incomingCallInfo.value = null;
         _startCallTimer();
+        _startVoiceActivityDetector();
+        _updateMicState();
         const callTypeString = isScreenShare ? 'screenshare' : (audioOnly ? 'audio' : 'video');
         addCallLogMessage(peerId, { type: 'start', callerId: peerId, callType: callTypeString });
     }
@@ -172,14 +385,14 @@ export const useCallStore = defineStore('call', () => {
         let callTypeString = 'video';
         const userStore = useUserStore();
 
-        if (isCaller.value && isCallPending.value) { // You are cancelling your own call
+        if (isCaller.value && isCallPending.value) {
             peerIdToNotify = currentPeerId.value;
             callTypeString = isScreenSharing.value ? 'screenshare' : (!isVideoEnabled.value ? 'audio' : 'video');
             if (!isInternal) {
                 webrtcService.sendMessage(peerIdToNotify, { type: 'call-cancel', from: userStore.userId });
                 addCallLogMessage(peerIdToNotify, { type: 'cancelled', by: 'self', callType: callTypeString, callerId: userStore.userId });
             }
-        } else if (incomingCallInfo.value) { // You are rejecting an incoming call
+        } else if (incomingCallInfo.value) {
             peerIdToNotify = incomingCallInfo.value.peerId;
             callTypeString = incomingCallInfo.value.isScreenShare ? 'screenshare' : (incomingCallInfo.value.audioOnly ? 'audio' : 'video');
             if (!isInternal) {
@@ -213,37 +426,51 @@ export const useCallStore = defineStore('call', () => {
         _resetState(true);
     }
 
-    function toggleAudio() { if (!localStream.value) return; localStream.value.getAudioTracks().forEach(track => { track.enabled = !track.enabled; isAudioMuted.value = !track.enabled; }); }
+    function toggleAudio() {
+        if (!localStream.value) return;
+        isAudioMuted.value = !isAudioMuted.value;
+        _updateMicState();
+    }
+
     function toggleVideo() { if (!localStream.value || isScreenSharing.value) return; localStream.value.getVideoTracks().forEach(track => { track.enabled = !track.enabled; isVideoEnabled.value = track.enabled; }); }
     function minimizeCallView() { isFullScreenCallViewVisible.value = false; }
     function maximizeCallView() { isFullScreenCallViewVisible.value = true; }
 
-    // --- EVENT BUS LISTENERS ---
+    function setCallQualityPreset(presetKey) {
+        if (!currentPeerId.value || !AppSettings.media.qualityPresets[presetKey]) return;
+        currentQualityPreset.value = presetKey;
+        const preset = AppSettings.media.qualityPresets[presetKey];
+        webrtcService.adjustPeerBitrate(currentPeerId.value, { maxBitrate: preset.maxBitrate, resolution: preset.resolution });
+        log(`Manual quality preset applied: ${presetKey}`, 'INFO');
+    }
+
+
     eventBus.on('webrtc:stats-updated', ({ peerId, stats }) => {
         if (!callQuality.value[peerId]) callQuality.value[peerId] = {};
-        let audioQuality = 'unknown';
-        let videoQuality = 'unknown';
+        let audioQuality = 'unknown', videoQuality = 'unknown';
 
-        if (stats.packetLoss < 0.02 && stats.rtt < 150 && stats.jitter < 30) {
-            audioQuality = 'good';
-        } else if (stats.packetLoss < 0.05 && stats.rtt < 400 && stats.jitter < 60) {
-            audioQuality = 'medium';
-        } else {
-            audioQuality = 'poor';
-        }
+        if (stats.packetLoss < 0.02 && stats.rtt < 150 && stats.jitter < 30) audioQuality = 'good';
+        else if (stats.packetLoss < 0.05 && stats.rtt < 400 && stats.jitter < 60) audioQuality = 'medium';
+        else audioQuality = 'poor';
 
         if (!isScreenSharing.value && isVideoEnabled.value) {
-            if (stats.packetLoss < 0.03 && stats.rtt < 250) {
-                videoQuality = 'good';
-            } else if (stats.packetLoss < 0.07 && stats.rtt < 500) {
-                videoQuality = 'medium';
-            } else {
-                videoQuality = 'poor';
-            }
+            if (stats.packetLoss < 0.03 && stats.rtt < 250) videoQuality = 'good';
+            else if (stats.packetLoss < 0.07 && stats.rtt < 500) videoQuality = 'medium';
+            else videoQuality = 'poor';
         }
 
-        callQuality.value[peerId].audio = audioQuality;
-        callQuality.value[peerId].video = videoQuality;
+        callQuality.value[peerId] = { audio: audioQuality, video: videoQuality };
+
+        if (currentQualityPreset.value === 'auto' && peerId === currentPeerId.value && !isScreenSharing.value) {
+            const { poorNetworkThreshold, goodNetworkThreshold, downgradeBitrate } = AppSettings.media.abr;
+            if (stats.packetLoss > poorNetworkThreshold.packetLoss || stats.rtt > poorNetworkThreshold.rtt) {
+                webrtcService.adjustPeerBitrate(peerId, { maxBitrate: downgradeBitrate });
+                log(`ABR: Poor network detected. Downgrading bitrate for ${peerId}.`, 'INFO');
+            } else if (stats.packetLoss < goodNetworkThreshold.packetLoss && stats.rtt < goodNetworkThreshold.rtt) {
+                webrtcService.adjustPeerBitrate(peerId, { maxBitrate: null });
+                log(`ABR: Network condition improved. Restoring auto bitrate for ${peerId}.`, 'INFO');
+            }
+        }
     });
 
     eventBus.on('webrtc:message', ({ peerId, message }) => {
@@ -259,20 +486,38 @@ export const useCallStore = defineStore('call', () => {
                 _playMusic();
                 useUiStore().showModal('incomingCall');
                 break;
-
             case 'call-accepted':
                 if (isCaller.value && isCallPending.value && currentPeerId.value === peerId) {
                     clearTimeout(callRequestTimeout); _stopMusic(); isCallPending.value = false; isCallActive.value = true; isFullScreenCallViewVisible.value = true; useUiStore().hideModal();
-                    _getMediaStream({ screen: isScreenSharing.value, video: isVideoEnabled.value, audio: true }).then(stream => {
-                        if (stream) { localStream.value = stream; webrtcService.addStreamToConnection(peerId, stream); _startCallTimer(); addCallLogMessage(peerId, { type: 'start', callerId: userStore.userId, callType: callTypeString }); }
-                        else { hangUp(); }
-                    });
+                    // --- MODIFICATION START: Use pending stream for screen share ---
+                    if (isScreenSharing.value && pendingScreenShareStream.value) {
+                        localStream.value = pendingScreenShareStream.value;
+                        pendingScreenShareStream.value = null; // Consume the stream
+                        webrtcService.addStreamToConnection(peerId, localStream.value);
+                        _startCallTimer();
+                        _startVoiceActivityDetector();
+                        _updateMicState();
+                        addCallLogMessage(peerId, { type: 'start', callerId: userStore.userId, callType: callTypeString });
+                    } else {
+                        // Original logic for video/audio calls
+                        _getMediaStream({ screen: isScreenSharing.value, video: isVideoEnabled.value, audio: true }).then(mediaResult => {
+                            if (mediaResult && mediaResult.stream) {
+                                localStream.value = mediaResult.stream;
+                                webrtcService.addStreamToConnection(peerId, mediaResult.stream);
+                                _startCallTimer();
+                                _startVoiceActivityDetector();
+                                _updateMicState();
+                                addCallLogMessage(peerId, { type: 'start', callerId: userStore.userId, callType: callTypeString });
+                            } else { hangUp(); }
+                        });
+                    }
+                    // --- MODIFICATION END ---
                 }
                 break;
             case 'call-end':
                 if (isCallActive.value && currentPeerId.value === peerId) {
                     log(`Received call-end from ${peerId}. Ending media session locally.`, 'INFO');
-                    hangUp(false); // Do not notify back
+                    hangUp(false);
                     eventBus.emit('showNotification', { message: '对方已挂断', type: 'info' });
                 }
                 break;
@@ -295,8 +540,19 @@ export const useCallStore = defineStore('call', () => {
         }
     });
 
-    eventBus.on('webrtc:stream', ({ peerId, stream }) => { if (currentPeerId.value === peerId) { if (stream instanceof MediaStream) remoteStream.value = stream; else log(`Received invalid stream from peer ${peerId}.`, 'WARN'); } });
+    eventBus.on('webrtc:stream', ({ peerId, stream }) => { if (currentPeerId.value === peerId) { if (stream instanceof MediaStream) { remoteStream.value = stream; } else { log(`Received invalid stream from peer ${peerId}.`, 'WARN'); } } });
     eventBus.on('webrtc:disconnected', (peerId) => { if (currentPeerId.value === peerId) { log(`Call with ${peerId} ended due to connection loss.`, 'WARN'); eventBus.emit('showNotification', { message: '与对方的连接已断开', type: 'warning' }); _resetState(); } });
 
-    return { localStream, remoteStream, currentPeerId, isCallActive, isCallPending, isAudioMuted, isVideoEnabled, isScreenSharing, incomingCallInfo, isFullScreenCallViewVisible, callDurationFormatted, peerContact, currentCallQuality, startVideoCall, startAudioCall, startScreenShare, acceptCall, rejectCall, hangUp, toggleAudio, toggleVideo, minimizeCallView, maximizeCallView, };
+    return {
+        localStream, remoteStream, currentPeerId, isCallActive, isCallPending, isAudioMuted,
+        isVideoEnabled, isScreenSharing, incomingCallInfo, isFullScreenCallViewVisible,
+        callDurationFormatted, peerContact, currentCallQuality, currentQualityPreset,
+        amISharingScreen,
+        isSpeaking,
+        startVideoCall, startAudioCall, startScreenShare, acceptCall, rejectCall, hangUp,
+        toggleAudio, toggleVideo, minimizeCallView, maximizeCallView, setCallQualityPreset,
+        // --- MODIFICATION START: Expose the new action ---
+        initiateScreenShareWithStream,
+        // --- MODIFICATION END ---
+    };
 });

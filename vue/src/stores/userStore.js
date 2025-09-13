@@ -134,12 +134,30 @@ export const useUserStore = defineStore('user', () => {
         for (const def of newThemeDefs) {
             const existingContact = contacts.value[def.id];
             const baseData = { ...def, isSpecial: true, type: 'contact' };
+
+            // 如果定义中包含 chaptersFilePath，则异步获取章节数据
+            if (def.chaptersFilePath) {
+                try {
+                    const response = await fetch(def.chaptersFilePath);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    baseData.chapters = await response.json();
+                    log(`成功加载角色 "${def.name}" 的章节。`, 'INFO');
+                } catch (error) {
+                    log(`加载角色 "${def.name}" 的章节失败 (${def.chaptersFilePath}): ${error.message}`, 'ERROR');
+                    baseData.chapters = []; // 出错时赋予空数组，避免UI出错
+                }
+            }
+
             newContactsState[def.id] = {
                 ...baseData,
                 lastMessage: existingContact?.lastMessage || def.initialMessage || '你好！',
                 lastTime: existingContact?.lastTime || new Date(0).toISOString(),
                 unread: existingContact?.unread || 0,
-                selectedChapterId: existingContact?.selectedChapterId ?? (def.selectedChapterId || null),
+                // --- FIX START: Ensure default selection is always "Default Behavior" (null) ---
+                selectedChapterId: existingContact?.selectedChapterId ?? null,
+                // --- FIX END ---
                 aiConfig: {
                     ...(def.aiConfig || {}),
                     ...(existingContact?.aiConfig || {}),

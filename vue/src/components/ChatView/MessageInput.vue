@@ -48,7 +48,7 @@
             @keydown="handleKeyDown"
             @input="handleInput"
             @paste="handlePaste"
-            :placeholder="isSttActive ? '正在聆听，请说话...' : '输入消息...'"
+            :placeholder="inputPlaceholder"
             class="message-textarea"
             :readonly="isSttActive"
         ></textarea>
@@ -58,15 +58,20 @@
         <IconButton v-if="!newMessage && !isRecording && !isSttActive" icon="📸" title="截图" @click="handleScreenshot" />
 
         <div v-if="!newMessage || isSttActive" class="voice-button-wrapper">
+          <!-- --- MODIFICATION START: Changed STT button to Push-to-Talk --- -->
           <!-- STT button for AI chats -->
           <IconButton
               v-if="isCurrentChatWithAI"
               :icon="isSttActive ? '🛑' : '🎙️'"
-              :title="isSttActive ? '停止识别' : '语音输入'"
-              @click="toggleStt"
+              :title="sttButtonTitle"
+              @mousedown.prevent="startStt"
+              @mouseup.prevent="stopStt"
+              @touchstart.prevent="startStt"
+              @touchend.prevent="stopStt"
               class="voice-button"
-              :class="{ recording: isSttActive }"
+              :class="{ 'stt-active': isSttActive }"
           />
+          <!-- --- MODIFICATION END --- -->
 
           <!-- Audio recording button for regular chats -->
           <template v-else>
@@ -95,16 +100,12 @@
         <IconButton v-else icon="➤" title="发送" @click="send" class="send-button" />
       </div>
 
-      <!-- --- FIX START: Moved EmojiPicker outside of .input-container --- -->
-      <!-- The EmojiPicker was moved from inside `.input-container` to here. -->
-      <!-- This prevents it from being clipped by `.input-container`'s `overflow: hidden` style. -->
     </div>
     <EmojiPicker
         :show="isEmojiPickerVisible"
         @select-emoji="insertEmoji"
         @select-sticker="sendSticker"
     />
-    <!-- --- FIX END --- -->
     <input type="file" ref="fileInputRef" @change="handleFileSelect" style="display:none;" />
   </div>
 </template>
@@ -154,11 +155,24 @@ const LOCK_THRESHOLD = -60;
 const CANCEL_THRESHOLD = -80;
 
 const isSttActive = ref(false);
-const sttStoppedManually = ref(false);
+const wasSttStoppedManually = ref(false);
+const sttStatusMessage = ref('');
+const sttFinalizedTranscript = ref('');
 const isCurrentChatWithAI = computed(() => {
   if (!chatStore.currentChatId) return false;
   const contact = userStore.contacts[chatStore.currentChatId];
   return contact?.isAI === true;
+});
+
+const inputPlaceholder = computed(() => {
+  if (sttStatusMessage.value) return sttStatusMessage.value;
+  if (isSttActive.value) return '正在聆听，请说话...';
+  return '输入消息...';
+});
+
+const sttButtonTitle = computed(() => {
+  if (isSttActive.value) return '停止识别';
+  return '语音输入 (按住说话)';
 });
 
 
@@ -194,7 +208,21 @@ function playPreviewAudio() { if (previewWavesurfer) { previewWavesurfer.playPau
 watch(preview, (newPreview, oldPreview) => { if (oldPreview && previewWavesurfer) { previewWavesurfer.destroy(); previewWavesurfer = null; isPreviewPlaying.value = false; } if (newPreview && newPreview.type === 'audio') { nextTick(() => { if (previewWaveformRef.value) { previewWavesurfer = WaveSurfer.create({ container: previewWaveformRef.value, url: newPreview.url, height: 32, waveColor: 'var(--color-text-tertiary)', progressColor: 'var(--color-brand-secondary)', cursorWidth: 1, cursorColor: 'var(--color-brand-primary)', barWidth: 2, barRadius: 2, }); previewWavesurfer.on('play', () => isPreviewPlaying.value = true); previewWavesurfer.on('pause', () => isPreviewPlaying.value = false); previewWavesurfer.on('finish', () => isPreviewPlaying.value = false); } }); } });
 
 const formatDuration = (seconds) => { const min = Math.floor(seconds / 60); const sec = seconds % 60; return `${min}:${sec < 10 ? '0' : ''}${sec}`; };
-function toggleStt() { if (isSttActive.value) { sttStoppedManually.value = true; sttService.stop(); } else { newMessage.value = ''; sttService.start(); } }
+
+// --- MODIFICATION START: Replaced toggleStt with start/stop functions for Push-to-Talk ---
+function startStt() {
+  if (isSttActive.value) return; // Prevent multiple starts
+  sttFinalizedTranscript.value = newMessage.value ? newMessage.value + ' ' : '';
+  sttService.start();
+}
+
+function stopStt() {
+  if (!isSttActive.value) return; // Prevent stopping if not active
+  wasSttStoppedManually.value = true;
+  sttService.stop();
+}
+// --- MODIFICATION END ---
+
 async function startRecording(event) { if (isRecording.value) return; cancelPreview(); const success = await mediaService.startRecording(); if (success) { isRecording.value = true; const touch = event.touches ? event.touches[0] : event; startCoords.value = { x: touch.clientX, y: touch.clientY }; recordingDuration.value = 0; recordingInterval = setInterval(() => { recordingDuration.value++; }, 1000); } }
 function stopRecording() { if (!isRecording.value) return; if (isRecordingLocked.value) return; clearInterval(recordingInterval); if (!isSlidToCancel.value) { mediaService.stopRecording(); } else { mediaService.stopRecording(true); } isRecording.value = false; isSlidToCancel.value = false; }
 function handleRecordingMove(event) { if (!isRecording.value || isRecordingLocked.value) return; const touch = event.touches ? event.touches[0] : event; const deltaY = touch.clientY - startCoords.value.y; const deltaX = touch.clientX - startCoords.value.x; if (deltaY < LOCK_THRESHOLD) { isRecordingLocked.value = true; startCoords.value = { x: 0, y: 0 }; } else if (deltaX < CANCEL_THRESHOLD) { isSlidToCancel.value = true; } else { isSlidToCancel.value = false; } }
@@ -231,10 +259,43 @@ onMounted(() => {
   eventBus.on('screenshot:raw-captured', handleRawScreenshot);
 
   sttService.init({
-    onStart: () => { isSttActive.value = true; sttStoppedManually.value = false; },
-    onResult: (finalTranscript, interimTranscript) => { newMessage.value = finalTranscript + interimTranscript; adjustTextareaHeight(); },
-    onError: (error) => { isSttActive.value = false; sttStoppedManually.value = false; const errorMessage = error === 'no-speech' ? '未检测到语音' : '语音识别出错'; eventBus.emit('showNotification', { message: errorMessage, type: 'error' }); },
-    onEnd: () => { isSttActive.value = false; if (sttStoppedManually.value) { sttStoppedManually.value = false; if (newMessage.value.trim()) { send(); } } }
+    onStart: () => {
+      isSttActive.value = true;
+      wasSttStoppedManually.value = false;
+      sttStatusMessage.value = '';
+    },
+    onResult: (event) => {
+      let interimTranscript = '';
+      let currentFinalized = '';
+      for (let i = 0; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          currentFinalized += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      newMessage.value = sttFinalizedTranscript.value + currentFinalized + interimTranscript;
+
+      adjustTextareaHeight();
+      sttStatusMessage.value = '';
+    },
+    onError: (error) => {
+      sttStatusMessage.value = error === 'no-speech' ? '未检测到语音，请重试...' : '语音识别出错';
+      setTimeout(() => {
+        if (sttStatusMessage.value) sttStatusMessage.value = '';
+      }, 3000);
+    },
+    onEnd: () => {
+      isSttActive.value = false;
+      if (wasSttStoppedManually.value) {
+        wasSttStoppedManually.value = false;
+        sttFinalizedTranscript.value = ''; // Reset for the next session
+        if (newMessage.value.trim()) {
+          send();
+        }
+      }
+    }
   });
 });
 onUnmounted(() => {
@@ -246,7 +307,7 @@ onUnmounted(() => {
   if (recordingInterval) clearInterval(recordingInterval);
   if (typingTimeout) clearTimeout(typingTimeout);
   cancelPreview();
-  if (isSttActive.value) sttService.stop();
+  if (sttService.isListening()) sttService.stop();
 });
 </script>
 
@@ -263,6 +324,8 @@ onUnmounted(() => {
 }
 .send-button { background-color: var(--color-brand-primary); color: white; border-radius: 50%; width: 36px; height: 36px; font-size: 1.2rem; }
 .voice-button.recording { color: var(--color-status-danger); animation: pulse 1.5s infinite; }
+.voice-button.stt-active { color: var(--color-brand-primary); animation: pulse-stt 1.5s infinite; }
+@keyframes pulse-stt { 0% { box-shadow: 0 0 0 0 rgba(var(--color-brand-primary-rgb), 0.4); } 70% { box-shadow: 0 0 0 10px rgba(var(--color-brand-primary-rgb), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--color-brand-primary-rgb), 0); } }
 @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--color-status-danger-rgb), 0.4); } 70% { box-shadow: 0 0 0 10px rgba(var(--color-status-danger-rgb), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--color-status-danger-rgb), 0); } }
 .preview-container { padding: var(--spacing-2); margin-bottom: var(--spacing-2); background: var(--color-background-hover); border-radius: var(--border-radius-md); font-size: var(--font-size-sm); display: flex; justify-content: space-between; align-items: center; }
 .preview-actions { display: flex; gap: var(--spacing-2); }

@@ -15,6 +15,9 @@ export const useSettingsStore = defineStore('settings', () => {
     const apiSettings = ref({});
     const customBackgrounds = ref({ light: null, dark: null });
     const isThemeTransitioning = ref(false);
+    // --- MODIFICATION START: Removed sttMode and callMode state ---
+    const isAiNoiseSuppressionEnabled = ref(JSON.parse(localStorage.getItem('isAiNoiseSuppressionEnabled') || 'false'));
+    // --- MODIFICATION END ---
 
     // --- GETTERS ---
     const effectiveColorScheme = computed(() => {
@@ -41,10 +44,7 @@ export const useSettingsStore = defineStore('settings', () => {
         if (themeConfig && themeConfig.dataJs && !themeConfig.specialContacts) {
             try {
                 log(`Fetching theme data for ${themeKey} from ${themeConfig.dataJs}`, 'DEBUG');
-                // --- FIX START ---
-                // 移除了路径前的 "/"，使其成为相对路径，以遵循 vite.config.js 中的 base: './' 设置。
                 const response = await fetch(`${themeConfig.dataJs}`);
-                // --- FIX END ---
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
                 themes.value[themeKey] = { ...themeConfig, specialContacts: data };
@@ -156,6 +156,16 @@ export const useSettingsStore = defineStore('settings', () => {
         await _syncThemeWithColorScheme(true);
     }
 
+    // --- MODIFICATION START: Removed setSttMode and setCallMode actions ---
+    function setAiNoiseSuppression(isEnabled) {
+        if (typeof isEnabled === 'boolean') {
+            isAiNoiseSuppressionEnabled.value = isEnabled;
+            localStorage.setItem('isAiNoiseSuppressionEnabled', JSON.stringify(isEnabled));
+            log(`AI Noise Suppression set to: ${isEnabled}`, 'INFO');
+        }
+    }
+    // --- MODIFICATION END ---
+
     async function saveApiSetting(key, value) {
         if (apiSettings.value[key] !== value) {
             apiSettings.value[key] = value;
@@ -195,6 +205,8 @@ export const useSettingsStore = defineStore('settings', () => {
     return {
         themes, colorScheme, currentThemeKey, apiSettings, customBackgrounds,
         isThemeTransitioning,
+        isAiNoiseSuppressionEnabled,
+        setAiNoiseSuppression,
         effectiveColorScheme, currentTheme, currentSpecialContacts,
         init, applyTheme, setColorScheme, saveApiSetting, handleLlmProviderChange,
         setCustomBackground, removeCustomBackground,

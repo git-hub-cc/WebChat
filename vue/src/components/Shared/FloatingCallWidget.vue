@@ -4,7 +4,12 @@
       <div class="widget-info">
         <Avatar v-if="callStore.peerContact" :entity="callStore.peerContact" size="small" />
         <div class="text-info">
-          <span class="peer-name">{{ callStore.peerContact?.name || '通话中' }}</span>
+          <!-- --- MODIFICATION START: Add screenshare icon --- -->
+          <span class="peer-name">
+            <span v-if="callStore.isScreenSharing" class="screenshare-icon">🖥️</span>
+            {{ callStore.peerContact?.name || '通话中' }}
+          </span>
+          <!-- --- MODIFICATION END --- -->
           <span class="call-status">{{ callStore.callDurationFormatted }}</span>
         </div>
       </div>
@@ -65,7 +70,17 @@ const maximize = () => {
 
 .peer-name {
   font-weight: var(--font-weight-semibold);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
 }
+
+/* --- MODIFICATION START: Style for screenshare icon --- */
+.screenshare-icon {
+  font-size: 0.9em;
+  opacity: 0.9;
+}
+/* --- MODIFICATION END --- */
 
 .call-status {
   font-size: var(--font-size-sm);

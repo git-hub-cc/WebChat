@@ -1,8 +1,9 @@
 <template>
-  <div class="avatar" :class="[sizeClass, { 'is-special': entity.isSpecial }, entity.id]">
+  <!-- --- MODIFICATION START: Add speaking indicator class --- -->
+  <div class="avatar" :class="[sizeClass, { 'is-special': entity.isSpecial, 'speaking-indicator': isSpeaking }, entity.id]">
+    <!-- --- MODIFICATION END --- -->
     <img v-if="entity.avatarUrl" :src="entity.avatarUrl" :alt="avatarText" class="avatar-image">
     <span v-else class="avatar-text">{{ avatarText }}</span>
-    <!-- MODIFICATION: isOnline prop is now the single source of truth for online dot visibility -->
     <span v-if="isOnline" class="online-dot"></span>
   </div>
 </template>
@@ -20,11 +21,16 @@ const props = defineProps({
     type: String,
     default: 'medium', // 'small', 'medium', 'large', 'xl'
   },
-  // MODIFICATION: isOnline is now directly passed as a boolean, no internal logic
   isOnline: {
     type: Boolean,
     default: false,
+  },
+  // --- MODIFICATION START: Add isSpeaking prop ---
+  isSpeaking: {
+    type: Boolean,
+    default: false,
   }
+  // --- MODIFICATION END ---
 });
 
 const settingsStore = useSettingsStore();
@@ -49,6 +55,9 @@ const avatarText = computed(() => {
   font-weight: var(--font-weight-bold);
   flex-shrink: 0;
   user-select: none;
+  /* --- MODIFICATION START: Add transition for speaking indicator --- */
+  transition: box-shadow 0.2s ease-in-out;
+  /* --- MODIFICATION END --- */
 }
 .avatar-small { width: 32px; height: 32px; font-size: 0.875rem; }
 .avatar-medium { width: 44px; height: 44px; font-size: 1.125rem; }
@@ -78,6 +87,14 @@ const avatarText = computed(() => {
   height: 15px;
 }
 
+/* --- MODIFICATION START: Style for speaking indicator --- */
+.speaking-indicator {
+  /* Use a box-shadow for a glowing effect that doesn't affect layout */
+  box-shadow: 0 0 8px 3px var(--color-status-success);
+}
+/* --- MODIFICATION END --- */
+
+
 /* This is where character-specific variables from themes will take effect */
 .avatar.is-special {
   background-color: var(--character-primary-color, var(--color-brand-secondary));
@@ -85,4 +102,9 @@ const avatarText = computed(() => {
   border: 2px solid var(--character-accent-color, transparent);
   box-shadow: 0 0 8px var(--character-glow-color, transparent);
 }
+/* The speaking indicator shadow should override the character glow */
+.avatar.is-special.speaking-indicator {
+  box-shadow: 0 0 8px 3px var(--color-status-success);
+}
+
 </style>
