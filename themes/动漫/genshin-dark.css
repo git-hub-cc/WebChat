@@ -1,0 +1,192 @@
+/*
+================================================================================
+|                                                                              |
+|               🌙 原神 - 静谧星夜 (深色主题) - REFACTORED 🌙                   |
+|                                                                              |
+================================================================================
+*/
+
+body.theme-原神-深色 {
+    /*
+    ================================================================
+    |           1. Theme-specific Design Tokens                    |
+    ================================================================
+    */
+
+    /* --- 1a. Theme Palette Definition --- */
+    --gi-dark-gold-primary-rgb: 222, 178, 111;
+    --gi-dark-night-deep-rgb: 22, 26, 40;
+    --gi-dark-night-medium-rgb: 33, 39, 58;
+    --gi-dark-night-elevated-rgb: 45, 52, 75;
+    --gi-dark-text-light-gold-rgb: 235, 225, 200;
+    --gi-dark-text-light-grey-rgb: 180, 185, 195;
+    --gi-dark-dendro-rgb: 153, 204, 51;
+    --gi-dark-pyro-rgb: 255, 123, 89;
+
+    /* --- 1b. Overriding Base Semantic Variables --- */
+    --color-brand-primary: rgb(var(--gi-dark-gold-primary-rgb));
+    --color-text-primary: rgb(var(--gi-dark-text-light-gold-rgb));
+    --color-text-secondary: rgb(var(--gi-dark-text-light-grey-rgb));
+    --color-text-on-brand: rgb(var(--gi-dark-night-deep-rgb));
+    --color-text-link: rgb(var(--gi-dark-gold-primary-rgb));
+
+    --color-background-page: rgb(var(--gi-dark-night-deep-rgb));
+    --color-background-panel: rgba(var(--gi-dark-night-medium-rgb), 0.9);
+    --color-background-elevated: rgb(var(--gi-dark-night-elevated-rgb));
+    --color-background-hover: rgba(60, 70, 95, 0.7);
+    --color-background-active: rgba(var(--gi-dark-gold-primary-rgb), 0.15);
+
+    --color-border: rgba(60, 70, 95, 0.8);
+    --color-border-strong: rgb(var(--gi-dark-gold-primary-rgb));
+
+    --color-status-success: rgb(var(--gi-dark-dendro-rgb));
+    --color-status-danger: rgb(var(--gi-dark-pyro-rgb));
+
+    --color-message-system-bg: rgba(var(--gi-dark-night-elevated-rgb), 0.6);
+    --color-message-system-text: rgb(var(--gi-dark-text-light-grey-rgb));
+
+    /* --- 1c. Overriding Typography & Layout --- */
+    --font-family-base: "HYWenHei-85W", "Noto Serif SC", serif;
+    --border-radius-md: 6px;
+    --shadow-md: 0 3px 6px rgba(0, 0, 0, 0.3);
+
+    /* --- 1d. Character Color Palette --- */
+    --paimon-primary: #fafaff;
+    --paimon-text: #465578;
+    --paimon-accent: #ffd700;
+    --paimon-msg-bg: linear-gradient(135deg, #2a2f48, #3a3f58);
+    --paimon-secondary-bg: rgba(70, 85, 120, 0.2);
+
+    --zhongli-primary: #ffc343;
+    --zhongli-text: #3a3228;
+    --zhongli-accent: #ffc343;
+    --zhongli-msg-bg: linear-gradient(135deg, #3a3228, #483d30);
+    --zhongli-secondary-bg: rgba(70, 60, 55, 0.2);
+
+    --venti-primary: #72e0c5;
+    --venti-text: #1e7864;
+    --venti-accent: #72e0c5;
+    --venti-msg-bg: linear-gradient(135deg, #203f3a, #284d46);
+    --venti-secondary-bg: rgba(114, 224, 197, 0.1);
+
+    --raiden-primary: #b08cff;
+    --raiden-text: #302a4a;
+    --raiden-accent: #b08cff;
+    --raiden-msg-bg: linear-gradient(135deg, #302a4a, #403858);
+    --raiden-secondary-bg: rgba(176, 140, 255, 0.1);
+
+    --hutao-primary: #ff7b59;
+    --hutao-text: #4a2a2a;
+    --hutao-accent: #ff7b59;
+    --hutao-msg-bg: linear-gradient(135deg, #4a2a2a, #583838);
+    --hutao-secondary-bg: rgba(255, 123, 89, 0.1);
+
+    --kazuha-primary: #d76666;
+    --kazuha-text: #4a302a;
+    --kazuha-accent: #72e0c5;
+    --kazuha-msg-bg: linear-gradient(135deg, #4a302a, #583d38);
+    --kazuha-secondary-bg: rgba(215, 102, 102, 0.1);
+
+    --traveler-primary: #b49678;
+    --traveler-text: #253835;
+    --traveler-accent: #72e0c5;
+    --traveler-msg-bg: linear-gradient(135deg, #253835, #304840);
+    --traveler-secondary-bg: rgba(180, 150, 120, 0.1);
+}
+
+/*
+================================================================
+|           2. Global Style Overrides for this Theme           |
+================================================================
+*/
+body.theme-原神-深色 {
+    background-image: var(--custom-background-image,
+    radial-gradient(ellipse at top right, rgba(var(--gi-dark-gold-primary-rgb), 0.1) 0%, transparent 60%),
+    radial-gradient(circle at bottom left, rgba(var(--gi-dark-dendro-rgb), 0.05) 0%, transparent 50%),
+    linear-gradient(to bottom, rgb(var(--gi-dark-night-medium-rgb)), rgb(var(--gi-dark-night-deep-rgb)))
+    );
+}
+
+body.theme-原神-深色 .app-container {
+    backdrop-filter: blur(5px);
+}
+
+/*
+================================================================
+|         3. Character-specific Variable Application           |
+================================================================
+*/
+body.theme-原神-深色 .AI_Paimon_原神 {
+    --character-primary-color: var(--paimon-primary);
+    --character-text-color: var(--paimon-text);
+    --character-accent-color: var(--paimon-accent);
+    --character-message-bg: var(--paimon-msg-bg);
+    --character-secondary-bg: var(--paimon-secondary-bg);
+    --character-glow-color: var(--paimon-accent);
+}
+body.theme-原神-深色 .AI_Zhongli_原神 {
+    --character-primary-color: var(--zhongli-primary);
+    --character-text-color: var(--zhongli-text);
+    --character-accent-color: var(--zhongli-accent);
+    --character-message-bg: var(--zhongli-msg-bg);
+    --character-secondary-bg: var(--zhongli-secondary-bg);
+    --character-glow-color: var(--zhongli-accent);
+}
+body.theme-原神-深色 .AI_Venti_原神 {
+    --character-primary-color: var(--venti-primary);
+    --character-text-color: var(--venti-text);
+    --character-accent-color: var(--venti-accent);
+    --character-message-bg: var(--venti-msg-bg);
+    --character-secondary-bg: var(--venti-secondary-bg);
+    --character-glow-color: var(--venti-accent);
+}
+body.theme-原神-深色 .AI_RaidenShogun_原神 {
+    --character-primary-color: var(--raiden-primary);
+    --character-text-color: var(--raiden-text);
+    --character-accent-color: var(--raiden-accent);
+    --character-message-bg: var(--raiden-msg-bg);
+    --character-secondary-bg: var(--raiden-secondary-bg);
+    --character-glow-color: var(--raiden-accent);
+}
+body.theme-原神-深色 .AI_HuTao_原神 {
+    --character-primary-color: var(--hutao-primary);
+    --character-text-color: var(--hutao-text);
+    --character-accent-color: var(--hutao-accent);
+    --character-message-bg: var(--hutao-msg-bg);
+    --character-secondary-bg: var(--hutao-secondary-bg);
+    --character-glow-color: var(--hutao-accent);
+}
+body.theme-原神-深色 .AI_Kazuha_原神 {
+    --character-primary-color: var(--kazuha-primary);
+    --character-text-color: var(--kazuha-text);
+    --character-accent-color: var(--kazuha-accent);
+    --character-message-bg: var(--kazuha-msg-bg);
+    --character-secondary-bg: var(--kazuha-secondary-bg);
+    --character-glow-color: var(--kazuha-accent);
+}
+body.theme-原神-深色 .AI_Traveler_原神 {
+    --character-primary-color: var(--traveler-primary);
+    --character-text-color: var(--traveler-text);
+    --character-accent-color: var(--traveler-accent);
+    --character-message-bg: var(--traveler-msg-bg);
+    --character-secondary-bg: var(--traveler-secondary-bg);
+    --character-glow-color: var(--traveler-accent);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-原神-深色 .chat-list-item.is-special.active {
+    background-color: var(--character-secondary-bg);
+}
+
+body.theme-原神-深色 .chat-list-item.is-special.active .name {
+    color: var(--character-primary-color) !important;
+}
+
+body.theme-原神-深色 .message-bubble.character-message {
+    border-color: var(--character-accent-color);
+    box-shadow: 0 0 10px -2px var(--character-glow-color), 0 0 1px 1px var(--character-accent-color) inset;
+}

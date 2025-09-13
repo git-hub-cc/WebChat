@@ -1,0 +1,174 @@
+/*
+================================================================================
+|                                                                              |
+|                    🎨 蜡笔小新 - 动感春日 (浅色主题) - REFACTORED 🎨          |
+|                                                                              |
+================================================================================
+*/
+body.theme-蜡笔小新-浅色 {
+    /*
+    ================================================================
+    |           1. Theme-specific Design Tokens                    |
+    ================================================================
+    */
+
+    /* --- 1a. Theme Palette Definition --- */
+    --cs-shinchan-red-rgb: 237, 28, 36;
+    --cs-kazama-sky-blue-rgb: 135, 206, 250;
+    --cs-background-light-yellow-rgb: 255, 253, 235;
+    --cs-bubble-blue-rgb: 200, 230, 255;
+    --cs-border-brown-rgb: 180, 150, 120;
+    --cs-text-dark-rgb: 55, 55, 55;
+    --cs-text-light-rgb: 120, 120, 120;
+    --cs-accent-green-rgb: 76, 175, 80;
+
+    /* --- 1b. Overriding Base Semantic Variables --- */
+    --color-brand-primary: rgb(var(--cs-shinchan-red-rgb));
+    --color-brand-primary-dark: rgb(200, 20, 28);
+    --color-text-primary: rgb(var(--cs-text-dark-rgb));
+    --color-text-secondary: rgb(var(--cs-text-light-rgb));
+    --color-text-on-brand: #FFFFFF;
+    --color-text-link: rgb(var(--cs-shinchan-red-rgb));
+
+    --color-background-page: rgb(var(--cs-background-light-yellow-rgb));
+    --color-background-panel: rgb(255, 253, 235);
+    --color-background-elevated: #FFFFFF;
+    --color-background-hover: rgb(255, 249, 196);
+    --color-background-active: rgb(var(--cs-shinchan-red-rgb)); /* Active item has brand color bg */
+
+    --color-border: rgb(var(--cs-border-brown-rgb));
+    --color-border-strong: rgb(var(--cs-text-dark-rgb));
+
+    --color-status-success: rgb(var(--cs-accent-green-rgb));
+    --color-status-danger: rgb(229, 57, 53);
+
+    --color-message-sent-bg: var(--color-brand-primary);
+    --color-message-sent-text: var(--color-text-on-brand);
+    --color-message-received-bg: rgb(var(--cs-bubble-blue-rgb));
+    --color-message-system-bg: rgba(var(--cs-border-brown-rgb), 0.2);
+    --color-message-system-text: var(--color-text-secondary);
+
+    /* --- 1c. Overriding Typography & Layout --- */
+    --font-family-base: "Comic Sans MS", "Chalkduster", "Arial Rounded MT Bold", sans-serif;
+    --border-radius-md: 10px;
+    --shadow-md: 2px 2px 0px var(--color-border-strong);
+    --shadow-lg: 4px 4px 0px rgba(var(--cs-border-brown-rgb), 0.5);
+
+    /* --- 1d. Character Color Palette --- */
+    --shinchan-primary: #ED1C24;
+    --shinchan-text: #ED1C24; /* Text color is same as primary on yellow bg */
+    --shinchan-accent: #ED1C24;
+    --shinchan-msg-bg: #FFF200;
+    --shinchan-secondary-bg: #FFF200;
+
+    --misae-primary: #F39DBE;
+    --misae-text: #FFFFFF;
+    --misae-accent: #F39DBE;
+    --misae-msg-bg: rgba(243, 157, 190, 0.3);
+    --misae-secondary-bg: #F39DBE;
+
+    --hiroshi-primary: #3C5A96;
+    --hiroshi-text: #FFFFFF;
+    --hiroshi-accent: #3C5A96;
+    --hiroshi-msg-bg: rgba(60, 90, 150, 0.3);
+    --hiroshi-secondary-bg: #3C5A96;
+
+    --kazama-primary: #3C5A96; /* Darker blue for text */
+    --kazama-text: #FFFFFF; /* Text on avatar */
+    --kazama-accent: #87CEFA; /* Lighter blue for bg */
+    --kazama-msg-bg: rgba(135, 206, 250, 0.3);
+    --kazama-secondary-bg: #87CEFA;
+
+    --shiro-primary: var(--color-text-secondary);
+    --shiro-text: var(--color-text-primary);
+    --shiro-accent: var(--color-text-secondary);
+    --shiro-msg-bg: #F5F5F5;
+    --shiro-secondary-bg: #F5F5F5;
+}
+
+/*
+================================================================
+|           2. Global Style Overrides for this Theme           |
+================================================================
+*/
+body.theme-蜡笔小新-浅色 {
+    background-image: var(--custom-background-image, linear-gradient(to bottom, rgb(var(--cs-kazama-sky-blue-rgb)), rgb(var(--cs-background-light-yellow-rgb))));
+}
+
+body.theme-蜡笔小新-浅色 .app-container {
+    border: 3px solid var(--color-border);
+}
+
+body.theme-蜡笔小新-浅色 .chat-list-item.active .name,
+body.theme-蜡笔小新-浅色 .chat-list-item.active .preview,
+body.theme-蜡笔小新-浅色 .chat-list-item.active .timestamp {
+    color: var(--color-text-on-brand);
+}
+
+/*
+================================================================
+|         3. Character-specific Variable Application           |
+================================================================
+*/
+body.theme-蜡笔小新-浅色 .AI_野原新之助 {
+    --character-primary-color: var(--shinchan-primary);
+    --character-text-color: var(--shinchan-text);
+    --character-accent-color: var(--shinchan-accent);
+    --character-message-bg: var(--shinchan-msg-bg);
+    --character-secondary-bg: var(--shinchan-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-蜡笔小新-浅色 .AI_野原美伢 {
+    --character-primary-color: var(--misae-primary);
+    --character-text-color: var(--misae-text);
+    --character-accent-color: var(--misae-accent);
+    --character-message-bg: var(--misae-msg-bg);
+    --character-secondary-bg: var(--misae-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-蜡笔小新-浅色 .AI_野原广志 {
+    --character-primary-color: var(--hiroshi-primary);
+    --character-text-color: var(--hiroshi-text);
+    --character-accent-color: var(--hiroshi-accent);
+    --character-message-bg: var(--hiroshi-msg-bg);
+    --character-secondary-bg: var(--hiroshi-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-蜡笔小新-浅色 .AI_风间彻 {
+    --character-primary-color: var(--kazama-primary);
+    --character-text-color: var(--kazama-text);
+    --character-accent-color: var(--kazama-accent);
+    --character-message-bg: var(--kazama-msg-bg);
+    --character-secondary-bg: var(--kazama-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+body.theme-蜡笔小新-浅色 .AI_小白 {
+    --character-primary-color: var(--shiro-primary);
+    --character-text-color: var(--shiro-text);
+    --character-accent-color: var(--shiro-accent);
+    --character-message-bg: var(--shiro-msg-bg);
+    --character-secondary-bg: var(--shiro-secondary-bg);
+    --character-glow-color: transparent;
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-蜡笔小新-浅色 .chat-list-item.is-special.active {
+    background: var(--character-secondary-bg);
+}
+
+body.theme-蜡笔小新-浅色 .chat-list-item.is-special.active .name {
+    color: var(--character-text-color) !important;
+}
+
+body.theme-蜡笔小新-浅色 .message-bubble.character-message {
+    border: 3px solid var(--color-border-strong);
+    box-shadow: 2px 2px 0px var(--color-border-strong);
+}

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "AI_DrHughes_YueDuLiJie_001",
+    "name": "Chapter 1: The Art of Active Reading - Skimming, Scanning, and Predicting",
+    "promptModifier": "This inaugural session aims to transform you from a passive reader into an active participant. We will master the foundational techniques of skimming for gist, scanning for specific information, and predicting content from titles and introductions. The focus is on developing strategic approaches to text before diving into the details. Our material will be a short expository article on a contemporary issue."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_002",
+    "name": "Chapter 2: Identifying the Core - Main Idea and Topic Sentences",
+    "promptModifier": "In this chapter, we dissect the heart of a text. The objective is to accurately identify the main idea of a passage and locate the topic sentence within each paragraph. We will differentiate between the topic (what the text is about) and the main idea (what the author asserts about the topic). This skill is paramount for comprehension and summary. We shall analyze several well-structured academic paragraphs."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_003",
+    "name": "Chapter 3: Understanding Text Structure - Patterns of Organization",
+    "promptModifier": "A text, like a building, has an architecture. This session is dedicated to recognizing common patterns of organization: chronological order, cause and effect, comparison and contrast, problem and solution, and classification. By identifying the author's chosen structure, you can better follow their logic and anticipate the flow of information. We will use graphic organizers to map out these patterns from selected texts."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_004",
+    "name": "Chapter 4: Making Inferences - Reading Between the Lines",
+    "promptModifier": "True comprehension extends beyond the literal. This chapter focuses on the skill of making logical inferences – understanding what is implied but not explicitly stated. We will learn to combine textual evidence with our own background knowledge to draw valid conclusions about the author's intentions, characters' motivations, or unstated consequences. Our practice text will be a short piece of literary fiction."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_005",
+    "name": "Chapter 5: Vocabulary in Context - Deducing Meaning from Clues",
+    "promptModifier": "Encountering an unknown word need not halt your progress. This session equips you with strategies to deduce a word's meaning from its context. We will examine various contextual clues, such as definitions, examples, synonyms, antonyms, and the overall logic of the sentence. This is a crucial skill for improving reading fluency and expanding vocabulary organically."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_006",
+    "name": "Chapter 6: Author's Purpose and Tone - Why and How It's Written",
+    "promptModifier": "Every text has a purpose, be it to inform, persuade, entertain, or a combination thereof. We will learn to identify the author's primary purpose and analyze their tone (e.g., objective, critical, sentimental, humorous). Understanding these elements provides a deeper insight into the message and the author's perspective. We will compare a news report, an editorial, and a satirical piece on the same topic."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_007",
+    "name": "Chapter 7: Fact vs. Opinion - The Foundation of Critical Thinking",
+    "promptModifier": "A critical reader must distinguish between verifiable facts and the author's personal judgments or beliefs. In this session, we will establish clear criteria for differentiating fact from opinion and analyze how authors use both to build their arguments. This is a fundamental skill for evaluating the credibility and objectivity of any source."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_008",
+    "name": "Chapter 8: Analyzing Arguments - Claims, Evidence, and Warrants",
+    "promptModifier": "This chapter delves into the structure of persuasive writing. We will learn to break down an argument into its essential components: the central claim (the thesis), the evidence provided (data, examples, testimony), and the underlying assumptions or warrants that connect them. Our goal is to assess the strength and validity of an argument, rather than simply accepting it at face value."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_009",
+    "name": "Chapter 9: Recognizing Bias and Propaganda Techniques",
+    "promptModifier": "Language is not always neutral. This session will train you to identify authorial bias and recognize common propaganda techniques, such as emotional appeals, glittering generalities, and bandwagon fallacies. Developing this critical lens is essential for navigating the modern information landscape responsibly. We will analyze political speeches and advertisements."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_010",
+    "name": "Chapter 10: Figurative Language - Unpacking Metaphors and Similes",
+    "promptModifier": "In this chapter, we explore the aesthetic dimension of language. We will identify and interpret various forms of figurative language, primarily simile, metaphor, personification, and hyperbole. The objective is to understand how these devices create vivid imagery, evoke emotion, and convey complex ideas in a compact and powerful manner. We will work with selected poems and literary prose."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_011",
+    "name": "Chapter 11: Summarizing and Paraphrasing - Condensing and Rephrasing Ideas",
+    "promptModifier": "The ability to accurately summarize and paraphrase is a hallmark of true comprehension. We will practice condensing the main points of a text into a concise summary and rephrasing an author's ideas into our own words without altering the original meaning. This session emphasizes the importance of attribution and the avoidance of plagiarism."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_012",
+    "name": "Chapter 12: Synthesizing Information from Multiple Sources",
+    "promptModifier": "Advanced reading often requires synthesizing information from various texts. In this session, we will read two or three articles on the same topic from different perspectives. Our task is to compare and contrast their arguments, identify areas of agreement and disagreement, and formulate a comprehensive, nuanced understanding of the issue. This is a key skill for academic research and informed decision-making."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_013",
+    "name": "Chapter 13: Reading Scientific and Technical Texts",
+    "promptModifier": "This chapter addresses the specific challenges of reading scientific and technical literature. We will focus on understanding a structured format (e.g., IMRaD), interpreting data presented in charts and graphs, and grasping the precise, denotative language characteristic of these fields. The goal is to demystify academic articles and reports."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_014",
+    "name": "Chapter 14: A Deep Dive into a Classic Essay",
+    "promptModifier": "In this session, we will apply all our accumulated skills to a close reading of a single, seminal essay (e.g., from Orwell, Woolf, or Bacon). We will conduct a comprehensive analysis, examining its structure, argumentation, style, and historical context. This serves as a capstone exercise in literary and rhetorical analysis."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_015",
+    "name": "Chapter 15: Developing Reading Stamina and Speed",
+    "promptModifier": "While depth is crucial, efficiency is also important. This chapter provides practical strategies for increasing reading speed without sacrificing comprehension. We will discuss techniques such as chunking, minimizing subvocalization, and using a pacer. Timed reading exercises will be employed to track and encourage progress."
+  },
+  {
+    "id": "AI_DrHughes_YueDuLiJie_016",
+    "name": "Chapter 16: The Synthesis Project - Formulating a Critical Response",
+    "promptModifier": "In our final session, the focus shifts from comprehension to response. After reading a challenging text, your task will be to formulate a well-reasoned critical response. This involves summarizing the author's argument, evaluating its strengths and weaknesses, and articulating your own informed position. This represents the culmination of our journey: to read not just as a student, but as a scholar. A fitting conclusion, I believe."
+  }
+]

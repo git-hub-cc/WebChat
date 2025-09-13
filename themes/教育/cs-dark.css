@@ -1,0 +1,181 @@
+/*
+================================================================================
+|                                                                              |
+|                    💻 CS - 赛博终端 (深色主题) - REFACTORED 💻               |
+|                                                                              |
+================================================================================
+*/
+body.theme-计算机科学-深色 {
+    /*
+    ================================================================
+    |           1. Theme-specific Design Tokens                    |
+    ================================================================
+    */
+
+    /* --- 1a. Theme Palette Definition --- */
+    --cs-dark-bg-main-rgb: 24, 24, 27;
+    --cs-dark-bg-container-rgb: 30, 30, 34;
+    --cs-dark-bg-sidebar-rgb: 37, 37, 42;
+    --cs-dark-bg-elevated-rgb: 45, 45, 50;
+    --cs-dark-bg-subtle-accent-rgb: 51, 51, 55;
+    --cs-dark-text-primary-rgb: 212, 212, 212;
+    --cs-dark-text-secondary-rgb: 150, 150, 150;
+    --cs-dark-accent-blue-rgb: 0, 122, 204;
+    --cs-dark-accent-blue-rgba: 0, 122, 204, 0.1;
+    --cs-dark-border-rgb: 60, 60, 60;
+    --cs-dark-status-online-rgb: 77, 183, 119;
+    --cs-dark-status-notification-rgb: 244, 121, 93;
+
+    /* --- 1b. Overriding Base Semantic Variables --- */
+    --color-brand-primary: rgb(var(--cs-dark-accent-blue-rgb));
+    --color-brand-primary-dark: rgb(0, 102, 174);
+    --color-text-primary: rgb(var(--cs-dark-text-primary-rgb));
+    --color-text-secondary: rgb(var(--cs-dark-text-secondary-rgb));
+    --color-text-on-brand: #FFFFFF;
+    --color-text-link: rgb(var(--cs-dark-accent-blue-rgb));
+
+    --color-background-page: rgb(var(--cs-dark-bg-main-rgb));
+    --color-background-panel: rgb(var(--cs-dark-bg-sidebar-rgb));
+    --color-background-elevated: rgb(var(--cs-dark-bg-elevated-rgb));
+    --color-background-hover: rgb(var(--cs-dark-bg-subtle-accent-rgb));
+    --color-background-active: rgba(var(--cs-dark-accent-blue-rgb), 0.15);
+
+    --color-border: rgb(var(--cs-dark-border-rgb));
+    --color-border-strong: rgb(80, 80, 80);
+
+    --color-status-success: rgb(var(--cs-dark-status-online-rgb));
+    --color-status-danger: rgb(var(--cs-dark-status-notification-rgb));
+
+    --color-message-sent-bg: rgba(var(--cs-dark-accent-blue-rgb), 0.2);
+    --color-message-sent-text: var(--color-text-primary);
+    --color-message-received-bg: var(--color-background-elevated);
+    --color-message-system-bg: transparent;
+    --color-message-system-text: var(--color-text-secondary);
+
+    /* --- 1c. Overriding Typography & Layout --- */
+    --font-family-base: "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", monospace;
+    --border-radius-md: 5px;
+    --shadow-focus-ring: 0 0 0 2px rgba(var(--cs-dark-accent-blue-rgb), 0.6);
+
+    /* --- 1d. Character Color Palette --- */
+    --ada-primary: #61AFEF;
+    --ada-accent: #61AFEF;
+    --ada-msg-bg: var(--color-background-active);
+    --ada-secondary-bg: var(--color-background-active);
+
+    --geek-primary: #E5C07B;
+    --geek-accent: #E5C07B;
+    --geek-msg-bg: rgba(229, 192, 123, 0.1);
+    --geek-secondary-bg: rgba(229, 192, 123, 0.1);
+
+    --wendy-primary: #C678DD;
+    --wendy-accent: #C678DD;
+    --wendy-msg-bg: rgba(198, 120, 221, 0.1);
+    --wendy-secondary-bg: rgba(198, 120, 221, 0.1);
+
+    --ligou-primary: #56B6C2;
+    --ligou-accent: #56B6C2;
+    --ligou-msg-bg: rgba(86, 182, 194, 0.1);
+    --ligou-secondary-bg: rgba(86, 182, 194, 0.1);
+
+    --phantom-primary: #2ECC71;
+    --phantom-accent: #2ECC71;
+    --phantom-msg-bg: rgba(46, 204, 113, 0.1);
+    --phantom-secondary-bg: rgba(46, 204, 113, 0.1);
+}
+
+/*
+================================================================
+|           2. Global Style Overrides for this Theme           |
+================================================================
+*/
+body.theme-计算机科学-深色 {
+    background-image: var(--custom-background-image,
+    linear-gradient(rgba(var(--cs-dark-border-rgb), 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--cs-dark-border-rgb), 0.1) 1px, transparent 1px)
+    );
+    background-size: 20px 20px;
+}
+
+body.theme-计算机科学-深色 .message-bubble,
+body.theme-计算机科学-深色 input,
+body.theme-计算机科学-深色 textarea,
+body.theme-计算机科学-深色 .details-panel h4 {
+    font-family: var(--font-family-mono), serif;
+}
+
+body.theme-计算机科学-深色 .chat-list-item.active {
+    border-left: 3px solid var(--color-brand-primary);
+    background-color: var(--color-background-active);
+}
+
+body.theme-计算机科学-深色 .system-message {
+    border: 1px dashed rgba(var(--cs-dark-border-rgb), 0.5);
+}
+
+/*
+================================================================
+|         3. Character-specific Variable Application           |
+================================================================
+*/
+body.theme-计算机科学-深色 .AI_Ada_Foundations {
+    --character-primary-color: var(--ada-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--ada-accent);
+    --character-message-bg: var(--ada-msg-bg);
+    --character-secondary-bg: var(--ada-secondary-bg);
+    --character-glow-color: var(--ada-primary);
+}
+
+body.theme-计算机科学-深色 .AI_GaoJike_PracticalPython {
+    --character-primary-color: var(--geek-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--geek-accent);
+    --character-message-bg: var(--geek-msg-bg);
+    --character-secondary-bg: var(--geek-secondary-bg);
+    --character-glow-color: var(--geek-primary);
+}
+
+body.theme-计算机科学-深色 .AI_Wendy_FrontendWizard {
+    --character-primary-color: var(--wendy-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--wendy-accent);
+    --character-message-bg: var(--wendy-msg-bg);
+    --character-secondary-bg: var(--wendy-secondary-bg);
+    --character-glow-color: var(--wendy-primary);
+}
+
+body.theme-计算机科学-深色 .AI_LiGou_SystemDesign {
+    --character-primary-color: var(--ligou-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--ligou-accent);
+    --character-message-bg: var(--ligou-msg-bg);
+    --character-secondary-bg: var(--ligou-secondary-bg);
+    --character-glow-color: var(--ligou-primary);
+}
+
+body.theme-计算机科学-深色 .AI_Phantom_CyberSecurity {
+    --character-primary-color: var(--phantom-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--phantom-primary);
+    --character-message-bg: var(--phantom-msg-bg);
+    --character-secondary-bg: var(--phantom-secondary-bg);
+    --character-glow-color: var(--phantom-primary);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-计算机科学-深色 .chat-list-item.is-special.active {
+    background-color: var(--character-secondary-bg);
+    border-left: 3px solid var(--character-primary-color);
+}
+
+body.theme-计算机科学-深色 .chat-list-item.is-special.active .name,
+body.theme-计算机科学-深色 .sender-name,
+body.theme-计算机科学-深色 .profile-name {
+    font-family: var(--font-family-mono);
+}

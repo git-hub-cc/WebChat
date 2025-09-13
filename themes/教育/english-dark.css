@@ -1,0 +1,141 @@
+/*
+================================================================================
+|                                                                              |
+|                📚 LexiLearn - Word Weavers (深色主题) - REFACTORED 📚       |
+|                                                                              |
+================================================================================
+*/
+body.theme-英语-深色 {
+    /*
+    ================================================================
+    |           1. Theme-specific Design Tokens                    |
+    ================================================================
+    */
+
+    /* --- 1a. Theme Palette Definition --- */
+    --ll-bg-main-rgb: 23, 27, 35;
+    --ll-bg-container-rgb: 30, 35, 45;
+    --ll-bg-sidebar-rgb: 27, 31, 40;
+    --ll-bg-elevated-rgb: 40, 46, 58;
+    --ll-bg-subtle-accent-rgb: 45, 52, 65;
+    --ll-text-primary-rgb: 229, 231, 235;
+    --ll-text-secondary-rgb: 156, 163, 175;
+    --ll-primary-green-rgb: 16, 185, 129;
+    --ll-secondary-blue-rgb: 96, 165, 250;
+    --ll-border-light-rgb: 43, 52, 69;
+
+    /* --- 1b. Overriding Base Semantic Variables --- */
+    --color-brand-primary: rgb(var(--ll-primary-green-rgb));
+    --color-brand-primary-dark: rgb(12, 148, 103);
+    --color-text-primary: rgb(var(--ll-text-primary-rgb));
+    --color-text-secondary: rgb(var(--ll-text-secondary-rgb));
+    --color-text-on-brand: #FFFFFF;
+    --color-text-link: rgb(var(--ll-secondary-blue-rgb));
+
+    --color-background-page: rgb(var(--ll-bg-main-rgb));
+    --color-background-panel: rgb(var(--ll-bg-sidebar-rgb));
+    --color-background-elevated: rgb(var(--ll-bg-elevated-rgb));
+    --color-background-hover: rgb(var(--ll-bg-subtle-accent-rgb));
+    --color-background-active: rgba(var(--ll-secondary-blue-rgb), 0.15);
+
+    --color-border: rgb(var(--ll-border-light-rgb));
+    --color-border-strong: rgb(55, 65, 81);
+
+    --color-status-success: var(--color-brand-primary);
+    --color-status-danger: rgb(239, 68, 68);
+    --color-status-info: var(--color-text-link);
+
+    --color-message-sent-bg: rgba(var(--ll-primary-green-rgb), 0.2);
+    --color-message-sent-text: var(--color-text-primary);
+    --color-message-received-bg: var(--color-background-elevated);
+    --color-message-system-bg: rgba(var(--ll-bg-main-rgb), 0.8);
+    --color-message-system-text: var(--color-text-secondary);
+
+    /* --- 1c. Overriding Typography & Layout --- */
+    --font-family-base: "Nunito Sans", "Segoe UI", system-ui, sans-serif;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+
+    /* --- 1d. Character Color Palette --- */
+    --liubin-primary: #2CC0D4;
+    --liubin-msg-bg: linear-gradient(135deg, #0d3f4f, #115061);
+    --liubin-secondary-bg: var(--color-background-active);
+
+    --wangfei-primary: #60A5FA;
+    --wangfei-msg-bg: linear-gradient(135deg, #1e293b, #28354c);
+    --wangfei-secondary-bg: var(--color-background-active);
+
+    --kevin-primary: #FB923C;
+    --kevin-msg-bg: linear-gradient(135deg, #3d2c1d, #4b3720);
+    --kevin-secondary-bg: var(--color-background-active);
+}
+
+/*
+================================================================
+|           2. Global Style Overrides for this Theme           |
+================================================================
+*/
+body.theme-英语-深色 {
+    background-image: var(--custom-background-image, url("data:image/svg+xml,%3Csvg width='10' height='10' viewBox='0 0 10 10' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='10' height='10' fill='%23171B23'/%3E%3Ccircle cx='1' cy='1' r='0.5' fill='%232B3445'/%3E%3C/svg%3E"));
+}
+
+body.theme-英语-深色 .app-container {
+    box-shadow: var(--shadow-md), 0 0 0 1px rgba(var(--ll-border-light-rgb), 0.5);
+    border: 1px solid var(--color-border);
+}
+
+body.theme-英语-深色 .message-area {
+    background-image: linear-gradient(to bottom, transparent calc(1.65em - 1px), rgba(var(--ll-secondary-blue-rgb), 0.06) calc(1.65em - 1px), rgba(var(--ll-secondary-blue-rgb), 0.06) 1.65em);
+    background-size: 100% 1.65em;
+    background-position: 0 0.5em;
+}
+
+body.theme-英语-深色 .system-message {
+    border: 1px dashed var(--color-border);
+}
+
+/*
+================================================================
+|         3. Character-specific Variable Application           |
+================================================================
+*/
+body.theme-英语-深色 .AI_LiuBin_CiHuiDaShi {
+    --character-primary-color: var(--liubin-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--liubin-primary);
+    --character-message-bg: var(--liubin-msg-bg);
+    --character-secondary-bg: var(--liubin-secondary-bg);
+    --character-glow-color: rgba(44, 192, 212, 0.3);
+}
+
+body.theme-英语-深色 .AI_WangFei_YuFaDaShi {
+    --character-primary-color: var(--wangfei-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--wangfei-primary);
+    --character-message-bg: var(--wangfei-msg-bg);
+    --character-secondary-bg: var(--wangfei-secondary-bg);
+    --character-glow-color: rgba(96, 165, 250, 0.3);
+}
+
+body.theme-英语-深色 .AI_Kevin_KouYuTingLi {
+    --character-primary-color: var(--kevin-primary);
+    --character-text-color: #FFFFFF;
+    --character-accent-color: var(--kevin-primary);
+    --character-message-bg: var(--kevin-msg-bg);
+    --character-secondary-bg: var(--kevin-secondary-bg);
+    --character-glow-color: rgba(251, 146, 60, 0.3);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-英语-深色 .chat-list-item.is-special.active {
+    background-image: linear-gradient(to right, var(--character-secondary-bg), transparent);
+}
+
+body.theme-英语-深色 .message-bubble.character-message .sender-name {
+    text-shadow: 0 0 3px var(--character-glow-color);
+}

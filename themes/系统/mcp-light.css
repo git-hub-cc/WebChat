@@ -1,0 +1,103 @@
+/*
+================================================================================
+|                                                                              |
+|               🤖 MCP - 系统界面 (浅色主题) - REFACTORED 🤖                    |
+|                                                                              |
+================================================================================
+*/
+body.theme-MCP-浅色 {
+    /*
+    ================================================================
+    |           1. Theme-specific Design Tokens                    |
+    ================================================================
+    */
+
+    /* --- 1a. Theme Palette Definition --- */
+    --mcp-bg-main-rgb: 242, 245, 247;
+    --mcp-bg-container-rgb: 255, 255, 255;
+    --mcp-bg-hover-rgb: 233, 236, 239;
+    --mcp-text-primary-rgb: 28, 32, 35;
+    --mcp-text-secondary-rgb: 90, 102, 112;
+    --mcp-accent-teal-rgb: 0, 150, 136;
+    --mcp-accent-light-teal-rgb: 77, 182, 172;
+    --mcp-border-light-rgb: 222, 226, 230;
+
+    /* --- 1b. Overriding Base Semantic Variables --- */
+    --color-brand-primary: rgb(var(--mcp-accent-teal-rgb));
+    --color-brand-primary-dark: rgb(0, 121, 107);
+    --color-text-primary: rgb(var(--mcp-text-primary-rgb));
+    --color-text-secondary: rgb(var(--mcp-text-secondary-rgb));
+    --color-text-on-brand: #FFFFFF;
+    --color-text-link: var(--color-brand-primary);
+
+    --color-background-page: rgb(var(--mcp-bg-main-rgb));
+    --color-background-panel: rgb(var(--mcp-bg-container-rgb));
+    --color-background-elevated: #FFFFFF;
+    --color-background-hover: rgb(var(--mcp-bg-hover-rgb));
+    --color-background-active: rgba(var(--mcp-accent-light-teal-rgb), 0.15);
+
+    --color-border: rgb(var(--mcp-border-light-rgb));
+    --color-border-strong: rgb(206, 212, 218);
+
+    --color-message-sent-bg: var(--color-brand-primary);
+    --color-message-sent-text: var(--color-text-on-brand);
+    --color-message-received-bg: rgb(224, 247, 244); /* Pre-calculated --mcp-char-msg-bg-rgb */
+
+    /* --- 1c. Overriding Typography & Layout --- */
+    --font-family-base: "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", monospace;
+    --border-radius-md: 4px;
+    --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.06);
+
+    /* --- 1d. Character Color Palette --- */
+    --mcp-primary: rgb(var(--mcp-accent-teal-rgb));
+    --mcp-text: var(--color-text-on-brand);
+    --mcp-accent: rgb(var(--mcp-accent-light-teal-rgb));
+    --mcp-msg-bg: rgb(224, 247, 244);
+    --mcp-secondary-bg: var(--color-background-active);
+}
+
+/*
+================================================================
+|           2. Global Style Overrides for this Theme           |
+================================================================
+*/
+body.theme-MCP-浅色 .chat-list-item.active {
+    background: linear-gradient(90deg, var(--color-background-active), transparent);
+    border-left: 3px solid var(--color-brand-primary);
+}
+body.theme-MCP-浅色 .details-panel.character-active h4,
+body.theme-MCP-浅色 .details-header h3 {
+    color: var(--color-brand-primary);
+    border-bottom-color: rgba(var(--mcp-accent-teal-rgb), 0.5);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    font-size: 13px;
+}
+body.theme-MCP-浅色 .message-bubble,
+body.theme-MCP-浅色 input,
+body.theme-MCP-浅色 textarea {
+    font-family: var(--font-family-mono), serif;
+}
+/*
+================================================================
+|         3. Character-specific Variable Application           |
+================================================================
+*/
+body.theme-MCP-浅色 .AI_McpAssistant_System {
+    --character-primary-color: var(--mcp-primary);
+    --character-text-color: var(--mcp-text);
+    --character-accent-color: var(--mcp-accent);
+    --character-message-bg: var(--mcp-msg-bg);
+    --character-secondary-bg: var(--mcp-secondary-bg);
+    --character-glow-color: rgba(var(--mcp-accent-light-teal-rgb), 0.6);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-MCP-浅色 .message-bubble.character-message {
+    border-left: 3px solid var(--character-accent-color);
+}

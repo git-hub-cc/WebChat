@@ -1,0 +1,131 @@
+/*
+================================================================================
+|                                                                              |
+|              🤖 MCP - 赛博核心 (深色主题) - REFACTORED 🤖                    |
+|                                                                              |
+================================================================================
+*/
+body.theme-MCP-深色 {
+    /*
+    ================================================================
+    |           1. Theme-specific Design Tokens                    |
+    ================================================================
+    */
+
+    /* --- 1a. Theme Palette Definition --- */
+    --mcp-bg-main-rgb: 16, 20, 28;
+    --mcp-bg-container-rgb: 22, 28, 39;
+    --mcp-bg-elevated-rgb: 29, 36, 51;
+    --mcp-text-primary-rgb: 205, 214, 229;
+    --mcp-text-secondary-rgb: 128, 144, 169;
+    --mcp-char-primary-rgb: 0, 229, 255;
+    --mcp-char-accent-rgb: 102, 255, 255;
+    --mcp-border-light-rgb: 44, 53, 70;
+    --mcp-border-strong-rgb: 61, 73, 94;
+
+    /* --- 1b. Overriding Base Semantic Variables --- */
+    --color-brand-primary: rgb(var(--mcp-char-primary-rgb));
+    --color-brand-primary-dark: rgb(0, 200, 220);
+    --color-text-primary: rgb(var(--mcp-text-primary-rgb));
+    --color-text-secondary: rgb(var(--mcp-text-secondary-rgb));
+    --color-text-on-brand: rgb(var(--mcp-bg-main-rgb));
+    --color-text-link: var(--color-brand-primary);
+
+    --color-background-page: rgb(var(--mcp-bg-main-rgb));
+    --color-background-panel: rgb(var(--mcp-bg-container-rgb));
+    --color-background-elevated: rgb(var(--mcp-bg-elevated-rgb));
+    --color-background-hover: rgb(var(--mcp-border-light-rgb));
+    --color-background-active: rgba(var(--mcp-char-primary-rgb), 0.1);
+
+    --color-border: rgb(var(--mcp-border-light-rgb));
+    --color-border-strong: rgb(var(--mcp-border-strong-rgb));
+
+    --color-status-success: rgb(75, 255, 150);
+    --color-status-danger: rgb(255, 75, 75);
+
+    --color-message-sent-bg: var(--color-background-elevated);
+    --color-message-sent-text: var(--color-text-primary);
+    --color-message-received-bg: rgba(var(--mcp-char-primary-rgb), 0.1);
+
+    /* --- 1c. Overriding Typography & Layout --- */
+    --font-family-base: "Inter", "Segoe UI", system-ui, sans-serif;
+    --font-family-mono: "Fira Code", "JetBrains Mono", monospace;
+    --border-radius-md: 4px;
+    --shadow-md: 0 2px 5px rgba(0,0,0, 0.4);
+
+    /* --- 1d. Character Color Palette --- */
+    --mcp-primary: rgb(var(--mcp-char-accent-rgb)); /* Brighter for titles */
+    --mcp-text: var(--color-text-on-brand);
+    --mcp-accent: rgb(var(--mcp-char-primary-rgb));
+    --mcp-msg-bg: linear-gradient(135deg, rgba(var(--mcp-char-primary-rgb), 0.05), rgba(var(--mcp-char-primary-rgb), 0.15));
+    --mcp-secondary-bg: var(--color-background-active);
+}
+
+/*
+================================================================
+|           2. Global Style Overrides for this Theme           |
+================================================================
+*/
+body.theme-MCP-深色 {
+    background-image: var(--custom-background-image,
+    linear-gradient(rgba(var(--mcp-border-light-rgb), 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(var(--mcp-border-light-rgb), 0.5) 1px, transparent 1px)
+    );
+    background-size: 30px 30px;
+}
+body.theme-MCP-深色 .chat-list-item.active {
+    background: var(--color-background-active);
+    border-left: 3px solid var(--color-brand-primary);
+    box-shadow: inset 3px 0 8px -2px rgba(var(--mcp-char-primary-rgb), 0.4);
+}
+body.theme-MCP-深色 .details-panel.character-active h4,
+body.theme-MCP-深色 .details-header h3 {
+    color: var(--mcp-primary);
+    border-bottom-color: rgba(var(--mcp-char-primary-rgb), 0.5);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    text-shadow: 0 0 3px rgba(var(--mcp-char-primary-rgb), 0.5);
+}
+body.theme-MCP-深色 .message-bubble.character-message {
+    border: 1px solid rgba(var(--mcp-char-primary-rgb), 0.7);
+    box-shadow: 0 0 15px rgba(var(--mcp-char-primary-rgb), 0.2);
+    backdrop-filter: blur(8px);
+}
+body.theme-MCP-深色 .message-bubble,
+body.theme-MCP-深色 input,
+body.theme-MCP-深色 textarea {
+    font-family: var(--font-family-mono), serif;
+}
+
+/*
+================================================================
+|         3. Character-specific Variable Application           |
+================================================================
+*/
+body.theme-MCP-深色 .AI_McpAssistant_System {
+    --character-primary-color: var(--mcp-primary);
+    --character-text-color: var(--mcp-text);
+    --character-accent-color: var(--mcp-accent);
+    --character-message-bg: var(--mcp-msg-bg);
+    --character-secondary-bg: var(--mcp-secondary-bg);
+    --character-glow-color: rgba(var(--mcp-char-primary-rgb), 0.8);
+}
+
+/*
+================================================================
+|        4. Theme-specific Character Style Enhancements        |
+================================================================
+*/
+body.theme-MCP-深色 .chat-header.character-active {
+    background: linear-gradient(to right, rgb(var(--mcp-bg-container-rgb)), rgba(var(--mcp-char-primary-rgb), 0.1));
+}
+
+body.theme-MCP-深色 .user-profile-section.character-active {
+    background: radial-gradient(circle at top, var(--character-secondary-bg), transparent 70%);
+}
+
+body.theme-MCP-深色 .user-profile-section.character-active hr {
+    border-color: var(--character-accent-color);
+    box-shadow: 0 0 5px var(--character-glow-color);
+    opacity: 0.5;
+}

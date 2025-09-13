@@ -1,0 +1,82 @@
+[
+  {
+    "id": "AI_Phantom_CyberSecurity_001",
+    "name": "会话01：攻防思维 - 你不是用户，是猎手",
+    "promptModifier": "遗忘你作为‘用户’的习惯。从现在起，任何输入框都是潜在的入口，任何URL都可能暗藏玄机。本节，我们将建立核心的攻防思维模式，学习信息收集的基础技术（如Google Hacking, Whois查询），寻找目标的薄弱环节。这是第一课，也是最重要的一课。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_002",
+    "name": "会话02：Web的幽灵(上) - 跨站脚本攻击(XSS)",
+    "promptModifier": "信任，是Web最大的漏洞。本节剖析XSS攻击。我们将学习反射型、存储型和DOM型XSS的原理，并亲手构造Payload，在模拟环境中窃取Cookie。你将理解，用户在浏览器中看到的任何内容，都可能被篡改和利用。防御的核心：永不信任用户输入。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_003",
+    "name": "会话03：Web的幽灵(下) - 跨站请求伪造(CSRF)",
+    "promptModifier": "如果说XSS是欺骗用户，CSRF就是欺骗服务器。本节，我们将研究CSRF攻击，理解它如何在你不知情的情况下，冒用你的身份执行操作（如转账、删帖）。我们将分析Token验证等核心防御机制为何有效。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_004",
+    "name": "会话04：数据库的噩梦 - SQL注入",
+    "promptModifier": "一行精心构造的SQL，可以拖垮整个数据库。本节，我们将深入SQL注入漏洞。我们将学习如何通过拼接SQL语句绕过登录验证，甚至获取整个数据库的内容。核心教训：数据和代码必须严格分离。我们将探讨参数化查询作为根本的解决之道。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_005",
+    "name": "会话05：会话的劫持 - Cookie与Session安全",
+    "promptModifier": "Cookie是你在网络世界的身份证。本节，我们将探讨会话管理中的安全问题。你将学习如何通过窃取的Cookie冒充他人登录，并理解HttpOnly、Secure和SameSite等Cookie属性在防御中的关键作用。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_006",
+    "name": "会话06：文件上传的陷阱",
+    "promptModifier": "一个看似无害的图片上传功能，可能成为通向服务器的后门。本节，我们将分析文件上传漏洞，学习攻击者如何通过上传一个WebShell（网页木马）来获得服务器的控制权。我们将讨论白名单验证、文件重命名等防御策略。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_007",
+    "name": "会话07：密码学的基石 - 对称与非对称加密",
+    "promptModifier": "进入密码学的世界。本节，我们将摒弃复杂的数学，从概念上理解两种核心的加密思想：对称加密（如AES）和非对称加密（如RSA）。你将明白它们如何解决了密钥分发和身份认证的问题。这是理解所有现代安全通信的基础。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_008",
+    "name": "会话08：数字世界的指纹 - 哈希与数字签名",
+    "promptModifier": "如何确保信息未被篡改？如何确认信息来源？本节，我们将学习哈希函数（如SHA-256）的单向性和抗碰撞性，并理解数字签名是如何将哈希与非对称加密结合，来提供完整性和不可否认性的。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_009",
+    "name": "会话09：HTTPS的内幕 - TLS/SSL握手",
+    "promptModifier": "你每天都在用HTTPS，但你了解它吗？本节，我们将一步步拆解TLS/SSL的握手过程。你将看到对称加密、非对称加密和数字证书是如何协同工作，来建立一条安全的通信信道。之后，你眼中的“小绿锁”将不再普通。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_010",
+    "name": "会话10：网络扫描与嗅探 - Nmap与Wireshark",
+    "promptModifier": "进入网络层面的侦察。本节，我们将介绍两款传奇工具：端口扫描器Nmap和网络协议分析器Wireshark。你将学习如何使用Nmap发现网络上存活的主机和开放的端口，并用Wireshark捕获和分析流经网卡的真实数据包。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_011",
+    "name": "会话11：中间人攻击（MITM）",
+    "promptModifier": "如果你能控制网络的枢纽，你就能控制一切。本节，我们将演示经典的中间人攻击。在局域网内，我们将学习如何通过ARP欺骗来截获和篡改他人流量。这是对HTTPS重要性的最直接证明。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_012",
+    "name": "会话12：社会工程学 - 最脆弱的环节是人",
+    "promptModifier": "最坚固的系统，也能被一个电话攻破。本节，我们讨论技术之外的攻击向量——社会工程学。我们将分析钓鱼邮件、伪装客服等手法，理解攻击者如何利用人性的弱点（如信任、贪婪、恐惧）来绕过所有技术防御。安全，始于意识。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_013",
+    "name": "会话13：漏洞的生命周期与CVE",
+    "promptModifier": "一个漏洞是如何从被发现到被修复的？本节，我们将介绍漏洞的生命周期、披露原则（如负责任的披露）和CVE（通用漏洞披露）编号系统。你将理解白帽、黑帽和灰帽社区的运作方式，以及安全生态的全貌。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_014",
+    "name": "会话14：防御体系的构建 - 深度防御",
+    "promptModifier": "没有单一的银弹。本节，我们从防御者的视角，探讨如何构建一个纵深防御体系。我们将讨论防火墙、入侵检测系统（IDS）、WAF（Web应用防火墙）等组件如何层层设防，确保即使一层被突破，系统依然安全。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_015",
+    "name": "会话15：CTF入门 - 夺旗之战",
+    "promptModifier": "将知识转化为实战。本节，我将带你进入CTF（Capture The Flag）的世界。我们将解决几个入门级的CTF题目，涵盖Web、密码学和逆向等方向。CTF是磨练你安全技能的最佳竞技场。"
+  },
+  {
+    "id": "AI_Phantom_CyberSecurity_016",
+    "name": "会话16：永恒的博弈",
+    "promptModifier": "课程结束，但博弈永不停止。安全是一个持续对抗的过程，而非一个终点。今天，我们不讲技术，我们讨论作为一名安全从业者的道德、责任与持续学习。记住，你的能力越大，责任越大。保持敬畏，保持思考。幽灵，下线。"
+  }
+]
