@@ -8,20 +8,37 @@
       <div class="picker-content">
         <!-- Emoji Grid -->
         <div v-show="activeTab === 'emoji'" class="emoji-grid scroller">
-          <span v-for="emoji in emojiList" :key="emoji" @click="selectEmoji(emoji)" class="emoji-item">
+          <!-- --- [动画] START: 为每个表情添加交错动画 --- -->
+          <span
+              v-for="(emoji, index) in emojiList"
+              :key="emoji"
+              @click="selectEmoji(emoji)"
+              class="emoji-item"
+              v-motion
+              :initial="{ opacity: 0, y: 10 }"
+              :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 350, damping: 25, delay: 10 + index * 5 } }"
+          >
             {{ emoji }}
           </span>
+          <!-- --- [动画] END --- -->
         </div>
         <!-- Sticker Grid -->
         <div v-show="activeTab === 'sticker'" class="sticker-grid scroller">
-          <!-- --- MODIFICATION START: Use a component-like structure for the sticker item --- -->
-          <div v-for="sticker in stickers" :key="sticker.id" class="sticker-item-wrapper">
+          <!-- --- [动画] START: 为每个贴图添加交错动画 --- -->
+          <div
+              v-for="(sticker, index) in stickers"
+              :key="sticker.id"
+              class="sticker-item-wrapper"
+              v-motion
+              :initial="{ opacity: 0, y: 10 }"
+              :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 350, damping: 25, delay: 10 + index * 5 } }"
+          >
             <div class="sticker-item" @click="selectSticker(sticker)">
               <div v-if="!sticker.url" class="sticker-placeholder"></div>
               <img v-if="sticker.url" :src="sticker.url" :alt="sticker.name" loading="lazy">
             </div>
           </div>
-          <!-- --- MODIFICATION END --- -->
+          <!-- --- [动画] END --- -->
           <label class="add-sticker-button" title="添加新贴图">
             +
             <input type="file" @change="handleStickerUpload" accept="image/png, image/jpeg, image/gif, image/webp" hidden>

@@ -1,35 +1,35 @@
 <template>
-  <transition name="editor-fade">
-    <div v-if="uiStore.activeModal === 'screenshotEditor'" class="editor-backdrop">
-      <header class="editor-toolbar">
-        <IconButton
-            icon="✂️"
-            title="裁剪"
-            :class="{ active: currentTool === 'crop' }"
-            @click="activateTool('crop')"
-        />
-        <IconButton
-            icon="⬜"
-            title="矩形标记"
-            :class="{ active: currentTool === 'drawRect' }"
-            @click="activateTool('drawRect')"
-        />
-        <input
-            v-if="currentTool === 'drawRect'"
-            type="color"
-            v-model="markColor"
-            class="color-picker"
-            title="选择标记颜色"
-        />
-        <div class="spacer"></div>
-        <button class="btn-confirm" @click="confirmEdit">完成</button>
-        <button class="btn-cancel" @click="cancelEdit">取消</button>
-      </header>
-      <div class="canvas-container">
-        <canvas ref="canvasRef" @mousedown="handleMouseDown"></canvas>
-      </div>
+  <!-- --- [动画] START: 应用 v-motion-fade --- -->
+  <div v-if="uiStore.activeModal === 'screenshotEditor'" class="editor-backdrop" v-motion-fade>
+    <!-- --- [动画] END --- -->
+    <header class="editor-toolbar">
+      <IconButton
+          icon="✂️"
+          title="裁剪"
+          :class="{ active: currentTool === 'crop' }"
+          @click="activateTool('crop')"
+      />
+      <IconButton
+          icon="⬜"
+          title="矩形标记"
+          :class="{ active: currentTool === 'drawRect' }"
+          @click="activateTool('drawRect')"
+      />
+      <input
+          v-if="currentTool === 'drawRect'"
+          type="color"
+          v-model="markColor"
+          class="color-picker"
+          title="选择标记颜色"
+      />
+      <div class="spacer"></div>
+      <button class="btn-confirm" @click="confirmEdit">完成</button>
+      <button class="btn-cancel" @click="cancelEdit">取消</button>
+    </header>
+    <div class="canvas-container">
+      <canvas ref="canvasRef" @mousedown="handleMouseDown"></canvas>
     </div>
-  </transition>
+  </div>
 </template>
 
 <script setup>
@@ -263,6 +263,10 @@ async function confirmEdit() {
 .btn-cancel { background-color: var(--color-background-elevated); color: var(--color-text-primary); }
 .canvas-container { flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: var(--spacing-4); overflow: auto; }
 canvas { max-width: 100%; max-height: 100%; object-fit: contain; cursor: crosshair; }
+
+/* The v-motion-fade directive handles the transition, so custom classes are not needed. */
+/*
 .editor-fade-enter-active, .editor-fade-leave-active { transition: opacity 0.3s ease; }
 .editor-fade-enter-from, .editor-fade-leave-to { opacity: 0; }
+*/
 </style>

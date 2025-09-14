@@ -1,4 +1,5 @@
 <template>
+  <!-- --- [动画] START: ModalWrapper 已被移至 App.vue，此处不再需要 --- -->
   <ModalWrapper :show="true" title="手动连接工具" @close="closeModal">
     <div class="manual-connection-content">
 
@@ -50,6 +51,7 @@
       <button class="btn-secondary" @click="closeModal">关闭</button>
     </template>
   </ModalWrapper>
+  <!-- --- [动画] END --- -->
 </template>
 
 <script setup>

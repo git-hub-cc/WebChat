@@ -9,192 +9,196 @@
         <button :class="{ active: activeTab === 'advanced' }" @click="switchTab('advanced')">高级</button>
       </nav>
 
-      <!-- 通用 General -->
-      <div v-if="activeTab === 'general'" class="tab-content">
-        <div class="setting-item">
-          <label>你的用户ID</label>
-          <div class="user-id-display">
-            <span>{{ userStore.userId }}</span>
-            <button @click="copyUserId">复制</button>
-          </div>
-        </div>
-        <div class="setting-item">
-          <label>网络状态</label>
-          <div class="network-status">
-            信令服务器:
-            <span :class="wsStatusClass">{{ wsStatusText }}</span>
-          </div>
-        </div>
-        <!-- --- MODIFICATION START: Removed STT Mode setting --- -->
-        <!-- The STT mode setting dropdown has been removed as per instructions. -->
-        <!-- --- MODIFICATION END --- -->
-        <hr>
-        <div class="actions-group">
-          <h3>操作</h3>
-          <button
-              class="btn-danger"
-              @click="clearContacts"
-              :disabled="nonSpecialContactsCount === 0 || uiStore.isPerformingDangerousAction">
-            {{ uiStore.isPerformingDangerousAction ? '处理中...' : `清空联系人 (${nonSpecialContactsCount})` }}
-          </button>
-          <button
-              class="btn-danger"
-              @click="clearChats"
-              :disabled="totalChatsCount === 0 || uiStore.isPerformingDangerousAction">
-            {{ uiStore.isPerformingDangerousAction ? '处理中...' : `清空所有聊天 (${totalChatsCount})` }}
-          </button>
-          <button
-              class="btn-danger"
-              @click="clearCache"
-              :disabled="uiStore.isPerformingDangerousAction">
-            {{ uiStore.isPerformingDangerousAction ? '处理中...' : '初始化应用' }}
-          </button>
-        </div>
-      </div>
-
-      <!-- 外观 Appearance -->
-      <div v-if="activeTab === 'appearance'" class="tab-content">
-        <div class="setting-item">
-          <label for="color-scheme-select">配色方案</label>
-          <select id="color-scheme-select" :value="settingsStore.colorScheme" @change="onColorSchemeChange">
-            <option value="auto">自动 (跟随系统)</option>
-            <option value="light">浅色模式</option>
-            <option value="dark">深色模式</option>
-          </select>
-        </div>
-        <div class="setting-item">
-          <label for="theme-select">主题</label>
-          <select id="theme-select" :value="settingsStore.currentThemeKey" @change="onThemeChange">
-            <option v-for="(theme, key) in compatibleThemes" :key="key" :value="key">
-              {{ theme.name }}
-            </option>
-          </select>
-        </div>
-        <hr>
-        <div class="setting-item">
-          <label>浅色模式背景</label>
-          <div class="background-controls">
-            <button class="btn-secondary" @click="triggerBgInput('light')">选择图片</button>
-            <button class="btn-danger-outline" @click="removeBackground('light')" :disabled="!settingsStore.customBackgrounds.light">移除</button>
-          </div>
-        </div>
-        <div class="setting-item">
-          <label>深色模式背景</label>
-          <div class="background-controls">
-            <button class="btn-secondary" @click="triggerBgInput('dark')">选择图片</button>
-            <button class="btn-danger-outline" @click="removeBackground('dark')" :disabled="!settingsStore.customBackgrounds.dark">移除</button>
-          </div>
-        </div>
-        <input type="file" ref="bgInputLightRef" @change="handleBgChange($event, 'light')" accept="image/*" hidden>
-        <input type="file" ref="bgInputDarkRef" @change="handleBgChange($event, 'dark')" accept="image/*" hidden>
-      </div>
-
-      <!-- AI & API -->
-      <div v-if="activeTab === 'api'" class="tab-content">
-        <div class="setting-item">
-          <label for="llm-provider-select">大模型提供商</label>
-          <select id="llm-provider-select" :value="apiSettingsForm.llmProvider" @change="onProviderChange">
-            <option v-for="(provider, key) in LLMProviders" :key="key" :value="key">
-              {{ provider.label }}
-            </option>
-          </select>
-        </div>
-        <div class="setting-item">
-          <label for="api-endpoint-input">API 端点</label>
-          <input id="api-endpoint-input" type="text" v-model="apiSettingsForm.apiEndpoint" @blur="saveApiSetting('apiEndpoint')">
-        </div>
-        <div class="setting-item">
-          <label for="api-model-select">模型名称</label>
-          <select v-if="currentProviderModels.length" id="api-model-select" v-model="apiSettingsForm.model" @change="saveApiSetting('model')">
-            <option v-for="model in currentProviderModels" :key="model.key" :value="model.key">
-              {{ model.label }}
-            </option>
-          </select>
-          <input v-else id="api-model-input" type="text" v-model="apiSettingsForm.model" @blur="saveApiSetting('model')" placeholder="输入自定义模型">
-        </div>
-        <div class="setting-item">
-          <label for="api-key-input">API 密钥</label>
-          <input id="api-key-input" type="password" v-model="apiSettingsForm.apiKey" @blur="saveApiSetting('apiKey')">
-        </div>
-        <div class="setting-item">
-          <label for="max-tokens-input">最大令牌数</label>
-          <input id="max-tokens-input" type="number" v-model.number="apiSettingsForm.maxTokens" @blur="saveApiSetting('maxTokens')">
-        </div>
-        <div class="setting-item">
-          <label for="tts-endpoint-input">TTS API 端点</label>
-          <input id="tts-endpoint-input" type="text" v-model="apiSettingsForm.ttsApiEndpoint" @blur="saveApiSetting('ttsApiEndpoint')">
-        </div>
-      </div>
-
-      <!-- Audio/Video device check tab -->
-      <div v-if="activeTab === 'media'" class="tab-content">
-        <h3>设备检测</h3>
-        <p>检查您的摄像头和麦克风是否工作正常，并已被浏览器授权访问。</p>
-        <!-- --- START OF MODIFICATION --- -->
-        <div class="device-check-area" :class="{ 'no-video-preview': !showVideoPreview }">
-          <div class="video-preview-container">
-            <!-- --- END OF MODIFICATION --- -->
-            <video ref="videoPreviewRef" autoplay muted playsinline class="video-preview"></video>
-            <div v-if="!videoPreviewStream" class="preview-placeholder">
-              {{ isCheckingDevices ? '检测中...' : '点击开始检测以预览摄像头' }}
+      <!-- --- [动画] START: 优化选项卡切换动画以消除闪烁 --- -->
+      <div class="tab-content-container" ref="tabContainerRef">
+        <Transition
+            name="tab-content-slide"
+            @before-leave="onBeforeLeave"
+            @enter="onEnter"
+            @after-enter="onAfterEnter"
+        >
+          <div :key="activeTab" class="tab-content-wrapper">
+            <!-- 通用 General -->
+            <div v-if="activeTab === 'general'" class="tab-content">
+              <div class="setting-item">
+                <label>你的用户ID</label>
+                <div class="user-id-display">
+                  <span>{{ userStore.userId }}</span>
+                  <button @click="copyUserId">复制</button>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label>网络状态</label>
+                <div class="network-status">
+                  信令服务器:
+                  <span :class="wsStatusClass">{{ wsStatusText }}</span>
+                </div>
+              </div>
+              <hr>
+              <div class="actions-group">
+                <h3>操作</h3>
+                <button
+                    class="btn-danger"
+                    @click="clearContacts"
+                    :disabled="nonSpecialContactsCount === 0 || uiStore.isPerformingDangerousAction">
+                  {{ uiStore.isPerformingDangerousAction ? '处理中...' : `清空联系人 (${nonSpecialContactsCount})` }}
+                </button>
+                <button
+                    class="btn-danger"
+                    @click="clearChats"
+                    :disabled="totalChatsCount === 0 || uiStore.isPerformingDangerousAction">
+                  {{ uiStore.isPerformingDangerousAction ? '处理中...' : `清空所有聊天 (${totalChatsCount})` }}
+                </button>
+                <button
+                    class="btn-danger"
+                    @click="clearCache"
+                    :disabled="uiStore.isPerformingDangerousAction">
+                  {{ uiStore.isPerformingDangerousAction ? '处理中...' : '初始化应用' }}
+                </button>
+              </div>
             </div>
-            <div v-if="micVolume > 0" class="vu-meter-container">
-              <div class="vu-meter-bar" :style="{ width: `${micVolume}%` }"></div>
-            </div>
-          </div>
-          <div class="device-status-list">
-            <div class="device-status-item">
-              <span class="device-name">摄像头</span>
-              <span class="status-indicator" :class="cameraStatus.class">{{ cameraStatus.text }}</span>
-            </div>
-            <div class="device-status-item">
-              <span class="device-name">麦克风</span>
-              <span class="status-indicator" :class="micStatus.class">{{ micStatus.text }}</span>
-            </div>
-          </div>
-        </div>
-        <button class="btn-secondary" @click="startDeviceCheck" :disabled="isCheckingDevices">
-          {{ isCheckingDevices ? '正在检测...' : '开始检测' }}
-        </button>
-        <hr>
-        <h3>通话设置</h3>
-        <!-- --- MODIFICATION START: Removed Call Mode setting --- -->
-        <!-- The Call Mode setting dropdown has been removed as per instructions. -->
-        <!-- --- MODIFICATION END --- -->
-        <div class="setting-item">
-          <label for="ai-noise-suppression-toggle">AI 智能降噪</label>
-          <input
-              type="checkbox"
-              id="ai-noise-suppression-toggle"
-              :checked="settingsStore.isAiNoiseSuppressionEnabled"
-              @change="onAiNoiseSuppressionChange"
-              class="toggle-switch"
-          />
-        </div>
-        <p class="setting-description">开启后可显著消除键盘、环境等噪音（实验性功能，可能会增加CPU消耗）。</p>
-        <hr>
-        <h3>网络诊断</h3>
-        <p>测试与 STUN/TURN 服务器的连通性，这对于建立稳定的通话至关重要。</p>
-        <div class="device-status-list" v-if="Object.keys(networkTestResults).length > 0">
-          <div class="device-status-item" v-for="(status, server) in networkTestResults" :key="server">
-            <span class="device-name">{{ server }}</span>
-            <span class="status-indicator" :class="status === 'OK' ? 'status-online' : 'status-offline'">{{ status }}</span>
-          </div>
-        </div>
-        <button class="btn-secondary" @click="startNetworkTest" :disabled="isTestingNetwork">
-          {{ isTestingNetwork ? '测试中...' : '开始网络测试' }}
-        </button>
-      </div>
 
-      <!-- 高级 Advanced -->
-      <div v-if="activeTab === 'advanced'" class="tab-content">
-        <h3>手动连接</h3>
-        <p>用于信令服务器故障时，通过手动交换信息来建立连接。</p>
-        <button class="btn-secondary" @click="uiStore.showModal('bindManualConnection')">
-          打开手动连接工具
-        </button>
-      </div>
+            <!-- 外观 Appearance -->
+            <div v-if="activeTab === 'appearance'" class="tab-content">
+              <div class="setting-item">
+                <label for="color-scheme-select">配色方案</label>
+                <select id="color-scheme-select" :value="settingsStore.colorScheme" @change="onColorSchemeChange">
+                  <option value="auto">自动 (跟随系统)</option>
+                  <option value="light">浅色模式</option>
+                  <option value="dark">深色模式</option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label for="theme-select">主题</label>
+                <select id="theme-select" :value="settingsStore.currentThemeKey" @change="onThemeChange">
+                  <option v-for="(theme, key) in compatibleThemes" :key="key" :value="key">
+                    {{ theme.name }}
+                  </option>
+                </select>
+              </div>
+              <hr>
+              <div class="setting-item">
+                <label>浅色模式背景</label>
+                <div class="background-controls">
+                  <button class="btn-secondary" @click="triggerBgInput('light')">选择图片</button>
+                  <button class="btn-danger-outline" @click="removeBackground('light')" :disabled="!settingsStore.customBackgrounds.light">移除</button>
+                </div>
+              </div>
+              <div class="setting-item">
+                <label>深色模式背景</label>
+                <div class="background-controls">
+                  <button class="btn-secondary" @click="triggerBgInput('dark')">选择图片</button>
+                  <button class="btn-danger-outline" @click="removeBackground('dark')" :disabled="!settingsStore.customBackgrounds.dark">移除</button>
+                </div>
+              </div>
+              <input type="file" ref="bgInputLightRef" @change="handleBgChange($event, 'light')" accept="image/*" hidden>
+              <input type="file" ref="bgInputDarkRef" @change="handleBgChange($event, 'dark')" accept="image/*" hidden>
+            </div>
 
+            <!-- AI & API -->
+            <div v-if="activeTab === 'api'" class="tab-content">
+              <div class="setting-item">
+                <label for="llm-provider-select">大模型提供商</label>
+                <select id="llm-provider-select" :value="apiSettingsForm.llmProvider" @change="onProviderChange">
+                  <option v-for="(provider, key) in LLMProviders" :key="key" :value="key">
+                    {{ provider.label }}
+                  </option>
+                </select>
+              </div>
+              <div class="setting-item">
+                <label for="api-endpoint-input">API 端点</label>
+                <input id="api-endpoint-input" type="text" v-model="apiSettingsForm.apiEndpoint" @blur="saveApiSetting('apiEndpoint')">
+              </div>
+              <div class="setting-item">
+                <label for="api-model-select">模型名称</label>
+                <select v-if="currentProviderModels.length" id="api-model-select" v-model="apiSettingsForm.model" @change="saveApiSetting('model')">
+                  <option v-for="model in currentProviderModels" :key="model.key" :value="model.key">
+                    {{ model.label }}
+                  </option>
+                </select>
+                <input v-else id="api-model-input" type="text" v-model="apiSettingsForm.model" @blur="saveApiSetting('model')" placeholder="输入自定义模型">
+              </div>
+              <div class="setting-item">
+                <label for="api-key-input">API 密钥</label>
+                <input id="api-key-input" type="password" v-model="apiSettingsForm.apiKey" @blur="saveApiSetting('apiKey')">
+              </div>
+              <div class="setting-item">
+                <label for="max-tokens-input">最大令牌数</label>
+                <input id="max-tokens-input" type="number" v-model.number="apiSettingsForm.maxTokens" @blur="saveApiSetting('maxTokens')">
+              </div>
+              <div class="setting-item">
+                <label for="tts-endpoint-input">TTS API 端点</label>
+                <input id="tts-endpoint-input" type="text" v-model="apiSettingsForm.ttsApiEndpoint" @blur="saveApiSetting('ttsApiEndpoint')">
+              </div>
+            </div>
+
+            <!-- Audio/Video device check tab -->
+            <div v-if="activeTab === 'media'" class="tab-content">
+              <h3>设备检测</h3>
+              <p>检查您的摄像头和麦克风是否工作正常，并已被浏览器授权访问。</p>
+              <div class="device-check-area" :class="{ 'no-video-preview': !showVideoPreview }">
+                <div class="video-preview-container">
+                  <video ref="videoPreviewRef" autoplay muted playsinline class="video-preview"></video>
+                  <div v-if="!videoPreviewStream" class="preview-placeholder">
+                    {{ isCheckingDevices ? '检测中...' : '点击开始检测以预览摄像头' }}
+                  </div>
+                  <div v-if="micVolume > 0" class="vu-meter-container">
+                    <div class="vu-meter-bar" :style="{ width: `${micVolume}%` }"></div>
+                  </div>
+                </div>
+                <div class="device-status-list">
+                  <div class="device-status-item">
+                    <span class="device-name">摄像头</span>
+                    <span class="status-indicator" :class="cameraStatus.class">{{ cameraStatus.text }}</span>
+                  </div>
+                  <div class="device-status-item">
+                    <span class="device-name">麦克风</span>
+                    <span class="status-indicator" :class="micStatus.class">{{ micStatus.text }}</span>
+                  </div>
+                </div>
+              </div>
+              <button class="btn-secondary" @click="startDeviceCheck" :disabled="isCheckingDevices">
+                {{ isCheckingDevices ? '正在检测...' : '开始检测' }}
+              </button>
+              <hr>
+              <h3>通话设置</h3>
+              <div class="setting-item">
+                <label for="ai-noise-suppression-toggle">AI 智能降噪</label>
+                <input
+                    type="checkbox"
+                    id="ai-noise-suppression-toggle"
+                    :checked="settingsStore.isAiNoiseSuppressionEnabled"
+                    @change="onAiNoiseSuppressionChange"
+                    class="toggle-switch"
+                />
+              </div>
+              <p class="setting-description">开启后可显著消除键盘、环境等噪音（实验性功能，可能会增加CPU消耗）。</p>
+              <hr>
+              <h3>网络诊断</h3>
+              <p>测试与 STUN/TURN 服务器的连通性，这对于建立稳定的通话至关重要。</p>
+              <div class="device-status-list" v-if="Object.keys(networkTestResults).length > 0">
+                <div class="device-status-item" v-for="(status, server) in networkTestResults" :key="server">
+                  <span class="device-name">{{ server }}</span>
+                  <span class="status-indicator" :class="status === 'OK' ? 'status-online' : 'status-offline'">{{ status }}</span>
+                </div>
+              </div>
+              <button class="btn-secondary" @click="startNetworkTest" :disabled="isTestingNetwork">
+                {{ isTestingNetwork ? '测试中...' : '开始网络测试' }}
+              </button>
+            </div>
+
+            <!-- 高级 Advanced -->
+            <div v-if="activeTab === 'advanced'" class="tab-content">
+              <h3>手动连接</h3>
+              <p>用于信令服务器故障时，通过手动交换信息来建立连接。</p>
+              <button class="btn-secondary" @click="uiStore.showModal('bindManualConnection')">
+                打开手动连接工具
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+      <!-- --- [动画] END --- -->
     </div>
   </ModalWrapper>
 </template>
@@ -239,10 +243,11 @@ let analyserNode = null;
 let micSourceNode = null;
 let animationFrameId = null;
 
-// --- START OF MODIFICATION ---
-// 新增计算属性，用于判断是否应显示视频预览区域
+// --- [动画] START: Ref for the transition container ---
+const tabContainerRef = ref(null);
+// --- [动画] END ---
+
 const showVideoPreview = computed(() => !!videoPreviewStream.value);
-// --- END OF MODIFICATION ---
 
 const cameraStatus = computed(() => {
   if (!deviceCheckResult.value) return { text: '未检测', class: 'status-unknown' };
@@ -442,6 +447,26 @@ const saveApiSetting = (key) => settingsStore.saveApiSetting(key, apiSettingsFor
 const onAiNoiseSuppressionChange = (event) => {
   settingsStore.setAiNoiseSuppression(event.target.checked);
 };
+
+// --- [动画] START: JS Hooks for smooth height transition ---
+const onBeforeLeave = (el) => {
+  if (tabContainerRef.value) {
+    tabContainerRef.value.style.height = `${el.offsetHeight}px`;
+  }
+};
+
+const onEnter = (el) => {
+  if (tabContainerRef.value) {
+    tabContainerRef.value.style.height = `${el.offsetHeight}px`;
+  }
+};
+
+const onAfterEnter = () => {
+  if (tabContainerRef.value) {
+    tabContainerRef.value.style.height = 'auto';
+  }
+};
+// --- [动画] END ---
 </script>
 
 <style scoped>
@@ -524,7 +549,6 @@ p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-b
   transform: translateX(20px);
 }
 
-/* --- START OF MODIFICATION: Added responsive styles for device check area --- */
 .device-check-area.no-video-preview {
   grid-template-columns: 1fr;
 }
@@ -532,5 +556,34 @@ p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-b
 .device-check-area.no-video-preview .video-preview-container {
   display: none;
 }
-/* --- END OF MODIFICATION --- */
+
+
+/* --- [动画] START: 选项卡内容切换动画 --- */
+.tab-content-container {
+  position: relative;
+  overflow: hidden;
+  transition: height 0.3s var(--transition-easing);
+}
+
+.tab-content-wrapper {
+  width: 100%;
+}
+
+.tab-content-slide-enter-active,
+.tab-content-slide-leave-active {
+  transition: opacity 0.3s var(--transition-easing), transform 0.3s var(--transition-easing);
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.tab-content-slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.tab-content-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+/* --- [动画] END --- */
 </style>

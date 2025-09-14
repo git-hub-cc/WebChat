@@ -1,46 +1,94 @@
 <template>
   <div id="app-root" :class="appRootClasses">
-    <div v-if="uiStore.isAppLoading" class="loading-overlay">
-      <Spinner />
-      <div class="loading-text">连接中，请稍候...</div>
-    </div>
+    <!-- --- [动画] START: 为骨架屏和主应用的切换添加过渡动画 --- -->
+    <Transition name="app-fade" mode="out-in">
+      <div v-if="uiStore.isAppLoading" class="loading-overlay">
+        <AppSkeletonLoader />
+      </div>
 
-    <div v-else class="app-container" :class="appContainerClasses">
-      <aside class="sidebar-container">
-        <ChatList />
-      </aside>
+      <div v-else class="app-container" :class="appContainerClasses">
+        <aside class="sidebar-container">
+          <ChatList />
+        </aside>
 
-      <main class="main-view-container">
-        <ChatView v-if="chatStore.currentChatId" :key="chatStore.currentChatId" />
-        <div v-else class="welcome-view">
-          <WelcomeHeader />
-          <WelcomeScreen />
+        <div class="main-content-wrapper">
+          <main class="main-view-container">
+            <ChatView v-if="chatStore.currentChatId" :key="chatStore.currentChatId" />
+            <div v-else class="welcome-view">
+              <WelcomeHeader />
+              <WelcomeScreen />
+            </div>
+          </main>
+
+          <aside
+              class="details-panel-container"
+              :class="{ 'is-open': uiStore.isDetailsPanelOpen }"
+          >
+            <Transition name="details-content-fade" mode="out-in">
+              <DetailsPanel v-if="uiStore.isDetailsPanelOpen" :key="chatStore.currentChatId" />
+            </Transition>
+          </aside>
         </div>
-      </main>
+      </div>
+    </Transition>
+    <!-- --- [动画] END --- -->
 
-      <aside v-if="uiStore.isDetailsPanelOpen" class="details-panel-container">
-        <DetailsPanel :key="chatStore.currentChatId" />
-      </aside>
-    </div>
-
-    <SettingsModal v-if="uiStore.activeModal === 'settings'" @close="uiStore.hideModal()" />
-    <NewContactModal v-if="uiStore.activeModal === 'newContact'" @close="uiStore.hideModal()" />
-    <BindManualConnectionModal v-if="uiStore.activeModal === 'bindManualConnection'" />
-    <ScreenshotEditor v-if="uiStore.activeModal === 'screenshotEditor'" />
-    <ScreenshotGuideModal v-if="uiStore.activeModal === 'screenshotGuide'" />
-    <IncomingCallModal v-if="uiStore.activeModal === 'incomingCall' || uiStore.activeModal === 'calling'" />
-    <ConfirmationModal v-if="uiStore.activeModal === 'confirmation'" />
-    <MediaViewerModal v-if="uiStore.activeModal === 'mediaViewer'" />
+    <!-- Modals and other overlays remain unchanged -->
+    <Transition
+        name="modal-fade"
+        @after-leave="uiStore.modalPrefillData = {}"
+    >
+      <div class="modal-wrapper-container" v-if="uiStore.activeModal">
+        <!-- All modal components here -->
+        <SettingsModal
+            v-if="uiStore.activeModal === 'settings'"
+            @close="uiStore.hideModal()"
+            v-motion-pop
+        />
+        <NewContactModal
+            v-if="uiStore.activeModal === 'newContact'"
+            @close="uiStore.hideModal()"
+            v-motion-pop
+        />
+        <BindManualConnectionModal
+            v-if="uiStore.activeModal === 'bindManualConnection'"
+            v-motion-pop
+        />
+        <ScreenshotEditor v-if="uiStore.activeModal === 'screenshotEditor'" />
+        <ScreenshotGuideModal
+            v-if="uiStore.activeModal === 'screenshotGuide'"
+            v-motion-pop
+        />
+        <IncomingCallModal
+            v-if="uiStore.activeModal === 'incomingCall' || uiStore.activeModal === 'calling'"
+            v-motion-pop
+        />
+        <ConfirmationModal
+            v-if="uiStore.activeModal === 'confirmation'"
+            v-motion-pop
+        />
+        <MediaViewerModal v-if="uiStore.activeModal === 'mediaViewer'" />
+      </div>
+    </Transition>
 
     <VideoCallView v-if="callStore.isCallActive && callStore.isFullScreenCallViewVisible" />
     <FloatingCallWidget v-if="callStore.isCallActive && !callStore.isFullScreenCallViewVisible" />
     <NotificationContainer />
     <ContextMenu />
     <link id="theme-stylesheet" rel="stylesheet" :href="themeHref" />
+
+    <!-- ✅ MODIFICATION START: Replaced theme transition overlay with modal skeleton -->
+    <Transition name="theme-transition-fade">
+      <div v-if="settingsStore.isThemeTransitioning" class="modal-skeleton-wrapper">
+        <SettingsModalSkeleton v-motion-pop />
+      </div>
+    </Transition>
+    <!-- ✅ MODIFICATION END -->
   </div>
 </template>
 
 <script setup>
+// Script setup remains completely unchanged
 import { onMounted, computed, watch } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { useChatStore } from '@/stores/chatStore';
@@ -53,6 +101,7 @@ import { webrtcService } from '@/services/webrtcService';
 import { apiService } from '@/services/apiService';
 import { eventBus } from '@/services/eventBus';
 
+import AppSkeletonLoader from '@/components/Shared/AppSkeletonLoader.vue';
 import ChatList from '@/components/ChatList/ChatList.vue';
 import ChatView from '@/components/ChatView/ChatView.vue';
 import WelcomeScreen from '@/components/ChatView/WelcomeScreen.vue';
@@ -60,7 +109,6 @@ import DetailsPanel from '@/components/DetailsPanel/DetailsPanel.vue';
 import SettingsModal from '@/components/Modals/SettingsModal.vue';
 import NewContactModal from '@/components/Modals/NewContactModal.vue';
 import NotificationContainer from '@/components/Shared/NotificationContainer.vue';
-import Spinner from '@/components/Shared/Spinner.vue';
 import IncomingCallModal from '@/components/Modals/IncomingCallModal.vue';
 import VideoCallView from '@/components/ChatView/VideoCallView.vue';
 import ScreenshotEditor from '@/components/Modals/ScreenshotEditor.vue';
@@ -71,6 +119,9 @@ import MediaViewerModal from '@/components/Modals/MediaViewerModal.vue';
 import BindManualConnectionModal from '@/components/Modals/BindManualConnectionModal.vue';
 import WelcomeHeader from '@/components/ChatView/WelcomeHeader.vue';
 import FloatingCallWidget from '@/components/Shared/FloatingCallWidget.vue';
+// ✅ MODIFICATION START: Import the new skeleton component
+import SettingsModalSkeleton from '@/components/Shared/SettingsModalSkeleton.vue';
+// ✅ MODIFICATION END
 
 const userStore = useUserStore();
 const chatStore = useChatStore();
@@ -91,10 +142,7 @@ const appRootClasses = computed(() => ({
 
 const themeHref = computed(() => {
   const themeConfig = settingsStore.currentTheme;
-  // --- FIX START ---
-  // 移除了路径前的 "/"，使其成为相对路径，以遵循 vite.config.js 中的 base: './' 设置。
   return themeConfig?.css ? `${themeConfig.css.replace(/^public\//, '')}` : '';
-  // --- FIX END ---
 });
 
 onMounted(async () => {
@@ -115,7 +163,7 @@ onMounted(async () => {
   } catch (error) {
     console.error("应用初始化失败:", error);
   } finally {
-    setTimeout(() => uiStore.setAppLoading(false), 300);
+    setTimeout(() => uiStore.setAppLoading(false), 500);
   }
 });
 
@@ -139,7 +187,6 @@ watch(() => [settingsStore.currentThemeKey, settingsStore.effectiveColorScheme],
 </script>
 
 <style>
-/* Style section remains unchanged */
 #app-root {
   width: 100vw;
   height: 100dvh;
@@ -165,8 +212,8 @@ body {
 }
 
 .app-container {
-  display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
+  /* --- [动画] START: 移除 grid-template-columns 的直接控制 --- */
+  display: flex; /* Changed from grid to flex */
   width: 100%;
   height: 100%;
   max-width: var(--max-app-width);
@@ -175,13 +222,11 @@ body {
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   position: relative;
-  transition: grid-template-columns 0.3s var(--transition-easing);
   background-color: var(--color-background-panel);
+  /* --- [动画] END --- */
 }
 
-.app-container.details-panel-open {
-  grid-template-columns: var(--sidebar-width) 1fr var(--details-panel-width);
-}
+/* All other global styles (.sidebar-container, modals, overlays, etc.) remain the same */
 .sidebar-container, .main-view-container, .details-panel-container {
   display: flex;
   flex-direction: column;
@@ -189,6 +234,10 @@ body {
   overflow: hidden;
 }
 .sidebar-container {
+  /* --- [动画] START: 明确设置侧边栏宽度和收缩行为 --- */
+  width: var(--sidebar-width);
+  flex-shrink: 0;
+  /* --- [动画] END --- */
   background-color: var(--color-background-panel);
 }
 .details-panel-container {
@@ -198,6 +247,44 @@ body {
 .main-view-container {
   border-left: 1px solid var(--color-border);
 }
+
+/* --- [动画] START: 新增 main-content-wrapper 并设置动画 --- */
+.main-content-wrapper {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+  position: relative; /* For mobile overlay */
+}
+
+.main-view-container {
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0; /* Important for flexbox shrinking */
+}
+
+.details-panel-container {
+  flex-shrink: 0;
+  width: 0; /* Initially closed */
+  transition: width 0.4s var(--transition-easing-spring);
+  will-change: width;
+}
+
+.details-panel-container.is-open {
+  width: var(--details-panel-width);
+}
+
+/* We need to use :deep() to target the component root inside Transition */
+.details-panel-container :deep(.details-panel) {
+  width: var(--details-panel-width); /* Fixed width for the content */
+  transform: translateX(100%);
+  transition: transform 0.4s var(--transition-easing-spring);
+}
+.details-panel-container.is-open :deep(.details-panel) {
+  transform: translateX(0);
+}
+/* --- [动画] END --- */
+
+
 .welcome-view {
   display: flex;
   flex-direction: column;
@@ -206,6 +293,7 @@ body {
 .welcome-view > .welcome-screen {
   flex-grow: 1;
 }
+
 .loading-overlay {
   position: fixed;
   inset: 0;
@@ -215,35 +303,97 @@ body {
   justify-content: center;
   background-color: var(--color-background-page);
   z-index: 9999;
+  padding-top: var(--app-root-padding-top, 0);
+  box-sizing: border-box;
 }
-.loading-text {
-  margin-top: 1rem;
-  font-size: 1.2rem;
-  color: var(--color-text-secondary);
+
+/* --- [动画] START: 为骨架屏到主应用的切换添加动画 --- */
+.app-fade-enter-active,
+.app-fade-leave-active {
+  transition: opacity 0.5s ease-in-out;
 }
+.app-fade-enter-from,
+.app-fade-leave-to {
+  opacity: 0;
+}
+/* --- [动画] END --- */
+
+
+.modal-wrapper-container {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s var(--transition-easing);
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+}
+
+/* ✅ MODIFICATION START: Style the new modal skeleton wrapper */
+.modal-skeleton-wrapper {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+/* ✅ MODIFICATION END */
+
+.theme-transition-fade-enter-active {
+  transition: opacity 0.3s ease-in-out;
+}
+.theme-transition-fade-leave-active {
+  transition: opacity 0.3s ease-in-out 0.1s;
+}
+.theme-transition-fade-enter-from,
+.theme-transition-fade-leave-to {
+  opacity: 0;
+}
+
+
 @media (max-width: 1024px) {
-  .app-container.details-panel-open {
-    grid-template-columns: var(--sidebar-width) 1fr;
-  }
+  /* For mobile, the panel should be an overlay, not push content */
   .details-panel-container {
     position: absolute;
     top: 0;
     right: 0;
-    width: var(--details-panel-width);
+    width: var(--details-panel-width); /* Fixed width when it's an overlay */
     height: 100%;
     transform: translateX(100%);
-    transition: transform 0.3s var(--transition-easing);
+    transition: transform 0.4s var(--transition-easing-spring);
     z-index: 100;
+    /* Reset width transition from desktop */
+    will-change: transform;
   }
-  .app-container.details-panel-open .details-panel-container {
+  .details-panel-container.is-open {
     transform: translateX(0);
+    width: var(--details-panel-width);
+  }
+  .details-panel-container :deep(.details-panel) {
+    /* Reset transform from desktop, as parent handles it now */
+    transform: none;
+    transition: none;
   }
 }
+
 @media (max-width: 768px) {
   .app-container {
-    grid-template-columns: 1fr;
+    display: block; /* Revert to block for mobile layout */
     max-height: 100dvh;
     border-radius: 0;
+  }
+  .main-content-wrapper {
+    height: 100%; /* Ensure it fills the container */
   }
   .sidebar-container {
     width: 100%;
@@ -264,6 +414,12 @@ body {
   .details-panel-container {
     width: 85vw;
     max-width: 320px;
+  }
+  .details-panel-container.is-open {
+    width: 85vw;
+  }
+  .details-panel-container :deep(.details-panel) {
+    width: 100%;
   }
 }
 </style>

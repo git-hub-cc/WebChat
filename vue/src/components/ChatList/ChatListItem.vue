@@ -4,8 +4,13 @@
       class="chat-list-item"
       :class="{ active: isActive, 'special-contact': item.isSpecial, [item.id]: item.isSpecial, 'highlight-new-message': isHighlighted }"
   >
-    <!-- --- MODIFICATION END --- -->
-    <Avatar :entity="item" :is-online="isOnline" />
+    <!-- --- [动画] START: 为头像添加悬浮效果 --- -->
+    <Avatar :entity="item" :is-online="isOnline"
+            v-motion
+            :hovered="{ scale: 1.1 }"
+            :tapped="{ scale: 0.9 }"
+    />
+    <!-- --- [动画] END --- -->
     <div class="chat-info">
       <div class="info-top">
         <span class="name">{{ item.name }}</span>
@@ -83,26 +88,56 @@ watch(
   align-items: center;
   padding: var(--spacing-3) var(--spacing-4);
   cursor: pointer;
-  transition: background-color var(--transition-duration-fast) ease;
+  /* --- [动画] START: 优化过渡效果 --- */
+  transition: background-color var(--transition-duration-normal) ease,
+  transform var(--transition-duration-fast) var(--transition-easing);
+  /* --- [动画] END --- */
   height: 72px; /* Fixed height for virtual scroller */
   border-bottom: 1px solid var(--color-border);
+  position: relative; /* For the highlight bar */
+  overflow: hidden; /* Hide the highlight bar initially */
 }
 
-/* --- MODIFICATION START: New message highlight animation --- */
-@keyframes highlight-fade {
+/* --- [动画] START: 新消息提醒动画 & 悬浮效果 --- */
+@keyframes highlight-bar {
   0% {
-    background-color: rgba(var(--color-brand-primary-rgb), 0.2);
+    transform: translateX(-100%);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateX(0);
+    opacity: 0.3;
   }
   100% {
-    background-color: transparent;
+    transform: translateX(100%);
+    opacity: 0;
   }
 }
-.chat-list-item.highlight-new-message {
-  animation: highlight-fade 1.5s var(--transition-easing);
-}
-/* --- MODIFICATION END --- */
 
-.chat-list-item:hover { background-color: var(--color-background-hover); }
+.chat-list-item.highlight-new-message::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+      to right,
+      transparent 20%,
+      rgba(var(--color-brand-primary-rgb), 0.2) 50%,
+      transparent 80%
+  );
+  animation: highlight-bar 1.5s var(--transition-easing);
+  pointer-events: none;
+}
+
+.chat-list-item:hover {
+  background-color: var(--color-background-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+/* --- [动画] END --- */
+
 .chat-list-item.active { background-color: var(--color-background-active); }
 .chat-info { flex-grow: 1; margin-left: var(--spacing-3); overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
 .info-top, .info-bottom { display: flex; justify-content: space-between; align-items: center; }

@@ -1,4 +1,6 @@
+
 <template>
+  <!-- --- [动画] START: ModalWrapper 已被移至 App.vue，此处不再需要 --- -->
   <ModalWrapper :show="true" title="准备共享屏幕" @close="cancel">
     <div class="guide-content">
       <div class="guide-icon">🖥️</div>
@@ -11,6 +13,7 @@
       <button class="btn-primary" @click="proceed">好的，开始选择</button>
     </template>
   </ModalWrapper>
+  <!-- --- [动画] END --- -->
 </template>
 
 <script setup>

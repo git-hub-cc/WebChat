@@ -46,7 +46,6 @@ export default {
             noiseSuppression: true,
             autoGainControl: true,
         },
-        // --- MODIFICATION START: Added Bitrate and Quality Presets ---
         qualityPresets: {
             'auto': { maxBitrate: null, resolution: null }, // Null means let the browser decide
             '480p': { maxBitrate: 700 * 1000, resolution: { height: 480 } },
@@ -59,7 +58,6 @@ export default {
             minBitrate: 300 * 1000,
             maxBitrate: 2000 * 1000,
         }
-        // --- MODIFICATION END ---
     },
     ui: {
         messageRetractionWindow: 2 * 60 * 1000, // 消息可撤回时间窗口 (2分钟)
@@ -97,25 +95,32 @@ export default {
         max_tokens: 2048,
         ttsApiEndpoint: 'https://gsv2p.acgnai.top',
     },
-    // --- MODIFICATION START: Recommended Production ICE Server Configuration ---
+    // --- MODIFICATION START: Upgraded ICE Server Configuration for Production Best Practices ---
     // 最佳实践:
     // 1. 使用多个 STUN 服务器以增加冗余。
     // 2. 部署全球分布的 TURN 服务器集群。
-    // 3. 确保 TURN 服务器同时支持 UDP, TCP, 和 TLS (端口 443)。
-    // 4. 下方为示例配置，请替换为您自己的生产服务器。
+    // 3. 确保 TURN 服务器同时支持 UDP, TCP, 和 TLS (端口 443)，以最大化NAT穿越成功率。
+    // 4. 下方为推荐的生产环境配置结构，请务必替换为
+    //    您自己部署的 Coturn 或其他 TURN 服务器地址、用户名和密码。
     peerConnectionConfig: {
         iceServers: [
-            // 公共 STUN 服务器 (建议多个)
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" },
-            { urls: "stun:stun.miwifi.com:3478" },
+            // ** 1. 公共 STUN 服务器 (建议多个以提高可靠性) **
             {
-                urls: "turn:175.178.216.24:3478",
+                urls: "turn:175.178.216.24:3478?transport=tcp",
                 username: "test",
                 credential: "123456"
             },
+            {
+                urls: "turn:175.178.216.24:3478?transport=udp",
+                username: "test",
+                credential: "123456"
+            },
+            { urls: "stun:stun.miwifi.com:3478" }, // 小米 STUN
+            { urls: "stun:stun.qq.com:3478" }, // 腾讯 STUN
+            { urls: "stun:stun.l.google.com:19302" },
         ],
-        iceTransportPolicy: 'all',
+        // 保持其他策略不变
+        iceTransportPolicy: 'all', // 'all' 意味着同时尝试 P2P 和中继
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require',
         iceCandidatePoolSize: 0,

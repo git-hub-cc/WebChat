@@ -21,9 +21,11 @@ const sizeClass = computed(() => props.size ? `spinner-${props.size}` : '');
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  border: 5px solid var(--color-background-hover);
+  /* --- [动画] START: 优化边框颜色和动画 --- */
+  border: 5px solid rgba(var(--color-brand-primary-rgb), 0.2);
   border-top-color: var(--color-brand-primary);
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
+  /* --- [动画] END --- */
 }
 
 .spinner-small {

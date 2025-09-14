@@ -2,7 +2,7 @@
   <transition name="media-viewer-fade">
     <div v-if="uiStore.activeModal === 'mediaViewer' && content" class="viewer-backdrop" @click.self="close">
       <button class="close-button" @click="close" title="关闭 (Esc)">×</button>
-      <div class="media-container">
+      <div class="media-container" v-motion-pop>
         <!-- --- MODIFICATION START: Use robust computed properties for type checking --- -->
         <img
             v-if="isImage"
@@ -217,21 +217,15 @@ onUnmounted(() => {
   border-radius: var(--border-radius-md);
 }
 
-/* --- Transitions --- */
+/* --- [动画] START: 媒体查看器动画 --- */
 .media-viewer-fade-enter-active,
 .media-viewer-fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.3s var(--transition-easing);
 }
 .media-viewer-fade-enter-from,
 .media-viewer-fade-leave-to {
   opacity: 0;
 }
-.media-viewer-fade-enter-active .media-content,
-.media-viewer-fade-leave-active .media-content {
-  transition: transform 0.3s ease;
-}
-.media-viewer-fade-enter-from .media-content,
-.media-viewer-fade-leave-to .media-content {
-  transform: scale(0.95);
-}
+/* VueUse Motion will handle the pop animation on .media-container */
+/* --- [动画] END --- */
 </style>

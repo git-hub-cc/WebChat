@@ -1,5 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { autoAnimatePlugin } from '@formkit/auto-animate/vue'
+import { MotionPlugin } from '@vueuse/motion'
 
 import App from './App.vue'
 import './assets/styles/main.css'
@@ -12,5 +14,7 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(VueVirtualScroller)
+app.use(autoAnimatePlugin) // <-- [动画] 注册 AutoAnimate 插件
+app.use(MotionPlugin)      // <-- [动画] 注册 VueUse Motion 插件
 
 app.mount('#app')

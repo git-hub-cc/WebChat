@@ -1,4 +1,6 @@
+
 <template>
+  <!-- --- [动画] START: ModalWrapper 已被移至 App.vue，此处不再需要 --- -->
   <ModalWrapper :show="uiStore.activeModal === 'incomingCall' || uiStore.activeModal === 'calling'" :title="modalTitle" @close="reject">
     <div class="call-modal-content">
       <Avatar v-if="callInfo" :entity="callInfo" size="xl" class="call-avatar" />
@@ -24,6 +26,7 @@
       </div>
     </div>
   </ModalWrapper>
+  <!-- --- [动画] END --- -->
 </template>
 
 <script setup>

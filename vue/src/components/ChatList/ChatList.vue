@@ -22,7 +22,10 @@
       <button :class="{ active: uiStore.chatListFilter === 'group' }" @click="uiStore.chatListFilter = 'group'">群组</button>
     </nav>
 
-    <div class="chat-items-wrapper">
+    <!-- --- [动画] START: 应用 v-auto-animate 指令 --- -->
+    <div class="chat-items-wrapper" v-auto-animate="{ duration: 300, easing: 'ease-in-out' }">
+      <!-- --- [动画] END --- -->
+
       <!-- --- MODIFICATION START: Improved empty state with SVG --- -->
       <div v-if="chatStore.filteredChatList.length === 0" class="empty-list">
         <svg class="empty-list-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -243,13 +246,13 @@ const showContextMenu = (event, item) => {
   transform: scale(1.05);
 }
 
-/* --- START OF MODIFICATION --- */
+/* --- [动画] START: FAB 图标旋转动画 --- */
 .new-chat-fab :deep(.icon) {
-  transition: transform 0.2s ease;
+  /* No transition here */
 }
-
 .new-chat-fab:hover :deep(.icon) {
-  transform: rotate(90deg);
+  transition: transform 0.3s var(--transition-easing-spring);
+  transform: rotate(90deg) scale(0.9);
 }
-/* --- END OF MODIFICATION --- */
+/* --- [动画] END --- */
 </style>

@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@formkit/auto-animate": "^0.8.2",
+    "@vueuse/motion": "^2.2.3",
     "pinia": "^2.1.7",
     "simple-peer": "^9.11.1",
     "vue": "^3.4.21",

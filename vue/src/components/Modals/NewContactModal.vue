@@ -1,4 +1,6 @@
+
 <template>
+  <!-- --- [动画] START: ModalWrapper 已被移至 App.vue，此处不再需要 --- -->
   <ModalWrapper :show="true" title="交互管理" @close="$emit('close')">
     <div class="interaction-manager">
       <nav class="modal-tabs">
@@ -71,6 +73,7 @@
 
     </div>
   </ModalWrapper>
+  <!-- --- [动画] END --- -->
 </template>
 
 <script setup>

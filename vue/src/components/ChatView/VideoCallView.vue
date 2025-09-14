@@ -1,4 +1,5 @@
 <template>
+  <!-- --- [动画] START: 为整个通话视图添加过渡 --- -->
   <transition name="call-view-fade">
     <div class="call-view-container" :class="{ 'pip-mode': isPipMode, 'audio-only-mode': isAudioOnly }" ref="callContainerRef">
       <header class="call-view-header">
@@ -21,7 +22,15 @@
       <div class="video-streams">
         <video ref="remoteVideoRef" class="remote-video" autoplay playsinline></video>
         <!-- --- MODIFICATION START: Hide local video whenever screen sharing is active --- -->
-        <video v-show="!isAudioOnly && !callStore.isScreenSharing" ref="localVideoRef" class="local-video" :class="{ 'speaking-indicator': callStore.isSpeaking }" autoplay playsinline muted></video>
+        <!-- --- [动画] START: 为本地视频窗口添加动画 --- -->
+        <video
+            v-show="!isAudioOnly && !callStore.isScreenSharing"
+            ref="localVideoRef" class="local-video"
+            :class="{ 'speaking-indicator': callStore.isSpeaking }"
+            autoplay playsinline muted
+            v-motion-slide-right
+        ></video>
+        <!-- --- [动画] END --- -->
         <!-- --- MODIFICATION END --- -->
         <div v-if="isAudioOnly" class="audio-only-ui">
           <Avatar :entity="peerContact" size="xl" :is-speaking="callStore.isSpeaking" />
@@ -29,7 +38,9 @@
         </div>
       </div>
 
-      <div class="call-controls">
+      <!-- --- [动画] START: 为控制栏添加动画 --- -->
+      <div class="call-controls" v-motion-slide-bottom>
+        <!-- --- [动画] END --- -->
         <IconButton
             :icon="callStore.isVideoEnabled ? '📹' : '🚫'"
             :title="callStore.isVideoEnabled ? '关闭摄像头' : '开启摄像头'"
@@ -67,6 +78,7 @@
       </div>
     </div>
   </transition>
+  <!-- --- [动画] END --- -->
 </template>
 
 <script setup>
@@ -154,6 +166,17 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* --- [动画] START: 优化通话视图的出现/消失动画 --- */
+.call-view-fade-enter-active, .call-view-fade-leave-active {
+  transition: opacity 0.3s var(--transition-easing-spring), transform 0.3s var(--transition-easing-spring);
+}
+.call-view-fade-enter-from, .call-view-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+/* --- [动画] END --- */
+
+
 .call-view-container { position: fixed; inset: 0; background-color: #111; z-index: 1200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .call-view-header { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: var(--spacing-3); background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); z-index: 1201; }
 .minimize-button { color: white; font-size: 1.8rem; }

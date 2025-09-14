@@ -54,51 +54,52 @@
         ></textarea>
       </div>
 
+      <!-- --- [动画] START: 为按钮切换添加滑动和淡入淡出动画 --- -->
       <div class="input-actions-area">
-        <IconButton v-if="!newMessage && !isRecording && !isSttActive" icon="📸" title="截图" @click="handleScreenshot" />
+        <TransitionGroup name="actions-slide-fade">
+          <IconButton v-if="!newMessage && !isRecording && !isSttActive" key="screenshot" icon="📸" title="截图" @click="handleScreenshot" />
 
-        <div v-if="!newMessage || isSttActive" class="voice-button-wrapper">
-          <!-- --- MODIFICATION START: Changed STT button to Push-to-Talk --- -->
-          <!-- STT button for AI chats -->
-          <IconButton
-              v-if="isCurrentChatWithAI"
-              :icon="isSttActive ? '🛑' : '🎙️'"
-              :title="sttButtonTitle"
-              @mousedown.prevent="startStt"
-              @mouseup.prevent="stopStt"
-              @touchstart.prevent="startStt"
-              @touchend.prevent="stopStt"
-              class="voice-button"
-              :class="{ 'stt-active': isSttActive }"
-          />
-          <!-- --- MODIFICATION END --- -->
-
-          <!-- Audio recording button for regular chats -->
-          <template v-else>
-            <transition name="lock-hint-fade">
-              <div v-if="isRecording && !isRecordingLocked" class="lock-hint">
-                <span class="lock-icon">🔒</span>
-                <span class="arrow">↑</span>
-                <span class="hint-text">上滑锁定</span>
-              </div>
-            </transition>
+          <div v-if="!newMessage || isSttActive" key="voice" class="voice-button-wrapper">
+            <!-- STT button for AI chats -->
             <IconButton
-                :icon="isRecording ? '🛑' : '🎙️'"
-                :title="isRecording ? `录音中... ${formatDuration(recordingDuration)}` : '按住录音'"
-                @mousedown.prevent="startRecording"
-                @mouseup.prevent="stopRecording"
-                @mousemove.prevent="handleRecordingMove"
-                @touchstart.prevent="startRecording"
-                @touchend.prevent="stopRecording"
-                @touchmove.prevent="handleRecordingMove"
+                v-if="isCurrentChatWithAI"
+                :icon="isSttActive ? '🛑' : '🎙️'"
+                :title="sttButtonTitle"
+                @mousedown.prevent="startStt"
+                @mouseup.prevent="stopStt"
+                @touchstart.prevent="startStt"
+                @touchend.prevent="stopStt"
                 class="voice-button"
-                :class="{ recording: isRecording }"
+                :class="{ 'stt-active': isSttActive }"
             />
-          </template>
-        </div>
+            <!-- Audio recording button for regular chats -->
+            <template v-else>
+              <transition name="lock-hint-fade">
+                <div v-if="isRecording && !isRecordingLocked" class="lock-hint">
+                  <span class="lock-icon">🔒</span>
+                  <span class="arrow">↑</span>
+                  <span class="hint-text">上滑锁定</span>
+                </div>
+              </transition>
+              <IconButton
+                  :icon="isRecording ? '🛑' : '🎙️'"
+                  :title="isRecording ? `录音中... ${formatDuration(recordingDuration)}` : '按住录音'"
+                  @mousedown.prevent="startRecording"
+                  @mouseup.prevent="stopRecording"
+                  @mousemove.prevent="handleRecordingMove"
+                  @touchstart.prevent="startRecording"
+                  @touchend.prevent="stopRecording"
+                  @touchmove.prevent="handleRecordingMove"
+                  class="voice-button"
+                  :class="{ recording: isRecording }"
+              />
+            </template>
+          </div>
 
-        <IconButton v-else icon="➤" title="发送" @click="send" class="send-button" />
+          <IconButton v-else key="send" icon="➤" title="发送" @click="send" class="send-button" />
+        </TransitionGroup>
       </div>
+      <!-- --- [动画] END --- -->
 
     </div>
     <EmojiPicker
@@ -230,9 +231,14 @@ function cancelLockedRecording() { isRecordingLocked.value = false; isRecording.
 function sendLockedRecording() { isRecordingLocked.value = false; isRecording.value = false; clearInterval(recordingInterval); mediaService.stopRecording(); }
 function onRecordingComplete({ blob, duration }) { cancelPreview(); const url = URL.createObjectURL(blob); preview.value = { type: 'audio', blob, duration, url, hash: `audio_${Date.now()}`, name: `voice-message.webm`, fileType: blob.type, size: blob.size, }; }
 
-function handleScreenshot() {
-  uiStore.showModal('screenshotGuide');
+// ✅ START OF FIX
+async function handleScreenshot() {
+  // Directly call mediaService to capture a screenshot.
+  // The 'true' flag indicates this is for a screenshot, not a call.
+  // The 'detail' contentHint is better for static images.
+  await mediaService.captureScreen('detail', true);
 }
+// ✅ END OF FIX
 
 function handleRawScreenshot(screenshotData) { uiStore.showModal('screenshotEditor', screenshotData); }
 
@@ -312,7 +318,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Styles remain unchanged */
 .message-input-root { padding: var(--spacing-2) var(--spacing-4); background-color: var(--color-background-panel); border-top: 1px solid var(--color-border); flex-shrink: 0; position: relative; }
 .input-container { display: flex; align-items: flex-end; background-color: var(--color-background-elevated); padding: var(--spacing-1) var(--spacing-2); position: relative; border-radius: var(--border-radius-lg); overflow: hidden; }
 .locked-recording-bar { display: flex; align-items: center; background-color: var(--color-background-elevated); padding: var(--spacing-1) var(--spacing-2); position: relative; border-radius: var(--border-radius-lg); }
@@ -344,6 +349,34 @@ onUnmounted(() => {
 .input-main-area { display: flex; align-items: flex-end; flex-grow: 1; transition: transform 0.3s ease; }
 .input-main-area.slide-away { transform: translateX(-80px); }
 .input-actions-area { display: flex; align-items: flex-end; }
+
+/* --- [动画] START: 按钮切换动画样式 --- */
+.input-actions-area {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  /* Set a fixed width to contain the animating buttons */
+  width: 120px; /* Adjust as needed, e.g., 40px * 2 + gaps */
+  justify-content: flex-end;
+}
+.actions-slide-fade-enter-active,
+.actions-slide-fade-leave-active {
+  transition: all 0.25s var(--transition-easing-spring);
+}
+.actions-slide-fade-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.actions-slide-fade-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+/* Ensure leaving items don't affect layout */
+.actions-slide-fade-leave-active {
+  position: absolute;
+}
+/* --- [动画] END --- */
+
 
 .cancel-hint {
   position: absolute;

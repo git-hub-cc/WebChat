@@ -1,22 +1,26 @@
 <template>
-  <transition name="context-menu-fade">
-    <div
-        v-if="uiStore.isContextMenuOpen"
-        class="context-menu"
-        :style="menuStyle"
-        ref="menuRef"
+  <!-- --- [动画] START: 应用 v-motion-pop-visible --- -->
+  <div
+      v-if="uiStore.isContextMenuOpen"
+      class="context-menu"
+      :style="menuStyle"
+      ref="menuRef"
+      v-motion
+      :initial="{ opacity: 0, scale: 0.95 }"
+      :enter="{ opacity: 1, scale: 1, transition: { type: 'spring', stiffness: 400, damping: 25 } }"
+      :leave="{ opacity: 0, scale: 0.95 }"
+  >
+    <!-- --- [动画] END --- -->
+    <button
+        v-for="(item, index) in uiStore.contextMenuItems"
+        :key="index"
+        class="context-menu-item"
+        :class="item.class"
+        @click="executeAction(item.action)"
     >
-      <button
-          v-for="(item, index) in uiStore.contextMenuItems"
-          :key="index"
-          class="context-menu-item"
-          :class="item.class"
-          @click="executeAction(item.action)"
-      >
-        {{ item.label }}
-      </button>
-    </div>
-  </transition>
+      {{ item.label }}
+    </button>
+  </div>
 </template>
 
 <script setup>
@@ -120,13 +124,11 @@ onUnmounted(() => {
   background-color: rgba(220, 53, 69, 0.1);
 }
 
+/* The v-motion directive handles transitions, so custom classes are removed. */
+/*
 .context-menu-fade-enter-active,
-.context-menu-fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
+.context-menu-fade-leave-active { ... }
 .context-menu-fade-enter-from,
-.context-menu-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.95);
-}
+.context-menu-fade-leave-to { ... }
+*/
 </style>

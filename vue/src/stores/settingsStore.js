@@ -126,10 +126,15 @@ export const useSettingsStore = defineStore('settings', () => {
      * Applies a new theme.
      */
     async function applyTheme(themeKey, event = null) {
-        if (!themes.value[themeKey]) {
-            log(`Attempted to apply non-existent theme: ${themeKey}`, 'WARN');
+        if (!themes.value[themeKey] || currentThemeKey.value === themeKey) {
+            if(currentThemeKey.value !== themeKey) log(`Attempted to apply non-existent theme: ${themeKey}`, 'WARN');
             return;
         }
+
+        // --- [动画] START: 触发主题切换遮罩 ---
+        isThemeTransitioning.value = true;
+        await new Promise(resolve => setTimeout(resolve, 100)); // 短暂延迟确保遮罩渲染
+        // --- [动画] END ---
 
         const updateLogic = async () => {
             currentThemeKey.value = themeKey;
@@ -139,6 +144,11 @@ export const useSettingsStore = defineStore('settings', () => {
         };
 
         await updateLogic();
+
+        // --- [动画] START: 隐藏主题切换遮罩 ---
+        await new Promise(resolve => setTimeout(resolve, 300)); // 等待新主题CSS加载和应用
+        isThemeTransitioning.value = false;
+        // --- [动画] END ---
     }
 
     /**

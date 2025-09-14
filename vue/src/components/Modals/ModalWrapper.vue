@@ -1,30 +1,23 @@
 <template>
-  <transition name="modal-fade">
-    <div v-if="show" class="modal-backdrop" @click.self="close">
-      <div class="modal-container">
-        <header class="modal-header">
-          <h2>{{ title }}</h2>
-          <IconButton icon="✕" title="关闭" @click="close" />
-        </header>
-        <main class="modal-body">
-          <slot></slot>
-        </main>
-        <footer class="modal-footer" v-if="$slots.footer">
-          <slot name="footer"></slot>
-        </footer>
-      </div>
-    </div>
-  </transition>
+  <div class="modal-container">
+    <header class="modal-header">
+      <h2>{{ title }}</h2>
+      <IconButton icon="✕" title="关闭" @click="close" />
+    </header>
+    <main class="modal-body">
+      <slot></slot>
+    </main>
+    <footer class="modal-footer" v-if="$slots.footer">
+      <slot name="footer"></slot>
+    </footer>
+  </div>
 </template>
 
 <script setup>
 import IconButton from '@/components/Shared/IconButton.vue';
 
 const props = defineProps({
-  show: {
-    type: Boolean,
-    required: true,
-  },
+  // 'show' prop is no longer needed as the parent <Transition> controls visibility.
   title: {
     type: String,
     default: 'Modal',
@@ -39,15 +32,7 @@ const close = () => {
 </script>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
+/* .modal-backdrop is now moved to App.vue as .modal-wrapper-container */
 
 .modal-container {
   background: var(--color-background-panel);
@@ -87,19 +72,5 @@ const close = () => {
   justify-content: flex-end;
   gap: var(--spacing-2);
   flex-shrink: 0;
-}
-
-/* Transitions */
-.modal-fade-enter-from, .modal-fade-leave-to {
-  opacity: 0;
-}
-
-.modal-fade-enter-active .modal-container,
-.modal-fade-leave-active .modal-container {
-  transition: transform 0.3s var(--transition-easing);
-}
-.modal-fade-enter-from .modal-container,
-.modal-fade-leave-to .modal-container {
-  transform: scale(0.95) translateY(10px);
 }
 </style>

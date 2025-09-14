@@ -4,15 +4,21 @@
       :class="{ ...wrapperClasses, 'consecutive': isConsecutive }"
       @contextmenu.prevent="showContextMenu"
       @dblclick="showContextMenu"
+      v-motion-slide-bottom
+      :delay="100"
   >
     <div v-if="message.type === 'system' || message.isRetracted" class="system-message">
-      <div v-if="message.subType === 'call-log'" class="call-log-content">
+      <!-- --- [动画] START: 优化 AI 思考中动画 --- -->
+      <div v-if="message.toolCallInfo || message.isThinking" class="tool-call-indicator">
+        <div class="thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span>{{ message.toolCallInfo ? `正在使用工具: ${message.toolCallInfo.name}...` : '思考中...' }}</span>
+      </div>
+      <!-- --- [动画] END --- -->
+      <div v-else-if="message.subType === 'call-log'" class="call-log-content">
         <span class="call-icon">{{ callIcon }}</span>
         <span>{{ message.content }}</span>
-      </div>
-      <div v-else-if="message.toolCallInfo" class="tool-call-indicator">
-        <Spinner size="x-small" />
-        <span>正在使用工具: {{ message.toolCallInfo.name }}...</span>
       </div>
       <span v-else>{{ message.content }}</span>
     </div>
@@ -33,17 +39,19 @@
         <!-- --- MODIFICATION START: Updated media handling for previews and placeholders --- -->
         <div v-else-if="isMedia" class="media-content" @click="handleMediaClick">
           <div v-if="message.type === 'sticker'" class="sticker-wrapper">
-            <!-- Sticker placeholder -->
+            <!-- --- [动画] START: 应用骨架屏加载动画 --- -->
             <div class="media-placeholder" v-if="!displayUrl">
-              <Spinner size="small" />
+              <SkeletonLoader type="grid-item" :shimmer="true" />
             </div>
+            <!-- --- [动画] END --- -->
             <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image">
           </div>
           <div v-else-if="isPreviewableMedia" class="media-preview-container">
-            <!-- Image/Video placeholder -->
+            <!-- --- [动画] START: 应用骨架屏加载动画 --- -->
             <div class="media-placeholder" v-if="!displayUrl">
-              <Spinner size="small" />
+              <SkeletonLoader type="grid-item" :shimmer="true" />
             </div>
+            <!-- --- [动画] END --- -->
             <div v-if="displayUrl" class="video-preview">
               <video v-if="message.fileType?.startsWith('video/')" :src="displayUrl" preload="metadata"></video>
               <img v-else :src="displayUrl" :alt="message.fileName || 'image preview'" class="media-image">
@@ -87,6 +95,7 @@ import { useChatStore } from '@/stores/chatStore';
 import { useTtsStore } from '@/stores/ttsStore';
 import { formatMessageText, log } from '@/utils';
 import Spinner from '@/components/Shared/Spinner.vue';
+import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
 import { eventBus } from '@/services/eventBus';
 import { mediaCacheService } from '@/services/mediaCacheService';
 import WaveSurfer from 'wavesurfer.js';
@@ -261,6 +270,22 @@ onUnmounted(() => {
 .call-icon { font-size: 1rem; opacity: 0.8; }
 .tool-call-indicator :deep(.spinner-x-small) { width: 1em; height: 1em; border-width: 2px; }
 
+/* --- [动画] START: 思考中动画 --- */
+.thinking-dots { display: flex; gap: 3px; }
+.thinking-dots span {
+  width: 6px; height: 6px; border-radius: 50%;
+  background-color: var(--color-text-secondary);
+  animation: thinking-bounce 1.4s infinite ease-in-out both;
+}
+.thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+.thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes thinking-bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1.0); }
+}
+/* --- [动画] END --- */
+
+
 .message-bubble { max-width: 75%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--border-radius-lg); position: relative; word-wrap: break-word; box-shadow: var(--shadow-sm); }
 .message-wrapper.sent .message-bubble { background-color: var(--color-message-sent-bg); color: var(--color-message-sent-text); border-bottom-right-radius: var(--border-radius-sm); }
 .message-wrapper.received .message-bubble { background-color: var(--color-message-received-bg); color: var(--color-message-received-text); border-bottom-left-radius: var(--border-radius-sm); }
@@ -303,6 +328,11 @@ onUnmounted(() => {
   justify-content: center;
   background-color: var(--color-background-elevated);
 }
+
+/* --- [动画] START: 移除 Spinner，改为骨架屏组件 --- */
+/* The spinner component is replaced by the SkeletonLoader component in the template. */
+/* --- [动画] END --- */
+
 
 .media-image, .video-preview video { width: 100%; height: 100%; object-fit: cover; }
 .video-preview { position: relative; width: 100%; height: 100%; }

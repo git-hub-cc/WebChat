@@ -1,4 +1,6 @@
+
 <template>
+  <!-- --- [动画] START: ModalWrapper 已被移至 App.vue，此处不再需要 --- -->
   <ModalWrapper :show="true" :title="options.title || '确认操作'" @close="handleCancel">
     <p class="confirmation-message" v-html="formattedMessage"></p>
     <template #footer>
@@ -10,6 +12,7 @@
       </button>
     </template>
   </ModalWrapper>
+  <!-- --- [动画] END --- -->
 </template>
 
 <script setup>

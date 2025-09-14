@@ -1,11 +1,6 @@
 <template>
   <div class="people-lobby-root">
     <!-- [已移除] 标签页导航已被移除，以简化界面 -->
-    <!--
-    <div class="lobby-tabs">
-      ...
-    </div>
-    -->
 
     <div class="lobby-header">
       <!-- [修改] 标题变为静态，因为只有一个列表 -->
@@ -13,7 +8,9 @@
       <IconButton icon="🔄" title="刷新列表" :class="{ loading: isLoading }" @click="fetchUsers" />
     </div>
 
-    <div class="lobby-list scroller">
+    <!-- --- [动画] START: 应用 v-auto-animate 指令 --- -->
+    <div class="lobby-list scroller" v-auto-animate="{ duration: 300 }">
+      <!-- --- [动画] END --- -->
       <div v-if="isLoading && allUsers.length === 0" class="loading-state">
         <SkeletonLoader type="list-item" v-for="i in 5" :key="i" />
       </div>
@@ -49,8 +46,6 @@ import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
 const userStore = useUserStore();
 const uiStore = useUiStore();
 const isLoading = ref(false);
-// [已移除] activeTab 不再需要
-// const activeTab = ref('local');
 
 const allUsers = computed(() => {
   return userStore.allOnlineUsers.map(user => {
@@ -72,10 +67,6 @@ const allUsers = computed(() => {
     };
   });
 });
-
-// [已移除] localUsers 和 displayedUsers 不再需要，因为我们只显示一个列表
-// const localUsers = computed(() => ...);
-// const displayedUsers = computed(() => ...);
 
 async function fetchUsers() {
   isLoading.value = true;

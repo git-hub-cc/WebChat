@@ -60,7 +60,6 @@ async function proactivelyConnectToOnlineContacts() {
     });
 }
 
-// --- MODIFICATION START: Implemented Exponential Backoff with Jitter ---
 function _connectWebSocket() {
     return new Promise((resolve, reject) => {
         if (websocket && websocket.readyState === WebSocket.OPEN) return resolve();
@@ -118,7 +117,6 @@ function _connectWebSocket() {
         };
     });
 }
-// --- MODIFICATION END ---
 
 function _cleanupConnection(peerId) {
     if (statsIntervals.has(peerId)) {
@@ -230,7 +228,6 @@ function _startStatsPolling(peer, peerId) {
     statsIntervals.set(peerId, intervalId);
 }
 
-// --- MODIFICATION START: Enhanced _setupPeerListeners with ICE Restart and state handling ---
 function _setupPeerListeners(peer, peerId) {
     peer.on('signal', signalData => {
         if (peerId === MANUAL_PEER_ID) {
@@ -247,6 +244,21 @@ function _setupPeerListeners(peer, peerId) {
             conn.isConnected = true;
         }
         _startStatsPolling(peer, peerId);
+        // --- MODIFICATION START: Add diagnostic logging for successful connection ---
+        try {
+            peer.getStats((err, stats) => {
+                if (err) return;
+                const selectedPair = stats.find(s => s.type === 'candidate-pair' && s.state === 'succeeded');
+                if (selectedPair) {
+                    const localCandidate = stats.find(s => s.id === selectedPair.localCandidateId);
+                    const remoteCandidate = stats.find(s => s.id === selectedPair.remoteCandidateId);
+                    if (localCandidate && remoteCandidate) {
+                        log(`[DIAGNOSTIC] Connection to ${peerId} established via: Local=${localCandidate.candidateType} -> Remote=${remoteCandidate.candidateType}`, 'INFO');
+                    }
+                }
+            });
+        } catch(e) { /* silently fail if stats not available */ }
+        // --- MODIFICATION END ---
         if (peerId === MANUAL_PEER_ID) {
             eventBus.emit('webrtc:manual-connection-ready');
         } else {
@@ -287,7 +299,6 @@ function _setupPeerListeners(peer, peerId) {
     peer.on('close', () => { _cleanupConnection(peerId); });
     peer.on('error', err => { log(`WebRTC: 与 ${peerId} 发生错误: ${err.message}`, 'ERROR'); _cleanupConnection(peerId); });
 }
-// --- MODIFICATION END ---
 
 export const webrtcService = {
     connections,
@@ -457,7 +468,6 @@ export const webrtcService = {
         }
     },
     closeConnection(peerId) { _cleanupConnection(peerId); },
-    // --- MODIFICATION START: Added new public methods ---
     restartIce(peerId) {
         const conn = connections.value[peerId];
         if (conn && conn.peer) {
@@ -472,7 +482,9 @@ export const webrtcService = {
 
         const videoSender = conn.peer._pc.getSenders().find(s => s.track?.kind === 'video');
         if (!videoSender) {
-            log(`WebRTC: No video sender found for peer ${peerId} to adjust bitrate.`, 'WARN');
+            // --- MODIFICATION START: Downgrade warning to debug log ---
+            log(`Cannot adjust bitrate: No active video sender found for peer ${peerId}. (This is expected for audio-only calls)`, 'DEBUG');
+            // --- MODIFICATION END ---
             return;
         }
 
@@ -534,7 +546,6 @@ export const webrtcService = {
         }
         return results;
     },
-    // --- MODIFICATION END ---
     createManualOffer() {
         if (connections.value[MANUAL_PEER_ID]) _cleanupConnection(MANUAL_PEER_ID);
         const peer = new SimplePeer({ initiator: true, config: AppSettings.peerConnectionConfig, trickle: false });

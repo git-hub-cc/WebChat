@@ -76,6 +76,10 @@ body, body.colorscheme-light {
     --transition-duration-fast: 150ms;
     --transition-duration-normal: 250ms;
     --transition-easing: cubic-bezier(0.4, 0, 0.2, 1);
+    /* --- [动画] START: 添加新的动画变量 --- */
+    --transition-duration-slow: 400ms;
+    --transition-easing-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* 带有回弹效果的缓动函数 */
+    /* --- [动画] END --- */
 }
 
 /*

@@ -19,6 +19,10 @@
       <div v-for="i in 9" :key="i" class="skeleton-grid-item"></div>
     </div>
 
+    <!-- --- [动画] START: 新增 grid-item 类型 --- -->
+    <div v-else-if="type === 'grid-item'" class="skeleton-grid-item-single"></div>
+    <!-- --- [动画] END --- -->
+
     <div v-else class="skeleton-generic">
       <div v-for="i in 3" :key="i" class="skeleton-line" :style="{ width: `${Math.random() * 40 + 50}%` }"></div>
     </div>
@@ -29,7 +33,7 @@
 defineProps({
   type: {
     type: String,
-    default: 'generic', // 'list-item', 'profile', 'grid', 'generic'
+    default: 'generic', // 'list-item', 'profile', 'grid', 'grid-item', 'generic'
   },
   baseColor: {
     type: String,
@@ -39,6 +43,12 @@ defineProps({
     type: String,
     default: 'var(--color-background-elevated)',
   },
+  // --- [动画] START: 新增 shimmer prop ---
+  shimmer: {
+    type: Boolean,
+    default: true
+  }
+  // --- [动画] END ---
 });
 </script>
 
@@ -54,14 +64,14 @@ defineProps({
   width: 100%;
 }
 
-.skeleton-line, .skeleton-avatar, .skeleton-avatar-xl, .skeleton-grid-item {
+.skeleton-line, .skeleton-avatar, .skeleton-avatar-xl, .skeleton-grid-item, .skeleton-grid-item-single {
   background-color: var(--base-color);
   position: relative;
   overflow: hidden;
   border-radius: var(--border-radius-md);
 }
 
-.skeleton-line::after, .skeleton-avatar::after, .skeleton-avatar-xl::after, .skeleton-grid-item::after {
+.skeleton-line::after, .skeleton-avatar::after, .skeleton-avatar-xl::after, .skeleton-grid-item::after, .skeleton-grid-item-single::after {
   content: '';
   position: absolute;
   top: 0;
@@ -71,12 +81,21 @@ defineProps({
   transform: translateX(-100%);
   background-image: linear-gradient(90deg,
   rgba(255, 255, 255, 0) 0,
-  var(--highlight-color) 20%,
-  var(--highlight-color) 60%,
-  rgba(255, 255, 255, 0) 100%
+  var(--highlight-color) 40%,
+  rgba(255, 255, 255, 0) 80%
   );
+  /* --- [动画] START: 根据 prop 控制动画 --- */
   animation: shimmer 1.5s infinite;
+  /* --- [动画] END --- */
 }
+
+/* --- [动画] START: 新增 grid-item-single 样式 --- */
+.skeleton-grid-item-single {
+  width: 100%;
+  height: 100%;
+}
+/* --- [动画] END --- */
+
 
 .skeleton-list-item {
   display: flex;
