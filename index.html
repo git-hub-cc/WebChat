@@ -7,87 +7,10 @@
     <title>WebChat</title>
     <!-- SEO & Metadata from original file can be placed here -->
     <meta name="description" content="WebChat: 一款基于 Vue 3, WebRTC 和 Pinia 重构的，功能丰富的 AI 角色扮演聊天平台。">
-
-    <!-- ✅ MODIFICATION START: Inline styles for the initial loader -->
-    <style>
-        /* This style block ensures the initial loader is visible immediately */
-        .initial-loader {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: #23272A; /* A neutral dark background */
-        }
-        body.colorscheme-light .initial-loader {
-            background-color: #F2F5F7; /* A neutral light background */
-        }
-        .initial-loader .spinner {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: 5px solid rgba(128, 128, 128, 0.2);
-            border-top-color: #3498DB; /* A neutral brand color */
-            animation: spin 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
-        }
-        body.colorscheme-light .initial-loader .spinner {
-            border-top-color: #007ACC;
-        }
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
-    <!-- ✅ MODIFICATION END -->
-
-  <script type="module" crossorigin src="/WebChat/assets/index-C21mJ90V.js"></script>
-  <link rel="stylesheet" crossorigin href="/WebChat/assets/index-Oc3BAKU_.css">
+  <script type="module" crossorigin src="/WebChat/assets/index-BlOEotBa.js"></script>
+  <link rel="stylesheet" crossorigin href="/WebChat/assets/index-DHmHBoOX.css">
 </head>
 <body>
-<!-- ✅ MODIFICATION START: Inline script for immediate theme application -->
-<script>
-    // This script runs immediately after the <body> tag is parsed,
-    // ensuring document.body exists and themes are applied before rendering.
-    (function() {
-        try {
-            const storedScheme = localStorage.getItem('colorScheme') || 'auto';
-            const storedThemeKey = localStorage.getItem('currentThemeKey') || '原神-浅色';
-            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-            let effectiveScheme = storedScheme;
-            if (effectiveScheme === 'auto') {
-                effectiveScheme = prefersDark ? 'dark' : 'light';
-            }
-
-            // Apply color scheme class
-            document.body.classList.add(`colorscheme-${effectiveScheme}`);
-
-            // Apply the specific theme class, ensuring it matches the effective color scheme
-            const themeMode = storedThemeKey.includes('-深色') ? 'dark' : 'light';
-            if (themeMode === effectiveScheme) {
-                document.body.classList.add(`theme-${storedThemeKey}`);
-            } else {
-                // If stored theme doesn't match the system scheme, switch it
-                const baseName = storedThemeKey.replace(/-浅色|-深色/, '');
-                const newSuffix = effectiveScheme === 'dark' ? '-深色' : '-浅色';
-                const newThemeKey = `${baseName}${newSuffix}`;
-                // We assume the corresponding theme key exists (e.g., if "原神-浅色" exists, so does "原神-深色")
-                document.body.classList.add(`theme-${newThemeKey}`);
-            }
-        } catch (error) {
-            console.error('Error applying initial theme:', error);
-        }
-    })();
-</script>
-<!-- ✅ MODIFICATION END -->
-
-<div id="app">
-    <!-- ✅ MODIFICATION START: Static initial loader -->
-    <!-- This will be displayed instantly and replaced by Vue when it mounts -->
-    <div class="initial-loader">
-        <div class="spinner"></div>
-    </div>
-    <!-- ✅ MODIFICATION END -->
-</div>
+<div id="app"></div>
 </body>
 </html>
