@@ -63,26 +63,22 @@ body.theme-蜡笔小新-深色 {
 
     --misae-primary: #DC6E86;
     --misae-text: var(--color-background-page);
-    /* --- ✅ FIX: Use the full color variable --- */
     --misae-accent: var(--color-text-primary);
     --misae-msg-bg: linear-gradient(135deg, rgba(220, 110, 130, 0.1), rgba(220, 110, 130, 0.2));
     --misae-secondary-bg: var(--color-background-active);
 
     --hiroshi-primary: #647896;
     --hiroshi-text: var(--color-text-primary);
-    /* --- ✅ FIX: Use the full color variable --- */
     --hiroshi-accent: var(--color-text-secondary);
     --hiroshi-msg-bg: linear-gradient(135deg, rgba(100, 120, 150, 0.1), rgba(100, 120, 150, 0.2));
     --hiroshi-secondary-bg: var(--color-background-active);
 
     --kazama-primary: #5AB4C8;
     --kazama-text: var(--color-background-page);
-    /* --- ✅ FIX: Use the full color variable --- */
     --kazama-accent: var(--color-text-primary);
     --kazama-msg-bg: linear-gradient(135deg, rgba(90, 170, 200, 0.1), rgba(90, 170, 200, 0.2));
     --kazama-secondary-bg: var(--color-background-active);
 
-    /* --- ✅ FIX: Use the full color variable --- */
     --shiro-primary: var(--color-text-primary);
     --shiro-text: #FF6450;
     --shiro-accent: #FF6450;
