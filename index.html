@@ -7,6 +7,54 @@
     <title>WebChat</title>
     <!-- SEO & Metadata from original file can be placed here -->
     <meta name="description" content="WebChat: 一款基于 Vue 3, WebRTC 和 Pinia 重构的，功能丰富的 AI 角色扮演聊天平台。">
+
+    <!-- ✅ MODIFICATION START: Flicker-Prevention Script -->
+    <script>
+        (function() {
+            try {
+                // 1. 获取本地存储的设置
+                const savedColorScheme = localStorage.getItem('colorScheme');
+                const savedThemeKey = localStorage.getItem('currentThemeKey');
+
+                // 2. 确定生效的配色方案 (light/dark)
+                let effectiveColorScheme;
+                if (savedColorScheme === 'light' || savedColorScheme === 'dark') {
+                    effectiveColorScheme = savedColorScheme;
+                } else {
+                    // 'auto' 或 null
+                    effectiveColorScheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+                }
+
+                // 3. 确定并校准主题 Key
+                let finalThemeKey = savedThemeKey || '原神-浅色'; // 提供一个默认值
+                const isDarkTheme = finalThemeKey.includes('-深色');
+                const isLightTheme = finalThemeKey.includes('-浅色');
+
+                if (effectiveColorScheme === 'dark' && isLightTheme) {
+                    finalThemeKey = finalThemeKey.replace('-浅色', '-深色');
+                } else if (effectiveColorScheme === 'light' && isDarkTheme) {
+                    finalThemeKey = finalThemeKey.replace('-深色', '-浅色');
+                }
+
+                // 4. 立即将类名应用到 <html> 标签上
+                //    在 <html> 上应用比在 <body> 上更早，效果更好
+                const themeClass = `theme-${finalThemeKey}`;
+                const colorSchemeClass = `colorscheme-${effectiveColorScheme}`;
+                document.documentElement.classList.add(themeClass, colorSchemeClass);
+
+                // 5. (可选但推荐) 设置一个基础背景色，防止在CSS加载完成前看到默认的白屏
+                //    这个颜色应该与目标主题的背景色近似
+                const bodyBgColor = effectiveColorScheme === 'dark' ? '#23272A' : '#F2F5F7';
+                document.documentElement.style.backgroundColor = bodyBgColor;
+
+            } catch (e) {
+                // In case of any error, fail silently to not block rendering.
+                console.error('Flicker-prevention script failed:', e);
+            }
+        })();
+    </script>
+    <!-- ✅ MODIFICATION END -->
+
   <script type="module" crossorigin src="/WebChat/assets/index-BlOEotBa.js"></script>
   <link rel="stylesheet" crossorigin href="/WebChat/assets/index-DHmHBoOX.css">
 </head>
