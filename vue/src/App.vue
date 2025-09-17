@@ -1,6 +1,9 @@
 <template>
   <div id="app-root" :class="appRootClasses">
-    <!-- --- [动画] START: 为骨架屏和主应用的切换添加过渡动画 --- -->
+    <!-- ✅ MODIFICATION START: Add the new global mobile header -->
+    <MobileGlobalHeader />
+    <!-- ✅ MODIFICATION END -->
+
     <Transition name="app-fade" mode="out-in">
       <div v-if="uiStore.isAppLoading" class="loading-overlay">
         <AppSkeletonLoader />
@@ -31,15 +34,12 @@
         </div>
       </div>
     </Transition>
-    <!-- --- [动画] END --- -->
 
-    <!-- Modals and other overlays remain unchanged -->
     <Transition
         name="modal-fade"
         @after-leave="uiStore.modalPrefillData = {}"
     >
       <div class="modal-wrapper-container" v-if="uiStore.activeModal">
-        <!-- All modal components here -->
         <SettingsModal
             v-if="uiStore.activeModal === 'settings'"
             @close="uiStore.hideModal()"
@@ -77,18 +77,15 @@
     <ContextMenu />
     <link id="theme-stylesheet" rel="stylesheet" :href="themeHref" />
 
-    <!-- ✅ MODIFICATION START: Replaced theme transition overlay with modal skeleton -->
     <Transition name="theme-transition-fade">
       <div v-if="settingsStore.isThemeTransitioning" class="modal-skeleton-wrapper">
         <SettingsModalSkeleton v-motion-pop />
       </div>
     </Transition>
-    <!-- ✅ MODIFICATION END -->
   </div>
 </template>
 
 <script setup>
-// Script setup remains completely unchanged
 import { onMounted, computed, watch } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { useChatStore } from '@/stores/chatStore';
@@ -119,8 +116,9 @@ import MediaViewerModal from '@/components/Modals/MediaViewerModal.vue';
 import BindManualConnectionModal from '@/components/Modals/BindManualConnectionModal.vue';
 import WelcomeHeader from '@/components/ChatView/WelcomeHeader.vue';
 import FloatingCallWidget from '@/components/Shared/FloatingCallWidget.vue';
-// ✅ MODIFICATION START: Import the new skeleton component
 import SettingsModalSkeleton from '@/components/Shared/SettingsModalSkeleton.vue';
+// ✅ MODIFICATION START: Import the new header component
+import MobileGlobalHeader from '@/components/Shared/MobileGlobalHeader.vue';
 // ✅ MODIFICATION END
 
 const userStore = useUserStore();
@@ -212,8 +210,7 @@ body {
 }
 
 .app-container {
-  /* --- [动画] START: 移除 grid-template-columns 的直接控制 --- */
-  display: flex; /* Changed from grid to flex */
+  display: flex;
   width: 100%;
   height: 100%;
   max-width: var(--max-app-width);
@@ -223,10 +220,8 @@ body {
   overflow: hidden;
   position: relative;
   background-color: var(--color-background-panel);
-  /* --- [动画] END --- */
 }
 
-/* All other global styles (.sidebar-container, modals, overlays, etc.) remain the same */
 .sidebar-container, .main-view-container, .details-panel-container {
   display: flex;
   flex-direction: column;
@@ -234,10 +229,8 @@ body {
   overflow: hidden;
 }
 .sidebar-container {
-  /* --- [动画] START: 明确设置侧边栏宽度和收缩行为 --- */
   width: var(--sidebar-width);
   flex-shrink: 0;
-  /* --- [动画] END --- */
   background-color: var(--color-background-panel);
 }
 .details-panel-container {
@@ -248,23 +241,22 @@ body {
   border-left: 1px solid var(--color-border);
 }
 
-/* --- [动画] START: 新增 main-content-wrapper 并设置动画 --- */
 .main-content-wrapper {
   display: flex;
   flex-grow: 1;
   overflow: hidden;
-  position: relative; /* For mobile overlay */
+  position: relative;
 }
 
 .main-view-container {
   flex-grow: 1;
   flex-shrink: 1;
-  min-width: 0; /* Important for flexbox shrinking */
+  min-width: 0;
 }
 
 .details-panel-container {
   flex-shrink: 0;
-  width: 0; /* Initially closed */
+  width: 0;
   transition: width 0.4s var(--transition-easing-spring);
   will-change: width;
 }
@@ -273,17 +265,14 @@ body {
   width: var(--details-panel-width);
 }
 
-/* We need to use :deep() to target the component root inside Transition */
 .details-panel-container :deep(.details-panel) {
-  width: var(--details-panel-width); /* Fixed width for the content */
+  width: var(--details-panel-width);
   transform: translateX(100%);
   transition: transform 0.4s var(--transition-easing-spring);
 }
 .details-panel-container.is-open :deep(.details-panel) {
   transform: translateX(0);
 }
-/* --- [动画] END --- */
-
 
 .welcome-view {
   display: flex;
@@ -307,7 +296,6 @@ body {
   box-sizing: border-box;
 }
 
-/* --- [动画] START: 为骨架屏到主应用的切换添加动画 --- */
 .app-fade-enter-active,
 .app-fade-leave-active {
   transition: opacity 0.5s ease-in-out;
@@ -316,8 +304,6 @@ body {
 .app-fade-leave-to {
   opacity: 0;
 }
-/* --- [动画] END --- */
-
 
 .modal-wrapper-container {
   position: fixed;
@@ -337,7 +323,6 @@ body {
   opacity: 0;
 }
 
-/* ✅ MODIFICATION START: Style the new modal skeleton wrapper */
 .modal-skeleton-wrapper {
   position: fixed;
   inset: 0;
@@ -347,7 +332,6 @@ body {
   align-items: center;
   z-index: 10000;
 }
-/* ✅ MODIFICATION END */
 
 .theme-transition-fade-enter-active {
   transition: opacity 0.3s ease-in-out;
@@ -362,17 +346,15 @@ body {
 
 
 @media (max-width: 1024px) {
-  /* For mobile, the panel should be an overlay, not push content */
   .details-panel-container {
     position: absolute;
     top: 0;
     right: 0;
-    width: var(--details-panel-width); /* Fixed width when it's an overlay */
+    width: var(--details-panel-width);
     height: 100%;
     transform: translateX(100%);
     transition: transform 0.4s var(--transition-easing-spring);
     z-index: 100;
-    /* Reset width transition from desktop */
     will-change: transform;
   }
   .details-panel-container.is-open {
@@ -380,20 +362,33 @@ body {
     width: var(--details-panel-width);
   }
   .details-panel-container :deep(.details-panel) {
-    /* Reset transform from desktop, as parent handles it now */
     transform: none;
     transition: none;
   }
 }
 
 @media (max-width: 768px) {
+  /* ✅ MODIFICATION START: Adjust mobile layout for the global header */
+  #app-root {
+    align-items: flex-start; /* Align container to top */
+  }
+  #app-root.call-widget-active {
+    /* The call widget is now on top of the global header */
+    padding-top: 100px; /* 50px call widget + 50px global header */
+  }
   .app-container {
-    display: block; /* Revert to block for mobile layout */
+    display: block;
     max-height: 100dvh;
     border-radius: 0;
+    /* Add padding to prevent content from being hidden by the fixed header */
+    padding-top: 50px;
+    height: 100dvh;
+    box-sizing: border-box;
   }
+  /* ✅ MODIFICATION END */
+
   .main-content-wrapper {
-    height: 100%; /* Ensure it fills the container */
+    height: 100%;
   }
   .sidebar-container {
     width: 100%;
@@ -404,6 +399,9 @@ body {
     z-index: 10;
     transform: translateX(0);
     transition: transform 0.3s var(--transition-easing);
+    /* ✅ MODIFICATION START: Add padding-top to sidebar as well */
+    padding-top: 50px; /* Same as app-container */
+    /* ✅ MODIFICATION END */
   }
   .main-view-container {
     border-left: none;

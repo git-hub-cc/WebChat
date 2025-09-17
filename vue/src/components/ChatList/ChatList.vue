@@ -2,18 +2,16 @@
   <div class="chat-list-root">
     <header class="chat-list-header">
       <IconButton icon="☰" title="菜单" @click="uiStore.showModal('settings')" />
-      <!-- --- MODIFICATION START: Use debounced handler & Add search icon --- -->
       <div class="search-bar-wrapper">
         <span class="search-icon">🔍</span>
         <input
             type="search"
-            :value="uiStore.chatListSearchTerm"
+            :value="chatStore.chatListSearchTerm"
             @input="handleSearchInput"
             placeholder="搜索..."
             class="search-bar"
         />
       </div>
-      <!-- --- MODIFICATION END --- -->
     </header>
 
     <nav class="chat-list-tabs">
@@ -22,11 +20,8 @@
       <button :class="{ active: uiStore.chatListFilter === 'group' }" @click="uiStore.chatListFilter = 'group'">群组</button>
     </nav>
 
-    <!-- --- [动画] START: 应用 v-auto-animate 指令 --- -->
     <div class="chat-items-wrapper" v-auto-animate="{ duration: 300, easing: 'ease-in-out' }">
-      <!-- --- [动画] END --- -->
 
-      <!-- --- MODIFICATION START: Improved empty state with SVG --- -->
       <div v-if="chatStore.filteredChatList.length === 0" class="empty-list">
         <svg class="empty-list-icon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
           <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/>
@@ -34,7 +29,6 @@
         <p>这里空空如也...</p>
         <p>点击右下角的 "+" 添加新的联系人或群组吧！</p>
       </div>
-      <!-- --- MODIFICATION END --- -->
       <RecycleScroller
           v-else
           class="scroller"
@@ -52,9 +46,7 @@
       </RecycleScroller>
     </div>
 
-    <!-- --- MODIFICATION START: Replaced text icon with SVG icon --- -->
     <IconButton icon="icons/plus.svg" class="new-chat-fab" title="新聊天/群组" @click="uiStore.showModal('newContact')" />
-    <!-- --- MODIFICATION END --- -->
   </div>
 </template>
 
@@ -149,15 +141,12 @@ const showContextMenu = (event, item) => {
 .chat-list-header {
   display: flex;
   align-items: center;
-  /* --- [✅ 优化] START --- */
-  height: var(--header-height); /* 显式设置高度为60px，与右侧头部对齐 */
-  padding: 0 var(--spacing-3);     /* 调整垂直内边距为0，由flexbox居中 */
-  /* --- [✅ 优化] END --- */
+  height: var(--header-height);
+  padding: 0 var(--spacing-3);
   flex-shrink: 0;
   border-bottom: 1px solid var(--color-border);
 }
 
-/* --- MODIFICATION START: Styles for search bar with icon --- */
 .search-bar-wrapper {
   flex-grow: 1;
   position: relative;
@@ -169,14 +158,13 @@ const showContextMenu = (event, item) => {
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-tertiary);
-  pointer-events: none; /* Allows clicking through the icon */
+  pointer-events: none;
 }
 .search-bar {
   width: 100%;
   border-radius: var(--border-radius-pill);
-  padding-left: calc(var(--spacing-3) * 2 + 1em); /* Make space for the icon */
+  padding-left: calc(var(--spacing-3) * 2 + 1em);
 }
-/* --- MODIFICATION END --- */
 
 .chat-list-tabs {
   display: flex;
@@ -205,7 +193,6 @@ const showContextMenu = (event, item) => {
   height: 100%;
 }
 
-/* --- MODIFICATION START: Styles for improved empty state --- */
 .empty-list {
   display: flex;
   flex-direction: column;
@@ -225,7 +212,6 @@ const showContextMenu = (event, item) => {
 .empty-list p {
   line-height: 1.6;
 }
-/* --- MODIFICATION END --- */
 
 .new-chat-fab {
   position: absolute;
@@ -246,13 +232,18 @@ const showContextMenu = (event, item) => {
   transform: scale(1.05);
 }
 
-/* --- [动画] START: FAB 图标旋转动画 --- */
 .new-chat-fab :deep(.icon) {
-  /* No transition here */
 }
 .new-chat-fab:hover :deep(.icon) {
   transition: transform 0.3s var(--transition-easing-spring);
   transform: rotate(90deg) scale(0.9);
 }
-/* --- [动画] END --- */
+
+/* ✅ MODIFICATION START: Hide desktop header on mobile */
+@media (max-width: 768px) {
+  .chat-list-header {
+    display: none;
+  }
+}
+/* ✅ MODIFICATION END */
 </style>

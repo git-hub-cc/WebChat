@@ -1,50 +1,60 @@
 <template>
-  <div class="app-container-skeleton">
-    <!-- Sidebar Skeleton -->
-    <aside class="sidebar-container-skeleton">
-      <div class="header-skeleton">
-        <div class="shimmer-bg circle"></div>
-        <div class="shimmer-bg line long"></div>
-      </div>
-      <div class="tabs-skeleton">
-        <div class="shimmer-bg line short"></div>
-        <div class="shimmer-bg line short"></div>
-        <div class="shimmer-bg line short"></div>
-      </div>
-      <div class="list-skeleton">
-        <div v-for="i in 7" :key="i" class="list-item-skeleton">
+  <div class="skeleton-root-wrapper">
+    <!-- ✅ MODIFICATION START: Add a separate skeleton for the mobile global header -->
+    <div class="mobile-header-skeleton">
+      <div class="shimmer-bg circle small"></div>
+      <div class="shimmer-bg line long"></div>
+      <div class="shimmer-bg circle small"></div>
+    </div>
+    <!-- ✅ MODIFICATION END -->
+
+    <div class="app-container-skeleton">
+      <!-- Sidebar Skeleton -->
+      <aside class="sidebar-container-skeleton">
+        <div class="header-skeleton">
+          <div class="shimmer-bg circle"></div>
+          <div class="shimmer-bg line long"></div>
+        </div>
+        <div class="tabs-skeleton">
+          <div class="shimmer-bg line short"></div>
+          <div class="shimmer-bg line short"></div>
+          <div class="shimmer-bg line short"></div>
+        </div>
+        <div class="list-skeleton">
+          <div v-for="i in 7" :key="i" class="list-item-skeleton">
+            <div class="shimmer-bg circle"></div>
+            <div class="text-group">
+              <div class="shimmer-bg line"></div>
+              <div class="shimmer-bg line short"></div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main View Skeleton -->
+      <main class="main-view-container-skeleton">
+        <div class="header-skeleton">
           <div class="shimmer-bg circle"></div>
           <div class="text-group">
             <div class="shimmer-bg line"></div>
             <div class="shimmer-bg line short"></div>
           </div>
+          <div class="actions-skeleton">
+            <div class="shimmer-bg circle small"></div>
+            <div class="shimmer-bg circle small"></div>
+            <div class="shimmer-bg circle small"></div>
+          </div>
         </div>
-      </div>
-    </aside>
-
-    <!-- Main View Skeleton -->
-    <main class="main-view-container-skeleton">
-      <div class="header-skeleton">
-        <div class="shimmer-bg circle"></div>
-        <div class="text-group">
-          <div class="shimmer-bg line"></div>
-          <div class="shimmer-bg line short"></div>
+        <div class="message-area-skeleton">
+          <div class="bubble-skeleton received"></div>
+          <div class="bubble-skeleton sent"></div>
+          <div class="bubble-skeleton sent short"></div>
         </div>
-        <div class="actions-skeleton">
-          <div class="shimmer-bg circle small"></div>
-          <div class="shimmer-bg circle small"></div>
-          <div class="shimmer-bg circle small"></div>
+        <div class="input-area-skeleton">
+          <div class="shimmer-bg line full"></div>
         </div>
-      </div>
-      <div class="message-area-skeleton">
-        <div class="bubble-skeleton received"></div>
-        <div class="bubble-skeleton sent"></div>
-        <div class="bubble-skeleton sent short"></div>
-      </div>
-      <div class="input-area-skeleton">
-        <div class="shimmer-bg line full"></div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
 </template>
 
@@ -78,6 +88,14 @@
   );
   animation: shimmer 1.5s infinite;
 }
+
+/* ✅ MODIFICATION START: Add a root wrapper for positioning context */
+.skeleton-root-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+/* ✅ MODIFICATION END */
 
 /* 主布局骨架 */
 .app-container-skeleton {
@@ -223,4 +241,66 @@
   height: 40px;
   border-radius: var(--border-radius-lg);
 }
+
+/* ✅ MODIFICATION START: Add styles for the mobile header skeleton */
+.mobile-header-skeleton {
+  display: none; /* Hidden on desktop by default */
+}
+/* ✅ MODIFICATION END */
+
+
+/* ✅ MODIFICATION START: Responsive styles for mobile skeleton */
+@media (max-width: 768px) {
+  /* 1. Show and style the mobile header skeleton */
+  .mobile-header-skeleton {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    padding: 0 var(--spacing-3);
+    background-color: var(--color-background-panel);
+    border-bottom: 1px solid var(--color-border);
+    z-index: 1;
+  }
+  .mobile-header-skeleton .circle.small {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+  .mobile-header-skeleton .line.long {
+    flex-grow: 1;
+    height: 36px;
+    border-radius: var(--border-radius-pill);
+  }
+
+  /* 2. Adjust the main container for mobile */
+  .app-container-skeleton {
+    display: block; /* Change from grid to block */
+    max-height: 100dvh;
+    border-radius: 0;
+    padding-top: 50px; /* Make space for the fixed header skeleton */
+    box-sizing: border-box;
+    height: 100dvh;
+  }
+
+  /* 3. Hide the main view (chat window) skeleton */
+  .main-view-container-skeleton {
+    display: none;
+  }
+
+  /* 4. Make the sidebar (chat list) skeleton full-width */
+  .sidebar-container-skeleton {
+    width: 100%;
+  }
+
+  /* 5. Hide the original header inside the sidebar skeleton */
+  .sidebar-container-skeleton .header-skeleton {
+    display: none;
+  }
+}
+/* ✅ MODIFICATION END */
 </style>
