@@ -11,6 +11,7 @@
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
     "@vueuse/motion": "^3.0.3",
+    "lodash-es": "^4.17.21",
     "pinia": "^2.1.7",
     "simple-peer": "^9.11.1",
     "vue": "^3.5.21",

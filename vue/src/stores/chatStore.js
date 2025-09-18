@@ -10,6 +10,7 @@ import { generateId, log } from '@/utils';
 import { eventBus } from '@/services/eventBus';
 import AppSettings from '@/config/AppSettings';
 import { useTtsStore } from './ttsStore';
+import { useTransferStore } from './transferStore'; // <-- [新增] 导入 transferStore
 
 export const useChatStore = defineStore('chat', () => {
     const chats = ref({});
@@ -58,7 +59,6 @@ export const useChatStore = defineStore('chat', () => {
             .filter(m => m && m.id)
             .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-        // --- MODIFICATION START: Calculate isConsecutive property here ---
         return sortedMessages.map((msg, index, allMsgs) => {
             if (index === 0) {
                 return { ...msg, isConsecutive: false };
@@ -70,7 +70,6 @@ export const useChatStore = defineStore('chat', () => {
                 prevMsg.type !== 'system' && !prevMsg.isRetracted;
             return { ...msg, isConsecutive };
         });
-        // --- MODIFICATION END ---
     });
 
     const isMessageRetractable = computed(() => (messageId) => {
@@ -128,7 +127,9 @@ export const useChatStore = defineStore('chat', () => {
         const updatePromises = [];
         chatItems.forEach(item => {
             if (item.messages && Array.isArray(item.messages)) {
-                const cleanedMessages = item.messages.filter(msg => msg && msg.id && !msg.isThinking && !msg.isStreaming && !msg.toolCallInfo);
+                // --- MODIFICATION START: Also clean up 'receiving' messages on init ---
+                const cleanedMessages = item.messages.filter(msg => msg && msg.id && !msg.isThinking && !msg.isStreaming && !msg.toolCallInfo && msg.status !== 'receiving');
+                // --- MODIFICATION END ---
                 if (cleanedMessages.length < item.messages.length) {
                     log(`ChatStore Init: Cleaned ${item.messages.length - cleanedMessages.length} temporary messages from chat ${item.id}.`, 'INFO');
                     const updatedItem = { ...item, messages: cleanedMessages };
@@ -149,7 +150,53 @@ export const useChatStore = defineStore('chat', () => {
         eventBus.on('message:retracted', ({ chatId, messageId, retractedByName }) => {
             _updateMessageToRetractedState(messageId, chatId, retractedByName);
         });
+        // --- NEW ---
+        eventBus.on('file:transfer-initiated', handleTransferInitiated);
+        eventBus.on('file:ready', handleTransferCompleted);
+        // --- END NEW ---
     }
+
+    // --- NEW: Handler for file transfer start ---
+    async function handleTransferInitiated({ peerId, messageId, fileHash, fileName, fileSize, fileType }) {
+        const chatId = peerId; // In P2P, peerId is the chatId
+        const userStore = useUserStore();
+        const transferStore = useTransferStore();
+        transferStore.startTransfer(fileHash, peerId, fileSize);
+
+        const placeholderMessage = {
+            id: messageId,
+            sender: peerId, // The one sending the file
+            timestamp: new Date().toISOString(),
+            status: 'receiving', // New status for the placeholder
+            type: 'file', // Generic type, can be refined if needed
+            fileHash,
+            fileName,
+            fileSize,
+            fileType,
+        };
+
+        await addMessage(chatId, placeholderMessage);
+
+        // Increment unread count if chat is not active
+        if (currentChatId.value !== chatId || !document.hasFocus()) {
+            userStore.incrementUnread(chatId);
+        }
+    }
+
+    // --- NEW: Handler for file transfer completion ---
+    async function handleTransferCompleted({ fileHash, messageId }) {
+        // Find the chat and message that matches this transfer
+        for (const chatId in chats.value) {
+            const messageIndex = chats.value[chatId].findIndex(m => m.id === messageId && m.fileHash === fileHash && m.status === 'receiving');
+            if (messageIndex > -1) {
+                // Update the status to 'delivered' to trigger UI update in MessageBubble
+                await _updateMessageState(chatId, messageId, { status: 'delivered' });
+                log(`File transfer message ${messageId} completed and status updated.`, 'INFO');
+                break; // Found and updated, exit loop
+            }
+        }
+    }
+
 
     function formatPreview(message) {
         if (!message) return '';
@@ -158,6 +205,9 @@ export const useChatStore = defineStore('chat', () => {
         if (message.toolCallInfo) return `正在使用工具: ${message.toolCallInfo.name}`;
         if (message.isThinking) return `思考中...`;
         if (message.isStreaming) return `正在输入...`;
+        // --- NEW: Preview for receiving files ---
+        if (message.status === 'receiving') return `[正在接收文件] ${message.fileName || ''}`;
+        // --- END NEW ---
         let senderPrefix = '';
         const userStore = useUserStore();
         if (message.groupId && message.sender !== userStore.userId) {
@@ -196,7 +246,8 @@ export const useChatStore = defineStore('chat', () => {
         } else {
             chats.value[chatId].push(message);
         }
-        if (!message.isThinking && !message.isStreaming && !message.toolCallInfo) {
+        // --- MODIFICATION: Do not save messages that are in a temporary state ---
+        if (!message.isThinking && !message.isStreaming && !message.toolCallInfo && message.status !== 'receiving') {
             const messagesToSave = JSON.parse(JSON.stringify(chats.value[chatId]));
             await dbService.setItem('chats', { id: chatId, messages: messagesToSave });
         }
@@ -262,7 +313,6 @@ export const useChatStore = defineStore('chat', () => {
 
         await addMessage(targetId, fullMessage);
 
-        // --- Centralized Sending Logic ---
         if (contact?.isAI) {
             await apiService.sendAiMessage(targetId, content, chats.value[targetId]?.slice(-15) || []);
             _updateMessageState(targetId, fullMessage.id, { status: 'sent' });
@@ -335,7 +385,15 @@ export const useChatStore = defineStore('chat', () => {
         if (message.type === 'group-join') { return; }
 
         const chatId = message.groupId || peerId;
-        await addMessage(chatId, { ...message, status: 'delivered' });
+        // --- MODIFICATION: Do not add the final message if it's a file transfer.
+        // The placeholder has already been created by `handleTransferInitiated`.
+        if (message.type === 'file' || message.type === 'image' || message.type === 'video' || message.type === 'audio' || message.type === 'sticker') {
+            // The placeholder is already in place. We just acknowledge.
+            log(`Received file message meta for ${message.id}. Placeholder should exist.`, 'DEBUG');
+        } else {
+            await addMessage(chatId, { ...message, status: 'delivered' });
+        }
+        // --- MODIFICATION END ---
         if (currentChatId.value !== chatId || !document.hasFocus()) {
             if (message.groupId) { useGroupStore().incrementUnread(chatId); }
             else { useUserStore().incrementUnread(chatId); }
@@ -374,7 +432,6 @@ export const useChatStore = defineStore('chat', () => {
             eventBus.emit('showNotification', { message: '没有聊天记录可清空。', type: 'info' });
             return;
         }
-        // --- MODIFICATION START: Add loading state for dangerous action ---
         const uiStore = useUiStore();
         uiStore.isPerformingDangerousAction = true;
         try {
@@ -386,7 +443,6 @@ export const useChatStore = defineStore('chat', () => {
         } finally {
             uiStore.isPerformingDangerousAction = false;
         }
-        // --- MODIFICATION END ---
     }
 
     async function deleteMessage(messageId) {
@@ -402,7 +458,7 @@ export const useChatStore = defineStore('chat', () => {
     async function retractMessage(messageId) {
         const chatId = currentChatId.value;
         if (!isMessageRetractable.value(messageId) || !chatId) {
-            if (isMessageRetractable.value(messageId) === false) { // Check explicitly for false to avoid firing on initial undefined
+            if (isMessageRetractable.value(messageId) === false) {
                 eventBus.emit('showNotification', { message: '消息已超过可撤回时间', type: 'warning' });
             }
             return;
@@ -419,7 +475,6 @@ export const useChatStore = defineStore('chat', () => {
             } else {
                 webrtcService.sendMessage(chatId, retractInfo);
             }
-            // Optimistically update local UI
             await _updateMessageToRetractedState(messageId, chatId, "你");
         } catch (error) {
             log(`Failed to send retract command for message ${messageId}: ${error.message}`, 'ERROR');
@@ -438,7 +493,6 @@ export const useChatStore = defineStore('chat', () => {
                 isRetracted: true,
                 content: `${retractedByName} 撤回了一条消息`
             };
-            // Replace the message in the array
             chats.value[chatId][messageIndex] = retractedMessage;
             await dbService.setItem('chats', { id: chatId, messages: JSON.parse(JSON.stringify(chats.value[chatId])) });
         }

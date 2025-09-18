@@ -8,14 +8,12 @@
       :delay="100"
   >
     <div v-if="message.type === 'system' || message.isRetracted" class="system-message">
-      <!-- --- [动画] START: 优化 AI 思考中动画 --- -->
       <div v-if="message.toolCallInfo || message.isThinking" class="tool-call-indicator">
         <div class="thinking-dots">
           <span></span><span></span><span></span>
         </div>
         <span>{{ message.toolCallInfo ? `正在使用工具: ${message.toolCallInfo.name}...` : '思考中...' }}</span>
       </div>
-      <!-- --- [动画] END --- -->
       <div v-else-if="message.subType === 'call-log'" class="call-log-content">
         <span class="call-icon">{{ callIcon }}</span>
         <span>{{ message.content }}</span>
@@ -38,31 +36,48 @@
 
         <!-- --- MODIFICATION START: Updated media handling for previews and placeholders --- -->
         <div v-else-if="isMedia" class="media-content" @click="handleMediaClick">
-          <div v-if="message.type === 'sticker'" class="sticker-wrapper">
-            <!-- --- [动画] START: 应用骨架屏加载动画 --- -->
-            <div class="media-placeholder" v-if="!displayUrl">
-              <SkeletonLoader type="grid-item" :shimmer="true" />
-            </div>
-            <!-- --- [动画] END --- -->
-            <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image">
-          </div>
-          <div v-else-if="isPreviewableMedia" class="media-preview-container">
-            <!-- --- [动画] START: 应用骨架屏加载动画 --- -->
-            <div class="media-placeholder" v-if="!displayUrl">
-              <SkeletonLoader type="grid-item" :shimmer="true" />
-            </div>
-            <!-- --- [动画] END --- -->
-            <div v-if="displayUrl" class="video-preview">
-              <video v-if="message.fileType?.startsWith('video/')" :src="displayUrl" preload="metadata"></video>
-              <img v-else :src="displayUrl" :alt="message.fileName || 'image preview'" class="media-image">
-              <div v-if="message.fileType?.startsWith('video/')" class="play-overlay">▶</div>
+          <!-- 1. Receiving Placeholder -->
+          <div v-if="message.status === 'receiving'" class="media-placeholder receiving">
+            <Spinner size="small" />
+            <div class="transfer-info">
+              <span class="file-name" :title="message.fileName">{{ message.fileName }}</span>
+              <progress
+                  v-if="transferProgress"
+                  :value="transferProgress.receivedBytes"
+                  :max="transferProgress.totalBytes"
+                  class="transfer-progress"
+              ></progress>
+              <span class="transfer-stats">
+                {{ formatSize(transferProgress?.receivedBytes || 0) }} / {{ formatSize(message.fileSize) }}
+                <span v-if="transferProgress && transferProgress.etaSeconds < Infinity"> - ETA: {{ formatEta(transferProgress.etaSeconds) }}</span>
+              </span>
             </div>
           </div>
-          <div v-else class="file-info-wrapper">
-            <div class="file-icon-container">{{ getFileExtension(message.fileName) }}</div>
-            <div class="file-info-text">
-              <div class="file-name">{{ message.fileName || '文件' }}</div>
-              <div class="file-meta">{{ formatSize(message.size) }}</div>
+
+          <!-- 2. Completed/Sent Media Content -->
+          <div v-else>
+            <div v-if="message.type === 'sticker'" class="sticker-wrapper">
+              <div class="media-placeholder" v-if="!displayUrl">
+                <SkeletonLoader type="grid-item" :shimmer="true" />
+              </div>
+              <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image">
+            </div>
+            <div v-else-if="isPreviewableMedia" class="media-preview-container">
+              <div class="media-placeholder" v-if="!displayUrl">
+                <SkeletonLoader type="grid-item" :shimmer="true" />
+              </div>
+              <div v-if="displayUrl" class="video-preview">
+                <video v-if="message.fileType?.startsWith('video/')" :src="displayUrl" preload="metadata"></video>
+                <img v-else :src="displayUrl" :alt="message.fileName || 'image preview'" class="media-image">
+                <div v-if="message.fileType?.startsWith('video/')" class="play-overlay">▶</div>
+              </div>
+            </div>
+            <div v-else class="file-info-wrapper">
+              <div class="file-icon-container">{{ getFileExtension(message.fileName) }}</div>
+              <div class="file-info-text">
+                <div class="file-name" :title="message.fileName || '文件'">{{ message.fileName || '文件' }}</div>
+                <div class="file-meta">{{ formatSize(message.size) }}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -79,7 +94,7 @@
         <span class="timestamp">{{ formattedTimestamp }}</span>
         <div v-if="isMyMessage" class="status-icon">
           <Spinner v-if="message.status === 'sending'" size="x-small" />
-          <span v-else-if="message.status === 'sent'" class="delivered">✓</span>
+          <span v-else-if="message.status === 'sent' || message.status === 'delivered'" class="delivered">✓</span>
           <span v-else-if="message.status === 'failed'" class="failed-icon" title="发送失败，点击重试" @click="resend">!</span>
         </div>
       </div>
@@ -93,6 +108,7 @@ import { useUserStore } from '@/stores/userStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useChatStore } from '@/stores/chatStore';
 import { useTtsStore } from '@/stores/ttsStore';
+import { useTransferStore } from '@/stores/transferStore';
 import { formatMessageText, log } from '@/utils';
 import Spinner from '@/components/Shared/Spinner.vue';
 import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
@@ -109,6 +125,7 @@ const userStore = useUserStore();
 const uiStore = useUiStore();
 const chatStore = useChatStore();
 const ttsStore = useTtsStore();
+const transferStore = useTransferStore();
 
 const isMyMessage = computed(() => props.message.sender === userStore.userId);
 const isGroupChat = computed(() => !!props.message.groupId);
@@ -125,19 +142,26 @@ const waveformRef = ref(null);
 let wavesurfer = null;
 
 const isMedia = computed(() => ['file', 'image', 'video', 'sticker', 'audio'].includes(props.message.type));
-// --- MODIFICATION START: New computed property to identify previewable media ---
 const isPreviewableMedia = computed(() => {
   const type = props.message.fileType;
   if (!type) return false;
   return type.startsWith('image/') || type.startsWith('video/');
 });
-// --- MODIFICATION END ---
 const getFileExtension = (name) => name?.split('.').pop()?.substring(0, 4).toUpperCase() || 'FILE';
-const formatSize = (bytes) => { if (typeof bytes !== 'number') return ''; if (bytes < 1024) return `${bytes} B`; if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`; return `${(bytes / 1024 / 1024).toFixed(2)} MB`; };
+const formatSize = (bytes) => { if (typeof bytes !== 'number' || isNaN(bytes)) return ''; if (bytes < 1024) return `${bytes} B`; if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`; return `${(bytes / 1024 / 1024).toFixed(2)} MB`; };
 const formatDuration = (seconds) => { if (typeof seconds !== 'number') return '0:00'; const min = Math.floor(seconds / 60); const sec = Math.floor(seconds % 60); return `${min}:${sec < 10 ? '0' : ''}${sec}`; };
 const ttsAudioPlayer = ref(null);
 const ttsState = computed(() => ttsStore.messageTtsState[props.message.id] || 'idle');
 const showTtsControl = computed(() => isCharacterMessage.value && senderContact.value?.aiConfig?.tts?.enabled && props.message.type === 'text' && props.message.content?.trim().length > 0 && !props.message.isStreaming);
+
+const transferProgress = computed(() => transferStore.transfers[props.message.fileHash]);
+
+const formatEta = (seconds) => {
+  if (seconds === Infinity || !seconds) return '';
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}m ${Math.round(seconds % 60)}s`;
+};
 
 const callIcon = computed(() => {
   if (props.message.subType !== 'call-log' || !props.message.callData) return '';
@@ -155,7 +179,6 @@ function toggleTtsPlay() { ttsStore.togglePlay(props.message.id); }
 function retryTts() { ttsStore.requestTtsForMessage({ ...props.message, senderContact: senderContact.value }); }
 async function loadMedia() { if (!isMedia.value || !props.message.fileHash) return; const url = await mediaCacheService.getUrl(props.message.fileHash); if (url) displayUrl.value = url; else eventBus.on('file:ready', handleFileReady); }
 function handleFileReady({ fileHash }) { if (fileHash === props.message.fileHash) { loadMedia(); eventBus.off('file:ready', handleFileReady); } }
-// --- MODIFICATION START: Updated media click handler for previews ---
 function handleMediaClick() {
   const type = props.message.fileType;
   const isPreviewable = type && (type.startsWith('image/') || type.startsWith('video/') || type === 'application/pdf' || type.startsWith('text/'));
@@ -175,8 +198,6 @@ function handleMediaClick() {
     document.body.removeChild(a);
   }
 }
-// --- MODIFICATION END ---
-
 function toggleAudioPlay() { if (wavesurfer) wavesurfer.playPause(); }
 
 function showContextMenu(event) {
@@ -189,7 +210,6 @@ function showContextMenu(event) {
   if (chatStore.isMessageRetractable(props.message.id)) {
     items.push({ label: '撤回', action: () => chatStore.retractMessage(props.message.id) });
   }
-  // --- MODIFICATION START: Add context menu for file messages ---
   if (isMedia.value && displayUrl.value) {
     const type = props.message.fileType;
     const isPreviewable = type && (type.startsWith('image/') || type.startsWith('video/') || type === 'application/pdf' || type.startsWith('text/'));
@@ -208,7 +228,6 @@ function showContextMenu(event) {
       }
     });
   }
-  // --- MODIFICATION END ---
   uiStore.showContextMenu({ event, items, target: { type: 'message', id: props.message.id } });
 }
 async function resend() { if (props.message.status !== 'failed' || !isMyMessage.value) return; await chatStore.resendFailedMessages(chatStore.currentChatId); }
@@ -241,7 +260,12 @@ onMounted(async () => {
   }
 });
 
-watch(() => props.message.fileHash, loadMedia, { immediate: true });
+// --- MODIFICATION: Only load media if it's not a placeholder ---
+watch(() => [props.message.fileHash, props.message.status], ([newHash, newStatus]) => {
+  if (newStatus !== 'receiving') {
+    loadMedia();
+  }
+}, { immediate: true });
 
 onUnmounted(() => {
   eventBus.off('file:ready', handleFileReady);
@@ -270,7 +294,6 @@ onUnmounted(() => {
 .call-icon { font-size: 1rem; opacity: 0.8; }
 .tool-call-indicator :deep(.spinner-x-small) { width: 1em; height: 1em; border-width: 2px; }
 
-/* --- [动画] START: 思考中动画 --- */
 .thinking-dots { display: flex; gap: 3px; }
 .thinking-dots span {
   width: 6px; height: 6px; border-radius: 50%;
@@ -283,8 +306,6 @@ onUnmounted(() => {
   0%, 80%, 100% { transform: scale(0); }
   40% { transform: scale(1.0); }
 }
-/* --- [动画] END --- */
-
 
 .message-bubble { max-width: 75%; padding: var(--spacing-2) var(--spacing-3); border-radius: var(--border-radius-lg); position: relative; word-wrap: break-word; box-shadow: var(--shadow-sm); }
 .message-wrapper.sent .message-bubble { background-color: var(--color-message-sent-bg); color: var(--color-message-sent-text); border-bottom-right-radius: var(--border-radius-sm); }
@@ -310,14 +331,11 @@ onUnmounted(() => {
   max-height: 300px;
   border-radius: var(--border-radius-md);
   overflow: hidden;
-  /* --- MODIFICATION START: Styles for placeholder --- */
   background-color: var(--color-background-hover);
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Add an aspect-ratio to prevent layout shift. Assume a common ratio. */
   aspect-ratio: 16 / 9;
-  /* --- MODIFICATION END --- */
 }
 
 .media-placeholder {
@@ -329,19 +347,20 @@ onUnmounted(() => {
   background-color: var(--color-background-elevated);
 }
 
-/* --- [动画] START: 移除 Spinner，改为骨架屏组件 --- */
-/* The spinner component is replaced by the SkeletonLoader component in the template. */
-/* --- [动画] END --- */
-
-
 .media-image, .video-preview video { width: 100%; height: 100%; object-fit: cover; }
 .video-preview { position: relative; width: 100%; height: 100%; }
 .video-preview .play-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; color: white; background: rgba(0,0,0,0.4); border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-.file-info-wrapper { display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-2); background: rgba(0,0,0,0.02); border-radius: var(--border-radius-md); min-width: 200px; cursor: pointer; }
+.file-info-wrapper { display: flex; align-items: center; gap: var(--spacing-3); padding: var(--spacing-2); background: rgba(0,0,0,0.02); border-radius: var(--border-radius-md); min-width: 250px; min-height: 80px; cursor: pointer; box-sizing: border-box; }
 .colorscheme-dark .file-info-wrapper { background: rgba(255,255,255,0.05); }
 .file-icon-container { width: 40px; height: 40px; flex-shrink: 0; background-color: var(--color-background-hover); border-radius: var(--border-radius-md); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--color-text-secondary); }
 .file-info-text { overflow: hidden; }
-.file-name { font-weight: var(--font-weight-medium); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-info-text .file-name {
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
 .file-meta { font-size: var(--font-size-xs); color: var(--color-text-secondary); }
 .message-meta { display: flex; justify-content: flex-end; align-items: center; font-size: var(--font-size-xs); color: var(--color-text-tertiary); margin-top: var(--spacing-1); float: right; clear: both; }
 .message-wrapper.sent .message-meta { color: rgba(255, 255, 255, 0.7); }
@@ -358,4 +377,47 @@ onUnmounted(() => {
 .tts-button.playing::before { content: '❚❚'; font-size: 0.9rem; }
 .tts-button.error { color: var(--color-status-danger); font-size: 1.1rem; }
 .tts-button.error::before { content: none; }
+
+.media-placeholder.receiving {
+  position: relative;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  width: 280px;
+  min-height: 88px;
+  height: auto;
+  background-color: var(--color-background-elevated);
+  border: 1px dashed var(--color-border);
+  box-sizing: border-box;
+}
+.media-placeholder.receiving :deep(.spinner-small) {
+  flex-shrink: 0;
+}
+.transfer-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  flex-grow: 1;
+  overflow: hidden;
+  gap: var(--spacing-1);
+}
+.transfer-info .file-name {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+.transfer-progress {
+  width: 100%;
+  margin-top: var(--spacing-1);
+}
+.transfer-stats {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
 </style>

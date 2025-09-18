@@ -5,12 +5,15 @@ services:
     image: coturn/coturn
     container_name: coturn
     restart: always
-    ports:
-      - "3478:3478"
-      - "3478:3478/udp"
-      - "5349:5349"
-      - "5349:5349/udp"
-      - "50000-50100:50000-50100/udp"
+    # 直接使用主机的网络，这是最简单、性能最好的方式。
+    network_mode: host
     volumes:
-      - ./turnserver.conf:/etc/coturn/turnserver.conf
+      # 将当前目录下的 turnserver.conf 挂载到容器内
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+
+      # 将 Nginx 使用的证书挂载到容器内，供 Coturn 使用
+      # 请确保这些主机路径是正确的！
+      - ./ppmc.club_bundle.crt:/etc/coturn/certs/fullchain.pem:ro
+      - ./ppmc.club.key:/etc/coturn/certs/privkey.pem:ro
+
     command: ["-c", "/etc/coturn/turnserver.conf"]

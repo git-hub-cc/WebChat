@@ -5,6 +5,8 @@ import { dbService } from './dbService';
 import { log } from '@/utils';
 import AppSettings from '@/config/AppSettings';
 import { useUserStore } from '@/stores/userStore';
+import { useTransferStore } from '@/stores/transferStore';
+import { throttle } from 'lodash-es';
 
 let currentUserId = null;
 const connections = ref({});
@@ -17,6 +19,13 @@ const pendingReceivedChunks = {};
 const chunkMetaBuffer = {};
 const MANUAL_PEER_ID = '_manual_peer_';
 const statsIntervals = new Map();
+
+// Throttled function to update transfer stats without overwhelming the system.
+const _throttledCalculateStats = throttle(() => {
+    const transferStore = useTransferStore();
+    transferStore.calculateStats();
+}, 500, { leading: false, trailing: true });
+
 
 function _sendWsMessage(messageObject) {
     if (websocket && websocket.readyState === WebSocket.OPEN) {
@@ -130,6 +139,9 @@ function _cleanupConnection(peerId) {
         delete connections.value[peerId];
         delete pendingReceivedChunks[peerId];
         delete chunkMetaBuffer[peerId];
+        // Fail any ongoing transfers from this peer
+        const transferStore = useTransferStore();
+        transferStore.failTransfersForPeer(peerId);
         useUserStore().updateContactStatus(peerId, false);
         eventBus.emit('webrtc:disconnected', peerId);
         log(`WebRTC: 已清理 ${peerId} 的连接`, 'INFO');
@@ -137,7 +149,11 @@ function _cleanupConnection(peerId) {
 }
 function _handlePeerData(rawData, peerId) {
     const meta = chunkMetaBuffer[peerId];
-    if (meta) {
+    if (meta) { // This is a binary file chunk
+        const transferStore = useTransferStore();
+        transferStore.updateProgress(meta.chunkId, rawData.byteLength);
+        _throttledCalculateStats(); // Update stats based on progress
+
         const assembly = pendingReceivedChunks[peerId]?.[meta.chunkId];
         if (assembly) {
             assembly.chunks[assembly.received] = rawData;
@@ -147,20 +163,23 @@ function _handlePeerData(rawData, peerId) {
                 const receivedMeta = { ...meta };
                 delete pendingReceivedChunks[peerId][meta.chunkId];
                 delete chunkMetaBuffer[peerId];
+
+                transferStore.endTransfer(receivedMeta.chunkId); // Mark transfer as complete
+
                 log(`文件 "${receivedMeta.fileName}" 已从 ${peerId} 接收。`, 'INFO');
                 dbService.setItem('fileCache', {
                     id: receivedMeta.chunkId,
                     fileBlob: fileBlob,
                     metadata: { name: receivedMeta.fileName, type: receivedMeta.fileType, size: receivedMeta.fileSize }
                 }).then(() => {
-                    eventBus.emit('file:ready', { fileHash: receivedMeta.chunkId });
+                    eventBus.emit('file:ready', { fileHash: receivedMeta.chunkId, messageId: receivedMeta.messageId });
                     if (receivedMeta.messageId) {
                         webrtcService.sendMessage(peerId, { type: 'file-transfer-complete', ackId: receivedMeta.messageId }, true);
                     }
                 });
             }
         }
-    } else {
+    } else { // This is a JSON message
         try {
             const message = JSON.parse(new TextDecoder().decode(rawData));
             if (message.type === 'retract-message-request') {
@@ -189,6 +208,15 @@ function _handlePeerData(rawData, peerId) {
                     received: 0,
                     chunks: new Array(message.totalChunks)
                 };
+                // Emit event for chatStore to create a placeholder message
+                eventBus.emit('file:transfer-initiated', {
+                    peerId,
+                    messageId: message.messageId,
+                    fileHash: message.chunkId,
+                    fileName: message.fileName,
+                    fileSize: message.fileSize,
+                    fileType: message.fileType
+                });
             } else {
                 eventBus.emit('webrtc:message', { peerId, message });
             }
@@ -244,7 +272,6 @@ function _setupPeerListeners(peer, peerId) {
             conn.isConnected = true;
         }
         _startStatsPolling(peer, peerId);
-        // --- MODIFICATION START: Add diagnostic logging for successful connection ---
         try {
             peer.getStats((err, stats) => {
                 if (err) return;
@@ -258,7 +285,6 @@ function _setupPeerListeners(peer, peerId) {
                 }
             });
         } catch(e) { /* silently fail if stats not available */ }
-        // --- MODIFICATION END ---
         if (peerId === MANUAL_PEER_ID) {
             eventBus.emit('webrtc:manual-connection-ready');
         } else {
@@ -482,9 +508,7 @@ export const webrtcService = {
 
         const videoSender = conn.peer._pc.getSenders().find(s => s.track?.kind === 'video');
         if (!videoSender) {
-            // --- MODIFICATION START: Downgrade warning to debug log ---
             log(`Cannot adjust bitrate: No active video sender found for peer ${peerId}. (This is expected for audio-only calls)`, 'DEBUG');
-            // --- MODIFICATION END ---
             return;
         }
 

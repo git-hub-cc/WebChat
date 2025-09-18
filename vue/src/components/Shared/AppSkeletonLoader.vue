@@ -94,6 +94,11 @@
   width: 100%;
   height: 100%;
   position: relative;
+  /* --- FIX START: Center the skeleton container --- */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* --- FIX END --- */
 }
 /* ✅ MODIFICATION END */
 

@@ -106,18 +106,51 @@ export default {
         iceServers: [
             // ** 1. 公共 STUN 服务器 (建议多个以提高可靠性) **
             {
-                urls: "turn:175.178.216.24:3478?transport=tcp",
-                username: "test",
-                credential: "123456"
-            },
-            {
-                urls: "turn:175.178.216.24:3478?transport=udp",
+                urls: "turns:ppmc.club:5349?transport=tcp",
                 username: "test",
                 credential: "123456"
             },
             { urls: "stun:stun.miwifi.com:3478" }, // 小米 STUN
-            { urls: "stun:stun.qq.com:3478" }, // 腾讯 STUN
             { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun2.l.google.com:19302" },
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            { urls: "stun:stun.hoiio.com:3478" },
+            { urls: "stun:stun4.l.google.com:19302" },
+            { urls: "stun:stun.chat.bilibili.com:3478" },
+            { urls: "stun:stun3.l.google.com:19302" },
+            { urls: "stun:stun.cloudflare.com:3478" },
+            { urls: "stun:stun.nfon.net:3478" },
+            { urls: "stun:stun.voip.blackberry.com:3478" },
+            { urls: "stun:stun.it1.hr:3478" },
+            { urls: "stun:stun.voys.nl:3478" },
+            { urls: "stun:stun.easybell.de:3478" },
+            { urls: "stun:stun.gmx.de:3478" },
+            { urls: "stun:stun.siplogin.de:3478" },
+            { urls: "stun:stun.1und1.de:3478" },
+            { urls: "stun:stun.freeswitch.org:3478" },
+            { urls: "stun:stun.acrobits.cz:3478" },
+            { urls: "stun:stun.aa.net.uk:3478" },
+            { urls: "stun:stun.sonetel.net:3478" },
+            { urls: "stun:stun.nextcloud.com:443" },
+            { urls: "stun:stun.netgsm.com.tr:3478" },
+            { urls: "stun:stun.callromania.ro:3478" },
+            { urls: "stun:stun.usfamily.net:3478" },
+            { urls: "stun:stun.annatel.net:3478" },
+            { urls: "stun:stun.gmx.net:3478" },
+            { urls: "stun:stun.solnet.ch:3478" },
+            { urls: "stun:stun.schlund.de:3478" },
+            { urls: "stun:stun.sonetel.com:3478" },
+            { urls: "stun:stun.commpeak.com:3478" },
+            { urls: "stun:stun.cope.es:3478" },
+            { urls: "stun:stun.voipgate.com:3478" },
+            { urls: "stun:stun.antisip.com:3478" },
+            { urls: "stun:stun.epygi.com:3478" },
+            { urls: "stun:stun.dcalling.de:3478" },
+            { urls: "stun:stun.linphone.org:3478" },
+            { urls: "stun:stun.sip.us:3478" },
+            { urls: "stun:stun.avigora.fr:3478" },
+            { urls: "stun:stun.zadarma.com:3478" }
         ],
         // 保持其他策略不变
         iceTransportPolicy: 'all', // 'all' 意味着同时尝试 P2P 和中继
