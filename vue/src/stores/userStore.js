@@ -31,38 +31,45 @@ export const useUserStore = defineStore('user', () => {
 
 
     // --- GETTERS ---
-    // [核心修改] 这是阶段二的关键。状态计算逻辑被简化，并且更加准确。
-    // 它不再关心用户在哪个服务器，只关心两个核心问题：
-    // 1. 用户是否在全网在线列表里？ (isGloballyOnline)
-    // 2. 我和这个用户之间是否已经建立了P2P连接？ (isConnected)
+    // ✅ MODIFICATION START: Updated getter to incorporate connectionType
     const getContactCombinedStatus = computed(() => (contactId) => {
         const contact = contacts.value[contactId];
-        const isConnected = webrtcService.connections.value[contactId]?.isConnected ?? false;
-        // 关键检查：用户是否在线，取决于他是否存在于从后端获取的全网用户列表中
+        const connDetails = contact?.connectionDetails || {};
+        const { isConnected, connectionType } = connDetails;
+
         const isGloballyOnline = allOnlineUsers.value.some(u => u.userId === contactId);
 
-        // 优先处理特殊状态
+        // Handle special cases first
         if (typingContacts.value[contactId]) {
-            return { isOnlineDisplay: true, isConnected: true, isGloballyOnline: true, isAi: false, statusText: '正在输入...', statusClass: 'online' };
+            return { ...connDetails, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '正在输入...', statusClass: 'online' };
         }
         if (contact?.isAI) {
-            return { isOnlineDisplay: isAiServiceHealthy.value, isConnected: isAiServiceHealthy.value, isGloballyOnline: isAiServiceHealthy.value, isAi: true, statusText: aiServiceStatusMessage.value, statusClass: isAiServiceHealthy.value ? 'online' : 'offline' };
+            return { ...connDetails, isOnlineDisplay: isAiServiceHealthy.value, isGloballyOnline: isAiServiceHealthy.value, isAi: true, statusText: aiServiceStatusMessage.value, statusClass: isAiServiceHealthy.value ? 'online' : 'offline' };
         }
         if (contact?.isSpecial) {
-            return { isOnlineDisplay: true, isConnected: true, isGloballyOnline: true, isAi: false, statusText: '特殊联系人', statusClass: 'online' };
+            return { ...connDetails, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '特殊联系人', statusClass: 'online' };
         }
 
-        // 核心状态判断逻辑
+        // Core logic for regular contacts
         if (isConnected) {
-            return { isOnlineDisplay: true, isConnected: true, isGloballyOnline: true, isAi: false, statusText: '在线 (已连接)', statusClass: 'online' };
-        }
-        if (isGloballyOnline) {
-            return { isOnlineDisplay: true, isConnected: false, isGloballyOnline: true, isAi: false, statusText: '在线 (未连接)', statusClass: 'warning' };
+            let statusText = '在线';
+            if (connectionType === 'p2p' || connectionType === 'p2p-lan') {
+                statusText += ' (直连)';
+            } else if (connectionType === 'relay') {
+                statusText += ' (服务器中继)';
+            } else {
+                statusText += ' (已连接)';
+            }
+            return { ...connDetails, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText, statusClass: 'online' };
         }
 
-        // 如果以上都不是，则用户离线
-        return { isOnlineDisplay: false, isConnected: false, isGloballyOnline: false, isAi: false, statusText: '离线', statusClass: 'offline' };
+        if (isGloballyOnline) {
+            return { ...connDetails, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '在线 (未连接)', statusClass: 'warning' };
+        }
+
+        return { ...connDetails, isOnlineDisplay: false, isGloballyOnline: false, isAi: false, statusText: '离线', statusClass: 'offline' };
     });
+    // ✅ MODIFICATION END
 
 
     // --- ACTIONS ---
@@ -95,7 +102,9 @@ export const useUserStore = defineStore('user', () => {
                 c.aiConfig = c.aiConfig || {};
                 c.aiConfig.tts = { ...DEFAULT_TTS_CONFIG, ...(c.aiConfig.tts || {}) };
             }
-            contactsMap[c.id] = { type: 'contact', ...c, isOnline: false };
+            // ✅ MODIFICATION START: Initialize connectionDetails
+            contactsMap[c.id] = { type: 'contact', ...c, connectionDetails: { isConnected: false, connectionType: null } };
+            // ✅ MODIFICATION END
         });
         contacts.value = contactsMap;
         await ensureSpecialContacts();
@@ -155,9 +164,10 @@ export const useUserStore = defineStore('user', () => {
                 lastMessage: existingContact?.lastMessage || def.initialMessage || '你好！',
                 lastTime: existingContact?.lastTime || new Date(0).toISOString(),
                 unread: existingContact?.unread || 0,
-                // --- FIX START: Ensure default selection is always "Default Behavior" (null) ---
                 selectedChapterId: existingContact?.selectedChapterId ?? null,
-                // --- FIX END ---
+                // ✅ MODIFICATION START: Persist connectionDetails
+                connectionDetails: existingContact?.connectionDetails || { isConnected: false, connectionType: null },
+                // ✅ MODIFICATION END
                 aiConfig: {
                     ...(def.aiConfig || {}),
                     ...(existingContact?.aiConfig || {}),
@@ -211,7 +221,10 @@ export const useUserStore = defineStore('user', () => {
         } else {
             const newContact = {
                 id: contactData.id, name: finalName, lastMessage: '', lastTime: new Date().toISOString(),
-                unread: 0, isOnline: false, type: 'contact', avatarText: finalName.charAt(0).toUpperCase()
+                unread: 0, type: 'contact', avatarText: finalName.charAt(0).toUpperCase(),
+                // ✅ MODIFICATION START: Initialize connectionDetails for new contacts
+                connectionDetails: { isConnected: false, connectionType: null }
+                // ✅ MODIFICATION END
             };
             contacts.value[contactData.id] = newContact;
             await dbService.setItem('contacts', newContact);
@@ -329,9 +342,24 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    function updateContactStatus(contactId, isConnected) {
-        log(`连接状态变更 for ${contactId}: ${isConnected}`, 'DEBUG');
+    // ✅ MODIFICATION START: New centralized action for updating connection details
+    function updateContactConnectionDetails(contactId, { isConnected, connectionType }) {
+        const contact = contacts.value[contactId];
+        if (contact) {
+            if (!contact.connectionDetails) {
+                contact.connectionDetails = {};
+            }
+            if (isConnected !== undefined) {
+                contact.connectionDetails.isConnected = isConnected;
+            }
+            if (connectionType !== undefined) {
+                contact.connectionDetails.connectionType = connectionType;
+            }
+            log(`Connection details updated for ${contactId}: isConnected=${contact.connectionDetails.isConnected}, type=${contact.connectionDetails.connectionType}`, 'DEBUG');
+        }
     }
+    // ✅ MODIFICATION END
+
 
     return {
         userId, userName, contacts, isAiServiceHealthy, aiServiceStatusMessage,
@@ -339,7 +367,9 @@ export const useUserStore = defineStore('user', () => {
         getContactCombinedStatus, typingContacts,
         init,
         fetchAllOnlineUsers,
-        addContact, removeContact, updateAiServiceStatus, updateContactStatus, clearUnread,
+        addContact, removeContact, updateAiServiceStatus,
+        updateContactConnectionDetails, // Expose the new action
+        clearUnread,
         incrementUnread, updateContactLastMessage, removeAllContacts, setSelectedChapterForAI, saveTtsSettings,
         ensureSpecialContacts
     };

@@ -206,7 +206,7 @@ onUnmounted(() => {
   top: 80px; /* Below the header */
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(var(--color-status-danger-rgb), 0.8);
+  background-color: rgba(var(--color-status-danger), 0.8);
   color: white;
   padding: var(--spacing-2) var(--spacing-4);
   border-radius: var(--border-radius-md);

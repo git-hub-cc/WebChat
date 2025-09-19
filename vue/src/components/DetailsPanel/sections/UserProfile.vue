@@ -10,7 +10,12 @@
       <Avatar :entity="contact" size="xl" class="profile-avatar" :is-online="combinedStatus.isOnlineDisplay" />
       <h2 class="profile-name">{{ contact.name }}</h2>
       <p class="profile-id">ID: {{ contact.id }}</p>
-      <p class="profile-status" :class="combinedStatus.statusClass">{{ combinedStatus.statusText }}</p>
+      <!-- ✅ MODIFICATION START: Display connection type icon -->
+      <p class="profile-status" :class="combinedStatus.statusClass">
+        <span v-if="connectionIcon" class="connection-icon" :title="connectionTitle">{{ connectionIcon }}</span>
+        {{ combinedStatus.statusText }}
+      </p>
+      <!-- ✅ MODIFICATION END -->
     </div>
     <hr>
 
@@ -63,6 +68,23 @@ const contact = computed(() => userStore.contacts[chatStore.currentChatId]);
 
 const combinedStatus = computed(() => contact.value ? userStore.getContactCombinedStatus(contact.value.id) : {});
 
+// ✅ MODIFICATION START: Add computed properties for the connection icon and title
+const connectionIcon = computed(() => {
+  const type = combinedStatus.value.connectionType;
+  if (type === 'p2p' || type === 'p2p-lan') return '⚡'; // P2P icon
+  if (type === 'relay') return '☁️'; // Relay icon
+  return null; // No icon for other states
+});
+
+const connectionTitle = computed(() => {
+  const type = combinedStatus.value.connectionType;
+  if (type === 'p2p' || type === 'p2p-lan') return 'P2P 直连';
+  if (type === 'relay') return '服务器中继';
+  return '';
+});
+// ✅ MODIFICATION END
+
+
 const isThemeSpecialContact = computed(() => {
   if (!contact.value) return false;
   return settingsStore.currentSpecialContacts.some(sc => sc.id === contact.value.id);
@@ -89,7 +111,16 @@ const deleteContact = () => {
 .profile-name { font-size: var(--font-size-xl); font-weight: var(--font-weight-bold); }
 .character-active .profile-name { color: var(--character-primary-color); }
 .profile-id { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-2); word-break: break-all; }
-.profile-status { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-bottom: var(--spacing-4); }
+.profile-status {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-4);
+  /* ✅ MODIFICATION START: Flex layout for status text and icon */
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  /* ✅ MODIFICATION END */
+}
 .profile-status.online { color: var(--color-status-success); }
 .profile-status.offline { color: var(--color-status-danger); }
 .profile-status.warning { color: var(--color-status-warning); }
@@ -104,16 +135,21 @@ hr { border: none; border-top: 1px solid var(--color-border); margin: 0 var(--sp
 
 .actions { margin-top: var(--spacing-5); }
 .btn-danger { background-color: var(--color-status-danger); color: white; padding: var(--spacing-2) var(--spacing-4); border-radius: var(--border-radius-md); font-weight: var(--font-weight-medium); width: 100%; }
-/* --- MODIFICATION START: Style for top-aligned skeleton --- */
 .loading-state {
   display: flex;
   justify-content: flex-start; /* Align skeleton to the top */
 }
-/* --- MODIFICATION END --- */
 
 .resource-section {
   margin-top: var(--spacing-5);
   margin-bottom: var(--spacing-4);
   text-align: left;
 }
+
+/* ✅ MODIFICATION START: Style for the new connection icon */
+.connection-icon {
+  font-size: 1.1em;
+  line-height: 1;
+}
+/* ✅ MODIFICATION END */
 </style>

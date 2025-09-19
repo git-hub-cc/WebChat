@@ -124,7 +124,7 @@ watch(
   background: linear-gradient(
       to right,
       transparent 20%,
-      rgba(var(--color-brand-primary-rgb), 0.2) 50%,
+      rgba(var(--color-brand-primary), 0.2) 50%,
       transparent 80%
   );
   animation: highlight-bar 1.5s var(--transition-easing);

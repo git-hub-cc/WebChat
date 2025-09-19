@@ -142,7 +142,9 @@ function _cleanupConnection(peerId) {
         // Fail any ongoing transfers from this peer
         const transferStore = useTransferStore();
         transferStore.failTransfersForPeer(peerId);
-        useUserStore().updateContactStatus(peerId, false);
+        // ✅ MODIFICATION START: Update userStore with connection details on cleanup
+        useUserStore().updateContactConnectionDetails(peerId, { isConnected: false, connectionType: null });
+        // ✅ MODIFICATION END
         eventBus.emit('webrtc:disconnected', peerId);
         log(`WebRTC: 已清理 ${peerId} 的连接`, 'INFO');
     }
@@ -256,6 +258,57 @@ function _startStatsPolling(peer, peerId) {
     statsIntervals.set(peerId, intervalId);
 }
 
+// ✅ MODIFICATION START: New function for connection type diagnostics
+async function _diagnoseConnectionType(peer, peerId) {
+    const userStore = useUserStore();
+    try {
+        // Simple-peer uses callbacks, so we wrap getStats in a Promise
+        const stats = await new Promise((resolve, reject) => {
+            peer.getStats((err, reports) => {
+                if (err) return reject(err);
+                resolve(reports);
+            });
+        });
+
+        let connectionType = 'unknown';
+
+        // The stats object from simple-peer is an array of reports
+        const candidatePairs = stats.filter(report => report.type === 'candidate-pair' && report.state === 'succeeded');
+
+        if (candidatePairs.length > 0) {
+            const activePair = candidatePairs[0]; // Usually the first succeeded pair is the active one
+            const localCandidate = stats.find(r => r.id === activePair.localCandidateId);
+            const remoteCandidate = stats.find(r => r.id === activePair.remoteCandidateId);
+
+            if (localCandidate && remoteCandidate) {
+                const localType = localCandidate.candidateType;
+                const remoteType = remoteCandidate.candidateType;
+                log(`[DIAGNOSTIC] Connection to ${peerId}: Local=${localType} -> Remote=${remoteType}`, 'INFO');
+
+                if (localType === 'relay' || remoteType === 'relay') {
+                    connectionType = 'relay';
+                } else if (localType === 'srflx' || remoteType === 'srflx') {
+                    connectionType = 'p2p';
+                } else if (localType === 'host' && remoteType === 'host') {
+                    connectionType = 'p2p-lan';
+                }
+            }
+        }
+
+        if (connectionType !== 'unknown') {
+            log(`[DIAGNOSTIC] Final connection type for ${peerId} is: ${connectionType.toUpperCase()}`, 'INFO');
+            userStore.updateContactConnectionDetails(peerId, { connectionType });
+        } else {
+            log(`[DIAGNOSTIC] Could not determine final connection type for ${peerId}.`, 'WARN');
+            userStore.updateContactConnectionDetails(peerId, { connectionType: 'unknown' });
+        }
+    } catch (e) {
+        log(`[DIAGNOSTIC] Failed to get stats for peer ${peerId}: ${e.message}`, 'ERROR');
+        userStore.updateContactConnectionDetails(peerId, { connectionType: 'error' });
+    }
+}
+// ✅ MODIFICATION END
+
 function _setupPeerListeners(peer, peerId) {
     peer.on('signal', signalData => {
         if (peerId === MANUAL_PEER_ID) {
@@ -272,25 +325,18 @@ function _setupPeerListeners(peer, peerId) {
             conn.isConnected = true;
         }
         _startStatsPolling(peer, peerId);
-        try {
-            peer.getStats((err, stats) => {
-                if (err) return;
-                const selectedPair = stats.find(s => s.type === 'candidate-pair' && s.state === 'succeeded');
-                if (selectedPair) {
-                    const localCandidate = stats.find(s => s.id === selectedPair.localCandidateId);
-                    const remoteCandidate = stats.find(s => s.id === selectedPair.remoteCandidateId);
-                    if (localCandidate && remoteCandidate) {
-                        log(`[DIAGNOSTIC] Connection to ${peerId} established via: Local=${localCandidate.candidateType} -> Remote=${remoteCandidate.candidateType}`, 'INFO');
-                    }
-                }
-            });
-        } catch(e) { /* silently fail if stats not available */ }
+
+        // ✅ MODIFICATION START: Trigger connection diagnostics
+        _diagnoseConnectionType(peer, peerId);
+        // ✅ MODIFICATION END
+
         if (peerId === MANUAL_PEER_ID) {
             eventBus.emit('webrtc:manual-connection-ready');
         } else {
             const userStore = useUserStore();
             if (!userStore.contacts[peerId]) await userStore.addContact({ id: peerId });
-            userStore.updateContactStatus(peerId, true);
+            // The userStore now handles more detailed status updates
+            userStore.updateContactConnectionDetails(peerId, { isConnected: true });
         }
         eventBus.emit('webrtc:connected', peerId);
     });
@@ -614,7 +660,7 @@ export const webrtcService = {
         _setupPeerListeners(manualConn.peer, targetId);
         const userStore = useUserStore();
         await userStore.addContact({ id: targetId });
-        userStore.updateContactStatus(targetId, true);
+        userStore.updateContactConnectionDetails(targetId, { isConnected: true });
         eventBus.emit('showNotification', { message: `已成功连接到 ${userStore.contacts[targetId]?.name || targetId}`, type: 'success' });
         return true;
     }

@@ -62,7 +62,7 @@ function handleDrop(event) {
 .drag-overlay {
   position: absolute;
   inset: 0;
-  background-color: rgba(var(--color-brand-primary-rgb), 0.8);
+  background-color: rgba(var(--color-brand-primary), 0.8);
   border: 3px dashed white;
   border-radius: var(--border-radius-lg);
   margin: var(--spacing-3);

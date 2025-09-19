@@ -330,8 +330,8 @@ onUnmounted(() => {
 .send-button { background-color: var(--color-brand-primary); color: white; border-radius: 50%; width: 36px; height: 36px; font-size: 1.2rem; }
 .voice-button.recording { color: var(--color-status-danger); animation: pulse 1.5s infinite; }
 .voice-button.stt-active { color: var(--color-brand-primary); animation: pulse-stt 1.5s infinite; }
-@keyframes pulse-stt { 0% { box-shadow: 0 0 0 0 rgba(var(--color-brand-primary-rgb), 0.4); } 70% { box-shadow: 0 0 0 10px rgba(var(--color-brand-primary-rgb), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--color-brand-primary-rgb), 0); } }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--color-status-danger-rgb), 0.4); } 70% { box-shadow: 0 0 0 10px rgba(var(--color-status-danger-rgb), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--color-status-danger-rgb), 0); } }
+@keyframes pulse-stt { 0% { box-shadow: 0 0 0 0 rgba(var(--color-brand-primary), 0.4); } 70% { box-shadow: 0 0 0 10px rgba(var(--color-brand-primary), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--color-brand-primary), 0); } }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(var(--color-status-danger), 0.4); } 70% { box-shadow: 0 0 0 10px rgba(var(--color-status-danger), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--color-status-danger), 0); } }
 .preview-container { padding: var(--spacing-2); margin-bottom: var(--spacing-2); background: var(--color-background-hover); border-radius: var(--border-radius-md); font-size: var(--font-size-sm); display: flex; justify-content: space-between; align-items: center; }
 .preview-actions { display: flex; gap: var(--spacing-2); }
 .preview-actions button { border-radius: 4px; padding: 4px 8px; color: white; font-weight: 500;}

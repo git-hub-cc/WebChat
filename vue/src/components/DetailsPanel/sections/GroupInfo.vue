@@ -169,7 +169,7 @@ hr { border: none; border-top: 1px solid var(--color-border); margin: var(--spac
 .member-item { display: flex; align-items: center; padding: var(--spacing-2) 0; gap: var(--spacing-3); }
 .member-info { flex-grow: 1; }
 .member-name { font-weight: var(--font-weight-medium); display: block; }
-.owner-badge { font-size: 0.7rem; color: var(--color-brand-primary); font-weight: bold; margin-left: var(--spacing-1); background-color: rgba(var(--color-brand-primary-rgb), 0.1); padding: 2px 5px; border-radius: 4px; }
+.owner-badge { font-size: 0.7rem; color: var(--color-brand-primary); font-weight: bold; margin-left: var(--spacing-1); background-color: rgba(var(--color-brand-primary), 0.1); padding: 2px 5px; border-radius: 4px; }
 .member-status { font-size: var(--font-size-sm); color: var(--color-text-secondary); }
 .member-status.online { color: var(--color-status-success); }
 .add-member-section h3 { margin-bottom: var(--spacing-2); }

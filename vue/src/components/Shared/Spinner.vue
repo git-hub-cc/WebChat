@@ -22,7 +22,7 @@ const sizeClass = computed(() => props.size ? `spinner-${props.size}` : '');
   height: 48px;
   border-radius: 50%;
   /* --- [动画] START: 优化边框颜色和动画 --- */
-  border: 5px solid rgba(var(--color-brand-primary-rgb), 0.2);
+  border: 5px solid rgba(var(--color-brand-primary), 0.2);
   border-top-color: var(--color-brand-primary);
   animation: spin 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
   /* --- [动画] END --- */

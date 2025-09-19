@@ -95,7 +95,7 @@ export default {
         max_tokens: 2048,
         ttsApiEndpoint: 'https://gsv2p.acgnai.top',
     },
-    // --- MODIFICATION START: Upgraded ICE Server Configuration for Production Best Practices ---
+    // --- ✅ MODIFICATION START: Upgraded ICE Server Configuration for Production Best Practices ---
     // 最佳实践:
     // 1. 使用多个 STUN 服务器以增加冗余。
     // 2. 部署全球分布的 TURN 服务器集群。
@@ -104,53 +104,25 @@ export default {
     //    您自己部署的 Coturn 或其他 TURN 服务器地址、用户名和密码。
     peerConnectionConfig: {
         iceServers: [
-            // ** 1. 公共 STUN 服务器 (建议多个以提高可靠性) **
+            // ** 1. 自建 TURN 服务器 (同时提供 UDP 和 TCP 选项) **
             {
-                urls: "turns:ppmc.club:5349?transport=tcp",
+                urls: "turn:ppmc.club:3478?transport=udp", // [新增] UDP 选项
                 username: "test",
                 credential: "123456"
             },
-            { urls: "stun:stun.miwifi.com:3478" }, // 小米 STUN
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun2.l.google.com:19302" },
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" },
-            { urls: "stun:stun.hoiio.com:3478" },
-            { urls: "stun:stun4.l.google.com:19302" },
+            {
+                urls: "turns:ppmc.club:5349?transport=tcp", // [保留] TCP/TLS 选项
+                username: "test",
+                credential: "123456"
+            },
+
+            // ** 2. 公共 STUN 服务器 (建议多个以提高可靠性) **
+            { urls: "stun:stun.miwifi.com:3478" },
             { urls: "stun:stun.chat.bilibili.com:3478" },
-            { urls: "stun:stun3.l.google.com:19302" },
-            { urls: "stun:stun.cloudflare.com:3478" },
-            { urls: "stun:stun.nfon.net:3478" },
-            { urls: "stun:stun.voip.blackberry.com:3478" },
-            { urls: "stun:stun.it1.hr:3478" },
-            { urls: "stun:stun.voys.nl:3478" },
-            { urls: "stun:stun.easybell.de:3478" },
-            { urls: "stun:stun.gmx.de:3478" },
-            { urls: "stun:stun.siplogin.de:3478" },
-            { urls: "stun:stun.1und1.de:3478" },
-            { urls: "stun:stun.freeswitch.org:3478" },
-            { urls: "stun:stun.acrobits.cz:3478" },
-            { urls: "stun:stun.aa.net.uk:3478" },
-            { urls: "stun:stun.sonetel.net:3478" },
-            { urls: "stun:stun.nextcloud.com:443" },
-            { urls: "stun:stun.netgsm.com.tr:3478" },
-            { urls: "stun:stun.callromania.ro:3478" },
-            { urls: "stun:stun.usfamily.net:3478" },
-            { urls: "stun:stun.annatel.net:3478" },
-            { urls: "stun:stun.gmx.net:3478" },
-            { urls: "stun:stun.solnet.ch:3478" },
-            { urls: "stun:stun.schlund.de:3478" },
-            { urls: "stun:stun.sonetel.com:3478" },
-            { urls: "stun:stun.commpeak.com:3478" },
-            { urls: "stun:stun.cope.es:3478" },
-            { urls: "stun:stun.voipgate.com:3478" },
-            { urls: "stun:stun.antisip.com:3478" },
-            { urls: "stun:stun.epygi.com:3478" },
-            { urls: "stun:stun.dcalling.de:3478" },
             { urls: "stun:stun.linphone.org:3478" },
-            { urls: "stun:stun.sip.us:3478" },
-            { urls: "stun:stun.avigora.fr:3478" },
-            { urls: "stun:stun.zadarma.com:3478" }
+            { urls: "stun:stun.cloudflare.com:3478" },
+            { urls: "stun:stun.nextcloud.com:443" },
+            { urls: "stun:stun.l.google.com:19302" }
         ],
         // 保持其他策略不变
         iceTransportPolicy: 'all', // 'all' 意味着同时尝试 P2P 和中继
@@ -159,5 +131,5 @@ export default {
         iceCandidatePoolSize: 0,
         sdpSemantics: 'unified-plan',
     },
-    // --- MODIFICATION END ---
+    // --- ✅ MODIFICATION END ---
 };
