@@ -34,11 +34,11 @@
           <span class="duration-label">{{ formatDuration(message.duration) }}</span>
         </div>
 
-        <!-- --- MODIFICATION START: Updated media handling for previews and placeholders --- -->
+        <!-- --- ✅ MODIFICATION START: Updated media handling for previews and placeholders --- -->
         <div v-else-if="isMedia" class="media-content" @click="handleMediaClick">
           <!-- 1. Receiving Placeholder -->
           <div v-if="message.status === 'receiving'" class="media-placeholder receiving">
-            <Spinner size="small" />
+            <!--            <Spinner size="small" />-->
             <div class="transfer-info">
               <span class="file-name" :title="message.fileName">{{ message.fileName }}</span>
               <progress
@@ -63,11 +63,11 @@
               <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image">
             </div>
             <div v-else-if="isPreviewableMedia" class="media-preview-container">
-              <div class="media-placeholder" v-if="!displayUrl">
+              <div class="media-placeholder" v-if="!displayUrl && !posterUrl">
                 <SkeletonLoader type="grid-item" :shimmer="true" />
               </div>
-              <div v-if="displayUrl" class="video-preview">
-                <video v-if="message.fileType?.startsWith('video/')" :src="displayUrl" preload="metadata"></video>
+              <div v-if="displayUrl || posterUrl" class="video-preview">
+                <video v-if="message.fileType?.startsWith('video/')" :src="displayUrl" :poster="posterUrl" preload="none"></video>
                 <img v-else :src="displayUrl" :alt="message.fileName || 'image preview'" class="media-image">
                 <div v-if="message.fileType?.startsWith('video/')" class="play-overlay">▶</div>
               </div>
@@ -81,7 +81,7 @@
             </div>
           </div>
         </div>
-        <!-- --- MODIFICATION END --- -->
+        <!-- --- ✅ MODIFICATION END --- -->
 
 
         <div v-if="showTtsControl" class="tts-control">
@@ -136,6 +136,7 @@ const senderName = computed(() => senderContact.value ? senderContact.value.name
 const formattedContent = computed(() => props.message.type === 'text' && props.message.content ? formatMessageText(props.message.content) : '');
 const formattedTimestamp = computed(() => new Date(props.message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 const displayUrl = ref(null);
+const posterUrl = ref(null);
 const isPlaying = ref(false);
 
 const waveformRef = ref(null);
@@ -177,8 +178,25 @@ const callIcon = computed(() => {
 watch(ttsState, (newState, oldState) => { const audioUrl = ttsStore.audioUrlCache.get(props.message.id); if (newState === 'playing' && audioUrl) { if (!ttsAudioPlayer.value) { ttsAudioPlayer.value = new Audio(audioUrl); ttsAudioPlayer.value.onended = () => ttsStore.setPlaybackFinished(props.message.id); ttsAudioPlayer.value.onpause = () => ttsStore.setPlaybackFinished(props.message.id); } ttsAudioPlayer.value.play().catch(e => { log(`Error playing TTS audio: ${e.message}`, 'ERROR'); ttsStore.messageTtsState[props.message.id] = 'error'; }); } else if (newState === 'ready' && oldState === 'playing') { if (ttsAudioPlayer.value) ttsAudioPlayer.value.pause(); } });
 function toggleTtsPlay() { ttsStore.togglePlay(props.message.id); }
 function retryTts() { ttsStore.requestTtsForMessage({ ...props.message, senderContact: senderContact.value }); }
-async function loadMedia() { if (!isMedia.value || !props.message.fileHash) return; const url = await mediaCacheService.getUrl(props.message.fileHash); if (url) displayUrl.value = url; else eventBus.on('file:ready', handleFileReady); }
-function handleFileReady({ fileHash }) { if (fileHash === props.message.fileHash) { loadMedia(); eventBus.off('file:ready', handleFileReady); } }
+async function loadMedia() {
+  if (!isMedia.value || !props.message.fileHash) return;
+  const mainUrl = await mediaCacheService.getUrl(props.message.fileHash);
+  if (mainUrl) displayUrl.value = mainUrl;
+
+  if (props.message.fileType?.startsWith('video/')) {
+    const thumbUrl = await mediaCacheService.getUrl(props.message.fileHash, true);
+    if (thumbUrl) posterUrl.value = thumbUrl;
+  }
+
+  if (!mainUrl) eventBus.on('file:ready', handleFileReady);
+}
+function handleFileReady({ fileHash }) {
+  if (fileHash === props.message.fileHash) {
+    posterUrl.value = null; // Reset poster to force re-evaluation
+    loadMedia();
+    eventBus.off('file:ready', handleFileReady);
+  }
+}
 function handleMediaClick() {
   const type = props.message.fileType;
   const isPreviewable = type && (type.startsWith('image/') || type.startsWith('video/') || type === 'application/pdf' || type.startsWith('text/'));
@@ -260,7 +278,6 @@ onMounted(async () => {
   }
 });
 
-// --- MODIFICATION: Only load media if it's not a placeholder ---
 watch(() => [props.message.fileHash, props.message.status], ([newHash, newStatus]) => {
   if (newStatus !== 'receiving') {
     loadMedia();
@@ -314,7 +331,11 @@ onUnmounted(() => {
 .message-content { line-height: var(--line-height-base); white-space: pre-wrap; }
 .message-bubble.character-message { background: var(--character-message-bg, var(--color-message-received-bg)); border: 1px solid var(--character-accent-color, transparent); box-shadow: 0 0 8px var(--character-glow-color, transparent); }
 .message-bubble.character-message .sender-name { color: var(--character-primary-color, var(--color-brand-secondary)); }
-.media-content { cursor: pointer; }
+.media-content {
+  cursor: pointer;
+  flex-grow: 1;
+  min-width: 0;
+}
 .sticker-wrapper { padding: 0; background: transparent !important; position: relative; width: 128px; height: 128px; }
 .sticker-image { max-width: 100%; max-height: 100%; display: block; }
 .audio-content { display: flex; align-items: center; gap: var(--spacing-2); min-width: 300px; }
@@ -384,7 +405,8 @@ onUnmounted(() => {
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-2) var(--spacing-3);
-  width: 280px;
+  width: 100%;
+  max-width: 280px;
   min-height: 88px;
   height: auto;
   background-color: var(--color-background-elevated);
@@ -402,6 +424,7 @@ onUnmounted(() => {
   flex-grow: 1;
   overflow: hidden;
   gap: var(--spacing-1);
+  min-width: 0;
 }
 .transfer-info .file-name {
   font-size: var(--font-size-sm);

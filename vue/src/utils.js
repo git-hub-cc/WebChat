@@ -185,3 +185,67 @@ export async function fetchApiStream(url, requestBody, headers, onChunkReceived,
     // Call onStreamEnd for non-[DONE] terminated streams
     if (onStreamEnd) onStreamEnd(fullContent);
 }
+
+/**
+ * --- ✅ MODIFICATION START: Added video thumbnail generator ---
+ * 从视频 Blob 生成一张预览图 (Data URL)。
+ * @param {Blob} videoBlob - 视频的 Blob 对象。
+ * @returns {Promise<string>} - 返回一个包含预览图的 Data URL 字符串。
+ */
+export const generateVideoThumbnail = (videoBlob) => {
+    return new Promise((resolve, reject) => {
+        const video = document.createElement('video');
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        const url = URL.createObjectURL(videoBlob);
+
+        video.style.display = 'none'; // 隐藏视频元素
+        video.muted = true;
+        video.playsInline = true;
+        video.preload = 'metadata';
+        video.src = url;
+
+        const cleanup = () => {
+            URL.revokeObjectURL(url);
+            video.remove();
+            canvas.remove();
+        };
+
+        // 监听 'loadeddata' 事件，确保视频元数据已加载
+        video.onloadeddata = () => {
+            // 设置 canvas 尺寸与视频一致
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // 寻址到视频的某一帧 (例如 0.1s 处，比 0s 更可靠)
+            video.currentTime = 0.1;
+        };
+
+        // 监听 'seeked' 事件，确保寻址操作已完成
+        video.onseeked = () => {
+            if (!context) {
+                cleanup();
+                reject(new Error('无法获取 Canvas 2D 上下文'));
+                return;
+            }
+            // 将当前视频帧绘制到 canvas 上
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // 从 canvas 导出图片 Data URL
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.8); // 压缩质量为 80%
+
+            cleanup();
+            resolve(dataUrl);
+        };
+
+        video.onerror = (err) => {
+            cleanup();
+            reject(new Error('视频加载或解码失败'));
+        };
+
+        document.body.appendChild(video); // 必须添加到 DOM 才能触发加载事件
+    });
+};
+/**
+ * --- ✅ MODIFICATION END ---
+ */

@@ -4,8 +4,11 @@
       <nav class="modal-tabs">
         <button :class="{ active: activeTab === 'general' }" @click="switchTab('general')">通用</button>
         <button :class="{ active: activeTab === 'appearance' }" @click="switchTab('appearance')">外观</button>
-        <button :class="{ active: activeTab === 'api' }" @click="switchTab('api')">AI & API</button>
+        <button :class="{ active: activeTab === 'api' }" @click="switchTab('api')">模型服务</button>
         <button :class="{ active: activeTab === 'media' }" @click="switchTab('media')">音视频</button>
+        <!-- ✅ MODIFICATION START: Added Network tab and adjusted handler -->
+        <button :class="{ active: activeTab === 'network' }" @click="switchTab('network')">网络诊断</button>
+        <!-- ✅ MODIFICATION END -->
         <button :class="{ active: activeTab === 'advanced' }" @click="switchTab('advanced')">高级</button>
       </nav>
 
@@ -95,7 +98,7 @@
               <input type="file" ref="bgInputDarkRef" @change="handleBgChange($event, 'dark')" accept="image/*" hidden>
             </div>
 
-            <!-- AI & API -->
+            <!-- 模型服务 -->
             <div v-if="activeTab === 'api'" class="tab-content">
               <div class="setting-item">
                 <label for="llm-provider-select">大模型提供商</label>
@@ -173,7 +176,10 @@
                 />
               </div>
               <p class="setting-description">开启后可显著消除键盘、环境等噪音（实验性功能，可能会增加CPU消耗）。</p>
-              <hr>
+            </div>
+
+            <!-- ✅ MODIFICATION START: New Network Diagnostics Tab -->
+            <div v-if="activeTab === 'network'" class="tab-content">
               <h3>网络诊断</h3>
               <p>测试与 STUN/TURN 服务器的连通性，这对于建立稳定的通话至关重要。</p>
               <div class="device-status-list" v-if="Object.keys(networkTestResults).length > 0">
@@ -186,6 +192,7 @@
                 {{ isTestingNetwork ? '测试中...' : '开始网络测试' }}
               </button>
             </div>
+            <!-- ✅ MODIFICATION END -->
 
             <!-- 高级 Advanced -->
             <div v-if="activeTab === 'advanced'" class="tab-content">
@@ -472,7 +479,9 @@ const onAfterEnter = () => {
 <style scoped>
 .settings-content { display: flex; flex-direction: column; }
 .modal-tabs { display: flex; border-bottom: 1px solid var(--color-border); margin-bottom: var(--spacing-4); flex-shrink: 0; }
-.modal-tabs button { padding: var(--spacing-2) var(--spacing-4); border-bottom: 2px solid transparent; font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
+/* ✅ MODIFICATION START: Adjusted padding for more tabs */
+.modal-tabs button { padding: var(--spacing-2) var(--spacing-3); border-bottom: 2px solid transparent; font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
+/* ✅ MODIFICATION END */
 .modal-tabs button.active { color: var(--color-brand-primary); border-bottom-color: var(--color-brand-primary); }
 .tab-content { display: flex; flex-direction: column; gap: var(--spacing-4); }
 .setting-item { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-4); }
