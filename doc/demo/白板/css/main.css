@@ -1,0 +1,454 @@
+:root {
+    --bg-main: #1e1e1e;
+    --bg-panel: #252525;
+    --bg-header: #2d2d2d;
+    --border-color: #444;
+    --text-primary: #eee;
+    --text-secondary: #aaa;
+    --accent-color: #00bcd4;
+    --hover-bg: #4a4a4a;
+    --disabled-bg: #3a3a3a;
+    --disabled-color: #777;
+    --selection-bg: rgba(0, 188, 212, 0.2);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* --- App Layout --- */
+.app-header, .app-footer {
+    flex-shrink: 0;
+    background: var(--bg-header);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.app-footer {
+    border-top: 1px solid var(--border-color);
+    border-bottom: none;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.app-main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+.left-panel, .right-panel {
+    width: 240px;
+    background: var(--bg-panel);
+    padding: 15px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease; /* 更改为 all 以便 width 也能平滑过渡 */
+}
+
+.left-panel {
+    border-right: 1px solid var(--border-color);
+}
+
+.right-panel {
+    border-left: 1px solid var(--border-color);
+}
+
+h4 {
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 12px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.canvas-area {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #121212 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><rect width="20" height="20" fill="%231a1a1a"/><path d="M0 10h20M10 0v20" stroke="%232a2a2a" stroke-width="0.5"/></svg>') repeat;
+}
+
+.canvas-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* --- Toolbar --- */
+.toolbar {
+    flex-shrink: 0;
+    background: var(--bg-panel);
+    padding: 8px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tool-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tool-group.separator {
+    padding-left: 15px;
+    border-left: 1px solid var(--border-color);
+}
+
+/* --- Buttons --- */
+.tool-btn, .action-btn {
+    padding: 8px 12px;
+    background: var(--disabled-bg);
+    color: var(--text-primary);
+    border: 1px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.tool-btn:hover, .action-btn:hover {
+    background: var(--hover-bg);
+    border-color: #777;
+}
+
+.tool-btn.active {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: #fff;
+}
+
+.action-btn:disabled, .tool-btn:disabled {
+    background: var(--disabled-bg);
+    color: var(--disabled-color);
+    cursor: not-allowed;
+    border-color: #555;
+}
+
+/* --- Right Panel: Property Panel --- */
+.property-group {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    transition: opacity 0.3s ease;
+}
+
+.property-group label {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.property-group input[type="color"] {
+    width: 100%;
+    height: 30px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 2px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.property-group input[type="range"] {
+    width: 100%;
+    cursor: pointer;
+}
+
+/* --- Left Panel: Layer Panel --- */
+.layer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex-grow: 1; /* 让列表填满剩余空间 */
+    overflow-y: auto;
+}
+
+.layer-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    margin-bottom: 5px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #333;
+    border: 1px solid transparent;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.layer-item:hover {
+    background: var(--hover-bg);
+}
+
+.layer-item.active {
+    background: var(--selection-bg);
+    border-color: var(--accent-color);
+}
+
+.layer-item-icon {
+    margin-right: 10px;
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+.layer-item-name {
+    flex-grow: 1;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --- Custom Scrollbar Styling --- */
+/* Works on Chrome, Edge, and Safari */
+::-webkit-scrollbar {
+    width: 10px; /* 垂直滚动条宽度 */
+    height: 10px; /* 水平滚动条高度 */
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-panel); /* 滚动条轨道颜色 */
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #555; /* 滚动条滑块颜色 */
+    border-radius: 10px;
+    border: 2px solid var(--bg-panel); /* 创建一个内边距效果 */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #777; /* 鼠标悬停时滑块的颜色 */
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent; /* 右下角交汇处的颜色 */
+}
+
+/* --- Custom Modal Dialog Styling --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--bg-header);
+    padding: 25px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+    width: 90%;
+    max-width: 450px;
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.visible .modal-content {
+    transform: scale(1);
+}
+
+.modal-header {
+    margin-bottom: 20px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 18px;
+}
+
+.modal-body {
+    margin-bottom: 25px;
+    color: var(--text-secondary);
+}
+
+/* 模态框内的表单元素样式 */
+.modal-body .form-group {
+    margin-bottom: 15px;
+}
+
+.modal-body label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.modal-body select, .modal-body input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg-main);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.modal-body .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-btn {
+    padding: 10px 20px;
+    border-radius: 5px;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.modal-btn.primary {
+    background: var(--accent-color);
+    color: #fff;
+}
+
+.modal-btn.primary:hover {
+    background: #00a8be;
+}
+
+.modal-btn.secondary {
+    background: #555;
+    color: var(--text-primary);
+}
+
+.modal-btn.secondary:hover {
+    background: var(--hover-bg);
+}
+
+.layer-item.future {
+    opacity: 0.4;
+    font-style: italic;
+    background: #2a2a2a; /* 使用一个更暗的背景来区分 */
+}
+
+.layer-item.future:hover {
+    opacity: 0.6; /* 悬停时稍微变亮，表示可交互 */
+    background: #3a3a3a;
+}
+
+/* --- 禁用状态的属性面板样式 --- */
+#property-panel.disabled {
+    opacity: 0.5;
+    pointer-events: none; /* 防止与禁用的元素交互 */
+}
+
+#property-panel.disabled .property-group label {
+    color: var(--disabled-color);
+}
+
+#property-panel.disabled .property-group input {
+    cursor: not-allowed;
+}
+
+/* --- 新增: 禁用状态的单个属性组样式 --- */
+.property-group.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+
+/* ========================================= */
+/* === Responsive Design Adjustments === */
+/* ========================================= */
+
+/* --- For Tablets (e.g., screen width <= 1024px) --- */
+@media (max-width: 1024px) {
+    /* 隐藏右侧属性面板，为画布和图层留出更多空间 */
+    .right-panel {
+        display: none;
+    }
+
+    /* 适当减小左侧图层面板的宽度 */
+    .left-panel {
+        width: 200px;
+    }
+
+    /* 允许工具栏中的项目在空间不足时换行 */
+    .toolbar {
+        flex-wrap: wrap;
+        gap: 10px; /* 调整换行后的间距 */
+    }
+}
+
+/* --- For Mobile Phones (e.g., screen width <= 768px) --- */
+@media (max-width: 768px) {
+    /* 在手机上隐藏所有侧边栏，以最大化画布区域 */
+    .left-panel, .right-panel {
+        display: none;
+    }
+
+    /* 调整头部，使其在小屏幕上更紧凑 */
+    .app-header {
+        padding: 8px 15px;
+    }
+
+    .app-header h1 {
+        font-size: 1.15em; /* 缩小标题字体 */
+    }
+
+    /* 缩小工具栏按钮的内边距和字体，以容纳更多内容 */
+    .tool-btn, .action-btn {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+
+    .toolbar {
+        padding: 8px 12px;
+    }
+
+    /* 调整脚部，使其内容垂直堆叠，更适合窄屏幕 */
+    .app-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        padding: 8px 15px;
+    }
+}
