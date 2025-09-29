@@ -8,8 +8,10 @@ import { computed } from 'vue';
 const props = defineProps({
   size: {
     type: String,
-    default: '', // 'small', 'x-small'
-    validator: (value) => ['', 'small', 'x-small'].includes(value),
+    // ✅ MODIFICATION: Add 'large' to the default comment
+    default: '', // 'small', 'x-small', 'large'
+    // ✅ MODIFICATION: Add 'large' to the validator array
+    validator: (value) => ['', 'small', 'x-small', 'large'].includes(value),
   }
 });
 
@@ -21,11 +23,9 @@ const sizeClass = computed(() => props.size ? `spinner-${props.size}` : '');
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  /* --- [动画] START: 优化边框颜色和动画 --- */
   border: 5px solid rgba(var(--color-brand-primary), 0.2);
   border-top-color: var(--color-brand-primary);
   animation: spin 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite;
-  /* --- [动画] END --- */
 }
 
 .spinner-small {
@@ -39,6 +39,14 @@ const sizeClass = computed(() => props.size ? `spinner-${props.size}` : '');
   height: 12px;
   border-width: 2px;
 }
+
+/* ✅ MODIFICATION START: Add the new .spinner-large style */
+.spinner-large {
+  width: 72px;
+  height: 72px;
+  border-width: 6px;
+}
+/* ✅ MODIFICATION END */
 
 @keyframes spin {
   to {

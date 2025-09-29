@@ -1,29 +1,44 @@
 <template>
   <transition name="media-viewer-fade">
-    <!-- ✅ MODIFICATION START: Add dynamic class for widget adjustment -->
     <div
         v-if="uiStore.activeModal === 'mediaViewer' && content"
         class="viewer-backdrop"
         :class="{ 'widget-active': isWidgetActive }"
         @click.self="close"
+        @mousemove="showControls"
     >
-      <!-- ✅ MODIFICATION END -->
       <button class="close-button" @click="close" title="关闭 (Esc)">×</button>
-      <div class="media-container" v-motion-pop>
-        <!-- --- MODIFICATION START: Use robust computed properties for type checking --- -->
+      <div class="media-container" ref="mediaContainerRef" v-motion-pop>
         <img
             v-if="isImage"
             :src="content.src"
             :alt="content.alt"
             class="media-content"
         />
-        <video
-            v-else-if="isVideo"
-            :src="content.src"
-            class="media-content"
-            controls
-            autoplay
-        ></video>
+        <div v-else-if="isVideo" class="video-wrapper">
+          <video
+              ref="videoRef"
+              :src="content.src"
+              class="media-content"
+              autoplay
+              @click="handlePlayPause"
+          ></video>
+          <CustomVideoControls
+              :visible="controlsVisible"
+              :is-playing="isPlaying"
+              :is-buffering="isBuffering"
+              :current-time="currentTime"
+              :duration="duration"
+              :volume="currentVolume"
+              :is-muted="isMuted"
+              :is-fullscreen="isFullscreen"
+              @play-pause="handlePlayPause"
+              @seek="handleSeek"
+              @set-volume="handleSetVolume"
+              @toggle-mute="handleToggleMute"
+              @toggle-fullscreen="handleToggleFullscreen"
+          />
+        </div>
         <iframe
             v-else-if="isPdf"
             :src="content.src"
@@ -38,48 +53,86 @@
           <span>{{ content.alt }}</span>
           <button @click="downloadFile">下载文件</button>
         </div>
-        <!-- --- MODIFICATION END --- -->
       </div>
     </div>
   </transition>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch, nextTick } from 'vue';
 import { useUiStore } from '@/stores/uiStore';
-// ✅ MODIFICATION START: Import callStore to detect the floating widget
 import { useCallStore } from '@/stores/callStore';
-// ✅ MODIFICATION END
+import CustomVideoControls from '@/components/Shared/CustomVideoControls.vue';
 
 const uiStore = useUiStore();
-// ✅ MODIFICATION START: Create callStore instance
 const callStore = useCallStore();
-// ✅ MODIFICATION END
 const content = computed(() => uiStore.mediaViewerContent);
 const textFileContent = ref('');
 
-// ✅ MODIFICATION START: Create computed property to check for active widget
 const isWidgetActive = computed(() => callStore.isCallActive && !callStore.isFullScreenCallViewVisible);
-// ✅ MODIFICATION END
 
-// --- MODIFICATION START: Create robust computed properties for type checking ---
-const isImage = computed(() => {
-  if (!content.value) return false;
-  return content.value.fileType?.startsWith('image/') || content.value.type === 'image';
-});
-const isVideo = computed(() => {
-  if (!content.value) return false;
-  return content.value.fileType?.startsWith('video/') || content.value.type === 'video';
-});
-const isPdf = computed(() => {
-  if (!content.value) return false;
-  return content.value.fileType === 'application/pdf';
-});
-const isText = computed(() => {
-  if (!content.value) return false;
-  return content.value.fileType?.startsWith('text/');
-});
-// --- MODIFICATION END ---
+const isImage = computed(() => content.value?.fileType?.startsWith('image/') || content.value?.type === 'image');
+const isVideo = computed(() => content.value?.fileType?.startsWith('video/') || content.value?.type === 'video');
+const isPdf = computed(() => content.value?.fileType === 'application/pdf');
+const isText = computed(() => content.value?.fileType?.startsWith('text/'));
+
+// State and logic for custom video player
+const videoRef = ref(null);
+const mediaContainerRef = ref(null);
+const isPlaying = ref(false);
+const isBuffering = ref(false);
+const currentTime = ref(0);
+const duration = ref(0);
+const currentVolume = ref(1);
+const isMuted = ref(false);
+const isFullscreen = ref(false);
+const controlsVisible = ref(true);
+let hideControlsTimeout = null;
+
+const updateVideoState = () => {
+  if (!videoRef.value) return;
+  isPlaying.value = !videoRef.value.paused;
+  currentTime.value = videoRef.value.currentTime;
+  duration.value = videoRef.value.duration;
+  currentVolume.value = videoRef.value.volume;
+  isMuted.value = videoRef.value.muted;
+};
+
+// ✅ FIX: Add guard clauses to all event handlers that access videoRef.value
+const onTimeUpdate = () => { if (videoRef.value) currentTime.value = videoRef.value.currentTime; };
+const onDurationChange = () => { if (videoRef.value) duration.value = videoRef.value.duration; };
+const onPlay = () => { isPlaying.value = true; isBuffering.value = false; };
+const onPause = () => { isPlaying.value = false; };
+const onVolumeChange = () => { if (videoRef.value) { currentVolume.value = videoRef.value.volume; isMuted.value = videoRef.value.muted; } };
+const onWaiting = () => { isBuffering.value = true; };
+const onPlaying = () => { isBuffering.value = false; };
+
+// ✅ FIX: Define the onFullscreenChange handler
+const onFullscreenChange = () => {
+  isFullscreen.value = !!document.fullscreenElement;
+};
+
+const handlePlayPause = () => videoRef.value?.paused ? videoRef.value?.play() : videoRef.value?.pause();
+const handleSeek = (newTime) => { if(videoRef.value) videoRef.value.currentTime = newTime; };
+const handleSetVolume = (newVolume) => { if(videoRef.value) { videoRef.value.volume = newVolume; videoRef.value.muted = false; } };
+const handleToggleMute = () => { if(videoRef.value) videoRef.value.muted = !videoRef.value.muted; };
+const handleToggleFullscreen = () => {
+  if (!document.fullscreenElement) {
+    mediaContainerRef.value?.requestFullscreen();
+  } else {
+    document.exitFullscreen();
+  }
+};
+
+const showControls = () => {
+  controlsVisible.value = true;
+  if (hideControlsTimeout) clearTimeout(hideControlsTimeout);
+  hideControlsTimeout = setTimeout(() => {
+    if (isPlaying.value) {
+      controlsVisible.value = false;
+    }
+  }, 3000);
+};
 
 const close = () => {
   uiStore.hideModal();
@@ -87,12 +140,20 @@ const close = () => {
 
 const handleKeyDown = (event) => {
   if (event.key === 'Escape') {
-    close();
+    if (isFullscreen.value) {
+      document.exitFullscreen();
+    } else {
+      close();
+    }
+  }
+  if (isVideo.value && event.key === ' ' && videoRef.value) {
+    event.preventDefault();
+    handlePlayPause();
   }
 };
 
 watch(content, async (newContent) => {
-  if (newContent && isText.value) { // Use the computed property here
+  if (newContent && isText.value) {
     try {
       const response = await fetch(newContent.src);
       if (!response.ok) throw new Error('Network response was not ok');
@@ -103,6 +164,22 @@ watch(content, async (newContent) => {
     }
   } else {
     textFileContent.value = '';
+  }
+
+  if (newContent && isVideo.value) {
+    await nextTick();
+    const video = videoRef.value;
+    if (video) {
+      video.addEventListener('timeupdate', onTimeUpdate);
+      video.addEventListener('durationchange', onDurationChange);
+      video.addEventListener('play', onPlay);
+      video.addEventListener('pause', onPause);
+      video.addEventListener('volumechange', onVolumeChange);
+      video.addEventListener('waiting', onWaiting);
+      video.addEventListener('playing', onPlaying);
+      updateVideoState();
+      showControls();
+    }
   }
 }, { immediate: true });
 
@@ -118,10 +195,23 @@ function downloadFile() {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
+  document.addEventListener('fullscreenchange', onFullscreenChange);
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
+  document.removeEventListener('fullscreenchange', onFullscreenChange);
+  const video = videoRef.value;
+  if (video) {
+    video.removeEventListener('timeupdate', onTimeUpdate);
+    video.removeEventListener('durationchange', onDurationChange);
+    video.removeEventListener('play', onPlay);
+    video.removeEventListener('pause', onPause);
+    video.removeEventListener('volumechange', onVolumeChange);
+    video.removeEventListener('waiting', onWaiting);
+    video.removeEventListener('playing', onPlaying);
+  }
+  if (hideControlsTimeout) clearTimeout(hideControlsTimeout);
 });
 </script>
 
@@ -136,17 +226,13 @@ onUnmounted(() => {
   z-index: 1500;
   padding: var(--spacing-4);
   box-sizing: border-box;
-  /* ✅ MODIFICATION START: Add transition for smooth layout adjustment */
   transition: top 0.3s var(--transition-easing), height 0.3s var(--transition-easing);
-  /* ✅ MODIFICATION END */
 }
 
-/* ✅ MODIFICATION START: New style to adjust layout when widget is active */
 .viewer-backdrop.widget-active {
-  top: 50px; /* Height of the floating widget */
+  top: 50px;
   height: calc(100% - 50px);
 }
-/* ✅ MODIFICATION END */
 
 .close-button {
   position: absolute;
@@ -244,7 +330,6 @@ onUnmounted(() => {
   border-radius: var(--border-radius-md);
 }
 
-/* --- [动画] START: 媒体查看器动画 --- */
 .media-viewer-fade-enter-active,
 .media-viewer-fade-leave-active {
   transition: opacity 0.3s var(--transition-easing);
@@ -253,6 +338,17 @@ onUnmounted(() => {
 .media-viewer-fade-leave-to {
   opacity: 0;
 }
-/* VueUse Motion will handle the pop animation on .media-container */
-/* --- [动画] END --- */
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-wrapper .media-content {
+  border-radius: 0;
+  box-shadow: none;
+}
 </style>

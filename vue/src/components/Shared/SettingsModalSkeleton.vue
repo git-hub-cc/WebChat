@@ -68,7 +68,8 @@
   box-shadow: var(--shadow-lg);
   width: 90vw;
   max-width: 500px;
-  max-height: 90vh;
+  /* ✅ FIX: Set a fixed height to match the real modal, preventing jumps during transition */
+  height: 378px;
   display: flex;
   flex-direction: column;
 }
