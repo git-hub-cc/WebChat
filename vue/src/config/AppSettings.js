@@ -111,6 +111,11 @@ export default {
                 credential: "123456"
             },
             {
+                urls: "turn:ppmc.club:3478?transport=tcp", // [新增] TCP 选项
+                username: "test",
+                credential: "123456"
+            },
+            {
                 urls: "turns:ppmc.club:5349?transport=tcp", // [保留] TCP/TLS 选项
                 username: "test",
                 credential: "123456"

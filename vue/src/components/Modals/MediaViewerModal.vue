@@ -1,6 +1,13 @@
 <template>
   <transition name="media-viewer-fade">
-    <div v-if="uiStore.activeModal === 'mediaViewer' && content" class="viewer-backdrop" @click.self="close">
+    <!-- ✅ MODIFICATION START: Add dynamic class for widget adjustment -->
+    <div
+        v-if="uiStore.activeModal === 'mediaViewer' && content"
+        class="viewer-backdrop"
+        :class="{ 'widget-active': isWidgetActive }"
+        @click.self="close"
+    >
+      <!-- ✅ MODIFICATION END -->
       <button class="close-button" @click="close" title="关闭 (Esc)">×</button>
       <div class="media-container" v-motion-pop>
         <!-- --- MODIFICATION START: Use robust computed properties for type checking --- -->
@@ -40,10 +47,20 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useUiStore } from '@/stores/uiStore';
+// ✅ MODIFICATION START: Import callStore to detect the floating widget
+import { useCallStore } from '@/stores/callStore';
+// ✅ MODIFICATION END
 
 const uiStore = useUiStore();
+// ✅ MODIFICATION START: Create callStore instance
+const callStore = useCallStore();
+// ✅ MODIFICATION END
 const content = computed(() => uiStore.mediaViewerContent);
 const textFileContent = ref('');
+
+// ✅ MODIFICATION START: Create computed property to check for active widget
+const isWidgetActive = computed(() => callStore.isCallActive && !callStore.isFullScreenCallViewVisible);
+// ✅ MODIFICATION END
 
 // --- MODIFICATION START: Create robust computed properties for type checking ---
 const isImage = computed(() => {
@@ -119,7 +136,17 @@ onUnmounted(() => {
   z-index: 1500;
   padding: var(--spacing-4);
   box-sizing: border-box;
+  /* ✅ MODIFICATION START: Add transition for smooth layout adjustment */
+  transition: top 0.3s var(--transition-easing), height 0.3s var(--transition-easing);
+  /* ✅ MODIFICATION END */
 }
+
+/* ✅ MODIFICATION START: New style to adjust layout when widget is active */
+.viewer-backdrop.widget-active {
+  top: 50px; /* Height of the floating widget */
+  height: calc(100% - 50px);
+}
+/* ✅ MODIFICATION END */
 
 .close-button {
   position: absolute;

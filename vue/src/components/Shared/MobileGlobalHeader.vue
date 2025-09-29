@@ -1,5 +1,5 @@
 <template>
-  <header class="mobile-global-header">
+  <header class="mobile-global-header" :style="headerStyle">
     <IconButton icon="☰" title="菜单" @click="uiStore.showModal('settings')" />
 
     <div class="search-bar-wrapper">
@@ -22,18 +22,27 @@
 </template>
 
 <script setup>
+// ✅ MODIFICATION START: Import computed and callStore
+import { computed } from 'vue';
 import { useUiStore } from '@/stores/uiStore';
 import { useChatStore } from '@/stores/chatStore';
+import { useCallStore } from '@/stores/callStore'; // Import callStore
 import { debounce } from '@/utils';
 import IconButton from '@/components/Shared/IconButton.vue';
 
 const uiStore = useUiStore();
 const chatStore = useChatStore();
+const callStore = useCallStore(); // Get callStore instance
 
 const handleSearchInput = debounce((event) => {
-  // Access the search term from chatStore, not uiStore as it was moved for better state management if needed
   chatStore.chatListSearchTerm = event.target.value;
 }, 250);
+
+// Dynamically set the header's top position based on the call widget's visibility
+const headerStyle = computed(() => ({
+  top: callStore.isCallActive && !callStore.isFullScreenCallViewVisible ? '50px' : '0'
+}));
+// ✅ MODIFICATION END
 </script>
 
 <style scoped>
@@ -48,7 +57,10 @@ const handleSearchInput = debounce((event) => {
     align-items: center;
     gap: var(--spacing-2);
     position: fixed;
-    top: 0;
+    /* ✅ MODIFICATION START: Remove fixed top: 0, it's now handled by style binding */
+    /* top: 0; */
+    transition: top 0.3s var(--transition-easing); /* Add smooth transition */
+    /* ✅ MODIFICATION END */
     left: 0;
     right: 0;
     height: 50px; /* Defined height for the header */

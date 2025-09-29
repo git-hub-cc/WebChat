@@ -1,5 +1,4 @@
 <template>
-  <!-- Use SkeletonLoader when contact is loading -->
   <div v-if="!contact" class="loading-state">
     <SkeletonLoader type="profile" />
   </div>
@@ -10,7 +9,7 @@
       <Avatar :entity="contact" size="xl" class="profile-avatar" :is-online="combinedStatus.isOnlineDisplay" />
       <h2 class="profile-name">{{ contact.name }}</h2>
       <p class="profile-id">ID: {{ contact.id }}</p>
-      <!-- ✅ MODIFICATION START: Display connection type icon -->
+      <!-- ✅ MODIFICATION START: Display connection type icon and status -->
       <p class="profile-status" :class="combinedStatus.statusClass">
         <span v-if="connectionIcon" class="connection-icon" :title="connectionTitle">{{ connectionIcon }}</span>
         {{ combinedStatus.statusText }}
@@ -78,7 +77,8 @@ const connectionIcon = computed(() => {
 
 const connectionTitle = computed(() => {
   const type = combinedStatus.value.connectionType;
-  if (type === 'p2p' || type === 'p2p-lan') return 'P2P 直连';
+  if (type === 'p2p') return 'P2P 直连';
+  if (type === 'p2p-lan') return '局域网直连';
   if (type === 'relay') return '服务器中继';
   return '';
 });
@@ -86,7 +86,7 @@ const connectionTitle = computed(() => {
 
 
 const isThemeSpecialContact = computed(() => {
-  if (!contact.value) return false;
+  if (!contact.value || contact.value.isImported) return false;
   return settingsStore.currentSpecialContacts.some(sc => sc.id === contact.value.id);
 });
 
@@ -122,22 +122,22 @@ const deleteContact = () => {
   /* ✅ MODIFICATION END */
 }
 .profile-status.online { color: var(--color-status-success); }
-.profile-status.offline { color: var(--color-status-danger); }
+.profile-status.offline { color: var(--color-text-secondary); } /* Changed from danger to secondary for offline state */
 .profile-status.warning { color: var(--color-status-warning); }
 hr { border: none; border-top: 1px solid var(--color-border); margin: 0 var(--spacing-4); }
 
 .about-section, .actions, .resource-section { padding: 0 var(--spacing-4); }
 .about-section { text-align: left; margin-top: var(--spacing-4); }
 .about-section h4 { font-weight: var(--font-weight-semibold); margin-bottom: var(--spacing-3); }
-.basic-info-list { list-style: none; margin-bottom: var(--spacing-3); }
+.basic-info-list { list-style: none; margin-bottom: var(--spacing-3); padding-left: 0; }
 .basic-info-list li { margin-bottom: var(--spacing-1); }
-.about-text { line-height: 1.6; color: var(--color-text-secondary); }
+.about-text { line-height: 1.6; color: var(--color-text-secondary); white-space: pre-wrap; }
 
 .actions { margin-top: var(--spacing-5); }
 .btn-danger { background-color: var(--color-status-danger); color: white; padding: var(--spacing-2) var(--spacing-4); border-radius: var(--border-radius-md); font-weight: var(--font-weight-medium); width: 100%; }
 .loading-state {
   display: flex;
-  justify-content: flex-start; /* Align skeleton to the top */
+  justify-content: flex-start;
 }
 
 .resource-section {
@@ -150,6 +150,7 @@ hr { border: none; border-top: 1px solid var(--color-border); margin: 0 var(--sp
 .connection-icon {
   font-size: 1.1em;
   line-height: 1;
+  filter: grayscale(0.5) opacity(0.8);
 }
 /* ✅ MODIFICATION END */
 </style>

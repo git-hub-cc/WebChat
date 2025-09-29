@@ -14,7 +14,9 @@ const isWebSocketConnected = ref(false);
 let websocket = null;
 let reconnectAttempts = 0;
 let heartbeatInterval = null;
+// --- ✅ MODIFICATION START: Add interval handle for auto-refresh ---
 let autoRefreshInterval = null;
+// --- ✅ MODIFICATION END ---
 const pendingReceivedChunks = {};
 const chunkMetaBuffer = {};
 const MANUAL_PEER_ID = '_manual_peer_';
@@ -52,22 +54,32 @@ function _stopHeartbeat() {
     }
 }
 
+// --- ✅ MODIFICATION START: Implement proactive connection logic ---
 async function proactivelyConnectToOnlineContacts() {
     const userStore = useUserStore();
+    // Fetch latest online users silently
     await userStore.fetchAllOnlineUsers();
+
     userStore.allOnlineUsers.forEach(onlineUser => {
         const contactId = onlineUser.userId;
         const contact = userStore.contacts[contactId];
         const conn = connections.value[contactId];
-        const isConnected = conn?.isConnected ?? false;
-        const isConnecting = conn && !conn.isConnected;
 
-        if (contact && !contact.isAI && !isConnected && !isConnecting) {
+        // Conditions to check before initiating a connection
+        const isMyContact = contact && !contact.isAI && !contact.isSpecial;
+        // Check both if the connection is established and if there's an ongoing attempt
+        const isNotConnected = !conn?.isConnected;
+        const isNotConnecting = !conn; // A simple check: if a conn object exists, an attempt is in progress.
+
+        if (isMyContact && isNotConnected && isNotConnecting) {
             log(`主动连接: 发现全网在线联系人 ${contactId}。尝试连接。`, 'INFO');
+            // Initiate a silent connection attempt, so it doesn't spam notifications
             webrtcService.createOffer(contactId, { isSilent: true });
         }
     });
 }
+// --- ✅ MODIFICATION END ---
+
 
 function _connectWebSocket() {
     return new Promise((resolve, reject) => {
@@ -84,7 +96,9 @@ function _connectWebSocket() {
             _sendWsMessage({ type: 'REGISTER', userId: currentUserId });
             _startHeartbeat();
             eventBus.emit('websocket:status', true);
+            // --- ✅ MODIFICATION START: Proactively connect on initial WS connection ---
             await webrtcService.proactivelyConnectToOnlineContacts();
+            // --- ✅ MODIFICATION END ---
             resolve();
         };
         websocket.onmessage = (event) => {
@@ -337,6 +351,11 @@ function _setupPeerListeners(peer, peerId) {
             if (!userStore.contacts[peerId]) await userStore.addContact({ id: peerId });
             // The userStore now handles more detailed status updates
             userStore.updateContactConnectionDetails(peerId, { isConnected: true });
+            // --- ✅ MODIFICATION START: Check isSilent before showing notification ---
+            if (!conn?.isSilent) {
+                eventBus.emit('showNotification', { message: `已连接到 ${userStore.contacts[peerId]?.name || peerId}`, type: 'success' });
+            }
+            // --- ✅ MODIFICATION END ---
         }
         eventBus.emit('webrtc:connected', peerId);
     });
@@ -383,7 +402,9 @@ export const webrtcService = {
         });
         try {
             await _connectWebSocket();
+            // --- ✅ MODIFICATION START: Start auto-refresh on init ---
             this.startAutoRefresh();
+            // --- ✅ MODIFICATION END ---
         } catch (error) {
             log('初始化WebSocket连接失败。', 'ERROR');
         }
@@ -402,6 +423,7 @@ export const webrtcService = {
             payload: payload
         });
     },
+    // --- ✅ MODIFICATION START: Add methods to manage the auto-refresh timer ---
     startAutoRefresh() {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
         autoRefreshInterval = setInterval(proactivelyConnectToOnlineContacts, 30000);
@@ -413,8 +435,11 @@ export const webrtcService = {
             autoRefreshInterval = null;
         }
     },
+    // --- ✅ MODIFICATION END ---
     proactivelyConnectToOnlineContacts,
+    // --- ✅ MODIFICATION START: Modify createOffer to accept options ---
     createOffer(targetPeerId, options = {}) {
+        // --- ✅ MODIFICATION END ---
         if (connections.value[targetPeerId]?.isConnected) {
             log(`WebRTC: 到 ${targetPeerId} 的连接已存在。忽略新提议。`, 'DEBUG');
             return;
@@ -434,7 +459,9 @@ export const webrtcService = {
             trickle: true,
             stream: options.stream || false,
         });
-        connections.value[targetPeerId] = { peer, isConnected: false, iceCheckingTimeout: null };
+        // --- ✅ MODIFICATION START: Store the isSilent option on the connection object ---
+        connections.value[targetPeerId] = { peer, isConnected: false, iceCheckingTimeout: null, isSilent: !!options.isSilent };
+        // --- ✅ MODIFICATION END ---
         _setupPeerListeners(peer, targetPeerId);
     },
     addStreamToConnection(peerId, stream) {
@@ -582,38 +609,65 @@ export const webrtcService = {
             }
         }
     },
-    async testNetwork() {
-        const results = { stun: 'Testing...', turnUdp: 'Pending...', turnTcp: 'Pending...', turnTls: 'Pending...' };
-        const testPeerConnection = new RTCPeerConnection({ iceServers: AppSettings.peerConnectionConfig.iceServers });
-
-        const candidatePromise = new Promise(resolve => {
+    async _testIceServer(iceServerConfig) {
+        return new Promise(resolve => {
+            // 为本次测试创建一个独立的 PeerConnection
+            const pc = new RTCPeerConnection({ iceServers: [iceServerConfig] });
             const candidates = [];
-            testPeerConnection.onicecandidate = (e) => {
+
+            // 设置一个超时，以防ICE收集卡住
+            const timeoutId = setTimeout(() => {
+                pc.close();
+                resolve(candidates); // 超时后返回已收集到的候选者
+            }, AppSettings.timeouts.iceGathering);
+
+            pc.onicecandidate = (e) => {
                 if (e.candidate) {
                     candidates.push(e.candidate);
                 } else {
+                    // ICE gathering is complete
+                    clearTimeout(timeoutId);
+                    pc.close();
                     resolve(candidates);
                 }
             };
-            setTimeout(() => resolve(candidates), AppSettings.timeouts.iceGathering);
+
+            // 触发ICE收集
+            pc.createDataChannel('test');
+            pc.createOffer().then(offer => pc.setLocalDescription(offer));
         });
+    },
+    async testNetwork() {
+        const results = { stun: 'Testing...', turnUdp: 'Testing...', turnTcp: 'Testing...', turnTls: 'Testing...' };
 
-        testPeerConnection.createDataChannel('test');
-        testPeerConnection.createOffer().then(offer => testPeerConnection.setLocalDescription(offer));
+        // 1. 从 AppSettings 中筛选出不同类型的服务器配置
+        const stunServers = AppSettings.peerConnectionConfig.iceServers.filter(s => s.urls.startsWith('stun:'));
+        const turnUdpServer = AppSettings.peerConnectionConfig.iceServers.find(s => s.urls.startsWith('turn:') && s.urls.includes('transport=udp'));
+        const turnTcpServer = AppSettings.peerConnectionConfig.iceServers.find(s => s.urls.startsWith('turn:') && s.urls.includes('transport=tcp'));
+        const turnTlsServer = AppSettings.peerConnectionConfig.iceServers.find(s => s.urls.startsWith('turns:'));
 
-        const gatheredCandidates = await candidatePromise;
-        testPeerConnection.close();
+        // 2. 并行执行所有独立的测试
+        const [stunCandidates, turnUdpCandidates, turnTcpCandidates, turnTlsCandidates] = await Promise.all([
+            stunServers.length > 0 ? this._testIceServer({ urls: stunServers.map(s => s.urls) }) : Promise.resolve([]),
+            turnUdpServer ? this._testIceServer(turnUdpServer) : Promise.resolve([]),
+            turnTcpServer ? this._testIceServer(turnTcpServer) : Promise.resolve([]),
+            turnTlsServer ? this._testIceServer(turnTlsServer) : Promise.resolve([])
+        ]);
 
-        if (gatheredCandidates.length > 0) {
-            const hasSrflx = gatheredCandidates.some(c => c.type === 'srflx');
-            results.stun = hasSrflx ? 'OK' : 'Failed';
-            results.turnUdp = gatheredCandidates.some(c => c.type === 'relay' && c.protocol === 'udp') ? 'OK' : 'Failed';
-            results.turnTcp = gatheredCandidates.some(c => c.type === 'relay' && c.protocol === 'tcp') ? 'OK' : 'Failed';
-            // Simple-peer doesn't expose TLS info directly, we infer it from port 443
-            results.turnTls = gatheredCandidates.some(c => c.type === 'relay' && c.port === 443) ? 'OK' : 'Failed';
-        } else {
-            results.stun = results.turnUdp = results.turnTcp = results.turnTls = 'Failed';
-        }
+        // 3. 根据每个独立测试的结果来判断状态
+        // STUN 测试成功，只要能获取到 'srflx' (Server Reflexive) 类型的候选者
+        results.stun = stunCandidates.some(c => c.type === 'srflx') ? 'OK' : 'Failed';
+
+        // TURN UDP 测试成功，只要在【只提供UDP服务器】的情况下获取到 'relay' 候选者
+        results.turnUdp = turnUdpCandidates.some(c => c.type === 'relay') ? 'OK' : 'Failed';
+
+        // TURN TCP 测试成功，只要在【只提供TCP服务器】的情况下获取到 'relay' 候选者
+        results.turnTcp = turnTcpCandidates.some(c => c.type === 'relay') ? 'OK' : 'Failed';
+
+        // TURN TLS 测试成功，只要在【只提供TLS服务器】的情况下获取到 'relay' 候选者
+        results.turnTls = turnTlsCandidates.some(c => c.type === 'relay') ? 'OK' : 'Failed';
+
+        log(`网络诊断结果: STUN=${results.stun}, TURN/UDP=${results.turnUdp}, TURN/TCP=${results.turnTcp}, TURN/TLS=${results.turnTls}`, 'INFO');
         return results;
     },
     createManualOffer() {
