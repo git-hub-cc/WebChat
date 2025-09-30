@@ -92,7 +92,6 @@ public class FederationRoutingService {
         return outboundSessionToGuidMap.get(session.getId());
     }
 
-    // [NEW] 允许Handler在收到带GUID的控制消息时，强制关联会话
     public void associateOutboundSessionWithGuid(WebSocketSession session, String guid) {
         if (!outboundSessionToGuidMap.containsKey(session.getId())) {
             outboundSessionToGuidMap.put(session.getId(), guid);
@@ -138,13 +137,13 @@ public class FederationRoutingService {
     public boolean forwardToOutboundPeers(SignalingMessage originalMessage, String fromUserId) {
         if (outboundPeers.isEmpty()) return false;
 
-        // --- [BUG FIX] ---
-        // 更新构造函数调用，移除 sourceServerUrl (null) 参数，以匹配新的7参数 DTO
+        // [MODIFIED] When forwarding, ensure all enhanced signaling fields are passed through.
         var forwardMessage = new SignalingMessage(
                 originalMessage.type(), null, originalMessage.targetUserId(), fromUserId,
-                originalMessage.payload(), null, federationService.getSelfGuid()
+                originalMessage.payload(), null, federationService.getSelfGuid(),
+                originalMessage.subType(), originalMessage.sequenceId(), originalMessage.ackId()
         );
-        // --- [BUG FIX] ---
+
         try {
             String payload = objectMapper.writeValueAsString(forwardMessage);
             for (WebSocketSession session : outboundPeers.values()) {
@@ -190,10 +189,11 @@ public class FederationRoutingService {
             logger.info("到伙伴 {} 的出站连接已建立: 会话ID {}", peerUrl, session.getId());
             outboundPeers.put(peerUrl, session);
 
-            // --- [BUG FIX] ---
-            // 更新构造函数调用，移除 sourceServerUrl (null) 参数
-            var registerMsg = new SignalingMessage(MessageType.REGISTER_PEER, null, null, null, null, "Peer Registration", federationService.getSelfGuid());
-            // --- [BUG FIX] ---
+            // [MODIFIED] Create a registration message with subtype
+            var registerMsg = new SignalingMessage(
+                    MessageType.REGISTER_PEER, null, null, null, null, "Peer Registration",
+                    federationService.getSelfGuid(), "initial", System.currentTimeMillis(), null);
+
             try {
                 sendOverWebSocket(session, objectMapper.writeValueAsString(registerMsg));
             } catch (JsonProcessingException e) {
@@ -216,7 +216,6 @@ public class FederationRoutingService {
 
         @Override
         protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-            // 所有消息都委托给统一处理器，它现在能够处理所有情况
             signalingWebSocketHandler.handleMessage(session, message);
         }
 

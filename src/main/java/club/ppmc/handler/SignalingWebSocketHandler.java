@@ -102,14 +102,10 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
     }
 
     private void handleSignalingMessage(WebSocketSession session, SignalingMessage message) {
-        // --- [BUG FIX START] ---
-        // 在处理任何伙伴消息之前，确保会话与其GUID已关联。
-        // 这个逻辑现在统一处理了信令消息和控制消息中的竞态条件。
         if (getPeerGuid(session) == null && message.sourceServerGuid() != null) {
             logger.warn("收到来自伙伴 {} 的信令消息，该伙伴GUID未知，但消息中包含GUID {}。将尝试关联。", session.getId(), message.sourceServerGuid());
             federationRoutingService.associateOutboundSessionWithGuid(session, message.sourceServerGuid());
         }
-        // --- [BUG FIX END] ---
 
         if (message.type() == MessageType.REGISTER_PEER) {
             handlePeerRegistration(session, message);
@@ -125,6 +121,8 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             case REGISTER -> handleRegister(session, message);
             case SIGNAL -> forwardSignalingMessage(session, message);
             case PING -> handlePing(session);
+            // [NEW] Handle application-level ACKs
+            case ACK -> logger.debug("收到来自会话 {} 的ACK消息, ackId: {}", session.getId(), message.ackId());
             default -> logger.warn("收到未知的客户端消息类型: {} | 会话ID: {}", message.type(), session.getId());
         }
     }
@@ -146,7 +144,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
 
         userSessionService.removeUser(session);
         inboundSessionToGuidMap.put(sessionId, peerGuid);
-        activeInboundPeers.put(sessionId, session); // [FIX] 将会话存入活跃池
+        activeInboundPeers.put(sessionId, session);
         logger.info("入站伙伴服务器注册成功: 会话ID {} | GUID: {}", sessionId, peerGuid);
         federationService.syncUserListToSinglePeer(session);
     }
@@ -156,9 +154,11 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         var targetSession = userSessionService.getUserSession(targetUserId);
 
         if (targetSession != null && targetSession.isOpen()) {
+            // [MODIFIED] Forward all enhanced signaling fields to the client
             var clientMessage = new SignalingMessage(
                     message.type(), null, null, message.fromUserId(),
-                    message.payload(), null, null
+                    message.payload(), null, null,
+                    message.subType(), message.sequenceId(), message.ackId()
             );
             sendMessage(targetSession, clientMessage);
         } else {
@@ -169,13 +169,8 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
     private void handleFederationControlMessage(WebSocketSession session, FederatedControlMessage message) {
         String peerGuid = getPeerGuid(session);
 
-        // --- [BUG FIX START] ---
-        // 这段逻辑现在是冗余的，因为已经在 handleSignalingMessage 中统一处理了。
-        // 但为了双重保险和清晰性，此处可以保留，或者简化。我们选择简化它，因为关联逻辑已提前。
         if (peerGuid == null) {
-            // [MODIFIED] 此时 getPeerGuid 应该已经返回了正确的 GUID，如果仍然为 null，说明消息本身也有问题。
             if (message.sourceServerGuid() != null) {
-                // 如果是第一次看到这个GUID，可能需要手动关联
                 federationRoutingService.associateOutboundSessionWithGuid(session, message.sourceServerGuid());
                 peerGuid = message.sourceServerGuid();
             } else {
@@ -183,7 +178,6 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
                 return;
             }
         }
-        // --- [BUG FIX END] ---
 
         switch (message.type()) {
             case USER_LIST_UPDATE -> federationService.updatePeerUserList(peerGuid, message.userIds());
@@ -211,16 +205,18 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
         // 1. 尝试本地转发
         var targetSession = userSessionService.getUserSession(targetUserId);
         if (targetSession != null && targetSession.isOpen()) {
-            var forwardMessage = new SignalingMessage(message.type(), null, null, fromUserId, message.payload(), null, null);
+            // [MODIFIED] When forwarding, pass through the new enhanced signaling fields
+            var forwardMessage = new SignalingMessage(
+                    message.type(), null, null, fromUserId, message.payload(), null, null,
+                    message.subType(), message.sequenceId(), message.ackId());
             sendMessage(targetSession, forwardMessage);
             logger.debug("SIGNAL 已从 '{}' 本地转发给 '{}'。", fromUserId, targetUserId);
             return;
         }
 
-        // 2. [FIXED] 尝试向下游伙伴精确转发
+        // 2. 尝试向下游伙伴精确转发
         String targetPeerGuid = federationService.findPeerGuidForUser(targetUserId);
         if (targetPeerGuid != null) {
-            // 反向查找GUID对应的sessionId
             String targetSessionId = inboundSessionToGuidMap.entrySet().stream()
                     .filter(entry -> targetPeerGuid.equals(entry.getValue()))
                     .map(Map.Entry::getKey)
@@ -230,11 +226,14 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
             if (targetSessionId != null) {
                 WebSocketSession peerSession = activeInboundPeers.get(targetSessionId);
                 if (peerSession != null && peerSession.isOpen()) {
-                    var forwardMessage = new SignalingMessage(message.type(), null, targetUserId, fromUserId, message.payload(), null, federationService.getSelfGuid());
+                    // [MODIFIED] Pass through new enhanced signaling fields for federated forwarding
+                    var forwardMessage = new SignalingMessage(
+                            message.type(), null, targetUserId, fromUserId, message.payload(), null, federationService.getSelfGuid(),
+                            message.subType(), message.sequenceId(), message.ackId());
                     try {
                         peerSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(forwardMessage)));
                         logger.debug("SIGNAL 已从 '{}' 通过入站伙伴连接 {} (GUID: {}) 精确转发给 '{}'。", fromUserId, peerSession.getId(), targetPeerGuid, targetUserId);
-                        return; // 转发成功，结束流程
+                        return;
                     } catch (IOException e) {
                         logger.error("通过入站伙伴连接 {} (GUID: {}) 转发信令失败。", peerSession.getId(), targetPeerGuid, e);
                     }
@@ -251,7 +250,7 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
 
         // 4. 用户不存在
         logger.warn("SIGNAL 转发失败：目标用户 '{}' 在全网均未找到。", targetUserId);
-        sendMessage(session, new SignalingMessage(MessageType.USER_NOT_FOUND, null, targetUserId, null, null, "目标用户不在线。", null));
+        sendMessage(session, new SignalingMessage(MessageType.USER_NOT_FOUND, null, targetUserId, null, null, "目标用户不在线。", null, null, null, null));
     }
 
     private boolean isPeerSession(WebSocketSession session) {
@@ -265,10 +264,10 @@ public class SignalingWebSocketHandler implements WebSocketHandler {
     }
 
     private boolean isFederationControlType(String type) { if (type == null) return false; try { FederatedControlMessageType.valueOf(type); return true; } catch (IllegalArgumentException e) { return false; } }
-    private void handleRegister(WebSocketSession session, SignalingMessage message) { var userId = message.userId(); if (userId == null || userId.trim().isEmpty()) { sendErrorMessage(session, "用户ID不能为空。"); return; } if (userSessionService.registerUser(userId, session)) { sendMessage(session, new SignalingMessage(MessageType.SUCCESS, userId, null, null, null, "注册成功", null)); logger.info("用户 '{}' 注册成功 | 会话ID: {}", userId, session.getId()); } else { sendErrorMessage(session, "用户ID '" + userId + "' 已被其他会话使用。"); logger.warn("用户 '{}' 注册失败，ID已被占用 | 会话ID: {}", userId, session.getId()); } }
-    private void handlePing(WebSocketSession session) { sendMessage(session, new SignalingMessage(MessageType.PONG, null, null, null, null, "pong", null)); }
+    private void handleRegister(WebSocketSession session, SignalingMessage message) { var userId = message.userId(); if (userId == null || userId.trim().isEmpty()) { sendErrorMessage(session, "用户ID不能为空。"); return; } if (userSessionService.registerUser(userId, session)) { sendMessage(session, new SignalingMessage(MessageType.SUCCESS, userId, null, null, null, "注册成功", null, null, null, null)); logger.info("用户 '{}' 注册成功 | 会话ID: {}", userId, session.getId()); } else { sendErrorMessage(session, "用户ID '" + userId + "' 已被其他会话使用。"); logger.warn("用户 '{}' 注册失败，ID已被占用 | 会话ID: {}", userId, session.getId()); } }
+    private void handlePing(WebSocketSession session) { sendMessage(session, new SignalingMessage(MessageType.PONG, null, null, null, null, "pong", null, null, null, null)); }
     private void sendMessage(WebSocketSession session, SignalingMessage message) { try { if (session.isOpen()) { session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message))); } } catch (Exception e) { logger.error("发送SignalingMessage失败 | 会话ID {}: {}", (session != null ? session.getId() : "null"), e.getMessage()); } }
-    private void sendErrorMessage(WebSocketSession session, String errorMessageText) { sendMessage(session, new SignalingMessage(MessageType.ERROR, null, null, null, null, errorMessageText, null)); }
+    private void sendErrorMessage(WebSocketSession session, String errorMessageText) { sendMessage(session, new SignalingMessage(MessageType.ERROR, null, null, null, null, errorMessageText, null, null, null, null)); }
     @Override public void handleTransportError(WebSocketSession session, Throwable exception) { logger.error("WebSocket传输错误 | 会话ID {}: {}", session.getId(), exception.getMessage());}
     @Override public boolean supportsPartialMessages() { return false; }
 }

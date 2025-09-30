@@ -426,7 +426,7 @@ export const webrtcService = {
     // --- ✅ MODIFICATION START: Add methods to manage the auto-refresh timer ---
     startAutoRefresh() {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-        autoRefreshInterval = setInterval(proactivelyConnectToOnlineContacts, 30000);
+        autoRefreshInterval = setInterval(proactivelyConnectToOnlineContacts, 8000);
         log('WebRTC 服务: 已启动周期性在线用户刷新和自动连接任务。', 'INFO');
     },
     stopAutoRefresh() {

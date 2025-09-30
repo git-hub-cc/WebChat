@@ -3,6 +3,7 @@
  *
  * `enum` 提供了一种类型安全的方式来识别和处理不同种OLS的消息。
  * [MODIFIED] 增加了 `REGISTER_PEER` 类型，用于伙伴服务器间的握手。
+ * [MODIFIED] 增加了 `ACK` 类型，用于应用层的消息确认。
  *
  * 关联:
  * - `SignalingMessage`: 使用此枚举来标识消息的具体类型。
@@ -23,6 +24,7 @@ public enum MessageType {
     SUCCESS,        // 服务器发往客户端的通用成功消息
     ERROR,          // 服务器发往客户端的错误消息
     USER_NOT_FOUND, // 表示消息的目标用户未找到
+    ACK,            // [NEW] 应用层消息确认
 
     // [NEW] 联邦服务器间握手
     REGISTER_PEER   // 下游伙伴服务器连接成功后，向上游服务器注册自己
