@@ -20,7 +20,9 @@ body.theme-迷宫饭-浅色 {
     --mgf-fresh-herb-green-rgb: 130, 160, 100;
     --mgf-berry-red-rgb: 190, 70, 80;
     --mgf-text-ink-brown-rgb: 85, 70, 55;
-    --mgf-text-light-soup-rgb: 150, 140, 125;
+    /* ✅ MODIFICATION START: Increased contrast for secondary text */
+    --mgf-text-light-soup-rgb: 140, 130, 115;
+    /* ✅ MODIFICATION END */
     --mgf-border-old-wood-rgb: 205, 195, 180;
 
     /* --- 1b. Overriding Base Semantic Variables --- */

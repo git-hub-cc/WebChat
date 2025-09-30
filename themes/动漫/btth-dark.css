@@ -22,7 +22,9 @@ body.theme-斗破苍穹-深色 {
     --dq-dark-demonic-cyan-flame-rgb: 50, 140, 170;
     --dq-dark-danger-crimson-rgb: 170, 30, 40;
     --dq-dark-text-ash-white-rgb: 220, 225, 230;
-    --dq-dark-text-shadow-gray-rgb: 140, 145, 155;
+    /* ✅ MODIFICATION START: Increased contrast for secondary text */
+    --dq-dark-text-shadow-gray-rgb: 160, 165, 175;
+    /* ✅ MODIFICATION END */
     --dq-dark-volcanic-border-rgb: 45, 42, 55;
 
     /* --- 1b. Overriding Base Semantic Variables --- */
