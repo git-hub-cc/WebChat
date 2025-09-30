@@ -35,7 +35,9 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { eventBus } from '@/services/eventBus';
-import { generateFileHash } from '@/utils';
+// --- MODIFICATION START: Import the new unified hashing function ---
+import { generateHash } from '@/utils';
+// --- MODIFICATION END ---
 import { useUiStore } from '@/stores/uiStore';
 import IconButton from '@/components/Shared/IconButton.vue';
 import AppSettings from '@/config/AppSettings';
@@ -234,7 +236,9 @@ async function confirmEdit() {
       closeEditor(true);
       return;
     }
-    const hash = await generateFileHash(blob);
+    // --- MODIFICATION START: Use the new worker-based hash function ---
+    const hash = await generateHash(blob);
+    // --- MODIFICATION END ---
     const fileObject = {
       blob, hash,
       name: `screenshot-${Date.now()}.png`,

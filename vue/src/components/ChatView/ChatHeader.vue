@@ -17,10 +17,10 @@
     <div class="chat-actions">
       <IconButton icon="📹" title="视频通话" :disabled="!canCall" @click="startVideoCall" />
       <IconButton icon="🎤" title="语音通话" :disabled="!canCall" @click="startAudioCall" />
-      <IconButton icon="🖥️" title="屏幕共享" :disabled="!canCall || callStore.isScreenSharing" @click="startScreenShare" />
-      <!-- ✅ MODIFICATION START: Add a class to the lobby button for mobile styling -->
-      <IconButton class="lobby-button" icon="👥" title="人员大厅" @click="uiStore.toggleDetailsPanel(true, 'lobby')" />
+      <!-- ✅ MODIFICATION START: Add a class to the screenshare button for mobile styling -->
+      <IconButton class="screenshare-button" icon="🖥️" title="屏幕共享" :disabled="!canCall || callStore.isScreenSharing" @click="startScreenShare" />
       <!-- ✅ MODIFICATION END -->
+      <IconButton class="lobby-button" icon="👥" title="人员大-厅" @click="uiStore.toggleDetailsPanel(true, 'lobby')" />
     </div>
   </header>
 </template>
@@ -101,8 +101,11 @@ const startScreenShare = () => { if (canCall.value) callStore.startScreenShare()
   .back-button {
     display: inline-flex;
   }
-  /* ✅ MODIFICATION START: Hide the lobby button on mobile */
   .lobby-button {
+    display: none;
+  }
+  /* ✅ MODIFICATION START: Hide the screenshare button on mobile */
+  .screenshare-button {
     display: none;
   }
   /* ✅ MODIFICATION END */

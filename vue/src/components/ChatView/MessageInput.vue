@@ -122,7 +122,9 @@ import EmojiPicker from '@/components/Shared/EmojiPicker.vue';
 import AiMentionList from './AiMentionList.vue';
 import { mediaService } from '@/services/mediaService';
 import { webrtcService } from '@/services/webrtcService';
-import { generateFileHash } from '@/utils';
+// --- MODIFICATION START: Import the new unified hashing function ---
+import { generateHash } from '@/utils';
+// --- MODIFICATION END ---
 import { eventBus } from '@/services/eventBus';
 import WaveSurfer from 'wavesurfer.js';
 import { sttService } from '@/services/sttService';
@@ -190,7 +192,9 @@ async function handleFileSelect(event) { const file = event.target.files[0]; if 
 async function handlePaste(event) { const file = event.clipboardData.files[0]; if (file?.type.startsWith('image/')) { event.preventDefault(); await processFile(file); } }
 async function processFile(file) {
   cancelPreview();
-  const hash = await generateFileHash(file);
+  // --- MODIFICATION START: Use the new worker-based hash function ---
+  const hash = await generateHash(file);
+  // --- MODIFICATION END ---
   const isImage = file.type.startsWith('image/');
   preview.value = {
     type: 'file',

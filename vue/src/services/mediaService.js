@@ -1,5 +1,7 @@
 import { ref } from 'vue';
-import { log, generateFileHash } from '@/utils';
+// --- MODIFICATION START: Import the new unified hashing function ---
+import { log, generateHash } from '@/utils';
+// --- MODIFICATION END ---
 import { eventBus } from './eventBus';
 import AppSettings from '@/config/AppSettings';
 import { dbService } from './dbService';
@@ -205,7 +207,9 @@ export const mediaService = {
         }
 
         try {
-            const hash = await generateFileHash(file);
+            // --- MODIFICATION START: Use the new worker-based hash function ---
+            const hash = await generateHash(file);
+            // --- MODIFICATION END ---
             const stickerData = { id: hash, name: file.name, blob: file };
             await dbService.setItem('stickers', stickerData);
             eventBus.emit('showNotification', { message: '贴图已添加！', type: 'success' });

@@ -146,7 +146,10 @@ onUnmounted(() => {
   height: 100%;
 }
 .scroller-item {
-  padding: 0 var(--spacing-4);
+  /* ✅ MODIFICATION START: Add bottom padding for spacing */
+  /* [✅ 优化] 增加底部内边距，确保消息间有足够间距，防止样式被裁剪 */
+  padding: 0 var(--spacing-4) var(--spacing-2);
+  /* ✅ MODIFICATION END */
 }
 .scroll-to-bottom {
   position: absolute;

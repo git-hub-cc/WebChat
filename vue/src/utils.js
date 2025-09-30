@@ -100,12 +100,73 @@ export const formatMessageText = (text) => {
     return escapedText.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
 };
 
+// --- MODIFICATION START: Web Worker implementation for hashing ---
+
+// Worker pool to avoid creating new workers for every hash.
+const workerPool = {
+    hash: null,
+};
+
 /**
- * 计算文件Blob的SHA-256哈希值。
- * @param {Blob} blob - 要计算哈希的文件Blob对象。
- * @returns {Promise<string>} - 文件的SHA-256哈希字符串。
+ * [NEW] Uses a Web Worker to calculate the SHA-256 hash of a file Blob.
+ * This is the high-performance method that avoids blocking the main thread.
+ * @param {Blob} blob - The file Blob object to hash.
+ * @returns {Promise<string>} A promise that resolves with the file's SHA-256 hash string.
  */
-export async function generateFileHash(blob) {
+function generateFileHashWithWorker(blob) {
+    return new Promise((resolve, reject) => {
+        // Fallback for browsers that don't support Web Workers
+        if (!window.Worker) {
+            console.warn("Web Worker not supported. Falling back to main thread hashing.");
+            return generateFileHashOnMainThread(blob).then(resolve).catch(reject);
+        }
+
+        // Initialize or get the existing worker from the pool
+        if (!workerPool.hash) {
+            try {
+                workerPool.hash = new Worker('hash.worker.js'); // Path relative to index.html
+            } catch (error) {
+                console.error("Failed to create hash worker. Falling back to main thread.", error);
+                return generateFileHashOnMainThread(blob).then(resolve).catch(reject);
+            }
+        }
+        const worker = workerPool.hash;
+
+        // Create a unique ID for this specific hashing task
+        const id = Date.now() + Math.random();
+
+        const messageHandler = (event) => {
+            // Ensure the response corresponds to this specific task
+            if (event.data.id === id) {
+                worker.removeEventListener('message', messageHandler); // Clean up the listener
+                if (event.data.error) {
+                    reject(new Error(event.data.error));
+                } else {
+                    resolve(event.data.hash);
+                }
+            }
+        };
+
+        worker.addEventListener('message', messageHandler);
+        worker.addEventListener('error', (err) => {
+            worker.removeEventListener('message', messageHandler);
+            reject(err);
+        });
+
+        // Send the blob to the worker to start processing.
+        // We do not use transferable objects ([blob]) because the main thread
+        // still needs the blob to create object URLs for previews.
+        worker.postMessage({ fileBlob: blob, id });
+    });
+}
+
+/**
+ * [RENAMED & FALLBACK] Calculates the SHA-256 hash on the main thread.
+ * Kept as a fallback for older browsers or if the worker fails.
+ * @param {Blob} blob - The file Blob object to hash.
+ * @returns {Promise<string>} A promise that resolves with the file's SHA-256 hash string.
+ */
+async function generateFileHashOnMainThread(blob) {
     if (!(blob instanceof Blob)) {
         throw new Error("Input must be a Blob object.");
     }
@@ -115,10 +176,21 @@ export async function generateFileHash(blob) {
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     } catch (error) {
-        log(`Failed to generate file hash: ${error.message}`, 'ERROR');
+        log(`Failed to generate file hash on main thread: ${error.message}`, 'ERROR');
         throw error;
     }
 }
+
+/**
+ * [EXPORTED] A unified hash generation function that prioritizes using a Web Worker.
+ * All parts of the app should use this function for hashing.
+ */
+export const generateHash = generateFileHashWithWorker;
+// Kept the old export for backward compatibility in case I missed a spot, but it's now an alias.
+export const generateFileHash = generateFileHashOnMainThread;
+
+// --- MODIFICATION END ---
+
 
 /**
  * 发起一个流式 API 请求并处理响应。
