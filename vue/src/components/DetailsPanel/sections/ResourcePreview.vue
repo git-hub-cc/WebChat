@@ -6,6 +6,9 @@
       <button :class="{ active: activeTab === 'media' }" @click="switchTab('media')">媒体</button>
       <button :class="{ active: activeTab === 'text' }" @click="switchTab('text')">文本</button>
       <button :class="{ active: activeTab === 'files' }" @click="switchTab('files')">文件</button>
+      <!-- --- ✅ MODIFICATION START --- -->
+      <button :class="{ active: activeTab === 'location' }" @click="switchTab('location')">位置</button>
+      <!-- --- ✅ MODIFICATION END --- -->
       <button :class="{ active: activeTab === 'calendar' }" @click="switchTab('calendar')">日历</button>
     </nav>
 
@@ -31,18 +34,16 @@
           <component
               :is="itemComponent"
               :item="item"
-              @click="scrollToMessage(item.id)"
+              @click="handleItemClick(item)"
           />
         </RecycleScroller>
 
-        <!-- --- MODIFICATION START: Improved empty state with SVG --- -->
         <div v-if="!isLoading && filteredResources.length === 0" class="empty-state">
           <svg class="empty-state-icon" viewBox="0 0 24 24" fill="currentColor">
             <path d="M21.99 4c0-1.1-.89-2-1.99-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h14l4 4-.01-18zM18 14H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"></path>
           </svg>
           <p>{{ searchQuery ? '无匹配结果' : '此分类下无资源' }}</p>
         </div>
-        <!-- --- MODIFICATION END --- -->
       </div>
 
       <div v-if="activeTab === 'calendar'" class="calendar-wrapper">
@@ -60,15 +61,25 @@ import { eventBus } from '@/services/eventBus';
 import { RecycleScroller } from 'vue-virtual-scroller';
 import CalendarView from './CalendarView.vue';
 import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
+// --- ✅ MODIFICATION START ---
+import { useUiStore } from '@/stores/uiStore';
+// --- ✅ MODIFICATION END ---
+
 
 const ResourceGridItem = defineAsyncComponent(() => import('./ResourceGridItem.vue'));
 const ResourceTextItem = defineAsyncComponent(() => import('./ResourceTextItem.vue'));
+// --- ✅ MODIFICATION START ---
+const ResourceLocationItem = defineAsyncComponent(() => import('./ResourceLocationItem.vue'));
+// --- ✅ MODIFICATION END ---
 
 const props = defineProps({
   chatId: { type: String, required: true }
 });
 
 const chatStore = useChatStore();
+// --- ✅ MODIFICATION START ---
+const uiStore = useUiStore();
+// --- ✅ MODIFICATION END ---
 const scrollContainerRef = ref(null);
 
 const activeTab = ref('media');
@@ -85,23 +96,46 @@ const filteredResources = computed(() => {
   const query = searchQuery.value.toLowerCase();
   if (!query) return allResources.value;
   return allResources.value.filter(item => {
-    const contentToSearch = item.type === 'text' ? item.content : item.fileName;
+    // --- ✅ MODIFICATION START ---
+    let contentToSearch = '';
+    if (item.type === 'text') {
+      contentToSearch = item.content;
+    } else if (item.type === 'location') {
+      // Allow searching by coordinates
+      contentToSearch = `${item.latitude},${item.longitude}`;
+    } else {
+      contentToSearch = item.fileName;
+    }
+    // --- ✅ MODIFICATION END ---
     return contentToSearch?.toLowerCase().includes(query);
   });
 });
 
 const itemComponent = computed(() => {
-  return activeTab.value === 'text' ? ResourceTextItem : ResourceGridItem;
+  // --- ✅ MODIFICATION START ---
+  switch(activeTab.value) {
+    case 'text': return ResourceTextItem;
+    case 'location': return ResourceLocationItem;
+    default: return ResourceGridItem;
+  }
+  // --- ✅ MODIFICATION END ---
 });
 
 const gridColumns = computed(() => {
-  return activeTab.value === 'text' ? 1 : 3;
+  // --- ✅ MODIFICATION START ---
+  if (activeTab.value === 'text' || activeTab.value === 'location') {
+    return 1;
+  }
+  // --- ✅ MODIFICATION END ---
+  return 3;
 });
 
 const itemSize = computed(() => {
-  if (activeTab.value === 'text') {
+  // --- ✅ MODIFICATION START ---
+  if (activeTab.value === 'text' || activeTab.value === 'location') {
     return 72;
   }
+  // --- ✅ MODIFICATION END ---
   if (scrollContainerRef.value) {
     const containerWidth = scrollContainerRef.value.clientWidth;
     const padding = 8 * 2;
@@ -116,6 +150,9 @@ function getResourceTypeForTab(tab) {
     case 'media': return 'imagery';
     case 'text': return 'text';
     case 'files': return 'other';
+      // --- ✅ MODIFICATION START ---
+    case 'location': return 'location';
+      // --- ✅ MODIFICATION END ---
     default: return 'all';
   }
 }
@@ -146,9 +183,24 @@ function switchTab(tab) {
   }
 }
 
-function scrollToMessage(messageId) {
-  eventBus.emit('chat:scroll-to-message', messageId);
+// --- ✅ MODIFICATION START ---
+function handleItemClick(item) {
+  if (item.type === 'location') {
+    // For location, open the map directly
+    const mapUrl = `https://uri.amap.com/marker?position=${item.longitude},${item.latitude}`;
+    window.open(mapUrl, '_blank', 'noopener,noreferrer');
+  } else {
+    // For other types, scroll to the message
+    eventBus.emit('chat:scroll-to-message', item.id);
+    // On mobile, also switch back to the chat view
+    if (window.innerWidth <= 768) {
+      uiStore.toggleDetailsPanel(false);
+      uiStore.isChatViewActiveOnMobile = true;
+    }
+  }
 }
+// --- ✅ MODIFICATION END ---
+
 
 function handleScroll() {
   const el = scrollContainerRef.value;
@@ -185,7 +237,6 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
   padding: var(--spacing-4);
 }
-/* --- MODIFICATION START: Styles for empty state icon --- */
 .empty-state-icon {
   width: 64px;
   height: 64px;
@@ -195,7 +246,6 @@ onUnmounted(() => {
 .empty-state p {
   line-height: 1.5;
 }
-/* --- MODIFICATION END --- */
 .loading-state {
   display: flex;
   flex-direction: column;

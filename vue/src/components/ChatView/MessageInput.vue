@@ -42,6 +42,7 @@
       <div class="input-main-area" :class="{ 'slide-away': isSlidToCancel }">
         <IconButton icon="😀" title="表情/贴图" @click.stop="toggleEmojiPicker" />
         <IconButton icon="📎" title="附加文件" @click="triggerFileInput" />
+        <IconButton icon="📍" title="发送位置" @click="sendLocation" />
         <textarea
             ref="textareaRef"
             v-model="newMessage"
@@ -54,10 +55,9 @@
         ></textarea>
       </div>
 
-      <!-- --- [动画] START: 为按钮切换添加滑动和淡入淡出动画 --- -->
       <div class="input-actions-area">
         <TransitionGroup name="actions-slide-fade">
-          <IconButton v-if="!newMessage && !isRecording && !isSttActive" key="screenshot" icon="📸" title="截图" @click="handleScreenshot" />
+          <IconButton v-if="!newMessage && !isRecording && !isSttActive" key="screenshot" icon="📸" title="截图" @click="handleScreenshot" class="screenshot-button" />
 
           <div v-if="!newMessage || isSttActive" key="voice" class="voice-button-wrapper">
             <!-- STT button for AI chats -->
@@ -99,8 +99,6 @@
           <IconButton v-else key="send" icon="➤" title="发送" @click="send" class="send-button" />
         </TransitionGroup>
       </div>
-      <!-- --- [动画] END --- -->
-
     </div>
     <EmojiPicker
         :show="isEmojiPickerVisible"
@@ -122,9 +120,7 @@ import EmojiPicker from '@/components/Shared/EmojiPicker.vue';
 import AiMentionList from './AiMentionList.vue';
 import { mediaService } from '@/services/mediaService';
 import { webrtcService } from '@/services/webrtcService';
-// --- MODIFICATION START: Import the new unified hashing function ---
 import { generateHash } from '@/utils';
-// --- MODIFICATION END ---
 import { eventBus } from '@/services/eventBus';
 import WaveSurfer from 'wavesurfer.js';
 import { sttService } from '@/services/sttService';
@@ -183,7 +179,18 @@ const adjustTextareaHeight = () => { nextTick(() => { const textarea = textareaR
 const handleKeyDown = (event) => { if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !isSttActive.value) { event.preventDefault(); send(); } };
 const triggerFileInput = () => fileInputRef.value?.click();
 
-function send() { if (preview.value) { if (preview.value.type === 'audio' || preview.value.type === 'file') { chatStore.sendMessage({ file: preview.value }); } cancelPreview(); } if (newMessage.value.trim()) { chatStore.sendMessage({ content: newMessage.value.trim() }); newMessage.value = ''; adjustTextareaHeight(); } }
+function send() {
+  if (preview.value) {
+    if (preview.value.type === 'audio' || preview.value.type === 'file') {
+      chatStore.sendMessage({ file: preview.value });
+    }
+    cancelPreview();
+  } else if (newMessage.value.trim()) {
+    chatStore.sendMessage({ content: newMessage.value.trim() });
+    newMessage.value = '';
+    adjustTextareaHeight();
+  }
+}
 function sendSticker(sticker) { chatStore.sendMessage({ sticker }); isEmojiPickerVisible.value = false; }
 function insertEmoji(emoji) { const textarea = textareaRef.value; const start = textarea.selectionStart; const end = textarea.selectionEnd; newMessage.value = newMessage.value.substring(0, start) + emoji + newMessage.value.substring(end); nextTick(() => { textarea.selectionStart = textarea.selectionEnd = start + emoji.length; textarea.focus(); }); }
 function toggleEmojiPicker() { isEmojiPickerVisible.value = !isEmojiPickerVisible.value; }
@@ -192,9 +199,7 @@ async function handleFileSelect(event) { const file = event.target.files[0]; if 
 async function handlePaste(event) { const file = event.clipboardData.files[0]; if (file?.type.startsWith('image/')) { event.preventDefault(); await processFile(file); } }
 async function processFile(file) {
   cancelPreview();
-  // --- MODIFICATION START: Use the new worker-based hash function ---
   const hash = await generateHash(file);
-  // --- MODIFICATION END ---
   const isImage = file.type.startsWith('image/');
   preview.value = {
     type: 'file',
@@ -214,7 +219,6 @@ watch(preview, (newPreview, oldPreview) => { if (oldPreview && previewWavesurfer
 
 const formatDuration = (seconds) => { const min = Math.floor(seconds / 60); const sec = seconds % 60; return `${min}:${sec < 10 ? '0' : ''}${sec}`; };
 
-// --- MODIFICATION START: Replaced toggleStt with start/stop functions for Push-to-Talk ---
 function startStt() {
   if (isSttActive.value) return; // Prevent multiple starts
   sttFinalizedTranscript.value = newMessage.value ? newMessage.value + ' ' : '';
@@ -226,7 +230,6 @@ function stopStt() {
   wasSttStoppedManually.value = true;
   sttService.stop();
 }
-// --- MODIFICATION END ---
 
 async function startRecording(event) { if (isRecording.value) return; cancelPreview(); const success = await mediaService.startRecording(); if (success) { isRecording.value = true; const touch = event.touches ? event.touches[0] : event; startCoords.value = { x: touch.clientX, y: touch.clientY }; recordingDuration.value = 0; recordingInterval = setInterval(() => { recordingDuration.value++; }, 1000); } }
 function stopRecording() { if (!isRecording.value) return; if (isRecordingLocked.value) return; clearInterval(recordingInterval); if (!isSlidToCancel.value) { mediaService.stopRecording(); } else { mediaService.stopRecording(true); } isRecording.value = false; isSlidToCancel.value = false; }
@@ -235,14 +238,9 @@ function cancelLockedRecording() { isRecordingLocked.value = false; isRecording.
 function sendLockedRecording() { isRecordingLocked.value = false; isRecording.value = false; clearInterval(recordingInterval); mediaService.stopRecording(); }
 function onRecordingComplete({ blob, duration }) { cancelPreview(); const url = URL.createObjectURL(blob); preview.value = { type: 'audio', blob, duration, url, hash: `audio_${Date.now()}`, name: `voice-message.webm`, fileType: blob.type, size: blob.size, }; }
 
-// ✅ START OF FIX
 async function handleScreenshot() {
-  // Directly call mediaService to capture a screenshot.
-  // The 'true' flag indicates this is for a screenshot, not a call.
-  // The 'detail' contentHint is better for static images.
   await mediaService.captureScreen('detail', true);
 }
-// ✅ END OF FIX
 
 function handleRawScreenshot(screenshotData) { uiStore.showModal('screenshotEditor', screenshotData); }
 
@@ -254,6 +252,10 @@ function onScreenshotComplete(fileObject) {
     isImage: true,
     url: URL.createObjectURL(fileObject.blob)
   };
+}
+
+function sendLocation() {
+  uiStore.showModal('locationPicker');
 }
 
 function handleInput() { adjustTextareaHeight(); handleTypingIndicator(); handleMentionPopup(); }
@@ -354,13 +356,11 @@ onUnmounted(() => {
 .input-main-area.slide-away { transform: translateX(-80px); }
 .input-actions-area { display: flex; align-items: flex-end; }
 
-/* --- [动画] START: 按钮切换动画样式 --- */
 .input-actions-area {
   position: relative;
   display: flex;
   align-items: flex-end;
-  /* Set a fixed width to contain the animating buttons */
-  width: 120px; /* Adjust as needed, e.g., 40px * 2 + gaps */
+  width: 120px;
   justify-content: flex-end;
 }
 .actions-slide-fade-enter-active,
@@ -375,11 +375,9 @@ onUnmounted(() => {
   opacity: 0;
   transform: translateX(20px);
 }
-/* Ensure leaving items don't affect layout */
 .actions-slide-fade-leave-active {
   position: absolute;
 }
-/* --- [动画] END --- */
 
 
 .cancel-hint {
@@ -414,4 +412,10 @@ onUnmounted(() => {
 .btn-cancel-recording, .btn-send-recording { font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold); padding: var(--spacing-1) var(--spacing-3); border-radius: var(--border-radius-md); }
 .btn-cancel-recording { color: var(--color-text-secondary); }
 .btn-send-recording { background-color: var(--color-brand-primary); color: white; }
+
+@media (max-width: 768px) {
+  .screenshot-button {
+    display: none;
+  }
+}
 </style>

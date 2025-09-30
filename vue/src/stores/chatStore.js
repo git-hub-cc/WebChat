@@ -10,7 +10,7 @@ import { generateId, log } from '@/utils';
 import { eventBus } from '@/services/eventBus';
 import AppSettings from '@/config/AppSettings';
 import { useTtsStore } from './ttsStore';
-import { useTransferStore } from './transferStore'; // <-- [新增] 导入 transferStore
+import { useTransferStore } from './transferStore';
 
 export const useChatStore = defineStore('chat', () => {
     const chats = ref({});
@@ -98,6 +98,9 @@ export const useChatStore = defineStore('chat', () => {
                 case 'imagery': isMatch = ['image', 'video', 'sticker'].includes(msg.type); break;
                 case 'text': isMatch = msg.type === 'text'; break;
                 case 'other': isMatch = ['file', 'audio'].includes(msg.type); break;
+                // --- ✅ MODIFICATION START ---
+                case 'location': isMatch = msg.type === 'location'; break;
+                // --- ✅ MODIFICATION END ---
             }
             if(isMatch) filtered.push(msg);
         }
@@ -127,9 +130,7 @@ export const useChatStore = defineStore('chat', () => {
         const updatePromises = [];
         chatItems.forEach(item => {
             if (item.messages && Array.isArray(item.messages)) {
-                // --- MODIFICATION START: Also clean up 'receiving' messages on init ---
                 const cleanedMessages = item.messages.filter(msg => msg && msg.id && !msg.isThinking && !msg.isStreaming && !msg.toolCallInfo && msg.status !== 'receiving');
-                // --- MODIFICATION END ---
                 if (cleanedMessages.length < item.messages.length) {
                     log(`ChatStore Init: Cleaned ${item.messages.length - cleanedMessages.length} temporary messages from chat ${item.id}.`, 'INFO');
                     const updatedItem = { ...item, messages: cleanedMessages };
@@ -150,13 +151,10 @@ export const useChatStore = defineStore('chat', () => {
         eventBus.on('message:retracted', ({ chatId, messageId, retractedByName }) => {
             _updateMessageToRetractedState(messageId, chatId, retractedByName);
         });
-        // --- NEW ---
         eventBus.on('file:transfer-initiated', handleTransferInitiated);
         eventBus.on('file:ready', handleTransferCompleted);
-        // --- END NEW ---
     }
 
-    // --- NEW: Handler for file transfer start ---
     async function handleTransferInitiated({ peerId, messageId, fileHash, fileName, fileSize, fileType }) {
         const chatId = peerId; // In P2P, peerId is the chatId
         const userStore = useUserStore();
@@ -177,22 +175,18 @@ export const useChatStore = defineStore('chat', () => {
 
         await addMessage(chatId, placeholderMessage);
 
-        // Increment unread count if chat is not active
         if (currentChatId.value !== chatId || !document.hasFocus()) {
             userStore.incrementUnread(chatId);
         }
     }
 
-    // --- NEW: Handler for file transfer completion ---
     async function handleTransferCompleted({ fileHash, messageId }) {
-        // Find the chat and message that matches this transfer
         for (const chatId in chats.value) {
             const messageIndex = chats.value[chatId].findIndex(m => m.id === messageId && m.fileHash === fileHash && m.status === 'receiving');
             if (messageIndex > -1) {
-                // Update the status to 'delivered' to trigger UI update in MessageBubble
                 await _updateMessageState(chatId, messageId, { status: 'delivered' });
                 log(`File transfer message ${messageId} completed and status updated.`, 'INFO');
-                break; // Found and updated, exit loop
+                break;
             }
         }
     }
@@ -205,9 +199,7 @@ export const useChatStore = defineStore('chat', () => {
         if (message.toolCallInfo) return `正在使用工具: ${message.toolCallInfo.name}`;
         if (message.isThinking) return `思考中...`;
         if (message.isStreaming) return `正在输入...`;
-        // --- NEW: Preview for receiving files ---
         if (message.status === 'receiving') return `[正在接收文件] ${message.fileName || ''}`;
-        // --- END NEW ---
         let senderPrefix = '';
         const userStore = useUserStore();
         if (message.groupId && message.sender !== userStore.userId) {
@@ -221,6 +213,9 @@ export const useChatStore = defineStore('chat', () => {
             case 'video': content = '[视频]'; break;
             case 'audio': content = '[语音消息]'; break;
             case 'file': content = `[文件] ${message.fileName || ''}`; break;
+            // --- ✅ MODIFICATION START ---
+            case 'location': content = '[位置信息]'; break;
+            // --- ✅ MODIFICATION END ---
             case 'system': return message.content;
             default: content = '新消息';
         }
@@ -246,14 +241,13 @@ export const useChatStore = defineStore('chat', () => {
         } else {
             chats.value[chatId].push(message);
         }
-        // --- MODIFICATION: Do not save messages that are in a temporary state ---
         if (!message.isThinking && !message.isStreaming && !message.toolCallInfo && message.status !== 'receiving') {
             const messagesToSave = JSON.parse(JSON.stringify(chats.value[chatId]));
             await dbService.setItem('chats', { id: chatId, messages: messagesToSave });
         }
     }
 
-    async function sendMessage({ content = null, file = null, sticker = null }, isResend = false) {
+    async function sendMessage({ content = null, file = null, sticker = null, location = null }, isResend = false) {
         if (!currentChatId.value) return;
         const targetId = currentChatId.value;
         const userStore = useUserStore();
@@ -301,6 +295,15 @@ export const useChatStore = defineStore('chat', () => {
             };
         } else if (content) {
             messagePayload = { type: 'text', content };
+            // --- ✅ MODIFICATION START ---
+        } else if (location) {
+            messagePayload = {
+                type: 'location',
+                latitude: location.latitude,
+                longitude: location.longitude,
+                accuracy: location.accuracy
+            };
+            // --- ✅ MODIFICATION END ---
         } else return;
 
         const fullMessage = {
@@ -385,15 +388,11 @@ export const useChatStore = defineStore('chat', () => {
         if (message.type === 'group-join') { return; }
 
         const chatId = message.groupId || peerId;
-        // --- MODIFICATION: Do not add the final message if it's a file transfer.
-        // The placeholder has already been created by `handleTransferInitiated`.
         if (message.type === 'file' || message.type === 'image' || message.type === 'video' || message.type === 'audio' || message.type === 'sticker') {
-            // The placeholder is already in place. We just acknowledge.
             log(`Received file message meta for ${message.id}. Placeholder should exist.`, 'DEBUG');
         } else {
             await addMessage(chatId, { ...message, status: 'delivered' });
         }
-        // --- MODIFICATION END ---
         if (currentChatId.value !== chatId || !document.hasFocus()) {
             if (message.groupId) { useGroupStore().incrementUnread(chatId); }
             else { useUserStore().incrementUnread(chatId); }

@@ -50,6 +50,10 @@
             @close="uiStore.hideModal()"
             v-motion-pop
         />
+        <LocationPickerModal
+            v-if="uiStore.activeModal === 'locationPicker'"
+            v-motion-pop
+        />
         <BindManualConnectionModal
             v-if="uiStore.activeModal === 'bindManualConnection'"
             v-motion-pop
@@ -68,6 +72,9 @@
             v-motion-pop
         />
         <MediaViewerModal v-if="uiStore.activeModal === 'mediaViewer'" />
+        <!-- ✅ MODIFICATION START: Add the new LocationViewerModal -->
+        <LocationViewerModal v-if="uiStore.activeModal === 'locationViewer'" />
+        <!-- ✅ MODIFICATION END -->
       </div>
     </Transition>
 
@@ -118,7 +125,11 @@ import BindManualConnectionModal from '@/components/Modals/BindManualConnectionM
 import WelcomeHeader from '@/components/ChatView/WelcomeHeader.vue';
 import FloatingCallWidget from '@/components/Shared/FloatingCallWidget.vue';
 import SettingsModalSkeleton from '@/components/Shared/SettingsModalSkeleton.vue';
+import LocationPickerModal from '@/components/Modals/LocationPickerModal.vue';
 import MobileGlobalHeader from '@/components/Shared/MobileGlobalHeader.vue';
+// ✅ MODIFICATION START: Import the new LocationViewerModal
+import LocationViewerModal from '@/components/Modals/LocationViewerModal.vue';
+// ✅ MODIFICATION END
 
 const userStore = useUserStore();
 const chatStore = useChatStore();

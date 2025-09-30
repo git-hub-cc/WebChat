@@ -3,101 +3,112 @@
       class="message-wrapper"
       :class="{ ...wrapperClasses, 'consecutive': isConsecutive }"
       @contextmenu.prevent="showContextMenu"
-  @dblclick="showContextMenu"
-  v-motion-slide-bottom
-  :delay="100"
+      @dblclick="showContextMenu"
+      v-motion-slide-bottom
+      :delay="100"
   >
-  <div v-if="message.type === 'system' || message.isRetracted" class="system-message">
-    <div v-if="message.toolCallInfo || message.isThinking" class="tool-call-indicator">
-      <div class="thinking-dots">
-        <span></span><span></span><span></span>
+    <div v-if="message.type === 'system' || message.isRetracted" class="system-message">
+      <div v-if="message.toolCallInfo || message.isThinking" class="tool-call-indicator">
+        <div class="thinking-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span>{{ message.toolCallInfo ? `正在使用工具: ${message.toolCallInfo.name}...` : '思考中...' }}</span>
       </div>
-      <span>{{ message.toolCallInfo ? `正在使用工具: ${message.toolCallInfo.name}...` : '思考中...' }}</span>
-    </div>
-    <div v-else-if="message.subType === 'call-log'" class="call-log-content">
-      <span class="call-icon">{{ callIcon }}</span>
-      <span>{{ message.content }}</span>
-    </div>
-    <span v-else>{{ message.content }}</span>
-  </div>
-
-  <div v-else class="message-bubble" :class="{ 'character-message': isCharacterMessage, [message.sender]: isCharacterMessage }">
-    <div v-if="!isMyMessage && isGroupChat" class="sender-name">
-      {{ senderName }}
-    </div>
-    <div class="content-wrapper">
-      <div v-if="message.type === 'text'" class="message-content" v-html="formattedContent"></div>
-
-      <div v-else-if="message.type === 'audio'" class="audio-content">
-        <button class="play-button" @click="toggleAudioPlay">{{ isPlaying ? '❚❚' : '▶' }}</button>
-        <div ref="waveformRef" class="waveform-container"></div>
-        <span class="duration-label">{{ formatDuration(message.duration) }}</span>
+      <div v-else-if="message.subType === 'call-log'" class="call-log-content">
+        <span class="call-icon">{{ callIcon }}</span>
+        <span>{{ message.content }}</span>
       </div>
+      <span v-else>{{ message.content }}</span>
+    </div>
 
-      <div v-else-if="isMedia" class="media-content" @click="handleMediaClick">
-        <div v-if="message.status === 'receiving'" class="media-placeholder receiving">
-          <div class="transfer-info">
-            <span class="file-name" :title="message.fileName">{{ message.fileName }}</span>
-            <progress
-                v-if="transferProgress"
-                :value="transferProgress.receivedBytes"
-                :max="transferProgress.totalBytes"
-                class="transfer-progress"
-            ></progress>
-            <span class="transfer-stats">
+    <div v-else class="message-bubble" :class="{ 'character-message': isCharacterMessage, [message.sender]: isCharacterMessage }">
+      <div v-if="!isMyMessage && isGroupChat" class="sender-name">
+        {{ senderName }}
+      </div>
+      <div class="content-wrapper">
+        <div v-if="message.type === 'text'" class="message-content" v-html="formattedContent"></div>
+
+        <div v-else-if="message.type === 'audio'" class="audio-content">
+          <button class="play-button" @click="toggleAudioPlay">{{ isPlaying ? '❚❚' : '▶' }}</button>
+          <div ref="waveformRef" class="waveform-container"></div>
+          <span class="duration-label">{{ formatDuration(message.duration) }}</span>
+        </div>
+
+        <!-- ✅ MODIFICATION START: Location content is now a clickable viewer trigger -->
+        <div v-else-if="message.type === 'location'" class="location-content" @click="openLocationViewer">
+          <div class="location-icon">📍</div>
+          <div class="location-info">
+            <div class="location-title">位置信息</div>
+            <div class="location-coords">
+              {{ message.latitude.toFixed(4) }}, {{ message.longitude.toFixed(4) }}
+            </div>
+          </div>
+        </div>
+        <!-- ✅ MODIFICATION END -->
+
+        <div v-else-if="isMedia" class="media-content" @click="handleMediaClick">
+          <div v-if="message.status === 'receiving'" class="media-placeholder receiving">
+            <div class="transfer-info">
+              <span class="file-name" :title="message.fileName">{{ message.fileName }}</span>
+              <progress
+                  v-if="transferProgress"
+                  :value="transferProgress.receivedBytes"
+                  :max="transferProgress.totalBytes"
+                  class="transfer-progress"
+              ></progress>
+              <span class="transfer-stats">
                 {{ formatSize(transferProgress?.receivedBytes || 0) }} / {{ formatSize(message.fileSize) }}
                 <span v-if="transferProgress && transferProgress.etaSeconds < Infinity"> - ETA: {{ formatEta(transferProgress.etaSeconds) }}</span>
               </span>
+            </div>
           </div>
-        </div>
 
-        <div v-else>
-          <div v-if="message.type === 'sticker'" class="sticker-wrapper">
-            <div class="media-placeholder" v-if="!displayUrl">
-              <SkeletonLoader type="grid-item" :shimmer="true" />
+          <div v-else>
+            <div v-if="message.type === 'sticker'" class="sticker-wrapper">
+              <div class="media-placeholder" v-if="!displayUrl">
+                <SkeletonLoader type="grid-item" :shimmer="true" />
+              </div>
+              <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image">
             </div>
-            <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image">
-          </div>
-          <div v-else-if="isPreviewableMedia" class="media-preview-container">
-            <div class="media-placeholder" v-if="!thumbnailSource">
-              <SkeletonLoader type="grid-item" :shimmer="true" />
+            <div v-else-if="isPreviewableMedia" class="media-preview-container">
+              <div class="media-placeholder" v-if="!thumbnailSource">
+                <SkeletonLoader type="grid-item" :shimmer="true" />
+              </div>
+              <div v-if="thumbnailSource" class="video-preview">
+                <img :src="thumbnailSource" :alt="message.fileName || 'media preview'" class="media-image">
+                <div v-if="message.fileType?.startsWith('video/')" class="play-overlay">
+                  <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 5v14l11-7z"></path>
+                  </svg>
+                </div>
+              </div>
             </div>
-            <!-- ✅ CONTEXT MENU FIX: 使用 <img> 替代 <video> 是关键。这阻止了浏览器默认视频菜单的出现。 -->
-            <div v-if="thumbnailSource" class="video-preview">
-              <img :src="thumbnailSource" :alt="message.fileName || 'media preview'" class="media-image">
-              <div v-if="message.fileType?.startsWith('video/')" class="play-overlay">
-                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 5v14l11-7z"></path>
-                </svg>
+            <div v-else class="file-info-wrapper">
+              <div class="file-icon-container">{{ getFileExtension(message.fileName) }}</div>
+              <div class="file-info-text">
+                <div class="file-name" :title="message.fileName || '文件'">{{ message.fileName || '文件' }}</div>
+                <div class="file-meta">{{ formatSize(message.size) }}</div>
               </div>
             </div>
           </div>
-          <div v-else class="file-info-wrapper">
-            <div class="file-icon-container">{{ getFileExtension(message.fileName) }}</div>
-            <div class="file-info-text">
-              <div class="file-name" :title="message.fileName || '文件'">{{ message.fileName || '文件' }}</div>
-              <div class="file-meta">{{ formatSize(message.size) }}</div>
-            </div>
-          </div>
+        </div>
+
+
+        <div v-if="showTtsControl" class="tts-control">
+          <button v-if="ttsState === 'error'" class="tts-button error" title="TTS 错误, 点击重试" @click.stop="retryTts">⚠️</button>
+          <Spinner v-else-if="ttsState === 'loading'" size="x-small" />
+          <button v-else-if="ttsState === 'ready' || ttsState === 'playing'" class="tts-button" :class="{ playing: ttsState === 'playing' }" @click.stop="toggleTtsPlay" :title="ttsState === 'playing' ? '暂停' : '播放'"></button>
         </div>
       </div>
-
-
-      <div v-if="showTtsControl" class="tts-control">
-        <button v-if="ttsState === 'error'" class="tts-button error" title="TTS 错误, 点击重试" @click.stop="retryTts">⚠️</button>
-        <Spinner v-else-if="ttsState === 'loading'" size="x-small" />
-        <button v-else-if="ttsState === 'ready' || ttsState === 'playing'" class="tts-button" :class="{ playing: ttsState === 'playing' }" @click.stop="toggleTtsPlay" :title="ttsState === 'playing' ? '暂停' : '播放'"></button>
+      <div v-if="!message.isRetracted && message.type !== 'system'" class="message-meta">
+        <span class="timestamp">{{ formattedTimestamp }}</span>
+        <div v-if="isMyMessage" class="status-icon">
+          <Spinner v-if="message.status === 'sending'" size="x-small" />
+          <span v-else-if="message.status === 'sent' || message.status === 'delivered'" class="delivered">✓</span>
+          <span v-else-if="message.status === 'failed'" class="failed-icon" title="发送失败，点击重试" @click="resend">!</span>
+        </div>
       </div>
     </div>
-    <div v-if="!message.isRetracted && message.type !== 'system'" class="message-meta">
-      <span class="timestamp">{{ formattedTimestamp }}</span>
-      <div v-if="isMyMessage" class="status-icon">
-        <Spinner v-if="message.status === 'sending'" size="x-small" />
-        <span v-else-if="message.status === 'sent' || message.status === 'delivered'" class="delivered">✓</span>
-        <span v-else-if="message.status === 'failed'" class="failed-icon" title="发送失败，点击重试" @click="resend">!</span>
-      </div>
-    </div>
-  </div>
   </div>
 </template>
 
@@ -185,6 +196,15 @@ const callIcon = computed(() => {
   return '📞';
 });
 
+// ✅ MODIFICATION START: Add handler to open the location viewer
+function openLocationViewer() {
+  uiStore.showLocationViewer({
+    latitude: props.message.latitude,
+    longitude: props.message.longitude
+  });
+}
+// ✅ MODIFICATION END
+
 watch(ttsState, (newState, oldState) => { const audioUrl = ttsStore.audioUrlCache.get(props.message.id); if (newState === 'playing' && audioUrl) { if (!ttsAudioPlayer.value) { ttsAudioPlayer.value = new Audio(audioUrl); ttsAudioPlayer.value.onended = () => ttsStore.setPlaybackFinished(props.message.id); ttsAudioPlayer.value.onpause = () => ttsStore.setPlaybackFinished(props.message.id); } ttsAudioPlayer.value.play().catch(e => { log(`Error playing TTS audio: ${e.message}`, 'ERROR'); ttsStore.messageTtsState[props.message.id] = 'error'; }); } else if (newState === 'ready' && oldState === 'playing') { if (ttsAudioPlayer.value) ttsAudioPlayer.value.pause(); } });
 function toggleTtsPlay() { ttsStore.togglePlay(props.message.id); }
 function retryTts() { ttsStore.requestTtsForMessage({ ...props.message, senderContact: senderContact.value }); }
@@ -229,8 +249,6 @@ function handleMediaClick() {
 function toggleAudioPlay() { if (wavesurfer) wavesurfer.playPause(); }
 
 function showContextMenu(event) {
-  // ✅ CONTEXT MENU FIX: This function is now correctly triggered for both image and video previews.
-  // No new logic is needed here; the existing logic already handles video files correctly.
   if (props.message.type === 'system' || props.message.isRetracted) return;
   const items = [{
     label: '删除',
@@ -476,4 +494,39 @@ onUnmounted(() => {
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
 }
+
+/* --- ✅ MODIFICATION START --- */
+.location-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 250px;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.location-content:hover {
+  opacity: 0.8;
+}
+
+.location-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.location-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  text-align: left;
+}
+.location-title {
+  font-weight: var(--font-weight-semibold);
+}
+.location-coords {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+}
+/* --- ✅ MODIFICATION END --- */
 </style>

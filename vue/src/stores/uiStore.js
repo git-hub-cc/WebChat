@@ -16,6 +16,9 @@ export const useUiStore = defineStore('ui', () => {
     const contextMenuTarget = ref(null);
     const confirmationOptions = ref(null);
     const mediaViewerContent = ref(null);
+    // --- ✅ MODIFICATION START: Add state for location viewer ---
+    const locationViewerContent = ref(null);
+    // --- ✅ MODIFICATION END ---
     const modalPrefillData = ref({});
     const manualSdpText = ref('');
     // --- MODIFICATION START: Add state for dangerous actions ---
@@ -44,6 +47,9 @@ export const useUiStore = defineStore('ui', () => {
         modalPrefillData.value = {};
         if (confirmationOptions.value) confirmationOptions.value = null;
         if (mediaViewerContent.value) mediaViewerContent.value = null;
+        // --- ✅ MODIFICATION START: Clear location viewer content on modal hide ---
+        if (locationViewerContent.value) locationViewerContent.value = null;
+        // --- ✅ MODIFICATION END ---
     }
 
     function setAppLoading(isLoading) {
@@ -73,16 +79,25 @@ export const useUiStore = defineStore('ui', () => {
         showModal('mediaViewer');
     }
 
+    // --- ✅ MODIFICATION START: Add action to show location viewer ---
+    function showLocationViewer(content) {
+        locationViewerContent.value = content;
+        showModal('locationViewer');
+    }
+    // --- ✅ MODIFICATION END ---
+
     return {
         isDetailsPanelOpen, detailsPanelContent, activeModal, isAppLoading,
         chatListFilter, chatListSearchTerm, isChatViewActiveOnMobile,
         modalPrefillData, isContextMenuOpen, contextMenuPos, contextMenuItems,
         contextMenuTarget, confirmationOptions, mediaViewerContent,
+        locationViewerContent, // Expose new state
         manualSdpText,
         // --- MODIFICATION START: Expose the new state ---
         isPerformingDangerousAction,
         // --- MODIFICATION END ---
         toggleDetailsPanel, showModal, hideModal, setAppLoading,
-        showContextMenu, hideContextMenu, showConfirmationModal, showMediaViewer
+        showContextMenu, hideContextMenu, showConfirmationModal, showMediaViewer,
+        showLocationViewer // Expose new action
     };
 });
