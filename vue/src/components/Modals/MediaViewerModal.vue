@@ -14,6 +14,7 @@
             :src="content.src"
             :alt="content.alt"
             class="media-content"
+            loading="lazy"
         />
         <div v-else-if="isVideo" class="video-wrapper">
           <video

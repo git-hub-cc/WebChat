@@ -93,8 +93,8 @@
 </template>
 
 <script setup>
-// ✅ MODIFICATION START: Import ref for back button handling
-import { onMounted, onUnmounted, computed, watch, ref } from 'vue';
+// ✅ MODIFICATION START: Import defineAsyncComponent and ref for back button handling
+import { onMounted, onUnmounted, computed, watch, ref, defineAsyncComponent } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { useChatStore } from '@/stores/chatStore';
 import { useGroupStore } from '@/stores/groupStore';
@@ -111,24 +111,25 @@ import ChatList from '@/components/ChatList/ChatList.vue';
 import ChatView from '@/components/ChatView/ChatView.vue';
 import WelcomeScreen from '@/components/ChatView/WelcomeScreen.vue';
 import DetailsPanel from '@/components/DetailsPanel/DetailsPanel.vue';
-import SettingsModal from '@/components/Modals/SettingsModal.vue';
-import NewContactModal from '@/components/Modals/NewContactModal.vue';
 import NotificationContainer from '@/components/Shared/NotificationContainer.vue';
-import IncomingCallModal from '@/components/Modals/IncomingCallModal.vue';
 import VideoCallView from '@/components/ChatView/VideoCallView.vue';
-import ScreenshotEditor from '@/components/Modals/ScreenshotEditor.vue';
-import ScreenshotGuideModal from '@/components/Modals/ScreenshotGuideModal.vue';
 import ContextMenu from '@/components/Shared/ContextMenu.vue';
-import ConfirmationModal from '@/components/Modals/ConfirmationModal.vue';
-import MediaViewerModal from '@/components/Modals/MediaViewerModal.vue';
-import BindManualConnectionModal from '@/components/Modals/BindManualConnectionModal.vue';
 import WelcomeHeader from '@/components/ChatView/WelcomeHeader.vue';
 import FloatingCallWidget from '@/components/Shared/FloatingCallWidget.vue';
 import SettingsModalSkeleton from '@/components/Shared/SettingsModalSkeleton.vue';
-import LocationPickerModal from '@/components/Modals/LocationPickerModal.vue';
 import MobileGlobalHeader from '@/components/Shared/MobileGlobalHeader.vue';
-// ✅ MODIFICATION START: Import the new LocationViewerModal
-import LocationViewerModal from '@/components/Modals/LocationViewerModal.vue';
+
+// ✅ MODIFICATION START: Use defineAsyncComponent for modals to split code
+const SettingsModal = defineAsyncComponent(() => import('@/components/Modals/SettingsModal.vue'));
+const NewContactModal = defineAsyncComponent(() => import('@/components/Modals/NewContactModal.vue'));
+const LocationPickerModal = defineAsyncComponent(() => import('@/components/Modals/LocationPickerModal.vue'));
+const BindManualConnectionModal = defineAsyncComponent(() => import('@/components/Modals/BindManualConnectionModal.vue'));
+const ScreenshotEditor = defineAsyncComponent(() => import('@/components/Modals/ScreenshotEditor.vue'));
+const ScreenshotGuideModal = defineAsyncComponent(() => import('@/components/Modals/ScreenshotGuideModal.vue'));
+const IncomingCallModal = defineAsyncComponent(() => import('@/components/Modals/IncomingCallModal.vue'));
+const ConfirmationModal = defineAsyncComponent(() => import('@/components/Modals/ConfirmationModal.vue'));
+const MediaViewerModal = defineAsyncComponent(() => import('@/components/Modals/MediaViewerModal.vue'));
+const LocationViewerModal = defineAsyncComponent(() => import('@/components/Modals/LocationViewerModal.vue'));
 // ✅ MODIFICATION END
 
 const userStore = useUserStore();

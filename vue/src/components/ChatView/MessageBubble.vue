@@ -68,14 +68,14 @@
               <div class="media-placeholder" v-if="!displayUrl">
                 <SkeletonLoader type="grid-item" :shimmer="true" />
               </div>
-              <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image">
+              <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image" loading="lazy">
             </div>
             <div v-else-if="isPreviewableMedia" class="media-preview-container">
               <div class="media-placeholder" v-if="!thumbnailSource">
                 <SkeletonLoader type="grid-item" :shimmer="true" />
               </div>
               <div v-if="thumbnailSource" class="video-preview">
-                <img :src="thumbnailSource" :alt="message.fileName || 'media preview'" class="media-image">
+                <img :src="thumbnailSource" :alt="message.fileName || 'media preview'" class="media-image" loading="lazy">
                 <div v-if="message.fileType?.startsWith('video/')" class="play-overlay">
                   <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                     <path d="M8 5v14l11-7z"></path>

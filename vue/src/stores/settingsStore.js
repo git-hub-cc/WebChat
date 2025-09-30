@@ -17,7 +17,9 @@ export const useSettingsStore = defineStore('settings', () => {
     const isThemeTransitioning = ref(false);
     // --- MODIFICATION START: Removed sttMode and callMode state ---
     const isAiNoiseSuppressionEnabled = ref(JSON.parse(localStorage.getItem('isAiNoiseSuppressionEnabled') || 'false'));
-    // --- MODIFICATION END ---
+    // --- ✅ MODIFICATION START: Add WebP support state ---
+    const isWebPSupported = ref(true); // Optimistic default
+    // --- ✅ MODIFICATION END ---
 
     // --- GETTERS ---
     const effectiveColorScheme = computed(() => {
@@ -32,6 +34,22 @@ export const useSettingsStore = defineStore('settings', () => {
     const currentSpecialContacts = computed(() => currentTheme.value?.specialContacts || []);
 
     // --- ACTIONS ---
+
+    // --- ✅ MODIFICATION START: Add WebP support check function ---
+    /**
+     * @private
+     * Checks if the browser supports the WebP image format.
+     */
+    async function _checkWebPSupport() {
+        // A small, transparent WebP image
+        const webP = new Image();
+        webP.src = 'data:image/webp;base64,UklGRjoAAABXRUJQVlA4IC4AAACyAgCdASoCAAIALmk0mk0iIiIiIgBoSygABc6WWgAA/veff/0PP8bA//LwYAAA';
+        webP.onload = webP.onerror = () => {
+            isWebPSupported.value = (webP.height === 2);
+            log(`WebP support detected: ${isWebPSupported.value}`, 'INFO');
+        };
+    }
+    // --- ✅ MODIFICATION END ---
 
     /**
      * @private
@@ -67,6 +85,10 @@ export const useSettingsStore = defineStore('settings', () => {
      * Initializes the settings store.
      */
     async function init() {
+        // --- ✅ MODIFICATION START: Run WebP check on init ---
+        await _checkWebPSupport();
+        // --- ✅ MODIFICATION END ---
+
         const storedApiSettings = await dbService.getItem('settings', 'apiSettings');
         const defaultProviderKey = storedApiSettings?.llmProvider || 'webchat';
         const defaultProvider = LLMProviders[defaultProviderKey] || LLMProviders.webchat;
@@ -216,6 +238,9 @@ export const useSettingsStore = defineStore('settings', () => {
         themes, colorScheme, currentThemeKey, apiSettings, customBackgrounds,
         isThemeTransitioning,
         isAiNoiseSuppressionEnabled,
+        // ✅ MODIFICATION START: Expose WebP support state
+        isWebPSupported,
+        // ✅ MODIFICATION END
         setAiNoiseSuppression,
         effectiveColorScheme, currentTheme, currentSpecialContacts,
         init, applyTheme, setColorScheme, saveApiSetting, handleLlmProviderChange,

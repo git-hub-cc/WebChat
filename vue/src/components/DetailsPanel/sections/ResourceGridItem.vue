@@ -1,7 +1,9 @@
 <template>
   <div class="resource-item-wrapper">
     <div class="resource-item">
+      <!-- ✅ MODIFICATION START: Add loading="lazy" -->
       <img v-if="isImage(item.fileType) && thumbnailUrl" :src="thumbnailUrl" class="thumbnail" loading="lazy" />
+      <!-- ✅ MODIFICATION END -->
       <div v-else-if="isVideo(item.fileType) && thumbnailUrl" class="thumbnail video-thumb">
         <video :src="thumbnailUrl" muted preload="metadata"></video>
         <span>▶</span>

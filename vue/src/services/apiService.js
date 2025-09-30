@@ -385,13 +385,23 @@ export const apiService = {
         }
         const effectiveConfig = _getEffectiveAiConfig();
         if (!effectiveConfig.ttsApiEndpoint) throw new Error('TTS API endpoint is not configured.');
-        const modelsUrl = `${effectiveConfig.ttsApiEndpoint.replace(/\/$/, '')}/models`;
-        log(`Fetching TTS models from ${modelsUrl} for version ${version}`, 'DEBUG');
+
+        // --- ✅ MODIFICATION START ---
+        // 构建新的 URL，将版本号作为路径的一部分
+        const modelsUrl = `${effectiveConfig.ttsApiEndpoint.replace(/\/$/, '')}/models/${version}`;
+        log(`Fetching TTS models from ${modelsUrl}`, 'DEBUG');
+
+        // 发起 GET 请求，不再需要请求体
         const response = await fetch(modelsUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer guest' },
-            body: JSON.stringify({ version })
+            method: 'GET',
+            headers: {
+                // 'Content-Type': 'application/json', // GET 请求不需要 Content-Type
+                'Authorization': 'Bearer guest'
+            },
+            // body: JSON.stringify({ version }) // GET 请求不需要 body
         });
+        // --- ✅ MODIFICATION END ---
+
         if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`Failed to fetch TTS models: ${response.status} ${errorText}`);

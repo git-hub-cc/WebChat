@@ -1,8 +1,9 @@
 <template>
   <!-- --- MODIFICATION START: Add speaking indicator class --- -->
   <div class="avatar" :class="[sizeClass, { 'is-special': entity.isSpecial, 'speaking-indicator': isSpeaking }, entity.id]">
+    <!-- --- MODIFICATION START: Use processed URL for WebP fallback --- -->
+    <img v-if="processedAvatarUrl" :src="processedAvatarUrl" :alt="avatarText" class="avatar-image">
     <!-- --- MODIFICATION END --- -->
-    <img v-if="entity.avatarUrl" :src="entity.avatarUrl" :alt="avatarText" class="avatar-image">
     <span v-else class="avatar-text">{{ avatarText }}</span>
     <span v-if="isOnline" class="online-dot"></span>
   </div>
@@ -40,6 +41,20 @@ const sizeClass = computed(() => `avatar-${props.size}`);
 const avatarText = computed(() => {
   return props.entity.avatarText || props.entity.name?.charAt(0).toUpperCase() || '?';
 });
+
+// --- ✅ MODIFICATION START: New computed property for WebP fallback ---
+const processedAvatarUrl = computed(() => {
+  if (!props.entity.avatarUrl) {
+    return null;
+  }
+  // If WebP is supported, or the URL doesn't end with .webp, use it directly.
+  if (settingsStore.isWebPSupported || !props.entity.avatarUrl.endsWith('.webp')) {
+    return props.entity.avatarUrl;
+  }
+  // Otherwise, fallback to .png
+  return props.entity.avatarUrl.replace(/\.webp$/, '.png');
+});
+// --- ✅ MODIFICATION END ---
 
 </script>
 

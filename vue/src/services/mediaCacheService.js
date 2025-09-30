@@ -89,6 +89,8 @@ export const mediaCacheService = {
     }
 };
 
-window.addEventListener('beforeunload', () => {
+// ✅ MODIFICATION START: Use 'pagehide' instead of 'beforeunload' for BFCache compatibility
+window.addEventListener('pagehide', () => {
     mediaCacheService.cleanup();
 });
+// ✅ MODIFICATION END

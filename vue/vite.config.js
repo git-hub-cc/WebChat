@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -16,6 +17,14 @@ export default defineConfig({
             },
             protocolImports: true,
         }),
+        // ✅ MODIFICATION START: Add visualizer for bundle analysis
+        visualizer({
+            open: true, // Automatically open the report in the browser after build
+            filename: 'dist/stats.html', // Output file
+            gzipSize: true, // Show gzipped size
+            brotliSize: true, // Show brotli compressed size
+        }),
+        // ✅ MODIFICATION END
     ],
     resolve: {
         alias: {

@@ -15,6 +15,21 @@ import VueVirtualScroller from 'vue-virtual-scroller'
 
 const app = createApp(App)
 
+// ✅ MODIFICATION START: Add global error handler
+app.config.errorHandler = (err, instance, info) => {
+    // Log the error for debugging purposes
+    console.error("Global Vue Error:", err);
+    console.error("Vue instance:", instance);
+    console.error("Component info:", info);
+
+    // Optionally, you can send this error to a monitoring service like Sentry
+    // Sentry.captureException(err);
+
+    // You could also show a user-friendly error message via an eventBus or a global store
+    // eventBus.emit('showNotification', { message: '应用发生未知错误，请刷新页面。', type: 'error' });
+};
+// ✅ MODIFICATION END
+
 app.use(createPinia())
 app.use(VueVirtualScroller)
 app.use(autoAnimatePlugin) // <-- [动画] 注册 AutoAnimate 插件
