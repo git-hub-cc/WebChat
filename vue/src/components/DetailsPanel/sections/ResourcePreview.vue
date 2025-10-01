@@ -183,23 +183,25 @@ function switchTab(tab) {
   }
 }
 
-// --- ✅ MODIFICATION START ---
+// ✅ BUG FIX START: Handle item clicks correctly. Location items should open the internal viewer.
 function handleItemClick(item) {
   if (item.type === 'location') {
-    // For location, open the map directly
-    const mapUrl = `https://uri.amap.com/marker?position=${item.longitude},${item.latitude}`;
-    window.open(mapUrl, '_blank', 'noopener,noreferrer');
+    // For location, open the internal map viewer modal.
+    uiStore.showLocationViewer({
+      latitude: item.latitude,
+      longitude: item.longitude,
+    });
   } else {
-    // For other types, scroll to the message
+    // For other types, scroll to the message in the chat view.
     eventBus.emit('chat:scroll-to-message', item.id);
-    // On mobile, also switch back to the chat view
+    // On mobile, also switch back to the chat view for better UX.
     if (window.innerWidth <= 768) {
       uiStore.toggleDetailsPanel(false);
       uiStore.isChatViewActiveOnMobile = true;
     }
   }
 }
-// --- ✅ MODIFICATION END ---
+// ✅ BUG FIX END
 
 
 function handleScroll() {

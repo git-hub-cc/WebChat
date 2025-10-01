@@ -1,10 +1,12 @@
 <template>
   <transition name="location-viewer-fade">
+    <!-- ✅ BUG FIX START: Changed v-if condition to check 'activeOverlayModal' instead of 'activeModal' -->
     <div
-        v-if="uiStore.activeModal === 'locationViewer' && content"
+        v-if="uiStore.activeOverlayModal === 'locationViewer' && content"
         class="viewer-backdrop"
         @click.self="close"
     >
+      <!-- ✅ BUG FIX END -->
       <button class="close-button" @click="close" title="关闭 (Esc)">×</button>
       <div class="map-container" v-motion-pop>
         <div id="location-viewer-map" ref="mapContainerRef"></div>
@@ -50,7 +52,9 @@ function initMap() {
 }
 
 function close() {
-  uiStore.hideModal();
+  // ✅ BUG FIX START: Changed from hideModal to hideOverlayModal
+  uiStore.hideOverlayModal();
+  // ✅ BUG FIX END
 }
 
 function handleKeyDown(event) {

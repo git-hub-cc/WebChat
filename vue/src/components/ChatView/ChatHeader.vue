@@ -21,7 +21,7 @@
       <IconButton class="screenshare-button" icon="🖥️" title="屏幕共享" :disabled="!canCall || callStore.isScreenSharing" @click="startScreenShare" />
       <!-- ✅ MODIFICATION END -->
       <!-- ✅ MODIFICATION START: Moved World Map button here -->
-      <IconButton icon="🌍" title="世界地-图" @click="uiStore.showModal('worldMap')" />
+      <IconButton class="screenshare-button" icon="🌍" title="世界地图" @click="uiStore.showOverlayModal('worldMap')" />
       <!-- ✅ MODIFICATION END -->
       <IconButton class="lobby-button" icon="👥" title="人员大-厅" @click="uiStore.toggleDetailsPanel(true, 'lobby')" />
     </div>

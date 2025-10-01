@@ -68,6 +68,10 @@ export const useUiStore = defineStore('ui', () => {
         else if (modalName === 'screenshotEditor') {
             modalPrefillData.value = content; // ScreenshotEditor uses prefillData
         }
+        // WorldMap doesn't need content
+        else if (modalName === 'worldMap') {
+            // No specific content needed
+        }
 
         activeOverlayModal.value = modalName;
     }

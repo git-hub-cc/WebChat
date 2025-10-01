@@ -14,7 +14,7 @@
     </div>
 
     <!-- ✅ MODIFICATION START: Moved World Map button here -->
-    <IconButton icon="🌍" title="世界地图" @click="uiStore.showModal('worldMap')" />
+    <IconButton icon="🌍" title="世界地图" @click="uiStore.showOverlayModal('worldMap')" />
     <!-- ✅ MODIFICATION END -->
     <IconButton
         icon="👥"

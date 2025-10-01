@@ -25,20 +25,20 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Cropper } from 'vue-advanced-cropper';
-import { useUiStore } from '@/stores/uiStore';
 import { compressImage } from '@/utils';
 import { eventBus } from '@/services/eventBus';
 
-const uiStore = useUiStore();
+const props = defineProps({
+  imageSrc: { type: String, required: true },
+  fileName: { type: String, required: true },
+});
+
+const emit = defineEmits(['complete', 'cancel']);
+
 const cropperRef = ref(null);
 const isProcessing = ref(false);
-
-const content = computed(() => uiStore.imageCropperContent);
-const imageSrc = computed(() => content.value?.imageSrc);
-const originalFileName = computed(() => content.value?.fileName);
-const onCompleteCallback = computed(() => content.value?.onComplete);
 
 async function confirm() {
   if (!cropperRef.value) return;
@@ -47,17 +47,12 @@ async function confirm() {
     const { canvas } = cropperRef.value.getResult();
     const compressedBlob = await compressImage(canvas, 100);
 
-    const finalFile = new File([compressedBlob], originalFileName.value, {
+    const finalFile = new File([compressedBlob], props.fileName, {
       type: compressedBlob.type,
       lastModified: Date.now()
     });
 
-    if (typeof onCompleteCallback.value === 'function') {
-      onCompleteCallback.value(finalFile);
-    }
-
-    // ✅ MODIFICATION: Use hideOverlayModal to close only the cropper
-    uiStore.hideOverlayModal();
+    emit('complete', finalFile);
 
   } catch (error) {
     console.error("图片裁剪或压缩失败:", error);
@@ -68,8 +63,7 @@ async function confirm() {
 }
 
 function cancel() {
-  // ✅ MODIFICATION: Use hideOverlayModal
-  uiStore.hideOverlayModal();
+  emit('cancel');
 }
 
 function handleKeyDown(event) {
@@ -86,12 +80,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
 .cropper-modal-backdrop {
   position: fixed;
   inset: 0;
-  /* ✅ MODIFICATION: Use a slightly different backdrop for overlays */
   background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   align-items: center;
   justify-content: center;
-  /* ✅ MODIFICATION: z-index is handled by the wrapper in App.vue */
+  /* ✅ MODIFICATION START: Set a high z-index to appear above the parent modal */
+  z-index: 1600; /* Higher than WorldMapModal's backdrop */
+  /* ✅ MODIFICATION END */
 }
 
 .cropper-container {
@@ -125,8 +120,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   flex-grow: 1;
   background-color: var(--color-background-page);
   position: relative;
+  /* ✅ FIX START: Prevent the cropper from overflowing its container and pushing the footer out of view. */
+  /* This is a classic flexbox fix that allows the container to shrink smaller than its content's intrinsic size. */
+  min-height: 0;
+  /* ✅ FIX END */
 }
-
 .image-cropper {
   width: 100%;
   height: 100%;

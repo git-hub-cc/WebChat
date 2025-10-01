@@ -42,7 +42,6 @@
 <script setup>
 import { ref, computed, onUnmounted } from 'vue';
 import { eventBus } from '@/services/eventBus';
-import { useUiStore } from '@/stores/uiStore';
 
 const props = defineProps({
   coordinates: {
@@ -50,9 +49,8 @@ const props = defineProps({
     required: true,
   }
 });
-const emit = defineEmits(['submit', 'cancel']);
+const emit = defineEmits(['submit', 'cancel', 'show-cropper']); // ✅ MODIFICATION: Added 'show-cropper' emit
 
-const uiStore = useUiStore();
 const tag = ref('美食');
 const description = ref('');
 const croppedImageFile = ref(null);
@@ -79,7 +77,7 @@ function processFile(file) {
     return;
   }
 
-  // ✅ MODIFICATION: This callback will be executed when the cropper is confirmed
+  // ✅ MODIFICATION START: Emit event to parent instead of calling uiStore
   const onCroppingComplete = (finalFile) => {
     croppedImageFile.value = finalFile;
     if (croppedImageUrlPreview.value) {
@@ -90,12 +88,12 @@ function processFile(file) {
 
   const imageSrc = URL.createObjectURL(file);
 
-  // ✅ MODIFICATION: Use the new overlay function and pass the callback
-  uiStore.showImageCropperOverlay({
+  emit('show-cropper', {
     imageSrc,
     fileName: file.name,
     onComplete: onCroppingComplete,
   });
+  // ✅ MODIFICATION END
 }
 
 function handleFileChange(event) {

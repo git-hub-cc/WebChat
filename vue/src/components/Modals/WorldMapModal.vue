@@ -1,101 +1,136 @@
 <template>
-  <ModalWrapper :show="true" title="世界地图" @close="uiStore.hideModal()">
-    <div class="world-map-content">
-      <div v-if="mapStore.isLoading && mapStore.locations.length === 0" class="status-overlay">
-        <Spinner />
-        <p>正在加载地点数据...</p>
-      </div>
-      <div id="world-map-container" ref="mapContainerRef" :class="{ 'add-mode': isAddingMode }"></div>
+  <transition name="world-map-fade">
+    <div v-if="uiStore.activeOverlayModal === 'worldMap'" class="viewer-backdrop" @click.self="close">
+      <button class="close-button" @click="close" title="关闭 (Esc)">×</button>
 
-      <transition name="form-fade">
-        <AddLocationForm
-            v-if="isAddingMode && newMarkerCoords"
-            :coordinates="newMarkerCoords"
-            @submit="handleFormSubmit"
-            @cancel="toggleAddMode(false)"
-        />
-      </transition>
-    </div>
-    <template #footer>
-      <div class="map-footer">
-        <p v-if="isAddingMode" class="add-mode-hint">请在地图上点击选择要分享的位置</p>
-        <div class="spacer"></div>
-        <button class="btn-secondary" @click="toggleAddMode(!isAddingMode)">
-          {{ isAddingMode ? '取消添加' : '+ 分享地点' }}
-        </button>
+      <div class="map-modal-container" v-motion-pop>
+        <div class="world-map-content">
+          <div v-if="mapStore.isLoading && mapStore.locations.length === 0" class="status-overlay">
+            <Spinner />
+            <p>正在加载地点数据...</p>
+          </div>
+          <div id="world-map-container" ref="mapContainerRef" :class="{ 'add-mode': isAddingMode }"></div>
+
+          <transition name="form-fade">
+            <AddLocationForm
+                v-if="isAddingMode && newMarkerCoords"
+                :coordinates="newMarkerCoords"
+                @submit="handleFormSubmit"
+                @cancel="toggleAddMode(false)"
+                @show-cropper="handleShowCropper"
+            />
+          </transition>
+        </div>
+        <footer class="map-footer">
+          <p v-if="isAddingMode" class="add-mode-hint">请在地图上点击选择要分享的位置</p>
+          <div class="spacer"></div>
+          <button class="btn-secondary" @click="toggleAddMode(!isAddingMode)">
+            {{ isAddingMode ? '取消添加' : '+ 分享地点' }}
+          </button>
+        </footer>
       </div>
-    </template>
-  </ModalWrapper>
+
+      <!-- ✅ MODIFICATION START: Local Image Cropper Instance -->
+      <ImageCropperModal
+          v-if="isCropperVisible"
+          :image-src="cropperProps.imageSrc"
+          :file-name="cropperProps.fileName"
+          @complete="handleCroppingComplete"
+          @cancel="handleCropperCancel"
+      />
+      <!-- ✅ MODIFICATION END -->
+    </div>
+  </transition>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue';
 import L from 'leaflet';
-import ModalWrapper from './ModalWrapper.vue';
 import Spinner from '@/components/Shared/Spinner.vue';
 import AddLocationForm from './AddLocationForm.vue';
 import { useUiStore } from '@/stores/uiStore';
 import { useMapStore } from '@/stores/mapStore';
 import { log } from '@/utils';
 
+// ✅ MODIFICATION: Dynamically import ImageCropperModal
+const ImageCropperModal = defineAsyncComponent(() => import('./ImageCropperModal.vue'));
+
 const uiStore = useUiStore();
 const mapStore = useMapStore();
 
 const mapContainerRef = ref(null);
 let map = null;
-let markersLayer = null; // 用于存放所有标记点
-let tempMarker = null; // 用于“添加模式”下的临时标记
+let markersLayer = null;
+let tempMarker = null;
 
 const isAddingMode = ref(false);
 const newMarkerCoords = ref(null);
 
-// 自定义标记图标
+// ✅ MODIFICATION START: State for local cropper
+const isCropperVisible = ref(false);
+const cropperProps = ref({});
+// ✅ MODIFICATION END
+
 const defaultIcon = L.icon({
   iconUrl: 'icons/marker-icon.svg',
   shadowUrl: 'icons/marker-shadow.svg',
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
 const tempIcon = L.icon({
-  iconUrl: 'icons/marker-icon-temp.svg', // 一个不同颜色的图标
+  iconUrl: 'icons/marker-icon-temp.svg',
   shadowUrl: 'icons/marker-shadow.svg',
   iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
 
-
-onMounted(async () => {
-  // 延迟地图初始化，确保模态框动画完成，容器尺寸正确
-  setTimeout(async () => {
-    initMap();
-    await mapStore.fetchLocations();
-  }, 100);
-});
-
-onUnmounted(() => {
-  if (map) {
-    map.remove();
-    map = null;
-  }
-});
-
 function initMap() {
   if (mapContainerRef.value && !map) {
-    map = L.map(mapContainerRef.value).setView([31.2304, 121.4737], 5); // 默认视图（上海）
+    map = L.map(mapContainerRef.value).setView([31.2304, 121.4737], 5);
     L.tileLayer('https://{s}.ppmc.club/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     }).addTo(map);
 
     markersLayer = L.layerGroup().addTo(map);
-
-    // 监听地图点击事件
     map.on('click', handleMapClick);
+    map.invalidateSize();
   }
 }
 
-// 监听从 store 获取的地点数据变化，并更新地图标记
+function close() {
+  uiStore.hideOverlayModal();
+}
+
+function handleKeyDown(event) {
+  if (event.key === 'Escape') {
+    if (isCropperVisible.value) {
+      handleCropperCancel();
+    } else if (isAddingMode.value) {
+      toggleAddMode(false);
+    } else {
+      close();
+    }
+  }
+}
+
+onMounted(async () => {
+  setTimeout(async () => {
+    initMap();
+    await mapStore.fetchLocations();
+  }, 100);
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+  if (map) {
+    map.remove();
+    map = null;
+  }
+});
+
 watch(() => mapStore.locations, (newLocations) => {
   if (!map || !markersLayer) return;
-  markersLayer.clearLayers(); // 清空旧标记
+  markersLayer.clearLayers();
 
   newLocations.forEach(loc => {
     const marker = L.marker([loc.latitude, loc.longitude], { icon: defaultIcon }).addTo(markersLayer);
@@ -115,9 +150,7 @@ watch(() => mapStore.locations, (newLocations) => {
 
 function toggleAddMode(forceState) {
   isAddingMode.value = typeof forceState === 'boolean' ? forceState : !isAddingMode.value;
-
   if (!isAddingMode.value) {
-    // 退出添加模式时，清除临时标记和坐标
     if (tempMarker) {
       tempMarker.remove();
       tempMarker = null;
@@ -141,17 +174,85 @@ function handleMapClick(e) {
 async function handleFormSubmit(formData) {
   const success = await mapStore.addLocation(formData);
   if (success) {
-    toggleAddMode(false); // 提交成功后退出添加模式
+    toggleAddMode(false);
   }
 }
+
+// ✅ MODIFICATION START: Handlers for local cropper lifecycle
+function handleShowCropper(data) {
+  cropperProps.value = data;
+  isCropperVisible.value = true;
+}
+
+function handleCroppingComplete(finalFile) {
+  if (typeof cropperProps.value.onComplete === 'function') {
+    cropperProps.value.onComplete(finalFile);
+  }
+  isCropperVisible.value = false;
+  cropperProps.value = {}; // Clean up
+}
+
+function handleCropperCancel() {
+  isCropperVisible.value = false;
+  cropperProps.value = {}; // Clean up
+}
+// ✅ MODIFICATION END
 </script>
 
 <style scoped>
+.viewer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1500;
+  padding: var(--spacing-4);
+  box-sizing: border-box;
+}
+
+.close-button {
+  position: absolute;
+  top: var(--spacing-4);
+  right: var(--spacing-4);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(30, 30, 30, 0.7);
+  color: white;
+  font-size: 2rem;
+  line-height: 1;
+  border: none;
+  cursor: pointer;
+  z-index: 1501;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: rgba(220, 53, 69, 0.8);
+  transform: scale(1.1);
+}
+
+.map-modal-container {
+  width: 90vw;
+  height: 90vh;
+  max-width: 1400px;
+  max-height: 900px;
+  background-color: var(--color-background-panel);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+}
+
 .world-map-content {
   position: relative;
-  width: 100%;
-  height: 65vh;
-  min-height: 400px;
+  flex-grow: 1;
   background-color: var(--color-background-elevated);
 }
 #world-map-container {
@@ -180,6 +281,9 @@ async function handleFormSubmit(formData) {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
 }
 .add-mode-hint {
   font-size: var(--font-size-sm);
@@ -195,6 +299,15 @@ async function handleFormSubmit(formData) {
 .form-fade-enter-from, .form-fade-leave-to {
   opacity: 0;
   transform: translate(-50%, 20px);
+}
+
+.world-map-fade-enter-active,
+.world-map-fade-leave-active {
+  transition: opacity 0.3s var(--transition-easing);
+}
+.world-map-fade-enter-from,
+.world-map-fade-leave-to {
+  opacity: 0;
 }
 
 /* Leaflet Popup Customization */
@@ -224,12 +337,10 @@ async function handleFormSubmit(formData) {
   margin: 0 0 var(--spacing-2) 0;
   font-size: var(--font-size-sm);
   line-height: 1.5;
-  /* ✅ MODIFICATION START */
-  max-height: 80px;      /* 限制描述区域最大高度，约4行 */
-  overflow-y: auto;      /* 内容超限时，仅在此区域显示垂直滚动条 */
-  overflow-wrap: break-word; /* 强制长单词或URL换行，防止水平溢出 */
-  white-space: normal;   /* 确保文本正常换行 */
-  /* ✅ MODIFICATION END */
+  max-height: 80px;
+  overflow-y: auto;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 :deep(.map-popup small) {
   color: var(--color-text-tertiary);

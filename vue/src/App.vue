@@ -66,7 +66,6 @@
             v-if="uiStore.activeModal === 'confirmation'"
             v-motion-pop
         />
-        <WorldMapModal v-if="uiStore.activeModal === 'worldMap'" v-motion-pop />
       </div>
     </Transition>
 
@@ -77,6 +76,9 @@
         <MediaViewerModal v-if="uiStore.activeOverlayModal === 'mediaViewer'" />
         <LocationViewerModal v-if="uiStore.activeOverlayModal === 'locationViewer'" />
         <ImageCropperModal v-if="uiStore.activeOverlayModal === 'imageCropper'" />
+        <!-- ✅ MODIFICATION START: WorldMapModal moved to overlay layer -->
+        <WorldMapModal v-if="uiStore.activeOverlayModal === 'worldMap'" />
+        <!-- ✅ MODIFICATION END -->
       </div>
     </Transition>
 
