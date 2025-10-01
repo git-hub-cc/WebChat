@@ -178,7 +178,7 @@ watch(filteredLocations, (newLocations) => {
     const marker = L.marker([loc.latitude, loc.longitude], { icon }).addTo(markersLayer);
     const popupContent = `
       <div class="map-popup">
-        <img src="${loc.imageUrl}" alt="${loc.tag}" class="popup-image" />
+        <img src="https://ppmc.club/webchat-vue/${loc.imageUrl}" alt="${loc.tag}" class="popup-image" />
         <div class="popup-content">
           <h4>${loc.tag}</h4>
           <p>${loc.description}</p>

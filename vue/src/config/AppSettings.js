@@ -102,7 +102,7 @@ export default {
     peerConnectionConfig: {
         iceServers: [
             {
-                urls: "turn:ppmc.club:3478?transport=udp",
+                urls: "turn:175.178.216.24:3478?transport=udp",
                 username: "test",
                 credential: "123456"
             },

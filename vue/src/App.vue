@@ -165,25 +165,36 @@ const updateViewportHeight = () => {
 };
 const lastBackPressTime = ref(0);
 
+// ✅ MODIFICATION: Initialization logic is now non-blocking for network requests.
 onMounted(async () => {
   uiStore.setAppLoading(true);
   try {
+    // --- Step 1: Load all essential local data first (blocking) ---
     await settingsStore.init();
     await userStore.init();
     await groupStore.init();
     await chatStore.init();
     await memoryStore.init();
-    await webrtcService.init(userStore.userId);
-    webrtcService.proactivelyConnectToOnlineContacts();
-    apiService.checkAiServiceHealth().then(isHealthy => {
-      userStore.updateAiServiceStatus(isHealthy);
-    });
+
+    // --- Step 2: Start network services in the background (non-blocking) ---
+    webrtcService.init(userStore.userId);
+
+    // Setup event listeners that depend on the above stores
     eventBus.on('webrtc:manual-connection-ready', () => {
       uiStore.showModal('bindManualConnection');
     });
+
   } catch (error) {
     console.error("应用初始化失败:", error);
   } finally {
+    // --- Step 3: Perform non-critical tasks and hide the loading screen ---
+
+    // Asynchronously check AI service health after UI is ready to show.
+    apiService.checkAiServiceHealth().then(isHealthy => {
+      userStore.updateAiServiceStatus(isHealthy);
+    });
+
+    // Hide loading overlay
     setTimeout(() => uiStore.setAppLoading(false), 500);
   }
 
