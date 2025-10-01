@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 25 41" width="25" height="41">
+    <!--
+      This SVG recreates the default Leaflet map marker icon.
+      - The path creates the classic teardrop/pin shape.
+      - The circle creates the white dot in the middle.
+      - Using SVG allows for crisp rendering at any resolution, replacing both marker-icon.png and marker-icon-2x.png.
+    -->
+    <path
+            fill="#228B22"
+            stroke="#ffffff"
+            stroke-width="1.5"
+            d="M12.5,0 C5.6,0,0,5.6,0,12.5 C0,20.4,12.5,41,12.5,41 S25,20.4,25,12.5 C25,5.6,19.4,0,12.5,0z"
+    />
+    <circle cx="12.5" cy="12.5" r="4" fill="white"/>
+</svg>
