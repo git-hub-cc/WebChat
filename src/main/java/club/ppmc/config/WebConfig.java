@@ -4,6 +4,7 @@
  * 主要职责:
  * - 配置CORS (跨域资源共享)，允许指定的外部域访问本应用的API。
  * - 注册自定义的拦截器，如`RateLimitInterceptor`，以实现API速率限制等功能。
+ * - [新增] 配置静态资源处理器，将服务器上的文件目录映射到公开的URL路径。
  *
  * 关联:
  * - `RateLimitInterceptor`: 在此被注册，并应用于特定API路径。
@@ -14,14 +15,19 @@ package club.ppmc.config;
 import club.ppmc.interceptor.RateLimitInterceptor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 @Configuration
-@EnableConfigurationProperties(AppProperties.class) // **[关键步骤]** 启用AppProperties
+@EnableConfigurationProperties(AppProperties.class)
 public class WebConfig implements WebMvcConfigurer {
 
     private static final Logger logger = LoggerFactory.getLogger(WebConfig.class);
@@ -34,12 +40,15 @@ public class WebConfig implements WebMvcConfigurer {
     private final RateLimitInterceptor rateLimitInterceptor;
     private final String[] allowedCorsOrigins;
 
-    // **[修改点]** 注入 AppProperties 而不是 @Value
+    // [新增] 注入地图图片上传目录
+    @Value("${file.upload-dir.map-images}")
+    private String mapImagesUploadDir;
+
     public WebConfig(
             RateLimitInterceptor rateLimitInterceptor,
-            AppProperties appProperties) { // <--- 修改此处
+            AppProperties appProperties) {
         this.rateLimitInterceptor = rateLimitInterceptor;
-        this.allowedCorsOrigins = appProperties.origins().toArray(new String[0]); // <--- 修改此处
+        this.allowedCorsOrigins = appProperties.origins().toArray(new String[0]);
         logger.info("WebConfig初始化。CORS允许的源: {}", appProperties.origins());
     }
 
@@ -62,5 +71,24 @@ public class WebConfig implements WebMvcConfigurer {
                 ALL_PATHS_PATTERN,
                 String.join(", ", this.allowedCorsOrigins),
                 String.join(", ", ALLOWED_CORS_METHODS));
+    }
+
+    /**
+     * [新增] 配置静态资源处理器。
+     * 此方法将服务器文件系统上的一个目录（例如 "uploads/map-images"）
+     * 映射到一个公共的URL路径（例如 "/map-images/**"）。
+     * 这样，前端就可以通过 `http://<server>/map-images/<filename>` 来访问上传的图片。
+     *
+     * @param registry Spring的资源处理器注册表。
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        Path uploadPath = Paths.get(mapImagesUploadDir).toAbsolutePath();
+        String resourceLocation = "file:" + uploadPath.toString() + "/";
+
+        registry.addResourceHandler("/map-images/**")
+                .addResourceLocations(resourceLocation);
+
+        logger.info("静态资源处理器已配置：URL路径 [/map-images/**] 映射到物理路径 [{}]", resourceLocation);
     }
 }

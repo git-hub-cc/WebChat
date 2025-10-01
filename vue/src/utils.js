@@ -321,3 +321,62 @@ export const generateVideoThumbnail = (videoBlob) => {
 /**
  * --- ✅ MODIFICATION END ---
  */
+
+// ✅ MODIFICATION START: New image compression utility function
+/**
+ * [NEW] Compresses an image from a canvas to a target file size.
+ * It uses an iterative approach on image quality to get as close as possible
+ * to the target size without exceeding it. Prefers WebP format.
+ *
+ * @param {HTMLCanvasElement} canvas - The canvas containing the cropped image.
+ * @param {number} [targetSizeKB=100] - The target file size in kilobytes.
+ * @returns {Promise<Blob>} A promise that resolves with the compressed image Blob.
+ */
+export const compressImage = async (canvas, targetSizeKB = 100) => {
+    const targetSizeBytes = targetSizeKB * 1024;
+
+    const getBlob = (quality, mimeType) => {
+        return new Promise(resolve => canvas.toBlob(resolve, mimeType, quality));
+    };
+
+    let quality = 0.9;
+    let compressedBlob = await getBlob(quality, 'image/webp');
+
+    // First, try with WebP
+    if (compressedBlob && compressedBlob.size > targetSizeBytes) {
+        // Iteratively lower quality to meet the size requirement
+        for (let q = 0.8; q >= 0.1; q -= 0.1) {
+            const newBlob = await getBlob(q, 'image/webp');
+            if (newBlob.size <= targetSizeBytes) {
+                compressedBlob = newBlob;
+                break;
+            }
+            // If even at lowest quality it's too big, use the last one
+            if (q < 0.2) {
+                compressedBlob = newBlob;
+            }
+        }
+    }
+
+    // Fallback to JPEG if WebP is still too large or not supported
+    if (!compressedBlob || compressedBlob.size > targetSizeBytes) {
+        quality = 0.9;
+        compressedBlob = await getBlob(quality, 'image/jpeg');
+        if (compressedBlob.size > targetSizeBytes) {
+            for (let q = 0.8; q >= 0.1; q -= 0.1) {
+                const newBlob = await getBlob(q, 'image/jpeg');
+                if (newBlob.size <= targetSizeBytes) {
+                    compressedBlob = newBlob;
+                    break;
+                }
+                if (q < 0.2) {
+                    compressedBlob = newBlob;
+                }
+            }
+        }
+    }
+
+    log(`Image compressed to ${(compressedBlob.size / 1024).toFixed(2)}KB`, 'INFO');
+    return compressedBlob;
+};
+// ✅ MODIFICATION END

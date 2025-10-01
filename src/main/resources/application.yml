@@ -11,6 +11,23 @@ spring:
     name: Web-Chat
   jackson:
     time-zone: Asia/Shanghai
+
+  # ===============================================
+  # [新增] H2 内存数据库配置 (用于开发和演示)
+  # 生产环境请替换为 MySQL, PostgreSQL 等
+  # ===============================================
+  datasource:
+    url: jdbc:h2:file:./data/webchatdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update # 自动更新表结构
+    show-sql: false # 设为 true 可在控制台查看执行的SQL语句
+
+
 # 日志配置
 logging:
   level:
@@ -51,18 +68,12 @@ openai:
     # TODO
     base_url: "http://api.siliconflow.cn/v1"
     model: "THUDM/GLM-4-32B-0414"
-    # !!! 安全警告 !!!
-    # 将API密钥硬编码在配置文件中存在安全风险。
-    # 推荐使用环境变量、Spring Cloud Config或Vault等方式来管理密钥。
-    # 例如：api_key: "${OPENAI_API_KEY}"
     api_keys:
       - sk-lgmczapcfkmzelleymipaktrizxkandklacggnijaidkomit
       - sk-uotzesuboojedyiuquqrfymcpjwkuuglrwfebljflhameast
 
 # 应用程序提示词配置
 app:
-  # 用于为角色生成今日事件和心情的系统提示词
-  # %s 将被替换为具体的角色设定
   event_mood_prompt: |
     基于以下角色设定，为其生成一个今天发生的、符合其人设的随机小事件和当前的心情。
     请严格以JSON格式返回，必须包含 'event' 和 'mood' 两个键，不要包含任何其他说明文字。
@@ -70,17 +81,16 @@ app:
     角色设定：
     %s
 
-# ===============================================
-# [修改] 联邦网络配置
-# ===============================================
+# 联邦网络配置
 federation:
-  # 必填：当前服务器的公开访问地址。此地址仅用于客户端连接参考，不再作为唯一标识。
-  # 真正的唯一标识是服务器GUID。
   self-url: "http://127.0.0.1:8080"
-
-  # 伙伴服务器列表。列出所有你想与之互联的其他后端实例的根URL。
-  # 例如，如果你的朋友部署了一个实例在 https://friends.chat.com
-  # 注意：不要在此列表中包含上面的 self-url。
   peers:
     - "https://ppmc.club/webchat/"
-  # - "http://192.168.1.50:8080"
+
+# ===============================================
+# [新增] 文件上传配置
+# ===============================================
+file:
+  upload-dir:
+    # 世界地图分享功能的图片存储路径
+    map-images: "uploads/map-images"

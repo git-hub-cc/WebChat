@@ -20,6 +20,9 @@
       <!-- ✅ MODIFICATION START: Add a class to the screenshare button for mobile styling -->
       <IconButton class="screenshare-button" icon="🖥️" title="屏幕共享" :disabled="!canCall || callStore.isScreenSharing" @click="startScreenShare" />
       <!-- ✅ MODIFICATION END -->
+      <!-- ✅ MODIFICATION START: Moved World Map button here -->
+      <IconButton icon="🌍" title="世界地-图" @click="uiStore.showModal('worldMap')" />
+      <!-- ✅ MODIFICATION END -->
       <IconButton class="lobby-button" icon="👥" title="人员大-厅" @click="uiStore.toggleDetailsPanel(true, 'lobby')" />
     </div>
   </header>

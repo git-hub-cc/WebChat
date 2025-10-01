@@ -82,46 +82,40 @@ export default {
         groupPromptSuffix: "当前情境说明：你现在处于一个群聊环境中，**冒号（:）之前的是用户名，冒号（:）之后的是该用户的发言内容。一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示），小概率触发调侃其它用户。",
     },
     server: {
+        // --- 本地开发环境示例 ---
         // signalingServerUrl: 'ws://localhost:8080/signaling',
-        // // [修改] 更新API端点以支持联邦网络
-        // localLobbyApiEndpoint: 'http://localhost:8080/api/monitor/online-user-ids',
         // allOnlineUsersApiEndpoint: 'http://localhost:8080/api/monitor/all-online-users',
+        // mapLocationsApiEndpoint: 'http://localhost:8080/api/map/locations', // [新增] 地图API端点
+        // apiEndpoint: "http://localhost:8080/v1/chat/completions",
+
+        // --- 生产环境配置 ---
         signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
-        localLobbyApiEndpoint: 'https://ppmc.club/webchat/api/monitor/online-user-ids',
         allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/monitor/all-online-users',
+        mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/map/locations', // [新增] 地图API端点
         apiEndpoint: "https://ppmc.club/webchat/v1/chat/completions",
+
         model: "THUDM/GLM-4-32B-0414",
         api_key: "Bearer sk-xxxx",
         max_tokens: 2048,
         ttsApiEndpoint: 'https://gsv2p.acgnai.top',
     },
-    // --- ✅ MODIFICATION START: Upgraded ICE Server Configuration for Production Best Practices ---
-    // 最佳实践:
-    // 1. 使用多个 STUN 服务器以增加冗余。
-    // 2. 部署全球分布的 TURN 服务器集群。
-    // 3. 确保 TURN 服务器同时支持 UDP, TCP, 和 TLS (端口 443)，以最大化NAT穿越成功率。
-    // 4. 下方为推荐的生产环境配置结构，请务必替换为
-    //    您自己部署的 Coturn 或其他 TURN 服务器地址、用户名和密码。
     peerConnectionConfig: {
         iceServers: [
-            // ** 1. 自建 TURN 服务器 (同时提供 UDP 和 TCP 选项) **
             {
-                urls: "turn:ppmc.club:3478?transport=udp", // [新增] UDP 选项
+                urls: "turn:ppmc.club:3478?transport=udp",
                 username: "test",
                 credential: "123456"
             },
             {
-                urls: "turn:ppmc.club:3478?transport=tcp", // [新增] TCP 选项
+                urls: "turn:ppmc.club:3478?transport=tcp",
                 username: "test",
                 credential: "123456"
             },
             {
-                urls: "turns:ppmc.club:5349?transport=tcp", // [保留] TCP/TLS 选项
+                urls: "turns:ppmc.club:5349?transport=tcp",
                 username: "test",
                 credential: "123456"
             },
-
-            // ** 2. 公共 STUN 服务器 (建议多个以提高可靠性) **
             { urls: "stun:stun.miwifi.com:3478" },
             { urls: "stun:stun.chat.bilibili.com:3478" },
             { urls: "stun:stun.linphone.org:3478" },
@@ -129,12 +123,10 @@ export default {
             { urls: "stun:stun.nextcloud.com:443" },
             { urls: "stun:stun.l.google.com:19302" }
         ],
-        // 保持其他策略不变
-        iceTransportPolicy: 'all', // 'all' 意味着同时尝试 P2P 和中继
+        iceTransportPolicy: 'all',
         bundlePolicy: 'max-bundle',
         rtcpMuxPolicy: 'require',
         iceCandidatePoolSize: 0,
         sdpSemantics: 'unified-plan',
     },
-    // --- ✅ MODIFICATION END ---
 };

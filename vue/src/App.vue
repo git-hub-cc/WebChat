@@ -1,8 +1,6 @@
 <template>
   <div id="app-root" :class="appRootClasses">
-    <!-- ✅ MODIFICATION START: Add the new global mobile header -->
     <MobileGlobalHeader />
-    <!-- ✅ MODIFICATION END -->
 
     <Transition name="app-fade" mode="out-in">
       <div v-if="uiStore.isAppLoading" class="loading-overlay">
@@ -35,10 +33,8 @@
       </div>
     </Transition>
 
-    <Transition
-        name="modal-fade"
-        @after-leave="uiStore.modalPrefillData = {}"
-    >
+    <!-- ✅ MODIFICATION: Base Modal Layer -->
+    <Transition name="modal-fade" @after-leave="uiStore.modalPrefillData = {}">
       <div class="modal-wrapper-container" v-if="uiStore.activeModal">
         <SettingsModal
             v-if="uiStore.activeModal === 'settings'"
@@ -58,7 +54,6 @@
             v-if="uiStore.activeModal === 'bindManualConnection'"
             v-motion-pop
         />
-        <ScreenshotEditor v-if="uiStore.activeModal === 'screenshotEditor'" />
         <ScreenshotGuideModal
             v-if="uiStore.activeModal === 'screenshotGuide'"
             v-motion-pop
@@ -71,12 +66,20 @@
             v-if="uiStore.activeModal === 'confirmation'"
             v-motion-pop
         />
-        <MediaViewerModal v-if="uiStore.activeModal === 'mediaViewer'" />
-        <!-- ✅ MODIFICATION START: Add the new LocationViewerModal -->
-        <LocationViewerModal v-if="uiStore.activeModal === 'locationViewer'" />
-        <!-- ✅ MODIFICATION END -->
+        <WorldMapModal v-if="uiStore.activeModal === 'worldMap'" v-motion-pop />
       </div>
     </Transition>
+
+    <!-- ✅ MODIFICATION: Overlay Modal Layer -->
+    <Transition name="modal-fade">
+      <div class="modal-overlay-wrapper" v-if="uiStore.activeOverlayModal">
+        <ScreenshotEditor v-if="uiStore.activeOverlayModal === 'screenshotEditor'" />
+        <MediaViewerModal v-if="uiStore.activeOverlayModal === 'mediaViewer'" />
+        <LocationViewerModal v-if="uiStore.activeOverlayModal === 'locationViewer'" />
+        <ImageCropperModal v-if="uiStore.activeOverlayModal === 'imageCropper'" />
+      </div>
+    </Transition>
+
 
     <VideoCallView v-if="callStore.isCallActive && callStore.isFullScreenCallViewVisible" />
     <FloatingCallWidget v-if="callStore.isCallActive && !callStore.isFullScreenCallViewVisible" />
@@ -93,7 +96,6 @@
 </template>
 
 <script setup>
-// ✅ MODIFICATION START: Import defineAsyncComponent and ref for back button handling
 import { onMounted, onUnmounted, computed, watch, ref, defineAsyncComponent } from 'vue';
 import { useUserStore } from '@/stores/userStore';
 import { useChatStore } from '@/stores/chatStore';
@@ -119,7 +121,6 @@ import FloatingCallWidget from '@/components/Shared/FloatingCallWidget.vue';
 import SettingsModalSkeleton from '@/components/Shared/SettingsModalSkeleton.vue';
 import MobileGlobalHeader from '@/components/Shared/MobileGlobalHeader.vue';
 
-// ✅ MODIFICATION START: Use defineAsyncComponent for modals to split code
 const SettingsModal = defineAsyncComponent(() => import('@/components/Modals/SettingsModal.vue'));
 const NewContactModal = defineAsyncComponent(() => import('@/components/Modals/NewContactModal.vue'));
 const LocationPickerModal = defineAsyncComponent(() => import('@/components/Modals/LocationPickerModal.vue'));
@@ -130,7 +131,8 @@ const IncomingCallModal = defineAsyncComponent(() => import('@/components/Modals
 const ConfirmationModal = defineAsyncComponent(() => import('@/components/Modals/ConfirmationModal.vue'));
 const MediaViewerModal = defineAsyncComponent(() => import('@/components/Modals/MediaViewerModal.vue'));
 const LocationViewerModal = defineAsyncComponent(() => import('@/components/Modals/LocationViewerModal.vue'));
-// ✅ MODIFICATION END
+const WorldMapModal = defineAsyncComponent(() => import('@/components/Modals/WorldMapModal.vue'));
+const ImageCropperModal = defineAsyncComponent(() => import('@/components/Modals/ImageCropperModal.vue'));
 
 const userStore = useUserStore();
 const chatStore = useChatStore();
@@ -154,18 +156,12 @@ const themeHref = computed(() => {
   return themeConfig?.css ? `${themeConfig.css.replace(/^public\//, '')}` : '';
 });
 
-// ✅ MODIFICATION START: Mobile Keyboard Handling
-// This function updates a CSS custom property with the real visual viewport height.
 const updateViewportHeight = () => {
   if (window.visualViewport) {
-    // We set the CSS variable on the root <html> element for global access.
     document.documentElement.style.setProperty('--visual-viewport-height', `${window.visualViewport.height}px`);
   }
 };
-// ✅ MODIFICATION END
-// ✅ MODIFICATION START: State and logic for custom back button handling
 const lastBackPressTime = ref(0);
-// ✅ MODIFICATION END
 
 onMounted(async () => {
   uiStore.setAppLoading(true);
@@ -176,10 +172,7 @@ onMounted(async () => {
     await chatStore.init();
     await memoryStore.init();
     await webrtcService.init(userStore.userId);
-    // --- ✅ MODIFICATION START: Call proactive connection after init ---
-    // This runs the first check after all necessary data is loaded.
     webrtcService.proactivelyConnectToOnlineContacts();
-    // --- ✅ MODIFICATION END ---
     apiService.checkAiServiceHealth().then(isHealthy => {
       userStore.updateAiServiceStatus(isHealthy);
     });
@@ -192,63 +185,51 @@ onMounted(async () => {
     setTimeout(() => uiStore.setAppLoading(false), 500);
   }
 
-  // ✅ MODIFICATION START: Mobile Keyboard Handling
-  // Add listener when the component mounts.
   if (window.visualViewport) {
     window.visualViewport.addEventListener('resize', updateViewportHeight);
-    updateViewportHeight(); // Set the initial value.
+    updateViewportHeight();
   }
-  // ✅ MODIFICATION START: Add popstate listener for back button
-  history.pushState(null, '', location.href); // Initial state to catch first back press
+  history.pushState(null, '', location.href);
   window.addEventListener('popstate', handleBackButton);
-  // ✅ MODIFICATION END
 });
 
-// ✅ MODIFICATION START: Mobile Keyboard Handling
-// Clean up the event listener when the component is unmounted to prevent memory leaks.
 onUnmounted(() => {
   if (window.visualViewport) {
     window.visualViewport.removeEventListener('resize', updateViewportHeight);
   }
-  // ✅ MODIFICATION START: Remove popstate listener
   window.removeEventListener('popstate', handleBackButton);
-  // ✅ MODIFICATION END
 });
-// ✅ MODIFICATION END
 
-// ✅ MODIFICATION START: Implement the custom back button handler
 function handleBackButton() {
   let handled = false;
 
-  // Priority 1: Close any open modal or details panel
-  if (uiStore.activeModal) {
+  if (uiStore.activeOverlayModal) {
+    uiStore.hideOverlayModal();
+    handled = true;
+  } else if (uiStore.activeModal) {
     uiStore.hideModal();
     handled = true;
   } else if (uiStore.isDetailsPanelOpen) {
     uiStore.toggleDetailsPanel(false);
     handled = true;
-    // Priority 2: Go back from chat view to chat list on mobile
   } else if (uiStore.isChatViewActiveOnMobile) {
     uiStore.isChatViewActiveOnMobile = false;
     handled = true;
   }
 
   if (handled) {
-    // Re-push state to "trap" the user and override default back behavior
     history.pushState(null, '', location.href);
   } else {
-    // Priority 3: Double-press to exit logic
     const now = new Date().getTime();
     if (now - lastBackPressTime.value < 1000) {
-      history.back(); // Allow the actual back navigation
+      history.back();
     } else {
       lastBackPressTime.value = now;
       eventBus.emit('showNotification', { message: '再按一次返回退出', type: 'info', duration: 2000 });
-      history.pushState(null, '', location.href); // Trap this back press as well
+      history.pushState(null, '', location.href);
     }
   }
 }
-// ✅ MODIFICATION END
 
 watch(
     () => settingsStore.customBackgrounds[settingsStore.effectiveColorScheme],
@@ -390,7 +371,8 @@ body {
   opacity: 0;
 }
 
-.modal-wrapper-container {
+.modal-wrapper-container,
+.modal-overlay-wrapper {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
@@ -399,6 +381,12 @@ body {
   align-items: center;
   z-index: 1000;
 }
+
+.modal-overlay-wrapper {
+  z-index: 1050; /* Higher z-index for the overlay layer */
+}
+
+
 .modal-fade-enter-active,
 .modal-fade-leave-active {
   transition: opacity 0.3s var(--transition-easing);
@@ -454,45 +442,31 @@ body {
 
 @media (max-width: 768px) {
   #app-root {
-    align-items: flex-start; /* Align container to top */
+    align-items: flex-start;
   }
 
-  /* ✅ MODIFICATION START: Remove incorrect padding logic from #app-root */
   #app-root.call-widget-active {
-    /* This rule is no longer needed on mobile as padding is handled by the container. */
-    /* It's still used on desktop, so we set it back to its default here. */
     padding-top: 0;
   }
-  /* ✅ MODIFICATION END */
 
   .app-container {
     display: block;
     border-radius: 0;
     padding-top: 50px;
     box-sizing: border-box;
-    /* ✅ MODIFICATION START: Add transition and dynamic padding rule */
     transition: padding-top 0.3s var(--transition-easing);
-    /* ✅ MODIFICATION END */
-    /* ✅ MODIFICATION START: Mobile Keyboard Handling */
-    /* This makes the container resize with the visual viewport (when keyboard appears), */
-    /* using 100dvh as a fallback for browsers that don't support the variable. */
     height: var(--visual-viewport-height, 100dvh);
     max-height: var(--visual-viewport-height, 100dvh);
-    /* ✅ MODIFICATION END */
   }
 
-  /* ✅ MODIFICATION START: Add new rule for when the call widget is active */
   #app-root.call-widget-active .app-container {
-    padding-top: 100px; /* 50px for widget + 50px for header */
+    padding-top: 100px;
   }
-  /* ✅ MODIFICATION END */
-  /* --- ✅ MODIFICATION START: Add new rule for media viewer --- */
   #app-root.call-widget-active :deep(.viewer-backdrop) {
     padding-top: 50px;
     box-sizing: border-box;
     transition: padding-top 0.3s var(--transition-easing);
   }
-  /* --- ✅ MODIFICATION END --- */
 
   .main-content-wrapper {
     height: 100%;
@@ -506,7 +480,7 @@ body {
     z-index: 10;
     transform: translateX(0);
     transition: transform 0.3s var(--transition-easing);
-    padding-top: 50px; /* Same as app-container */
+    padding-top: 50px;
   }
   .main-view-container {
     border-left: none;

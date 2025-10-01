@@ -1,6 +1,9 @@
 <template>
   <header class="welcome-header">
     <div class="spacer"></div>
+    <!-- ✅ MODIFICATION START: Moved World Map button here -->
+    <IconButton icon="🌍" title="世界地图" @click="uiStore.showModal('worldMap')" />
+    <!-- ✅ MODIFICATION END -->
     <IconButton
         icon="👥"
         title="人员大厅"

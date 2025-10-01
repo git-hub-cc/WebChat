@@ -39,7 +39,7 @@ const close = () => {
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-lg);
   width: 90vw;
-  max-width: 500px;
+  max-width: 600px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;

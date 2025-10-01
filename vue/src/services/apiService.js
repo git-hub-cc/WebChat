@@ -8,7 +8,6 @@ import { log, fetchApiStream } from '@/utils';
 import AppSettings from '@/config/AppSettings';
 import { MCP_TOOLS } from '@/config/McpTools';
 import { dbService } from './dbService';
-// --- NEW ---
 import { useTtsStore } from '@/stores/ttsStore';
 
 
@@ -188,10 +187,8 @@ export const apiService = {
                         await chatStore.addMessage(targetId, finalAiMessage);
 
                         const latestContactState = useUserStore().contacts[targetId];
-                        // --- MODIFICATION: Trigger TTS via ttsStore ---
                         if (latestContactState?.aiConfig?.tts?.enabled && finalContent) {
                             const ttsStore = useTtsStore();
-                            // Pass the final message object and the contact info
                             ttsStore.requestTtsForMessage({ ...finalAiMessage, senderContact: latestContactState });
                         }
                     }
@@ -310,7 +307,6 @@ export const apiService = {
                         const messageForBroadcast = { ...finalAiMessage, isNewlyCompletedAIResponse: undefined };
                         groupStore.broadcastMessage(groupId, messageForBroadcast);
 
-                        // --- MODIFICATION: Trigger TTS via ttsStore ---
                         const latestAiContactState = useUserStore().contacts[aiContact.id];
                         if (latestAiContactState?.aiConfig?.tts?.enabled && finalContent) {
                             const ttsStore = useTtsStore();
@@ -386,21 +382,15 @@ export const apiService = {
         const effectiveConfig = _getEffectiveAiConfig();
         if (!effectiveConfig.ttsApiEndpoint) throw new Error('TTS API endpoint is not configured.');
 
-        // --- ✅ MODIFICATION START ---
-        // 构建新的 URL，将版本号作为路径的一部分
         const modelsUrl = `${effectiveConfig.ttsApiEndpoint.replace(/\/$/, '')}/models/${version}`;
         log(`Fetching TTS models from ${modelsUrl}`, 'DEBUG');
 
-        // 发起 GET 请求，不再需要请求体
         const response = await fetch(modelsUrl, {
             method: 'GET',
             headers: {
-                // 'Content-Type': 'application/json', // GET 请求不需要 Content-Type
                 'Authorization': 'Bearer guest'
             },
-            // body: JSON.stringify({ version }) // GET 请求不需要 body
         });
-        // --- ✅ MODIFICATION END ---
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -414,12 +404,9 @@ export const apiService = {
         return Object.keys(data.models);
     },
 
-    // --- START OF FIX ---
     getTtsModelData(version) {
-        // Correctly references the module-level cache variable.
         return _ttsDynamicDataCache[version]?.models || {};
     },
-    // --- END OF FIX ---
 
     async requestTtsForMessage(contact, text) {
         const effectiveConfig = _getEffectiveAiConfig();
@@ -475,5 +462,83 @@ export const apiService = {
         const audioBlob = await audioResponse.blob();
         await dbService.setItem('ttsCache', { id: cacheKey, audioBlob });
         return audioBlob;
+    },
+
+    // ===============================================
+    // [修改] 世界地图功能相关 API 方法 - 遵循配置化模式
+    // ===============================================
+
+    /**
+     * 从后端获取所有已分享的地理位置标记点。
+     * @returns {Promise<Array>} 一个包含所有地点对象的 Promise 数组。
+     */
+    async getMapLocations() {
+        // [修改] 使用 AppSettings.js 中的配置，而不是硬编码的 URL
+        const endpoint = AppSettings.server.mapLocationsApiEndpoint;
+        if (!endpoint) {
+            const errorMsg = '地图 API 端点未配置。';
+            log(errorMsg, 'ERROR');
+            eventBus.emit('showNotification', { message: errorMsg, type: 'error' });
+            return [];
+        }
+
+        try {
+            const response = await fetch(endpoint);
+            if (!response.ok) {
+                throw new Error(`获取地图位置失败: ${response.status} ${response.statusText}`);
+            }
+            return await response.json();
+        } catch (error) {
+            log(error.message, 'ERROR');
+            eventBus.emit('showNotification', { message: '无法加载地图标记点，请稍后重试。', type: 'error' });
+            return [];
+        }
+    },
+
+    /**
+     * 创建一个新的地理位置分享，包含图片上传。
+     * @param {object} locationData - 包含地点信息的对象。
+     * @param {number} locationData.latitude - 纬度。
+     * @param {number} locationData.longitude - 经度。
+     * @param {string} locationData.tag - 标签。
+     * @param {string} locationData.description - 描述。
+     * @param {File} locationData.imageFile - 图片文件对象。
+     * @returns {Promise<object|null>} 成功时返回新创建的地点对象，失败时返回 null。
+     */
+    async createMapLocation(locationData) {
+        // [修改] 使用 AppSettings.js 中的配置
+        const endpoint = AppSettings.server.mapLocationsApiEndpoint;
+        if (!endpoint) {
+            const errorMsg = '地图 API 端点未配置。';
+            log(errorMsg, 'ERROR');
+            eventBus.emit('showNotification', { message: errorMsg, type: 'error' });
+            return null;
+        }
+
+        const userStore = useUserStore();
+        const formData = new FormData();
+        formData.append('latitude', locationData.latitude);
+        formData.append('longitude', locationData.longitude);
+        formData.append('tag', locationData.tag);
+        formData.append('description', locationData.description);
+        formData.append('image', locationData.imageFile);
+        formData.append('createdBy', userStore.userId);
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `分享地点失败: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            log(error.message, 'ERROR');
+            eventBus.emit('showNotification', { message: error.message || '分享地点失败，请检查网络连接。', type: 'error' });
+            return null;
+        }
     },
 };

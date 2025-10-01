@@ -2,7 +2,11 @@
   <div class="people-lobby-root">
     <div class="lobby-header">
       <h4>全部在线用户 ({{ allUsers.length }})</h4>
-      <IconButton icon="🔄" title="刷新列表" :class="{ loading: isLoading }" @click="fetchUsers" />
+      <div>
+        <!-- ✅ MODIFICATION START: Removed World Map button -->
+        <IconButton icon="🔄" title="刷新列表" :class="{ loading: isLoading }" @click="fetchUsers" />
+        <!-- ✅ MODIFICATION END -->
+      </div>
     </div>
 
     <!-- [优化] 使用 v-if/else-if/else 分离加载、空、内容三种状态，并添加过渡动画 -->
@@ -111,6 +115,7 @@ onMounted(() => {
 <style scoped>
 .people-lobby-root { display: flex; flex-direction: column; height: 100%; }
 .lobby-header { display: flex; justify-content: space-between; align-items: center; padding: var(--spacing-2) var(--spacing-3); border-bottom: 1px solid var(--color-border); flex-shrink: 0; }
+.lobby-header div { display: flex; align-items: center; }
 .lobby-header h4 { font-weight: var(--font-weight-semibold); }
 /* [新增] 容器用于过渡动画 */
 .lobby-list-container {

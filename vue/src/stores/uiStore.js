@@ -6,6 +6,9 @@ export const useUiStore = defineStore('ui', () => {
     const isDetailsPanelOpen = ref(false);
     const detailsPanelContent = ref('info');
     const activeModal = ref(null);
+    // ✅ MODIFICATION START: Add state for an overlay modal
+    const activeOverlayModal = ref(null);
+    // ✅ MODIFICATION END
     const isAppLoading = ref(true);
     const chatListFilter = ref('all');
     const chatListSearchTerm = ref('');
@@ -16,14 +19,11 @@ export const useUiStore = defineStore('ui', () => {
     const contextMenuTarget = ref(null);
     const confirmationOptions = ref(null);
     const mediaViewerContent = ref(null);
-    // --- ✅ MODIFICATION START: Add state for location viewer ---
     const locationViewerContent = ref(null);
-    // --- ✅ MODIFICATION END ---
+    const imageCropperContent = ref(null);
     const modalPrefillData = ref({});
     const manualSdpText = ref('');
-    // --- MODIFICATION START: Add state for dangerous actions ---
     const isPerformingDangerousAction = ref(false);
-    // --- MODIFICATION END ---
 
     // --- ACTIONS ---
     function toggleDetailsPanel(forceState, content = 'info') {
@@ -44,13 +44,42 @@ export const useUiStore = defineStore('ui', () => {
 
     function hideModal() {
         activeModal.value = null;
+        // Also ensure any overlay is closed when the base modal closes
+        activeOverlayModal.value = null;
+
+        // Cleanup logic
         modalPrefillData.value = {};
         if (confirmationOptions.value) confirmationOptions.value = null;
         if (mediaViewerContent.value) mediaViewerContent.value = null;
-        // --- ✅ MODIFICATION START: Clear location viewer content on modal hide ---
         if (locationViewerContent.value) locationViewerContent.value = null;
-        // --- ✅ MODIFICATION END ---
+        if (imageCropperContent.value) imageCropperContent.value = null;
     }
+
+    // ✅ MODIFICATION START: New functions to manage overlay modals
+    function showOverlayModal(modalName, content) {
+        if (modalName === 'imageCropper') {
+            imageCropperContent.value = content;
+        } else if (modalName === 'mediaViewer') {
+            mediaViewerContent.value = content;
+        } else if (modalName === 'locationViewer') {
+            locationViewerContent.value = content;
+        }
+        // Can be extended for other overlay types like ScreenshotEditor
+        else if (modalName === 'screenshotEditor') {
+            modalPrefillData.value = content; // ScreenshotEditor uses prefillData
+        }
+
+        activeOverlayModal.value = modalName;
+    }
+
+    function hideOverlayModal() {
+        activeOverlayModal.value = null;
+        // Cleanup specific content
+        if (imageCropperContent.value) imageCropperContent.value = null;
+        if (mediaViewerContent.value) mediaViewerContent.value = null;
+        if (locationViewerContent.value) locationViewerContent.value = null;
+    }
+    // ✅ MODIFICATION END
 
     function setAppLoading(isLoading) {
         isAppLoading.value = isLoading;
@@ -74,30 +103,52 @@ export const useUiStore = defineStore('ui', () => {
         showModal('confirmation');
     }
 
+    // These now use the overlay system
     function showMediaViewer(content) {
-        mediaViewerContent.value = content;
-        showModal('mediaViewer');
+        showOverlayModal('mediaViewer', content);
     }
 
-    // --- ✅ MODIFICATION START: Add action to show location viewer ---
     function showLocationViewer(content) {
-        locationViewerContent.value = content;
-        showModal('locationViewer');
+        showOverlayModal('locationViewer', content);
     }
-    // --- ✅ MODIFICATION END ---
+
+    // Renamed for clarity, this now specifically opens the cropper as an overlay
+    function showImageCropperOverlay(content) {
+        showOverlayModal('imageCropper', content);
+    }
+
 
     return {
-        isDetailsPanelOpen, detailsPanelContent, activeModal, isAppLoading,
-        chatListFilter, chatListSearchTerm, isChatViewActiveOnMobile,
-        modalPrefillData, isContextMenuOpen, contextMenuPos, contextMenuItems,
-        contextMenuTarget, confirmationOptions, mediaViewerContent,
-        locationViewerContent, // Expose new state
+        isDetailsPanelOpen,
+        detailsPanelContent,
+        activeModal,
+        activeOverlayModal, // Expose new state
+        isAppLoading,
+        chatListFilter,
+        chatListSearchTerm,
+        isChatViewActiveOnMobile,
+        modalPrefillData,
+        isContextMenuOpen,
+        contextMenuPos,
+        contextMenuItems,
+        contextMenuTarget,
+        confirmationOptions,
+        mediaViewerContent,
+        locationViewerContent,
         manualSdpText,
-        // --- MODIFICATION START: Expose the new state ---
         isPerformingDangerousAction,
-        // --- MODIFICATION END ---
-        toggleDetailsPanel, showModal, hideModal, setAppLoading,
-        showContextMenu, hideContextMenu, showConfirmationModal, showMediaViewer,
-        showLocationViewer // Expose new action
+        imageCropperContent,
+        toggleDetailsPanel,
+        showModal,
+        hideModal,
+        showOverlayModal, // Expose showOverlayModal for other components like ScreenshotEditor
+        hideOverlayModal, // Expose new action
+        setAppLoading,
+        showContextMenu,
+        hideContextMenu,
+        showConfirmationModal,
+        showMediaViewer,
+        showLocationViewer,
+        showImageCropperOverlay,
     };
 });
