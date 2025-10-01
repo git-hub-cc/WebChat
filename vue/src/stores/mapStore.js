@@ -21,17 +21,23 @@ export const useMapStore = defineStore('map', () => {
     /**
      * 从后端API获取所有共享的地点标记。
      */
+    // ✅ MODIFICATION START: Ensure the loading indicator shows for a minimum duration.
     async function fetchLocations() {
         if (isLoading.value) return;
         isLoading.value = true;
         try {
-            const fetchedLocations = await apiService.getMapLocations();
+            const fetchPromise = apiService.getMapLocations();
+            const minDelay = new Promise(resolve => setTimeout(resolve, 1000)); // 1-second minimum delay
+
+            const [fetchedLocations] = await Promise.all([fetchPromise, minDelay]);
+
             locations.value = fetchedLocations;
             log(`成功获取 ${fetchedLocations.length} 个地图标记点。`, 'INFO');
         } finally {
             isLoading.value = false;
         }
     }
+    // ✅ MODIFICATION END
 
     /**
      * 添加一个新的地点标记。

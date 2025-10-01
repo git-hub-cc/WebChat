@@ -113,20 +113,24 @@ const filteredModels = computed(() => {
   return modelNames.filter(m => m.toLowerCase().includes(modelSearch.value.toLowerCase()));
 });
 
+// ✅ MODIFICATION START: Ensure the loading indicator shows for a minimum duration.
 async function fetchModels(version) {
-  // --- MODIFICATION START: Rely on apiService's internal caching ---
-  if (!version) return;
-  // --- MODIFICATION END ---
+  if (!version || dynamicDataStatus.models === 'loading') return;
+
   dynamicDataStatus.models = 'loading';
   try {
-    // This fetches and caches data within the apiService
-    await apiService.getTtsModels(version);
+    const fetchPromise = apiService.getTtsModels(version);
+    const minDelay = new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+
+    await Promise.all([fetchPromise, minDelay]);
     dynamicDataStatus.models = 'loaded';
+
   } catch (error) {
     log(`Failed to fetch TTS models for version ${version}: ${error}`, 'ERROR');
     dynamicDataStatus.models = 'error';
   }
 }
+// ✅ MODIFICATION END
 
 function selectModel(model) {
   localSettings.model_name = model;

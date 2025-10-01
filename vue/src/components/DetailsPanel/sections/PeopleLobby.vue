@@ -4,7 +4,7 @@
       <h4>全部在线用户 ({{ allUsers.length }})</h4>
       <div>
         <!-- ✅ MODIFICATION START: Removed World Map button -->
-        <IconButton icon="🔄" title="刷新列表" :class="{ loading: isLoading }" @click="fetchUsers" />
+        <IconButton icon="⟳" title="刷新列表" :class="{ loading: isLoading }" @click="fetchUsers" />
         <!-- ✅ MODIFICATION END -->
       </div>
     </div>
@@ -74,11 +74,26 @@ const allUsers = computed(() => {
   });
 });
 
+// ✅ MODIFICATION START: Ensure the loading animation runs for a minimum duration.
 async function fetchUsers() {
   isLoading.value = true;
-  await userStore.fetchAllOnlineUsers();
-  isLoading.value = false;
+  // 创建一个获取数据的 Promise 和一个最小延迟的 Promise
+  const fetchPromise = userStore.fetchAllOnlineUsers();
+  const minDelay = new Promise(resolve => setTimeout(resolve, 1000)); // 1秒最小延迟
+
+  try {
+    // 等待两个 Promise 都完成
+    await Promise.all([fetchPromise, minDelay]);
+  } catch (error) {
+    // 即使 fetch 失败，我们依然等待最小延迟结束，以保证动画完整性。
+    // userStore 内部会处理错误日志。
+    console.error("刷新用户列表时出错，但动画将平滑结束:", error);
+  } finally {
+    // 在数据加载和最小延迟都完成后，才隐藏加载状态
+    isLoading.value = false;
+  }
 }
+// ✅ MODIFICATION END
 
 function handleUserClick(user) {
   if (user.isContact) {

@@ -313,12 +313,17 @@ function stopVuMeter() {
 }
 
 
+// ✅ MODIFICATION START: Ensure the loading animation runs for a minimum duration.
 async function startDeviceCheck() {
   isCheckingDevices.value = true;
   deviceCheckResult.value = null;
   cleanupPreviewStream();
 
-  const result = await mediaService.checkDevices();
+  const checkPromise = mediaService.checkDevices();
+  const minDelay = new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
+
+  const [result] = await Promise.all([checkPromise, minDelay]);
+
   deviceCheckResult.value = result;
 
   if (result.video.stream) {
@@ -339,7 +344,11 @@ async function startNetworkTest() {
   isTestingNetwork.value = true;
   networkTestResults.value = {};
   try {
-    const results = await webrtcService.testNetwork();
+    const testPromise = webrtcService.testNetwork();
+    const minDelay = new Promise(resolve => setTimeout(resolve, 1000)); // 1-second delay
+
+    const [results] = await Promise.all([testPromise, minDelay]);
+
     networkTestResults.value = {
       'STUN (公网IP发现)': results.stun,
       'TURN (UDP中继)': results.turnUdp,
@@ -353,6 +362,7 @@ async function startNetworkTest() {
     isTestingNetwork.value = false;
   }
 }
+// ✅ MODIFICATION END
 
 function cleanupPreviewStream() {
   if (videoPreviewStream.value) {

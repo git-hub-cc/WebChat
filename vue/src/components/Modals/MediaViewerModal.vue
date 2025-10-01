@@ -1,60 +1,60 @@
 <template>
   <transition name="media-viewer-fade">
     <div
-        v-if="uiStore.activeModal === 'mediaViewer' && content"
-        class="viewer-backdrop"
-        :class="{ 'widget-active': isWidgetActive }"
-        @click.self="close"
-        @mousemove="showControls"
+    v-if="uiStore.activeOverlayModal === 'mediaViewer' && content"
+    class="viewer-backdrop"
+    :class="{ 'widget-active': isWidgetActive }"
+    @click.self="close"
+    @mousemove="showControls"
     >
-      <button class="close-button" @click="close" title="关闭 (Esc)">×</button>
-      <div class="media-container" ref="mediaContainerRef" v-motion-pop>
-        <img
-            v-if="isImage"
+    <button class="close-button" @click="close" title="关闭 (Esc)">×</button>
+    <div class="media-container" ref="mediaContainerRef" v-motion-pop>
+      <img
+          v-if="isImage"
+          :src="content.src"
+          :alt="content.alt"
+          class="media-content"
+          loading="lazy"
+      />
+      <div v-else-if="isVideo" class="video-wrapper">
+        <video
+            ref="videoRef"
             :src="content.src"
-            :alt="content.alt"
             class="media-content"
-            loading="lazy"
+            autoplay
+            @click="handlePlayPause"
+        ></video>
+        <CustomVideoControls
+            :visible="controlsVisible"
+            :is-playing="isPlaying"
+            :is-buffering="isBuffering"
+            :current-time="currentTime"
+            :duration="duration"
+            :volume="currentVolume"
+            :is-muted="isMuted"
+            :is-fullscreen="isFullscreen"
+            @play-pause="handlePlayPause"
+            @seek="handleSeek"
+            @set-volume="handleSetVolume"
+            @toggle-mute="handleToggleMute"
+            @toggle-fullscreen="handleToggleFullscreen"
         />
-        <div v-else-if="isVideo" class="video-wrapper">
-          <video
-              ref="videoRef"
-              :src="content.src"
-              class="media-content"
-              autoplay
-              @click="handlePlayPause"
-          ></video>
-          <CustomVideoControls
-              :visible="controlsVisible"
-              :is-playing="isPlaying"
-              :is-buffering="isBuffering"
-              :current-time="currentTime"
-              :duration="duration"
-              :volume="currentVolume"
-              :is-muted="isMuted"
-              :is-fullscreen="isFullscreen"
-              @play-pause="handlePlayPause"
-              @seek="handleSeek"
-              @set-volume="handleSetVolume"
-              @toggle-mute="handleToggleMute"
-              @toggle-fullscreen="handleToggleFullscreen"
-          />
-        </div>
-        <iframe
-            v-else-if="isPdf"
-            :src="content.src"
-            class="media-content iframe-content"
-            frameborder="0"
-        ></iframe>
-        <div v-else-if="isText" class="text-preview-wrapper">
-          <pre class="media-content text-content">{{ textFileContent || '加载中...' }}</pre>
-        </div>
-        <div v-else class="unsupported-preview">
-          <p>不支持预览此文件类型</p>
-          <span>{{ content.alt }}</span>
-          <button @click="downloadFile">下载文件</button>
-        </div>
       </div>
+      <iframe
+          v-else-if="isPdf"
+          :src="content.src"
+          class="media-content iframe-content"
+          frameborder="0"
+      ></iframe>
+      <div v-else-if="isText" class="text-preview-wrapper">
+        <pre class="media-content text-content">{{ textFileContent || '加载中...' }}</pre>
+      </div>
+      <div v-else class="unsupported-preview">
+        <p>不支持预览此文件类型</p>
+        <span>{{ content.alt }}</span>
+        <button @click="downloadFile">下载文件</button>
+      </div>
+    </div>
     </div>
   </transition>
 </template>
@@ -99,7 +99,6 @@ const updateVideoState = () => {
   isMuted.value = videoRef.value.muted;
 };
 
-// ✅ FIX: Add guard clauses to all event handlers that access videoRef.value
 const onTimeUpdate = () => { if (videoRef.value) currentTime.value = videoRef.value.currentTime; };
 const onDurationChange = () => { if (videoRef.value) duration.value = videoRef.value.duration; };
 const onPlay = () => { isPlaying.value = true; isBuffering.value = false; };
@@ -108,7 +107,6 @@ const onVolumeChange = () => { if (videoRef.value) { currentVolume.value = video
 const onWaiting = () => { isBuffering.value = true; };
 const onPlaying = () => { isBuffering.value = false; };
 
-// ✅ FIX: Define the onFullscreenChange handler
 const onFullscreenChange = () => {
   isFullscreen.value = !!document.fullscreenElement;
 };
@@ -136,7 +134,9 @@ const showControls = () => {
 };
 
 const close = () => {
-  uiStore.hideModal();
+  // ✅ BUG FIX START: Call hideOverlayModal instead of hideModal
+  uiStore.hideOverlayModal();
+  // ✅ BUG FIX END
 };
 
 const handleKeyDown = (event) => {

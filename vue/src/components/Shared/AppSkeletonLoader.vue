@@ -46,7 +46,6 @@
           </div>
         </div>
         <div class="message-area-skeleton">
-          <div class="bubble-skeleton received"></div>
           <div class="bubble-skeleton sent"></div>
           <div class="bubble-skeleton sent short"></div>
         </div>

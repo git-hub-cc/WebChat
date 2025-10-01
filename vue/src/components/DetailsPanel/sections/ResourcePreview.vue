@@ -157,23 +157,36 @@ function getResourceTypeForTab(tab) {
   }
 }
 
+// ✅ MODIFICATION START: Ensure the loading skeleton shows for a minimum duration.
 async function loadResources(reset = false) {
   if (isLoading.value || (!hasMore.value && !reset)) return;
+
   isLoading.value = true;
   if (reset) {
     allResources.value = [];
     hasMore.value = true;
   }
+
   try {
-    const rawMessages = chatStore.getMessagesWithResources(props.chatId, getResourceTypeForTab(activeTab.value), allResources.value.length, 21);
-    if (rawMessages.length === 0) hasMore.value = false;
-    allResources.value.push(...rawMessages);
+    const loadPromise = new Promise(resolve => {
+      const rawMessages = chatStore.getMessagesWithResources(props.chatId, getResourceTypeForTab(activeTab.value), allResources.value.length, 21);
+      if (rawMessages.length < 21) hasMore.value = false;
+      allResources.value.push(...rawMessages);
+      resolve();
+    });
+
+    // Ensure the skeleton loader is visible for at least 500ms for better UX
+    const minDelay = new Promise(resolve => setTimeout(resolve, 500));
+
+    await Promise.all([loadPromise, minDelay]);
+
   } catch (error) {
     log(`加载资源失败: ${error}`, 'ERROR');
   } finally {
     isLoading.value = false;
   }
 }
+// ✅ MODIFICATION END
 
 function switchTab(tab) {
   activeTab.value = tab;

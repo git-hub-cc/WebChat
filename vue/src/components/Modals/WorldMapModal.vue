@@ -22,6 +22,15 @@
           </transition>
         </div>
         <footer class="map-footer">
+          <!-- ✅ MODIFICATION START: Added filter dropdown -->
+          <div class="map-filter-container">
+            <select v-model="selectedTagFilter" class="filter-select">
+              <option v-for="option in filterOptions" :key="option.value" :value="option.value">
+                {{ option.text }}
+              </option>
+            </select>
+          </div>
+          <!-- ✅ MODIFICATION END -->
           <p v-if="isAddingMode" class="add-mode-hint">请在地图上点击选择要分享的位置</p>
           <div class="spacer"></div>
           <button class="btn-secondary" @click="toggleAddMode(!isAddingMode)">
@@ -30,7 +39,6 @@
         </footer>
       </div>
 
-      <!-- ✅ MODIFICATION START: Local Image Cropper Instance -->
       <ImageCropperModal
           v-if="isCropperVisible"
           :image-src="cropperProps.imageSrc"
@@ -38,13 +46,12 @@
           @complete="handleCroppingComplete"
           @cancel="handleCropperCancel"
       />
-      <!-- ✅ MODIFICATION END -->
     </div>
   </transition>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch, defineAsyncComponent } from 'vue';
+import { ref, onMounted, onUnmounted, watch, defineAsyncComponent, computed } from 'vue';
 import L from 'leaflet';
 import Spinner from '@/components/Shared/Spinner.vue';
 import AddLocationForm from './AddLocationForm.vue';
@@ -52,7 +59,6 @@ import { useUiStore } from '@/stores/uiStore';
 import { useMapStore } from '@/stores/mapStore';
 import { log } from '@/utils';
 
-// ✅ MODIFICATION: Dynamically import ImageCropperModal
 const ImageCropperModal = defineAsyncComponent(() => import('./ImageCropperModal.vue'));
 
 const uiStore = useUiStore();
@@ -66,21 +72,54 @@ let tempMarker = null;
 const isAddingMode = ref(false);
 const newMarkerCoords = ref(null);
 
-// ✅ MODIFICATION START: State for local cropper
 const isCropperVisible = ref(false);
 const cropperProps = ref({});
+
+// ✅ MODIFICATION START: Define tag configurations and filter state
+const TAG_CONFIG = {
+  '美食': { iconFile: 'icons/marker-icon-food.svg' },
+  '景点': { iconFile: 'icons/marker-icon-scenery.svg' },
+  '购物': { iconFile: 'icons/marker-icon-shopping.svg' },
+  '活动': { iconFile: 'icons/marker-icon-activity.svg' },
+  '其他': { iconFile: 'icons/marker-icon-other.svg' },
+};
+
+const selectedTagFilter = ref('all');
+const filterOptions = ref([
+  { value: 'all', text: '全部分类' },
+  ...Object.keys(TAG_CONFIG).map(key => ({ value: key, text: key }))
+]);
+
+const locationIcons = {
+  default: L.icon({
+    iconUrl: 'icons/marker-icon.svg',
+    shadowUrl: 'icons/marker-shadow.svg',
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+  }),
+  temp: L.icon({
+    iconUrl: 'icons/marker-icon-temp.svg',
+    shadowUrl: 'icons/marker-shadow.svg',
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+  })
+};
+
+// Create icon instances for each tag
+for (const tag in TAG_CONFIG) {
+  locationIcons[tag] = L.icon({
+    iconUrl: TAG_CONFIG[tag].iconFile,
+    shadowUrl: 'icons/marker-shadow.svg',
+    iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+  });
+}
+
+const filteredLocations = computed(() => {
+  if (selectedTagFilter.value === 'all') {
+    return mapStore.locations;
+  }
+  return mapStore.locations.filter(loc => loc.tag === selectedTagFilter.value);
+});
 // ✅ MODIFICATION END
 
-const defaultIcon = L.icon({
-  iconUrl: 'icons/marker-icon.svg',
-  shadowUrl: 'icons/marker-shadow.svg',
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-});
-const tempIcon = L.icon({
-  iconUrl: 'icons/marker-icon-temp.svg',
-  shadowUrl: 'icons/marker-shadow.svg',
-  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
-});
 
 function initMap() {
   if (mapContainerRef.value && !map) {
@@ -128,25 +167,29 @@ onUnmounted(() => {
   }
 });
 
-watch(() => mapStore.locations, (newLocations) => {
+// ✅ MODIFICATION START: Watch the computed filteredLocations instead of the raw store data
+watch(filteredLocations, (newLocations) => {
   if (!map || !markersLayer) return;
   markersLayer.clearLayers();
 
   newLocations.forEach(loc => {
-    const marker = L.marker([loc.latitude, loc.longitude], { icon: defaultIcon }).addTo(markersLayer);
+    // Select the correct icon based on the tag
+    const icon = locationIcons[loc.tag] || locationIcons.default;
+    const marker = L.marker([loc.latitude, loc.longitude], { icon }).addTo(markersLayer);
     const popupContent = `
       <div class="map-popup">
         <img src="${loc.imageUrl}" alt="${loc.tag}" class="popup-image" />
         <div class="popup-content">
           <h4>${loc.tag}</h4>
           <p>${loc.description}</p>
-          <small>由 ${loc.createdBy.substring(0, 6)}... 分享</small>
+          <small>由 ${loc.createdBy} 分享</small>
         </div>
       </div>
     `;
     marker.bindPopup(popupContent);
   });
 }, { deep: true });
+// ✅ MODIFICATION END
 
 function toggleAddMode(forceState) {
   isAddingMode.value = typeof forceState === 'boolean' ? forceState : !isAddingMode.value;
@@ -165,7 +208,7 @@ function handleMapClick(e) {
     if (tempMarker) {
       tempMarker.setLatLng(e.latlng);
     } else {
-      tempMarker = L.marker(e.latlng, { icon: tempIcon, zIndexOffset: 1000 }).addTo(map);
+      tempMarker = L.marker(e.latlng, { icon: locationIcons.temp, zIndexOffset: 1000 }).addTo(map);
     }
     map.panTo(e.latlng);
   }
@@ -178,7 +221,6 @@ async function handleFormSubmit(formData) {
   }
 }
 
-// ✅ MODIFICATION START: Handlers for local cropper lifecycle
 function handleShowCropper(data) {
   cropperProps.value = data;
   isCropperVisible.value = true;
@@ -189,14 +231,13 @@ function handleCroppingComplete(finalFile) {
     cropperProps.value.onComplete(finalFile);
   }
   isCropperVisible.value = false;
-  cropperProps.value = {}; // Clean up
+  cropperProps.value = {};
 }
 
 function handleCropperCancel() {
   isCropperVisible.value = false;
-  cropperProps.value = {}; // Clean up
+  cropperProps.value = {};
 }
-// ✅ MODIFICATION END
 </script>
 
 <style scoped>
@@ -309,6 +350,20 @@ function handleCropperCancel() {
 .world-map-fade-leave-to {
   opacity: 0;
 }
+
+/* ✅ MODIFICATION START: Styles for the new filter dropdown */
+.map-filter-container {
+  position: relative;
+}
+.filter-select {
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-background-elevated);
+  min-width: 120px;
+}
+/* ✅ MODIFICATION END */
+
 
 /* Leaflet Popup Customization */
 :deep(.leaflet-popup-content-wrapper) {

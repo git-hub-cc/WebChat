@@ -5,15 +5,15 @@ import sys
 # 起始搜索目录（'.' 表示当前目录）
 START_DIRECTORY = '.'
 # 输出文件名
-OUTPUT_FILE = 'res.md'
+OUTPUT_FILE = 'res-vue.md'
 # 允许的文件扩展名 (请使用小写)
-ALLOWED_EXTENSIONS = ['.md']
+ALLOWED_EXTENSIONS = ['.md', '.html', '.js', '.css', '.json', '.vue', '.svg']
 # 行数限制
 LINE_LIMIT = 1000
 # 要排除的目录名
-EXCLUDED_DIRS = ['node_modules', '.git', '__pycache__', '.venv', 'venv', 'package.json', 'package-lock.json', 'lib']
+EXCLUDED_DIRS = ['node_modules', 'tmp', 'dist']
 # 【新增】要排除的特定文件名
-EXCLUDED_FILES = ['01base.md', 'about.md']
+EXCLUDED_FILES = ['package-lock.json', 'res_vue.md']
 # --- 配置结束 ---
 
 def find_files_recursively(start_dir: str) -> list[str]:

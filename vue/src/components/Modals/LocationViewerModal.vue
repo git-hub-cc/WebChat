@@ -1,6 +1,6 @@
 <template>
   <transition name="location-viewer-fade">
-    <!-- ✅ BUG FIX START: Changed v-if condition to check 'activeOverlayModal' instead of 'activeModal' -->
+    <!-- ✅ BUG FIX START: Changed v-if condition to check 'activeOverlayModal' -->
     <div
         v-if="uiStore.activeOverlayModal === 'locationViewer' && content"
         class="viewer-backdrop"
