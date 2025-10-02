@@ -2,8 +2,8 @@
   <!-- --- [动画] START: 为整个通话视图添加过渡 --- -->
   <transition name="call-view-fade">
     <div class="call-view-container" :class="{ 'pip-mode': isPipMode, 'audio-only-mode': isAudioOnly }" ref="callContainerRef">
+      <!-- ✅ MODIFICATION START: Header structure updated for new button and position -->
       <header class="call-view-header">
-        <IconButton icon="↓" title="最小化通话" @click="callStore.minimizeCallView()" class="minimize-button" />
         <div class="peer-info">
           <p class="peer-name">{{ viewTitle }}</p>
           <div class="status-indicators">
@@ -12,7 +12,16 @@
             <span v-if="callStore.currentCallQuality.video && !isAudioOnly" class="quality-indicator" :class="qualityClass('video')" :title="`视频质量: ${qualityText(callStore.currentCallQuality.video)}`">V</span>
           </div>
         </div>
+        <button class="icon-button minimize-button" title="最小化通话" @click="callStore.minimizeCallView()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 14H10V20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M20 10H14V4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 10L21 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 21L10 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </header>
+      <!-- ✅ MODIFICATION END -->
 
       <div v-if="amISharingScreen" class="sharing-banner">
         🔴 您正在分享屏幕
@@ -180,9 +189,15 @@ onUnmounted(() => {
 
 
 .call-view-container { position: fixed; inset: 0; background-color: #111; z-index: 1200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.call-view-header { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: var(--spacing-3); background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); z-index: 1201; }
-.minimize-button { color: white; font-size: 1.8rem; }
-.peer-info { margin-left: var(--spacing-3); color: white; }
+/* ✅ MODIFICATION START: Header layout updated for new button and position */
+.call-view-header { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: var(--spacing-3); background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); z-index: 1201; justify-content: space-between; }
+.minimize-button { color: white; }
+.minimize-button svg {
+  width: 24px;
+  height: 24px;
+}
+.peer-info { color: white; }
+/* ✅ MODIFICATION END */
 .peer-name { font-weight: var(--font-weight-semibold); }
 .status-indicators { display: flex; align-items: center; gap: var(--spacing-2); font-size: var(--font-size-sm); opacity: 0.8; }
 .quality-indicator { font-size: 0.75rem; padding: 2px 6px; border-radius: var(--border-radius-sm); color: white; font-weight: bold; }
