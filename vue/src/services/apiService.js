@@ -464,16 +464,72 @@ export const apiService = {
         return audioBlob;
     },
 
+    // --- [新增] ---
     // ===============================================
-    // [修改] 世界地图功能相关 API 方法 - 遵循配置化模式
+    // 世界地图评论与点赞功能相关 API 方法
     // ===============================================
 
-    /**
-     * 从后端获取所有已分享的地理位置标记点。
-     * @returns {Promise<Array>} 一个包含所有地点对象的 Promise 数组。
-     */
+    async getCommentsForLocation(locationId) {
+        const userStore = useUserStore();
+        // 生产环境警告: userId 不应作为查询参数，应由后端从认证信息中获取
+        const endpoint = `${AppSettings.server.mapLocationsApiEndpoint}/${locationId}/comments?userId=${userStore.userId}`;
+        try {
+            const response = await fetch(endpoint);
+            if (!response.ok) {
+                throw new Error(`获取评论失败: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            log(error.message, 'ERROR');
+            eventBus.emit('showNotification', { message: '无法加载评论。', type: 'error' });
+            return [];
+        }
+    },
+
+    async addCommentForLocation(locationId, content) {
+        const userStore = useUserStore();
+        const endpoint = `${AppSettings.server.mapLocationsApiEndpoint}/${locationId}/comments`;
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content, userId: userStore.userId }) // 生产环境警告
+            });
+            if (!response.ok) {
+                throw new Error(`发表评论失败: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            log(error.message, 'ERROR');
+            eventBus.emit('showNotification', { message: '评论发表失败。', type: 'error' });
+            return null;
+        }
+    },
+
+    async toggleCommentLike(commentId) {
+        const userStore = useUserStore();
+        // 注意：后端API路径是 /api/map/comments/{commentId}/like
+        // AppSettings.server.mapLocationsApiEndpoint 是 /api/map/locations
+        // 我们需要构建正确的路径。
+        const baseEndpoint = AppSettings.server.mapLocationsApiEndpoint.replace('/locations', '');
+        const endpoint = `${baseEndpoint}/comments/${commentId}/like?userId=${userStore.userId}`; // 生产环境警告
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST'
+            });
+            if (!response.ok) {
+                throw new Error(`操作失败: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            log(error.message, 'ERROR');
+            eventBus.emit('showNotification', { message: '点赞操作失败。', type: 'error' });
+            return null;
+        }
+    },
+    // --- [新增结束] ---
+
     async getMapLocations() {
-        // [修改] 使用 AppSettings.js 中的配置，而不是硬编码的 URL
         const endpoint = AppSettings.server.mapLocationsApiEndpoint;
         if (!endpoint) {
             const errorMsg = '地图 API 端点未配置。';
@@ -495,18 +551,7 @@ export const apiService = {
         }
     },
 
-    /**
-     * 创建一个新的地理位置分享，包含图片上传。
-     * @param {object} locationData - 包含地点信息的对象。
-     * @param {number} locationData.latitude - 纬度。
-     * @param {number} locationData.longitude - 经度。
-     * @param {string} locationData.tag - 标签。
-     * @param {string} locationData.description - 描述。
-     * @param {File} locationData.imageFile - 图片文件对象。
-     * @returns {Promise<object|null>} 成功时返回新创建的地点对象，失败时返回 null。
-     */
     async createMapLocation(locationData) {
-        // [修改] 使用 AppSettings.js 中的配置
         const endpoint = AppSettings.server.mapLocationsApiEndpoint;
         if (!endpoint) {
             const errorMsg = '地图 API 端点未配置。';

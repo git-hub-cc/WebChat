@@ -1,13 +1,20 @@
 /**
- * [新文件]
- * “世界地图分享”功能的核心业务逻辑服务。
- * 负责处理地点的增删改查以及关联的文件操作。
+ * [修改]
+ * 新增了评论和点赞相关的业务逻辑。
  */
 package club.ppmc.service;
 
+import club.ppmc.dto.CommentLikeResponse;
+import club.ppmc.dto.CommentRequest;
+import club.ppmc.dto.LocationCommentDto;
 import club.ppmc.dto.SharedLocationDto;
 import club.ppmc.exception.FileUploadException;
+import club.ppmc.exception.ResourceNotFoundException;
+import club.ppmc.model.CommentLike;
+import club.ppmc.model.LocationComment;
 import club.ppmc.model.SharedLocation;
+import club.ppmc.repository.CommentLikeRepository;
+import club.ppmc.repository.LocationCommentRepository;
 import club.ppmc.repository.SharedLocationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +32,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -34,13 +42,18 @@ public class MapService {
     private static final Logger logger = LoggerFactory.getLogger(MapService.class);
 
     private final SharedLocationRepository locationRepository;
+    private final LocationCommentRepository commentRepository; // [新增]
+    private final CommentLikeRepository likeRepository; // [新增]
     private final Path uploadPath;
-    // [修改] 将 publicPathPrefix 的值从 "/map-images/" 改为 "map-images/"
     private final String publicPathPrefix = "map-images/";
 
     public MapService(SharedLocationRepository locationRepository,
+                      LocationCommentRepository commentRepository, // [新增]
+                      CommentLikeRepository likeRepository,       // [新增]
                       @Value("${file.upload-dir.map-images}") String uploadDir) {
         this.locationRepository = locationRepository;
+        this.commentRepository = commentRepository; // [新增]
+        this.likeRepository = likeRepository;       // [新增]
         this.uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
         try {
             Files.createDirectories(this.uploadPath);
@@ -49,10 +62,6 @@ public class MapService {
         }
     }
 
-    /**
-     * 获取所有已分享的地点。
-     * @return A list of SharedLocationDto objects.
-     */
     @Transactional(readOnly = true)
     public List<SharedLocationDto> getAllLocations() {
         return locationRepository.findAll().stream()
@@ -60,23 +69,9 @@ public class MapService {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 创建一个新的地点分享，并处理附带的图片上传。
-     *
-     * @param latitude    纬度
-     * @param longitude   经度
-     * @param tag         标签
-     * @param description 描述
-     * @param createdBy   创建者用户ID
-     * @param imageFile   上传的图片文件
-     * @return The DTO of the newly created location.
-     */
     @Transactional
     public SharedLocationDto createLocation(BigDecimal latitude, BigDecimal longitude, String tag, String description, String createdBy, MultipartFile imageFile) {
-        // 1. 保存图片文件并获取其相对访问URL
         String imageUrl = saveFile(imageFile);
-
-        // 2. 创建并保存地点实体
         SharedLocation newLocation = new SharedLocation();
         newLocation.setLatitude(latitude);
         newLocation.setLongitude(longitude);
@@ -84,43 +79,110 @@ public class MapService {
         newLocation.setDescription(description);
         newLocation.setCreatedBy(createdBy);
         newLocation.setImageUrl(imageUrl);
-
         SharedLocation savedLocation = locationRepository.save(newLocation);
         logger.info("新地点已创建，ID: {}, 创建者: {}", savedLocation.getId(), createdBy);
-
         return SharedLocationDto.fromEntity(savedLocation);
     }
 
-    /**
-     * 将上传的文件保存到服务器，并返回其可公开访问的相对URL路径。
-     *
-     * @param file The MultipartFile to save.
-     * @return The public relative URL path for the saved file.
-     * @throws FileUploadException if the file is empty, invalid, or cannot be saved.
-     */
     private String saveFile(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new FileUploadException("上传的文件不能为空。");
-        }
-
+        if (file.isEmpty()) throw new FileUploadException("上传的文件不能为空。");
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
-        if (originalFilename.contains("..")) {
-            throw new FileUploadException("文件名包含无效路径序列: " + originalFilename);
-        }
-
-        // 生成唯一文件名以避免冲突
+        if (originalFilename.contains("..")) throw new FileUploadException("文件名包含无效路径序列: " + originalFilename);
         String fileExtension = StringUtils.getFilenameExtension(originalFilename);
         String uniqueFilename = UUID.randomUUID().toString() + "." + fileExtension;
         Path targetLocation = this.uploadPath.resolve(uniqueFilename);
-
         try (InputStream inputStream = file.getInputStream()) {
             Files.copy(inputStream, targetLocation, StandardCopyOption.REPLACE_EXISTING);
             logger.debug("文件已成功保存至: {}", targetLocation);
         } catch (IOException e) {
             throw new FileUploadException("存储文件失败: " + uniqueFilename, e);
         }
-
-        // [修改] 返回拼接后的相对路径，不带开头的斜杠
         return publicPathPrefix + uniqueFilename;
     }
+
+    // --- [新增] ---
+
+    /**
+     * 获取指定地点的所有评论。
+     * @param locationId 地点ID。
+     * @param currentUserId 当前请求的用户ID，用于判断是否已点赞。
+     * @return 评论DTO列表。
+     */
+    @Transactional(readOnly = true)
+    public List<LocationCommentDto> getCommentsForLocation(Long locationId, String currentUserId) {
+        if (!locationRepository.existsById(locationId)) {
+            throw new ResourceNotFoundException("地点未找到，ID: " + locationId);
+        }
+        List<LocationComment> comments = commentRepository.findByLocationIdOrderByCreatedAtDesc(locationId);
+        return comments.stream()
+                .map(comment -> new LocationCommentDto(
+                        comment.getId(),
+                        comment.getContent(),
+                        comment.getUserId(),
+                        comment.getCreatedAt(),
+                        likeRepository.countByComment(comment),
+                        likeRepository.findByCommentAndUserId(comment, currentUserId).isPresent()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 为指定地点添加一条新评论。
+     * @param locationId 地点ID。
+     * @param commentRequest 包含评论内容和用户ID的请求体。
+     * @return 新创建的评论DTO。
+     */
+    @Transactional
+    public LocationCommentDto addComment(Long locationId, CommentRequest commentRequest) {
+        SharedLocation location = locationRepository.findById(locationId)
+                .orElseThrow(() -> new ResourceNotFoundException("地点未找到，ID: " + locationId));
+
+        LocationComment newComment = new LocationComment();
+        newComment.setLocation(location);
+        newComment.setContent(commentRequest.content());
+        newComment.setUserId(commentRequest.userId());
+
+        LocationComment savedComment = commentRepository.save(newComment);
+        logger.info("新评论已添加至地点ID {}, 评论ID: {}", locationId, savedComment.getId());
+
+        return new LocationCommentDto(
+                savedComment.getId(),
+                savedComment.getContent(),
+                savedComment.getUserId(),
+                savedComment.getCreatedAt(),
+                0, // 新评论点赞数为0
+                false // 新评论当前用户未点赞
+        );
+    }
+
+    /**
+     * 处理对评论的点赞或取消点赞操作。
+     * @param commentId 评论ID。
+     * @param userId 操作用户的ID。
+     * @return 包含最新点赞数和用户点赞状态的响应对象。
+     */
+    @Transactional
+    public CommentLikeResponse toggleLike(Long commentId, String userId) {
+        LocationComment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new ResourceNotFoundException("评论未找到，ID: " + commentId));
+
+        Optional<CommentLike> existingLike = likeRepository.findByCommentAndUserId(comment, userId);
+
+        if (existingLike.isPresent()) {
+            // 已点赞，取消点赞
+            likeRepository.delete(existingLike.get());
+            logger.debug("用户 {} 取消了对评论 {} 的点赞", userId, commentId);
+        } else {
+            // 未点赞，添加点赞
+            CommentLike newLike = new CommentLike(comment, userId);
+            likeRepository.save(newLike);
+            logger.debug("用户 {} 点赞了评论 {}", userId, commentId);
+        }
+
+        long newLikeCount = likeRepository.countByComment(comment);
+        boolean likedByCurrentUser = !existingLike.isPresent();
+
+        return new CommentLikeResponse(newLikeCount, likedByCurrentUser);
+    }
+    // --- [新增结束] ---
 }

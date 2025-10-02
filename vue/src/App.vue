@@ -33,7 +33,6 @@
       </div>
     </Transition>
 
-    <!-- ✅ MODIFICATION: Base Modal Layer -->
     <Transition name="modal-fade" @after-leave="uiStore.modalPrefillData = {}">
       <div class="modal-wrapper-container" v-if="uiStore.activeModal">
         <SettingsModal
@@ -66,19 +65,18 @@
             v-if="uiStore.activeModal === 'confirmation'"
             v-motion-pop
         />
+        <!-- --- [移除] --- -->
+        <!-- CommentModal is no longer a global modal -->
       </div>
     </Transition>
 
-    <!-- ✅ MODIFICATION: Overlay Modal Layer -->
     <Transition name="modal-fade">
       <div class="modal-overlay-wrapper" v-if="uiStore.activeOverlayModal">
         <ScreenshotEditor v-if="uiStore.activeOverlayModal === 'screenshotEditor'" />
         <MediaViewerModal v-if="uiStore.activeOverlayModal === 'mediaViewer'" />
         <LocationViewerModal v-if="uiStore.activeOverlayModal === 'locationViewer'" />
         <ImageCropperModal v-if="uiStore.activeOverlayModal === 'imageCropper'" />
-        <!-- ✅ MODIFICATION START: WorldMapModal moved to overlay layer -->
         <WorldMapModal v-if="uiStore.activeOverlayModal === 'worldMap'" />
-        <!-- ✅ MODIFICATION END -->
       </div>
     </Transition>
 
@@ -95,9 +93,7 @@
       </div>
     </Transition>
 
-    <!-- ✅ MODIFICATION START: Add global audio sink for calls -->
     <audio ref="globalAudioSink" style="display: none;" autoplay playsinline></audio>
-    <!-- ✅ MODIFICATION END -->
   </div>
 </template>
 
@@ -139,6 +135,8 @@ const MediaViewerModal = defineAsyncComponent(() => import('@/components/Modals/
 const LocationViewerModal = defineAsyncComponent(() => import('@/components/Modals/LocationViewerModal.vue'));
 const WorldMapModal = defineAsyncComponent(() => import('@/components/Modals/WorldMapModal.vue'));
 const ImageCropperModal = defineAsyncComponent(() => import('@/components/Modals/ImageCropperModal.vue'));
+// --- [移除] ---
+// const CommentModal = ... // No longer needed here
 
 const userStore = useUserStore();
 const chatStore = useChatStore();
@@ -148,9 +146,7 @@ const uiStore = useUiStore();
 const callStore = useCallStore();
 const memoryStore = useMemoryStore();
 
-// ✅ MODIFICATION START: Add ref for the global audio sink
 const globalAudioSink = ref(null);
-// ✅ MODIFICATION END
 
 const appContainerClasses = computed(() => ({
   'details-panel-open': uiStore.isDetailsPanelOpen,
@@ -173,40 +169,25 @@ const updateViewportHeight = () => {
 };
 const lastBackPressTime = ref(0);
 
-// ✅ MODIFICATION: Initialization logic is now non-blocking for network requests.
 onMounted(async () => {
   uiStore.setAppLoading(true);
   try {
-    // --- Step 1: Load all essential local data first (blocking) ---
     await settingsStore.init();
     await userStore.init();
     await groupStore.init();
     await chatStore.init();
     await memoryStore.init();
-
-    // ✅ MODIFICATION START: Pass the global audio element to the call store
     callStore.setGlobalAudioElement(globalAudioSink.value);
-    // ✅ MODIFICATION END
-
-    // --- Step 2: Start network services in the background (non-blocking) ---
     webrtcService.init(userStore.userId);
-
-    // Setup event listeners that depend on the above stores
     eventBus.on('webrtc:manual-connection-ready', () => {
       uiStore.showModal('bindManualConnection');
     });
-
   } catch (error) {
     console.error("应用初始化失败:", error);
   } finally {
-    // --- Step 3: Perform non-critical tasks and hide the loading screen ---
-
-    // Asynchronously check AI service health after UI is ready to show.
     apiService.checkAiServiceHealth().then(isHealthy => {
       userStore.updateAiServiceStatus(isHealthy);
     });
-
-    // Hide loading overlay
     setTimeout(() => uiStore.setAppLoading(false), 500);
   }
 
@@ -408,7 +389,7 @@ body {
 }
 
 .modal-overlay-wrapper {
-  z-index: 1050; /* Higher z-index for the overlay layer */
+  z-index: 1050;
 }
 
 

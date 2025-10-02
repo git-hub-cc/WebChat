@@ -1,7 +1,6 @@
 /**
- * [新文件]
- * 全局异常处理器，使用 @RestControllerAdvice 注解。
- * 它可以捕获Controller层抛出的特定异常，并返回统一格式的HTTP错误响应。
+ * [修改]
+ * 增加了对 ResourceNotFoundException 的处理，返回 HTTP 404 状态码。
  */
 package club.ppmc.exception;
 
@@ -20,10 +19,20 @@ public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /**
-     * 处理文件上传相关的异常。
-     * @param ex FileUploadException 实例。
-     * @return 返回一个 HTTP 500 (Internal Server Error) 响应，包含错误信息。
+     * [新增] 处理资源未找到的异常。
+     * @param ex ResourceNotFoundException 实例。
+     * @return 返回一个 HTTP 404 (Not Found) 响应，包含错误信息。
      */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleResourceNotFoundException(ResourceNotFoundException ex) {
+        logger.warn("请求的资源未找到: {}", ex.getMessage());
+        Map<String, String> errorResponse = Map.of(
+                "error", "Resource Not Found",
+                "message", ex.getMessage()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.NOT_FOUND);
+    }
+
     @ExceptionHandler(FileUploadException.class)
     public ResponseEntity<Map<String, String>> handleFileUploadException(FileUploadException ex) {
         logger.error("文件上传失败: {}", ex.getMessage(), ex);
@@ -34,11 +43,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    /**
-     * 兜底处理器，捕获所有其他未处理的异常。
-     * @param ex Exception 实例。
-     * @return 返回一个通用的 HTTP 500 响应。
-     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
         logger.error("发生未捕获的服务器内部错误: {}", ex.getMessage(), ex);

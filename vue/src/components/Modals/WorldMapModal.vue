@@ -20,9 +20,19 @@
                 @show-cropper="handleShowCropper"
             />
           </transition>
+
+          <!-- ✅ MODIFICATION START: CommentModal is now a child component, positioned absolutely -->
+          <transition name="comment-panel-fade">
+            <CommentModal
+                v-if="isCommentPanelVisible && selectedLocation"
+                :location-data="selectedLocation"
+                :style="commentPanelStyle"
+                @close="closeCommentPanel"
+            />
+          </transition>
+          <!-- ✅ MODIFICATION END -->
         </div>
         <footer class="map-footer">
-          <!-- ✅ MODIFICATION START: Added filter dropdown -->
           <div class="map-filter-container">
             <select v-model="selectedTagFilter" class="filter-select">
               <option v-for="option in filterOptions" :key="option.value" :value="option.value">
@@ -30,9 +40,23 @@
               </option>
             </select>
           </div>
-          <!-- ✅ MODIFICATION END -->
+
+          <div class="map-search-container">
+            <input
+                type="search"
+                :value="searchQuery"
+                @input="handleSearchInput"
+                placeholder="搜索地点..."
+                class="search-input"
+            />
+          </div>
+
           <p v-if="isAddingMode" class="add-mode-hint">请在地图上点击选择要分享的位置</p>
+          <p v-if="!isAddingMode && filteredLocations.length === 0 && (selectedTagFilter !== 'all' || searchQuery !== '')" class="no-results-hint">
+            无匹配地点
+          </p>
           <div class="spacer"></div>
+
           <button class="btn-secondary" @click="toggleAddMode(!isAddingMode)">
             {{ isAddingMode ? '取消添加' : '+ 分享地点' }}
           </button>
@@ -58,7 +82,8 @@ import AddLocationForm from './AddLocationForm.vue';
 import { useUiStore } from '@/stores/uiStore';
 import { useMapStore } from '@/stores/mapStore';
 import { useCallStore } from '@/stores/callStore';
-import { log } from '@/utils';
+import { log, debounce } from '@/utils';
+import CommentModal from './CommentModal.vue';
 
 const ImageCropperModal = defineAsyncComponent(() => import('./ImageCropperModal.vue'));
 
@@ -79,7 +104,22 @@ const cropperProps = ref({});
 
 const isWidgetActive = computed(() => callStore.isCallActive && !callStore.isFullScreenCallViewVisible);
 
-// ✅ MODIFICATION START: Define tag configurations and filter state
+// ✅ MODIFICATION START: Renamed state for clarity
+const isCommentPanelVisible = ref(false);
+const selectedLocation = ref(null);
+const commentPanelPosition = ref({ top: 0, left: 0 });
+
+const commentPanelStyle = computed(() => ({
+  top: `${commentPanelPosition.value.top}px`,
+  left: `${commentPanelPosition.value.left}px`,
+}));
+
+function closeCommentPanel() {
+  isCommentPanelVisible.value = false;
+  selectedLocation.value = null;
+}
+// ✅ MODIFICATION END
+
 const TAG_CONFIG = {
   '美食': { iconFile: 'icons/marker-icon-food.svg' },
   '景点': { iconFile: 'icons/marker-icon-scenery.svg' },
@@ -89,6 +129,11 @@ const TAG_CONFIG = {
 };
 
 const selectedTagFilter = ref('all');
+const searchQuery = ref('');
+const handleSearchInput = debounce((event) => {
+  searchQuery.value = event.target.value;
+}, 300);
+
 const filterOptions = ref([
   { value: 'all', text: '全部分类' },
   ...Object.keys(TAG_CONFIG).map(key => ({ value: key, text: key }))
@@ -107,7 +152,6 @@ const locationIcons = {
   })
 };
 
-// Create icon instances for each tag
 for (const tag in TAG_CONFIG) {
   locationIcons[tag] = L.icon({
     iconUrl: TAG_CONFIG[tag].iconFile,
@@ -117,13 +161,19 @@ for (const tag in TAG_CONFIG) {
 }
 
 const filteredLocations = computed(() => {
-  if (selectedTagFilter.value === 'all') {
-    return mapStore.locations;
+  const locationsByTag = selectedTagFilter.value === 'all'
+      ? mapStore.locations
+      : mapStore.locations.filter(loc => loc.tag === selectedTagFilter.value);
+  const query = searchQuery.value.toLowerCase().trim();
+  if (!query) {
+    return locationsByTag;
   }
-  return mapStore.locations.filter(loc => loc.tag === selectedTagFilter.value);
+  return locationsByTag.filter(loc =>
+      (loc.description && loc.description.toLowerCase().includes(query)) ||
+      (loc.tag && loc.tag.toLowerCase().includes(query)) ||
+      (loc.createdBy && loc.createdBy.toLowerCase().includes(query))
+  );
 });
-// ✅ MODIFICATION END
-
 
 function initMap() {
   if (mapContainerRef.value && !map) {
@@ -145,7 +195,9 @@ function close() {
 
 function handleKeyDown(event) {
   if (event.key === 'Escape') {
-    if (isCropperVisible.value) {
+    if (isCommentPanelVisible.value) {
+      closeCommentPanel();
+    } else if (isCropperVisible.value) {
       handleCropperCancel();
     } else if (isAddingMode.value) {
       toggleAddMode(false);
@@ -171,29 +223,48 @@ onUnmounted(() => {
   }
 });
 
-// ✅ MODIFICATION START: Watch the computed filteredLocations instead of the raw store data
 watch(filteredLocations, (newLocations) => {
   if (!map || !markersLayer) return;
   markersLayer.clearLayers();
 
   newLocations.forEach(loc => {
-    // Select the correct icon based on the tag
     const icon = locationIcons[loc.tag] || locationIcons.default;
     const marker = L.marker([loc.latitude, loc.longitude], { icon }).addTo(markersLayer);
-    const popupContent = `
-      <div class="map-popup">
-        <img src="https://ppmc.club/webchat-vue/${loc.imageUrl}" alt="${loc.tag}" class="popup-image" />
-        <div class="popup-content">
-          <h4>${loc.tag}</h4>
-          <p>${loc.description}</p>
-          <small>由 ${loc.createdBy} 分享</small>
-        </div>
-      </div>
-    `;
-    marker.bindPopup(popupContent);
+
+    // ✅ MODIFICATION START: Bind a click event instead of a popup
+    marker.on('click', (e) => {
+      L.DomEvent.stopPropagation(e); // Prevent map's click event from firing
+
+      selectedLocation.value = loc;
+      isCommentPanelVisible.value = true;
+
+      // Calculate panel position
+      const mapContainer = mapContainerRef.value;
+      if (!mapContainer) return;
+      const point = map.latLngToContainerPoint(e.latlng);
+      const panelWidth = 350; // Should match CommentModal width
+      const panelHeight = 400; // Should match CommentModal max-height
+      const margin = 15;
+
+      let left = point.x + margin;
+      let top = point.y - (panelHeight / 2);
+
+      // Adjust if panel goes out of bounds
+      if (left + panelWidth > mapContainer.clientWidth) {
+        left = point.x - panelWidth - margin;
+      }
+      if (top < 0) {
+        top = margin;
+      }
+      if (top + panelHeight > mapContainer.clientHeight) {
+        top = mapContainer.clientHeight - panelHeight - margin;
+      }
+
+      commentPanelPosition.value = { top, left };
+    });
+    // ✅ MODIFICATION END
   });
 }, { deep: true });
-// ✅ MODIFICATION END
 
 function toggleAddMode(forceState) {
   isAddingMode.value = typeof forceState === 'boolean' ? forceState : !isAddingMode.value;
@@ -207,6 +278,12 @@ function toggleAddMode(forceState) {
 }
 
 function handleMapClick(e) {
+  // ✅ MODIFICATION START: Close comment panel when clicking on the map background
+  if (isCommentPanelVisible.value) {
+    closeCommentPanel();
+  }
+  // ✅ MODIFICATION END
+
   if (isAddingMode.value) {
     newMarkerCoords.value = e.latlng;
     if (tempMarker) {
@@ -255,8 +332,6 @@ function handleCropperCancel() {
   z-index: 1500;
   padding: var(--spacing-4);
   box-sizing: border-box;
-}
-.viewer-backdrop {
   transition: top 0.3s var(--transition-easing), height 0.3s var(--transition-easing);
 }
 .viewer-backdrop.widget-active {
@@ -330,14 +405,15 @@ function handleCropperCancel() {
 }
 .map-footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   width: 100%;
   padding: var(--spacing-3) var(--spacing-4);
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
+  gap: var(--spacing-3);
 }
-.add-mode-hint {
+.add-mode-hint, .no-results-hint {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   font-style: italic;
@@ -362,7 +438,6 @@ function handleCropperCancel() {
   opacity: 0;
 }
 
-/* ✅ MODIFICATION START: Styles for the new filter dropdown */
 .map-filter-container {
   position: relative;
 }
@@ -373,43 +448,26 @@ function handleCropperCancel() {
   background-color: var(--color-background-elevated);
   min-width: 120px;
 }
-/* ✅ MODIFICATION END */
-
-
-/* Leaflet Popup Customization */
-:deep(.leaflet-popup-content-wrapper) {
+.map-search-container {
+  position: relative;
+}
+.search-input {
+  padding: var(--spacing-1) var(--spacing-2);
   border-radius: var(--border-radius-md);
-  box-shadow: var(--shadow-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-background-elevated);
+  width: 200px;
 }
-:deep(.leaflet-popup-content) {
-  margin: 0;
-  width: 250px !important;
+
+/* ✅ MODIFICATION START: Styles for the new comment panel transition */
+.comment-panel-fade-enter-active,
+.comment-panel-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
-:deep(.map-popup .popup-image) {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  display: block;
+.comment-panel-fade-enter-from,
+.comment-panel-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
-:deep(.map-popup .popup-content) {
-  padding: var(--spacing-3);
-}
-:deep(.map-popup h4) {
-  margin: 0 0 var(--spacing-1) 0;
-  color: var(--color-brand-primary);
-  font-weight: var(--font-weight-semibold);
-}
-:deep(.map-popup p) {
-  margin: 0 0 var(--spacing-2) 0;
-  font-size: var(--font-size-sm);
-  line-height: 1.5;
-  max-height: 80px;
-  overflow-y: auto;
-  overflow-wrap: break-word;
-  white-space: normal;
-}
-:deep(.map-popup small) {
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-xs);
-}
+/* ✅ MODIFICATION END */
 </style>

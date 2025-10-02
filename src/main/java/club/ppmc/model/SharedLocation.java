@@ -1,14 +1,21 @@
 /**
- * [新文件]
- * 定义了“世界地图分享”功能中地理位置标记点的数据库实体类。
- * 使用JPA注解将此类映射到数据库的`shared_locations`表。
+ * [修改]
+ * 增加了与 LocationComment 的一对多关系。
+ * - @OneToMany: 定义了与 LocationComment 实体的关系。
+ * - cascade = CascadeType.ALL: 当删除一个地点时，与之关联的所有评论也会被级联删除。
+ * - orphanRemoval = true: 当一个评论从地点的评论集合中移除时，该评论实体也会从数据库中删除。
+ * - @JsonIgnore: 防止在序列化 SharedLocation 时因循环引用导致无限递归。
  */
 package club.ppmc.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "shared_locations")
@@ -27,7 +34,7 @@ public class SharedLocation {
     @Column(nullable = false, length = 50)
     private String tag;
 
-    @Lob // Large Object, for potentially long text
+    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
@@ -40,6 +47,13 @@ public class SharedLocation {
     @CreationTimestamp
     @Column(nullable = false, updatable = false, name = "created_at")
     private LocalDateTime createdAt;
+
+    // --- [新增] ---
+    @OneToMany(mappedBy = "location", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<LocationComment> comments = new ArrayList<>();
+    // --- [新增结束] ---
+
 
     // Constructors
     public SharedLocation() {}
@@ -61,4 +75,9 @@ public class SharedLocation {
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    // --- [新增] ---
+    public List<LocationComment> getComments() { return comments; }
+    public void setComments(List<LocationComment> comments) { this.comments = comments; }
+    // --- [新增结束] ---
 }

@@ -6,9 +6,7 @@ export const useUiStore = defineStore('ui', () => {
     const isDetailsPanelOpen = ref(false);
     const detailsPanelContent = ref('info');
     const activeModal = ref(null);
-    // ✅ MODIFICATION START: Add state for an overlay modal
     const activeOverlayModal = ref(null);
-    // ✅ MODIFICATION END
     const isAppLoading = ref(true);
     const chatListFilter = ref('all');
     const chatListSearchTerm = ref('');
@@ -24,6 +22,8 @@ export const useUiStore = defineStore('ui', () => {
     const modalPrefillData = ref({});
     const manualSdpText = ref('');
     const isPerformingDangerousAction = ref(false);
+    // --- [移除] ---
+    // const commentModalContent = ref(null); // No longer needed
 
     // --- ACTIONS ---
     function toggleDetailsPanel(forceState, content = 'info') {
@@ -39,23 +39,23 @@ export const useUiStore = defineStore('ui', () => {
 
     function showModal(modalName, prefillData = {}) {
         modalPrefillData.value = prefillData;
+        // --- [移除] ---
+        // if (modalName === 'comment') { ... } // No longer needed
         activeModal.value = modalName;
     }
 
     function hideModal() {
         activeModal.value = null;
-        // Also ensure any overlay is closed when the base modal closes
         activeOverlayModal.value = null;
-
-        // Cleanup logic
         modalPrefillData.value = {};
         if (confirmationOptions.value) confirmationOptions.value = null;
         if (mediaViewerContent.value) mediaViewerContent.value = null;
         if (locationViewerContent.value) locationViewerContent.value = null;
         if (imageCropperContent.value) imageCropperContent.value = null;
+        // --- [移除] ---
+        // if (commentModalContent.value) commentModalContent.value = null; // No longer needed
     }
 
-    // ✅ MODIFICATION START: New functions to manage overlay modals
     function showOverlayModal(modalName, content) {
         if (modalName === 'imageCropper') {
             imageCropperContent.value = content;
@@ -64,26 +64,21 @@ export const useUiStore = defineStore('ui', () => {
         } else if (modalName === 'locationViewer') {
             locationViewerContent.value = content;
         }
-        // Can be extended for other overlay types like ScreenshotEditor
         else if (modalName === 'screenshotEditor') {
-            modalPrefillData.value = content; // ScreenshotEditor uses prefillData
+            modalPrefillData.value = content;
         }
-        // WorldMap doesn't need content
         else if (modalName === 'worldMap') {
             // No specific content needed
         }
-
         activeOverlayModal.value = modalName;
     }
 
     function hideOverlayModal() {
         activeOverlayModal.value = null;
-        // Cleanup specific content
         if (imageCropperContent.value) imageCropperContent.value = null;
         if (mediaViewerContent.value) mediaViewerContent.value = null;
         if (locationViewerContent.value) locationViewerContent.value = null;
     }
-    // ✅ MODIFICATION END
 
     function setAppLoading(isLoading) {
         isAppLoading.value = isLoading;
@@ -107,7 +102,6 @@ export const useUiStore = defineStore('ui', () => {
         showModal('confirmation');
     }
 
-    // These now use the overlay system
     function showMediaViewer(content) {
         showOverlayModal('mediaViewer', content);
     }
@@ -116,7 +110,6 @@ export const useUiStore = defineStore('ui', () => {
         showOverlayModal('locationViewer', content);
     }
 
-    // Renamed for clarity, this now specifically opens the cropper as an overlay
     function showImageCropperOverlay(content) {
         showOverlayModal('imageCropper', content);
     }
@@ -126,7 +119,7 @@ export const useUiStore = defineStore('ui', () => {
         isDetailsPanelOpen,
         detailsPanelContent,
         activeModal,
-        activeOverlayModal, // Expose new state
+        activeOverlayModal,
         isAppLoading,
         chatListFilter,
         chatListSearchTerm,
@@ -145,8 +138,8 @@ export const useUiStore = defineStore('ui', () => {
         toggleDetailsPanel,
         showModal,
         hideModal,
-        showOverlayModal, // Expose showOverlayModal for other components like ScreenshotEditor
-        hideOverlayModal, // Expose new action
+        showOverlayModal,
+        hideOverlayModal,
         setAppLoading,
         showContextMenu,
         hideContextMenu,
