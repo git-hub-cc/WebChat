@@ -1,7 +1,7 @@
 <template>
-  <!-- --- [动画] START: 应用 v-motion-fade --- -->
-  <div v-if="uiStore.activeModal === 'screenshotEditor'" class="editor-backdrop" v-motion-fade>
-    <!-- --- [动画] END --- -->
+  <!-- ✅ MODIFICATION START: Update v-if condition and remove redundant animation directive -->
+  <div v-if="uiStore.activeOverlayModal === 'screenshotEditor'" class="editor-backdrop">
+    <!-- ✅ MODIFICATION END -->
     <header class="editor-toolbar">
       <IconButton
           icon="✂️"
@@ -35,9 +35,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { eventBus } from '@/services/eventBus';
-// --- MODIFICATION START: Import the new unified hashing function ---
 import { generateHash } from '@/utils';
-// --- MODIFICATION END ---
 import { useUiStore } from '@/stores/uiStore';
 import IconButton from '@/components/Shared/IconButton.vue';
 import AppSettings from '@/config/AppSettings';
@@ -193,7 +191,9 @@ function closeEditor(emitCancelEvent = true) {
   if (emitCancelEvent) {
     eventBus.emit('screenshot:editing-cancelled');
   }
-  uiStore.hideModal();
+  // ✅ MODIFICATION START: Call the correct store action
+  uiStore.hideOverlayModal();
+  // ✅ MODIFICATION END
   if (originalStream.value) {
     originalStream.value.getTracks().forEach(track => track.stop());
   }
@@ -236,16 +236,11 @@ async function confirmEdit() {
       closeEditor(true);
       return;
     }
-    // --- MODIFICATION START: Use the new worker-based hash function ---
     const hash = await generateHash(blob);
-    // --- MODIFICATION END ---
     const fileObject = {
       blob, hash,
       name: `screenshot-${Date.now()}.png`,
-      // --- MODIFICATION START ---
-      // MODIFIED: Use 'fileType' to avoid naming collision with preview.type
       fileType: 'image/png',
-      // --- MODIFICATION END ---
       size: blob.size
     };
     eventBus.emit('screenshot:editing-complete', fileObject);

@@ -242,7 +242,11 @@ async function handleScreenshot() {
   await mediaService.captureScreen('detail', true);
 }
 
-function handleRawScreenshot(screenshotData) { uiStore.showModal('screenshotEditor', screenshotData); }
+// ✅ MODIFICATION START: Call the correct store action for overlay modals
+function handleRawScreenshot(screenshotData) {
+  uiStore.showOverlayModal('screenshotEditor', screenshotData);
+}
+// ✅ MODIFICATION END
 
 function onScreenshotComplete(fileObject) {
   cancelPreview();
