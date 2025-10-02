@@ -1,6 +1,6 @@
 <template>
   <transition name="world-map-fade">
-    <div v-if="uiStore.activeOverlayModal === 'worldMap'" class="viewer-backdrop" @click.self="close">
+    <div v-if="uiStore.activeOverlayModal === 'worldMap'" class="viewer-backdrop" :class="{ 'widget-active': isWidgetActive }" @click.self="close">
       <button class="close-button" @click="close" title="关闭 (Esc)">×</button>
 
       <div class="map-modal-container" v-motion-pop>
@@ -57,12 +57,14 @@ import Spinner from '@/components/Shared/Spinner.vue';
 import AddLocationForm from './AddLocationForm.vue';
 import { useUiStore } from '@/stores/uiStore';
 import { useMapStore } from '@/stores/mapStore';
+import { useCallStore } from '@/stores/callStore';
 import { log } from '@/utils';
 
 const ImageCropperModal = defineAsyncComponent(() => import('./ImageCropperModal.vue'));
 
 const uiStore = useUiStore();
 const mapStore = useMapStore();
+const callStore = useCallStore();
 
 const mapContainerRef = ref(null);
 let map = null;
@@ -74,6 +76,8 @@ const newMarkerCoords = ref(null);
 
 const isCropperVisible = ref(false);
 const cropperProps = ref({});
+
+const isWidgetActive = computed(() => callStore.isCallActive && !callStore.isFullScreenCallViewVisible);
 
 // ✅ MODIFICATION START: Define tag configurations and filter state
 const TAG_CONFIG = {
@@ -251,6 +255,13 @@ function handleCropperCancel() {
   z-index: 1500;
   padding: var(--spacing-4);
   box-sizing: border-box;
+}
+.viewer-backdrop {
+  transition: top 0.3s var(--transition-easing), height 0.3s var(--transition-easing);
+}
+.viewer-backdrop.widget-active {
+  top: 50px;
+  height: calc(100% - 50px);
 }
 
 .close-button {

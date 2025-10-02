@@ -40,6 +40,10 @@ export const useCallStore = defineStore('call', () => {
     let analyserNode = null;
     let vadInterval = null;
 
+    // ✅ MODIFICATION START: Add state for the global audio element
+    const globalAudioElement = ref(null);
+    // ✅ MODIFICATION END
+
 
     // --- GETTERS ---
     const peerContact = computed(() => {
@@ -124,6 +128,12 @@ export const useCallStore = defineStore('call', () => {
         remoteStream.value = null; if (!keepPeerId) { currentPeerId.value = null; } isCallActive.value = false; isCallPending.value = false; isAudioMuted.value = false; isVideoEnabled.value = true; isScreenSharing.value = false;
         amISharingScreen.value = false;
         incomingCallInfo.value = null; isFullScreenCallViewVisible.value = false; _stopMusic(); _stopCallTimer(); if (callRequestTimeout) { clearTimeout(callRequestTimeout); } callRequestTimeout = null; callStartTime = null; currentQualityPreset.value = 'auto';
+
+        // ✅ MODIFICATION START: Clean up the global audio element
+        if (globalAudioElement.value) {
+            globalAudioElement.value.srcObject = null;
+        }
+        // ✅ MODIFICATION END
     }
 
     async function _getMediaStream(options = { video: true, audio: true, screen: false }) {
@@ -444,6 +454,12 @@ export const useCallStore = defineStore('call', () => {
         log(`Manual quality preset applied: ${presetKey}`, 'INFO');
     }
 
+    // ✅ MODIFICATION START: New action to set the global audio element
+    function setGlobalAudioElement(element) {
+        globalAudioElement.value = element;
+    }
+    // ✅ MODIFICATION END
+
 
     eventBus.on('webrtc:stats-updated', ({ peerId, stats }) => {
         if (!callQuality.value[peerId]) callQuality.value[peerId] = {};
@@ -540,7 +556,13 @@ export const useCallStore = defineStore('call', () => {
         }
     });
 
-    eventBus.on('webrtc:stream', ({ peerId, stream }) => { if (currentPeerId.value === peerId) { if (stream instanceof MediaStream) { remoteStream.value = stream; } else { log(`Received invalid stream from peer ${peerId}.`, 'WARN'); } } });
+    eventBus.on('webrtc:stream', ({ peerId, stream }) => { if (currentPeerId.value === peerId) { if (stream instanceof MediaStream) { remoteStream.value = stream;
+        // ✅ MODIFICATION START: Set the stream on the global audio element
+        if (globalAudioElement.value) {
+            globalAudioElement.value.srcObject = stream;
+        }
+        // ✅ MODIFICATION END
+    } else { log(`Received invalid stream from peer ${peerId}.`, 'WARN'); } } });
     eventBus.on('webrtc:disconnected', (peerId) => { if (currentPeerId.value === peerId) { log(`Call with ${peerId} ended due to connection loss.`, 'WARN'); eventBus.emit('showNotification', { message: '与对方的连接已断开', type: 'warning' }); _resetState(); } });
 
     return {
@@ -553,6 +575,9 @@ export const useCallStore = defineStore('call', () => {
         toggleAudio, toggleVideo, minimizeCallView, maximizeCallView, setCallQualityPreset,
         // --- MODIFICATION START: Expose the new action ---
         initiateScreenShareWithStream,
+        // ✅ MODIFICATION START: Expose the new action for setting the audio element
+        setGlobalAudioElement,
+        // ✅ MODIFICATION END
         // --- MODIFICATION END ---
     };
 });

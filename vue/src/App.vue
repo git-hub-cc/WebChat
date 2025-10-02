@@ -94,6 +94,10 @@
         <SettingsModalSkeleton v-motion-pop />
       </div>
     </Transition>
+
+    <!-- ✅ MODIFICATION START: Add global audio sink for calls -->
+    <audio ref="globalAudioSink" style="display: none;" autoplay playsinline></audio>
+    <!-- ✅ MODIFICATION END -->
   </div>
 </template>
 
@@ -144,6 +148,10 @@ const uiStore = useUiStore();
 const callStore = useCallStore();
 const memoryStore = useMemoryStore();
 
+// ✅ MODIFICATION START: Add ref for the global audio sink
+const globalAudioSink = ref(null);
+// ✅ MODIFICATION END
+
 const appContainerClasses = computed(() => ({
   'details-panel-open': uiStore.isDetailsPanelOpen,
   'chat-active': uiStore.isChatViewActiveOnMobile
@@ -175,6 +183,10 @@ onMounted(async () => {
     await groupStore.init();
     await chatStore.init();
     await memoryStore.init();
+
+    // ✅ MODIFICATION START: Pass the global audio element to the call store
+    callStore.setGlobalAudioElement(globalAudioSink.value);
+    // ✅ MODIFICATION END
 
     // --- Step 2: Start network services in the background (non-blocking) ---
     webrtcService.init(userStore.userId);

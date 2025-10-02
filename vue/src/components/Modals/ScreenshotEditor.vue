@@ -1,6 +1,6 @@
 <template>
   <!-- ✅ MODIFICATION START: Update v-if condition and remove redundant animation directive -->
-  <div v-if="uiStore.activeOverlayModal === 'screenshotEditor'" class="editor-backdrop">
+  <div v-if="uiStore.activeOverlayModal === 'screenshotEditor'" class="editor-backdrop" :class="{ 'widget-active': isWidgetActive }">
     <!-- ✅ MODIFICATION END -->
     <header class="editor-toolbar">
       <IconButton
@@ -33,14 +33,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue';
 import { eventBus } from '@/services/eventBus';
 import { generateHash } from '@/utils';
 import { useUiStore } from '@/stores/uiStore';
+import { useCallStore } from '@/stores/callStore';
 import IconButton from '@/components/Shared/IconButton.vue';
 import AppSettings from '@/config/AppSettings';
 
 const uiStore = useUiStore();
+const callStore = useCallStore();
+
 const canvasRef = ref(null);
 const ctx = ref(null);
 const rawImage = ref(null);
@@ -53,6 +56,8 @@ const cropRect = ref(null);
 const isDrawing = ref(false);
 const startPos = ref({ x: 0, y: 0 });
 const currentPos = ref({ x: 0, y: 0 });
+
+const isWidgetActive = computed(() => callStore.isCallActive && !callStore.isFullScreenCallViewVisible);
 
 onMounted(() => {
   const screenshotData = uiStore.modalPrefillData;
@@ -251,7 +256,13 @@ async function confirmEdit() {
 
 <style scoped>
 /* Styles remain unchanged */
-.editor-backdrop { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.85); z-index: 1100; display: flex; flex-direction: column; }
+.editor-backdrop { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.85); z-index: 1100; display: flex; flex-direction: column; transition: top 0.3s var(--transition-easing), height 0.3s var(--transition-easing); }
+
+.editor-backdrop.widget-active {
+  top: 50px;
+  height: calc(100% - 50px);
+}
+
 .editor-toolbar { display: flex; align-items: center; padding: var(--spacing-2); background-color: #333; flex-shrink: 0; }
 .color-picker { -webkit-appearance: none; -moz-appearance: none; appearance: none; width: 30px; height: 30px; border: none; cursor: pointer; background: none; padding: 0; border-radius: 50%; overflow: hidden; border: 2px solid white; }
 .color-picker::-webkit-color-swatch-wrapper { padding: 0; }

@@ -202,6 +202,7 @@ function _handlePeerData(rawData, peerId) {
             if (message.id) { if (message.type === 'text' || message.type.startsWith('call-') || message.type === 'typing') { webrtcService.sendMessage(peerId, { type: 'message-ack', ackId: message.id }, true); } }
             if (message.type === 'typing') { eventBus.emit('webrtc:typing', { peerId }); return; }
             if (message.type === 'chunk-meta') {
+                // ✅ FIX START: Extract 'duration' and pass it to the event bus
                 chunkMetaBuffer[peerId] = message;
                 if (!pendingReceivedChunks[peerId]) pendingReceivedChunks[peerId] = {};
                 pendingReceivedChunks[peerId][message.chunkId] = {
@@ -216,8 +217,10 @@ function _handlePeerData(rawData, peerId) {
                     fileHash: message.chunkId,
                     fileName: message.fileName,
                     fileSize: message.fileSize,
-                    fileType: message.fileType
+                    fileType: message.fileType,
+                    duration: message.duration, // Pass the duration along
                 });
+                // ✅ FIX END
             } else {
                 eventBus.emit('webrtc:message', { peerId, message });
             }
@@ -510,6 +513,7 @@ export const webrtcService = {
         const CHUNK_SIZE = AppSettings.media.chunkSize;
         const HIGH_WATER_MARK = AppSettings.network.dataChannelHighThreshold;
         try {
+            // ✅ FIX START: Include 'duration' in the chunk-meta payload if it exists
             this.sendMessage(peerId, {
                 type: 'chunk-meta',
                 messageId: fileObject.messageId,
@@ -518,7 +522,9 @@ export const webrtcService = {
                 fileType: fileObject.type,
                 fileSize: fileObject.size,
                 totalChunks: Math.ceil(fileObject.blob.size / CHUNK_SIZE),
+                duration: fileObject.duration, // Add duration here
             });
+            // ✅ FIX END
         } catch (error) {
             log(`向 ${peerId} 发送文件元数据 "${fileObject.name}" 失败。中止。`, 'ERROR');
             return false;

@@ -7,7 +7,7 @@ import AppSettings from '@/config/AppSettings';
  */
 export const log = (message, level = 'DEBUG') => {
     // 在生产环境下，直接跳过所有日志记录逻辑
-    return;
+    // return;
     const levelMap = AppSettings.logLevels;
     const currentLogLevel = levelMap[AppSettings.logLevel] ?? levelMap.DEBUG;
 

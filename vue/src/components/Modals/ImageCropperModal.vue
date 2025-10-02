@@ -1,5 +1,5 @@
 <template>
-  <div class="cropper-modal-backdrop" @click.self="cancel">
+  <div class="cropper-modal-backdrop" :class="{ 'widget-active': isWidgetActive }" @click.self="cancel">
     <div class="cropper-container" v-motion-pop>
       <header class="cropper-header">
         <h3>裁剪图片</h3>
@@ -25,15 +25,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { Cropper } from 'vue-advanced-cropper';
 import { compressImage } from '@/utils';
 import { eventBus } from '@/services/eventBus';
+import { useCallStore } from '@/stores/callStore';
 
 const props = defineProps({
   imageSrc: { type: String, required: true },
   fileName: { type: String, required: true },
 });
+
+const callStore = useCallStore();
+
+const isWidgetActive = computed(() => callStore.isCallActive && !callStore.isFullScreenCallViewVisible);
 
 const emit = defineEmits(['complete', 'cancel']);
 
@@ -87,6 +92,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeyDown));
   /* ✅ MODIFICATION START: Set a high z-index to appear above the parent modal */
   z-index: 1600; /* Higher than WorldMapModal's backdrop */
   /* ✅ MODIFICATION END */
+  transition: top 0.3s var(--transition-easing), height 0.3s var(--transition-easing);
+}
+
+.cropper-modal-backdrop.widget-active {
+  top: 50px;
+  height: calc(100% - 50px);
 }
 
 .cropper-container {

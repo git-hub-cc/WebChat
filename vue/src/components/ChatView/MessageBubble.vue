@@ -280,17 +280,20 @@ function showContextMenu(event) {
 }
 async function resend() { if (props.message.status !== 'failed' || !isMyMessage.value) return; await chatStore.resendFailedMessages(chatStore.currentChatId); }
 
-onMounted(async () => {
-  if (showTtsControl.value && ttsState.value === 'idle') {
-    ttsStore.requestTtsForMessage({ ...props.message, senderContact: senderContact.value });
+// ✅ FIX START: Move WaveSurfer initialization into a reactive watch effect
+watch(displayUrl, async (newUrl, oldUrl) => {
+  // Cleanup previous instance if it exists
+  if (wavesurfer) {
+    wavesurfer.destroy();
+    wavesurfer = null;
   }
 
-  if (props.message.type === 'audio' && waveformRef.value) {
-    await loadMedia();
-    if (displayUrl.value) {
+  // Initialize new instance if the URL is valid and it's an audio message
+  if (newUrl && props.message.type === 'audio' && waveformRef.value) {
+    try {
       wavesurfer = WaveSurfer.create({
         container: waveformRef.value,
-        url: displayUrl.value,
+        url: newUrl,
         height: 38,
         waveColor: 'rgba(128, 128, 128, 0.5)',
         progressColor: 'var(--color-brand-primary)',
@@ -304,8 +307,18 @@ onMounted(async () => {
       wavesurfer.on('pause', () => isPlaying.value = false);
       wavesurfer.on('finish', () => isPlaying.value = false);
       wavesurfer.on('error', (err) => log(`WaveSurfer error: ${err}`, 'ERROR'));
+    } catch (error) {
+      log(`Failed to create WaveSurfer instance: ${error}`, 'ERROR');
     }
   }
+}, { immediate: true });
+// ✅ FIX END
+
+onMounted(() => {
+  if (showTtsControl.value && ttsState.value === 'idle') {
+    ttsStore.requestTtsForMessage({ ...props.message, senderContact: senderContact.value });
+  }
+  // The initial loadMedia call is now triggered by the watch effect on message hash/status
 });
 
 watch(() => [props.message.fileHash, props.message.status], ([newHash, newStatus]) => {

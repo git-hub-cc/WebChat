@@ -20,7 +20,9 @@
       </div>
 
       <div class="video-streams">
-        <video ref="remoteVideoRef" class="remote-video" autoplay playsinline></video>
+        <!-- ✅ MODIFICATION START: Add muted attribute to the remote video element -->
+        <video ref="remoteVideoRef" class="remote-video" autoplay playsinline muted></video>
+        <!-- ✅ MODIFICATION END -->
         <!-- --- MODIFICATION START: Hide local video whenever screen sharing is active --- -->
         <!-- --- [动画] START: 为本地视频窗口添加动画 --- -->
         <video

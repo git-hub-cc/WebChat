@@ -155,22 +155,34 @@ export const useChatStore = defineStore('chat', () => {
         eventBus.on('file:ready', handleTransferCompleted);
     }
 
-    async function handleTransferInitiated({ peerId, messageId, fileHash, fileName, fileSize, fileType }) {
+    // ✅ FIX START: Receive 'duration' and add it to the placeholder message
+    async function handleTransferInitiated({ peerId, messageId, fileHash, fileName, fileSize, fileType, duration }) {
         const chatId = peerId; // In P2P, peerId is the chatId
         const userStore = useUserStore();
         const transferStore = useTransferStore();
         transferStore.startTransfer(fileHash, peerId, fileSize);
 
+        let messageType = 'file';
+        if (fileType?.startsWith('audio/') && fileName.endsWith('webm')) {
+            messageType = 'audio';
+        } else if (fileType?.startsWith('image/')) {
+            messageType = 'image';
+        } else if (fileType?.startsWith('video/')) {
+            messageType = 'video';
+        }
+
         const placeholderMessage = {
             id: messageId,
-            sender: peerId, // The one sending the file
+            sender: peerId,
             timestamp: new Date().toISOString(),
-            status: 'receiving', // New status for the placeholder
-            type: 'file', // Generic type, can be refined if needed
+            status: 'receiving',
+            type: messageType,
             fileHash,
             fileName,
             fileSize,
             fileType,
+            // Add the duration property if it exists
+            ...(duration && { duration }),
         };
 
         await addMessage(chatId, placeholderMessage);
@@ -179,6 +191,8 @@ export const useChatStore = defineStore('chat', () => {
             userStore.incrementUnread(chatId);
         }
     }
+    // ✅ FIX END
+
 
     async function handleTransferCompleted({ fileHash, messageId }) {
         for (const chatId in chats.value) {
@@ -285,14 +299,17 @@ export const useChatStore = defineStore('chat', () => {
                 ...(messageType === 'audio' && { duration: mediaData.duration })
             };
 
+            // ✅ FIX START: Add duration to the transport object for audio files
             fileDataForTransport = {
                 blob: mediaBlob,
                 hash: mediaHash,
                 name: mediaData.name,
                 type: mediaData.fileType || mediaBlob.type,
                 size: mediaData.size || mediaBlob.size,
-                messageId: messageId
+                messageId: messageId,
+                ...(messageType === 'audio' && { duration: mediaData.duration })
             };
+            // ✅ FIX END
         } else if (content) {
             messagePayload = { type: 'text', content };
             // --- ✅ MODIFICATION START ---

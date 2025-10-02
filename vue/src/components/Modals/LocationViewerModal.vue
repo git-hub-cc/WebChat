@@ -1,9 +1,11 @@
 <template>
   <transition name="location-viewer-fade">
     <!-- ✅ BUG FIX START: Changed v-if condition to check 'activeOverlayModal' -->
+    <!-- ✅ MODIFICATION START: Add widget-active class binding -->
     <div
         v-if="uiStore.activeOverlayModal === 'locationViewer' && content"
         class="viewer-backdrop"
+        :class="{ 'widget-active': isWidgetActive }"
         @click.self="close"
     >
       <!-- ✅ BUG FIX END -->
@@ -19,11 +21,15 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import L from 'leaflet';
 import { useUiStore } from '@/stores/uiStore';
+import { useCallStore } from '@/stores/callStore';
 
 const uiStore = useUiStore();
+const callStore = useCallStore();
 const content = computed(() => uiStore.locationViewerContent);
 const mapContainerRef = ref(null);
 let map = null;
+
+const isWidgetActive = computed(() => callStore.isCallActive && !callStore.isFullScreenCallViewVisible);
 
 // 使用 SVG 标记图标
 const markerIcon = L.icon({
@@ -89,6 +95,14 @@ onUnmounted(() => {
   z-index: 1500;
   padding: var(--spacing-4);
   box-sizing: border-box;
+}
+.viewer-backdrop {
+  /* ... existing styles ... */
+  transition: top 0.3s var(--transition-easing), height 0.3s var(--transition-easing);
+}
+.viewer-backdrop.widget-active {
+  top: 50px;
+  height: calc(100% - 50px);
 }
 
 .close-button {

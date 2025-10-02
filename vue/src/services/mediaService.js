@@ -131,7 +131,7 @@ export const mediaService = {
             if (!forScreenshot) {
                 return stream;
             }
-
+            await new Promise(resolve => setTimeout(resolve, 300));
             // --- Logic below is now ONLY for taking a single screenshot ---
             const videoTrack = stream.getVideoTracks()[0];
             if (!videoTrack) {
