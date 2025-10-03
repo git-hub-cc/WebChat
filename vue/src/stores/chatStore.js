@@ -86,26 +86,31 @@ export const useChatStore = defineStore('chat', () => {
     });
 
 
-    const getMessagesWithResources = computed(() => (chatId, resourceType, offset, limit) => {
+    // --- ✅ MODIFICATION START: Rewritten getter with modern array methods for clarity and robustness ---
+    const getMessagesWithResources = computed(() => (chatId, resourceType) => {
         const allMessages = chats.value[chatId] || [];
-        const filtered = [];
-        for (let i = allMessages.length - 1; i >= 0; i--) {
-            if (filtered.length >= offset + limit) break;
-            const msg = allMessages[i];
-            if (msg.isRetracted || msg.isThinking || msg.isStreaming || msg.toolCallInfo) continue;
-            let isMatch = false;
-            switch(resourceType) {
-                case 'imagery': isMatch = ['image', 'video', 'sticker'].includes(msg.type); break;
-                case 'text': isMatch = msg.type === 'text'; break;
-                case 'other': isMatch = ['file', 'audio'].includes(msg.type); break;
-                // --- ✅ MODIFICATION START ---
-                case 'location': isMatch = msg.type === 'location'; break;
-                // --- ✅ MODIFICATION END ---
-            }
-            if(isMatch) filtered.push(msg);
-        }
-        return filtered.slice(offset, offset + limit);
+        const userStore = useUserStore();
+
+        return allMessages
+            .filter(msg => {
+                if (msg.isRetracted || msg.isThinking || msg.isStreaming || msg.toolCallInfo) {
+                    return false;
+                }
+                switch(resourceType) {
+                    case 'imagery': return ['image', 'video', 'sticker'].includes(msg.type);
+                    case 'text': return msg.type === 'text';
+                    case 'other': return ['file', 'audio'].includes(msg.type);
+                    case 'location': return msg.type === 'location';
+                    default: return false;
+                }
+            })
+            .map(msg => ({
+                ...msg,
+                originalSenderName: userStore.contacts[msg.sender]?.name || (msg.sender === userStore.userId ? userStore.userName : `用户 ${String(msg.sender).substring(0,4)}`)
+            }))
+            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Sort by newest first
     });
+    // --- ✅ MODIFICATION END ---
 
     const getDatesWithMessages = computed(() => (chatId) => {
         if (!chats.value[chatId]) return [];
@@ -122,8 +127,7 @@ export const useChatStore = defineStore('chat', () => {
         return Array.from(dates).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
     });
 
-    // --- ACTIONS ---
-
+    // ... (the rest of the actions remain unchanged) ...
     async function init() {
         const chatItems = await dbService.getAllItems('chats');
         const cleanedChats = {};
@@ -155,7 +159,6 @@ export const useChatStore = defineStore('chat', () => {
         eventBus.on('file:ready', handleTransferCompleted);
     }
 
-    // ✅ FIX START: Receive 'duration' and add it to the placeholder message
     async function handleTransferInitiated({ peerId, messageId, fileHash, fileName, fileSize, fileType, duration }) {
         const chatId = peerId; // In P2P, peerId is the chatId
         const userStore = useUserStore();
@@ -181,7 +184,6 @@ export const useChatStore = defineStore('chat', () => {
             fileName,
             fileSize,
             fileType,
-            // Add the duration property if it exists
             ...(duration && { duration }),
         };
 
@@ -191,7 +193,6 @@ export const useChatStore = defineStore('chat', () => {
             userStore.incrementUnread(chatId);
         }
     }
-    // ✅ FIX END
 
 
     async function handleTransferCompleted({ fileHash, messageId }) {
@@ -227,9 +228,7 @@ export const useChatStore = defineStore('chat', () => {
             case 'video': content = '[视频]'; break;
             case 'audio': content = '[语音消息]'; break;
             case 'file': content = `[文件] ${message.fileName || ''}`; break;
-            // --- ✅ MODIFICATION START ---
             case 'location': content = '[位置信息]'; break;
-            // --- ✅ MODIFICATION END ---
             case 'system': return message.content;
             default: content = '新消息';
         }
@@ -299,7 +298,6 @@ export const useChatStore = defineStore('chat', () => {
                 ...(messageType === 'audio' && { duration: mediaData.duration })
             };
 
-            // ✅ FIX START: Add duration to the transport object for audio files
             fileDataForTransport = {
                 blob: mediaBlob,
                 hash: mediaHash,
@@ -309,10 +307,8 @@ export const useChatStore = defineStore('chat', () => {
                 messageId: messageId,
                 ...(messageType === 'audio' && { duration: mediaData.duration })
             };
-            // ✅ FIX END
         } else if (content) {
             messagePayload = { type: 'text', content };
-            // --- ✅ MODIFICATION START ---
         } else if (location) {
             messagePayload = {
                 type: 'location',
@@ -320,7 +316,6 @@ export const useChatStore = defineStore('chat', () => {
                 longitude: location.longitude,
                 accuracy: location.accuracy
             };
-            // --- ✅ MODIFICATION END ---
         } else return;
 
         const fullMessage = {

@@ -8,17 +8,12 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useUserStore } from '@/stores/userStore';
 
 const props = defineProps({
   item: { type: Object, required: true }
 });
 
-const userStore = useUserStore();
-
-const senderName = computed(() => {
-  return props.item.originalSenderName || userStore.contacts[props.item.sender]?.name || `用户 ${String(props.item.sender).substring(0,4)}`;
-});
+const senderName = computed(() => props.item.originalSenderName);
 
 const formattedTimestamp = computed(() => {
   if (!props.item.timestamp) return '';
@@ -61,9 +56,14 @@ const formattedTimestamp = computed(() => {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   line-height: 1.4;
-  white-space: nowrap;
+  /* ✅ MODIFICATION START: Use multi-line ellipsis for better text display */
   overflow: hidden;
   text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Allow up to 2 lines */
+  -webkit-box-orient: vertical;
+  white-space: normal; /* Allow text to wrap */
+  /* ✅ MODIFICATION END */
 }
 
 .text-item-timestamp {

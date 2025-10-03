@@ -3,9 +3,11 @@
     <div class="location-item-icon">📍</div>
     <div class="location-item-info">
       <div class="location-item-sender">{{ senderName }}</div>
+      <!-- ✅ FIX START: Use a safe computed property to avoid errors -->
       <div class="location-item-coords">
-        {{ item.latitude.toFixed(4) }}, {{ item.longitude.toFixed(4) }}
+        {{ formattedCoordinates }}
       </div>
+      <!-- ✅ FIX END -->
     </div>
     <div class="location-item-timestamp">{{ formattedTimestamp }}</div>
   </div>
@@ -13,22 +15,28 @@
 
 <script setup>
 import { computed } from 'vue';
-import { useUserStore } from '@/stores/userStore';
 
 const props = defineProps({
   item: { type: Object, required: true }
 });
 
-const userStore = useUserStore();
-
-const senderName = computed(() => {
-  return props.item.originalSenderName || userStore.contacts[props.item.sender]?.name || `用户 ${String(props.item.sender).substring(0,4)}`;
-});
+const senderName = computed(() => props.item.originalSenderName);
 
 const formattedTimestamp = computed(() => {
   if (!props.item.timestamp) return '';
   return new Date(props.item.timestamp).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
 });
+
+// ✅ FIX START: Create a computed property that safely formats coordinates
+const formattedCoordinates = computed(() => {
+  // Check if item and its coordinate properties are valid numbers before calling .toFixed()
+  if (props.item && typeof props.item.latitude === 'number' && typeof props.item.longitude === 'number') {
+    return `${props.item.latitude.toFixed(4)}, ${props.item.longitude.toFixed(4)}`;
+  }
+  // Return a fallback string if data is invalid, preventing the crash
+  return '无效坐标';
+});
+// ✅ FIX END
 </script>
 
 <style scoped>
