@@ -48,6 +48,7 @@
                 @input="handleSearchInput"
                 placeholder="搜索地点..."
                 class="search-input"
+                aria-label="搜索地点"
             />
           </div>
 

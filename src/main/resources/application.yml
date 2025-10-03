@@ -26,7 +26,12 @@ spring:
     hibernate:
       ddl-auto: update # 自动更新表结构
     show-sql: false # 设为 true 可在控制台查看执行的SQL语句
-
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
 
 # 日志配置
 logging:

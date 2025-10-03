@@ -4,18 +4,20 @@
 
     <div class="search-bar-wrapper">
       <span class="search-icon">🔍</span>
+      <!-- ✅ FIX START: Added id and aria-label for accessibility -->
       <input
           type="search"
+          id="mobile-global-search"
           :value="chatStore.chatListSearchTerm"
           @input="handleSearchInput"
           placeholder="搜索..."
           class="search-bar"
+          aria-label="搜索聊天"
       />
+      <!-- ✅ FIX END -->
     </div>
 
-    <!-- ✅ MODIFICATION START: Moved World Map button here -->
     <IconButton icon="🌍" title="世界地图" @click="uiStore.showOverlayModal('worldMap')" />
-    <!-- ✅ MODIFICATION END -->
     <IconButton
         icon="👥"
         title="人员大厅"
@@ -25,31 +27,27 @@
 </template>
 
 <script setup>
-// ✅ MODIFICATION START: Import computed and callStore
 import { computed } from 'vue';
 import { useUiStore } from '@/stores/uiStore';
 import { useChatStore } from '@/stores/chatStore';
-import { useCallStore } from '@/stores/callStore'; // Import callStore
+import { useCallStore } from '@/stores/callStore';
 import { debounce } from '@/utils';
 import IconButton from '@/components/Shared/IconButton.vue';
 
 const uiStore = useUiStore();
 const chatStore = useChatStore();
-const callStore = useCallStore(); // Get callStore instance
+const callStore = useCallStore();
 
 const handleSearchInput = debounce((event) => {
   chatStore.chatListSearchTerm = event.target.value;
 }, 250);
 
-// Dynamically set the header's top position based on the call widget's visibility
 const headerStyle = computed(() => ({
   top: callStore.isCallActive && !callStore.isFullScreenCallViewVisible ? '50px' : '0'
 }));
-// ✅ MODIFICATION END
 </script>
 
 <style scoped>
-/* This header is hidden by default and only shown on mobile */
 .mobile-global-header {
   display: none;
 }
@@ -60,17 +58,14 @@ const headerStyle = computed(() => ({
     align-items: center;
     gap: var(--spacing-2);
     position: fixed;
-    /* ✅ MODIFICATION START: Remove fixed top: 0, it's now handled by style binding */
-    /* top: 0; */
-    transition: top 0.3s var(--transition-easing); /* Add smooth transition */
-    /* ✅ MODIFICATION END */
+    transition: top 0.3s var(--transition-easing);
     left: 0;
     right: 0;
-    height: 50px; /* Defined height for the header */
+    height: 50px;
     padding: 0 var(--spacing-3);
     background-color: var(--color-background-panel);
     border-bottom: 1px solid var(--color-border);
-    z-index: 20; /* Ensure it's above other content but below modals */
+    z-index: 20;
     box-sizing: border-box;
   }
 

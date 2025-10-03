@@ -4,13 +4,17 @@
       <IconButton icon="☰" title="菜单" @click="uiStore.showModal('settings')" />
       <div class="search-bar-wrapper">
         <span class="search-icon">🔍</span>
+        <!-- ✅ FIX START: Added id and a more specific aria-label -->
         <input
             type="search"
+            id="chat-list-search"
             :value="chatStore.chatListSearchTerm"
             @input="handleSearchInput"
             placeholder="搜索..."
             class="search-bar"
+            aria-label="搜索聊天列表"
         />
+        <!-- ✅ FIX END -->
       </div>
     </header>
 
@@ -239,11 +243,9 @@ const showContextMenu = (event, item) => {
   transform: rotate(90deg) scale(0.9);
 }
 
-/* ✅ MODIFICATION START: Hide desktop header on mobile */
 @media (max-width: 768px) {
   .chat-list-header {
     display: none;
   }
 }
-/* ✅ MODIFICATION END */
 </style>

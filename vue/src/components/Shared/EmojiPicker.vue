@@ -8,7 +8,6 @@
       <div class="picker-content">
         <!-- Emoji Grid -->
         <div v-show="activeTab === 'emoji'" class="emoji-grid scroller">
-          <!-- --- [动画] START: 为每个表情添加交错动画 --- -->
           <span
               v-for="(emoji, index) in emojiList"
               :key="emoji"
@@ -20,11 +19,9 @@
           >
             {{ emoji }}
           </span>
-          <!-- --- [动画] END --- -->
         </div>
         <!-- Sticker Grid -->
         <div v-show="activeTab === 'sticker'" class="sticker-grid scroller">
-          <!-- --- [动画] START: 为每个贴图添加交错动画 --- -->
           <div
               v-for="(sticker, index) in stickers"
               :key="sticker.id"
@@ -38,11 +35,12 @@
               <img v-if="sticker.url" :src="sticker.url" :alt="sticker.name" loading="lazy">
             </div>
           </div>
-          <!-- --- [动画] END --- -->
-          <label class="add-sticker-button" title="添加新贴图">
+          <!-- ✅ FIX START: Added 'for' attribute to label and 'id' to input -->
+          <label for="sticker-upload-input" class="add-sticker-button" title="添加新贴图">
             +
-            <input type="file" @change="handleStickerUpload" accept="image/png, image/jpeg, image/gif, image/webp" hidden>
+            <input type="file" id="sticker-upload-input" @change="handleStickerUpload" accept="image/png, image/jpeg, image/gif, image/webp" hidden>
           </label>
+          <!-- ✅ FIX END -->
         </div>
       </div>
     </div>
@@ -178,7 +176,6 @@ onUnmounted(() => {
   grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
   gap: var(--spacing-2);
 }
-/* --- MODIFICATION START: Styles for sticker placeholder and wrapper --- */
 .sticker-item-wrapper {
   width: 70px;
   height: 70px;
@@ -190,11 +187,11 @@ onUnmounted(() => {
   border-radius: var(--border-radius-md);
   cursor: pointer;
   transition: transform 0.1s ease;
-  overflow: hidden; /* Important for placeholder */
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative; /* For placeholder positioning */
+  position: relative;
 }
 
 .sticker-placeholder {
@@ -212,10 +209,9 @@ onUnmounted(() => {
   max-width: 90%;
   max-height: 90%;
   object-fit: contain;
-  position: relative; /* Ensure it's on top of the placeholder */
+  position: relative;
   z-index: 1;
 }
-/* --- MODIFICATION END --- */
 
 .add-sticker-button {
   width: 70px;
