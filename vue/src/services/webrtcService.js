@@ -202,7 +202,7 @@ function _handlePeerData(rawData, peerId) {
             if (message.id) { if (message.type === 'text' || message.type.startsWith('call-') || message.type === 'typing') { webrtcService.sendMessage(peerId, { type: 'message-ack', ackId: message.id }, true); } }
             if (message.type === 'typing') { eventBus.emit('webrtc:typing', { peerId }); return; }
             if (message.type === 'chunk-meta') {
-                // ✅ FIX START: Extract 'duration' and pass it to the event bus
+                // ✅ MODIFICATION START: Extract groupId and pass it to the event
                 chunkMetaBuffer[peerId] = message;
                 if (!pendingReceivedChunks[peerId]) pendingReceivedChunks[peerId] = {};
                 pendingReceivedChunks[peerId][message.chunkId] = {
@@ -213,14 +213,15 @@ function _handlePeerData(rawData, peerId) {
                 };
                 eventBus.emit('file:transfer-initiated', {
                     peerId,
+                    groupId: message.groupId, // Pass the groupId along
                     messageId: message.messageId,
                     fileHash: message.chunkId,
                     fileName: message.fileName,
                     fileSize: message.fileSize,
                     fileType: message.fileType,
-                    duration: message.duration, // Pass the duration along
+                    duration: message.duration,
                 });
-                // ✅ FIX END
+                // ✅ MODIFICATION END
             } else {
                 eventBus.emit('webrtc:message', { peerId, message });
             }
@@ -373,7 +374,6 @@ function _setupPeerListeners(peer, peerId) {
 export const webrtcService = {
     connections,
     isWebSocketConnected,
-    // ✅ MODIFICATION START: Removed 'async', making this function non-blocking.
     init(userId) {
         if (!userId) {
             log("webrtcService init: 必须提供 userId。", 'ERROR');
@@ -384,16 +384,12 @@ export const webrtcService = {
             this.handleIncomingSignal(fromUserId, payload);
         });
 
-        // Start WebSocket connection in the background. Don't wait for it.
-        // Add a .catch to log initial connection errors without crashing.
         _connectWebSocket().catch(error => {
             log('初始化WebSocket连接失败，服务将在后台重试。', 'ERROR');
         });
 
-        // Start the periodic refresh task immediately.
         this.startAutoRefresh();
     },
-    // ✅ MODIFICATION END
     sendViaSignaling(targetUserId, payload) {
         if (!isWebSocketConnected.value) {
             log(`无法发送信令消息给 ${targetUserId}: WebSocket 未连接。`, 'ERROR');
@@ -513,7 +509,7 @@ export const webrtcService = {
         const CHUNK_SIZE = AppSettings.media.chunkSize;
         const HIGH_WATER_MARK = AppSettings.network.dataChannelHighThreshold;
         try {
-            // ✅ FIX START: Include 'duration' in the chunk-meta payload if it exists
+            // ✅ MODIFICATION START: Include groupId in the chunk-meta payload if it exists
             this.sendMessage(peerId, {
                 type: 'chunk-meta',
                 messageId: fileObject.messageId,
@@ -522,9 +518,10 @@ export const webrtcService = {
                 fileType: fileObject.type,
                 fileSize: fileObject.size,
                 totalChunks: Math.ceil(fileObject.blob.size / CHUNK_SIZE),
-                duration: fileObject.duration, // Add duration here
+                duration: fileObject.duration,
+                groupId: fileObject.groupId, // Send groupId if present
             });
-            // ✅ FIX END
+            // ✅ MODIFICATION END
         } catch (error) {
             log(`向 ${peerId} 发送文件元数据 "${fileObject.name}" 失败。中止。`, 'ERROR');
             return false;

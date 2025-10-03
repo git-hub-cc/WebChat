@@ -167,11 +167,8 @@ export const useGroupStore = defineStore('group', () => {
         const userId = useUserStore().userId;
         if (!group || group.owner !== userId) return false;
 
-        // --- FIX START ---
-        // 同样，为解散操作也先保存原始成员列表，确保每个人都能收到解散通知。
         const originalMembers = [...group.members];
         broadcastMessage(groupId, { type: 'group-dissolved', groupName: group.name }, { customRecipientList: originalMembers, excludeIds: [userId] });
-        // --- FIX END ---
 
         delete groups.value[groupId];
         await dbService.removeItem('groups', groupId);
@@ -192,7 +189,17 @@ export const useGroupStore = defineStore('group', () => {
                 try {
                     webrtcService.sendMessage(memberId, { ...message, groupId });
                     if (file) {
-                        const fileData = { blob: file.blob, hash: file.hash || file.id, name: file.name, type: file.fileType || file.blob.type, size: file.size, messageId: message.id };
+                        // ✅ MODIFICATION START: Add groupId to the file data object
+                        const fileData = {
+                            blob: file.blob,
+                            hash: file.hash || file.id,
+                            name: file.name,
+                            type: file.fileType || file.blob.type,
+                            size: file.size,
+                            messageId: message.id,
+                            groupId: groupId // Pass the group context
+                        };
+                        // ✅ MODIFICATION END
                         webrtcService.sendFile(memberId, fileData);
                     }
                 } catch (error) {

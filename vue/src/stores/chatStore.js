@@ -86,7 +86,6 @@ export const useChatStore = defineStore('chat', () => {
     });
 
 
-    // --- ✅ MODIFICATION START: Rewritten getter with modern array methods for clarity and robustness ---
     const getMessagesWithResources = computed(() => (chatId, resourceType) => {
         const allMessages = chats.value[chatId] || [];
         const userStore = useUserStore();
@@ -110,7 +109,6 @@ export const useChatStore = defineStore('chat', () => {
             }))
             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Sort by newest first
     });
-    // --- ✅ MODIFICATION END ---
 
     const getDatesWithMessages = computed(() => (chatId) => {
         if (!chats.value[chatId]) return [];
@@ -159,8 +157,10 @@ export const useChatStore = defineStore('chat', () => {
         eventBus.on('file:ready', handleTransferCompleted);
     }
 
-    async function handleTransferInitiated({ peerId, messageId, fileHash, fileName, fileSize, fileType, duration }) {
-        const chatId = peerId; // In P2P, peerId is the chatId
+    async function handleTransferInitiated({ peerId, groupId, messageId, fileHash, fileName, fileSize, fileType, duration }) {
+        // ✅ MODIFICATION START: Prioritize groupId for determining the chat
+        const chatId = groupId || peerId;
+        // ✅ MODIFICATION END
         const userStore = useUserStore();
         const transferStore = useTransferStore();
         transferStore.startTransfer(fileHash, peerId, fileSize);
@@ -185,12 +185,17 @@ export const useChatStore = defineStore('chat', () => {
             fileSize,
             fileType,
             ...(duration && { duration }),
+            ...(groupId && { groupId }), // Include groupId in the message
         };
 
         await addMessage(chatId, placeholderMessage);
 
         if (currentChatId.value !== chatId || !document.hasFocus()) {
-            userStore.incrementUnread(chatId);
+            if(groupId) {
+                useGroupStore().incrementUnread(chatId);
+            } else {
+                userStore.incrementUnread(chatId);
+            }
         }
     }
 
