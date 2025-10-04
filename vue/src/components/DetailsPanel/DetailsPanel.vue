@@ -1,5 +1,5 @@
 <template>
-  <div class="details-panel" v-auto-animate="{ duration: 400, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }">
+  <div class="details-panel" v-auto-animate="{ duration: 300, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' }">
     <header class="details-header">
       <h3>{{ title }}</h3>
       <IconButton icon="✕" title="关闭" @click="uiStore.toggleDetailsPanel(false)" />

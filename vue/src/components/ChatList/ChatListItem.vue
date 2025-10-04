@@ -71,10 +71,10 @@ watch(
       // and this chat is not currently active.
       if (newUnread > oldUnread && !props.isActive) {
         isHighlighted.value = true;
-        // The animation duration is 1.5s, so we remove the class after it finishes.
+        // The animation duration is 0.6s, so we remove the class after it finishes.
         setTimeout(() => {
           isHighlighted.value = false;
-        }, 1500);
+        }, 600);
       }
     }
 );
@@ -127,7 +127,7 @@ watch(
       rgba(var(--color-brand-primary), 0.2) 50%,
       transparent 80%
   );
-  animation: highlight-bar 1.5s var(--transition-easing);
+  animation: highlight-bar 0.6s var(--transition-easing);
   pointer-events: none;
 }
 

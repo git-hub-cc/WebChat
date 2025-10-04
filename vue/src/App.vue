@@ -186,7 +186,7 @@ onMounted(async () => {
     apiService.checkAiServiceHealth().then(isHealthy => {
       userStore.updateAiServiceStatus(isHealthy);
     });
-    setTimeout(() => uiStore.setAppLoading(false), 500);
+    setTimeout(() => uiStore.setAppLoading(false), 400);
   }
 
   if (window.visualViewport) {
@@ -368,7 +368,7 @@ body {
 
 .app-fade-enter-active,
 .app-fade-leave-active {
-  transition: opacity 0.5s ease-in-out;
+  transition: opacity 0.3s ease-in-out;
 }
 .app-fade-enter-from,
 .app-fade-leave-to {

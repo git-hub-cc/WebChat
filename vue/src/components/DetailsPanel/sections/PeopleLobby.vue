@@ -79,7 +79,7 @@ async function fetchUsers() {
   isLoading.value = true;
   // 创建一个获取数据的 Promise 和一个最小延迟的 Promise
   const fetchPromise = userStore.fetchAllOnlineUsers();
-  const minDelay = new Promise(resolve => setTimeout(resolve, 1000)); // 1秒最小延迟
+  const minDelay = new Promise(resolve => setTimeout(resolve, 400)); // 0.4秒最小延迟
 
   try {
     // 等待两个 Promise 都完成
@@ -156,7 +156,7 @@ onMounted(() => {
 .user-status.offline { color: var(--color-status-danger); }
 .user-status.warning { color: var(--color-status-warning); }
 .contact-indicator { color: var(--color-status-success); font-weight: bold; margin-left: var(--spacing-2); }
-.loading { animation: spin 1s linear infinite; }
+.loading { animation: spin 0.4s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .origin-server { font-size: 0.7rem; color: var(--color-text-tertiary); background-color: var(--color-background-elevated); padding: 1px 4px; border-radius: var(--border-radius-sm); margin-top: 2px; display: inline-block; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
