@@ -103,3 +103,30 @@ input:focus, textarea:focus, select:focus {
     clip: rect(0, 0, 0, 0);
     border: 0;
 }
+
+/* --- ✅ MODIFICATION START: Disable text selection on mobile for better UX --- */
+@media (max-width: 768px) {
+    /*
+      Disable text selection globally on mobile to prevent accidental selection
+      when scrolling or tapping.
+    */
+    body {
+        -webkit-user-select: none; /* Safari, Chrome */
+        -moz-user-select: none;    /* Firefox */
+        -ms-user-select: none;     /* IE/Edge */
+        user-select: none;         /* Standard */
+    }
+
+    /*
+      Re-enable text selection for input fields so users can still
+      copy/paste text inside them.
+    */
+    input,
+    textarea {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+    }
+}
+/* --- ✅ MODIFICATION END --- */

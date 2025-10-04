@@ -49,10 +49,8 @@
             v-if="uiStore.activeModal === 'locationPicker'"
             v-motion-pop
         />
-        <BindManualConnectionModal
-            v-if="uiStore.activeModal === 'bindManualConnection'"
-            v-motion-pop
-        />
+        <!-- --- [移除] --- -->
+        <!-- BindManualConnectionModal is no longer needed -->
         <ScreenshotGuideModal
             v-if="uiStore.activeModal === 'screenshotGuide'"
             v-motion-pop
@@ -126,7 +124,8 @@ import MobileGlobalHeader from '@/components/Shared/MobileGlobalHeader.vue';
 const SettingsModal = defineAsyncComponent(() => import('@/components/Modals/SettingsModal.vue'));
 const NewContactModal = defineAsyncComponent(() => import('@/components/Modals/NewContactModal.vue'));
 const LocationPickerModal = defineAsyncComponent(() => import('@/components/Modals/LocationPickerModal.vue'));
-const BindManualConnectionModal = defineAsyncComponent(() => import('@/components/Modals/BindManualConnectionModal.vue'));
+// --- [移除] ---
+// const BindManualConnectionModal = ...
 const ScreenshotEditor = defineAsyncComponent(() => import('@/components/Modals/ScreenshotEditor.vue'));
 const ScreenshotGuideModal = defineAsyncComponent(() => import('@/components/Modals/ScreenshotGuideModal.vue'));
 const IncomingCallModal = defineAsyncComponent(() => import('@/components/Modals/IncomingCallModal.vue'));
@@ -179,9 +178,8 @@ onMounted(async () => {
     await memoryStore.init();
     callStore.setGlobalAudioElement(globalAudioSink.value);
     webrtcService.init(userStore.userId);
-    eventBus.on('webrtc:manual-connection-ready', () => {
-      uiStore.showModal('bindManualConnection');
-    });
+    // --- [移除] ---
+    // eventBus.on('webrtc:manual-connection-ready', ...)
   } catch (error) {
     console.error("应用初始化失败:", error);
   } finally {

@@ -9,7 +9,8 @@
         <!-- ✅ MODIFICATION START: Added Network tab and adjusted handler -->
         <button :class="{ active: activeTab === 'network' }" @click="switchTab('network')">网络诊断</button>
         <!-- ✅ MODIFICATION END -->
-        <button :class="{ active: activeTab === 'advanced' }" @click="switchTab('advanced')">高级</button>
+        <!-- --- [移除] --- -->
+        <!-- "Advanced" tab has been removed -->
       </nav>
 
       <!-- --- [动画] START: 优化选项卡切换动画以消除闪烁 --- -->
@@ -194,14 +195,8 @@
             </div>
             <!-- ✅ MODIFICATION END -->
 
-            <!-- 高级 Advanced -->
-            <div v-if="activeTab === 'advanced'" class="tab-content">
-              <h3>手动连接</h3>
-              <p>用于信令服务器故障时，通过手动交换信息来建立连接。</p>
-              <button class="btn-secondary" @click="uiStore.showModal('bindManualConnection')">
-                打开手动连接工具
-              </button>
-            </div>
+            <!-- --- [移除] --- -->
+            <!-- Advanced tab content has been removed -->
           </div>
         </Transition>
       </div>

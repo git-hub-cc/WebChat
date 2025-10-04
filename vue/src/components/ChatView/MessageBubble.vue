@@ -250,14 +250,28 @@ function toggleAudioPlay() { if (wavesurfer) wavesurfer.playPause(); }
 
 function showContextMenu(event) {
   if (props.message.type === 'system' || props.message.isRetracted) return;
-  const items = [{
-    label: '删除',
-    action: () => uiStore.showConfirmationModal({ message: "确定要删除这条消息吗？此操作仅在您本地生效。", onConfirm: () => chatStore.deleteMessage(props.message.id) }),
-    class: 'danger'
-  }];
-  if (chatStore.isMessageRetractable(props.message.id)) {
-    items.push({ label: '撤回', action: () => chatStore.retractMessage(props.message.id) });
+  const items = [];
+
+  // ✅ MODIFICATION START: Add "Copy" option for text messages
+  if (props.message.type === 'text' && props.message.content) {
+    items.push({
+      label: '复制',
+      action: () => {
+        // Remove streaming cursor and trim whitespace before copying
+        const textToCopy = props.message.content.replace(/▍/g, '').trim();
+        navigator.clipboard.writeText(textToCopy)
+            .then(() => {
+              eventBus.emit('showNotification', { message: '已复制到剪贴板', type: 'success' });
+            })
+            .catch(err => {
+              log(`复制失败: ${err}`, 'ERROR');
+              eventBus.emit('showNotification', { message: '复制失败', type: 'error' });
+            });
+      }
+    });
   }
+  // ✅ MODIFICATION END
+
   if (isMedia.value && displayUrl.value) {
     const type = props.message.fileType;
     const isPreviewable = type && (type.startsWith('image/') || type.startsWith('video/') || type === 'application/pdf' || type.startsWith('text/'));
@@ -276,7 +290,21 @@ function showContextMenu(event) {
       }
     });
   }
-  uiStore.showContextMenu({ event, items, target: { type: 'message', id: props.message.id } });
+
+  items.push({
+    label: '删除',
+    action: () => uiStore.showConfirmationModal({ message: "确定要删除这条消息吗？此操作仅在您本地生效。", onConfirm: () => chatStore.deleteMessage(props.message.id) }),
+    class: 'danger'
+  });
+
+  if (chatStore.isMessageRetractable(props.message.id)) {
+    items.push({ label: '撤回', action: () => chatStore.retractMessage(props.message.id) });
+  }
+
+
+  if (items.length > 0) {
+    uiStore.showContextMenu({ event, items, target: { type: 'message', id: props.message.id } });
+  }
 }
 async function resend() { if (props.message.status !== 'failed' || !isMyMessage.value) return; await chatStore.resendFailedMessages(chatStore.currentChatId); }
 

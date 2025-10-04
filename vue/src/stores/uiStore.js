@@ -20,9 +20,9 @@ export const useUiStore = defineStore('ui', () => {
     const locationViewerContent = ref(null);
     const imageCropperContent = ref(null);
     const modalPrefillData = ref({});
-    const manualSdpText = ref('');
     const isPerformingDangerousAction = ref(false);
     // --- [移除] ---
+    // const manualSdpText = ref('');
     // const commentModalContent = ref(null); // No longer needed
 
     // --- ACTIONS ---
@@ -132,7 +132,6 @@ export const useUiStore = defineStore('ui', () => {
         confirmationOptions,
         mediaViewerContent,
         locationViewerContent,
-        manualSdpText,
         isPerformingDangerousAction,
         imageCropperContent,
         toggleDetailsPanel,

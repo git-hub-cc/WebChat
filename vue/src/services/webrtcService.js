@@ -17,7 +17,6 @@ let heartbeatInterval = null;
 let autoRefreshInterval = null;
 const pendingReceivedChunks = {};
 const chunkMetaBuffer = {};
-const MANUAL_PEER_ID = '_manual_peer_';
 const statsIntervals = new Map();
 
 const _throttledCalculateStats = throttle(() => {
@@ -310,11 +309,7 @@ async function _diagnoseConnectionType(peer, peerId) {
 
 function _setupPeerListeners(peer, peerId) {
     peer.on('signal', signalData => {
-        if (peerId === MANUAL_PEER_ID) {
-            eventBus.emit('webrtc:manual-signal', signalData);
-        } else {
-            _sendWsMessage({ type: 'SIGNAL', targetUserId: peerId, payload: signalData, userId: currentUserId });
-        }
+        _sendWsMessage({ type: 'SIGNAL', targetUserId: peerId, payload: signalData, userId: currentUserId });
     });
     peer.on('connect', async () => {
         log(`WebRTC: 与 ${peerId} 的 DataChannel 已连接。`, 'INFO');
@@ -327,15 +322,11 @@ function _setupPeerListeners(peer, peerId) {
 
         _diagnoseConnectionType(peer, peerId);
 
-        if (peerId === MANUAL_PEER_ID) {
-            eventBus.emit('webrtc:manual-connection-ready');
-        } else {
-            const userStore = useUserStore();
-            if (!userStore.contacts[peerId]) await userStore.addContact({ id: peerId });
-            userStore.updateContactConnectionDetails(peerId, { isConnected: true });
-            if (!conn?.isSilent) {
-                eventBus.emit('showNotification', { message: `已连接到 ${userStore.contacts[peerId]?.name || peerId}`, type: 'success' });
-            }
+        const userStore = useUserStore();
+        if (!userStore.contacts[peerId]) await userStore.addContact({ id: peerId });
+        userStore.updateContactConnectionDetails(peerId, { isConnected: true });
+        if (!conn?.isSilent) {
+            eventBus.emit('showNotification', { message: `已连接到 ${userStore.contacts[peerId]?.name || peerId}`, type: 'success' });
         }
         eventBus.emit('webrtc:connected', peerId);
     });
@@ -638,52 +629,6 @@ export const webrtcService = {
         log(`网络诊断结果: STUN=${results.stun}, TURN/UDP=${results.turnUdp}, TURN/TCP=${results.turnTcp}, TURN/TLS=${results.turnTls}`, 'INFO');
         return results;
     },
-    createManualOffer() {
-        if (connections.value[MANUAL_PEER_ID]) _cleanupConnection(MANUAL_PEER_ID);
-        const peer = new SimplePeer({ initiator: true, config: AppSettings.peerConnectionConfig, trickle: false });
-        connections.value[MANUAL_PEER_ID] = { peer, isConnected: false, iceCheckingTimeout: null };
-        _setupPeerListeners(peer, MANUAL_PEER_ID);
-        eventBus.emit('showNotification', { message: '连接提议已生成，请复制并发送给对方。', type: 'info' });
-    },
-    createManualAnswer(offerText) {
-        if (!offerText.trim()) { eventBus.emit('showNotification', { message: '请先粘贴对方的连接提议。', type: 'warning' }); return; }
-        let offerData;
-        try { offerData = JSON.parse(offerText); }
-        catch (e) { eventBus.emit('showNotification', { message: '提议格式无效 (非JSON)。', type: 'error' }); return; }
-        if (offerData.type !== 'offer') { eventBus.emit('showNotification', { message: '粘贴的内容不是一个有效的连接提议。', type: 'warning' }); return; }
-        if (connections.value[MANUAL_PEER_ID]) _cleanupConnection(MANUAL_PEER_ID);
-        const peer = new SimplePeer({ initiator: false, config: AppSettings.peerConnectionConfig, trickle: true });
-        connections.value[MANUAL_PEER_ID] = { peer, isConnected: false, iceCheckingTimeout: null };
-        _setupPeerListeners(peer, MANUAL_PEER_ID);
-        peer.signal(offerData);
-        eventBus.emit('showNotification', { message: '连接应答已生成，请复制并发送给对方。', type: 'info' });
-    },
-    acceptManualAnswer(answerText) {
-        if (!answerText.trim()) { eventBus.emit('showNotification', { message: '请先粘贴对方的连接应答。', type: 'warning' }); return; }
-        let answerData;
-        try { answerData = JSON.parse(answerText); }
-        catch (e) { eventBus.emit('showNotification', { message: '应答格式无效 (非JSON)。', type: 'error' }); return; }
-        if (answerData.type !== 'answer') { eventBus.emit('showNotification', { message: '粘贴的内容不是一个有效的连接应答。', type: 'warning' }); return; }
-        const conn = connections.value[MANUAL_PEER_ID];
-        if (conn && conn.peer && conn.peer.initiator) {
-            conn.peer.signal(answerData);
-        } else {
-            eventBus.emit('showNotification', { message: '未找到待处理的连接提议。请先创建提议。', type: 'error' });
-        }
-    },
-    async bindManualConnection(targetId) {
-        if (!targetId) { eventBus.emit('showNotification', { message: '请输入有效的联系人ID。', type: 'error' }); return false; }
-        const manualConn = connections.value[MANUAL_PEER_ID];
-        if (!manualConn || !manualConn.peer?.connected) { eventBus.emit('showNotification', { message: '没有已建立的手动连接可供绑定。', type: 'error' }); return false; }
-        if (connections.value[targetId]) { _cleanupConnection(MANUAL_PEER_ID); return true; }
-        connections.value[targetId] = manualConn;
-        delete connections.value[MANUAL_PEER_ID];
-        manualConn.peer.removeAllListeners();
-        _setupPeerListeners(manualConn.peer, targetId);
-        const userStore = useUserStore();
-        await userStore.addContact({ id: targetId });
-        userStore.updateContactConnectionDetails(targetId, { isConnected: true });
-        eventBus.emit('showNotification', { message: `已成功连接到 ${userStore.contacts[targetId]?.name || targetId}`, type: 'success' });
-        return true;
-    }
+    // --- [移除] ---
+    // All manual connection functions have been removed.
 };
