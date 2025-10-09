@@ -27,9 +27,15 @@ export const useCallStore = defineStore('call', () => {
     const callQuality = ref({});
     const currentQualityPreset = ref('auto');
     const isSpeaking = ref(false);
-    // --- MODIFICATION START: Add state for pre-selected screen share stream ---
     const pendingScreenShareStream = ref(null);
-    // --- MODIFICATION END ---
+    const globalAudioElement = ref(null);
+
+    // [新增] 白板功能相关状态
+    const isWhiteboardActive = ref(false);
+    const currentDrawingTool = ref('pen');
+    const currentDrawingColor = ref('#FF0000'); // 默认为红色
+    const drawingHistory = ref([]); // 存储所有绘图操作
+
     let callTimer = null;
     let musicPlayer = null;
     let isMusicPlaying = false;
@@ -39,11 +45,6 @@ export const useCallStore = defineStore('call', () => {
     let audioContext = null;
     let analyserNode = null;
     let vadInterval = null;
-
-    // ✅ MODIFICATION START: Add state for the global audio element
-    const globalAudioElement = ref(null);
-    // ✅ MODIFICATION END
-
 
     // --- GETTERS ---
     const peerContact = computed(() => {
@@ -119,21 +120,21 @@ export const useCallStore = defineStore('call', () => {
     function _resetState(keepPeerId = false) {
         _stopVoiceActivityDetector();
         if (localStream.value) { localStream.value.getTracks().forEach(track => track.stop()); } localStream.value = null;
-        // --- MODIFICATION START: Ensure pending screen share stream is cleaned up ---
         if (pendingScreenShareStream.value) {
             pendingScreenShareStream.value.getTracks().forEach(track => track.stop());
             pendingScreenShareStream.value = null;
         }
-        // --- MODIFICATION END ---
         remoteStream.value = null; if (!keepPeerId) { currentPeerId.value = null; } isCallActive.value = false; isCallPending.value = false; isAudioMuted.value = false; isVideoEnabled.value = true; isScreenSharing.value = false;
         amISharingScreen.value = false;
         incomingCallInfo.value = null; isFullScreenCallViewVisible.value = false; _stopMusic(); _stopCallTimer(); if (callRequestTimeout) { clearTimeout(callRequestTimeout); } callRequestTimeout = null; callStartTime = null; currentQualityPreset.value = 'auto';
 
-        // ✅ MODIFICATION START: Clean up the global audio element
+        // [新增] 重置白板状态
+        isWhiteboardActive.value = false;
+        drawingHistory.value = [];
+
         if (globalAudioElement.value) {
             globalAudioElement.value.srcObject = null;
         }
-        // ✅ MODIFICATION END
     }
 
     async function _getMediaStream(options = { video: true, audio: true, screen: false }) {
@@ -151,12 +152,10 @@ export const useCallStore = defineStore('call', () => {
         let mediaResult = null;
         if (options.screen) {
             try {
-                // Step 1: Get screen video track ONLY
                 const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
                 const finalStream = new MediaStream();
                 screenStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
 
-                // Step 2: Try to get microphone audio track and add it
                 try {
                     const micStream = await navigator.mediaDevices.getUserMedia({ audio: AppSettings.media.audioConstraints, video: false });
                     micStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
@@ -165,7 +164,6 @@ export const useCallStore = defineStore('call', () => {
                     eventBus.emit('showNotification', { message: '无法获取麦克风，将继续共享但不包含您的声音。', type: 'warning' });
                 }
 
-                // Add onended listener to the screen track to hang up the call
                 finalStream.getVideoTracks()[0].onended = () => hangUp();
                 mediaResult = { stream: finalStream, videoEnabled: true, audioEnabled: true };
             } catch (error) {
@@ -321,7 +319,6 @@ export const useCallStore = defineStore('call', () => {
 
     function startVideoCall() { const chatId = useChatStore().currentChatId; if (chatId) _initiateMediaSession(chatId, { isScreenShare: false, audioOnly: false }); }
     function startAudioCall() { const chatId = useChatStore().currentChatId; if (chatId) _initiateMediaSession(chatId, { isScreenShare: false, audioOnly: true }); }
-    // --- MODIFICATION START: startScreenShare now triggers the guide modal ---
     function startScreenShare() {
         const chatId = useChatStore().currentChatId;
         if (!chatId) return;
@@ -329,27 +326,15 @@ export const useCallStore = defineStore('call', () => {
             eventBus.emit('showNotification', { message: '已在通话中', type: 'warning' });
             return;
         }
-        // Instead of initiating the call directly, we show the guide modal.
-        // The modal will then call `initiateScreenShareWithStream`.
         useUiStore().showModal('screenshotGuide');
     }
 
-    /**
-     * [NEW] This function is called by the guide modal after the user has selected a screen.
-     * @param {MediaStream} stream The screen share stream provided by the browser.
-     */
     function initiateScreenShareWithStream(stream) {
         const chatId = useChatStore().currentChatId;
         if (!chatId || !stream) return;
-
-        // Store the pre-selected stream.
         pendingScreenShareStream.value = stream;
-
-        // Now, proceed with the call initiation logic.
         _initiateMediaSession(chatId, { isScreenShare: true, audioOnly: false });
     }
-    // --- MODIFICATION END ---
-
 
     async function acceptCall() {
         if (!incomingCallInfo.value) return;
@@ -454,12 +439,114 @@ export const useCallStore = defineStore('call', () => {
         log(`Manual quality preset applied: ${presetKey}`, 'INFO');
     }
 
-    // ✅ MODIFICATION START: New action to set the global audio element
     function setGlobalAudioElement(element) {
         globalAudioElement.value = element;
     }
-    // ✅ MODIFICATION END
 
+    // [新增] 白板相关 actions
+    function toggleWhiteboard(isActive) {
+        if (typeof isActive !== 'boolean') {
+            isWhiteboardActive.value = !isWhiteboardActive.value;
+        } else {
+            isWhiteboardActive.value = isActive;
+        }
+
+        // 通知对端白板状态变化
+        if (isCallActive.value && currentPeerId.value) {
+            webrtcService.sendMessage(currentPeerId.value, {
+                type: 'whiteboard_action',
+                payload: {
+                    type: 'state_change',
+                    isActive: isWhiteboardActive.value,
+                }
+            });
+        }
+
+        // 如果关闭白板，清空历史记录
+        if (!isWhiteboardActive.value) {
+            drawingHistory.value = [];
+        }
+    }
+
+    function setDrawingTool(tool) {
+        currentDrawingTool.value = tool;
+    }
+
+    function setDrawingColor(color) {
+        currentDrawingColor.value = color;
+    }
+
+    function addDrawingAction(actionData) {
+        if (!isWhiteboardActive.value) return;
+        drawingHistory.value.push(actionData);
+        webrtcService.sendMessage(currentPeerId.value, {
+            type: 'whiteboard_action',
+            payload: actionData
+        });
+    }
+
+    function undoLastAction() {
+        if (!isWhiteboardActive.value) return;
+        // 移除最后一次完整的绘图操作（例如，一次完整的画笔 stroke）
+        let lastStartIndex = -1;
+        for (let i = drawingHistory.value.length - 1; i >= 0; i--) {
+            if (drawingHistory.value[i].type === 'draw_start' || drawingHistory.value[i].type === 'draw_rect') {
+                lastStartIndex = i;
+                break;
+            }
+        }
+        if (lastStartIndex > -1) {
+            drawingHistory.value.splice(lastStartIndex);
+            // 发送指令让对端同步
+            webrtcService.sendMessage(currentPeerId.value, {
+                type: 'whiteboard_action',
+                payload: { type: 'undo' }
+            });
+        }
+    }
+
+    function clearWhiteboard() {
+        if (!isWhiteboardActive.value) return;
+        drawingHistory.value = [];
+        webrtcService.sendMessage(currentPeerId.value, {
+            type: 'whiteboard_action',
+            payload: { type: 'clear' }
+        });
+    }
+
+    // [修改] 监听远端白板指令
+    eventBus.on('webrtc:whiteboard-action', ({ peerId, action }) => {
+        if (isCallActive.value && currentPeerId.value === peerId) {
+            switch (action.type) {
+                case 'state_change':
+                    isWhiteboardActive.value = action.isActive;
+                    if (!action.isActive) {
+                        drawingHistory.value = []; // 清空画布
+                    }
+                    break;
+                case 'undo':
+                    // 与本地逻辑相同，移除最后一次完整的绘图
+                    let lastStartIndex = -1;
+                    for (let i = drawingHistory.value.length - 1; i >= 0; i--) {
+                        if (drawingHistory.value[i].type === 'draw_start' || drawingHistory.value[i].type === 'draw_rect') {
+                            lastStartIndex = i;
+                            break;
+                        }
+                    }
+                    if (lastStartIndex > -1) {
+                        drawingHistory.value.splice(lastStartIndex);
+                    }
+                    break;
+                case 'clear':
+                    drawingHistory.value = [];
+                    break;
+                default:
+                    // 接收并添加绘图指令
+                    drawingHistory.value.push(action);
+                    break;
+            }
+        }
+    });
 
     eventBus.on('webrtc:stats-updated', ({ peerId, stats }) => {
         if (!callQuality.value[peerId]) callQuality.value[peerId] = {};
@@ -505,7 +592,6 @@ export const useCallStore = defineStore('call', () => {
             case 'call-accepted':
                 if (isCaller.value && isCallPending.value && currentPeerId.value === peerId) {
                     clearTimeout(callRequestTimeout); _stopMusic(); isCallPending.value = false; isCallActive.value = true; isFullScreenCallViewVisible.value = true; useUiStore().hideModal();
-                    // --- MODIFICATION START: Use pending stream for screen share ---
                     if (isScreenSharing.value && pendingScreenShareStream.value) {
                         localStream.value = pendingScreenShareStream.value;
                         pendingScreenShareStream.value = null; // Consume the stream
@@ -515,7 +601,6 @@ export const useCallStore = defineStore('call', () => {
                         _updateMicState();
                         addCallLogMessage(peerId, { type: 'start', callerId: userStore.userId, callType: callTypeString });
                     } else {
-                        // Original logic for video/audio calls
                         _getMediaStream({ screen: isScreenSharing.value, video: isVideoEnabled.value, audio: true }).then(mediaResult => {
                             if (mediaResult && mediaResult.stream) {
                                 localStream.value = mediaResult.stream;
@@ -527,7 +612,6 @@ export const useCallStore = defineStore('call', () => {
                             } else { hangUp(); }
                         });
                     }
-                    // --- MODIFICATION END ---
                 }
                 break;
             case 'call-end':
@@ -557,11 +641,9 @@ export const useCallStore = defineStore('call', () => {
     });
 
     eventBus.on('webrtc:stream', ({ peerId, stream }) => { if (currentPeerId.value === peerId) { if (stream instanceof MediaStream) { remoteStream.value = stream;
-        // ✅ MODIFICATION START: Set the stream on the global audio element
         if (globalAudioElement.value) {
             globalAudioElement.value.srcObject = stream;
         }
-        // ✅ MODIFICATION END
     } else { log(`Received invalid stream from peer ${peerId}.`, 'WARN'); } } });
     eventBus.on('webrtc:disconnected', (peerId) => { if (currentPeerId.value === peerId) { log(`Call with ${peerId} ended due to connection loss.`, 'WARN'); eventBus.emit('showNotification', { message: '与对方的连接已断开', type: 'warning' }); _resetState(); } });
 
@@ -571,13 +653,13 @@ export const useCallStore = defineStore('call', () => {
         callDurationFormatted, peerContact, currentCallQuality, currentQualityPreset,
         amISharingScreen,
         isSpeaking,
+        // [新增] 导出白板相关状态和 actions
+        isWhiteboardActive, currentDrawingTool, currentDrawingColor, drawingHistory,
+        toggleWhiteboard, setDrawingTool, setDrawingColor, addDrawingAction, undoLastAction, clearWhiteboard,
+
         startVideoCall, startAudioCall, startScreenShare, acceptCall, rejectCall, hangUp,
         toggleAudio, toggleVideo, minimizeCallView, maximizeCallView, setCallQualityPreset,
-        // --- MODIFICATION START: Expose the new action ---
         initiateScreenShareWithStream,
-        // ✅ MODIFICATION START: Expose the new action for setting the audio element
         setGlobalAudioElement,
-        // ✅ MODIFICATION END
-        // --- MODIFICATION END ---
     };
 });

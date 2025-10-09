@@ -25,9 +25,7 @@ body {
     background-color: var(--color-background-page);
     color: var(--color-text-primary);
     font-family: var(--font-family-base), serif;
-    /* --- MODIFICATION START: Smooth theme/color-scheme transitions --- */
     transition: background-color 0.3s var(--transition-easing), color 0.3s var(--transition-easing);
-    /* --- MODIFICATION END --- */
 }
 
 /* --- Scrollbar Styling (Telegram Style) --- */
@@ -104,7 +102,11 @@ input:focus, textarea:focus, select:focus {
     border: 0;
 }
 
-/* --- ✅ MODIFICATION START: Disable text selection on mobile for better UX --- */
+/* [新增] 白板激活时的全局光标样式 */
+body.whiteboard-active-cursor {
+    cursor: crosshair;
+}
+
 @media (max-width: 768px) {
     /*
       Disable text selection globally on mobile to prevent accidental selection
@@ -129,4 +131,3 @@ input:focus, textarea:focus, select:focus {
         user-select: text;
     }
 }
-/* --- ✅ MODIFICATION END --- */

@@ -83,16 +83,16 @@ export default {
     },
     server: {
         // --- 本地开发环境示例 ---
-        // signalingServerUrl: 'ws://localhost:8080/signaling',
-        // allOnlineUsersApiEndpoint: 'http://localhost:8080/api/monitor/all-online-users',
-        // mapLocationsApiEndpoint: 'http://localhost:8080/api/map/locations', // [新增] 地图API端点
-        // apiEndpoint: "http://localhost:8080/v1/chat/completions",
+        signalingServerUrl: 'ws://localhost:8080/signaling',
+        allOnlineUsersApiEndpoint: 'http://localhost:8080/api/monitor/all-online-users',
+        mapLocationsApiEndpoint: 'http://localhost:8080/api/map/locations', // [新增] 地图API端点
+        apiEndpoint: "http://localhost:8080/v1/chat/completions",
 
         // --- 生产环境配置 ---
-        signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
-        allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/monitor/all-online-users',
-        mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/map/locations', // [新增] 地图API端点
-        apiEndpoint: "https://ppmc.club/webchat/v1/chat/completions",
+        // signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
+        // allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/monitor/all-online-users',
+        // mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/map/locations', // [新增] 地图API端点
+        // apiEndpoint: "https://ppmc.club/webchat/v1/chat/completions",
 
         model: "THUDM/GLM-4-32B-0414",
         api_key: "Bearer sk-xxxx",

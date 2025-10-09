@@ -183,6 +183,12 @@ function _handlePeerData(rawData, peerId) {
     } else {
         try {
             const message = JSON.parse(new TextDecoder().decode(rawData));
+
+            // [新增] 处理白板绘图指令
+            if (message.type === 'whiteboard_action') {
+                eventBus.emit('webrtc:whiteboard-action', { peerId, action: message.payload });
+                return;
+            }
             if (message.type === 'retract-message-request') {
                 eventBus.emit('message:retracted', {
                     chatId: message.groupId || peerId,
@@ -201,7 +207,6 @@ function _handlePeerData(rawData, peerId) {
             if (message.id) { if (message.type === 'text' || message.type.startsWith('call-') || message.type === 'typing') { webrtcService.sendMessage(peerId, { type: 'message-ack', ackId: message.id }, true); } }
             if (message.type === 'typing') { eventBus.emit('webrtc:typing', { peerId }); return; }
             if (message.type === 'chunk-meta') {
-                // ✅ MODIFICATION START: Extract groupId and pass it to the event
                 chunkMetaBuffer[peerId] = message;
                 if (!pendingReceivedChunks[peerId]) pendingReceivedChunks[peerId] = {};
                 pendingReceivedChunks[peerId][message.chunkId] = {
@@ -220,7 +225,6 @@ function _handlePeerData(rawData, peerId) {
                     fileType: message.fileType,
                     duration: message.duration,
                 });
-                // ✅ MODIFICATION END
             } else {
                 eventBus.emit('webrtc:message', { peerId, message });
             }
@@ -500,7 +504,6 @@ export const webrtcService = {
         const CHUNK_SIZE = AppSettings.media.chunkSize;
         const HIGH_WATER_MARK = AppSettings.network.dataChannelHighThreshold;
         try {
-            // ✅ MODIFICATION START: Include groupId in the chunk-meta payload if it exists
             this.sendMessage(peerId, {
                 type: 'chunk-meta',
                 messageId: fileObject.messageId,
@@ -510,9 +513,8 @@ export const webrtcService = {
                 fileSize: fileObject.size,
                 totalChunks: Math.ceil(fileObject.blob.size / CHUNK_SIZE),
                 duration: fileObject.duration,
-                groupId: fileObject.groupId, // Send groupId if present
+                groupId: fileObject.groupId,
             });
-            // ✅ MODIFICATION END
         } catch (error) {
             log(`向 ${peerId} 发送文件元数据 "${fileObject.name}" 失败。中止。`, 'ERROR');
             return false;
@@ -629,6 +631,4 @@ export const webrtcService = {
         log(`网络诊断结果: STUN=${results.stun}, TURN/UDP=${results.turnUdp}, TURN/TCP=${results.turnTcp}, TURN/TLS=${results.turnTls}`, 'INFO');
         return results;
     },
-    // --- [移除] ---
-    // All manual connection functions have been removed.
 };
