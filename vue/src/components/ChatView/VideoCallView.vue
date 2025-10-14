@@ -26,9 +26,7 @@
       </div>
 
       <div class="video-streams">
-        <!-- ✅ MODIFICATION START: Main video element now uses mainVideoRef -->
         <video ref="mainVideoRef" class="main-video" autoplay playsinline muted></video>
-        <!-- ✅ MODIFICATION END -->
 
         <canvas
             ref="whiteboardCanvasRef"
@@ -36,7 +34,6 @@
             :class="{ active: callStore.isWhiteboardActive }"
         ></canvas>
 
-        <!-- ✅ MODIFICATION START: PiP video element uses pipVideoRef and new visibility logic -->
         <video
             v-show="showPipView"
             ref="pipVideoRef" class="pip-video"
@@ -44,7 +41,6 @@
             autoplay playsinline muted
             v-motion-slide-right
         ></video>
-        <!-- ✅ MODIFICATION END -->
 
         <div v-if="isAudioOnly" class="audio-only-ui">
           <Avatar :entity="peerContact" size="xl" :is-speaking="callStore.isSpeaking" />
@@ -115,15 +111,13 @@ import IconButton from '@/components/Shared/IconButton.vue';
 import Avatar from '@/components/Shared/Avatar.vue';
 import { throttle } from 'lodash-es';
 import WhiteboardToolbar from '@/components/Shared/WhiteboardToolbar.vue';
+import { log } from '@/utils';
 
 const callStore = useCallStore();
 const settingsStore = useSettingsStore();
 
-// ✅ MODIFICATION START: Renamed refs for clarity
 const mainVideoRef = ref(null);
 const pipVideoRef = ref(null);
-// ✅ MODIFICATION END
-
 const callContainerRef = ref(null);
 const whiteboardCanvasRef = ref(null);
 let whiteboardCtx = null;
@@ -131,10 +125,8 @@ let isDrawing = false;
 let lastPos = { x: 0, y: 0 };
 let resizeObserver = null;
 
-// ✅ MODIFICATION START: New computed properties to dynamically assign streams
 const mainStream = computed(() => callStore.amISharingScreen ? callStore.localStream : callStore.remoteStream);
 const pipStream = computed(() => callStore.amISharingScreen ? callStore.remoteStream : callStore.localStream);
-// ✅ MODIFICATION END
 
 const isPipMode = ref(false);
 const showQualityMenu = ref(false);
@@ -144,19 +136,20 @@ const qualityOptions = {
   '480p': '标清 (480p)',
 };
 
-// ✅ MODIFICATION START: Updated watch effects to use dynamic stream computed properties
-watch(mainStream, (newStream) => {
-  if (mainVideoRef.value) {
-    mainVideoRef.value.srcObject = newStream instanceof MediaStream ? newStream : null;
+watch([mainStream, mainVideoRef], ([newStream, videoEl]) => {
+  log(`VideoCallView: 组合 watch 触发。newStream ID: ${newStream?.id}, videoEl 存在吗？ ${!!videoEl}`, 'DEBUG');
+  if (videoEl && videoEl.srcObject !== newStream) {
+    videoEl.srcObject = newStream instanceof MediaStream ? newStream : null;
+    log(`VideoCallView: mainVideoRef.srcObject 已被赋值。`, 'INFO');
   }
 }, { immediate: true });
 
-watch(pipStream, (newStream) => {
-  if (pipVideoRef.value) {
-    pipVideoRef.value.srcObject = newStream instanceof MediaStream ? newStream : null;
+watch([pipStream, pipVideoRef], ([newStream, videoEl]) => {
+  if (videoEl && videoEl.srcObject !== newStream) {
+    videoEl.srcObject = newStream instanceof MediaStream ? newStream : null;
   }
 }, { immediate: true });
-// ✅ MODIFICATION END
+
 
 const peerContact = computed(() => callStore.peerContact);
 const isAudioOnly = computed(() => {
@@ -166,12 +159,9 @@ const isAudioOnly = computed(() => {
 });
 const amISharingScreen = computed(() => callStore.isScreenSharing && callStore.amISharingScreen);
 
-// ✅ MODIFICATION START: New computed property for PiP visibility
 const showPipView = computed(() => {
-  // Show PiP if the stream for it exists, has video, and we are not in an audio-only call.
   return pipStream.value && pipStream.value.getVideoTracks().some(t => t.readyState === 'live') && !isAudioOnly.value;
 });
-// ✅ MODIFICATION END
 
 const viewTitle = computed(() => {
   if (callStore.isScreenSharing && !amISharingScreen.value) {
@@ -243,12 +233,33 @@ function handleDrawStart(event) {
   callStore.addDrawingAction(actionData);
 }
 
+// --- ✅ MODIFICATION START: Implement real-time rectangle preview ---
 const throttledHandleDrawMove = throttle((event) => {
   if (!isDrawing || !callStore.isWhiteboardActive || !callStore.amISharingScreen) return;
   const pos = getNormalizedPos(event);
-  const actionData = { type: 'draw_move', ...pos };
-  callStore.addDrawingAction(actionData);
-}, 16);
+
+  if (callStore.currentDrawingTool === 'rect') {
+    // 1. Redraw the committed history to clear the previous preview frame.
+    redrawWhiteboard();
+    // 2. Draw the temporary preview rectangle directly on the canvas.
+    //    This does NOT modify the shared drawingHistory.
+    if (whiteboardCtx) {
+      const canvas = whiteboardCanvasRef.value;
+      whiteboardCtx.strokeStyle = callStore.currentDrawingColor;
+      whiteboardCtx.lineWidth = 3;
+      const x1 = lastPos.x * canvas.width;
+      const y1 = lastPos.y * canvas.height;
+      const x2 = pos.x * canvas.width;
+      const y2 = pos.y * canvas.height;
+      whiteboardCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+    }
+  } else { // Original logic for the 'pen' tool
+    const actionData = { type: 'draw_move', ...pos };
+    callStore.addDrawingAction(actionData);
+  }
+}, 16); // 16ms throttle is ~60fps, suitable for smooth preview
+// --- ✅ MODIFICATION END ---
+
 
 function handleDrawEnd(event) {
   if (!isDrawing) return;
@@ -340,7 +351,6 @@ onUnmounted(() => {
 .quality-poor { background-color: var(--color-status-danger); }
 .video-streams { position: absolute; inset: 0; }
 
-/* ✅ MODIFICATION START: Renamed classes for clarity */
 .main-video, .pip-video {
   position: absolute;
   object-fit: contain;
@@ -360,7 +370,6 @@ onUnmounted(() => {
   box-shadow: var(--shadow-md);
   transition: box-shadow 0.2s ease-in-out;
 }
-/* ✅ MODIFICATION END */
 
 .whiteboard-canvas {
   position: absolute;
@@ -392,7 +401,7 @@ onUnmounted(() => {
   top: 80px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: rgba(220, 53, 69, 0.8); /* Using CSS variable */
+  background-color: rgba(220, 53, 69, 0.8);
   color: white;
   padding: var(--spacing-2) var(--spacing-4);
   border-radius: var(--border-radius-md);
