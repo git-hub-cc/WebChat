@@ -138,7 +138,6 @@ export const useCallStore = defineStore('call', () => {
     }
 
     async function _getMediaStream(options = { video: true, audio: true, screen: false }) {
-        const uiStore = useUiStore();
         const settingsStore = useSettingsStore();
 
         const handleTrackEnded = (event) => {
@@ -182,54 +181,37 @@ export const useCallStore = defineStore('call', () => {
                 stream.getTracks().forEach(track => track.onended = handleTrackEnded);
                 mediaResult = { stream, videoEnabled: options.video, audioEnabled: options.audio };
             } catch (error) {
+                // ✅ MODIFICATION START: Remove user prompt for silent fallback
                 if (error.name !== 'NotFoundError' && error.name !== 'DevicesNotFoundError') {
                     log(`Failed to get media stream: ${error.message}`, 'ERROR');
                     eventBus.emit('showNotification', { message: `无法访问摄像头或麦克风: ${error.message}`, type: 'error' });
                     return null;
                 }
-                log(`Initial media request failed (${error.name}). Trying fallbacks.`, 'WARN');
+                log(`Initial media request failed (${error.name}). Trying fallbacks without prompts.`, 'WARN');
+
+                // Fallback 1: Try audio-only (when camera fails)
                 try {
                     const audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: AppSettings.media.audioConstraints });
-                    const userConfirmed = await new Promise(resolve => {
-                        uiStore.showConfirmationModal({
-                            title: '摄像头无法使用',
-                            message: '无法访问您的摄像头，但麦克风工作正常。\n是否继续进行纯语音通话？',
-                            confirmText: '继续语音通话',
-                            confirmClass: 'btn-primary',
-                            onConfirm: () => resolve(true), onCancel: () => resolve(false),
-                        });
-                    });
-                    if (userConfirmed) {
-                        audioStream.getTracks().forEach(track => track.onended = handleTrackEnded);
-                        mediaResult = { stream: audioStream, videoEnabled: false, audioEnabled: true };
-                    } else {
-                        audioStream.getTracks().forEach(t => t.stop());
-                        return null;
-                    }
+                    audioStream.getTracks().forEach(track => track.onended = handleTrackEnded);
+                    mediaResult = { stream: audioStream, videoEnabled: false, audioEnabled: true };
+                    log('Camera failed, proceeding with audio-only stream for video call.', 'INFO');
                 } catch (audioError) {
                     log(`Audio-only fallback also failed: ${audioError.message}`, 'WARN');
                 }
-                try {
-                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                    const userConfirmed = await new Promise(resolve => {
-                        uiStore.showConfirmationModal({
-                            title: '麦克风无法使用',
-                            message: '无法访问您的麦克风，但摄像头工作正常。\n是否继续进行无声视频通话？',
-                            confirmText: '继续无声通话',
-                            confirmClass: 'btn-primary',
-                            onConfirm: () => resolve(true), onCancel: () => resolve(false),
-                        });
-                    });
-                    if (userConfirmed) {
+
+                // Fallback 2: If audio also failed, try video-only (when mic fails)
+                if (!mediaResult) {
+                    try {
+                        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                         videoStream.getTracks().forEach(track => track.onended = handleTrackEnded);
                         mediaResult = { stream: videoStream, videoEnabled: true, audioEnabled: false };
-                    } else {
-                        videoStream.getTracks().forEach(t => t.stop());
-                        return null;
+                        log('Microphone failed, proceeding with video-only stream for video call.', 'INFO');
+                    } catch (videoError) {
+                        log(`Video-only fallback also failed: ${videoError.message}`, 'WARN');
                     }
-                } catch (videoError) {
-                    log(`Video-only fallback also failed: ${videoError.message}`, 'WARN');
                 }
+
+                // If all fallbacks fail, show a final error message
                 if (!mediaResult) {
                     eventBus.emit('showNotification', {
                         message: '无法访问任何摄像头或麦克风。请检查它们是否已连接、在系统设置中启用，并且未被其他应用占用。',
@@ -237,6 +219,7 @@ export const useCallStore = defineStore('call', () => {
                     });
                     return null;
                 }
+                // ✅ MODIFICATION END
             }
         }
 

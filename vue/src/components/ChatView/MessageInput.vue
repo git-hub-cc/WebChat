@@ -89,7 +89,6 @@
                   @mousemove.prevent="handleRecordingMove"
                   @touchstart.prevent="startRecording"
                   @touchend.prevent="stopRecording"
-                  @touchmove.prevent="handleRecordingMove"
                   class="voice-button"
                   :class="{ recording: isRecording }"
               />
@@ -264,7 +263,11 @@ function sendLocation() {
 
 function handleInput() { adjustTextareaHeight(); handleTypingIndicator(); handleMentionPopup(); }
 function handleTypingIndicator() { if (typingTimeout) clearTimeout(typingTimeout); webrtcService.sendTyping(chatStore.currentChatId); typingTimeout = setTimeout(() => {}, 2000); }
-function handleMentionPopup() { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); if (lastAtSymbolIndex !== -1 && chatStore.currentChatId.startsWith('group_')) { const group = groupStore.groups[chatStore.currentChatId]; if (group) { mentionSuggestions.value = group.members.map(id => userStore.contacts[id]).filter(contact => contact?.isAI && contact.name.toLowerCase().includes(query.toLowerCase())); showMentionList.value = mentionSuggestions.value.length > 0; } } else { showMentionList.value = false; } }
+function handleMentionPopup() { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); if (lastAtSymbolIndex !== -1 && chatStore.currentChatId.startsWith('group_')) {
+  // ✅ FIX START: Define the 'query' variable before using it.
+  const query = textBeforeCursor.substring(lastAtSymbolIndex + 1);
+  // ✅ FIX END
+  const group = groupStore.groups[chatStore.currentChatId]; if (group) { mentionSuggestions.value = group.members.map(id => userStore.contacts[id]).filter(contact => contact?.isAI && contact.name.toLowerCase().includes(query.toLowerCase())); showMentionList.value = mentionSuggestions.value.length > 0; } } else { showMentionList.value = false; } }
 function handleMentionSelect(user) { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); const prefix = text.substring(0, lastAtSymbolIndex); const suffix = text.substring(cursorPos); newMessage.value = `${prefix}@${user.name} ${suffix}`; showMentionList.value = false; nextTick(() => { const newCursorPos = prefix.length + `@${user.name} `.length; textareaRef.value.focus(); textareaRef.value.setSelectionRange(newCursorPos, newCursorPos); }); }
 
 onMounted(() => {

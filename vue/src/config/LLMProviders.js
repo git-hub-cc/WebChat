@@ -3,6 +3,7 @@ export const LLMProviders = {
     "webchat": {
         "label": "WebChat",
         // [修改] 路径已更新为 /api/v1/chat/completions
+        // "defaultEndpoint": "http://localhost:8080/api/v1/chat/completions",
         "defaultEndpoint": "https://ppmc.club/webchat/api/v1/chat/completions",
         "defaultModel": "THUDM/GLM-4-32B-0414",
         "models": [
