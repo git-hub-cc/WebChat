@@ -2,8 +2,10 @@
  * [修改]
  * 增加了对 ResourceNotFoundException 的处理，返回 HTTP 404 状态码。
  */
-package club.ppmc.exception;
+package club.ppmc.advice;
 
+import club.ppmc.exception.FileUploadException;
+import club.ppmc.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;

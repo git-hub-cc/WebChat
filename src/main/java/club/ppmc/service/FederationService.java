@@ -2,7 +2,7 @@ package club.ppmc.service;
 
 import club.ppmc.dto.FederatedControlMessage;
 import club.ppmc.dto.FederatedControlMessageType;
-import club.ppmc.dto.FederatedUserDto;
+import club.ppmc.dto.FederatedUser;
 import club.ppmc.dto.SignalingMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
@@ -147,13 +147,13 @@ public class FederationService {
      *
      * @return 所有联邦用户的列表（不含本服务器用户）。
      */
-    public List<FederatedUserDto> getFederatedUsers() {
+    public List<FederatedUser> getFederatedUsers() {
         return federatedUsersCache.entrySet().stream()
                 .flatMap(entry -> {
                     String originServerGuid = entry.getKey();
                     List<String> userIds = entry.getValue();
                     return userIds.stream()
-                            .map(userId -> new FederatedUserDto(userId, originServerGuid));
+                            .map(userId -> new FederatedUser(userId, originServerGuid));
                 })
                 .collect(Collectors.toList());
     }

@@ -1,7 +1,11 @@
+/**
+ * [修改]
+ * 1. API基准路径已统一为 /api/v1/monitor
+ */
 package club.ppmc.controller;
 
-import club.ppmc.dto.FederatedUserDto;
-import club.ppmc.dto.ServerStatusDto;
+import club.ppmc.dto.FederatedUser;
+import club.ppmc.dto.ServerStatus;
 import club.ppmc.service.FederationService;
 import club.ppmc.service.ServerIdentityService;
 import club.ppmc.service.UserSessionService;
@@ -18,7 +22,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @RestController
-@RequestMapping("/api/monitor")
+@RequestMapping("/api/v1/monitor") // [修改] 统一API前缀
 public class MonitorController {
 
     private static final Logger logger = LoggerFactory.getLogger(MonitorController.class);
@@ -39,31 +43,33 @@ public class MonitorController {
 
     /**
      * 获取服务器状态，包括在线用户数和服务器时间。
+     * Endpoint: GET /api/v1/monitor/status
      * @return 包含服务器状态的`ServerStatusDto`对象。
      */
     @GetMapping("/status")
-    public ServerStatusDto getServerStatus() {
-        logger.info("收到获取服务器状态的请求 /api/monitor/status");
+    public ServerStatus getServerStatus() {
+        logger.info("收到获取服务器状态的请求 /api/v1/monitor/status");
         try {
             var onlineUserCount = userSessionService.getOnlineUserCount();
             var serverTime = System.currentTimeMillis();
-            var status = ServerStatusDto.success(onlineUserCount, serverTime);
+            var status = ServerStatus.success(onlineUserCount, serverTime);
 
             logger.debug("服务器状态获取成功: {}", status);
             return status;
         } catch (Exception e) {
             logger.error("获取服务器状态时发生未知错误。", e);
-            return ServerStatusDto.error(e.getMessage());
+            return ServerStatus.error(e.getMessage());
         }
     }
 
     /**
      * 获取当前所有在线用户的ID列表。
+     * Endpoint: GET /api/v1/monitor/online-user-ids
      * @return 包含所有在线用户ID的列表。如果发生错误，则返回空列表。
      */
     @GetMapping("/online-user-ids")
     public ResponseEntity<List<String>> getOnlineUserIds() {
-        logger.info("收到获取在线用户ID列表的请求 /api/monitor/online-user-ids");
+        logger.info("收到获取在线用户ID列表的请求 /api/v1/monitor/online-user-ids");
         try {
             var onlineUserIds = userSessionService.getOnlineUserIds();
             logger.debug("成功获取在线用户ID列表，数量: {}", onlineUserIds.size());
@@ -77,25 +83,26 @@ public class MonitorController {
     /**
      * [MODIFIED] 获取所有已知服务器（包括本机）的在线用户列表。
      * 现在使用服务器的持久化GUID作为来源标识。
+     * Endpoint: GET /api/v1/monitor/all-online-users
      * @return 包含所有在线用户ID及其来源服务器GUID的列表。
      */
     @GetMapping("/all-online-users")
-    public ResponseEntity<List<FederatedUserDto>> getAllOnlineUsers() {
-        logger.info("收到获取全网在线用户的请求 /api/monitor/all-online-users");
+    public ResponseEntity<List<FederatedUser>> getAllOnlineUsers() {
+        logger.info("收到获取全网在线用户的请求 /api/v1/monitor/all-online-users");
         try {
             // 获取本服务器的GUID
             String selfServerGuid = serverIdentityService.getServerGuid();
 
             // 获取本地用户，并使用GUID进行标记
-            List<FederatedUserDto> localUsers = userSessionService.getOnlineUserIds().stream()
-                    .map(userId -> new FederatedUserDto(userId, selfServerGuid))
-                    .collect(Collectors.toList());
+            List<FederatedUser> localUsers = userSessionService.getOnlineUserIds().stream()
+                    .map(userId -> new FederatedUser(userId, selfServerGuid))
+                    .toList();
 
             // 获取联邦用户 (FederationService现在会返回带有GUID的DTO)
-            List<FederatedUserDto> federatedUsers = federationService.getFederatedUsers();
+            List<FederatedUser> federatedUsers = federationService.getFederatedUsers();
 
             // 合并并返回
-            List<FederatedUserDto> allUsers = Stream.concat(localUsers.stream(), federatedUsers.stream())
+            List<FederatedUser> allUsers = Stream.concat(localUsers.stream(), federatedUsers.stream())
                     .collect(Collectors.toList());
 
             logger.debug("成功获取全网在线用户列表，数量: {}", allUsers.size());

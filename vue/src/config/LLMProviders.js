@@ -2,7 +2,8 @@
 export const LLMProviders = {
     "webchat": {
         "label": "WebChat",
-        "defaultEndpoint": "http://127.0.0.1:8080/v1/chat/completions",
+        // [修改] 路径已更新为 /api/v1/chat/completions
+        "defaultEndpoint": "https://ppmc.club/webchat/api/v1/chat/completions",
         "defaultModel": "THUDM/GLM-4-32B-0414",
         "models": [
             { "key": "Qwen/Qwen3-14B", "label": "Qwen3 14B" },

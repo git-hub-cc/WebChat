@@ -6,13 +6,11 @@ package club.ppmc.service;
 
 import club.ppmc.dto.CommentLikeResponse;
 import club.ppmc.dto.CommentRequest;
-import club.ppmc.dto.LocationCommentDto;
-import club.ppmc.dto.SharedLocationDto;
+import club.ppmc.dto.LocationComment;
+import club.ppmc.dto.SharedLocation;
 import club.ppmc.exception.FileUploadException;
 import club.ppmc.exception.ResourceNotFoundException;
 import club.ppmc.model.CommentLike;
-import club.ppmc.model.LocationComment;
-import club.ppmc.model.SharedLocation;
 import club.ppmc.repository.CommentLikeRepository;
 import club.ppmc.repository.LocationCommentRepository;
 import club.ppmc.repository.SharedLocationRepository;
@@ -63,25 +61,25 @@ public class MapService {
     }
 
     @Transactional(readOnly = true)
-    public List<SharedLocationDto> getAllLocations() {
+    public List<SharedLocation> getAllLocations() {
         return locationRepository.findAll().stream()
-                .map(SharedLocationDto::fromEntity)
+                .map(SharedLocation::fromEntity)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public SharedLocationDto createLocation(BigDecimal latitude, BigDecimal longitude, String tag, String description, String createdBy, MultipartFile imageFile) {
+    public SharedLocation createLocation(BigDecimal latitude, BigDecimal longitude, String tag, String description, String createdBy, MultipartFile imageFile) {
         String imageUrl = saveFile(imageFile);
-        SharedLocation newLocation = new SharedLocation();
+        club.ppmc.model.SharedLocation newLocation = new club.ppmc.model.SharedLocation();
         newLocation.setLatitude(latitude);
         newLocation.setLongitude(longitude);
         newLocation.setTag(tag);
         newLocation.setDescription(description);
         newLocation.setCreatedBy(createdBy);
         newLocation.setImageUrl(imageUrl);
-        SharedLocation savedLocation = locationRepository.save(newLocation);
+        club.ppmc.model.SharedLocation savedLocation = locationRepository.save(newLocation);
         logger.info("新地点已创建，ID: {}, 创建者: {}", savedLocation.getId(), createdBy);
-        return SharedLocationDto.fromEntity(savedLocation);
+        return SharedLocation.fromEntity(savedLocation);
     }
 
     private String saveFile(MultipartFile file) {
@@ -109,13 +107,13 @@ public class MapService {
      * @return 评论DTO列表。
      */
     @Transactional(readOnly = true)
-    public List<LocationCommentDto> getCommentsForLocation(Long locationId, String currentUserId) {
+    public List<LocationComment> getCommentsForLocation(Long locationId, String currentUserId) {
         if (!locationRepository.existsById(locationId)) {
             throw new ResourceNotFoundException("地点未找到，ID: " + locationId);
         }
-        List<LocationComment> comments = commentRepository.findByLocationIdOrderByCreatedAtDesc(locationId);
+        List<club.ppmc.model.LocationComment> comments = commentRepository.findByLocationIdOrderByCreatedAtDesc(locationId);
         return comments.stream()
-                .map(comment -> new LocationCommentDto(
+                .map(comment -> new LocationComment(
                         comment.getId(),
                         comment.getContent(),
                         comment.getUserId(),
@@ -133,19 +131,19 @@ public class MapService {
      * @return 新创建的评论DTO。
      */
     @Transactional
-    public LocationCommentDto addComment(Long locationId, CommentRequest commentRequest) {
-        SharedLocation location = locationRepository.findById(locationId)
+    public LocationComment addComment(Long locationId, CommentRequest commentRequest) {
+        club.ppmc.model.SharedLocation location = locationRepository.findById(locationId)
                 .orElseThrow(() -> new ResourceNotFoundException("地点未找到，ID: " + locationId));
 
-        LocationComment newComment = new LocationComment();
+        club.ppmc.model.LocationComment newComment = new club.ppmc.model.LocationComment();
         newComment.setLocation(location);
         newComment.setContent(commentRequest.content());
         newComment.setUserId(commentRequest.userId());
 
-        LocationComment savedComment = commentRepository.save(newComment);
+        club.ppmc.model.LocationComment savedComment = commentRepository.save(newComment);
         logger.info("新评论已添加至地点ID {}, 评论ID: {}", locationId, savedComment.getId());
 
-        return new LocationCommentDto(
+        return new LocationComment(
                 savedComment.getId(),
                 savedComment.getContent(),
                 savedComment.getUserId(),
@@ -163,7 +161,7 @@ public class MapService {
      */
     @Transactional
     public CommentLikeResponse toggleLike(Long commentId, String userId) {
-        LocationComment comment = commentRepository.findById(commentId)
+        club.ppmc.model.LocationComment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new ResourceNotFoundException("评论未找到，ID: " + commentId));
 
         Optional<CommentLike> existingLike = likeRepository.findByCommentAndUserId(comment, userId);

@@ -5,11 +5,10 @@
  */
 package club.ppmc.dto;
 
-import club.ppmc.model.SharedLocation;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record SharedLocationDto(
+public record SharedLocation(
         Long id,
         BigDecimal latitude,
         BigDecimal longitude,
@@ -24,8 +23,8 @@ public record SharedLocationDto(
      * @param entity The SharedLocation entity from the database.
      * @return A new SharedLocationDto instance.
      */
-    public static SharedLocationDto fromEntity(SharedLocation entity) {
-        return new SharedLocationDto(
+    public static SharedLocation fromEntity(club.ppmc.model.SharedLocation entity) {
+        return new SharedLocation(
                 entity.getId(),
                 entity.getLatitude(),
                 entity.getLongitude(),

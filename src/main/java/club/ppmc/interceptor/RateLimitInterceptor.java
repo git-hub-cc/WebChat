@@ -3,7 +3,7 @@
  *
  * 主要职责:
  * - 在请求到达Controller之前进行拦截。
- * - 基于客户端IP地址，限制特定API路径 (如`/v1/**`) 的日访问次数。
+ * - 基于客户端IP地址，限制特定API路径 (如`/api/v1/**`) 的日访问次数。[修改] 路径已更新
  * - 如果超过限制，则中断请求并返回`429 Too Many Requests`响应。
  *
  * 关联:
@@ -34,7 +34,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private static final Logger logger = LoggerFactory.getLogger(RateLimitInterceptor.class);
     private final Map<String, RateLimitInfo> requestCounts = new ConcurrentHashMap<>();
 
-    private static final String API_V1_PREFIX = "/v1/";
+    // [修改] 更新为新的统一API前缀
+    private static final String API_V1_PREFIX = "/api/v1/";
     private static final String HEADER_X_FORWARDED_FOR = "X-Forwarded-For";
 
     private final int dailyLimit;
@@ -52,7 +53,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 仅对/v1/**路径应用速率限制
+        // [修改] 仅对 /api/v1/** 路径应用速率限制
         if (!request.getRequestURI().startsWith(API_V1_PREFIX)) {
             return true;
         }

@@ -33,7 +33,8 @@ public class WebConfig implements WebMvcConfigurer {
     private static final Logger logger = LoggerFactory.getLogger(WebConfig.class);
 
     private static final String ALL_PATHS_PATTERN = "/**";
-    private static final String API_V1_PATHS_PATTERN = "/v1/**";
+    // [修改] 更新为新的统一API路径模式
+    private static final String API_V1_PATHS_PATTERN = "/api/v1/**";
     private static final String[] ALLOWED_CORS_METHODS =
             new String[] {"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"};
 
@@ -54,6 +55,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // [修改] 拦截器现在作用于 /api/v1/**
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns(API_V1_PATHS_PATTERN);
         logger.info("速率限制拦截器已注册，作用于路径: {}", API_V1_PATHS_PATTERN);

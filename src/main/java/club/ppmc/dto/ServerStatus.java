@@ -12,7 +12,7 @@ package club.ppmc.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public record ServerStatusDto(
+public record ServerStatus(
         int onlineUsers,
         long serverTime,
         String status,
@@ -24,8 +24,8 @@ public record ServerStatusDto(
      * @param serverTime 当前服务器时间戳。
      * @return 代表成功的`ServerStatusDto`对象。
      */
-    public static ServerStatusDto success(int onlineUsers, long serverTime) {
-        return new ServerStatusDto(onlineUsers, serverTime, "运行中", null);
+    public static ServerStatus success(int onlineUsers, long serverTime) {
+        return new ServerStatus(onlineUsers, serverTime, "运行中", null);
     }
 
     /**
@@ -33,7 +33,7 @@ public record ServerStatusDto(
      * @param message 错误信息。
      * @return 代表错误的`ServerStatusDto`对象。
      */
-    public static ServerStatusDto error(String message) {
-        return new ServerStatusDto(-1, System.currentTimeMillis(), "错误", message);
+    public static ServerStatus error(String message) {
+        return new ServerStatus(-1, System.currentTimeMillis(), "错误", message);
     }
 }

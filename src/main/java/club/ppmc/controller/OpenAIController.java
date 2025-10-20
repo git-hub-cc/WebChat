@@ -2,7 +2,7 @@
  * 此文件定义了与OpenAI聊天功能相关的API端点。
  *
  * 主要职责:
- * - 提供 `/v1/chat/completions` 端点，用于处理标准聊天请求。它会先准备上下文（如注入角色心情），然后流式返回AI响应。
+ * - 提供 `/api/v1/chat/completions` 端点，用于处理聊天请求，并流式返回AI响应。 [修改] 路径已更新
  *
  * 关联:
  * - `OpenAIService`: 核心业务逻辑的实现，由本Controller调用。
@@ -20,35 +20,29 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 
 @RestController
-@RequestMapping("/v1")
+@RequestMapping("/api/v1/chat") // [修改] 统一API前缀
 public class OpenAIController {
 
     private static final Logger logger = LoggerFactory.getLogger(OpenAIController.class);
 
     private final OpenAIService openAIService;
 
-    // 移除了对ObjectMapper的直接依赖，因为控制器不再需要手动解析JSON。
     public OpenAIController(OpenAIService openAIService) {
         this.openAIService = openAIService;
     }
 
     /**
      * 聊天完成接口。
-     * 此端点接收聊天请求，准备上下文（如注入角色心情），然后流式返回AI的响应。
+     * 此端点接收聊天请求，并直接将其流式转发给AI服务。
+     * Endpoint: POST /api/v1/chat/completions
      *
      * @param rawBody 原始的JSON请求体字符串。
      * @return 一个Server-Sent Events (SSE) 事件流。
      */
-    @PostMapping(value = "/chat/completions", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping(value = "/completions", produces = MediaType.TEXT_EVENT_STREAM_VALUE) // [修改] 路径调整为相对路径
     public Flux<String> streamChatCompletion(@RequestBody String rawBody) {
-        logger.info("接收到聊天请求: POST /v1/chat/completions");
-
-        // 步骤1: 准备聊天上下文，可能会注入今日事件和心情。
-        // 使用响应式链，避免阻塞，并将准备好的上下文直接传递给聊天服务。
-        return openAIService.prepareChatContext(rawBody)
-                .flatMapMany(modifiedBody -> {
-                    logger.info("上下文准备完毕，开始执行基础聊天逻辑。");
-                    return openAIService.streamBaseChatCompletion(modifiedBody);
-                });
+        logger.info("接收到聊天请求: POST /api/v1/chat/completions，直接转发。"); // [修改] 更新日志中的路径
+        // 直接将请求体传递给基础聊天服务
+        return openAIService.streamBaseChatCompletion(rawBody);
     }
 }

@@ -7,7 +7,7 @@ package club.ppmc.dto;
 
 import java.time.LocalDateTime;
 
-public record LocationCommentDto(
+public record LocationComment(
         Long id,
         String content,
         String userId,

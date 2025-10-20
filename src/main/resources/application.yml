@@ -8,7 +8,7 @@ server:
 # Spring 应用配置
 spring:
   application:
-    name: Web-Chat
+    name: WebChat
   jackson:
     time-zone: Asia/Shanghai
 
@@ -48,7 +48,7 @@ websocket:
     text-buffer-size-kb: 1024
     binary-buffer-size-kb: 1024
     # 会话空闲超时时间（单位：分钟）
-    session-timeout-min: 5
+    session-timeout-min: 30
 
 # 自定义API配置
 api:
@@ -61,7 +61,6 @@ api:
 allowed:
   origins:
     - "https://ppmc.club"
-    - "https://www.ppmc.club"
     - "https://git-hub-cc.github.io"
     - "http://localhost:8080"
     - "http://localhost:3000"
@@ -71,20 +70,10 @@ allowed:
 # OpenAI兼容的API配置
 openai:
   api:
-    # TODO
     base_url: "https://api.siliconflow.cn/v1"
     model: "THUDM/GLM-4-32B-0414"
     api_keys:
       - "sk-fqggcfnwuqlwiewvrcqafqrzcimoptyothdauduwozpqtwsw"
-
-# 应用程序提示词配置
-app:
-  event_mood_prompt: |
-    基于以下角色设定，为其生成一个今天发生的、符合其人设的随机小事件和当前的心情。
-    请严格以JSON格式返回，必须包含 'event' 和 'mood' 两个键，不要包含任何其他说明文字。
-    
-    角色设定：
-    %s
 
 # 联邦网络配置
 federation:

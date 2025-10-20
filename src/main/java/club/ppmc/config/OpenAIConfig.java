@@ -72,18 +72,6 @@ public class OpenAIConfig {
     }
 
     /**
-     * 将生成事件和心情的提示词作为一个Bean提供。
-     *
-     * @param prompt 从`application.yml`读取的`app.event_mood_prompt`值。
-     * @return 事件/心情提示词字符串。
-     */
-    @Bean("eventMoodPrompt")
-    public String eventMoodPrompt(@org.springframework.beans.factory.annotation.Value("${app.event_mood_prompt}") String prompt) {
-        logger.info("事件/心情生成提示词已加载。");
-        return prompt;
-    }
-
-    /**
      * 将要使用的AI模型名称作为一个Bean提供。
      * 模型名称从 `OpenaiApiProperties` 中获取。
      *

@@ -7,4 +7,4 @@ package club.ppmc.dto;
  * @param userId 用户的唯一ID。
  * @param originServerGuid 用户当前连接的服务器的持久化全局唯一ID (GUID)。
  */
-public record FederatedUserDto(String userId, String originServerGuid) {}
+public record FederatedUser(String userId, String originServerGuid) {}

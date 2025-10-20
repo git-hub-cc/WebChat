@@ -82,17 +82,20 @@ export default {
         groupPromptSuffix: "当前情境说明：你现在处于一个群聊环境中，**冒号（:）之前的是用户名，冒号（:）之后的是该用户的发言内容。一般回复1句话，具有多变、丰富台词潜力（通过表情、姿态、情境暗示），小概率触发调侃其它用户。",
     },
     server: {
-        // --- 本地开发环境示例 ---
-        signalingServerUrl: 'ws://localhost:8080/signaling',
-        allOnlineUsersApiEndpoint: 'http://localhost:8080/api/monitor/all-online-users',
-        mapLocationsApiEndpoint: 'http://localhost:8080/api/map/locations', // [新增] 地图API端点
-        apiEndpoint: "http://localhost:8080/v1/chat/completions",
+        // --- 本地开发环境示例 (已更新) ---
+        // signalingServerUrl: 'ws://localhost:8080/signaling',
+        // allOnlineUsersApiEndpoint: 'http://localhost:8080/api/v1/monitor/all-online-users',
+        // mapLocationsApiEndpoint: 'http://localhost:8080/api/v1/locations',
+        // apiEndpoint: "http://localhost:8080/api/v1/chat/completions",
 
-        // --- 生产环境配置 ---
-        // signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
-        // allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/monitor/all-online-users',
-        // mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/map/locations', // [新增] 地图API端点
-        // apiEndpoint: "https://ppmc.club/webchat/v1/chat/completions",
+        // --- 生产环境配置 (已更新) ---
+        signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
+        // [修改] 路径已更新为 /api/v1/monitor/all-online-users
+        allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/v1/monitor/all-online-users',
+        // [修改] 路径已更新为 /api/v1/locations
+        mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/v1/locations',
+        // [修改] 路径已更新为 /api/v1/chat/completions
+        apiEndpoint: "https://ppmc.club/webchat/api/v1/chat/completions",
 
         model: "THUDM/GLM-4-32B-0414",
         api_key: "Bearer sk-xxxx",
@@ -102,17 +105,17 @@ export default {
     peerConnectionConfig: {
         iceServers: [
             {
-                urls: "turn:175.178.216.24:3478?transport=udp",
+                urls: "turn:ppmc.club?transport=udp",
                 username: "test",
                 credential: "123456"
             },
             {
-                urls: "turn:ppmc.club:3478?transport=tcp",
+                urls: "turn:ppmc.club?transport=tcp",
                 username: "test",
                 credential: "123456"
             },
             {
-                urls: "turns:ppmc.club:5349?transport=tcp",
+                urls: "turns:ppmc.club?transport=tcp",
                 username: "test",
                 credential: "123456"
             },
