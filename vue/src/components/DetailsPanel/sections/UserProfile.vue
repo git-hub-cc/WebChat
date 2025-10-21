@@ -9,10 +9,17 @@
       <Avatar :entity="contact" size="xl" class="profile-avatar" :is-online="combinedStatus.isOnlineDisplay" />
       <h2 class="profile-name">{{ contact.name }}</h2>
       <p class="profile-id">ID: {{ contact.id }}</p>
-      <!-- ✅ MODIFICATION START: Display connection type icon and status -->
+      <!-- ✅ MODIFICATION START: Display connection type, status, and reconnect button -->
       <p class="profile-status" :class="combinedStatus.statusClass">
         <span v-if="connectionIcon" class="connection-icon" :title="connectionTitle">{{ connectionIcon }}</span>
         {{ combinedStatus.statusText }}
+        <IconButton
+            v-if="combinedStatus.connectionType === 'relay'"
+            icon="🔄"
+            title="尝试重新连接以建立直连"
+            class="reconnect-button"
+            @click="reconnectToPeer"
+        />
       </p>
       <!-- ✅ MODIFICATION END -->
     </div>
@@ -53,10 +60,13 @@ import { useUserStore } from '@/stores/userStore';
 import { useChatStore } from '@/stores/chatStore';
 import { useUiStore } from '@/stores/uiStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { webrtcService } from '@/services/webrtcService';
+import { eventBus } from '@/services/eventBus';
 import Avatar from '@/components/Shared/Avatar.vue';
 import AiSettings from './AiSettings.vue';
 import ResourcePreview from './ResourcePreview.vue';
 import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
+import IconButton from '@/components/Shared/IconButton.vue';
 
 const userStore = useUserStore();
 const chatStore = useChatStore();
@@ -89,6 +99,17 @@ const isThemeSpecialContact = computed(() => {
   if (!contact.value || contact.value.isImported) return false;
   return settingsStore.currentSpecialContacts.some(sc => sc.id === contact.value.id);
 });
+
+// ✅ MODIFICATION START: Add reconnect function
+function reconnectToPeer() {
+  if (!contact.value) return;
+  eventBus.emit('showNotification', {
+    message: `正在为 ${contact.value.name} 尝试重新连接...`,
+    type: 'info'
+  });
+  webrtcService.restartIce(contact.value.id);
+}
+// ✅ MODIFICATION END
 
 const deleteContact = () => {
   uiStore.showConfirmationModal({
@@ -146,11 +167,24 @@ hr { border: none; border-top: 1px solid var(--color-border); margin: 0 var(--sp
   text-align: left;
 }
 
-/* ✅ MODIFICATION START: Style for the new connection icon */
+/* ✅ MODIFICATION START: Style for the new connection icon and reconnect button */
 .connection-icon {
   font-size: 1.1em;
   line-height: 1;
   filter: grayscale(0.5) opacity(0.8);
+}
+
+.reconnect-button {
+  width: 24px;
+  height: 24px;
+  font-size: 1rem;
+  margin-left: var(--spacing-2);
+  color: var(--color-text-secondary);
+}
+
+.reconnect-button:hover {
+  color: var(--color-brand-primary);
+  transform: scale(1.1) rotate(90deg);
 }
 /* ✅ MODIFICATION END */
 </style>

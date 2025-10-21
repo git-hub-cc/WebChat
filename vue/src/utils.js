@@ -380,3 +380,49 @@ export const compressImage = async (canvas, targetSizeKB = 100) => {
     return compressedBlob;
 };
 // ✅ MODIFICATION END
+
+// --- ✅ MODIFICATION START: Added object-fit calculation utility ---
+/**
+ * [NEW] Calculates the dimensions and offset of content displayed with object-fit: contain.
+ * This is crucial for correctly mapping coordinates on a canvas overlaid on such content.
+ * @param {number} containerWidth - The width of the container element.
+ * @param {number} containerHeight - The height of the container element.
+ * @param {number} contentWidth - The intrinsic width of the content (e.g., video.videoWidth).
+ * @param {number} contentHeight - The intrinsic height of the content (e.g., video.videoHeight).
+ * @returns {{scale: number, renderedWidth: number, renderedHeight: number, offsetX: number, offsetY: number}}
+ */
+export const calculateObjectFitDimensions = (containerWidth, containerHeight, contentWidth, contentHeight) => {
+    if (!containerWidth || !containerHeight || !contentWidth || !contentHeight) {
+        return { scale: 1, renderedWidth: containerWidth, renderedHeight: containerHeight, offsetX: 0, offsetY: 0 };
+    }
+
+    const containerRatio = containerWidth / containerHeight;
+    const contentRatio = contentWidth / contentHeight;
+
+    let renderedWidth, renderedHeight, offsetX, offsetY, scale;
+
+    if (containerRatio > contentRatio) {
+        // Container is wider than content (letterboxed vertically)
+        renderedHeight = containerHeight;
+        renderedWidth = renderedHeight * contentRatio;
+        scale = containerHeight / contentHeight;
+        offsetX = (containerWidth - renderedWidth) / 2;
+        offsetY = 0;
+    } else {
+        // Container is taller than content (pillarboxed horizontally)
+        renderedWidth = containerWidth;
+        renderedHeight = renderedWidth / contentRatio;
+        scale = containerWidth / contentWidth;
+        offsetX = 0;
+        offsetY = (containerHeight - renderedHeight) / 2;
+    }
+
+    return {
+        scale,
+        renderedWidth,
+        renderedHeight,
+        offsetX,
+        offsetY,
+    };
+};
+// --- ✅ MODIFICATION END ---

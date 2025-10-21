@@ -21,7 +21,6 @@
             />
           </transition>
 
-          <!-- ✅ MODIFICATION START: CommentModal is now a child component, positioned absolutely -->
           <transition name="comment-panel-fade">
             <CommentModal
                 v-if="isCommentPanelVisible && selectedLocation"
@@ -30,27 +29,28 @@
                 @close="closeCommentPanel"
             />
           </transition>
-          <!-- ✅ MODIFICATION END -->
         </div>
         <footer class="map-footer">
-          <div class="map-filter-container">
-            <select v-model="selectedTagFilter" class="filter-select">
-              <option v-for="option in filterOptions" :key="option.value" :value="option.value">
-                {{ option.text }}
-              </option>
-            </select>
-          </div>
+          <template v-if="!isAddingMode">
+            <div class="map-filter-container">
+              <select v-model="selectedTagFilter" class="filter-select">
+                <option v-for="option in filterOptions" :key="option.value" :value="option.value">
+                  {{ option.text }}
+                </option>
+              </select>
+            </div>
 
-          <div class="map-search-container">
-            <input
-                type="search"
-                :value="searchQuery"
-                @input="handleSearchInput"
-                placeholder="搜索地点..."
-                class="search-input"
-                aria-label="搜索地点"
-            />
-          </div>
+            <div class="map-search-container">
+              <input
+                  type="search"
+                  :value="searchQuery"
+                  @input="handleSearchInput"
+                  placeholder="搜索地点..."
+                  class="search-input"
+                  aria-label="搜索地点"
+              />
+            </div>
+          </template>
 
           <p v-if="isAddingMode" class="add-mode-hint">请在地图上点击选择要分享的位置</p>
           <p v-if="!isAddingMode && filteredLocations.length === 0 && (selectedTagFilter !== 'all' || searchQuery !== '')" class="no-results-hint">
@@ -76,6 +76,7 @@
 </template>
 
 <script setup>
+// ... a script parte (sem alterações) ...
 import { ref, onMounted, onUnmounted, watch, defineAsyncComponent, computed } from 'vue';
 import L from 'leaflet';
 import Spinner from '@/components/Shared/Spinner.vue';
@@ -105,7 +106,6 @@ const cropperProps = ref({});
 
 const isWidgetActive = computed(() => callStore.isCallActive && !callStore.isFullScreenCallViewVisible);
 
-// ✅ MODIFICATION START: Renamed state for clarity
 const isCommentPanelVisible = ref(false);
 const selectedLocation = ref(null);
 const commentPanelPosition = ref({ top: 0, left: 0 });
@@ -119,7 +119,6 @@ function closeCommentPanel() {
   isCommentPanelVisible.value = false;
   selectedLocation.value = null;
 }
-// ✅ MODIFICATION END
 
 const TAG_CONFIG = {
   '美食': { iconFile: 'icons/marker-icon-food.svg' },
@@ -212,7 +211,10 @@ onMounted(async () => {
   setTimeout(async () => {
     initMap();
     await mapStore.fetchLocations();
-  }, 100);
+    if (map) {
+      map.invalidateSize();
+    }
+  }, 350);
   window.addEventListener('keydown', handleKeyDown);
 });
 
@@ -232,25 +234,22 @@ watch(filteredLocations, (newLocations) => {
     const icon = locationIcons[loc.tag] || locationIcons.default;
     const marker = L.marker([loc.latitude, loc.longitude], { icon }).addTo(markersLayer);
 
-    // ✅ MODIFICATION START: Bind a click event instead of a popup
     marker.on('click', (e) => {
-      L.DomEvent.stopPropagation(e); // Prevent map's click event from firing
+      L.DomEvent.stopPropagation(e);
 
       selectedLocation.value = loc;
       isCommentPanelVisible.value = true;
 
-      // Calculate panel position
       const mapContainer = mapContainerRef.value;
       if (!mapContainer) return;
       const point = map.latLngToContainerPoint(e.latlng);
-      const panelWidth = 350; // Should match CommentModal width
-      const panelHeight = 400; // Should match CommentModal max-height
+      const panelWidth = 350;
+      const panelHeight = 400;
       const margin = 15;
 
       let left = point.x + margin;
       let top = point.y - (panelHeight / 2);
 
-      // Adjust if panel goes out of bounds
       if (left + panelWidth > mapContainer.clientWidth) {
         left = point.x - panelWidth - margin;
       }
@@ -263,7 +262,6 @@ watch(filteredLocations, (newLocations) => {
 
       commentPanelPosition.value = { top, left };
     });
-    // ✅ MODIFICATION END
   });
 }, { deep: true });
 
@@ -279,11 +277,9 @@ function toggleAddMode(forceState) {
 }
 
 function handleMapClick(e) {
-  // ✅ MODIFICATION START: Close comment panel when clicking on the map background
   if (isCommentPanelVisible.value) {
     closeCommentPanel();
   }
-  // ✅ MODIFICATION END
 
   if (isAddingMode.value) {
     newMarkerCoords.value = e.latlng;
@@ -413,6 +409,13 @@ function handleCropperCancel() {
   border-top: 1px solid var(--color-border);
   flex-shrink: 0;
   gap: var(--spacing-3);
+  position: relative;
+  z-index: 1001;
+  background-color: var(--color-background-panel);
+  /* ✅ MODIFICATION START: Enable wrapping for responsive layout */
+  flex-wrap: wrap;
+  row-gap: var(--spacing-2);
+  /* ✅ MODIFICATION END */
 }
 .add-mode-hint, .no-results-hint {
   font-size: var(--font-size-sm);
@@ -451,16 +454,21 @@ function handleCropperCancel() {
 }
 .map-search-container {
   position: relative;
+  /* ✅ MODIFICATION START: Make search container flexible */
+  flex-grow: 1;
+  min-width: 150px;
+  /* ✅ MODIFICATION END */
 }
 .search-input {
   padding: var(--spacing-1) var(--spacing-2);
   border-radius: var(--border-radius-md);
   border: 1px solid var(--color-border);
   background-color: var(--color-background-elevated);
-  width: 200px;
+  /* ✅ MODIFICATION START: Make search input fill its container */
+  width: 100%;
+  /* ✅ MODIFICATION END */
 }
 
-/* ✅ MODIFICATION START: Styles for the new comment panel transition */
 .comment-panel-fade-enter-active,
 .comment-panel-fade-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -470,5 +478,4 @@ function handleCropperCancel() {
   opacity: 0;
   transform: scale(0.95);
 }
-/* ✅ MODIFICATION END */
 </style>

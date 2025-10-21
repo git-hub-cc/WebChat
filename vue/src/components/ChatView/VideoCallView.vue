@@ -26,7 +26,9 @@
       </div>
 
       <div class="video-streams">
-        <video ref="mainVideoRef" class="main-video" autoplay playsinline muted></video>
+        <!-- ✅ MODIFICATION START: Added loadedmetadata event listener -->
+        <video ref="mainVideoRef" class="main-video" autoplay playsinline muted @loadedmetadata="updateVideoDimensions"></video>
+        <!-- ✅ MODIFICATION END -->
 
         <canvas
             ref="whiteboardCanvasRef"
@@ -77,9 +79,7 @@
             @click="callStore.toggleAudio()"
             :class="{ active: !callStore.isAudioMuted }"
         />
-        <!-- ✅ MODIFICATION START: Remove v-if for screen share -->
         <div class="quality-settings-wrapper" v-if="!isAudioOnly">
-          <!-- ✅ MODIFICATION END -->
           <IconButton
               icon="⚙️"
               title="通话质量"
@@ -88,7 +88,6 @@
           />
           <transition name="quality-menu-fade">
             <div v-if="showQualityMenu" class="quality-menu">
-              <!-- ✅ MODIFICATION START: Conditional rendering for menu items -->
               <template v-if="callStore.isScreenSharing">
                 <button
                     v-for="(preset, key) in screenShareQualityOptions"
@@ -109,7 +108,6 @@
                   {{ label }}
                 </button>
               </template>
-              <!-- ✅ MODIFICATION END -->
             </div>
           </transition>
         </div>
@@ -127,10 +125,10 @@ import IconButton from '@/components/Shared/IconButton.vue';
 import Avatar from '@/components/Shared/Avatar.vue';
 import { throttle } from 'lodash-es';
 import WhiteboardToolbar from '@/components/Shared/WhiteboardToolbar.vue';
-import { log } from '@/utils';
-// ✅ MODIFICATION START: Import AppSettings
-import AppSettings from '@/config/AppSettings';
+// ✅ MODIFICATION START: Import the new utility and log function
+import { log, calculateObjectFitDimensions } from '@/utils';
 // ✅ MODIFICATION END
+import AppSettings from '@/config/AppSettings';
 
 const callStore = useCallStore();
 const settingsStore = useSettingsStore();
@@ -144,6 +142,16 @@ let isDrawing = false;
 let lastPos = { x: 0, y: 0 };
 let resizeObserver = null;
 
+// ✅ MODIFICATION START: Add state to store calculated video dimensions
+const videoDimensions = ref({
+  scale: 1,
+  renderedWidth: 0,
+  renderedHeight: 0,
+  offsetX: 0,
+  offsetY: 0,
+});
+// ✅ MODIFICATION END
+
 const mainStream = computed(() => callStore.amISharingScreen ? callStore.localStream : callStore.remoteStream);
 const pipStream = computed(() => callStore.amISharingScreen ? callStore.remoteStream : callStore.localStream);
 
@@ -154,9 +162,7 @@ const qualityOptions = {
   '720p': '高清 (720p)',
   '480p': '标清 (480p)',
 };
-// ✅ MODIFICATION START: Add screen share quality options
 const screenShareQualityOptions = computed(() => AppSettings.media.screenSharePresets);
-// ✅ MODIFICATION END
 
 watch([mainStream, mainVideoRef], ([newStream, videoEl]) => {
   log(`VideoCallView: 组合 watch 触发。newStream ID: ${newStream?.id}, videoEl 存在吗？ ${!!videoEl}`, 'DEBUG');
@@ -212,10 +218,23 @@ const qualityText = (quality) => {
 
 function toggleQualityMenu() { showQualityMenu.value = !showQualityMenu.value; }
 function setQuality(key) { callStore.setCallQualityPreset(key); showQualityMenu.value = false; }
-// ✅ MODIFICATION START: Add function to set screen share quality
 function setScreenShareQuality(key) { callStore.setScreenShareQualityPreset(key); showQualityMenu.value = false; }
-// ✅ MODIFICATION END
 function closeQualityMenuOnClickOutside(event) { if (showQualityMenu.value && !event.target.closest('.quality-settings-wrapper')) { showQualityMenu.value = false; } }
+
+// ✅ MODIFICATION START: Function to update video dimensions based on object-fit
+function updateVideoDimensions() {
+  const videoEl = mainVideoRef.value;
+  if (videoEl && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+    videoDimensions.value = calculateObjectFitDimensions(
+        videoEl.clientWidth,
+        videoEl.clientHeight,
+        videoEl.videoWidth,
+        videoEl.videoHeight
+    );
+    redrawWhiteboard(); // Redraw with new dimensions
+  }
+}
+// ✅ MODIFICATION END
 
 function initWhiteboard() {
   if (!whiteboardCanvasRef.value) return;
@@ -228,7 +247,9 @@ function initWhiteboard() {
         if (whiteboardCanvasRef.value.width !== width || whiteboardCanvasRef.value.height !== height) {
           whiteboardCanvasRef.value.width = width;
           whiteboardCanvasRef.value.height = height;
-          redrawWhiteboard();
+          // ✅ MODIFICATION START: Recalculate dimensions on resize
+          updateVideoDimensions();
+          // ✅ MODIFICATION END
         }
       }
     });
@@ -240,14 +261,28 @@ function initWhiteboard() {
   whiteboardCanvasRef.value.addEventListener('mouseleave', handleDrawEnd);
 }
 
+// ✅ MODIFICATION START: Overhauled coordinate normalization logic
 function getNormalizedPos(event) {
   const canvas = whiteboardCanvasRef.value;
   const rect = canvas.getBoundingClientRect();
-  return {
-    x: (event.clientX - rect.left) / canvas.clientWidth,
-    y: (event.clientY - rect.top) / canvas.clientHeight
-  };
+  const { offsetX, offsetY, renderedWidth, renderedHeight } = videoDimensions.value;
+
+  // 1. Get click coordinates relative to the canvas
+  const canvasX = event.clientX - rect.left;
+  const canvasY = event.clientY - rect.top;
+
+  // 2. Translate coordinates to be relative to the visible video area
+  const videoX = canvasX - offsetX;
+  const videoY = canvasY - offsetY;
+
+  // 3. Normalize coordinates based on the rendered video dimensions
+  //    Also, clamp values between 0 and 1 to prevent drawing outside the area
+  const normalizedX = Math.max(0, Math.min(1, videoX / renderedWidth));
+  const normalizedY = Math.max(0, Math.min(1, videoY / renderedHeight));
+
+  return { x: normalizedX, y: normalizedY };
 }
+// ✅ MODIFICATION END
 
 function handleDrawStart(event) {
   if (!callStore.isWhiteboardActive || !callStore.amISharingScreen) return;
@@ -265,14 +300,16 @@ const throttledHandleDrawMove = throttle((event) => {
   if (callStore.currentDrawingTool === 'rect') {
     redrawWhiteboard();
     if (whiteboardCtx) {
-      const canvas = whiteboardCanvasRef.value;
+      // ✅ MODIFICATION START: Use videoDimensions for real-time preview
+      const { offsetX, offsetY, renderedWidth, renderedHeight } = videoDimensions.value;
       whiteboardCtx.strokeStyle = callStore.currentDrawingColor;
       whiteboardCtx.lineWidth = 3;
-      const x1 = lastPos.x * canvas.width;
-      const y1 = lastPos.y * canvas.height;
-      const x2 = pos.x * canvas.width;
-      const y2 = pos.y * canvas.height;
+      const x1 = offsetX + lastPos.x * renderedWidth;
+      const y1 = offsetY + lastPos.y * renderedHeight;
+      const x2 = offsetX + pos.x * renderedWidth;
+      const y2 = offsetY + pos.y * renderedHeight;
       whiteboardCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      // ✅ MODIFICATION END
     }
   } else {
     const actionData = { type: 'draw_move', ...pos };
@@ -296,31 +333,54 @@ function handleDrawEnd(event) {
   }
 }
 
+// ✅ MODIFICATION START: Overhauled redraw logic to respect object-fit dimensions
 function redrawWhiteboard() {
   if (!whiteboardCtx || !whiteboardCanvasRef.value) return;
   const canvas = whiteboardCanvasRef.value;
+  const { offsetX, offsetY, renderedWidth, renderedHeight } = videoDimensions.value;
+
   whiteboardCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Don't draw if the video dimensions aren't calculated yet
+  if (renderedWidth <= 0 || renderedHeight <= 0) return;
+
   let isDrawingPen = false;
   let currentColor = '#000000';
   callStore.drawingHistory.forEach(action => {
-    const x = action.x * canvas.width;
-    const y = action.y * canvas.height;
+    // De-normalize coordinates based on the current video dimensions
+    const x = offsetX + action.x * renderedWidth;
+    const y = offsetY + action.y * renderedHeight;
+
     switch (action.type) {
       case 'draw_start':
         isDrawingPen = action.tool === 'pen';
-        if (isDrawingPen) { currentColor = action.color; whiteboardCtx.beginPath(); whiteboardCtx.moveTo(x, y); }
+        if (isDrawingPen) {
+          currentColor = action.color;
+          whiteboardCtx.beginPath();
+          whiteboardCtx.moveTo(x, y);
+        }
         break;
       case 'draw_move':
-        if (isDrawingPen) { whiteboardCtx.strokeStyle = currentColor; whiteboardCtx.lineWidth = 3; whiteboardCtx.lineTo(x, y); whiteboardCtx.stroke(); whiteboardCtx.beginPath(); whiteboardCtx.moveTo(x, y); }
+        if (isDrawingPen) {
+          whiteboardCtx.strokeStyle = currentColor;
+          whiteboardCtx.lineWidth = 3;
+          whiteboardCtx.lineTo(x, y);
+          whiteboardCtx.stroke();
+          whiteboardCtx.beginPath();
+          whiteboardCtx.moveTo(x, y);
+        }
         break;
       case 'draw_end':
-        if (isDrawingPen) { whiteboardCtx.closePath(); isDrawingPen = false; }
+        if (isDrawingPen) {
+          whiteboardCtx.closePath();
+          isDrawingPen = false;
+        }
         break;
       case 'draw_rect':
-        const x1 = action.x1 * canvas.width;
-        const y1 = action.y1 * canvas.height;
-        const x2 = action.x2 * canvas.width;
-        const y2 = action.y2 * canvas.height;
+        const x1 = offsetX + action.x1 * renderedWidth;
+        const y1 = offsetY + action.y1 * renderedHeight;
+        const x2 = offsetX + action.x2 * renderedWidth;
+        const y2 = offsetY + action.y2 * renderedHeight;
         whiteboardCtx.strokeStyle = action.color;
         whiteboardCtx.lineWidth = 3;
         whiteboardCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
@@ -328,6 +388,7 @@ function redrawWhiteboard() {
     }
   });
 }
+// ✅ MODIFICATION END
 
 watch(() => callStore.drawingHistory, redrawWhiteboard, { deep: true });
 watch(() => callStore.isWhiteboardActive, (isActive) => { if (!isActive) { redrawWhiteboard(); } });
