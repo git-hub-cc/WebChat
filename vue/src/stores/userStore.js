@@ -185,7 +185,11 @@ export const useUserStore = defineStore('user', () => {
         if (idsToRemoveFromDb.length > 0) {
             for (const idToRemove of idsToRemoveFromDb) {
                 dbWritePromises.push(dbService.removeItem('contacts', idToRemove));
-                dbWritePromises.push(chatStore.deleteChatHistory(idToRemove));
+                // --- 🚀 BUG FIX START: Do not delete chat history on theme change ---
+                // By removing the line below, chat history for special contacts will be preserved
+                // even when they are removed from the contact list due to a theme switch.
+                // dbWritePromises.push(chatStore.deleteChatHistory(idToRemove));
+                // --- 🚀 BUG FIX END ---
             }
         }
         contacts.value = newContactsState;

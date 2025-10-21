@@ -51,6 +51,25 @@ export default {
             '480p': { maxBitrate: 700 * 1000, resolution: { height: 480 } },
             '720p': { maxBitrate: 1500 * 1000, resolution: { height: 720 } },
         },
+        // ✅ MODIFICATION START: Add screenSharePresets
+        screenSharePresets: {
+            'auto': {
+                label: '自动',
+                resolution: {}, // Let the browser decide
+                frameRate: { ideal: 15, max: 30 }
+            },
+            'text': {
+                label: '文本清晰',
+                resolution: { width: 1920, height: 1080 },
+                frameRate: { ideal: 10, max: 15 }
+            },
+            'motion': {
+                label: '流畅动态',
+                resolution: { width: 1280, height: 720 },
+                frameRate: { ideal: 30, max: 30 }
+            }
+        },
+        // ✅ MODIFICATION END
         abr: { // Adaptive Bitrate Rules
             poorNetworkThreshold: { packetLoss: 0.05, rtt: 350 }, // Conditions to downgrade quality
             goodNetworkThreshold: { packetLoss: 0.02, rtt: 150 }, // Conditions to upgrade quality

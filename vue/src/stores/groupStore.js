@@ -189,18 +189,12 @@ export const useGroupStore = defineStore('group', () => {
                 try {
                     webrtcService.sendMessage(memberId, { ...message, groupId });
                     if (file) {
-                        // ✅ MODIFICATION START: Add groupId to the file data object
-                        const fileData = {
-                            blob: file.blob,
-                            hash: file.hash || file.id,
-                            name: file.name,
-                            type: file.fileType || file.blob.type,
-                            size: file.size,
-                            messageId: message.id,
-                            groupId: groupId // Pass the group context
-                        };
-                        // ✅ MODIFICATION END
+                        // ✅ MODIFICATION START: Correctly pass the file object with messageType
+                        // The `file` object is `fileDataForTransport`, which already has all necessary properties.
+                        // We just need to spread it and add the `groupId`.
+                        const fileData = { ...file, groupId };
                         webrtcService.sendFile(memberId, fileData);
+                        // ✅ MODIFICATION END
                     }
                 } catch (error) {
                     log(`向群组成员 ${memberId} 广播消息失败 (可能未连接): ${error.message}`, 'WARN');

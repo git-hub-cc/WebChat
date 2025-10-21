@@ -77,7 +77,9 @@
             @click="callStore.toggleAudio()"
             :class="{ active: !callStore.isAudioMuted }"
         />
-        <div class="quality-settings-wrapper" v-if="!callStore.isScreenSharing && !isAudioOnly">
+        <!-- ✅ MODIFICATION START: Remove v-if for screen share -->
+        <div class="quality-settings-wrapper" v-if="!isAudioOnly">
+          <!-- ✅ MODIFICATION END -->
           <IconButton
               icon="⚙️"
               title="通话质量"
@@ -86,14 +88,28 @@
           />
           <transition name="quality-menu-fade">
             <div v-if="showQualityMenu" class="quality-menu">
-              <button
-                  v-for="(label, key) in qualityOptions"
-                  :key="key"
-                  @click="setQuality(key)"
-                  :class="{ active: callStore.currentQualityPreset === key }"
-              >
-                {{ label }}
-              </button>
+              <!-- ✅ MODIFICATION START: Conditional rendering for menu items -->
+              <template v-if="callStore.isScreenSharing">
+                <button
+                    v-for="(preset, key) in screenShareQualityOptions"
+                    :key="key"
+                    @click="setScreenShareQuality(key)"
+                    :class="{ active: callStore.currentScreenShareQualityPreset === key }"
+                >
+                  {{ preset.label }}
+                </button>
+              </template>
+              <template v-else>
+                <button
+                    v-for="(label, key) in qualityOptions"
+                    :key="key"
+                    @click="setQuality(key)"
+                    :class="{ active: callStore.currentQualityPreset === key }"
+                >
+                  {{ label }}
+                </button>
+              </template>
+              <!-- ✅ MODIFICATION END -->
             </div>
           </transition>
         </div>
@@ -112,6 +128,9 @@ import Avatar from '@/components/Shared/Avatar.vue';
 import { throttle } from 'lodash-es';
 import WhiteboardToolbar from '@/components/Shared/WhiteboardToolbar.vue';
 import { log } from '@/utils';
+// ✅ MODIFICATION START: Import AppSettings
+import AppSettings from '@/config/AppSettings';
+// ✅ MODIFICATION END
 
 const callStore = useCallStore();
 const settingsStore = useSettingsStore();
@@ -135,6 +154,9 @@ const qualityOptions = {
   '720p': '高清 (720p)',
   '480p': '标清 (480p)',
 };
+// ✅ MODIFICATION START: Add screen share quality options
+const screenShareQualityOptions = computed(() => AppSettings.media.screenSharePresets);
+// ✅ MODIFICATION END
 
 watch([mainStream, mainVideoRef], ([newStream, videoEl]) => {
   log(`VideoCallView: 组合 watch 触发。newStream ID: ${newStream?.id}, videoEl 存在吗？ ${!!videoEl}`, 'DEBUG');
@@ -190,6 +212,9 @@ const qualityText = (quality) => {
 
 function toggleQualityMenu() { showQualityMenu.value = !showQualityMenu.value; }
 function setQuality(key) { callStore.setCallQualityPreset(key); showQualityMenu.value = false; }
+// ✅ MODIFICATION START: Add function to set screen share quality
+function setScreenShareQuality(key) { callStore.setScreenShareQualityPreset(key); showQualityMenu.value = false; }
+// ✅ MODIFICATION END
 function closeQualityMenuOnClickOutside(event) { if (showQualityMenu.value && !event.target.closest('.quality-settings-wrapper')) { showQualityMenu.value = false; } }
 
 function initWhiteboard() {
@@ -233,16 +258,12 @@ function handleDrawStart(event) {
   callStore.addDrawingAction(actionData);
 }
 
-// --- ✅ MODIFICATION START: Implement real-time rectangle preview ---
 const throttledHandleDrawMove = throttle((event) => {
   if (!isDrawing || !callStore.isWhiteboardActive || !callStore.amISharingScreen) return;
   const pos = getNormalizedPos(event);
 
   if (callStore.currentDrawingTool === 'rect') {
-    // 1. Redraw the committed history to clear the previous preview frame.
     redrawWhiteboard();
-    // 2. Draw the temporary preview rectangle directly on the canvas.
-    //    This does NOT modify the shared drawingHistory.
     if (whiteboardCtx) {
       const canvas = whiteboardCanvasRef.value;
       whiteboardCtx.strokeStyle = callStore.currentDrawingColor;
@@ -253,12 +274,11 @@ const throttledHandleDrawMove = throttle((event) => {
       const y2 = pos.y * canvas.height;
       whiteboardCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
     }
-  } else { // Original logic for the 'pen' tool
+  } else {
     const actionData = { type: 'draw_move', ...pos };
     callStore.addDrawingAction(actionData);
   }
-}, 16); // 16ms throttle is ~60fps, suitable for smooth preview
-// --- ✅ MODIFICATION END ---
+}, 16);
 
 
 function handleDrawEnd(event) {

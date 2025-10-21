@@ -21,7 +21,7 @@
       <span v-else>{{ message.content }}</span>
     </div>
 
-    <div v-else class="message-bubble" :class="{ 'character-message': isCharacterMessage, [message.sender]: isCharacterMessage }">
+    <div v-else class="message-bubble" :class="{ 'character-message': isCharacterMessage, [message.sender]: isCharacterMessage, 'sticker-bubble': message.type === 'sticker' }">
       <div v-if="!isMyMessage && isGroupChat" class="sender-name">
         {{ senderName }}
       </div>
@@ -34,7 +34,6 @@
           <span class="duration-label">{{ formatDuration(message.duration) }}</span>
         </div>
 
-        <!-- ✅ MODIFICATION START: Location content is now a clickable viewer trigger -->
         <div v-else-if="message.type === 'location'" class="location-content" @click="openLocationViewer">
           <div class="location-icon">📍</div>
           <div class="location-info">
@@ -44,7 +43,6 @@
             </div>
           </div>
         </div>
-        <!-- ✅ MODIFICATION END -->
 
         <div v-else-if="isMedia" class="media-content" @click="handleMediaClick">
           <div v-if="message.status === 'receiving'" class="media-placeholder receiving">
@@ -64,7 +62,7 @@
           </div>
 
           <div v-else>
-            <div v-if="message.type === 'sticker'" class="sticker-wrapper">
+            <div v-if="message.type === 'sticker'" class="sticker-wrapper" @click.stop>
               <div class="media-placeholder" v-if="!displayUrl">
                 <SkeletonLoader type="grid-item" :shimmer="true" />
               </div>
@@ -196,14 +194,12 @@ const callIcon = computed(() => {
   return '📞';
 });
 
-// ✅ MODIFICATION START: Add handler to open the location viewer
 function openLocationViewer() {
   uiStore.showLocationViewer({
     latitude: props.message.latitude,
     longitude: props.message.longitude
   });
 }
-// ✅ MODIFICATION END
 
 watch(ttsState, (newState, oldState) => { const audioUrl = ttsStore.audioUrlCache.get(props.message.id); if (newState === 'playing' && audioUrl) { if (!ttsAudioPlayer.value) { ttsAudioPlayer.value = new Audio(audioUrl); ttsAudioPlayer.value.onended = () => ttsStore.setPlaybackFinished(props.message.id); ttsAudioPlayer.value.onpause = () => ttsStore.setPlaybackFinished(props.message.id); } ttsAudioPlayer.value.play().catch(e => { log(`Error playing TTS audio: ${e.message}`, 'ERROR'); ttsStore.messageTtsState[props.message.id] = 'error'; }); } else if (newState === 'ready' && oldState === 'playing') { if (ttsAudioPlayer.value) ttsAudioPlayer.value.pause(); } });
 function toggleTtsPlay() { ttsStore.togglePlay(props.message.id); }
@@ -252,12 +248,10 @@ function showContextMenu(event) {
   if (props.message.type === 'system' || props.message.isRetracted) return;
   const items = [];
 
-  // ✅ MODIFICATION START: Add "Copy" option for text messages
   if (props.message.type === 'text' && props.message.content) {
     items.push({
       label: '复制',
       action: () => {
-        // Remove streaming cursor and trim whitespace before copying
         const textToCopy = props.message.content.replace(/▍/g, '').trim();
         navigator.clipboard.writeText(textToCopy)
             .then(() => {
@@ -270,7 +264,6 @@ function showContextMenu(event) {
       }
     });
   }
-  // ✅ MODIFICATION END
 
   if (isMedia.value && displayUrl.value) {
     const type = props.message.fileType;
@@ -308,15 +301,12 @@ function showContextMenu(event) {
 }
 async function resend() { if (props.message.status !== 'failed' || !isMyMessage.value) return; await chatStore.resendFailedMessages(chatStore.currentChatId); }
 
-// ✅ FIX START: Move WaveSurfer initialization into a reactive watch effect
 watch(displayUrl, async (newUrl, oldUrl) => {
-  // Cleanup previous instance if it exists
   if (wavesurfer) {
     wavesurfer.destroy();
     wavesurfer = null;
   }
 
-  // Initialize new instance if the URL is valid and it's an audio message
   if (newUrl && props.message.type === 'audio' && waveformRef.value) {
     try {
       wavesurfer = WaveSurfer.create({
@@ -340,13 +330,11 @@ watch(displayUrl, async (newUrl, oldUrl) => {
     }
   }
 }, { immediate: true });
-// ✅ FIX END
 
 onMounted(() => {
   if (showTtsControl.value && ttsState.value === 'idle') {
     ttsStore.requestTtsForMessage({ ...props.message, senderContact: senderContact.value });
   }
-  // The initial loadMedia call is now triggered by the watch effect on message hash/status
 });
 
 watch(() => [props.message.fileHash, props.message.status], ([newHash, newStatus]) => {
@@ -402,6 +390,13 @@ onUnmounted(() => {
 .message-content { line-height: var(--line-height-base); white-space: pre-wrap; }
 .message-bubble.character-message { background: var(--character-message-bg, var(--color-message-received-bg)); border: 1px solid var(--character-accent-color, transparent); box-shadow: 0 0 8px var(--character-glow-color, transparent); }
 .message-bubble.character-message .sender-name { color: var(--character-primary-color, var(--color-brand-secondary)); }
+
+/* ✅ MODIFICATION START: Add styles to give the sticker bubble padding and shadow */
+.message-bubble.sticker-bubble {
+  border: none;                 /* No border */
+}
+/* ✅ MODIFICATION END */
+
 .media-content {
   cursor: pointer;
   flex-grow: 1;
@@ -536,7 +531,6 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
 }
 
-/* --- ✅ MODIFICATION START --- */
 .location-content {
   display: flex;
   align-items: center;
@@ -569,5 +563,4 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
   font-family: var(--font-family-mono);
 }
-/* --- ✅ MODIFICATION END --- */
 </style>

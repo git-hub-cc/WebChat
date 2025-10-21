@@ -35,7 +35,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     private final Map<String, RateLimitInfo> requestCounts = new ConcurrentHashMap<>();
 
     // [修改] 更新为新的统一API前缀
-    private static final String API_V1_PREFIX = "/api/v1/";
+    private static final String API_V1_PREFIX = "/api/v1/chat";
     private static final String HEADER_X_FORWARDED_FOR = "X-Forwarded-For";
 
     private final int dailyLimit;

@@ -26,6 +26,9 @@ export const useCallStore = defineStore('call', () => {
     const callDuration = ref(0);
     const callQuality = ref({});
     const currentQualityPreset = ref('auto');
+    // ✅ MODIFICATION START: Add state for screen share quality
+    const currentScreenShareQualityPreset = ref('auto');
+    // ✅ MODIFICATION END
     const isSpeaking = ref(false);
     const pendingScreenShareStream = ref(null);
     const globalAudioElement = ref(null);
@@ -127,6 +130,9 @@ export const useCallStore = defineStore('call', () => {
         remoteStream.value = null; if (!keepPeerId) { currentPeerId.value = null; } isCallActive.value = false; isCallPending.value = false; isAudioMuted.value = false; isVideoEnabled.value = true; isScreenSharing.value = false;
         amISharingScreen.value = false;
         incomingCallInfo.value = null; isFullScreenCallViewVisible.value = false; _stopMusic(); _stopCallTimer(); if (callRequestTimeout) { clearTimeout(callRequestTimeout); } callRequestTimeout = null; callStartTime = null; currentQualityPreset.value = 'auto';
+        // ✅ MODIFICATION START: Reset screen share quality preset
+        currentScreenShareQualityPreset.value = 'auto';
+        // ✅ MODIFICATION END
 
         // [新增] 重置白板状态
         isWhiteboardActive.value = false;
@@ -151,7 +157,17 @@ export const useCallStore = defineStore('call', () => {
         let mediaResult = null;
         if (options.screen) {
             try {
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                // ✅ MODIFICATION START: Apply initial screen share quality settings
+                const preset = AppSettings.media.screenSharePresets[currentScreenShareQualityPreset.value] || AppSettings.media.screenSharePresets['auto'];
+                const screenStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        cursor: 'always',
+                        ...preset.resolution,
+                        frameRate: preset.frameRate
+                    },
+                    audio: false
+                });
+                // ✅ MODIFICATION END
                 const finalStream = new MediaStream();
                 screenStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
 
@@ -181,7 +197,6 @@ export const useCallStore = defineStore('call', () => {
                 stream.getTracks().forEach(track => track.onended = handleTrackEnded);
                 mediaResult = { stream, videoEnabled: options.video, audioEnabled: options.audio };
             } catch (error) {
-                // ✅ MODIFICATION START: Remove user prompt for silent fallback
                 if (error.name !== 'NotFoundError' && error.name !== 'DevicesNotFoundError') {
                     log(`Failed to get media stream: ${error.message}`, 'ERROR');
                     eventBus.emit('showNotification', { message: `无法访问摄像头或麦克风: ${error.message}`, type: 'error' });
@@ -219,7 +234,6 @@ export const useCallStore = defineStore('call', () => {
                     });
                     return null;
                 }
-                // ✅ MODIFICATION END
             }
         }
 
@@ -421,6 +435,21 @@ export const useCallStore = defineStore('call', () => {
         webrtcService.adjustPeerBitrate(currentPeerId.value, { maxBitrate: preset.maxBitrate, resolution: preset.resolution });
         log(`Manual quality preset applied: ${presetKey}`, 'INFO');
     }
+
+    // ✅ MODIFICATION START: Add action for setting screen share quality
+    function setScreenShareQualityPreset(presetKey) {
+        if (!currentPeerId.value || !isScreenSharing.value || !amISharingScreen.value) return;
+        if (!AppSettings.media.screenSharePresets[presetKey]) return;
+
+        currentScreenShareQualityPreset.value = presetKey;
+        const preset = AppSettings.media.screenSharePresets[presetKey];
+        webrtcService.adjustScreenShareParameters(currentPeerId.value, {
+            resolution: preset.resolution,
+            frameRate: preset.frameRate,
+        });
+        log(`Screen share quality preset applied: ${presetKey}`, 'INFO');
+    }
+    // ✅ MODIFICATION END
 
     function setGlobalAudioElement(element) {
         globalAudioElement.value = element;
@@ -634,6 +663,9 @@ export const useCallStore = defineStore('call', () => {
         localStream, remoteStream, currentPeerId, isCallActive, isCallPending, isAudioMuted,
         isVideoEnabled, isScreenSharing, incomingCallInfo, isFullScreenCallViewVisible,
         callDurationFormatted, peerContact, currentCallQuality, currentQualityPreset,
+        // ✅ MODIFICATION START: Expose screen share state
+        currentScreenShareQualityPreset,
+        // ✅ MODIFICATION END
         amISharingScreen,
         isSpeaking,
         // [新增] 导出白板相关状态和 actions
@@ -642,6 +674,9 @@ export const useCallStore = defineStore('call', () => {
 
         startVideoCall, startAudioCall, startScreenShare, acceptCall, rejectCall, hangUp,
         toggleAudio, toggleVideo, minimizeCallView, maximizeCallView, setCallQualityPreset,
+        // ✅ MODIFICATION START: Expose screen share action
+        setScreenShareQualityPreset,
+        // ✅ MODIFICATION END
         initiateScreenShareWithStream,
         setGlobalAudioElement,
     };

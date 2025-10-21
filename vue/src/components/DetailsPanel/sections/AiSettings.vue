@@ -4,12 +4,12 @@
     <div v-if="contact.chapters && contact.chapters.length > 0" class="setting-block">
       <h4>篇章选择</h4>
       <select :value="selectedChapter" @change="onChapterChange" class="chapter-select">
-        <option :value="null">默认行为</option>
-        <!-- ✅ FIX START: Use a computed property to display truncated names -->
+        <!-- ✅ MODIFICATION START: Use empty string for default value -->
+        <option value="">默认行为</option>
+        <!-- ✅ MODIFICATION END -->
         <option v-for="chapter in formattedChapters" :key="chapter.id" :value="chapter.id" :title="chapter.name">
           {{ chapter.displayName }}
         </option>
-        <!-- ✅ FIX END -->
       </select>
     </div>
 
@@ -92,7 +92,9 @@ const userStore = useUserStore();
 const memoryStore = useMemoryStore();
 
 const contact = computed(() => userStore.contacts[props.contactId]);
-const selectedChapter = computed(() => contact.value?.selectedChapterId || null);
+// ✅ MODIFICATION START: Default to empty string for select binding
+const selectedChapter = computed(() => contact.value?.selectedChapterId || '');
+// ✅ MODIFICATION END
 
 // ✅ FIX START: Create a computed property to handle text truncation
 const formattedChapters = computed(() => {
@@ -108,10 +110,12 @@ const formattedChapters = computed(() => {
 });
 // ✅ FIX END
 
+// ✅ MODIFICATION START: Handle empty string value from select
 const onChapterChange = (event) => {
-  const chapterId = event.target.value === 'null' ? null : event.target.value;
+  const chapterId = event.target.value === '' ? null : event.target.value;
   userStore.setSelectedChapterForAI(props.contactId, chapterId);
 };
+// ✅ MODIFICATION END
 
 const getMemoryContent = (setId) => memoryStore.elementSets.find(s => s.id === setId)?.books?.[props.contactId]?.content || '';
 const isMemoryBookEnabled = (setId) => !!memoryStore.elementSets.find(s => s.id === setId)?.books?.[props.contactId]?.enabled;

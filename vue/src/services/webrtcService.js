@@ -184,7 +184,6 @@ function _handlePeerData(rawData, peerId) {
         try {
             const message = JSON.parse(new TextDecoder().decode(rawData));
 
-            // [新增] 处理白板绘图指令
             if (message.type === 'whiteboard_action') {
                 eventBus.emit('webrtc:whiteboard-action', { peerId, action: message.payload });
                 return;
@@ -217,13 +216,14 @@ function _handlePeerData(rawData, peerId) {
                 };
                 eventBus.emit('file:transfer-initiated', {
                     peerId,
-                    groupId: message.groupId, // Pass the groupId along
+                    groupId: message.groupId,
                     messageId: message.messageId,
                     fileHash: message.chunkId,
                     fileName: message.fileName,
                     fileSize: message.fileSize,
                     fileType: message.fileType,
                     duration: message.duration,
+                    messageType: message.messageType,
                 });
             } else {
                 eventBus.emit('webrtc:message', { peerId, message });
@@ -507,9 +507,10 @@ export const webrtcService = {
             this.sendMessage(peerId, {
                 type: 'chunk-meta',
                 messageId: fileObject.messageId,
+                messageType: fileObject.messageType,
                 chunkId: fileObject.hash,
                 fileName: fileObject.name,
-                fileType: fileObject.type,
+                fileType: fileObject.fileType,
                 fileSize: fileObject.size,
                 totalChunks: Math.ceil(fileObject.blob.size / CHUNK_SIZE),
                 duration: fileObject.duration,
@@ -581,6 +582,29 @@ export const webrtcService = {
             }
         }
     },
+    // ✅ MODIFICATION START: Add new function for screen share parameters
+    async adjustScreenShareParameters(peerId, { resolution, frameRate }) {
+        const conn = connections.value[peerId];
+        if (!conn || !conn.peer || !conn.peer.connected) return;
+
+        const videoSender = conn.peer._pc.getSenders().find(s => s.track?.kind === 'video');
+        if (!videoSender || !videoSender.track) {
+            log(`Cannot adjust screen share parameters: No active video sender found for peer ${peerId}.`, 'WARN');
+            return;
+        }
+
+        try {
+            await videoSender.track.applyConstraints({
+                ...resolution,
+                frameRate
+            });
+            log(`WebRTC: Adjusted screen share for ${peerId} to resolution ${JSON.stringify(resolution)} and frameRate ${JSON.stringify(frameRate)}.`, 'INFO');
+        } catch (e) {
+            log(`WebRTC: Failed to apply screen share constraints for ${peerId}: ${e.message}`, 'ERROR');
+            eventBus.emit('showNotification', { message: '无法应用新的共享设置，可能不被支持。', type: 'warning' });
+        }
+    },
+    // ✅ MODIFICATION END
     async _testIceServer(iceServerConfig) {
         return new Promise(resolve => {
             const pc = new RTCPeerConnection({ iceServers: [iceServerConfig] });

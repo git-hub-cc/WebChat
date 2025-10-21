@@ -157,22 +157,27 @@ export const useChatStore = defineStore('chat', () => {
         eventBus.on('file:ready', handleTransferCompleted);
     }
 
-    async function handleTransferInitiated({ peerId, groupId, messageId, fileHash, fileName, fileSize, fileType, duration }) {
-        // ✅ MODIFICATION START: Prioritize groupId for determining the chat
-        const chatId = groupId || peerId;
+    // ✅ MODIFICATION START: Update function signature to accept messageType
+    async function handleTransferInitiated({ peerId, groupId, messageId, fileHash, fileName, fileSize, fileType, duration, messageType: incomingType }) {
         // ✅ MODIFICATION END
+        const chatId = groupId || peerId;
         const userStore = useUserStore();
         const transferStore = useTransferStore();
         transferStore.startTransfer(fileHash, peerId, fileSize);
 
-        let messageType = 'file';
-        if (fileType?.startsWith('audio/') && fileName.endsWith('webm')) {
-            messageType = 'audio';
-        } else if (fileType?.startsWith('image/')) {
-            messageType = 'image';
-        } else if (fileType?.startsWith('video/')) {
-            messageType = 'video';
+        // ✅ MODIFICATION START: Prioritize incomingType, then fallback to inference
+        let messageType = incomingType;
+        if (!messageType) { // Fallback logic for older clients or if type is missing
+            messageType = 'file';
+            if (fileType?.startsWith('audio/') && fileName.endsWith('webm')) {
+                messageType = 'audio';
+            } else if (fileType?.startsWith('image/')) {
+                messageType = 'image';
+            } else if (fileType?.startsWith('video/')) {
+                messageType = 'video';
+            }
         }
+        // ✅ MODIFICATION END
 
         const placeholderMessage = {
             id: messageId,
@@ -185,7 +190,7 @@ export const useChatStore = defineStore('chat', () => {
             fileSize,
             fileType,
             ...(duration && { duration }),
-            ...(groupId && { groupId }), // Include groupId in the message
+            ...(groupId && { groupId }),
         };
 
         await addMessage(chatId, placeholderMessage);
@@ -303,15 +308,18 @@ export const useChatStore = defineStore('chat', () => {
                 ...(messageType === 'audio' && { duration: mediaData.duration })
             };
 
+            // ✅ MODIFICATION START: Add messageType to the transport object
             fileDataForTransport = {
                 blob: mediaBlob,
                 hash: mediaHash,
                 name: mediaData.name,
-                type: mediaData.fileType || mediaBlob.type,
+                fileType: mediaData.fileType || mediaBlob.type,
                 size: mediaData.size || mediaBlob.size,
                 messageId: messageId,
+                messageType: messageType, // Pass the determined message type
                 ...(messageType === 'audio' && { duration: mediaData.duration })
             };
+            // ✅ MODIFICATION END
         } else if (content) {
             messagePayload = { type: 'text', content };
         } else if (location) {
@@ -334,7 +342,8 @@ export const useChatStore = defineStore('chat', () => {
         await addMessage(targetId, fullMessage);
 
         if (contact?.isAI) {
-            await apiService.sendAiMessage(targetId, content, chats.value[targetId]?.slice(-15) || []);
+            const historyForAI = (chats.value[targetId] || []).slice(0, -1);
+            await apiService.sendAiMessage(targetId, content, historyForAI.slice(-15));
             _updateMessageState(targetId, fullMessage.id, { status: 'sent' });
         } else if (isGroup) {
             groupStore.broadcastMessage(targetId, fullMessage, { file: fileDataForTransport });
