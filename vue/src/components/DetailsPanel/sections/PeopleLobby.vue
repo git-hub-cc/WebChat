@@ -4,7 +4,7 @@
       <h4>全部在线用户 ({{ allUsers.length }})</h4>
       <div>
         <!-- ✅ MODIFICATION START: Removed World Map button -->
-        <IconButton icon="⟳" title="刷新列表" :class="{ loading: isLoading }" @click="fetchUsers" />
+        <IconButton icon="icons/refresh.svg" title="刷新列表" :class="{ loading: isLoading }" @click="fetchUsers" />
         <!-- ✅ MODIFICATION END -->
       </div>
     </div>
