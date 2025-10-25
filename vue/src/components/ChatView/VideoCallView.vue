@@ -26,9 +26,7 @@
       </div>
 
       <div class="video-streams">
-        <!-- ✅ MODIFICATION START: Added loadedmetadata event listener -->
         <video ref="mainVideoRef" class="main-video" autoplay playsinline muted @loadedmetadata="updateVideoDimensions"></video>
-        <!-- ✅ MODIFICATION END -->
 
         <canvas
             ref="whiteboardCanvasRef"
@@ -66,19 +64,52 @@
             @click="callStore.toggleWhiteboard()"
             :class="{ active: callStore.isWhiteboardActive }"
         />
-        <IconButton
-            :icon="callStore.isVideoEnabled ? '📹' : '🚫'"
-            :title="callStore.isVideoEnabled ? '关闭摄像头' : '开启摄像头'"
-            @click="callStore.toggleVideo()"
-            v-if="!callStore.isScreenSharing && !isAudioOnly"
-            :class="{ active: callStore.isVideoEnabled }"
-        />
-        <IconButton
-            :icon="muteButtonIcon"
-            :title="muteButtonTitle"
-            @click="callStore.toggleAudio()"
-            :class="{ active: !callStore.isAudioMuted }"
-        />
+
+        <!-- ✅ MODIFICATION START: New conditional controls for screen share vs. regular call -->
+        <template v-if="callStore.isScreenSharing">
+          <!-- Mic control (available for both sender and receiver) -->
+          <IconButton
+              :icon="callStore.isMicrophoneMuted ? '🔇' : '🎤'"
+              :title="callStore.isMicrophoneMuted ? '开启麦克风' : '麦克风静音'"
+              @click="callStore.toggleMicrophone()"
+              :class="{ active: !callStore.isMicrophoneMuted }"
+              :disabled="!callStore.microphoneAudioTrack"
+          />
+          <!-- System audio control (only for sender) -->
+          <IconButton
+              v-if="callStore.amISharingScreen"
+              :icon="callStore.isSystemAudioMuted ? '🔈' : '🔊'"
+              :title="callStore.isSystemAudioMuted ? '分享系统声音' : '停止分享系统声音'"
+              @click="callStore.toggleSystemAudio()"
+              :class="{ active: !callStore.isSystemAudioMuted }"
+              :disabled="!callStore.systemAudioTrack"
+          />
+          <!-- Remote audio control (available for both) -->
+          <IconButton
+              :icon="callStore.isRemoteStreamMuted ? '🔇' : '🎧'"
+              :title="callStore.isRemoteStreamMuted ? '收听对方声音' : '静音对方'"
+              @click="callStore.toggleRemoteMute()"
+              :class="{ active: !callStore.isRemoteStreamMuted }"
+          />
+        </template>
+        <template v-else>
+          <!-- Regular call controls -->
+          <IconButton
+              :icon="callStore.isVideoEnabled ? '📹' : '🚫'"
+              :title="callStore.isVideoEnabled ? '关闭摄像头' : '开启摄像头'"
+              @click="callStore.toggleVideo()"
+              v-if="!isAudioOnly"
+              :class="{ active: callStore.isVideoEnabled }"
+          />
+          <IconButton
+              :icon="callStore.isAudioMuted ? '🔇' : '🎤'"
+              :title="callStore.isAudioMuted ? '取消静音' : '静音'"
+              @click="callStore.toggleAudio()"
+              :class="{ active: !callStore.isAudioMuted }"
+          />
+        </template>
+        <!-- ✅ MODIFICATION END -->
+
         <div class="quality-settings-wrapper" v-if="!isAudioOnly">
           <IconButton
               icon="⚙️"
@@ -125,9 +156,7 @@ import IconButton from '@/components/Shared/IconButton.vue';
 import Avatar from '@/components/Shared/Avatar.vue';
 import { throttle } from 'lodash-es';
 import WhiteboardToolbar from '@/components/Shared/WhiteboardToolbar.vue';
-// ✅ MODIFICATION START: Import the new utility and log function
 import { log, calculateObjectFitDimensions } from '@/utils';
-// ✅ MODIFICATION END
 import AppSettings from '@/config/AppSettings';
 
 const callStore = useCallStore();
@@ -142,7 +171,6 @@ let isDrawing = false;
 let lastPos = { x: 0, y: 0 };
 let resizeObserver = null;
 
-// ✅ MODIFICATION START: Add state to store calculated video dimensions
 const videoDimensions = ref({
   scale: 1,
   renderedWidth: 0,
@@ -150,7 +178,6 @@ const videoDimensions = ref({
   offsetX: 0,
   offsetY: 0,
 });
-// ✅ MODIFICATION END
 
 const mainStream = computed(() => callStore.amISharingScreen ? callStore.localStream : callStore.remoteStream);
 const pipStream = computed(() => callStore.amISharingScreen ? callStore.remoteStream : callStore.localStream);
@@ -198,9 +225,6 @@ const viewTitle = computed(() => {
   return peerContact.value?.name;
 });
 
-const muteButtonIcon = computed(() => callStore.isAudioMuted ? '🔇' : '🎤');
-const muteButtonTitle = computed(() => callStore.isAudioMuted ? '取消静音' : '静音');
-
 const qualityClass = (type) => {
   const quality = callStore.currentCallQuality[type];
   if (quality === 'good') return 'quality-good';
@@ -221,7 +245,6 @@ function setQuality(key) { callStore.setCallQualityPreset(key); showQualityMenu.
 function setScreenShareQuality(key) { callStore.setScreenShareQualityPreset(key); showQualityMenu.value = false; }
 function closeQualityMenuOnClickOutside(event) { if (showQualityMenu.value && !event.target.closest('.quality-settings-wrapper')) { showQualityMenu.value = false; } }
 
-// ✅ MODIFICATION START: Function to update video dimensions based on object-fit
 function updateVideoDimensions() {
   const videoEl = mainVideoRef.value;
   if (videoEl && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
@@ -234,7 +257,6 @@ function updateVideoDimensions() {
     redrawWhiteboard(); // Redraw with new dimensions
   }
 }
-// ✅ MODIFICATION END
 
 function initWhiteboard() {
   if (!whiteboardCanvasRef.value) return;
@@ -247,9 +269,7 @@ function initWhiteboard() {
         if (whiteboardCanvasRef.value.width !== width || whiteboardCanvasRef.value.height !== height) {
           whiteboardCanvasRef.value.width = width;
           whiteboardCanvasRef.value.height = height;
-          // ✅ MODIFICATION START: Recalculate dimensions on resize
           updateVideoDimensions();
-          // ✅ MODIFICATION END
         }
       }
     });
@@ -261,28 +281,22 @@ function initWhiteboard() {
   whiteboardCanvasRef.value.addEventListener('mouseleave', handleDrawEnd);
 }
 
-// ✅ MODIFICATION START: Overhauled coordinate normalization logic
 function getNormalizedPos(event) {
   const canvas = whiteboardCanvasRef.value;
   const rect = canvas.getBoundingClientRect();
   const { offsetX, offsetY, renderedWidth, renderedHeight } = videoDimensions.value;
 
-  // 1. Get click coordinates relative to the canvas
   const canvasX = event.clientX - rect.left;
   const canvasY = event.clientY - rect.top;
 
-  // 2. Translate coordinates to be relative to the visible video area
   const videoX = canvasX - offsetX;
   const videoY = canvasY - offsetY;
 
-  // 3. Normalize coordinates based on the rendered video dimensions
-  //    Also, clamp values between 0 and 1 to prevent drawing outside the area
   const normalizedX = Math.max(0, Math.min(1, videoX / renderedWidth));
   const normalizedY = Math.max(0, Math.min(1, videoY / renderedHeight));
 
   return { x: normalizedX, y: normalizedY };
 }
-// ✅ MODIFICATION END
 
 function handleDrawStart(event) {
   if (!callStore.isWhiteboardActive || !callStore.amISharingScreen) return;
@@ -300,7 +314,6 @@ const throttledHandleDrawMove = throttle((event) => {
   if (callStore.currentDrawingTool === 'rect') {
     redrawWhiteboard();
     if (whiteboardCtx) {
-      // ✅ MODIFICATION START: Use videoDimensions for real-time preview
       const { offsetX, offsetY, renderedWidth, renderedHeight } = videoDimensions.value;
       whiteboardCtx.strokeStyle = callStore.currentDrawingColor;
       whiteboardCtx.lineWidth = 3;
@@ -309,7 +322,6 @@ const throttledHandleDrawMove = throttle((event) => {
       const x2 = offsetX + pos.x * renderedWidth;
       const y2 = offsetY + pos.y * renderedHeight;
       whiteboardCtx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-      // ✅ MODIFICATION END
     }
   } else {
     const actionData = { type: 'draw_move', ...pos };
@@ -333,7 +345,6 @@ function handleDrawEnd(event) {
   }
 }
 
-// ✅ MODIFICATION START: Overhauled redraw logic to respect object-fit dimensions
 function redrawWhiteboard() {
   if (!whiteboardCtx || !whiteboardCanvasRef.value) return;
   const canvas = whiteboardCanvasRef.value;
@@ -341,13 +352,11 @@ function redrawWhiteboard() {
 
   whiteboardCtx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Don't draw if the video dimensions aren't calculated yet
   if (renderedWidth <= 0 || renderedHeight <= 0) return;
 
   let isDrawingPen = false;
   let currentColor = '#000000';
   callStore.drawingHistory.forEach(action => {
-    // De-normalize coordinates based on the current video dimensions
     const x = offsetX + action.x * renderedWidth;
     const y = offsetY + action.y * renderedHeight;
 
@@ -388,7 +397,6 @@ function redrawWhiteboard() {
     }
   });
 }
-// ✅ MODIFICATION END
 
 watch(() => callStore.drawingHistory, redrawWhiteboard, { deep: true });
 watch(() => callStore.isWhiteboardActive, (isActive) => { if (!isActive) { redrawWhiteboard(); } });
@@ -420,7 +428,7 @@ onUnmounted(() => {
 }
 
 .call-view-container { position: fixed; inset: 0; background-color: #111; z-index: 1200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-.call-view-header { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: var(--spacing-3); background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); z-index: 1201; justify-content: space-between; }
+.call-view-header { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; padding: var(--spacing-3); background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); z-index: 1500; justify-content: space-between; }
 .minimize-button { color: white; }
 .minimize-button svg { width: 24px; height: 24px; }
 .peer-info { color: white; }

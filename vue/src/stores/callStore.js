@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { eventBus } from '@/services/eventBus';
 import { webrtcService } from '@/services/webrtcService';
 import { useUserStore } from './userStore';
@@ -26,14 +26,20 @@ export const useCallStore = defineStore('call', () => {
     const callDuration = ref(0);
     const callQuality = ref({});
     const currentQualityPreset = ref('auto');
-    // ✅ MODIFICATION START: Add state for screen share quality
     const currentScreenShareQualityPreset = ref('auto');
-    // ✅ MODIFICATION END
     const isSpeaking = ref(false);
+    // ✅ FIX START: Re-introduce pendingScreenShareStream state
     const pendingScreenShareStream = ref(null);
+    // ✅ FIX END
     const globalAudioElement = ref(null);
 
-    // [新增] 白板功能相关状态
+    const microphoneAudioTrack = ref(null);
+    const systemAudioTrack = ref(null);
+    const isMicrophoneMuted = ref(false);
+    const isSystemAudioMuted = ref(false);
+    const isRemoteStreamMuted = ref(false);
+    const remoteStreamVolume = ref(1);
+
     const isWhiteboardActive = ref(false);
     const currentDrawingTool = ref('pen');
     const currentDrawingColor = ref('#FF0000'); // 默认为红色
@@ -123,18 +129,24 @@ export const useCallStore = defineStore('call', () => {
     function _resetState(keepPeerId = false) {
         _stopVoiceActivityDetector();
         if (localStream.value) { localStream.value.getTracks().forEach(track => track.stop()); } localStream.value = null;
+        // ✅ FIX START: Add cleanup for pendingScreenShareStream
         if (pendingScreenShareStream.value) {
             pendingScreenShareStream.value.getTracks().forEach(track => track.stop());
             pendingScreenShareStream.value = null;
         }
+        // ✅ FIX END
         remoteStream.value = null; if (!keepPeerId) { currentPeerId.value = null; } isCallActive.value = false; isCallPending.value = false; isAudioMuted.value = false; isVideoEnabled.value = true; isScreenSharing.value = false;
         amISharingScreen.value = false;
         incomingCallInfo.value = null; isFullScreenCallViewVisible.value = false; _stopMusic(); _stopCallTimer(); if (callRequestTimeout) { clearTimeout(callRequestTimeout); } callRequestTimeout = null; callStartTime = null; currentQualityPreset.value = 'auto';
-        // ✅ MODIFICATION START: Reset screen share quality preset
         currentScreenShareQualityPreset.value = 'auto';
-        // ✅ MODIFICATION END
 
-        // [新增] 重置白板状态
+        microphoneAudioTrack.value = null;
+        systemAudioTrack.value = null;
+        isMicrophoneMuted.value = false;
+        isSystemAudioMuted.value = false;
+        isRemoteStreamMuted.value = false;
+        remoteStreamVolume.value = 1;
+
         isWhiteboardActive.value = false;
         drawingHistory.value = [];
 
@@ -143,7 +155,7 @@ export const useCallStore = defineStore('call', () => {
         }
     }
 
-    async function _getMediaStream(options = { video: true, audio: true, screen: false }) {
+    async function _getMediaStream(options = { video: true, audio: true }) {
         const settingsStore = useSettingsStore();
 
         const handleTrackEnded = (event) => {
@@ -155,85 +167,50 @@ export const useCallStore = defineStore('call', () => {
         };
 
         let mediaResult = null;
-        if (options.screen) {
-            try {
-                // ✅ MODIFICATION START: Apply initial screen share quality settings
-                const preset = AppSettings.media.screenSharePresets[currentScreenShareQualityPreset.value] || AppSettings.media.screenSharePresets['auto'];
-                const screenStream = await navigator.mediaDevices.getDisplayMedia({
-                    video: {
-                        cursor: 'always',
-                        ...preset.resolution,
-                        frameRate: preset.frameRate
-                    },
-                    audio: false
-                });
-                // ✅ MODIFICATION END
-                const finalStream = new MediaStream();
-                screenStream.getVideoTracks().forEach(track => finalStream.addTrack(track));
-
-                try {
-                    const micStream = await navigator.mediaDevices.getUserMedia({ audio: AppSettings.media.audioConstraints, video: false });
-                    micStream.getAudioTracks().forEach(track => finalStream.addTrack(track));
-                } catch (micError) {
-                    log(`Could not get microphone for screen share: ${micError.message}`, 'WARN');
-                    eventBus.emit('showNotification', { message: '无法获取麦克风，将继续共享但不包含您的声音。', type: 'warning' });
-                }
-
-                finalStream.getVideoTracks()[0].onended = () => hangUp();
-                mediaResult = { stream: finalStream, videoEnabled: true, audioEnabled: true };
-            } catch (error) {
-                log(`Failed to get screen stream: ${error.message}`, 'ERROR');
-                if (error.name !== 'NotAllowedError') { // Don't show error if user just cancels
-                    eventBus.emit('showNotification', { message: `无法共享屏幕: ${error.message}`, type: 'error' });
-                }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: options.video,
+                audio: options.audio ? AppSettings.media.audioConstraints : false
+            });
+            stream.getTracks().forEach(track => track.onended = handleTrackEnded);
+            mediaResult = { stream, videoEnabled: options.video, audioEnabled: options.audio };
+        } catch (error) {
+            if (error.name !== 'NotFoundError' && error.name !== 'DevicesNotFoundError') {
+                log(`Failed to get media stream: ${error.message}`, 'ERROR');
+                eventBus.emit('showNotification', { message: `无法访问摄像头或麦克风: ${error.message}`, type: 'error' });
                 return null;
             }
-        } else { // Standard camera/mic logic
+            log(`Initial media request failed (${error.name}). Trying fallbacks without prompts.`, 'WARN');
+
+            // Fallback 1: Try audio-only (when camera fails)
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: options.video,
-                    audio: options.audio ? AppSettings.media.audioConstraints : false
-                });
-                stream.getTracks().forEach(track => track.onended = handleTrackEnded);
-                mediaResult = { stream, videoEnabled: options.video, audioEnabled: options.audio };
-            } catch (error) {
-                if (error.name !== 'NotFoundError' && error.name !== 'DevicesNotFoundError') {
-                    log(`Failed to get media stream: ${error.message}`, 'ERROR');
-                    eventBus.emit('showNotification', { message: `无法访问摄像头或麦克风: ${error.message}`, type: 'error' });
-                    return null;
-                }
-                log(`Initial media request failed (${error.name}). Trying fallbacks without prompts.`, 'WARN');
+                const audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: AppSettings.media.audioConstraints });
+                audioStream.getTracks().forEach(track => track.onended = handleTrackEnded);
+                mediaResult = { stream: audioStream, videoEnabled: false, audioEnabled: true };
+                log('Camera failed, proceeding with audio-only stream for video call.', 'INFO');
+            } catch (audioError) {
+                log(`Audio-only fallback also failed: ${audioError.message}`, 'WARN');
+            }
 
-                // Fallback 1: Try audio-only (when camera fails)
+            // Fallback 2: If audio also failed, try video-only (when mic fails)
+            if (!mediaResult) {
                 try {
-                    const audioStream = await navigator.mediaDevices.getUserMedia({ video: false, audio: AppSettings.media.audioConstraints });
-                    audioStream.getTracks().forEach(track => track.onended = handleTrackEnded);
-                    mediaResult = { stream: audioStream, videoEnabled: false, audioEnabled: true };
-                    log('Camera failed, proceeding with audio-only stream for video call.', 'INFO');
-                } catch (audioError) {
-                    log(`Audio-only fallback also failed: ${audioError.message}`, 'WARN');
+                    const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                    videoStream.getTracks().forEach(track => track.onended = handleTrackEnded);
+                    mediaResult = { stream: videoStream, videoEnabled: true, audioEnabled: false };
+                    log('Microphone failed, proceeding with video-only stream for video call.', 'INFO');
+                } catch (videoError) {
+                    log(`Video-only fallback also failed: ${videoError.message}`, 'WARN');
                 }
+            }
 
-                // Fallback 2: If audio also failed, try video-only (when mic fails)
-                if (!mediaResult) {
-                    try {
-                        const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                        videoStream.getTracks().forEach(track => track.onended = handleTrackEnded);
-                        mediaResult = { stream: videoStream, videoEnabled: true, audioEnabled: false };
-                        log('Microphone failed, proceeding with video-only stream for video call.', 'INFO');
-                    } catch (videoError) {
-                        log(`Video-only fallback also failed: ${videoError.message}`, 'WARN');
-                    }
-                }
-
-                // If all fallbacks fail, show a final error message
-                if (!mediaResult) {
-                    eventBus.emit('showNotification', {
-                        message: '无法访问任何摄像头或麦克风。请检查它们是否已连接、在系统设置中启用，并且未被其他应用占用。',
-                        type: 'error', duration: 8000
-                    });
-                    return null;
-                }
+            // If all fallbacks fail, show a final error message
+            if (!mediaResult) {
+                eventBus.emit('showNotification', {
+                    message: '无法访问任何摄像头或麦克风。请检查它们是否已连接、在系统设置中启用，并且未被其他应用占用。',
+                    type: 'error', duration: 8000
+                });
+                return null;
             }
         }
 
@@ -290,6 +267,15 @@ export const useCallStore = defineStore('call', () => {
             eventBus.emit('showNotification', { message: '已在通话中', type: 'warning' });
             return;
         }
+
+        const conn = webrtcService.connections.value[peerId];
+        if (!options.isScreenShare && (!conn?.peer?.connected || conn.peer?._channel?.readyState !== 'open')) {
+            eventBus.emit('showNotification', { message: `与对方的连接尚未就绪，请稍等片刻...`, type: 'warning' });
+            webrtcService.restartIce(peerId);
+            return;
+        }
+
+
         const userStore = useUserStore();
         currentPeerId.value = peerId;
         isCaller.value = true;
@@ -298,6 +284,8 @@ export const useCallStore = defineStore('call', () => {
         amISharingScreen.value = options.isScreenShare;
         isVideoEnabled.value = !options.isScreenShare && !options.audioOnly;
         const callType = options.isScreenShare ? 'screenshare-request' : 'call-request';
+        // Try sending via data channel, if it fails, it means we must use signaling (which is handled inside sendMessage)
+        // This is the crucial part that sends the call notification
         webrtcService.sendMessage(peerId, { type: callType, from: userStore.userId, audioOnly: options.audioOnly });
         useUiStore().showModal('calling');
         _playMusic();
@@ -326,12 +314,16 @@ export const useCallStore = defineStore('call', () => {
         useUiStore().showModal('screenshotGuide');
     }
 
+    // ✅ FIX START: Revert to the old, reliable logic for initiating a screen share call
     function initiateScreenShareWithStream(stream) {
         const chatId = useChatStore().currentChatId;
         if (!chatId || !stream) return;
+        // 1. Store the captured stream temporarily
         pendingScreenShareStream.value = stream;
+        // 2. Call the main session initiator which handles sending the 'screenshare-request' signal
         _initiateMediaSession(chatId, { isScreenShare: true, audioOnly: false });
     }
+    // ✅ FIX END
 
     async function acceptCall() {
         if (!incomingCallInfo.value) return;
@@ -341,16 +333,17 @@ export const useCallStore = defineStore('call', () => {
         uiStore.hideModal();
 
         const mediaOptions = {
-            screen: false,
             video: isScreenShare ? false : !audioOnly,
             audio: true
         };
         const mediaResult = await _getMediaStream(mediaOptions);
 
-        if (!mediaResult || !mediaResult.stream) {
-            rejectCall(true);
+        if (!mediaResult || !mediaResult.stream || !mediaResult.stream.active) {
+            log('获取到的媒体流无效，无法接听电话。', 'ERROR');
+            rejectCall(true); // Internal silent rejection
             return;
         }
+
         const { stream, videoEnabled, audioEnabled } = mediaResult;
 
         currentPeerId.value = peerId;
@@ -361,6 +354,11 @@ export const useCallStore = defineStore('call', () => {
         isVideoEnabled.value = videoEnabled;
         isAudioMuted.value = !audioEnabled;
         localStream.value = stream;
+
+        microphoneAudioTrack.value = stream.getAudioTracks()[0] || null;
+        if (isScreenShare) {
+            systemAudioTrack.value = null;
+        }
 
         webrtcService.sendMessage(peerId, { type: 'call-accepted', from: useUserStore().userId });
         webrtcService.addStreamToConnection(peerId, stream);
@@ -424,6 +422,37 @@ export const useCallStore = defineStore('call', () => {
         _updateMicState();
     }
 
+    function toggleMicrophone() {
+        if (microphoneAudioTrack.value) {
+            isMicrophoneMuted.value = !isMicrophoneMuted.value;
+            microphoneAudioTrack.value.enabled = !isMicrophoneMuted.value;
+            log(`Microphone toggled. Muted: ${isMicrophoneMuted.value}`, 'INFO');
+        }
+    }
+
+    function toggleSystemAudio() {
+        if (systemAudioTrack.value) {
+            isSystemAudioMuted.value = !isSystemAudioMuted.value;
+            systemAudioTrack.value.enabled = !isSystemAudioMuted.value;
+            log(`System audio toggled. Muted: ${isSystemAudioMuted.value}`, 'INFO');
+        }
+    }
+
+    function toggleRemoteMute() {
+        isRemoteStreamMuted.value = !isRemoteStreamMuted.value;
+        log(`Remote stream audio toggled. Muted: ${isRemoteStreamMuted.value}`, 'INFO');
+    }
+
+    function setRemoteVolume(volume) {
+        const newVolume = Math.max(0, Math.min(1, parseFloat(volume)));
+        if (!isNaN(newVolume)) {
+            remoteStreamVolume.value = newVolume;
+            if (newVolume > 0 && isRemoteStreamMuted.value) {
+                isRemoteStreamMuted.value = false;
+            }
+        }
+    }
+
     function toggleVideo() { if (!localStream.value || isScreenSharing.value) return; localStream.value.getVideoTracks().forEach(track => { track.enabled = !track.enabled; isVideoEnabled.value = track.enabled; }); }
     function minimizeCallView() { isFullScreenCallViewVisible.value = false; }
     function maximizeCallView() { isFullScreenCallViewVisible.value = true; }
@@ -436,7 +465,6 @@ export const useCallStore = defineStore('call', () => {
         log(`Manual quality preset applied: ${presetKey}`, 'INFO');
     }
 
-    // ✅ MODIFICATION START: Add action for setting screen share quality
     function setScreenShareQualityPreset(presetKey) {
         if (!currentPeerId.value || !isScreenSharing.value || !amISharingScreen.value) return;
         if (!AppSettings.media.screenSharePresets[presetKey]) return;
@@ -449,13 +477,22 @@ export const useCallStore = defineStore('call', () => {
         });
         log(`Screen share quality preset applied: ${presetKey}`, 'INFO');
     }
-    // ✅ MODIFICATION END
 
     function setGlobalAudioElement(element) {
         globalAudioElement.value = element;
+        if (element) {
+            element.muted = isRemoteStreamMuted.value;
+            element.volume = remoteStreamVolume.value;
+        }
     }
 
-    // [新增] 白板相关 actions
+    watch([isRemoteStreamMuted, remoteStreamVolume], ([muted, volume]) => {
+        if (globalAudioElement.value) {
+            globalAudioElement.value.muted = muted;
+            globalAudioElement.value.volume = volume;
+        }
+    });
+
     function toggleWhiteboard(isActive) {
         if (typeof isActive !== 'boolean') {
             isWhiteboardActive.value = !isWhiteboardActive.value;
@@ -463,7 +500,6 @@ export const useCallStore = defineStore('call', () => {
             isWhiteboardActive.value = isActive;
         }
 
-        // 通知对端白板状态变化
         if (isCallActive.value && currentPeerId.value) {
             webrtcService.sendMessage(currentPeerId.value, {
                 type: 'whiteboard_action',
@@ -474,7 +510,6 @@ export const useCallStore = defineStore('call', () => {
             });
         }
 
-        // 如果关闭白板，清空历史记录
         if (!isWhiteboardActive.value) {
             drawingHistory.value = [];
         }
@@ -499,7 +534,6 @@ export const useCallStore = defineStore('call', () => {
 
     function undoLastAction() {
         if (!isWhiteboardActive.value) return;
-        // 移除最后一次完整的绘图操作（例如，一次完整的画笔 stroke）
         let lastStartIndex = -1;
         for (let i = drawingHistory.value.length - 1; i >= 0; i--) {
             if (drawingHistory.value[i].type === 'draw_start' || drawingHistory.value[i].type === 'draw_rect') {
@@ -509,7 +543,6 @@ export const useCallStore = defineStore('call', () => {
         }
         if (lastStartIndex > -1) {
             drawingHistory.value.splice(lastStartIndex);
-            // 发送指令让对端同步
             webrtcService.sendMessage(currentPeerId.value, {
                 type: 'whiteboard_action',
                 payload: { type: 'undo' }
@@ -526,18 +559,16 @@ export const useCallStore = defineStore('call', () => {
         });
     }
 
-    // [修改] 监听远端白板指令
     eventBus.on('webrtc:whiteboard-action', ({ peerId, action }) => {
         if (isCallActive.value && currentPeerId.value === peerId) {
             switch (action.type) {
                 case 'state_change':
                     isWhiteboardActive.value = action.isActive;
                     if (!action.isActive) {
-                        drawingHistory.value = []; // 清空画布
+                        drawingHistory.value = [];
                     }
                     break;
                 case 'undo':
-                    // 与本地逻辑相同，移除最后一次完整的绘图
                     let lastStartIndex = -1;
                     for (let i = drawingHistory.value.length - 1; i >= 0; i--) {
                         if (drawingHistory.value[i].type === 'draw_start' || drawingHistory.value[i].type === 'draw_rect') {
@@ -553,7 +584,6 @@ export const useCallStore = defineStore('call', () => {
                     drawingHistory.value = [];
                     break;
                 default:
-                    // 接收并添加绘图指令
                     drawingHistory.value.push(action);
                     break;
             }
@@ -604,18 +634,26 @@ export const useCallStore = defineStore('call', () => {
             case 'call-accepted':
                 if (isCaller.value && isCallPending.value && currentPeerId.value === peerId) {
                     clearTimeout(callRequestTimeout); _stopMusic(); isCallPending.value = false; isCallActive.value = true; isFullScreenCallViewVisible.value = true; useUiStore().hideModal();
+                    // ✅ FIX START: Handle adding the pending screen share stream on accept
                     if (isScreenSharing.value && pendingScreenShareStream.value) {
                         localStream.value = pendingScreenShareStream.value;
                         pendingScreenShareStream.value = null; // Consume the stream
+
+                        // Extract and manage separate audio tracks for screen sharing
+                        microphoneAudioTrack.value = localStream.value.getAudioTracks().find(t => t.label.toLowerCase().includes('microphone')) || localStream.value.getAudioTracks()[0] || null;
+                        systemAudioTrack.value = localStream.value.getAudioTracks().find(t => t.label.toLowerCase().includes('system')) || null;
+
                         webrtcService.addStreamToConnection(peerId, localStream.value);
                         _startCallTimer();
                         _startVoiceActivityDetector();
-                        _updateMicState();
                         addCallLogMessage(peerId, { type: 'start', callerId: userStore.userId, callType: callTypeString });
-                    } else {
-                        _getMediaStream({ screen: isScreenSharing.value, video: isVideoEnabled.value, audio: true }).then(mediaResult => {
-                            if (mediaResult && mediaResult.stream) {
+                    }
+                    // ✅ FIX END
+                    else { // This is for regular video/audio calls
+                        _getMediaStream({ video: isVideoEnabled.value, audio: true }).then(mediaResult => {
+                            if (mediaResult && mediaResult.stream && mediaResult.stream.active) {
                                 localStream.value = mediaResult.stream;
+                                microphoneAudioTrack.value = localStream.value.getAudioTracks()[0] || null;
                                 webrtcService.addStreamToConnection(peerId, mediaResult.stream);
                                 _startCallTimer();
                                 _startVoiceActivityDetector();
@@ -663,20 +701,25 @@ export const useCallStore = defineStore('call', () => {
         localStream, remoteStream, currentPeerId, isCallActive, isCallPending, isAudioMuted,
         isVideoEnabled, isScreenSharing, incomingCallInfo, isFullScreenCallViewVisible,
         callDurationFormatted, peerContact, currentCallQuality, currentQualityPreset,
-        // ✅ MODIFICATION START: Expose screen share state
         currentScreenShareQualityPreset,
-        // ✅ MODIFICATION END
         amISharingScreen,
         isSpeaking,
-        // [新增] 导出白板相关状态和 actions
+        microphoneAudioTrack,
+        systemAudioTrack,
+        isMicrophoneMuted,
+        isSystemAudioMuted,
+        isRemoteStreamMuted,
+        remoteStreamVolume,
+        toggleMicrophone,
+        toggleSystemAudio,
+        toggleRemoteMute,
+        setRemoteVolume,
         isWhiteboardActive, currentDrawingTool, currentDrawingColor, drawingHistory,
         toggleWhiteboard, setDrawingTool, setDrawingColor, addDrawingAction, undoLastAction, clearWhiteboard,
 
         startVideoCall, startAudioCall, startScreenShare, acceptCall, rejectCall, hangUp,
         toggleAudio, toggleVideo, minimizeCallView, maximizeCallView, setCallQualityPreset,
-        // ✅ MODIFICATION START: Expose screen share action
         setScreenShareQualityPreset,
-        // ✅ MODIFICATION END
         initiateScreenShareWithStream,
         setGlobalAudioElement,
     };

@@ -27,16 +27,14 @@ export default {
         networkCheck: 5000,
         signalingResponse: 5000,
         callRequest: 30000,
-        iceChecking: 8000, // 新增：ICE 'checking' 状态超时
+        iceChecking: 8000, // ✅ MODIFICATION: 新增 ICE 'checking' 状态超时
     },
     network: {
         websocketHeartbeatInterval: 25000,
-        dataChannelHighThreshold: 2 * 1024 * 1024,
-        dataChannelBufferCheckInterval: 200,
-        // ✅ MODIFICATION START: Added configurable refresh interval
+        dataChannelHighThreshold: 2 * 1024 * 1024, // ✅ MODIFICATION: DataChannel 缓冲区高水位阈值 (2MB)
+        dataChannelBufferCheckInterval: 200,      // ✅ MODIFICATION: (用于轮询的备用选项，当前实现未使用)
         // 自动刷新在线用户列表的时间间隔 (单位: 毫秒)
         onlineUserRefreshInterval: 120000, // 120000ms = 2 minutes
-        // ✅ MODIFICATION END
     },
     media: {
         music: 'music/call.mp3', // Note: In Vite, public assets are served from root
@@ -104,14 +102,14 @@ export default {
     },
     server: {
         // --- 本地开发环境示例 (已更新) ---
-        signalingServerUrl: 'ws://localhost:8080/signaling',
-        allOnlineUsersApiEndpoint: 'http://localhost:8080/api/v1/monitor/all-online-users',
-        mapLocationsApiEndpoint: 'http://localhost:8080/api/v1/locations',
-        apiEndpoint: "http://localhost:8080/api/v1/chat/completions",
-        // signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
-        // allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/v1/monitor/all-online-users',
-        // mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/v1/locations',
-        // apiEndpoint: "https://ppmc.club/webchat/api/v1/chat/completions",
+        // signalingServerUrl: 'ws://localhost:8080/signaling',
+        // allOnlineUsersApiEndpoint: 'http://localhost:8080/api/v1/monitor/all-online-users',
+        // mapLocationsApiEndpoint: 'http://localhost:8080/api/v1/locations',
+        // apiEndpoint: "http://localhost:8080/api/v1/chat/completions",
+        signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
+        allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/v1/monitor/all-online-users',
+        mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/v1/locations',
+        apiEndpoint: "https://ppmc.club/webchat/api/v1/chat/completions",
         model: "THUDM/GLM-4-32B-0414",
         api_key: "Bearer sk-xxxx",
         max_tokens: 2048,

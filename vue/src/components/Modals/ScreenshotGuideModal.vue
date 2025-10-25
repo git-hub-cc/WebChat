@@ -1,4 +1,3 @@
-
 <template>
   <!-- --- [动画] START: ModalWrapper 已被移至 App.vue，此处不再需要 --- -->
   <ModalWrapper :show="true" title="准备共享屏幕" @close="cancel">
@@ -6,7 +5,9 @@
       <div class="guide-icon">🖥️</div>
       <h3>即将开始屏幕共享</h3>
       <p class="guide-text">为了完成共享，您的浏览器会请求您授权并选择要分享的屏幕内容。</p>
-      <p class="guide-tip">为了获得最佳效果，请在弹出的窗口中选择 **“整个屏幕”** 选项。</p>
+      <!-- ✅ MODIFICATION START: Updated hint text -->
+      <p class="guide-tip">为了获得最佳效果，请在弹出的窗口中选择 **“整个屏幕”** 选项，并勾选 **“分享系统音频”**。</p>
+      <!-- ✅ MODIFICATION END -->
     </div>
     <template #footer>
       <button class="btn-secondary" @click="cancel">取消</button>

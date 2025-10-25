@@ -14,6 +14,8 @@ const isWebSocketConnected = ref(false);
 let websocket = null;
 let reconnectAttempts = 0;
 let heartbeatInterval = null;
+// ✅ FIX: Add DataChannel heartbeat timer
+let dataChannelHeartbeatInterval = null;
 let autoRefreshInterval = null;
 const pendingReceivedChunks = {};
 const chunkMetaBuffer = {};
@@ -33,6 +35,39 @@ function _sendWsMessage(messageObject) {
     log('WebSocket 未连接。消息未发送。', 'WARN');
     return false;
 }
+
+// ✅ FIX: Add DataChannel heartbeat functions
+function _startDataChannelHeartbeat() {
+    if (dataChannelHeartbeatInterval) clearInterval(dataChannelHeartbeatInterval);
+    dataChannelHeartbeatInterval = setInterval(() => {
+        Object.keys(connections.value).forEach(peerId => {
+            const conn = connections.value[peerId];
+            if (conn?.peer?.connected && conn.peer?._channel?.readyState === 'open') {
+                try {
+                    // Send ping and record time
+                    conn.lastPingSent = Date.now();
+                    conn.peer.send(JSON.stringify({ type: 'datachannel-ping' }));
+
+                    // Check last pong time
+                    if (conn.lastPongReceived && (Date.now() - conn.lastPongReceived > 35000)) {
+                        log(`DataChannel to ${peerId} seems unresponsive. Triggering ICE restart.`, 'WARN');
+                        webrtcService.restartIce(peerId);
+                    }
+                } catch(e) {
+                    log(`Failed to send DataChannel ping to ${peerId}: ${e.message}`, 'WARN');
+                }
+            }
+        });
+    }, 15000); // Send every 15 seconds
+}
+
+function _stopDataChannelHeartbeat() {
+    if (dataChannelHeartbeatInterval) {
+        clearInterval(dataChannelHeartbeatInterval);
+        dataChannelHeartbeatInterval = null;
+    }
+}
+
 
 function _startHeartbeat() {
     if (heartbeatInterval) clearInterval(heartbeatInterval);
@@ -137,6 +172,8 @@ function _cleanupConnection(peerId) {
     const conn = connections.value[peerId];
     if (conn) {
         if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
+        // ✅ FIX: Add cleanup for reconnect timeout
+        if (conn.reconnectTimeout) clearTimeout(conn.reconnectTimeout);
         conn.peer?.destroy();
         delete connections.value[peerId];
         delete pendingReceivedChunks[peerId];
@@ -183,6 +220,17 @@ function _handlePeerData(rawData, peerId) {
     } else {
         try {
             const message = JSON.parse(new TextDecoder().decode(rawData));
+
+            // ✅ FIX: Add DataChannel heartbeat handling
+            if (message.type === 'datachannel-ping') {
+                webrtcService.sendMessage(peerId, { type: 'datachannel-pong' }, true);
+                return;
+            }
+            if (message.type === 'datachannel-pong') {
+                const conn = connections.value[peerId];
+                if (conn) conn.lastPongReceived = Date.now();
+                return;
+            }
 
             if (message.type === 'whiteboard_action') {
                 eventBus.emit('webrtc:whiteboard-action', { peerId, action: message.payload });
@@ -321,6 +369,8 @@ function _setupPeerListeners(peer, peerId) {
         if (conn) {
             if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
             conn.isConnected = true;
+            // ✅ FIX: Initialize heartbeat timestamp
+            conn.lastPongReceived = Date.now();
         }
         _startStatsPolling(peer, peerId);
 
@@ -328,15 +378,18 @@ function _setupPeerListeners(peer, peerId) {
 
         const userStore = useUserStore();
         if (!userStore.contacts[peerId]) await userStore.addContact({ id: peerId });
-        userStore.updateContactConnectionDetails(peerId, { isConnected: true });
+        eventBus.emit('webrtc:connected', peerId);
         if (!conn?.isSilent) {
             eventBus.emit('showNotification', { message: `已连接到 ${userStore.contacts[peerId]?.name || peerId}`, type: 'success' });
         }
-        eventBus.emit('webrtc:connected', peerId);
     });
     peer.on('data', rawData => _handlePeerData(rawData, peerId));
     peer.on('stream', remoteStream => {
         if (remoteStream instanceof MediaStream) {
+            if (!remoteStream.active) {
+                log(`WebRTC: 从 ${peerId} 收到一个无效的(inactive)流。`, 'WARN');
+                return;
+            }
             log(`WebRTC: 从 ${peerId} 收到一个有效的远程流。`, 'INFO');
             eventBus.emit('webrtc:stream', { peerId, stream: remoteStream });
         } else {
@@ -350,14 +403,30 @@ function _setupPeerListeners(peer, peerId) {
         if (!conn) return;
 
         if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
+        // ✅ FIX: Add cleanup for reconnect timeout
+        if (conn.reconnectTimeout) { clearTimeout(conn.reconnectTimeout); conn.reconnectTimeout = null; }
+
 
         if (iceConnectionState === 'checking') {
             conn.iceCheckingTimeout = setTimeout(() => {
                 log(`WebRTC: ${peerId} ICE checking timed out. Cleaning up.`, 'WARN');
                 _cleanupConnection(peerId);
             }, AppSettings.timeouts.iceChecking);
-        } else if (iceConnectionState === 'failed' || iceConnectionState === 'disconnected') {
-            log(`WebRTC: Connection to ${peerId} is unstable or failed. Attempting ICE restart.`, 'WARN');
+            // ✅ FIX: Optimize 'disconnected' state handling for auto-recovery
+        } else if (iceConnectionState === 'disconnected') {
+            log(`WebRTC: Connection to ${peerId} is disconnected. Waiting for auto-reconnect...`, 'WARN');
+            conn.reconnectTimeout = setTimeout(() => {
+                log(`WebRTC: Auto-reconnect for ${peerId} failed. Triggering ICE restart.`, 'ERROR');
+                webrtcService.restartIce(peerId);
+            }, 4000); // Wait 4 seconds for the browser to attempt recovery
+        } else if (iceConnectionState === 'connected' || iceConnectionState === 'completed') {
+            if (conn.reconnectTimeout) {
+                clearTimeout(conn.reconnectTimeout);
+                conn.reconnectTimeout = null;
+                log(`WebRTC: Connection to ${peerId} re-established automatically.`, 'INFO');
+            }
+        } else if (iceConnectionState === 'failed') {
+            log(`WebRTC: Connection to ${peerId} failed. Attempting ICE restart.`, 'WARN');
             webrtcService.restartIce(peerId);
         }
     });
@@ -384,6 +453,8 @@ export const webrtcService = {
         });
 
         this.startAutoRefresh();
+        // ✅ FIX: Start the DataChannel heartbeat
+        _startDataChannelHeartbeat();
     },
     sendViaSignaling(targetUserId, payload) {
         if (!isWebSocketConnected.value) {
@@ -401,9 +472,7 @@ export const webrtcService = {
     },
     startAutoRefresh() {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-        // ✅ MODIFICATION START: Use configurable interval from AppSettings
         autoRefreshInterval = setInterval(proactivelyConnectToOnlineContacts, AppSettings.network.onlineUserRefreshInterval);
-        // ✅ MODIFICATION END
         log('WebRTC 服务: 已启动周期性在线用户刷新和自动连接任务。', 'INFO');
     },
     stopAutoRefresh() {
@@ -438,6 +507,11 @@ export const webrtcService = {
     },
     addStreamToConnection(peerId, stream) {
         const conn = connections.value[peerId];
+        if (!stream || !stream.active || stream.getTracks().every(t => t.readyState === 'ended')) {
+            log(`Attempted to add an invalid or ended stream to connection ${peerId}. Aborting.`, 'ERROR');
+            eventBus.emit('showNotification', { message: '媒体流无效，无法添加至通话。', type: 'error' });
+            return;
+        }
         if (conn?.peer) {
             log(`WebRTC: 正在向 ${peerId} 的现有对等连接添加流。`, 'INFO');
             if (conn.peer.streams && conn.peer.streams.length > 0) {
@@ -498,6 +572,7 @@ export const webrtcService = {
             }
         }
     },
+    // ✅ FIX: Implement backpressure in sendFile
     async sendFile(peerId, fileObject) {
         const conn = connections.value[peerId];
         if (!conn?.peer?.connected) return false;
@@ -547,6 +622,12 @@ export const webrtcService = {
         if (conn && conn.peer) {
             log(`WebRTC: Manually restarting ICE for peer ${peerId}`, 'INFO');
             conn.peer.destroy();
+            // 在销毁后，我们需要从connections中移除旧实例，以便createOffer可以创建新的
+            delete connections.value[peerId];
+            this.createOffer(peerId);
+        } else if (!conn) {
+            // 如果连接记录完全不存在，直接创建
+            log(`WebRTC: No existing connection for ${peerId}. Creating a new one.`, 'INFO');
             this.createOffer(peerId);
         }
     },
@@ -645,11 +726,8 @@ export const webrtcService = {
         ]);
 
         results.stun = stunCandidates.some(c => c.type === 'srflx') ? 'OK' : 'Failed';
-
         results.turnUdp = turnUdpCandidates.some(c => c.type === 'relay') ? 'OK' : 'Failed';
-
         results.turnTcp = turnTcpCandidates.some(c => c.type === 'relay') ? 'OK' : 'Failed';
-
         results.turnTls = turnTlsCandidates.some(c => c.type === 'relay') ? 'OK' : 'Failed';
 
         log(`网络诊断结果: STUN=${results.stun}, TURN/UDP=${results.turnUdp}, TURN/TCP=${results.turnTcp}, TURN/TLS=${results.turnTls}`, 'INFO');

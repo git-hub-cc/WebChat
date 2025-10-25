@@ -123,7 +123,8 @@ export const mediaService = {
         try {
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: { cursor: 'always', contentHint },
-                audio: false
+                // ✅ MODIFICATION: Request audio to capture system sound.
+                audio: true
             });
             log('Successfully obtained MediaStream from getDisplayMedia.', 'DEBUG');
 

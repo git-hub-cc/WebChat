@@ -19,39 +19,35 @@ export const useUserStore = defineStore('user', () => {
     const contacts = ref({});
     const isAiServiceHealthy = ref(false);
     const aiServiceStatusMessage = ref("状态检查中...");
-
-    // [修改] `allOnlineUsers` 成为全网在线用户的唯一真实来源
-    // 格式: [{ userId: string, originServer: string, isLocal: boolean }, ...]
     const allOnlineUsers = ref([]);
-
     const typingContacts = ref({});
-
-    // [新增] 存储当前服务器的URL，用于判断用户是否为本地用户
     const selfServerUrl = ref('');
 
-
     // --- GETTERS ---
-    // ✅ MODIFICATION START: Updated getter to incorporate connectionType
     const getContactCombinedStatus = computed(() => (contactId) => {
         const contact = contacts.value[contactId];
         const connDetails = contact?.connectionDetails || {};
-        const { isConnected, connectionType } = connDetails;
+        const { connectionType } = connDetails;
+
+        // [修复] 引入 webrtcService 来获取最准确的连接状态
+        const conn = webrtcService.connections.value[contactId];
+        const isDataChannelOpen = conn?.peer?.connected && conn.peer?._channel?.readyState === 'open';
 
         const isGloballyOnline = allOnlineUsers.value.some(u => u.userId === contactId);
 
         // Handle special cases first
         if (typingContacts.value[contactId]) {
-            return { ...connDetails, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '正在输入...', statusClass: 'online' };
+            return { ...connDetails, isConnected: isDataChannelOpen, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '正在输入...', statusClass: 'online' };
         }
         if (contact?.isAI) {
-            return { ...connDetails, isOnlineDisplay: isAiServiceHealthy.value, isGloballyOnline: isAiServiceHealthy.value, isAi: true, statusText: aiServiceStatusMessage.value, statusClass: isAiServiceHealthy.value ? 'online' : 'offline' };
+            return { ...connDetails, isConnected: false, isOnlineDisplay: isAiServiceHealthy.value, isGloballyOnline: isAiServiceHealthy.value, isAi: true, statusText: aiServiceStatusMessage.value, statusClass: isAiServiceHealthy.value ? 'online' : 'offline' };
         }
         if (contact?.isSpecial) {
-            return { ...connDetails, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '特殊联系人', statusClass: 'online' };
+            return { ...connDetails, isConnected: false, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '特殊联系人', statusClass: 'online' };
         }
 
-        // Core logic for regular contacts
-        if (isConnected) {
+        // [修复] 核心逻辑修改：使用 isDataChannelOpen 作为最高优先级的“已连接”判断
+        if (isDataChannelOpen) {
             let statusText = '在线';
             if (connectionType === 'p2p' || connectionType === 'p2p-lan') {
                 statusText += ' (直连)';
@@ -60,16 +56,20 @@ export const useUserStore = defineStore('user', () => {
             } else {
                 statusText += ' (已连接)';
             }
-            return { ...connDetails, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText, statusClass: 'online' };
+            return { ...connDetails, isConnected: true, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText, statusClass: 'online' };
+        }
+
+        // Fallback states
+        if (conn?.peer) { // 连接正在建立中
+            return { ...connDetails, isConnected: false, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '正在连接...', statusClass: 'warning' };
         }
 
         if (isGloballyOnline) {
-            return { ...connDetails, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '在线 (未连接)', statusClass: 'warning' };
+            return { ...connDetails, isConnected: false, isOnlineDisplay: true, isGloballyOnline: true, isAi: false, statusText: '在线 (未连接)', statusClass: 'warning' };
         }
 
-        return { ...connDetails, isOnlineDisplay: false, isGloballyOnline: false, isAi: false, statusText: '离线', statusClass: 'offline' };
+        return { ...connDetails, isConnected: false, isOnlineDisplay: false, isGloballyOnline: false, isAi: false, statusText: '离线', statusClass: 'offline' };
     });
-    // ✅ MODIFICATION END
 
 
     // --- ACTIONS ---
@@ -102,9 +102,7 @@ export const useUserStore = defineStore('user', () => {
                 c.aiConfig = c.aiConfig || {};
                 c.aiConfig.tts = { ...DEFAULT_TTS_CONFIG, ...(c.aiConfig.tts || {}) };
             }
-            // ✅ MODIFICATION START: Initialize connectionDetails
             contactsMap[c.id] = { type: 'contact', ...c, connectionDetails: { isConnected: false, connectionType: null } };
-            // ✅ MODIFICATION END
         });
         contacts.value = contactsMap;
         await ensureSpecialContacts();
@@ -144,7 +142,6 @@ export const useUserStore = defineStore('user', () => {
             const existingContact = contacts.value[def.id];
             const baseData = { ...def, isSpecial: true, type: 'contact' };
 
-            // 如果定义中包含 chaptersFilePath，则异步获取章节数据
             if (def.chaptersFilePath) {
                 try {
                     const response = await fetch(def.chaptersFilePath);
@@ -155,7 +152,7 @@ export const useUserStore = defineStore('user', () => {
                     log(`成功加载角色 "${def.name}" 的章节。`, 'INFO');
                 } catch (error) {
                     log(`加载角色 "${def.name}" 的章节失败 (${def.chaptersFilePath}): ${error.message}`, 'ERROR');
-                    baseData.chapters = []; // 出错时赋予空数组，避免UI出错
+                    baseData.chapters = [];
                 }
             }
 
@@ -165,9 +162,7 @@ export const useUserStore = defineStore('user', () => {
                 lastTime: existingContact?.lastTime || new Date(0).toISOString(),
                 unread: existingContact?.unread || 0,
                 selectedChapterId: existingContact?.selectedChapterId ?? null,
-                // ✅ MODIFICATION START: Persist connectionDetails
                 connectionDetails: existingContact?.connectionDetails || { isConnected: false, connectionType: null },
-                // ✅ MODIFICATION END
                 aiConfig: {
                     ...(def.aiConfig || {}),
                     ...(existingContact?.aiConfig || {}),
@@ -185,11 +180,6 @@ export const useUserStore = defineStore('user', () => {
         if (idsToRemoveFromDb.length > 0) {
             for (const idToRemove of idsToRemoveFromDb) {
                 dbWritePromises.push(dbService.removeItem('contacts', idToRemove));
-                // --- 🚀 BUG FIX START: Do not delete chat history on theme change ---
-                // By removing the line below, chat history for special contacts will be preserved
-                // even when they are removed from the contact list due to a theme switch.
-                // dbWritePromises.push(chatStore.deleteChatHistory(idToRemove));
-                // --- 🚀 BUG FIX END ---
             }
         }
         contacts.value = newContactsState;
@@ -210,7 +200,6 @@ export const useUserStore = defineStore('user', () => {
         const finalName = contactData.name?.trim() || existingContact?.name || `用户 ${contactData.id.substring(0, 4)}`;
 
         const postAction = () => {
-            // 添加或更新联系人后，立即触发一次主动连接检查
             webrtcService.proactivelyConnectToOnlineContacts();
         };
 
@@ -226,9 +215,7 @@ export const useUserStore = defineStore('user', () => {
             const newContact = {
                 id: contactData.id, name: finalName, lastMessage: '', lastTime: new Date().toISOString(),
                 unread: 0, type: 'contact', avatarText: finalName.charAt(0).toUpperCase(),
-                // ✅ MODIFICATION START: Initialize connectionDetails for new contacts
                 connectionDetails: { isConnected: false, connectionType: null }
-                // ✅ MODIFICATION END
             };
             contacts.value[contactData.id] = newContact;
             await dbService.setItem('contacts', newContact);
@@ -252,11 +239,9 @@ export const useUserStore = defineStore('user', () => {
                 .filter(u => u.userId !== userId.value)
                 .map(u => ({ ...u, isLocal: u.originServer === selfServerUrl.value }));
 
-            // 只有在列表发生变化时才更新，以防止不必要的重渲染
             if (JSON.stringify(allOnlineUsers.value.map(u => u.userId).sort()) !== JSON.stringify(newAllOnlineUsers.map(u => u.userId).sort())) {
                 allOnlineUsers.value = newAllOnlineUsers;
                 log(`全网用户列表已更新: ${allOnlineUsers.value.length} users online.`, 'INFO');
-                // 触发一次主动连接检查
                 webrtcService.proactivelyConnectToOnlineContacts();
             }
 
@@ -346,7 +331,6 @@ export const useUserStore = defineStore('user', () => {
         }
     }
 
-    // ✅ MODIFICATION START: New centralized action for updating connection details
     function updateContactConnectionDetails(contactId, { isConnected, connectionType }) {
         const contact = contacts.value[contactId];
         if (contact) {
@@ -362,7 +346,6 @@ export const useUserStore = defineStore('user', () => {
             log(`Connection details updated for ${contactId}: isConnected=${contact.connectionDetails.isConnected}, type=${contact.connectionDetails.connectionType}`, 'DEBUG');
         }
     }
-    // ✅ MODIFICATION END
 
 
     return {
@@ -372,7 +355,7 @@ export const useUserStore = defineStore('user', () => {
         init,
         fetchAllOnlineUsers,
         addContact, removeContact, updateAiServiceStatus,
-        updateContactConnectionDetails, // Expose the new action
+        updateContactConnectionDetails,
         clearUnread,
         incrementUnread, updateContactLastMessage, removeAllContacts, setSelectedChapterForAI, saveTtsSettings,
         ensureSpecialContacts
