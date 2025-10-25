@@ -23,6 +23,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList; // [NEW] 导入ArrayList
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,12 +39,15 @@ import java.util.concurrent.TimeUnit;
  * - 连接成功后，发送包含自身GUID的 `REGISTER_PEER` 消息进行握手。
  * - 将所有收到的上游消息委托给`SignalingWebSocketHandler`统一处理。
  * - 缓存上游伙伴的GUID，并为`SignalingWebSocketHandler`提供查询能力。
- * - 执行对未知用户的“洪泛路由”转发。
+ * - 执行对未知用户的“洪泛路由”转发，并实现路由循环保护。
  */
 @Service
 public class FederationRoutingService {
 
     private static final Logger logger = LoggerFactory.getLogger(FederationRoutingService.class);
+    // [NEW] 定义最大跳数，防止无限转发
+    private static final int MAX_HOPS = 10;
+
     private final FederationProperties properties;
     private final WebSocketClient webSocketClient;
     private final FederationService federationService;
@@ -134,22 +138,50 @@ public class FederationRoutingService {
         }
     }
 
+    /**
+     * [MODIFIED] 向上游伙伴洪泛转发消息，并实现路由循环保护。
+     */
     public boolean forwardToOutboundPeers(SignalingMessage originalMessage, String fromUserId) {
         if (outboundPeers.isEmpty()) return false;
 
-        // [MODIFIED] When forwarding, ensure all enhanced signaling fields are passed through.
+        // --- [NEW] 路由循环保护逻辑 ---
+        // 1. 处理跳数 (Hop Count / TTL)
+        int currentHopCount = (originalMessage.hopCount() != null) ? originalMessage.hopCount() : 0;
+        int nextHopCount = currentHopCount + 1;
+        if (nextHopCount > MAX_HOPS) {
+            logger.warn("消息转发跳数 ({}) 已达上限 ({})，为防止无限循环已丢弃。消息: {}", nextHopCount, MAX_HOPS, originalMessage);
+            return false;
+        }
+
+        // 2. 处理访问过的服务器列表 (Visited Servers Path)
+        List<String> visited = (originalMessage.visitedServers() != null) ? new ArrayList<>(originalMessage.visitedServers()) : new ArrayList<>();
+        visited.add(federationService.getSelfGuid());
+        // --- 路由循环保护逻辑结束 ---
+
         var forwardMessage = new SignalingMessage(
                 originalMessage.type(), null, originalMessage.targetUserId(), fromUserId,
                 originalMessage.payload(), null, federationService.getSelfGuid(),
-                originalMessage.subType(), originalMessage.sequenceId(), originalMessage.ackId()
+                originalMessage.subType(), originalMessage.sequenceId(), originalMessage.ackId(),
+                visited, // [NEW] 传递更新后的路径列表
+                nextHopCount // [NEW] 传递更新后的跳数
         );
 
         try {
             String payload = objectMapper.writeValueAsString(forwardMessage);
+            boolean messageForwarded = false;
             for (WebSocketSession session : outboundPeers.values()) {
+                // --- [NEW] 检查是否形成循环 ---
+                String targetPeerGuid = getGuidForOutboundSession(session);
+                if (targetPeerGuid != null && visited.contains(targetPeerGuid)) {
+                    logger.debug("跳过向伙伴 {} (GUID: {}) 的转发以防止路由循环。", session.getRemoteAddress(), targetPeerGuid);
+                    continue; // 跳过这个伙伴，因为它已经在路径上了
+                }
+                // --- 检查结束 ---
+
                 sendOverWebSocket(session, payload);
+                messageForwarded = true;
             }
-            return true;
+            return messageForwarded;
         } catch (JsonProcessingException e) {
             logger.error("序列化洪泛路由消息失败。", e);
             return false;
@@ -189,10 +221,10 @@ public class FederationRoutingService {
             logger.info("到伙伴 {} 的出站连接已建立: 会话ID {}", peerUrl, session.getId());
             outboundPeers.put(peerUrl, session);
 
-            // [MODIFIED] Create a registration message with subtype
             var registerMsg = new SignalingMessage(
                     MessageType.REGISTER_PEER, null, null, null, null, "Peer Registration",
-                    federationService.getSelfGuid(), "initial", System.currentTimeMillis(), null);
+                    federationService.getSelfGuid(), "initial", System.currentTimeMillis(), null,
+                    null, null); // [MODIFIED] 握手消息不包含路径信息
 
             try {
                 sendOverWebSocket(session, objectMapper.writeValueAsString(registerMsg));

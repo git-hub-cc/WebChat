@@ -32,7 +32,11 @@ export default {
     network: {
         websocketHeartbeatInterval: 25000,
         dataChannelHighThreshold: 2 * 1024 * 1024,
-        dataChannelBufferCheckInterval: 200
+        dataChannelBufferCheckInterval: 200,
+        // ✅ MODIFICATION START: Added configurable refresh interval
+        // 自动刷新在线用户列表的时间间隔 (单位: 毫秒)
+        onlineUserRefreshInterval: 120000, // 120000ms = 2 minutes
+        // ✅ MODIFICATION END
     },
     media: {
         music: 'music/call.mp3', // Note: In Vite, public assets are served from root
@@ -51,7 +55,6 @@ export default {
             '480p': { maxBitrate: 700 * 1000, resolution: { height: 480 } },
             '720p': { maxBitrate: 1500 * 1000, resolution: { height: 720 } },
         },
-        // ✅ MODIFICATION START: Add screenSharePresets
         screenSharePresets: {
             'auto': {
                 label: '自动',
@@ -69,7 +72,6 @@ export default {
                 frameRate: { ideal: 30, max: 30 }
             }
         },
-        // ✅ MODIFICATION END
         abr: { // Adaptive Bitrate Rules
             poorNetworkThreshold: { packetLoss: 0.05, rtt: 350 }, // Conditions to downgrade quality
             goodNetworkThreshold: { packetLoss: 0.02, rtt: 150 }, // Conditions to upgrade quality
@@ -102,20 +104,14 @@ export default {
     },
     server: {
         // --- 本地开发环境示例 (已更新) ---
-        // signalingServerUrl: 'ws://localhost:8080/signaling',
-        // allOnlineUsersApiEndpoint: 'http://localhost:8080/api/v1/monitor/all-online-users',
-        // mapLocationsApiEndpoint: 'http://localhost:8080/api/v1/locations',
-        // apiEndpoint: "http://localhost:8080/api/v1/chat/completions",
-
-        // --- 生产环境配置 (已更新) ---
-        signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
-        // [修改] 路径已更新为 /api/v1/monitor/all-online-users
-        allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/v1/monitor/all-online-users',
-        // [修改] 路径已更新为 /api/v1/locations
-        mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/v1/locations',
-        // [修改] 路径已更新为 /api/v1/chat/completions
-        apiEndpoint: "https://ppmc.club/webchat/api/v1/chat/completions",
-
+        signalingServerUrl: 'ws://localhost:8080/signaling',
+        allOnlineUsersApiEndpoint: 'http://localhost:8080/api/v1/monitor/all-online-users',
+        mapLocationsApiEndpoint: 'http://localhost:8080/api/v1/locations',
+        apiEndpoint: "http://localhost:8080/api/v1/chat/completions",
+        // signalingServerUrl: 'wss://ppmc.club/webchat/signaling',
+        // allOnlineUsersApiEndpoint: 'https://ppmc.club/webchat/api/v1/monitor/all-online-users',
+        // mapLocationsApiEndpoint: 'https://ppmc.club/webchat/api/v1/locations',
+        // apiEndpoint: "https://ppmc.club/webchat/api/v1/chat/completions",
         model: "THUDM/GLM-4-32B-0414",
         api_key: "Bearer sk-xxxx",
         max_tokens: 2048,

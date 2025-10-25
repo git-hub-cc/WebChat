@@ -401,7 +401,9 @@ export const webrtcService = {
     },
     startAutoRefresh() {
         if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-        autoRefreshInterval = setInterval(proactivelyConnectToOnlineContacts, 8000);
+        // ✅ MODIFICATION START: Use configurable interval from AppSettings
+        autoRefreshInterval = setInterval(proactivelyConnectToOnlineContacts, AppSettings.network.onlineUserRefreshInterval);
+        // ✅ MODIFICATION END
         log('WebRTC 服务: 已启动周期性在线用户刷新和自动连接任务。', 'INFO');
     },
     stopAutoRefresh() {
@@ -582,7 +584,6 @@ export const webrtcService = {
             }
         }
     },
-    // ✅ MODIFICATION START: Add new function for screen share parameters
     async adjustScreenShareParameters(peerId, { resolution, frameRate }) {
         const conn = connections.value[peerId];
         if (!conn || !conn.peer || !conn.peer.connected) return;
@@ -604,7 +605,6 @@ export const webrtcService = {
             eventBus.emit('showNotification', { message: '无法应用新的共享设置，可能不被支持。', type: 'warning' });
         }
     },
-    // ✅ MODIFICATION END
     async _testIceServer(iceServerConfig) {
         return new Promise(resolve => {
             const pc = new RTCPeerConnection({ iceServers: [iceServerConfig] });

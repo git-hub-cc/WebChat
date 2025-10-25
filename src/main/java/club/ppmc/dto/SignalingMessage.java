@@ -5,15 +5,11 @@
  * `@JsonInclude(JsonInclude.Include.NON_NULL)`确保在序列化为JSON时，
  * null值的字段会被忽略，从而保持消息体的整洁。
  * [MODIFIED] 字段已更新以支持 simple-peer 的通用信令负载，并增加了用于联邦路由和增强信令的字段。
- *
- * 关联:
- * - `SignalingWebSocketHandler`: 创建和解析此类型的对象。
- * - `MessageType`: 作为此记录的一个字段，定义了消息的类型。
- * - `FederationRoutingService`: 创建带有 `sourceServerGuid` 的此类型对象用于跨服转发。
  */
 package club.ppmc.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.List; // [NEW] 导入List
 import java.util.Map;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -38,7 +34,18 @@ public record SignalingMessage(
         /**
          * 用于ACK机制，确认某条消息的ID
          */
-        String ackId) {
+        String ackId,
+
+        // --- [NEW] Fields for Loop Prevention ---
+        /**
+         * [NEW] 记录消息经过的服务器GUID列表，用于防止路由循环。
+         */
+        List<String> visitedServers,
+        /**
+         * [NEW] 记录消息的转发次数（跳数），用于防止无限转发。
+         */
+        Integer hopCount
+) {
 
     /**
      * 重写toString方法以避免在日志中记录完整的、可能很大的信令负载。
@@ -58,6 +65,9 @@ public record SignalingMessage(
         if (subType != null) builder.append(", subType='").append(subType).append('\'');
         if (sequenceId != null) builder.append(", sequenceId=").append(sequenceId);
         if (ackId != null) builder.append(", ackId='").append(ackId).append('\'');
+        // [NEW] Add loop prevention fields to logging
+        if (visitedServers != null) builder.append(", visitedServers=").append(visitedServers);
+        if (hopCount != null) builder.append(", hopCount=").append(hopCount);
         builder.append('}');
         return builder.toString();
     }
