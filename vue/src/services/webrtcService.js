@@ -7,15 +7,13 @@ import AppSettings from '@/config/AppSettings';
 import { useUserStore } from '@/stores/userStore';
 import { useTransferStore } from '@/stores/transferStore';
 import { throttle } from 'lodash-es';
+import { heartbeatService } from './heartbeatService';
 
 let currentUserId = null;
 const connections = ref({});
 const isWebSocketConnected = ref(false);
 let websocket = null;
 let reconnectAttempts = 0;
-let heartbeatInterval = null;
-// ✅ FIX: Add DataChannel heartbeat timer
-let dataChannelHeartbeatInterval = null;
 let autoRefreshInterval = null;
 const pendingReceivedChunks = {};
 const chunkMetaBuffer = {};
@@ -34,55 +32,6 @@ function _sendWsMessage(messageObject) {
     }
     log('WebSocket 未连接。消息未发送。', 'WARN');
     return false;
-}
-
-// ✅ FIX: Add DataChannel heartbeat functions
-function _startDataChannelHeartbeat() {
-    if (dataChannelHeartbeatInterval) clearInterval(dataChannelHeartbeatInterval);
-    dataChannelHeartbeatInterval = setInterval(() => {
-        Object.keys(connections.value).forEach(peerId => {
-            const conn = connections.value[peerId];
-            if (conn?.peer?.connected && conn.peer?._channel?.readyState === 'open') {
-                try {
-                    // Send ping and record time
-                    conn.lastPingSent = Date.now();
-                    conn.peer.send(JSON.stringify({ type: 'datachannel-ping' }));
-
-                    // Check last pong time
-                    if (conn.lastPongReceived && (Date.now() - conn.lastPongReceived > 35000)) {
-                        log(`DataChannel to ${peerId} seems unresponsive. Triggering ICE restart.`, 'WARN');
-                        webrtcService.restartIce(peerId);
-                    }
-                } catch(e) {
-                    log(`Failed to send DataChannel ping to ${peerId}: ${e.message}`, 'WARN');
-                }
-            }
-        });
-    }, 15000); // Send every 15 seconds
-}
-
-function _stopDataChannelHeartbeat() {
-    if (dataChannelHeartbeatInterval) {
-        clearInterval(dataChannelHeartbeatInterval);
-        dataChannelHeartbeatInterval = null;
-    }
-}
-
-
-function _startHeartbeat() {
-    if (heartbeatInterval) clearInterval(heartbeatInterval);
-    heartbeatInterval = setInterval(() => {
-        if (_sendWsMessage({ type: 'PING' })) {
-            log('WebSocket: 已发送 PING 心跳', 'DEBUG');
-        }
-    }, AppSettings.network.websocketHeartbeatInterval);
-}
-
-function _stopHeartbeat() {
-    if (heartbeatInterval) {
-        clearInterval(heartbeatInterval);
-        heartbeatInterval = null;
-    }
 }
 
 async function proactivelyConnectToOnlineContacts() {
@@ -119,7 +68,7 @@ function _connectWebSocket() {
             isWebSocketConnected.value = true;
             reconnectAttempts = 0;
             _sendWsMessage({ type: 'REGISTER', userId: currentUserId });
-            _startHeartbeat();
+            heartbeatService.resumeAll(); // Start/Resume heartbeats on connect
             eventBus.emit('websocket:status', true);
             await webrtcService.proactivelyConnectToOnlineContacts();
             resolve();
@@ -140,7 +89,7 @@ function _connectWebSocket() {
         };
         websocket.onclose = () => {
             isWebSocketConnected.value = false;
-            _stopHeartbeat();
+            heartbeatService.shutdown(); // Stop all heartbeats on disconnect
             eventBus.emit('websocket:status', false);
             if (reconnectAttempts < AppSettings.reconnect.websocket.maxAttempts) {
                 const delay = Math.min(
@@ -172,8 +121,10 @@ function _cleanupConnection(peerId) {
     const conn = connections.value[peerId];
     if (conn) {
         if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
-        // ✅ FIX: Add cleanup for reconnect timeout
         if (conn.reconnectTimeout) clearTimeout(conn.reconnectTimeout);
+
+        heartbeatService.notifyPeerDisconnected(peerId);
+
         conn.peer?.destroy();
         delete connections.value[peerId];
         delete pendingReceivedChunks[peerId];
@@ -197,6 +148,8 @@ function _handlePeerData(rawData, peerId) {
             assembly.chunks[assembly.received] = rawData;
             assembly.received++;
             if (assembly.received === assembly.total) {
+                heartbeatService.resume(); // Resume heartbeat after file reception is complete
+
                 const fileBlob = new Blob(assembly.chunks, { type: meta.fileType });
                 const receivedMeta = { ...meta };
                 delete pendingReceivedChunks[peerId][meta.chunkId];
@@ -221,7 +174,6 @@ function _handlePeerData(rawData, peerId) {
         try {
             const message = JSON.parse(new TextDecoder().decode(rawData));
 
-            // ✅ FIX: Add DataChannel heartbeat handling
             if (message.type === 'datachannel-ping') {
                 webrtcService.sendMessage(peerId, { type: 'datachannel-pong' }, true);
                 return;
@@ -254,6 +206,8 @@ function _handlePeerData(rawData, peerId) {
             if (message.id) { if (message.type === 'text' || message.type.startsWith('call-') || message.type === 'typing') { webrtcService.sendMessage(peerId, { type: 'message-ack', ackId: message.id }, true); } }
             if (message.type === 'typing') { eventBus.emit('webrtc:typing', { peerId }); return; }
             if (message.type === 'chunk-meta') {
+                heartbeatService.pause(); // Pause heartbeat on file reception start
+
                 chunkMetaBuffer[peerId] = message;
                 if (!pendingReceivedChunks[peerId]) pendingReceivedChunks[peerId] = {};
                 pendingReceivedChunks[peerId][message.chunkId] = {
@@ -369,7 +323,6 @@ function _setupPeerListeners(peer, peerId) {
         if (conn) {
             if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
             conn.isConnected = true;
-            // ✅ FIX: Initialize heartbeat timestamp
             conn.lastPongReceived = Date.now();
         }
         _startStatsPolling(peer, peerId);
@@ -403,7 +356,6 @@ function _setupPeerListeners(peer, peerId) {
         if (!conn) return;
 
         if (conn.iceCheckingTimeout) clearTimeout(conn.iceCheckingTimeout);
-        // ✅ FIX: Add cleanup for reconnect timeout
         if (conn.reconnectTimeout) { clearTimeout(conn.reconnectTimeout); conn.reconnectTimeout = null; }
 
 
@@ -412,7 +364,6 @@ function _setupPeerListeners(peer, peerId) {
                 log(`WebRTC: ${peerId} ICE checking timed out. Cleaning up.`, 'WARN');
                 _cleanupConnection(peerId);
             }, AppSettings.timeouts.iceChecking);
-            // ✅ FIX: Optimize 'disconnected' state handling for auto-recovery
         } else if (iceConnectionState === 'disconnected') {
             log(`WebRTC: Connection to ${peerId} is disconnected. Waiting for auto-reconnect...`, 'WARN');
             conn.reconnectTimeout = setTimeout(() => {
@@ -448,13 +399,14 @@ export const webrtcService = {
             this.handleIncomingSignal(fromUserId, payload);
         });
 
+        // Initialize heartbeat service and pass it the message sending functions
+        heartbeatService.init(_sendWsMessage, this.sendMessage, connections);
+
         _connectWebSocket().catch(error => {
             log('初始化WebSocket连接失败，服务将在后台重试。', 'ERROR');
         });
 
         this.startAutoRefresh();
-        // ✅ FIX: Start the DataChannel heartbeat
-        _startDataChannelHeartbeat();
     },
     sendViaSignaling(targetUserId, payload) {
         if (!isWebSocketConnected.value) {
@@ -572,14 +524,17 @@ export const webrtcService = {
             }
         }
     },
-    // ✅ FIX: Implement backpressure in sendFile
     async sendFile(peerId, fileObject) {
         const conn = connections.value[peerId];
         if (!conn?.peer?.connected) return false;
+
+        heartbeatService.pause(); // Pause heartbeats before starting file transfer
+
         const peer = conn.peer;
         const dataChannel = peer._channel;
         const CHUNK_SIZE = AppSettings.media.chunkSize;
         const HIGH_WATER_MARK = AppSettings.network.dataChannelHighThreshold;
+
         try {
             this.sendMessage(peerId, {
                 type: 'chunk-meta',
@@ -593,12 +548,8 @@ export const webrtcService = {
                 duration: fileObject.duration,
                 groupId: fileObject.groupId,
             });
-        } catch (error) {
-            log(`向 ${peerId} 发送文件元数据 "${fileObject.name}" 失败。中止。`, 'ERROR');
-            return false;
-        }
-        let offset = 0;
-        try {
+
+            let offset = 0;
             while (offset < fileObject.blob.size) {
                 if (dataChannel.bufferedAmount > HIGH_WATER_MARK) {
                     await new Promise(resolve => {
@@ -614,6 +565,8 @@ export const webrtcService = {
         } catch (error) {
             log(`WebRTC: 向 ${peerId} 发送文件块时出错: ${error.message}`, 'ERROR');
             return false;
+        } finally {
+            heartbeatService.resume(); // Always resume heartbeats after transfer attempt
         }
     },
     closeConnection(peerId) { _cleanupConnection(peerId); },

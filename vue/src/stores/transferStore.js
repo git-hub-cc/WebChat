@@ -108,6 +108,21 @@ export const useTransferStore = defineStore('transfer', () => {
         }
     }
 
+    /**
+     * Counts active transfers for a specific peer.
+     * @param {string} peerId - The ID of the peer.
+     * @returns {number} The number of active transfers.
+     */
+    function countActiveTransfersForPeer(peerId) {
+        let count = 0;
+        for (const hash in transfers) {
+            if (transfers[hash].peerId === peerId && transfers[hash].status === 'receiving') {
+                count++;
+            }
+        }
+        return count;
+    }
+
 
     return {
         transfers,
@@ -116,5 +131,6 @@ export const useTransferStore = defineStore('transfer', () => {
         calculateStats,
         endTransfer,
         failTransfersForPeer,
+        countActiveTransfersForPeer,
     };
 });
