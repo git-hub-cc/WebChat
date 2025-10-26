@@ -128,7 +128,7 @@ export default {
                 credential: "123456"
             },
             {
-                urls: "turns:ppmc.club?transport=tcp",
+                urls: "turns:ppmc.club",
                 username: "test",
                 credential: "123456"
             },

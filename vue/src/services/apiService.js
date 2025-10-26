@@ -86,12 +86,36 @@ export const apiService = {
         }
 
         const effectiveConfig = _getEffectiveAiConfig();
-        if (!effectiveConfig.apiEndpoint) throw new Error("AI API 端点未配置。");
+        if (!effectiveConfig.apiEndpoint) {
+            const error = new Error("AI API 端点未配置。");
+            log(error.message, 'ERROR');
+            // Directly show error in UI without a temporary message
+            const errorMessage = {
+                id: `ai_error_${Date.now()}`, type: 'text',
+                content: `抱歉，我遇到了一个错误: ${error.message}`,
+                sender: targetId, timestamp: new Date().toISOString()
+            };
+            await chatStore.addMessage(targetId, errorMessage);
+            return;
+        }
 
-        const thinkingMessageId = `ai_thinking_${Date.now()}`;
-        chatStore.addTemporaryMessage(targetId, { id: thinkingMessageId, type: 'system', content: '思考中...', sender: targetId, isThinking: true });
+        // --- ✅ MODIFICATION START ---
+        // Create a single, unified temporary message ID for the entire AI response lifecycle.
+        const aiResponseId = `ai_response_${Date.now()}`;
+        const initialTimestamp = new Date().toISOString();
+
+        // 1. Add an initial "thinking" message. This message will be updated or replaced.
+        chatStore.addTemporaryMessage(targetId, {
+            id: aiResponseId,
+            type: 'system',
+            content: '思考中...',
+            sender: targetId,
+            isThinking: true,
+            timestamp: initialTimestamp
+        });
 
         try {
+            // (The rest of the logic for preparing the request remains the same)
             const formattedChatHistory = fullChatHistory
                 .filter(msg => msg.type === 'text' && msg.content && typeof msg.content === 'string')
                 .map(msg => ({
@@ -135,18 +159,15 @@ export const apiService = {
                     try { const parsedContent = JSON.parse(aiContent); if (parsedContent.tool_call) toolCall = parsedContent.tool_call; } catch(e) {}
 
                     if (toolCall) {
-                        chatStore.removeTemporaryMessage(targetId, thinkingMessageId);
-                        const toolUseMessageId = `tool_use_${Date.now()}`;
-                        chatStore.addTemporaryMessage(targetId, { id: toolUseMessageId, type: 'system', toolCallInfo: { name: toolCall.name }, sender: targetId });
+                        chatStore.updateTemporaryMessage(targetId, aiResponseId, { content: `正在使用工具: ${toolCall.name}...`, isThinking: true, isStreaming: false, type: 'system', toolCallInfo: { name: toolCall.name } });
                         const toolResult = await _executeMcpTool(toolCall.name, toolCall.arguments);
-                        chatStore.removeTemporaryMessage(targetId, toolUseMessageId);
                         if (toolResult.error) throw new Error(`工具调用错误: ${toolResult.error}`);
                         const finalMessages = _buildMcpFinalPrompt(systemPrompt, messageText, toolCall, toolResult.data);
                         requestBody = { model: effectiveConfig.model, messages: finalMessages, stream: true, max_tokens: effectiveConfig.maxTokens };
                     } else {
                         runStreaming = false;
-                        chatStore.removeTemporaryMessage(targetId, thinkingMessageId);
-                        const finalAiMessage = { id: `ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: targetId, isNewlyCompletedAIResponse: true };
+                        chatStore.removeTemporaryMessage(targetId, aiResponseId);
+                        const finalAiMessage = { id: aiResponseId, type: 'text', content: aiContent, timestamp: initialTimestamp, sender: targetId, isNewlyCompletedAIResponse: true };
                         await chatStore.addMessage(targetId, finalAiMessage);
                     }
                 } catch (mcpError) {
@@ -166,11 +187,14 @@ export const apiService = {
             }
 
             if (runStreaming) {
-                chatStore.removeTemporaryMessage(targetId, thinkingMessageId);
-                const aiMessageId = `ai_stream_${Date.now()}`;
+                // 2. Update the "thinking" message to a "streaming" message
                 let fullResponseContent = "";
-                const initialAiMessage = { id: aiMessageId, type: 'text', content: "▍", sender: targetId, timestamp: new Date().toISOString(), isStreaming: true };
-                chatStore.addTemporaryMessage(targetId, initialAiMessage);
+                chatStore.updateTemporaryMessage(targetId, aiResponseId, {
+                    content: "▍",
+                    isThinking: false,
+                    isStreaming: true,
+                    type: 'text' // Change type from system to text
+                });
 
                 await fetchApiStream(
                     effectiveConfig.apiEndpoint, requestBody, { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey },
@@ -178,12 +202,21 @@ export const apiService = {
                         const chunkContent = jsonChunk.choices[0]?.delta?.content;
                         if (chunkContent) {
                             fullResponseContent += chunkContent;
-                            chatStore.updateTemporaryMessage(targetId, aiMessageId, fullResponseContent + "▍");
+                            // Update the same temporary message with new content
+                            chatStore.updateTemporaryMessage(targetId, aiResponseId, { content: fullResponseContent + "▍" });
                         }
                     },
                     async (finalContent) => {
-                        chatStore.removeTemporaryMessage(targetId, aiMessageId);
-                        const finalAiMessage = { id: aiMessageId, type: 'text', content: finalContent, sender: targetId, timestamp: initialAiMessage.timestamp, isNewlyCompletedAIResponse: true };
+                        // 3a. On success, remove the temporary message and add the final permanent one
+                        chatStore.removeTemporaryMessage(targetId, aiResponseId);
+                        const finalAiMessage = {
+                            id: aiResponseId,
+                            type: 'text',
+                            content: finalContent,
+                            sender: targetId,
+                            timestamp: initialTimestamp,
+                            isNewlyCompletedAIResponse: true
+                        };
                         await chatStore.addMessage(targetId, finalAiMessage);
 
                         const latestContactState = useUserStore().contacts[targetId];
@@ -196,10 +229,19 @@ export const apiService = {
             }
         } catch (error) {
             log(`与 AI 通信时出错: ${error}`, 'ERROR');
-            chatStore.removeTemporaryMessage(targetId, thinkingMessageId);
-            const errorMessage = { id: `ai_error_${Date.now()}`, type: 'text', content: `抱歉，我遇到了一个错误: ${error.message}`, sender: targetId, timestamp: new Date().toISOString() };
+            // 3b. On error, remove the temporary message and add a final error message
+            chatStore.removeTemporaryMessage(targetId, aiResponseId);
+            const errorMessage = {
+                id: aiResponseId, // Use the same ID for smooth replacement in UI
+                type: 'text',
+                content: `抱歉，我遇到了一个错误: ${error.message}`,
+                sender: targetId,
+                timestamp: initialTimestamp,
+                status: 'failed'
+            };
             await chatStore.addMessage(targetId, errorMessage);
         }
+        // --- ✅ MODIFICATION END ---
     },
     async sendGroupAiMessage(groupId, aiContactId, mentionedMessageText, originalSenderId) {
         const chatStore = useChatStore();
@@ -216,8 +258,18 @@ export const apiService = {
         const group = groupStore.groups[groupId];
         if (!group) return;
 
-        const thinkingMessageId = `ai_thinking_group_${Date.now()}`;
-        chatStore.addTemporaryMessage(groupId, { id: thinkingMessageId, type: 'system', toolCallInfo: { name: '思考中...' }, sender: aiContact.id });
+        // --- ✅ MODIFICATION START (Group AI Message) ---
+        const aiResponseId = `group_ai_response_${aiContact.id}_${Date.now()}`;
+        const initialTimestamp = new Date().toISOString();
+
+        chatStore.addTemporaryMessage(groupId, {
+            id: aiResponseId,
+            type: 'system',
+            sender: aiContact.id,
+            content: '思考中...',
+            isThinking: true,
+            timestamp: initialTimestamp
+        });
 
         try {
             const fullHistory = (chatStore.chats[groupId] || []).slice(-10);
@@ -249,18 +301,15 @@ export const apiService = {
                     let toolCall;
                     try { const parsedContent = JSON.parse(aiContent); if (parsedContent.tool_call) toolCall = parsedContent.tool_call; } catch (e) {}
                     if (toolCall) {
-                        chatStore.removeTemporaryMessage(groupId, thinkingMessageId);
-                        const toolUseMessageId = `tool_use_group_${Date.now()}`;
-                        chatStore.addTemporaryMessage(groupId, { id: toolUseMessageId, type: 'system', toolCallInfo: { name: toolCall.name }, sender: aiContact.id });
+                        chatStore.updateTemporaryMessage(groupId, aiResponseId, { content: `正在使用工具: ${toolCall.name}...`, isThinking: true, isStreaming: false, type: 'system', toolCallInfo: { name: toolCall.name } });
                         const toolResult = await _executeMcpTool(toolCall.name, toolCall.arguments);
-                        chatStore.removeTemporaryMessage(groupId, toolUseMessageId);
                         if (toolResult.error) throw new Error(`工具调用错误: ${toolResult.error}`);
                         const finalMessages = _buildMcpFinalPrompt(group.aiPrompts?.[aiContact.id] || aiContact.aiConfig?.systemPrompt || "", userTriggerMessage, toolCall, toolResult.data);
                         requestBody = { model: effectiveConfig.model, messages: finalMessages, stream: true, max_tokens: effectiveConfig.maxTokens };
                     } else {
                         runStreaming = false;
-                        chatStore.removeTemporaryMessage(groupId, thinkingMessageId);
-                        const finalAiMessage = { id: `group_ai_msg_${Date.now()}`, type: 'text', content: aiContent, timestamp: new Date().toISOString(), sender: aiContact.id, groupId: groupId };
+                        chatStore.removeTemporaryMessage(groupId, aiResponseId);
+                        const finalAiMessage = { id: aiResponseId, type: 'text', content: aiContent, timestamp: initialTimestamp, sender: aiContact.id, groupId: groupId };
                         await chatStore.addMessage(groupId, finalAiMessage);
                         groupStore.broadcastMessage(groupId, finalAiMessage);
                     }
@@ -281,15 +330,13 @@ export const apiService = {
             }
 
             if(runStreaming) {
-                chatStore.removeTemporaryMessage(groupId, thinkingMessageId);
-                const aiResponseMessageId = `group_ai_msg_${aiContact.id}_${Date.now()}`;
                 let fullAiResponseContent = "";
-                const initialAiResponseMessage = {
-                    id: aiResponseMessageId, type: 'text', content: "▍",
-                    timestamp: new Date().toISOString(), sender: aiContact.id,
-                    groupId: groupId, isStreaming: true,
-                };
-                chatStore.addTemporaryMessage(groupId, initialAiResponseMessage);
+                chatStore.updateTemporaryMessage(groupId, aiResponseId, {
+                    content: "▍",
+                    isThinking: false,
+                    isStreaming: true,
+                    type: 'text'
+                });
 
                 await fetchApiStream(
                     effectiveConfig.apiEndpoint, requestBody, { 'Content-Type': 'application/json', 'Authorization': effectiveConfig.apiKey },
@@ -297,12 +344,21 @@ export const apiService = {
                         const chunkContent = jsonChunk.choices[0]?.delta?.content;
                         if (chunkContent) {
                             fullAiResponseContent += chunkContent;
-                            chatStore.updateTemporaryMessage(groupId, aiResponseMessageId, fullAiResponseContent + "▍");
+                            chatStore.updateTemporaryMessage(groupId, aiResponseId, { content: fullAiResponseContent + "▍" });
                         }
                     },
                     async (finalContent) => {
-                        chatStore.removeTemporaryMessage(groupId, aiResponseMessageId);
-                        const finalAiMessage = { ...initialAiResponseMessage, content: finalContent, isStreaming: false, isNewlyCompletedAIResponse: true };
+                        chatStore.removeTemporaryMessage(groupId, aiResponseId);
+                        const finalAiMessage = {
+                            id: aiResponseId,
+                            type: 'text',
+                            content: finalContent,
+                            timestamp: initialTimestamp,
+                            sender: aiContact.id,
+                            groupId: groupId,
+                            isStreaming: false,
+                            isNewlyCompletedAIResponse: true,
+                        };
                         await chatStore.addMessage(groupId, finalAiMessage);
                         const messageForBroadcast = { ...finalAiMessage, isNewlyCompletedAIResponse: undefined };
                         groupStore.broadcastMessage(groupId, messageForBroadcast);
@@ -318,13 +374,16 @@ export const apiService = {
 
         } catch (error) {
             log(`在群聊中与 AI 通信时出错: ${error}`, 'ERROR');
-            chatStore.removeTemporaryMessage(groupId, thinkingMessageId);
+            chatStore.removeTemporaryMessage(groupId, aiResponseId);
             const errorMessage = {
-                id: `ai_error_group_${Date.now()}`, type: 'system',
-                content: `${aiContact.name} 无法回复: ${error.message}`, sender: aiContact.id
+                id: aiResponseId,
+                type: 'system',
+                content: `${aiContact.name} 无法回复: ${error.message}`,
+                sender: aiContact.id
             };
             await chatStore.addMessage(groupId, errorMessage);
         }
+        // --- ✅ MODIFICATION END (Group AI Message) ---
     },
     async extractMemoryElements(elements, conversationTranscript) {
         const effectiveConfig = _getEffectiveAiConfig();
@@ -464,14 +523,8 @@ export const apiService = {
         return audioBlob;
     },
 
-    // --- [新增] ---
-    // ===============================================
-    // 世界地图评论与点赞功能相关 API 方法
-    // ===============================================
-
     async getCommentsForLocation(locationId) {
         const userStore = useUserStore();
-        // 生产环境警告: userId 不应作为查询参数，应由后端从认证信息中获取
         const endpoint = `${AppSettings.server.mapLocationsApiEndpoint}/${locationId}/comments?userId=${userStore.userId}`;
         try {
             const response = await fetch(endpoint);
@@ -493,7 +546,7 @@ export const apiService = {
             const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, userId: userStore.userId }) // 生产环境警告
+                body: JSON.stringify({ content, userId: userStore.userId })
             });
             if (!response.ok) {
                 throw new Error(`发表评论失败: ${response.status}`);
@@ -508,11 +561,8 @@ export const apiService = {
 
     async toggleCommentLike(commentId) {
         const userStore = useUserStore();
-        // 注意：后端API路径是 /api/map/comments/{commentId}/like
-        // AppSettings.server.mapLocationsApiEndpoint 是 /api/map/locations
-        // 我们需要构建正确的路径。
         const baseEndpoint = AppSettings.server.mapLocationsApiEndpoint.replace('/locations', '');
-        const endpoint = `${baseEndpoint}/comments/${commentId}/like?userId=${userStore.userId}`; // 生产环境警告
+        const endpoint = `${baseEndpoint}/comments/${commentId}/like?userId=${userStore.userId}`;
         try {
             const response = await fetch(endpoint, {
                 method: 'POST'
@@ -527,7 +577,6 @@ export const apiService = {
             return null;
         }
     },
-    // --- [新增结束] ---
 
     async getMapLocations() {
         const endpoint = AppSettings.server.mapLocationsApiEndpoint;

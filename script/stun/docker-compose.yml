@@ -7,11 +7,11 @@ services:
     network_mode: host
     volumes:
       # 将当前目录下的 turnserver.conf 挂载到容器内
-      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - ./turnserver.conf:/etc/coturn/turnserver.conf
 
       # 将 Nginx 使用的证书挂载到容器内，供 Coturn 使用
       # 请确保这些主机路径是正确的！
-      - ./ppmc.club_bundle.crt:/etc/coturn/certs/fullchain.pem:ro
-      - ./ppmc.club.key:/etc/coturn/certs/privkey.pem:ro
+      - ./fullchain.pem:/etc/coturn/certs/fullchain.pem
+      - ./privkey.pem:/etc/coturn/certs/privkey.pem
 
     command: ["-c", "/etc/coturn/turnserver.conf"]
