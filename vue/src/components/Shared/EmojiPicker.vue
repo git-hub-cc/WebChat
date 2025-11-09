@@ -22,25 +22,30 @@
         </div>
         <!-- Sticker Grid -->
         <div v-show="activeTab === 'sticker'" class="sticker-grid scroller">
-          <div
-              v-for="(sticker, index) in stickers"
-              :key="sticker.id"
-              class="sticker-item-wrapper"
-              v-motion
-              :initial="{ opacity: 0, y: 10 }"
-              :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 350, damping: 25, delay: 10 + index * 5 } }"
-          >
-            <div class="sticker-item" @click="selectSticker(sticker)">
-              <div v-if="!sticker.url" class="sticker-placeholder"></div>
-              <img v-if="sticker.url" :src="sticker.url" :alt="sticker.name" loading="lazy">
+          <template v-for="(pack, packId) in stickerPacks" :key="packId">
+            <div
+                v-for="(sticker, index) in pack.stickers"
+                :key="sticker.id"
+                class="sticker-item-wrapper"
+                v-motion
+                :initial="{ opacity: 0, y: 10 }"
+                :enter="{ opacity: 1, y: 0, transition: { type: 'spring', stiffness: 350, damping: 25, delay: 10 + index * 5 } }"
+            >
+              <!-- --- ✅ MODIFICATION START: Added mouse events and ref binding --- -->
+              <div
+                  class="sticker-item"
+                  @click="selectSticker(packId, sticker.id)"
+                  @mouseenter="handleMouseEnter(packId, sticker.id)"
+                  @mouseleave="handleMouseLeave(packId, sticker.id)"
+              >
+                <AnimatedSticker
+                    :src="sticker.file"
+                    :ref="(el) => setStickerRef(`${packId}/${sticker.id}`, el)"
+                />
+              </div>
+              <!-- --- ✅ MODIFICATION END --- -->
             </div>
-          </div>
-          <!-- ✅ FIX START: Added 'for' attribute to label and 'id' to input -->
-          <label for="sticker-upload-input" class="add-sticker-button" title="添加新贴图">
-            +
-            <input type="file" id="sticker-upload-input" @change="handleStickerUpload" accept="image/png, image/jpeg, image/gif, image/webp" hidden>
-          </label>
-          <!-- ✅ FIX END -->
+          </template>
         </div>
       </div>
     </div>
@@ -48,63 +53,62 @@
 </template>
 
 <script setup>
-import { ref, onUnmounted, watch } from 'vue';
+// --- ✅ MODIFICATION START ---
+import { ref, onBeforeUpdate } from 'vue';
+// --- ✅ MODIFICATION END ---
 import { EMOJI_LIST } from '@/config/EmojiList';
-import { mediaService } from '@/services/mediaService';
-import { dbService } from '@/services/dbService';
+import { STICKER_PACKS } from '@/config/stickerPacks';
+import AnimatedSticker from './AnimatedSticker.vue';
 
-const props = defineProps({
+defineProps({
   show: Boolean,
 });
 const emit = defineEmits(['select-emoji', 'select-sticker']);
 
 const activeTab = ref('emoji');
 const emojiList = EMOJI_LIST;
-const stickers = ref([]);
+const stickerPacks = ref(STICKER_PACKS);
 
-let objectUrls = new Map();
+// --- ✅ MODIFICATION START: Logic for handling hover animations ---
+const stickerRefs = ref(new Map());
 
-async function loadStickers() {
-  objectUrls.forEach(URL.revokeObjectURL);
-  objectUrls.clear();
-
-  const storedStickers = await dbService.getAllItems('stickers');
-  stickers.value = storedStickers.map(s => {
-    const url = URL.createObjectURL(s.blob);
-    objectUrls.set(s.id, url);
-    return { ...s, url };
-  });
-}
-
-async function handleStickerUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const newStickerData = await mediaService.processStickerFile(file);
-  if (newStickerData) {
-    const url = URL.createObjectURL(newStickerData.blob);
-    objectUrls.set(newStickerData.id, url);
-    stickers.value.push({ ...newStickerData, url });
+// This function is called during render to populate the refs map.
+const setStickerRef = (id, el) => {
+  if (el) {
+    stickerRefs.value.set(id, el);
   }
-  event.target.value = '';
-}
+};
+
+// Before each update, clear the map to remove refs to old, unmounted components.
+onBeforeUpdate(() => {
+  stickerRefs.value.clear();
+});
+
+const handleMouseEnter = (packId, stickerId) => {
+  const combinedId = `${packId}/${stickerId}`;
+  const stickerComponent = stickerRefs.value.get(combinedId);
+  if (stickerComponent) {
+    stickerComponent.playAnimation();
+  }
+};
+
+const handleMouseLeave = (packId, stickerId) => {
+  const combinedId = `${packId}/${stickerId}`;
+  const stickerComponent = stickerRefs.value.get(combinedId);
+  if (stickerComponent) {
+    stickerComponent.stopAnimation();
+  }
+};
+// --- ✅ MODIFICATION END ---
 
 function selectEmoji(emoji) {
   emit('select-emoji', emoji);
 }
 
-function selectSticker(sticker) {
-  emit('select-sticker', sticker);
+function selectSticker(packId, stickerId) {
+  const combinedId = `${packId}/${stickerId}`;
+  emit('select-sticker', combinedId);
 }
-
-watch(() => props.show, (isVisible) => {
-  if (isVisible) {
-    loadStickers();
-  }
-});
-
-onUnmounted(() => {
-  objectUrls.forEach(URL.revokeObjectURL);
-});
 </script>
 
 <style scoped>
@@ -173,12 +177,12 @@ onUnmounted(() => {
 
 .sticker-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-  gap: var(--spacing-2);
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: var(--spacing-1);
 }
 .sticker-item-wrapper {
-  width: 70px;
-  height: 70px;
+  width: 56px;
+  height: 56px;
 }
 
 .sticker-item {
@@ -186,47 +190,17 @@ onUnmounted(() => {
   height: 100%;
   border-radius: var(--border-radius-md);
   cursor: pointer;
-  transition: transform 0.1s ease;
+  transition: transform 0.1s ease, background-color 0.1s ease;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-}
-
-.sticker-placeholder {
-  position: absolute;
-  inset: 0;
   background-color: var(--color-background-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--border-radius-md);
 }
 
 .sticker-item:hover {
   transform: scale(1.05);
-}
-.sticker-item img {
-  max-width: 90%;
-  max-height: 90%;
-  object-fit: contain;
-  position: relative;
-  z-index: 1;
-}
-
-.add-sticker-button {
-  width: 70px;
-  height: 70px;
-  border-radius: var(--border-radius-md);
-  background-color: var(--color-background-elevated);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 2rem;
-  color: var(--color-text-secondary);
-  border: 2px dashed var(--color-border);
-}
-.add-sticker-button:hover {
   background-color: var(--color-background-hover);
 }
 

@@ -157,15 +157,12 @@ export const useChatStore = defineStore('chat', () => {
         eventBus.on('file:ready', handleTransferCompleted);
     }
 
-    // ✅ MODIFICATION START: Update function signature to accept messageType
     async function handleTransferInitiated({ peerId, groupId, messageId, fileHash, fileName, fileSize, fileType, duration, messageType: incomingType }) {
-        // ✅ MODIFICATION END
         const chatId = groupId || peerId;
         const userStore = useUserStore();
         const transferStore = useTransferStore();
         transferStore.startTransfer(fileHash, peerId, fileSize);
 
-        // ✅ MODIFICATION START: Prioritize incomingType, then fallback to inference
         let messageType = incomingType;
         if (!messageType) { // Fallback logic for older clients or if type is missing
             messageType = 'file';
@@ -177,7 +174,6 @@ export const useChatStore = defineStore('chat', () => {
                 messageType = 'video';
             }
         }
-        // ✅ MODIFICATION END
 
         const placeholderMessage = {
             id: messageId,
@@ -270,7 +266,9 @@ export const useChatStore = defineStore('chat', () => {
         }
     }
 
-    async function sendMessage({ content = null, file = null, sticker = null, location = null }, isResend = false) {
+    // ✅ MODIFICATION START: Update sendMessage to handle stickerId
+    async function sendMessage({ content = null, file = null, stickerId = null, location = null }, isResend = false) {
+        // ✅ MODIFICATION END
         if (!currentChatId.value) return;
         const targetId = currentChatId.value;
         const userStore = useUserStore();
@@ -283,13 +281,17 @@ export const useChatStore = defineStore('chat', () => {
         let fileDataForTransport = null;
         const messageId = generateId(16);
 
-        if (file || sticker) {
-            const mediaData = file || sticker;
+        // ✅ MODIFICATION START: Handle stickerId separately and early
+        if (stickerId) {
+            messagePayload = { type: 'sticker', stickerId };
+        }
+        // ✅ MODIFICATION END
+        else if (file) {
+            const mediaData = file;
             const mediaBlob = mediaData.blob;
-            const mediaHash = mediaData.hash || mediaData.id;
+            const mediaHash = mediaData.hash;
             let messageType = 'file';
             if (mediaData.type === 'audio') messageType = 'audio';
-            else if (sticker) messageType = 'sticker';
             else if (mediaData.fileType?.startsWith('image/')) messageType = 'image';
             else if (mediaData.fileType?.startsWith('video/')) messageType = 'video';
 
@@ -308,7 +310,6 @@ export const useChatStore = defineStore('chat', () => {
                 ...(messageType === 'audio' && { duration: mediaData.duration })
             };
 
-            // ✅ MODIFICATION START: Add messageType to the transport object
             fileDataForTransport = {
                 blob: mediaBlob,
                 hash: mediaHash,
@@ -316,10 +317,9 @@ export const useChatStore = defineStore('chat', () => {
                 fileType: mediaData.fileType || mediaBlob.type,
                 size: mediaData.size || mediaBlob.size,
                 messageId: messageId,
-                messageType: messageType, // Pass the determined message type
+                messageType: messageType,
                 ...(messageType === 'audio' && { duration: mediaData.duration })
             };
-            // ✅ MODIFICATION END
         } else if (content) {
             messagePayload = { type: 'text', content };
         } else if (location) {
@@ -386,6 +386,9 @@ export const useChatStore = defineStore('chat', () => {
         chats.value[peerId] = chats.value[peerId].filter(m => m.status !== 'failed' || m.sender !== useUserStore().userId);
 
         for (const message of failedMessages) {
+            // --- [移除] ---
+            // Sticker resend logic is removed, as sticker messages should not fail
+            // if they are simple JSON messages. This logic is now only for files.
             const fileBlob = message.fileHash ? (await dbService.getItem('fileCache', message.fileHash))?.fileBlob : null;
             const payload = {
                 content: message.content,
@@ -393,11 +396,9 @@ export const useChatStore = defineStore('chat', () => {
                     hash: message.fileHash, name: message.fileName, fileType: message.fileType, size: message.size, blob: fileBlob,
                     ...(message.type === 'audio' && {duration: message.duration})
                 } : null,
-                sticker: message.fileHash && message.type === 'sticker' ? {
-                    id: message.fileHash, name: message.fileName, size: message.size, blob: fileBlob
-                } : null
+                // Sticker resend is no longer needed
             };
-            if ((payload.file || payload.sticker) && !payload.file?.blob && !payload.sticker?.blob) {
+            if (payload.file && !payload.file.blob) {
                 log(`Cannot resend file message ${message.id} as blob is missing from cache.`, 'ERROR');
                 await addMessage(peerId, { ...message, status: 'failed' });
                 continue;
@@ -414,7 +415,9 @@ export const useChatStore = defineStore('chat', () => {
         if (message.type === 'group-join') { return; }
 
         const chatId = message.groupId || peerId;
-        if (message.type === 'file' || message.type === 'image' || message.type === 'video' || message.type === 'audio' || message.type === 'sticker') {
+        // ✅ MODIFICATION: Sticker messages are now simple JSON, handled like text.
+        // The check for file/image etc. is sufficient.
+        if (message.type === 'file' || message.type === 'image' || message.type === 'video' || message.type === 'audio') {
             log(`Received file message meta for ${message.id}. Placeholder should exist.`, 'DEBUG');
         } else {
             await addMessage(chatId, { ...message, status: 'delivered' });
@@ -524,7 +527,7 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     function addTemporaryMessage(chatId, message) { if (!temporaryMessages.value[chatId]) temporaryMessages.value[chatId] = []; temporaryMessages.value[chatId].push(message); }
-    function updateTemporaryMessage(chatId, messageId, newContent) { const tempChat = temporaryMessages.value[chatId]; if (tempChat) { const msg = tempChat.find(m => m.id === messageId); if (msg) msg.content = newContent; } }
+    function updateTemporaryMessage(chatId, messageId, newContent) { const tempChat = temporaryMessages.value[chatId]; if (tempChat) { const msg = tempChat.find(m => m.id === messageId); if (msg) Object.assign(msg, newContent); } }
     function removeTemporaryMessage(chatId, messageId) { if (temporaryMessages.value[chatId]) { temporaryMessages.value[chatId] = temporaryMessages.value[chatId].filter(m => m.id !== messageId); } }
 
     return {

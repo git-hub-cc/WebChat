@@ -13,12 +13,14 @@
     "@vueuse/motion": "^3.0.3",
     "leaflet": "^1.9.4",
     "lodash-es": "^4.17.21",
+    "lottie-web": "^5.12.2",
+    "pako": "^2.1.0",
     "pinia": "^2.1.7",
     "simple-peer": "^9.11.1",
     "vue": "^3.5.21",
+    "vue-advanced-cropper": "^2.8.9",
     "vue-virtual-scroller": "2.0.0-beta.8",
-    "wavesurfer.js": "^7.10.1",
-    "vue-advanced-cropper": "^2.8.9"
+    "wavesurfer.js": "^7.10.1"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.12",

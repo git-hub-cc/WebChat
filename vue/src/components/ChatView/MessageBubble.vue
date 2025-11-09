@@ -44,30 +44,34 @@
           </div>
         </div>
 
+        <!-- ✅ MODIFICATION START: Updated media handling, especially for stickers -->
         <div v-else-if="isMedia" class="media-content" @click="handleMediaClick">
-          <div v-if="message.status === 'receiving'" class="media-placeholder receiving">
-            <div class="transfer-info">
-              <span class="file-name" :title="message.fileName">{{ message.fileName }}</span>
-              <progress
-                  v-if="transferProgress"
-                  :value="transferProgress.receivedBytes"
-                  :max="transferProgress.totalBytes"
-                  class="transfer-progress"
-              ></progress>
-              <span class="transfer-stats">
-                {{ formatSize(transferProgress?.receivedBytes || 0) }} / {{ formatSize(message.fileSize) }}
-                <span v-if="transferProgress && transferProgress.etaSeconds < Infinity"> - ETA: {{ formatEta(transferProgress.etaSeconds) }}</span>
-              </span>
+          <!-- Sticker Rendering -->
+          <div v-if="message.type === 'sticker'" class="sticker-wrapper" @click.stop>
+            <AnimatedSticker v-if="stickerSrc" :src="stickerSrc" :loop="true" />
+            <div v-else class="media-placeholder">
+              <span>❔</span> <!-- Fallback for unknown sticker -->
             </div>
           </div>
 
+          <!-- Other Media (Image, Video, File) -->
           <div v-else>
-            <div v-if="message.type === 'sticker'" class="sticker-wrapper" @click.stop>
-              <div class="media-placeholder" v-if="!displayUrl">
-                <SkeletonLoader type="grid-item" :shimmer="true" />
+            <div v-if="message.status === 'receiving'" class="media-placeholder receiving">
+              <div class="transfer-info">
+                <span class="file-name" :title="message.fileName">{{ message.fileName }}</span>
+                <progress
+                    v-if="transferProgress"
+                    :value="transferProgress.receivedBytes"
+                    :max="transferProgress.totalBytes"
+                    class="transfer-progress"
+                ></progress>
+                <span class="transfer-stats">
+                {{ formatSize(transferProgress?.receivedBytes || 0) }} / {{ formatSize(message.fileSize) }}
+                <span v-if="transferProgress && transferProgress.etaSeconds < Infinity"> - ETA: {{ formatEta(transferProgress.etaSeconds) }}</span>
+              </span>
               </div>
-              <img v-if="displayUrl" :src="displayUrl" :alt="message.fileName || 'sticker'" class="sticker-image" loading="lazy">
             </div>
+
             <div v-else-if="isPreviewableMedia" class="media-preview-container">
               <div class="media-placeholder" v-if="!thumbnailSource">
                 <SkeletonLoader type="grid-item" :shimmer="true" />
@@ -90,6 +94,7 @@
             </div>
           </div>
         </div>
+        <!-- ✅ MODIFICATION END -->
 
 
         <div v-if="showTtsControl" class="tts-control">
@@ -123,6 +128,10 @@ import SkeletonLoader from '@/components/Shared/SkeletonLoader.vue';
 import { eventBus } from '@/services/eventBus';
 import { mediaCacheService } from '@/services/mediaCacheService';
 import WaveSurfer from 'wavesurfer.js';
+// ✅ MODIFICATION START: Import sticker helpers
+import AnimatedSticker from '@/components/Shared/AnimatedSticker.vue';
+import { getStickerPathById } from '@/config/stickerPacks';
+// ✅ MODIFICATION END
 
 const props = defineProps({
   message: { type: Object, required: true },
@@ -156,6 +165,15 @@ const isPreviewableMedia = computed(() => {
   if (!type) return false;
   return type.startsWith('image/') || type.startsWith('video/');
 });
+
+// ✅ MODIFICATION START: New computed property for sticker source path
+const stickerSrc = computed(() => {
+  if (props.message.type === 'sticker' && props.message.stickerId) {
+    return getStickerPathById(props.message.stickerId);
+  }
+  return null;
+});
+// ✅ MODIFICATION END
 
 const thumbnailSource = computed(() => {
   if (props.message.fileType?.startsWith('video/')) {
@@ -205,7 +223,8 @@ watch(ttsState, (newState, oldState) => { const audioUrl = ttsStore.audioUrlCach
 function toggleTtsPlay() { ttsStore.togglePlay(props.message.id); }
 function retryTts() { ttsStore.requestTtsForMessage({ ...props.message, senderContact: senderContact.value }); }
 async function loadMedia() {
-  if (!isMedia.value || !props.message.fileHash) return;
+  // ✅ MODIFICATION: Skip this logic for stickers as they don't use blobs anymore
+  if (!isMedia.value || props.message.type === 'sticker' || !props.message.fileHash) return;
   const mainUrl = await mediaCacheService.getUrl(props.message.fileHash);
   if (mainUrl) displayUrl.value = mainUrl;
 
@@ -224,6 +243,9 @@ function handleFileReady({ fileHash }) {
   }
 }
 function handleMediaClick() {
+  // ✅ MODIFICATION: Disable clicks for stickers, as they are non-interactive
+  if (props.message.type === 'sticker') return;
+
   const type = props.message.fileType;
   const isPreviewable = type && (type.startsWith('image/') || type.startsWith('video/') || type === 'application/pdf' || type.startsWith('text/'));
   if (displayUrl.value && isPreviewable) {
@@ -265,7 +287,8 @@ function showContextMenu(event) {
     });
   }
 
-  if (isMedia.value && displayUrl.value) {
+  // ✅ MODIFICATION: Exclude stickers from download/preview context menu items
+  if (isMedia.value && props.message.type !== 'sticker' && displayUrl.value) {
     const type = props.message.fileType;
     const isPreviewable = type && (type.startsWith('image/') || type.startsWith('video/') || type === 'application/pdf' || type.startsWith('text/'));
     if (isPreviewable) {
@@ -391,19 +414,27 @@ onUnmounted(() => {
 .message-bubble.character-message { background: var(--character-message-bg, var(--color-message-received-bg)); border: 1px solid var(--character-accent-color, transparent); box-shadow: 0 0 8px var(--character-glow-color, transparent); }
 .message-bubble.character-message .sender-name { color: var(--character-primary-color, var(--color-brand-secondary)); }
 
-/* ✅ MODIFICATION START: Add styles to give the sticker bubble padding and shadow */
 .message-bubble.sticker-bubble {
-  border: none;                 /* No border */
+  /* ✅ MODIFICATION START: Styles for sticker bubble */
+  padding: 0;
+  background-color: transparent !important; /* Override default bubble colors */
+  border: none;
+  box-shadow: none;
+  /* ✅ MODIFICATION END */
 }
-/* ✅ MODIFICATION END */
 
 .media-content {
   cursor: pointer;
   flex-grow: 1;
   min-width: 0;
 }
-.sticker-wrapper { padding: 0; background: transparent !important; position: relative; width: 128px; height: 128px; }
-.sticker-image { max-width: 100%; max-height: 100%; display: block; }
+.sticker-wrapper {
+  /* ✅ MODIFICATION START: Define fixed size for sticker */
+  width: 128px;
+  height: 128px;
+  cursor: default; /* Stickers are not clickable */
+  /* ✅ MODIFICATION END */
+}
 .audio-content { display: flex; align-items: center; gap: var(--spacing-2); min-width: 300px; }
 .play-button { font-size: 1.5rem; width: 32px; height: 32px; border-radius: 50%; background: var(--color-brand-primary); color: white; display:flex; align-items:center; justify-content:center; flex-shrink:0; border: none; cursor: pointer; }
 .waveform-container { flex-grow: 1; height: 38px; }

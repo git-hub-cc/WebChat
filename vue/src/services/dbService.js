@@ -2,7 +2,8 @@ import { log } from '@/utils';
 
 const DB_NAME = 'WebChatVueDB';
 const DB_VERSION = 2; // Keep this version if it's already deployed, or increment if needed.
-const STORES = ['user', 'contacts', 'chats', 'groups', 'settings', 'appStateCache', 'stickers', 'memoryBooks', 'fileCache', 'ttsCache'];
+// ✅ MODIFICATION: Removed 'stickers' from the list of stores
+const STORES = ['user', 'contacts', 'chats', 'groups', 'settings', 'appStateCache', 'memoryBooks', 'fileCache', 'ttsCache'];
 
 let dbPromise = null;
 
@@ -30,6 +31,11 @@ function getDb() {
                         log(`对象存储 ${storeName} 已创建。`, 'INFO');
                     }
                 });
+                // Logic to delete old stores can be added here if needed for future versions
+                // For example:
+                // if (event.oldVersion < 3 && db.objectStoreNames.contains('oldStoreName')) {
+                //     db.deleteObjectStore('oldStoreName');
+                // }
                 log('数据库架构升级完成。', 'INFO');
             };
         });
@@ -74,23 +80,16 @@ export const dbService = {
      * @param {object} item - The item to store.
      */
     setItem: (storeName, item) => {
-        // --- START OF FIX ---
-        // Define a list of stores that contain Blob objects and should not be stringified.
-        const blobStores = ['fileCache', 'ttsCache', 'stickers', 'appStateCache'];
+        // ✅ MODIFICATION: Removed 'stickers' from the blob stores list
+        const blobStores = ['fileCache', 'ttsCache', 'appStateCache'];
 
         if (blobStores.includes(storeName)) {
-            // For stores containing Blobs, we must pass the object directly
-            // without JSON stringification. The caller is responsible for ensuring
-            // the object is not a Vue reactive proxy if it causes issues,
-            // but for simple structures like {id, blob}, it's generally safe.
             log(`dbService.setItem: Bypassing JSON.stringify for blob store '${storeName}'.`, 'DEBUG');
             return performDbOperation(storeName, 'readwrite', store => store.put(item));
         } else {
-            // For all other metadata stores, this is a safe way to remove Vue's reactivity proxies.
             const plainItem = JSON.parse(JSON.stringify(item));
             return performDbOperation(storeName, 'readwrite', store => store.put(plainItem));
         }
-        // --- END OF FIX ---
     },
 
     removeItem: (storeName, key) => performDbOperation(storeName, 'readwrite', store => store.delete(key)),

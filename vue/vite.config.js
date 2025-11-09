@@ -17,14 +17,12 @@ export default defineConfig({
             },
             protocolImports: true,
         }),
-        // ✅ MODIFICATION START: Add visualizer for bundle analysis
         visualizer({
             open: true, // Automatically open the report in the browser after build
             filename: 'dist/stats.html', // Output file
             gzipSize: true, // Show gzipped size
             brotliSize: true, // Show brotli compressed size
         }),
-        // ✅ MODIFICATION END
     ],
     resolve: {
         alias: {

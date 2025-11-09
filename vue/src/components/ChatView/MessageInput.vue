@@ -190,7 +190,14 @@ function send() {
     adjustTextareaHeight();
   }
 }
-function sendSticker(sticker) { chatStore.sendMessage({ sticker }); isEmojiPickerVisible.value = false; }
+
+// ✅ MODIFICATION START: Handle stickerId instead of sticker object
+function sendSticker(stickerId) {
+  chatStore.sendMessage({ stickerId });
+  isEmojiPickerVisible.value = false;
+}
+// ✅ MODIFICATION END
+
 function insertEmoji(emoji) { const textarea = textareaRef.value; const start = textarea.selectionStart; const end = textarea.selectionEnd; newMessage.value = newMessage.value.substring(0, start) + emoji + newMessage.value.substring(end); nextTick(() => { textarea.selectionStart = textarea.selectionEnd = start + emoji.length; textarea.focus(); }); }
 function toggleEmojiPicker() { isEmojiPickerVisible.value = !isEmojiPickerVisible.value; }
 function closeEmojiPicker(event) { if (isEmojiPickerVisible.value && !event.target.closest('.picker-container, .input-container')) { isEmojiPickerVisible.value = false; } }
@@ -241,11 +248,9 @@ async function handleScreenshot() {
   await mediaService.captureScreen('detail', true);
 }
 
-// ✅ MODIFICATION START: Call the correct store action for overlay modals
 function handleRawScreenshot(screenshotData) {
   uiStore.showOverlayModal('screenshotEditor', screenshotData);
 }
-// ✅ MODIFICATION END
 
 function onScreenshotComplete(fileObject) {
   cancelPreview();
@@ -264,9 +269,7 @@ function sendLocation() {
 function handleInput() { adjustTextareaHeight(); handleTypingIndicator(); handleMentionPopup(); }
 function handleTypingIndicator() { if (typingTimeout) clearTimeout(typingTimeout); webrtcService.sendTyping(chatStore.currentChatId); typingTimeout = setTimeout(() => {}, 2000); }
 function handleMentionPopup() { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); if (lastAtSymbolIndex !== -1 && chatStore.currentChatId.startsWith('group_')) {
-  // ✅ FIX START: Define the 'query' variable before using it.
   const query = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-  // ✅ FIX END
   const group = groupStore.groups[chatStore.currentChatId]; if (group) { mentionSuggestions.value = group.members.map(id => userStore.contacts[id]).filter(contact => contact?.isAI && contact.name.toLowerCase().includes(query.toLowerCase())); showMentionList.value = mentionSuggestions.value.length > 0; } } else { showMentionList.value = false; } }
 function handleMentionSelect(user) { const text = newMessage.value; const cursorPos = textareaRef.value.selectionStart; const textBeforeCursor = text.substring(0, cursorPos); const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@'); const prefix = text.substring(0, lastAtSymbolIndex); const suffix = text.substring(cursorPos); newMessage.value = `${prefix}@${user.name} ${suffix}`; showMentionList.value = false; nextTick(() => { const newCursorPos = prefix.length + `@${user.name} `.length; textareaRef.value.focus(); textareaRef.value.setSelectionRange(newCursorPos, newCursorPos); }); }
 
@@ -340,7 +343,7 @@ onUnmounted(() => {
   background-color: var(--color-background-hover);
   cursor: default;
 }
-.send-button { background-color: var(--color-brand-primary); color: white; border-radius: 50%; width: 36px; height: 36px; font-size: 1.2rem; }
+.send-button { background-color: var(--color-brand-primary); color: white; border-radius: 50%; width: 32px; height: 32px; font-size: 1.2rem; }
 .voice-button.recording { color: var(--color-status-danger); animation: pulse 1.5s infinite; }
 .voice-button.stt-active { color: var(--color-brand-primary); animation: pulse-stt 1.5s infinite; }
 @keyframes pulse-stt { 0% { box-shadow: 0 0 0 0 rgba(var(--color-brand-primary), 0.4); } 70% { box-shadow: 0 0 0 10px rgba(var(--color-brand-primary), 0); } 100% { box-shadow: 0 0 0 0 rgba(var(--color-brand-primary), 0); } }

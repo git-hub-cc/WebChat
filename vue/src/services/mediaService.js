@@ -1,13 +1,9 @@
 import { ref } from 'vue';
-// --- MODIFICATION START: Import the new unified hashing function ---
 import { log, generateHash } from '@/utils';
-// --- MODIFICATION END ---
 import { eventBus } from './eventBus';
 import AppSettings from '@/config/AppSettings';
 import { dbService } from './dbService';
-// --- MODIFICATION START: Import uiStore to check for screenshot editor ---
 import { useUiStore } from '@/stores/uiStore';
-// --- MODIFICATION END ---
 
 const mediaRecorder = ref(null);
 const audioChunks = ref([]);
@@ -103,7 +99,6 @@ export const mediaService = {
         return result;
     },
 
-    // --- MODIFICATION START: Refactored captureScreen for both screenshots and screen sharing ---
     async captureScreen(contentHint = 'motion', forScreenshot = false) {
         log(`Screen capture initiated. For screenshot: ${forScreenshot}`, 'INFO');
 
@@ -123,17 +118,14 @@ export const mediaService = {
         try {
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: { cursor: 'always', contentHint },
-                // ✅ MODIFICATION: Request audio to capture system sound.
                 audio: true
             });
             log('Successfully obtained MediaStream from getDisplayMedia.', 'DEBUG');
 
-            // If the goal is just screen sharing, return the stream immediately.
             if (!forScreenshot) {
                 return stream;
             }
             await new Promise(resolve => setTimeout(resolve, 300));
-            // --- Logic below is now ONLY for taking a single screenshot ---
             const videoTrack = stream.getVideoTracks()[0];
             if (!videoTrack) {
                 throw new Error("在媒体流中未找到视频轨道。");
@@ -174,15 +166,13 @@ export const mediaService = {
             if (blob) {
                 log('Canvas converted to Blob successfully for screenshot.', 'INFO');
                 const dataUrl = URL.createObjectURL(blob);
-                // The editor will be responsible for stopping the stream tracks
                 eventBus.emit('screenshot:raw-captured', { dataUrl, blob, originalStream: stream });
             } else {
                 throw new Error('canvas.toBlob() resulted in a null blob.');
             }
 
-            // Clean up the temporary video element
             tempVideo.remove();
-            return null; // Return null as the result was handled via event bus
+            return null;
 
         } catch (err) {
             if (err.name === 'NotAllowedError') {
@@ -192,35 +182,13 @@ export const mediaService = {
                 log(`getDisplayMedia failed: ${err}`, 'ERROR');
                 eventBus.emit('showNotification', { message: `操作失败: ${err.message}`, type: 'error' });
             }
-            return null; // Explicitly return null on failure
-        }
-    },
-    // --- MODIFICATION END ---
-
-    async processStickerFile(file) {
-        if (file.size > AppSettings.media.maxStickerSize) {
-            eventBus.emit('showNotification', { message: `贴图文件过大 (上限 ${AppSettings.media.maxStickerSize / 1024 / 1024}MB)`, type: 'warning' });
-            return null;
-        }
-        if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) {
-            eventBus.emit('showNotification', { message: '不支持的贴图格式。', type: 'warning' });
-            return null;
-        }
-
-        try {
-            // --- MODIFICATION START: Use the new worker-based hash function ---
-            const hash = await generateHash(file);
-            // --- MODIFICATION END ---
-            const stickerData = { id: hash, name: file.name, blob: file };
-            await dbService.setItem('stickers', stickerData);
-            eventBus.emit('showNotification', { message: '贴图已添加！', type: 'success' });
-            return stickerData;
-        } catch (error) {
-            log(`处理贴图文件时出错: ${error}`, 'ERROR');
-            eventBus.emit('showNotification', { message: '保存贴图失败。', type: 'error' });
             return null;
         }
     },
+
+    // --- [移除] ---
+    // The processStickerFile method is no longer needed as users cannot upload stickers.
+    // async processStickerFile(file) { ... }
 };
 
 window.handleNativeScreenshot = function(base64DataUrl) {
