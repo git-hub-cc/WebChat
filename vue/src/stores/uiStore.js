@@ -1,8 +1,19 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import { debounce } from '@/utils';
+
+// --- ✅ MODIFICATION START: Debounced function to save sidebar width ---
+const saveSidebarWidthDebounced = debounce((width) => {
+    localStorage.setItem('sidebarWidth', width.toString());
+}, 500);
+// --- ✅ MODIFICATION END ---
+
 
 export const useUiStore = defineStore('ui', () => {
     // --- STATE ---
+    // ✅ MODIFICATION START: Add sidebarWidth state, loading from localStorage
+    const sidebarWidth = ref(parseInt(localStorage.getItem('sidebarWidth') || '320', 10));
+    // ✅ MODIFICATION END
     const isDetailsPanelOpen = ref(false);
     const detailsPanelContent = ref('info');
     const activeModal = ref(null);
@@ -21,15 +32,30 @@ export const useUiStore = defineStore('ui', () => {
     const imageCropperContent = ref(null);
     const modalPrefillData = ref({});
     const isPerformingDangerousAction = ref(false);
-    // --- [移除] ---
-    // const manualSdpText = ref('');
-    // const commentModalContent = ref(null); // No longer needed
-
-    // ✅ MODIFICATION START: Add new state for EmojiPicker
     const isEmojiPickerVisible = ref(false);
-    // ✅ MODIFICATION END
 
     // --- ACTIONS ---
+
+    // ✅ MODIFICATION START: Add action to set sidebar width
+    /**
+     * Sets the width of the chat list sidebar.
+     * @param {number} newWidth - The new width in pixels.
+     */
+    function setSidebarWidth(newWidth) {
+        const minWidth = 200;  // Minimum width (for avatar-only view)
+        const maxWidth = 600; // A reasonable maximum width
+
+        // Clamp the width within the defined bounds
+        const clampedWidth = Math.max(minWidth, Math.min(newWidth, maxWidth));
+
+        if (sidebarWidth.value !== clampedWidth) {
+            sidebarWidth.value = clampedWidth;
+            // Persist the new width to localStorage using a debounced function
+            saveSidebarWidthDebounced(clampedWidth);
+        }
+    }
+    // ✅ MODIFICATION END
+
     function toggleDetailsPanel(forceState, content = 'info') {
         if (typeof forceState === 'boolean') {
             isDetailsPanelOpen.value = forceState;
@@ -41,7 +67,6 @@ export const useUiStore = defineStore('ui', () => {
         }
     }
 
-    // ✅ MODIFICATION START: Add new action to control EmojiPicker
     function toggleEmojiPicker(forceState) {
         if (typeof forceState === 'boolean') {
             isEmojiPickerVisible.value = forceState;
@@ -49,21 +74,16 @@ export const useUiStore = defineStore('ui', () => {
             isEmojiPickerVisible.value = !isEmojiPickerVisible.value;
         }
     }
-    // ✅ MODIFICATION END
 
     function showModal(modalName, prefillData = {}) {
         modalPrefillData.value = prefillData;
-        // --- [移除] ---
-        // if (modalName === 'comment') { ... } // No longer needed
         activeModal.value = modalName;
     }
 
     function hideModal() {
-        // ✅ MODIFICATION START: Also hide emoji picker when a modal is hidden
         if (isEmojiPickerVisible.value) {
             isEmojiPickerVisible.value = false;
         }
-        // ✅ MODIFICATION END
         activeModal.value = null;
         activeOverlayModal.value = null;
         modalPrefillData.value = {};
@@ -71,8 +91,6 @@ export const useUiStore = defineStore('ui', () => {
         if (mediaViewerContent.value) mediaViewerContent.value = null;
         if (locationViewerContent.value) locationViewerContent.value = null;
         if (imageCropperContent.value) imageCropperContent.value = null;
-        // --- [移除] ---
-        // if (commentModalContent.value) commentModalContent.value = null; // No longer needed
     }
 
     function showOverlayModal(modalName, content) {
@@ -135,6 +153,9 @@ export const useUiStore = defineStore('ui', () => {
 
 
     return {
+        // ✅ MODIFICATION START: Expose new state and action
+        sidebarWidth,
+        // ✅ MODIFICATION END
         isDetailsPanelOpen,
         detailsPanelContent,
         activeModal,
@@ -153,8 +174,9 @@ export const useUiStore = defineStore('ui', () => {
         locationViewerContent,
         isPerformingDangerousAction,
         imageCropperContent,
-        // ✅ MODIFICATION START: Expose new state and action
         isEmojiPickerVisible,
+        // ✅ MODIFICATION START: Expose new state and action
+        setSidebarWidth,
         // ✅ MODIFICATION END
         toggleDetailsPanel,
         showModal,
@@ -168,8 +190,6 @@ export const useUiStore = defineStore('ui', () => {
         showMediaViewer,
         showLocationViewer,
         showImageCropperOverlay,
-        // ✅ MODIFICATION START: Expose new state and action
         toggleEmojiPicker,
-        // ✅ MODIFICATION END
     };
 });

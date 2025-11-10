@@ -28,6 +28,17 @@ body {
     transition: background-color 0.3s var(--transition-easing), color 0.3s var(--transition-easing);
 }
 
+/* --- ✅ MODIFICATION START: Global styles for resizing state --- */
+body.is-resizing {
+    cursor: ew-resize !important;
+    user-select: none !important;
+}
+body.is-resizing * {
+    /* Prevent iframes or other elements from capturing mouse events during drag */
+    pointer-events: none;
+}
+/* --- ✅ MODIFICATION END --- */
+
 /* --- Scrollbar Styling (Telegram Style) --- */
 ::-webkit-scrollbar {
     width: 6px;

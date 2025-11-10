@@ -3,9 +3,9 @@
 </template>
 
 <script setup>
-// --- ✅ MODIFICATION START ---
-import { ref, onMounted, onUnmounted, watch, defineExpose } from 'vue';
-// --- ✅ MODIFICATION END ---
+// ✅ MODIFICATION START: Removed defineExpose from import
+import { ref, onMounted, onUnmounted, watch } from 'vue';
+// ✅ MODIFICATION END
 import lottie from 'lottie-web';
 import pako from 'pako';
 
@@ -14,7 +14,6 @@ const props = defineProps({
     type: String,
     required: true,
   },
-  // ✅ MODIFICATION START: Add loop prop
   loop: {
     type: Boolean,
     default: false,
@@ -43,10 +42,8 @@ const loadAnimation = async () => {
       animationInstance = lottie.loadAnimation({
         container: lottieContainer.value,
         renderer: 'svg',
-        // ✅ MODIFICATION START: Use loop prop for loop and autoplay
         loop: props.loop,
         autoplay: props.loop,
-        // ✅ MODIFICATION END
         animationData: animationData,
       });
 
@@ -59,7 +56,7 @@ const loadAnimation = async () => {
   }
 };
 
-// --- ✅ MODIFICATION START: Expose control methods to parent component ---
+// Expose control methods to the parent component
 defineExpose({
   /**
    * Plays the animation from the beginning.
@@ -80,7 +77,6 @@ defineExpose({
     }
   }
 });
-// --- ✅ MODIFICATION END ---
 
 
 onMounted(() => {

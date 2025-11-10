@@ -7,10 +7,21 @@
         <AppSkeletonLoader />
       </div>
 
-      <div v-else class="app-container" :class="appContainerClasses">
+      <!-- ✅ MODIFICATION START: Bind dynamic style for sidebar width and a class for collapsed state -->
+      <div
+          v-else
+          class="app-container"
+          :class="appContainerClasses"
+          :style="{ '--sidebar-width': `${uiStore.sidebarWidth}px` }"
+      >
+        <!-- ✅ MODIFICATION END -->
         <aside class="sidebar-container">
           <ChatList />
         </aside>
+
+        <!-- ✅ MODIFICATION START: Add SidebarResizer component between sidebar and main content -->
+        <SidebarResizer />
+        <!-- ✅ MODIFICATION END -->
 
         <div class="main-content-wrapper">
           <main class="main-view-container">
@@ -49,8 +60,6 @@
             v-if="uiStore.activeModal === 'locationPicker'"
             v-motion-pop
         />
-        <!-- --- [移除] --- -->
-        <!-- BindManualConnectionModal is no longer needed -->
         <ScreenshotGuideModal
             v-if="uiStore.activeModal === 'screenshotGuide'"
             v-motion-pop
@@ -63,8 +72,6 @@
             v-if="uiStore.activeModal === 'confirmation'"
             v-motion-pop
         />
-        <!-- --- [移除] --- -->
-        <!-- CommentModal is no longer a global modal -->
       </div>
     </Transition>
 
@@ -120,12 +127,13 @@ import WelcomeHeader from '@/components/ChatView/WelcomeHeader.vue';
 import FloatingCallWidget from '@/components/Shared/FloatingCallWidget.vue';
 import SettingsModalSkeleton from '@/components/Shared/SettingsModalSkeleton.vue';
 import MobileGlobalHeader from '@/components/Shared/MobileGlobalHeader.vue';
+// ✅ MODIFICATION START: Import the new resizer component
+import SidebarResizer from '@/components/Shared/SidebarResizer.vue';
+// ✅ MODIFICATION END
 
 const SettingsModal = defineAsyncComponent(() => import('@/components/Modals/SettingsModal.vue'));
 const NewContactModal = defineAsyncComponent(() => import('@/components/Modals/NewContactModal.vue'));
 const LocationPickerModal = defineAsyncComponent(() => import('@/components/Modals/LocationPickerModal.vue'));
-// --- [移除] ---
-// const BindManualConnectionModal = ...
 const ScreenshotEditor = defineAsyncComponent(() => import('@/components/Modals/ScreenshotEditor.vue'));
 const ScreenshotGuideModal = defineAsyncComponent(() => import('@/components/Modals/ScreenshotGuideModal.vue'));
 const IncomingCallModal = defineAsyncComponent(() => import('@/components/Modals/IncomingCallModal.vue'));
@@ -134,8 +142,6 @@ const MediaViewerModal = defineAsyncComponent(() => import('@/components/Modals/
 const LocationViewerModal = defineAsyncComponent(() => import('@/components/Modals/LocationViewerModal.vue'));
 const WorldMapModal = defineAsyncComponent(() => import('@/components/Modals/WorldMapModal.vue'));
 const ImageCropperModal = defineAsyncComponent(() => import('@/components/Modals/ImageCropperModal.vue'));
-// --- [移除] ---
-// const CommentModal = ... // No longer needed here
 
 const userStore = useUserStore();
 const chatStore = useChatStore();
@@ -147,9 +153,17 @@ const memoryStore = useMemoryStore();
 
 const globalAudioSink = ref(null);
 
+// ✅ MODIFICATION START: Define sidebar collapsed threshold and computed property
+const SIDEBAR_COLLAPSED_THRESHOLD = 80;
+const isSidebarCollapsed = computed(() => uiStore.sidebarWidth < SIDEBAR_COLLAPSED_THRESHOLD);
+// ✅ MODIFICATION END
+
 const appContainerClasses = computed(() => ({
   'details-panel-open': uiStore.isDetailsPanelOpen,
-  'chat-active': uiStore.isChatViewActiveOnMobile
+  'chat-active': uiStore.isChatViewActiveOnMobile,
+  // ✅ MODIFICATION START: Add collapsed class dynamically
+  'sidebar-collapsed': isSidebarCollapsed.value,
+  // ✅ MODIFICATION END
 }));
 
 const appRootClasses = computed(() => ({
@@ -178,8 +192,6 @@ onMounted(async () => {
     await memoryStore.init();
     callStore.setGlobalAudioElement(globalAudioSink.value);
     webrtcService.init(userStore.userId);
-    // --- [移除] ---
-    // eventBus.on('webrtc:manual-connection-ready', ...)
   } catch (error) {
     console.error("应用初始化失败:", error);
   } finally {
@@ -213,11 +225,9 @@ function handleBackButton() {
   } else if (uiStore.activeModal) {
     uiStore.hideModal();
     handled = true;
-    // ✅ MODIFICATION START: Add check for EmojiPicker
   } else if (uiStore.isEmojiPickerVisible) {
     uiStore.toggleEmojiPicker(false);
     handled = true;
-    // ✅ MODIFICATION END
   } else if (uiStore.isDetailsPanelOpen) {
     uiStore.toggleDetailsPanel(false);
     handled = true;
@@ -307,7 +317,18 @@ body {
   width: var(--sidebar-width);
   flex-shrink: 0;
   background-color: var(--color-background-panel);
+  /* ✅ MODIFICATION START: Add smooth transition for width changes */
+  transition: width 0.2s ease-out;
+  will-change: width;
+  /* ✅ MODIFICATION END */
 }
+
+/* ✅ MODIFICATION START: Disable transition during drag for "跟手" effect */
+body.is-resizing .sidebar-container {
+  transition: none;
+}
+/* ✅ MODIFICATION END */
+
 .details-panel-container {
   background-color: var(--color-background-panel);
   border-left: 1px solid var(--color-border);

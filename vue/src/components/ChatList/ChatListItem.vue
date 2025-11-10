@@ -1,16 +1,13 @@
 <template>
-  <!-- --- MODIFICATION START --- -->
   <div
       class="chat-list-item"
       :class="{ active: isActive, 'special-contact': item.isSpecial, [item.id]: item.isSpecial, 'highlight-new-message': isHighlighted }"
   >
-    <!-- --- [动画] START: 为头像添加悬浮效果 --- -->
     <Avatar :entity="item" :is-online="isOnline"
             v-motion
             :hovered="{ scale: 1.1 }"
             :tapped="{ scale: 0.9 }"
     />
-    <!-- --- [动画] END --- -->
     <div class="chat-info">
       <div class="info-top">
         <span class="name">{{ item.name }}</span>
@@ -25,9 +22,7 @@
 </template>
 
 <script setup>
-// --- MODIFICATION START ---
 import { computed, ref, watch } from 'vue';
-// --- MODIFICATION END ---
 import { useUserStore } from '@/stores/userStore';
 import Avatar from '@/components/Shared/Avatar.vue';
 import { formatDate } from '@/utils';
@@ -44,9 +39,7 @@ const props = defineProps({
 });
 
 const userStore = useUserStore();
-// --- MODIFICATION START ---
 const isHighlighted = ref(false);
-// --- MODIFICATION END ---
 
 const combinedStatus = computed(() => userStore.getContactCombinedStatus(props.item.id));
 
@@ -63,7 +56,6 @@ const unreadCount = computed(() => {
   return props.item.unread > 99 ? '99+' : props.item.unread;
 });
 
-// --- MODIFICATION START: Watch for new unread messages to trigger highlight animation ---
 watch(
     () => props.item.unread,
     (newUnread, oldUnread) => {
@@ -78,8 +70,6 @@ watch(
       }
     }
 );
-// --- MODIFICATION END ---
-
 </script>
 
 <style scoped>
@@ -88,17 +78,14 @@ watch(
   align-items: center;
   padding: var(--spacing-3) var(--spacing-4);
   cursor: pointer;
-  /* --- [动画] START: 优化过渡效果 --- */
   transition: background-color var(--transition-duration-normal) ease,
   transform var(--transition-duration-fast) var(--transition-easing);
-  /* --- [动画] END --- */
   height: 72px; /* Fixed height for virtual scroller */
   border-bottom: 1px solid var(--color-border);
   position: relative; /* For the highlight bar */
   overflow: hidden; /* Hide the highlight bar initially */
 }
 
-/* --- [动画] START: 新消息提醒动画 & 悬浮效果 --- */
 @keyframes highlight-bar {
   0% {
     transform: translateX(-100%);
@@ -136,10 +123,22 @@ watch(
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
-/* --- [动画] END --- */
 
 .chat-list-item.active { background-color: var(--color-background-active); }
-.chat-info { flex-grow: 1; margin-left: var(--spacing-3); overflow: hidden; display: flex; flex-direction: column; justify-content: center; }
+
+.chat-info {
+  flex-grow: 1;
+  margin-left: var(--spacing-3);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* ✅ MODIFICATION START: Add transition for smooth appearance */
+  transition: opacity 0.1s ease-out, transform 0.2s ease-out;
+  opacity: 1;
+  transform: translateX(0);
+  /* ✅ MODIFICATION END */
+}
 .info-top, .info-bottom { display: flex; justify-content: space-between; align-items: center; }
 .info-bottom { margin-top: 2px; }
 .name { font-weight: var(--font-weight-semibold); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; flex-grow: 1; }
@@ -148,4 +147,23 @@ watch(
 .timestamp { font-size: var(--font-size-xs); color: var(--color-text-secondary); flex-shrink: 0; margin-left: var(--spacing-2); }
 .preview { font-size: var(--font-size-sm); color: var(--color-text-secondary); white-space: nowrap; text-overflow: ellipsis; overflow: hidden; flex-grow: 1; line-height: 1.4; }
 .unread-badge { background-color: var(--color-brand-secondary); color: var(--color-text-on-brand); border-radius: var(--border-radius-pill); padding: 2px 8px; font-size: var(--font-size-xs); font-weight: var(--font-weight-bold); min-width: 20px; text-align: center; flex-shrink: 0; margin-left: var(--spacing-2); }
+
+/* --- ✅ MODIFICATION START: Styles for the collapsed sidebar state --- */
+/*
+  Use `:deep()` to target the `.sidebar-collapsed` class which is applied on a parent component (`App.vue`).
+  This allows us to style this component based on a global layout state.
+*/
+:deep(.sidebar-collapsed) .chat-list-item {
+  justify-content: center; /* Center the avatar horizontally */
+  padding: var(--spacing-2) 0; /* Adjust padding for a centered look */
+}
+
+:deep(.sidebar-collapsed) .chat-list-item .chat-info {
+  /* Instead of `display: none`, use opacity and transform for a smoother transition */
+  opacity: 0;
+  transform: translateX(-10px);
+  pointer-events: none; /* Prevent interaction with hidden elements */
+  position: absolute; /* Take it out of the layout flow */
+}
+/* --- ✅ MODIFICATION END --- */
 </style>

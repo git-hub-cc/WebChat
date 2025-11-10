@@ -27,7 +27,6 @@ export const log = (message, level = 'DEBUG') => {
 };
 
 /**
- * --- MODIFICATION START: Added debounce utility function ---
  * 创建一个防抖函数，该函数会从上一次被调用后，延迟 `delay` 毫秒后调用 `func` 方法。
  * @param {Function} func - 要防抖的函数。
  * @param {number} [delay=300] - 延迟的毫秒数。
@@ -40,8 +39,42 @@ export const debounce = (func, delay = 300) => {
         timeoutId = setTimeout(() => func.apply(this, args), delay);
     };
 };
+
 /**
- * --- MODIFICATION END ---
+ * --- ✅ MODIFICATION START: Added throttle utility function ---
+ * 创建一个节流函数，在 `delay` 毫秒内最多执行 `func` 一次。
+ * @param {Function} func - 要节流的函数。
+ * @param {number} delay - 节流的时间间隔（毫秒）。
+ * @returns {Function} - 返回新的节流函数。
+ */
+export const throttle = (func, delay) => {
+    let inThrottle = false;
+    let lastArgs = null;
+    let lastThis = null;
+    let timeoutId = null;
+
+    function wrapper(...args) {
+        lastArgs = args;
+        lastThis = this;
+
+        if (!inThrottle) {
+            inThrottle = true;
+            func.apply(lastThis, lastArgs);
+            timeoutId = setTimeout(() => {
+                inThrottle = false;
+            }, delay);
+        }
+    }
+
+    wrapper.cancel = () => {
+        clearTimeout(timeoutId);
+        inThrottle = false;
+    };
+
+    return wrapper;
+};
+/**
+ * --- ✅ MODIFICATION END ---
  */
 
 /**
@@ -100,7 +133,7 @@ export const formatMessageText = (text) => {
     return escapedText.replace(urlRegex, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
 };
 
-// --- MODIFICATION START: Web Worker implementation for hashing ---
+// --- Web Worker implementation for hashing ---
 
 // Worker pool to avoid creating new workers for every hash.
 const workerPool = {
@@ -189,8 +222,6 @@ export const generateHash = generateFileHashWithWorker;
 // Kept the old export for backward compatibility in case I missed a spot, but it's now an alias.
 export const generateFileHash = generateFileHashOnMainThread;
 
-// --- MODIFICATION END ---
-
 
 /**
  * 发起一个流式 API 请求并处理响应。
@@ -259,7 +290,6 @@ export async function fetchApiStream(url, requestBody, headers, onChunkReceived,
 }
 
 /**
- * --- ✅ MODIFICATION START: Added video thumbnail generator ---
  * 从视频 Blob 生成一张预览图 (Data URL)。
  * @param {Blob} videoBlob - 视频的 Blob 对象。
  * @returns {Promise<string>} - 返回一个包含预览图的 Data URL 字符串。
@@ -319,11 +349,6 @@ export const generateVideoThumbnail = (videoBlob) => {
     });
 };
 /**
- * --- ✅ MODIFICATION END ---
- */
-
-// ✅ MODIFICATION START: New image compression utility function
-/**
  * [NEW] Compresses an image from a canvas to a target file size.
  * It uses an iterative approach on image quality to get as close as possible
  * to the target size without exceeding it. Prefers WebP format.
@@ -379,9 +404,6 @@ export const compressImage = async (canvas, targetSizeKB = 100) => {
     log(`Image compressed to ${(compressedBlob.size / 1024).toFixed(2)}KB`, 'INFO');
     return compressedBlob;
 };
-// ✅ MODIFICATION END
-
-// --- ✅ MODIFICATION START: Added object-fit calculation utility ---
 /**
  * [NEW] Calculates the dimensions and offset of content displayed with object-fit: contain.
  * This is crucial for correctly mapping coordinates on a canvas overlaid on such content.
@@ -425,4 +447,3 @@ export const calculateObjectFitDimensions = (containerWidth, containerHeight, co
         offsetY,
     };
 };
-// --- ✅ MODIFICATION END ---

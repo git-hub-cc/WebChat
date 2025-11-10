@@ -1,15 +1,16 @@
 <template>
   <div class="skeleton-root-wrapper">
-    <!-- ✅ MODIFICATION START: Add a separate skeleton for the mobile global header -->
+    <!-- 移动端全局头部骨架 -->
     <div class="mobile-header-skeleton">
       <div class="shimmer-bg circle small"></div>
       <div class="shimmer-bg line long"></div>
       <div class="shimmer-bg circle small"></div>
     </div>
-    <!-- ✅ MODIFICATION END -->
 
-    <div class="app-container-skeleton">
-      <!-- Sidebar Skeleton -->
+    <!-- ✅ MODIFICATION START: Bind dynamic style for grid-template-columns -->
+    <div class="app-container-skeleton" :style="containerStyle">
+      <!-- ✅ MODIFICATION END -->
+      <!-- 侧边栏骨架 -->
       <aside class="sidebar-container-skeleton">
         <div class="header-skeleton">
           <div class="shimmer-bg circle"></div>
@@ -31,7 +32,7 @@
         </div>
       </aside>
 
-      <!-- Main View Skeleton -->
+      <!-- 主视图骨架 -->
       <main class="main-view-container-skeleton">
         <div class="header-skeleton">
           <div class="shimmer-bg circle"></div>
@@ -56,6 +57,22 @@
     </div>
   </div>
 </template>
+
+<script setup>
+// ✅ MODIFICATION START: Read sidebar width from localStorage for accurate skeleton layout
+import { ref } from 'vue';
+
+// 直接从 localStorage 读取侧边栏宽度，如果不存在则使用默认值 '320'
+// 这确保了骨架屏的布局与用户最后一次调整的侧边栏宽度一致
+const sidebarWidth = ref(localStorage.getItem('sidebarWidth') || '320');
+
+// 创建一个动态样式对象，用于设置网格布局的列宽
+const containerStyle = {
+  gridTemplateColumns: `${sidebarWidth.value}px 1fr`
+};
+// ✅ MODIFICATION END
+</script>
+
 
 <style scoped>
 /* 定义闪烁动画 */
@@ -88,23 +105,22 @@
   animation: shimmer 1.5s infinite;
 }
 
-/* ✅ MODIFICATION START: Add a root wrapper for positioning context */
+/* 根包装器，用于定位 */
 .skeleton-root-wrapper {
   width: 100%;
   height: 100%;
   position: relative;
-  /* --- FIX START: Center the skeleton container --- */
   display: flex;
   align-items: center;
   justify-content: center;
-  /* --- FIX END --- */
 }
-/* ✅ MODIFICATION END */
 
 /* 主布局骨架 */
 .app-container-skeleton {
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
+  /* ✅ MODIFICATION START: Removed grid-template-columns, now handled by inline style */
+  /* grid-template-columns: var(--sidebar-width) 1fr; */
+  /* ✅ MODIFICATION END */
   width: 100%;
   height: 100%;
   max-width: var(--max-app-width);
@@ -222,11 +238,6 @@
   border-radius: var(--border-radius-lg);
   height: 40px;
 }
-.bubble-skeleton.received {
-  align-self: flex-start;
-  width: 60%;
-  background-color: var(--color-background-elevated);
-}
 .bubble-skeleton.sent {
   align-self: flex-end;
   width: 50%;
@@ -246,16 +257,14 @@
   border-radius: var(--border-radius-lg);
 }
 
-/* ✅ MODIFICATION START: Add styles for the mobile header skeleton */
+/* 移动端头部骨架 */
 .mobile-header-skeleton {
-  display: none; /* Hidden on desktop by default */
+  display: none;
 }
-/* ✅ MODIFICATION END */
 
 
-/* ✅ MODIFICATION START: Responsive styles for mobile skeleton */
+/* 移动端响应式样式 */
 @media (max-width: 768px) {
-  /* 1. Show and style the mobile header skeleton */
   .mobile-header-skeleton {
     display: flex;
     align-items: center;
@@ -281,30 +290,25 @@
     border-radius: var(--border-radius-pill);
   }
 
-  /* 2. Adjust the main container for mobile */
   .app-container-skeleton {
-    display: block; /* Change from grid to block */
+    display: block;
     max-height: 100dvh;
     border-radius: 0;
-    padding-top: 50px; /* Make space for the fixed header skeleton */
+    padding-top: 50px;
     box-sizing: border-box;
     height: 100dvh;
   }
 
-  /* 3. Hide the main view (chat window) skeleton */
   .main-view-container-skeleton {
     display: none;
   }
 
-  /* 4. Make the sidebar (chat list) skeleton full-width */
   .sidebar-container-skeleton {
     width: 100%;
   }
 
-  /* 5. Hide the original header inside the sidebar skeleton */
   .sidebar-container-skeleton .header-skeleton {
     display: none;
   }
 }
-/* ✅ MODIFICATION END */
 </style>
