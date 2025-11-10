@@ -100,7 +100,7 @@
       </div>
     </div>
     <EmojiPicker
-        :show="isEmojiPickerVisible"
+        :show="uiStore.isEmojiPickerVisible"
         @select-emoji="insertEmoji"
         @select-sticker="sendSticker"
     />
@@ -132,7 +132,9 @@ const uiStore = useUiStore();
 const newMessage = ref('');
 const textareaRef = ref(null);
 const fileInputRef = ref(null);
-const isEmojiPickerVisible = ref(false);
+// --- ❌ REMOVAL ---
+// const isEmojiPickerVisible = ref(false);
+// --- ❌ REMOVAL ---
 const preview = ref(null);
 const isRecording = ref(false);
 const recordingDuration = ref(0);
@@ -194,13 +196,27 @@ function send() {
 // ✅ MODIFICATION START: Handle stickerId instead of sticker object
 function sendSticker(stickerId) {
   chatStore.sendMessage({ stickerId });
-  isEmojiPickerVisible.value = false;
+  // ✅ MODIFICATION: Use store action to close
+  uiStore.toggleEmojiPicker(false);
 }
 // ✅ MODIFICATION END
 
 function insertEmoji(emoji) { const textarea = textareaRef.value; const start = textarea.selectionStart; const end = textarea.selectionEnd; newMessage.value = newMessage.value.substring(0, start) + emoji + newMessage.value.substring(end); nextTick(() => { textarea.selectionStart = textarea.selectionEnd = start + emoji.length; textarea.focus(); }); }
-function toggleEmojiPicker() { isEmojiPickerVisible.value = !isEmojiPickerVisible.value; }
-function closeEmojiPicker(event) { if (isEmojiPickerVisible.value && !event.target.closest('.picker-container, .input-container')) { isEmojiPickerVisible.value = false; } }
+
+// ✅ MODIFICATION START: Use store action
+function toggleEmojiPicker() {
+  uiStore.toggleEmojiPicker();
+}
+// ✅ MODIFICATION END
+
+// ✅ MODIFICATION START: Use store state and action
+function closeEmojiPicker(event) {
+  if (uiStore.isEmojiPickerVisible && !event.target.closest('.picker-container, .input-container')) {
+    uiStore.toggleEmojiPicker(false);
+  }
+}
+// ✅ MODIFICATION END
+
 async function handleFileSelect(event) { const file = event.target.files[0]; if (file) await processFile(file); if(event.target) event.target.value = ''; }
 async function handlePaste(event) { const file = event.clipboardData.files[0]; if (file?.type.startsWith('image/')) { event.preventDefault(); await processFile(file); } }
 async function processFile(file) {

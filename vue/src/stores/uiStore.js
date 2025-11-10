@@ -25,6 +25,10 @@ export const useUiStore = defineStore('ui', () => {
     // const manualSdpText = ref('');
     // const commentModalContent = ref(null); // No longer needed
 
+    // ✅ MODIFICATION START: Add new state for EmojiPicker
+    const isEmojiPickerVisible = ref(false);
+    // ✅ MODIFICATION END
+
     // --- ACTIONS ---
     function toggleDetailsPanel(forceState, content = 'info') {
         if (typeof forceState === 'boolean') {
@@ -37,6 +41,16 @@ export const useUiStore = defineStore('ui', () => {
         }
     }
 
+    // ✅ MODIFICATION START: Add new action to control EmojiPicker
+    function toggleEmojiPicker(forceState) {
+        if (typeof forceState === 'boolean') {
+            isEmojiPickerVisible.value = forceState;
+        } else {
+            isEmojiPickerVisible.value = !isEmojiPickerVisible.value;
+        }
+    }
+    // ✅ MODIFICATION END
+
     function showModal(modalName, prefillData = {}) {
         modalPrefillData.value = prefillData;
         // --- [移除] ---
@@ -45,6 +59,11 @@ export const useUiStore = defineStore('ui', () => {
     }
 
     function hideModal() {
+        // ✅ MODIFICATION START: Also hide emoji picker when a modal is hidden
+        if (isEmojiPickerVisible.value) {
+            isEmojiPickerVisible.value = false;
+        }
+        // ✅ MODIFICATION END
         activeModal.value = null;
         activeOverlayModal.value = null;
         modalPrefillData.value = {};
@@ -134,6 +153,9 @@ export const useUiStore = defineStore('ui', () => {
         locationViewerContent,
         isPerformingDangerousAction,
         imageCropperContent,
+        // ✅ MODIFICATION START: Expose new state and action
+        isEmojiPickerVisible,
+        // ✅ MODIFICATION END
         toggleDetailsPanel,
         showModal,
         hideModal,
@@ -146,5 +168,8 @@ export const useUiStore = defineStore('ui', () => {
         showMediaViewer,
         showLocationViewer,
         showImageCropperOverlay,
+        // ✅ MODIFICATION START: Expose new state and action
+        toggleEmojiPicker,
+        // ✅ MODIFICATION END
     };
 });

@@ -213,6 +213,11 @@ function handleBackButton() {
   } else if (uiStore.activeModal) {
     uiStore.hideModal();
     handled = true;
+    // ✅ MODIFICATION START: Add check for EmojiPicker
+  } else if (uiStore.isEmojiPickerVisible) {
+    uiStore.toggleEmojiPicker(false);
+    handled = true;
+    // ✅ MODIFICATION END
   } else if (uiStore.isDetailsPanelOpen) {
     uiStore.toggleDetailsPanel(false);
     handled = true;
