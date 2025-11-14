@@ -9,7 +9,7 @@
 
     <!-- ✅ MODIFICATION START: Added a new section for location details -->
     <div class="location-details-container">
-      <img :src="`https://ppmc.club/webchat-vue/${locationData.imageUrl}`" :alt="locationData.tag" class="location-image">
+      <img :src="`https://ppmc.club/webchat/${locationData.imageUrl}`" :alt="locationData.tag" class="location-image">
       <div class="location-text-content">
         <p class="location-description">{{ locationData.description }}</p>
         <small class="location-creator">由 {{ locationData.createdBy }} 分享</small>

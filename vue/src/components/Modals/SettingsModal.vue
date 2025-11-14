@@ -6,14 +6,12 @@
         <button :class="{ active: activeTab === 'appearance' }" @click="switchTab('appearance')">外观</button>
         <button :class="{ active: activeTab === 'api' }" @click="switchTab('api')">模型服务</button>
         <button :class="{ active: activeTab === 'media' }" @click="switchTab('media')">音视频</button>
-        <!-- ✅ MODIFICATION START: Added Network tab and adjusted handler -->
         <button :class="{ active: activeTab === 'network' }" @click="switchTab('network')">网络诊断</button>
+        <!-- ✅ MODIFICATION START: Added About tab -->
+        <button :class="{ active: activeTab === 'about' }" @click="switchTab('about')">关于</button>
         <!-- ✅ MODIFICATION END -->
-        <!-- --- [移除] --- -->
-        <!-- "Advanced" tab has been removed -->
       </nav>
 
-      <!-- --- [动画] START: 优化选项卡切换动画以消除闪烁 --- -->
       <div class="tab-content-container" ref="tabContainerRef">
         <Transition
             name="tab-content-slide"
@@ -179,7 +177,7 @@
               <p class="setting-description">开启后可显著消除键盘、环境等噪音（实验性功能，可能会增加CPU消耗）。</p>
             </div>
 
-            <!-- ✅ MODIFICATION START: New Network Diagnostics Tab -->
+            <!-- Network Diagnostics Tab -->
             <div v-if="activeTab === 'network'" class="tab-content">
               <h3>网络诊断</h3>
               <p>测试与 STUN/TURN 服务器的连通性，这对于建立稳定的通话至关重要。</p>
@@ -193,14 +191,26 @@
                 {{ isTestingNetwork ? '测试中...' : '开始网络测试' }}
               </button>
             </div>
-            <!-- ✅ MODIFICATION END -->
 
-            <!-- --- [移除] --- -->
-            <!-- Advanced tab content has been removed -->
+            <!-- ✅ MODIFICATION START: New "About" Tab Content -->
+            <div v-if="activeTab === 'about'" class="tab-content about-tab-content">
+              <h3>关于 WebChat</h3>
+              <div class="about-item">
+                <label>项目地址</label>
+                <a href="https://github.com/git-hub-cc/WebChat" target="_blank" rel="noopener noreferrer">
+                  https://github.com/git-hub-cc/WebChat
+                </a>
+              </div>
+              <hr>
+              <div class="disclaimer-section">
+                <h4>免责声明</h4>
+                <p>本项目仅用于教育和演示目的。在使用或改编此代码时，请尊重任何外部 API、服务或知识产权的所有相关版权和服条款。</p>
+              </div>
+            </div>
+            <!-- ✅ MODIFICATION END -->
           </div>
         </Transition>
       </div>
-      <!-- --- [动画] END --- -->
     </div>
   </ModalWrapper>
 </template>
@@ -245,9 +255,7 @@ let analyserNode = null;
 let micSourceNode = null;
 let animationFrameId = null;
 
-// --- [动画] START: Ref for the transition container ---
 const tabContainerRef = ref(null);
-// --- [动画] END ---
 
 const showVideoPreview = computed(() => !!videoPreviewStream.value);
 
@@ -307,8 +315,6 @@ function stopVuMeter() {
   animationFrameId = null;
 }
 
-
-// ✅ MODIFICATION START: Ensure the loading animation runs for a minimum duration.
 async function startDeviceCheck() {
   isCheckingDevices.value = true;
   deviceCheckResult.value = null;
@@ -357,7 +363,6 @@ async function startNetworkTest() {
     isTestingNetwork.value = false;
   }
 }
-// ✅ MODIFICATION END
 
 function cleanupPreviewStream() {
   if (videoPreviewStream.value) {
@@ -460,7 +465,6 @@ const onAiNoiseSuppressionChange = (event) => {
   settingsStore.setAiNoiseSuppression(event.target.checked);
 };
 
-// --- [动画] START: JS Hooks for smooth height transition ---
 const onBeforeLeave = (el) => {
   if (tabContainerRef.value) {
     tabContainerRef.value.style.height = `${el.offsetHeight}px`;
@@ -478,15 +482,20 @@ const onAfterEnter = () => {
     tabContainerRef.value.style.height = 'auto';
   }
 };
-// --- [动画] END ---
 </script>
 
 <style scoped>
 .settings-content { display: flex; flex-direction: column; }
 .modal-tabs { display: flex; border-bottom: 1px solid var(--color-border); margin-bottom: var(--spacing-4); flex-shrink: 0; }
-/* ✅ MODIFICATION START: Adjusted padding for more tabs */
-.modal-tabs button { padding: var(--spacing-2) var(--spacing-3); border-bottom: 2px solid transparent; font-weight: var(--font-weight-medium); color: var(--color-text-secondary); }
-/* ✅ MODIFICATION END */
+.modal-tabs button {
+  flex-grow: 1; /* ✅ Make buttons flexible */
+  padding: var(--spacing-2) var(--spacing-1); /* ✅ Adjust padding */
+  border-bottom: 2px solid transparent;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm); /* ✅ Smaller font for more tabs */
+  white-space: nowrap; /* Prevent wrapping */
+}
 .modal-tabs button.active { color: var(--color-brand-primary); border-bottom-color: var(--color-brand-primary); }
 .tab-content { display: flex; flex-direction: column; gap: var(--spacing-4); }
 .setting-item { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-4); }
@@ -571,8 +580,6 @@ p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-b
   display: none;
 }
 
-
-/* --- [动画] START: 选项卡内容切换动画 --- */
 .tab-content-container {
   position: relative;
   overflow: hidden;
@@ -599,5 +606,38 @@ p { font-size: var(--font-size-sm); color: var(--color-text-secondary); margin-b
   opacity: 0;
   transform: translateX(-20px);
 }
-/* --- [动画] END --- */
+
+/* ✅ MODIFICATION START: Styles for the new "About" tab */
+.about-tab-content {
+  text-align: left;
+}
+.about-tab-content h3, .about-tab-content h4 {
+  margin-bottom: var(--spacing-3);
+}
+.about-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+}
+.about-item label {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  width: auto; /* Override default label width */
+  text-align: left;
+}
+.about-item a {
+  color: var(--color-text-link);
+  word-break: break-all;
+}
+.disclaimer-section p {
+  line-height: 1.6;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background-color: var(--color-background-elevated);
+  padding: var(--spacing-3);
+  border-radius: var(--border-radius-md);
+  border-left: 4px solid var(--color-status-warning);
+}
+/* ✅ MODIFICATION END */
 </style>
